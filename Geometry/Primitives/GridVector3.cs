@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Collections.Immutable;
 
 namespace Geometry
 {
@@ -11,10 +12,20 @@ namespace Geometry
     {
         public static double EpsilonSquared = 0.00001;
 
+        //Return a new instance for the static in case someone writes back to the value somewhere
+
+        /*
+        public static GridVector3 UnitX { get { return new GridVector3(1, 0, 0); } }
+        public static GridVector3 UnitY { get { return new GridVector3(0, 1, 0); } }
+        public static GridVector3 UnitZ { get { return new GridVector3(1, 0, 1); } }
+        public static GridVector3 Zero { get { return new GridVector3(0, 0, 0); } }
+        */
+
         public readonly static GridVector3 UnitX = new GridVector3(1, 0, 0);
-        public readonly static GridVector3 UnitY = new GridVector3(0, 1, 0);
-        public readonly static GridVector3 UnitZ = new GridVector3(0, 0, 1);
-        public readonly static GridVector3 Zero = new GridVector3(0, 0, 0);
+        public readonly static GridVector3 UnitY = new GridVector3(0, 1, 0); 
+        public readonly static GridVector3 UnitZ = new GridVector3(1, 0, 1); 
+        public readonly static GridVector3 Zero = new GridVector3(0, 0, 0); 
+
 
         public double[] coords { get => _coords; } 
         private readonly double[] _coords;
@@ -122,6 +133,9 @@ namespace Geometry
         public void Normalize()
         {
             double mag = Magnitude(this);
+            if (mag == 0)
+                return; 
+
             for (int iAxis = 0; iAxis < _coords.Length; iAxis++)
             {
                 _coords[iAxis] = _coords[iAxis] / mag;
