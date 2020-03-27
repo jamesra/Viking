@@ -30,9 +30,9 @@ namespace Geometry
         public double[] coords { get => _coords; } 
         private readonly double[] _coords;
 
-        public double X { get { return _coords[(int)AXIS.X]; } }
-        public double Y { get { return _coords[(int)AXIS.Y]; } }
-        public double Z { get { return _coords[(int)AXIS.Z]; } }
+        public double X { get => _coords[(int)AXIS.X]; }
+        public double Y { get => _coords[(int)AXIS.Y]; }
+        public double Z { get =>_coords[(int)AXIS.Z]; } 
 
         public GridVector3(double[] input)
         {
@@ -251,37 +251,37 @@ namespace Geometry
 
         static public GridVector3 operator -(GridVector3 A)
         {
-            return new GridVector3(A._coords.Select(val => -val));
+            return new GridVector3(-A.X, -A.Y, -A.Z);
         }
 
         static public GridVector3 operator -(GridVector3 A, GridVector3 B)
         {
-            return new GridVector3(A._coords.Select((val, i) => val - B._coords[i]));
+            return new GridVector3(A.X - B.X, A.Y - B.Y, A.Z - B.Z);
         }
         
         static public GridVector3 operator +(GridVector3 A, GridVector3 B)
         {
-            return new GridVector3(A._coords.Select((val, i) => val + B._coords[i]));
+            return new GridVector3(A.X + B.X, A.Y + B.Y, A.Z + B.Z);
         }
 
         static public GridVector3 operator *(GridVector3 A, double scalar)
         {
-            return new GridVector3(A._coords.Select((val, i) => val * scalar));
+            return new GridVector3(A.X * scalar, A.Y * scalar, A.Z * scalar);
         }
 
         static public GridVector3 operator *(GridVector3 A, GridVector3 B)
         {
-            return new GridVector3(A._coords.Select((a, i) => a * B._coords[i]));
+            return new GridVector3(A.X * B.X, A.Y * B.Y, A.Z * B.Z);
         }
 
         static public GridVector3 operator /(GridVector3 A, double scalar)
         {
-            return new GridVector3(A._coords.Select((val, i) => val / scalar));
+            return new GridVector3(A.X / scalar, A.Y / scalar, A.Z / scalar);
         }
 
         static public GridVector3 operator /(GridVector3 A, GridVector3 B)
         {
-            return new GridVector3(A._coords.Select((a, i) => a / B._coords[i]));
+            return new GridVector3(A.X / B.X, A.Y / B.Y, A.Z / B.Z);
         }
 
         static public bool operator ==(GridVector3 A, GridVector3 B)
