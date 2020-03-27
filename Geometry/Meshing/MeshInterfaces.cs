@@ -131,6 +131,11 @@ namespace Geometry.Meshing
         ImmutableArray<int> iVerts { get; }
         ImmutableArray<IEdgeKey> Edges { get; }
 
+        /// <summary>
+        /// The object's iVerts array, but sorted.  Profiling showed not having this cache was considerably slower during bajaj mesh generation.  It was originally 20% of the composite mesh generation time.
+        /// </summary>
+        ImmutableArray<int> sortedVerts { get; }
+
         IFace Clone();
     }
 
