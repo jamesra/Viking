@@ -14,7 +14,9 @@ namespace Geometry.Meshing
     public class Face : IComparable<Face>, IEquatable<Face>, IFace
     {
         private readonly ImmutableArray<int> _iVerts;
-        private readonly ImmutableArray<IEdgeKey> _Edges; 
+        private readonly ImmutableArray<IEdgeKey> _Edges;
+        private readonly ImmutableArray<int> _sorted_verts; //caching sorted verts was a 3% optimization from profiling
+
 
         public ImmutableArray<int> iVerts
         {
@@ -32,7 +34,15 @@ namespace Geometry.Meshing
             }
         }
 
-          
+        public ImmutableArray<int> sortedVerts
+        {
+            get
+            {
+                return this._sorted_verts;
+            }
+        }
+
+
         private IEdgeKey[] CalculateEdges()
         {
             IEdgeKey[] _edges = new IEdgeKey[iVerts.Length];
@@ -83,8 +93,17 @@ namespace Geometry.Meshing
             {
                 throw new ArgumentException("Vertex indicies must be unique");
             }
+
             _iVerts = (new int[] { A, B, C}).ToImmutableArray();
             _Edges = CalculateEdges().ToImmutableArray();
+
+            SortedSet<int> s = new SortedSet<int>(_iVerts);
+            if (s.Count != iVerts.Length)
+            {
+                throw new ArgumentException("Vertex indicies must be unique");
+            }
+
+            _sorted_verts = s.ToImmutableArray();
         }
 
         public Face(int A, int B, int C, int D)
@@ -98,6 +117,14 @@ namespace Geometry.Meshing
 
             _iVerts = (new int[] { A, B, C, D }).ToImmutableArray();
             _Edges = CalculateEdges().ToImmutableArray();
+
+            SortedSet<int> s = new SortedSet<int>(_iVerts);
+            if (s.Count != iVerts.Length)
+            {
+                throw new ArgumentException("Vertex indicies must be unique");
+            }
+
+            _sorted_verts = s.ToImmutableArray();
         }
 
         /// <summary>
@@ -124,6 +151,7 @@ namespace Geometry.Meshing
                 throw new ArgumentException("A face must have at least 3 verticies and currently no more than 4.  The 4 limit is negiotiable.");
 
             _Edges = CalculateEdges().ToImmutableArray();
+            _sorted_verts = s.ToImmutableArray();
         }
 
         /// <summary>
@@ -207,13 +235,12 @@ namespace Geometry.Meshing
             if (compareVal != 0)
                 return compareVal;
 
-            
-            ImmutableArray<int> A = this.iVerts.Sort();
-            ImmutableArray<int> B = other.iVerts.Sort();
+
+            ImmutableArray<int> B = other.sortedVerts;
 
             for (int i = 0; i < iVerts.Length; i++)
             {
-                compareVal = A[i].CompareTo(B[i]);
+                compareVal = this._sorted_verts[i].CompareTo(B[i]);
                 if (compareVal != 0)
                     return compareVal;
             }
@@ -241,10 +268,15 @@ namespace Geometry.Meshing
             if (other.iVerts.Length != this.iVerts.Length)
                 return false;
 
-            SortedSet<int> A = new SortedSet<int>(this.iVerts);
-            SortedSet<int> B = new SortedSet<int>(other.iVerts);
+           ImmutableArray<int> B = other.sortedVerts;
 
-            return A.SetEquals(B);
+            for (int i = 0; i < iVerts.Length; i++)
+            {
+                if (this._sorted_verts[i] != B[i])
+                    return false;
+            }
+
+            return true;
         }
 
         public virtual IFace Clone()
