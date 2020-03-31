@@ -362,13 +362,15 @@ namespace Geometry.Meshing
 
             for (int i = 0; i < _Verticies.Count; i++)
             {
-                SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
+                //SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
                 IVertex3D v = this[i];
 
-                foreach (IEdgeKey ek in v.Edges)
+                IEnumerable<IFace> vertFaces = this[v.Edges].SelectMany(e => e.Faces).Distinct();
+                /*foreach (IEdgeKey ek in v.Edges)
                 {
                     vertFaces.UnionWith(Edges[ek].Faces);
                 }
+                */
                 
                 GridVector3 avgNormal = GridVector3.Zero;
                 foreach (IFace f in vertFaces)

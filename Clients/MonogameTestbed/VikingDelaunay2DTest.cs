@@ -575,7 +575,7 @@ namespace MonogameTestbed
                 TriangulatedEdgeView.LineRadius = 1.5;
                 TriangulatedEdgeView.color = Color.Beige;
 
-                var edgeKeys = mesh.Edges.Keys;
+                var edgeKeys = mesh.Edges.Keys.ToArray();
                 for (int i = 0; i < lineViews.Length; i++)
                 {
                     IEdgeKey key = edgeKeys[i];

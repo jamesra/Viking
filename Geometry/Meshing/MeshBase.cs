@@ -64,7 +64,7 @@ namespace Geometry.Meshing
         where VERTEX : IVertex
     {
         IReadOnlyList<VERTEX> Verticies { get; }
-        SortedList<IEdgeKey, IEdge> Edges { get; }
+        Dictionary<IEdgeKey, IEdge> Edges { get; } //If you are ever tempted to try a sortedlist profiling showed dictionary to be much faster during bajaj mesh generation
         SortedSet<IFace> Faces { get; }
 
         VERTEX this[long index] { get; }
@@ -202,14 +202,14 @@ namespace Geometry.Meshing
         where VERTEX : IVertex
     {
         protected readonly List<VERTEX> _Verticies = new List<VERTEX>();
-        protected readonly SortedList<IEdgeKey, IEdge> _Edges = new SortedList<IEdgeKey, IEdge>();
+        protected readonly Dictionary<IEdgeKey, IEdge> _Edges = new Dictionary<IEdgeKey, IEdge>();
         protected readonly SortedSet<IFace> _Faces = new SortedSet<IFace>();
 
 //        public event MeshChangeEvent OnMeshChange;
 //        public delegate void MeshChangeEvent(MeshBase<VERTEX> mesh, MeshChangeEventArgs e);
 
         public virtual IReadOnlyList<VERTEX> Verticies { get { return _Verticies; } }
-        public SortedList<IEdgeKey, IEdge> Edges { get { return _Edges; } }
+        public Dictionary<IEdgeKey, IEdge> Edges { get { return _Edges; } }
         public SortedSet<IFace> Faces { get { return _Faces; } }
 
         /* Functions for mesh users to override how mesh objects are created*/

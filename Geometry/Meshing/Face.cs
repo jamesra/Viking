@@ -175,7 +175,7 @@ namespace Geometry.Meshing
         {
             if (_hashcode.HasValue == false)
             {
-                _hashcode = _iVerts.Sum();
+                _hashcode = (int)(((ulong)_iVerts[0] * (ulong)_iVerts[1] * (ulong)_iVerts[2]) & uint.MaxValue);//_iVerts.Sum();
             }
 
             return _hashcode.Value;

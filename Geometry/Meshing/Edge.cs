@@ -64,7 +64,7 @@ namespace Geometry.Meshing
             int comparison = other.A - this.A;
             if (comparison == 0)
             {
-                comparison = other.B - this.B;
+                return other.B - this.B;
             }
 
             return comparison;
@@ -75,7 +75,7 @@ namespace Geometry.Meshing
             int comparison = other.A - this.A;
             if(comparison == 0)
             {
-                comparison = other.B - this.B;
+                return other.B - this.B;
             }
 
             return comparison;
@@ -114,7 +114,7 @@ namespace Geometry.Meshing
 
         public override int GetHashCode()
         {
-            return System.Convert.ToInt32(((long)A * (long)B) & int.MaxValue);
+            return (int)(((long)A * (long)B) & int.MaxValue);
         }
 
         public override string ToString()

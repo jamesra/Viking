@@ -416,12 +416,12 @@ namespace MonogameTestbed
         {
             while(true)
             {
-                if (CompletedMeshes.TryDequeue(out BajajGeneratorMesh completedMesh))
+                while(CompletedMeshes.TryDequeue(out BajajGeneratorMesh completedMesh))
                 {
                     CompositeMeshModel.AddSlice(completedMesh);
-
-                    System.Threading.Thread.Sleep(100);
                 }
+
+                System.Threading.Thread.Sleep(100);
             }
         }
 
@@ -622,7 +622,7 @@ namespace MonogameTestbed
 
             //BajajMeshGenerator.ConvertToMeshGraph(graph);
 
-            
+            /*
             double MaxZ = graph.Nodes.Values.Max(n => n.Z);
             double MinZ = graph.Nodes.Values.Min(n => n.Z);
 
@@ -635,7 +635,7 @@ namespace MonogameTestbed
                 {
                     graph.RemoveNode(node.ID);
                 }
-            }
+            }*/
             
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
