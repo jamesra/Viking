@@ -73,6 +73,7 @@ namespace Geometry
             { 
                 if (item.Equals(value))
                     return i;
+                i += 1;
             }
 
             return -1;
