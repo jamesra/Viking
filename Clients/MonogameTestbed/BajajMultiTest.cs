@@ -96,11 +96,15 @@ namespace MonogameTestbed
         {
             get
             {
-                return PolyViews.PointLabelType;
+                if(PolyViews != null)
+                    return PolyViews.PointLabelType;
+
+                return IndexLabelType.NONE;
             }
             set
             {
-                PolyViews.PointLabelType = value;
+                if(PolyViews != null)
+                    PolyViews.PointLabelType = value;
             }
         }
         
@@ -130,6 +134,12 @@ namespace MonogameTestbed
         }
 
         readonly MorphologyGraph Graph;
+        /// <summary>
+        /// Used to lock the mesh views for individual slices
+        /// </summary>
+        private object drawlock = new object();
+
+        System.Threading.Thread BuildCompositeThread = null;
         //SliceGraph sliceGraph;
 
         public BajajMultiOTVAssignmentView(MorphologyGraph graph)
@@ -145,28 +155,44 @@ namespace MonogameTestbed
 
             GenerateMesh();
 
-            System.Threading.Thread BuildCompositeThread = new System.Threading.Thread(this.MeshCompositeTask);
-            BuildCompositeThread.Start();
+            //BuildCompositeThread = new System.Threading.Thread(this.MeshCompositeTask);
+            //BuildCompositeThread.IsBackground = true;
+            //BuildCompositeThread.Start();
         }
 
         MeshView<VertexPositionColor> SliceMeshView = null;
         MeshView<VertexPositionNormalColor> CompositeMeshView = null;
 
-        public SliceGraphMeshModel CompositeMeshModel = null;
+        //public SliceGraphMeshModel CompositeMeshModel = null;
          
+        public MeshAssemblyPlanner meshAssemblyPlan = null;
 
-        object drawlock = new object();
-
-        private void OnSliceCompleted(BajajGeneratorMesh mesh)
+        /// <summary>
+        /// Called when the test window is closed
+        /// </summary>
+        public void OnUnloadContent()
         {
-            this.AddMesh(mesh);
+            if (BuildCompositeThread == null)
+                return;
+
+            BuildCompositeThread.Abort();
         }
 
-        private void AddMesh(BajajGeneratorMesh mesh)
+        private void OnSliceCompleted(BajajGeneratorMesh mesh, bool Success)
         {
+            this.AddMesh(mesh, Success);
+        }
+
+        private void AddMesh(BajajGeneratorMesh mesh, bool Success)
+        {
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                meshAssemblyPlan.OnMeshCompleted(mesh, Success);
+                //CompletedMeshes.Enqueue(mesh);
+            });
 
             //MeshModel<VertexPositionColor> meshViewModel = BajajOTVAssignmentView.CreateFaceView(mesh);
-            CompletedMeshes.Enqueue(mesh);
+            //CompletedMeshes.Enqueue(mesh);
             /*lock (drawlock)
             { 
                 //SliceMeshView.models.Add(meshViewModel);
@@ -174,6 +200,8 @@ namespace MonogameTestbed
             }
             */
         }
+
+
 
         internal void GenerateMesh()
         {
@@ -193,11 +221,15 @@ namespace MonogameTestbed
             CompositeMeshView = new MeshView<VertexPositionNormalColor>();
             CompositeMeshView.Name = "Composite Mesh";
 
-            CompositeMeshModel = new SliceGraphMeshModel();
+            //CompositeMeshModel = new SliceGraphMeshModel();
+            //CompositeMeshView.models.Add(CompositeMeshModel.model);
 
-            CompositeMeshView.models.Add(CompositeMeshModel.model);
+            Trace.WriteLine("Begin Slice graph construction");
+            SliceGraph sliceGraph = SliceGraph.Create(graph, 2.0);
+            Trace.WriteLine("End Slice graph construction");
 
-            List<BajajGeneratorMesh> meshes = BajajMeshGenerator.ConvertToMesh(Graph, OnSliceCompleted);
+            meshAssemblyPlan = new MeshAssemblyPlanner(sliceGraph);
+            List<BajajGeneratorMesh> meshes = BajajMeshGenerator.ConvertToMesh(sliceGraph, OnSliceCompleted);
 
 
 
@@ -317,8 +349,11 @@ namespace MonogameTestbed
                 {
                     if (MeshViews != null && MeshViews.Count > 0 && ShowMesh)
                     {
-                        MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.None);
-                        ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
+                        lock (drawlock)
+                        {
+                            MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.None);
+                            ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
+                        }
                     }
                 }
                 else
@@ -408,7 +443,7 @@ namespace MonogameTestbed
             LabelView label = new LabelView(ViewLabels.ToString(), scene.VisibleWorldBounds.UpperLeft, HorizontalAlignment.LEFT, VerticalAlignment.BOTTOM, scaleFontWithScene: false);
             LabelView.Draw(window.spriteBatch, window.fontArial, scene, new LabelView[] { label }); 
         }
-
+        /*
         /// <summary>
         /// Dequeues entries from the CompletedMeshes
         /// </summary>
@@ -416,14 +451,32 @@ namespace MonogameTestbed
         {
             while(true)
             {
+                bool NewMesh = false;
                 while(CompletedMeshes.TryDequeue(out BajajGeneratorMesh completedMesh))
                 {
-                    CompositeMeshModel.AddSlice(completedMesh);
+                    //CompositeMeshModel.AddSlice(completedMesh)
+                    //System.Threading.Thread.Sleep(1000); 
+                    //var leaf = meshAssemblyPlan.Slices[completedMesh.Slice.Key];
+
+                    NewMesh = true;
                 }
 
-                System.Threading.Thread.Sleep(100);
+                if (NewMesh)
+                {
+                    lock (drawlock)
+                    { 
+                        CompositeMeshView.models.Clear();
+
+                        foreach (var model in meshAssemblyPlan.MeshModels)
+                        {
+                            CompositeMeshView.models.Add(model);
+                        }
+                    }
+                }
+
+                System.Threading.Thread.Sleep(100); //Consume all of the objects in the queue every interval
             }
-        }
+        }*/
 
         public void Draw3D(MonoTestbed window, Scene3D scene)
         {
@@ -441,7 +494,7 @@ namespace MonogameTestbed
             //Expand our model if we can
             
 
-            //lock (drawlock)
+            lock (drawlock)
             {
                 if (ShowCompositeMesh == false)
                 {
@@ -456,12 +509,13 @@ namespace MonogameTestbed
                     {
                         try
                         {
-                            CompositeMeshModel.ModelLock.EnterReadLock();
-                            CompositeMeshView.Draw(window.GraphicsDevice, scene, CullMode);
+                            //CompositeMeshModel.ModelLock.EnterReadLock();
+                            //CompositeMeshView.Draw(window.GraphicsDevice, scene, CullMode);
+                            MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene, window.basicEffect, CullMode, meshAssemblyPlan.MeshModels);
                         }
                         finally
                         {
-                            CompositeMeshModel.ModelLock.ExitReadLock();
+                            //CompositeMeshModel.ModelLock.ExitReadLock();
                         }
                         
                         //ViewLabels.AppendLine(CompositeMeshView.Name);
@@ -626,7 +680,7 @@ namespace MonogameTestbed
             double MaxZ = graph.Nodes.Values.Max(n => n.Z);
             double MinZ = graph.Nodes.Values.Min(n => n.Z);
 
-            double Cutoff = (MaxZ - MinZ) / 10;
+            double Cutoff = (MaxZ - MinZ) / 20;
             Cutoff = MaxZ - Cutoff;
             
             foreach(var node in graph.Nodes.Values.ToList())
@@ -635,8 +689,8 @@ namespace MonogameTestbed
                 {
                     graph.RemoveNode(node.ID);
                 }
-            }*/
-            
+            }
+            */
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
             wrapView = new MonogameTestbed.BajajMultiOTVAssignmentView(graph);// (nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
@@ -764,7 +818,8 @@ namespace MonogameTestbed
 
             if(Gamepad.Back_Clicked)
             {
-                SaveMesh(wrapView.CompositeMeshModel.composite);
+                if(wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
+                    SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite);
             }
 
 
@@ -801,7 +856,11 @@ namespace MonogameTestbed
 
         public void UnloadContent(MonoTestbed window)
         {
-            this.scene.SaveCamera(TestMode.BAJAJTEST);
+            if(this.wrapView != null)
+                this.wrapView.OnUnloadContent();
+
+            if(window.Scene != null)
+                window.Scene.SaveCamera(TestMode.BAJAJTEST);
         }
 
         public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh)

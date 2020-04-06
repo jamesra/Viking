@@ -103,7 +103,7 @@ namespace MorphologyMesh
     public static class BajajMeshGenerator
     {
 
-        public delegate void OnMeshGeneratedEventHandler(BajajGeneratorMesh mesh);
+        public delegate void OnMeshGeneratedEventHandler(BajajGeneratorMesh mesh, bool Success);
 
 
         /// <summary>
@@ -131,7 +131,6 @@ namespace MorphologyMesh
 
             List<Task<BajajGeneratorMesh>> meshGenTasks = new List<Task<BajajGeneratorMesh>>();
 
-            
             //var SimplerPolygon = CreateSimplerPolygonLookup(graph, 2.0);
             
             foreach (Slice slice in sliceGraph.Nodes.Values)
@@ -161,6 +160,7 @@ namespace MorphologyMesh
             }
             //listBajajMeshGenerators.AddRange(meshGenTasks.Select(t => t.Result));
 
+            listBajajMeshGenerators.Sort(Comparer<BajajGeneratorMesh>.Create((a, b) => a.AverageZ.CompareTo(b.AverageZ)));  //Sorting the bajaj generators before launching tasks is optional but built the model in a predictable order for debug viewing
             List<Task> bajajTasks = new List<Task>();
 
             BajajGeneratorMesh[] BajajGeneratorMeshArray = listBajajMeshGenerators.ToArray();
@@ -170,10 +170,20 @@ namespace MorphologyMesh
                 //BajajGeneratorMesh mesh = listBajajMeshGenerators[iMesh];
                 bajajTasks.Add(Task.Factory.StartNew((i) =>
                    {
-                       GenerateFaces(BajajGeneratorMeshArray[(int)i]);
-                       if(OnMeshGenerated != null)
+                       try
                        {
-                           OnMeshGenerated(BajajGeneratorMeshArray[(int)i]);
+                           GenerateFaces(BajajGeneratorMeshArray[(int)i]);
+                           if (OnMeshGenerated != null)
+                           {
+                               OnMeshGenerated(BajajGeneratorMeshArray[(int)i], true);
+                           }
+                       }
+                       catch
+                       {
+                           if (OnMeshGenerated != null)
+                           {
+                               OnMeshGenerated(BajajGeneratorMeshArray[(int)i], false);
+                           }
                        }
                    }, iMesh));
                    
@@ -255,7 +265,7 @@ namespace MorphologyMesh
             }
 #endif
 */
-            return listBajajMeshGenerators;
+            return null;//listBajajMeshGenerators;
         }
 
         public static void GenerateFaces(BajajGeneratorMesh mesh)
@@ -366,6 +376,10 @@ namespace MorphologyMesh
                     mesh.AddFace(mesh_face);
                 }
             }
+
+            //For corresponding verticies, we'll create edges where
+            //int[] triMeshCorrespondingVerts = TriMeshToMesh.Where(item => item.Value.Count > 1).Select(item => item.Key).ToArray();
+
 
             mesh.ClassifyMeshEdges();
             //BajajGeneratorMesh.AddTriangulationEdgesToMesh(triMesh, mesh);
@@ -527,9 +541,20 @@ namespace MorphologyMesh
 
             return;
         }
+        /*
+        /// <summary>
+        /// This is a specialized criteria function that quickly checks for faces for corresponding verticies.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="checkedEdges"></param>
+        /// <param name="current"></param>
+        /// <param name="candidate"></param>
+        /// <returns></returns>
+        private static bool CorrespondingVertexCloseableFaceCriteriaFunction(Stack<int> path, SortedSet<IEdgeKey> checkedEdges, IVertex current, IEdgeKey candidate)
+        {
 
-
-
+        }
+        */
         public static void CompleteCorrespondingVertexFaces(MorphRenderMesh mesh)
         {
             //Corresponding edges should have two faces if they are complete
@@ -554,13 +579,10 @@ namespace MorphologyMesh
                         break;
 
                     List<int> Face = null;
-                    Face = mesh.FindAnyCloseableFace(vA.Index, vB, edge);
-
-                    //TODO: DEBUG why this can happen
-                    if (Face == null)
-                        continue; 
+                    Face = mesh.FindAnyCloseableFace(vA.Index, vB, edge, MaxPathLength: 4);
                     
-                    if (Face.Count <= 4)
+                    //Check for an existing pathway for a face, if it exists, use it to be consistent with the model
+                    if (Face?.Count <= 4)
                     {
                         MorphMeshFace face = new MorphMeshFace(Face);
                         mesh.AddFace(face);
@@ -570,17 +592,104 @@ namespace MorphologyMesh
                             mesh.SplitFace(face);
                         }
                     }
-                    else
+                    else //Face is null, so there isn't an obvious mapping
                     {
                         //We cannot count on the order of the verticies returned in Face. 
                         //If we want to get correct CCW winding it takes extra work
+                        int iVA = v.Index;
+                        int iVB = v.Corresponding.Value;
 
-                        int iVA = Face.IndexOf(vA.Index);
-                        int iVB = Face.IndexOf(vB.Index);
+                        //int iVLower = mesh.IsUpperPolygon[vA.PolyIndex.Value.iPoly] ? iVB : iVA;
+                        //int iVUpper = iVLower == iVB ? iVA : iVB;
 
-                        int iVLower = mesh.IsUpperPolygon[vA.PolyIndex.Value.iPoly] ? iVB : iVA;
-                        int iVUpper = iVLower == iVB ? iVA : iVB;
-                        
+                        PointIndex vPolyIndex = v.PolyIndex.Value;
+                        PointIndex vCorrespondingIndex = mesh[iVB].PolyIndex.Value;
+                        GridPolygon oppositePolygon = mesh.Polygons[vCorrespondingIndex.iPoly];
+
+                        //Check all of the edge cases
+
+                        /*MorphMeshEdge testNextNext = new MorphMeshEdge(EdgeType.UNKNOWN, mesh[vPolyIndex.Next].Index, mesh[vCorrespondingIndex.Next].Index);
+                        MorphMeshEdge testNextPrev = new MorphMeshEdge(EdgeType.UNKNOWN, mesh[vPolyIndex.Next].Index, mesh[vCorrespondingIndex.Previous].Index);
+                        MorphMeshEdge testPrevPrev = new MorphMeshEdge(EdgeType.UNKNOWN, mesh[vPolyIndex.Previous].Index, mesh[vCorrespondingIndex.Previous].Index);
+                        MorphMeshEdge testPrevNext = new MorphMeshEdge(EdgeType.UNKNOWN, mesh[vPolyIndex.Previous].Index, mesh[vCorrespondingIndex.Next].Index);
+                        */
+
+                        EdgeType NNType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Next, vCorrespondingIndex.Next);
+                        EdgeType NPType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Next, vCorrespondingIndex.Previous);
+                        EdgeType PPType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Previous, vCorrespondingIndex.Previous);
+                        EdgeType PNType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Previous, vCorrespondingIndex.Next);
+
+                        if(NNType.IsValid() || NNType == EdgeType.FLIPPED_DIRECTION)
+                        {
+                            int[] TriFace = new int[] { mesh[vPolyIndex.Next].Index, iVA, iVB };
+                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                            TriFace = new int[] { mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Next].Index, iVB };
+                            face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                        }
+
+                        if (NPType.IsValid() || NPType == EdgeType.FLIPPED_DIRECTION)
+                        {
+                            int[] TriFace = new int[] { mesh[vPolyIndex.Next].Index, iVA, iVB };
+                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                            TriFace = new int[] { mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Next].Index, iVB };
+                            face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                        }
+
+                        if (PPType.IsValid() || PPType == EdgeType.FLIPPED_DIRECTION)
+                        {
+                            int[] TriFace = new int[] { mesh[vPolyIndex.Previous].Index, iVA, iVB };
+                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                            TriFace = new int[] { mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Previous].Index, iVB };
+                            face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                        }
+
+                        if (PNType.IsValid() || PNType == EdgeType.FLIPPED_DIRECTION)
+                        {
+                            int[] TriFace = new int[] { mesh[vPolyIndex.Previous].Index, iVA, iVB };
+                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                            TriFace = new int[] { mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Previous].Index, iVB };
+                            face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                        }
+                        /*
+
+                        bool NextContains = oppositePolygon.Contains(vPolyIndex.Next.Point(mesh.Polygons));
+                        bool PrevContains = oppositePolygon.Contains(vPolyIndex.Previous.Point(mesh.Polygons));
+
+                        bool FlipContainsTest = vCorrespondingIndex.IsInner; // false;// vPolyIndex.IsInner ^ vCorrespondingIndex.IsInner;
+
+                        if(FlipContainsTest)
+                        {
+                            NextContains = !NextContains;
+                            PrevContains = !PrevContains;
+                        }
+
+                        if (NextContains == false)
+                        {
+                            int iOther = mesh[vPolyIndex.Next].Index;
+                            int[] TriFace = new int[] { iOther, iVA, iVB };
+                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                        }
+
+                        if(PrevContains == false)
+                        {
+                            int iOther = mesh[vPolyIndex.Previous].Index;
+                            int[] TriFace = new int[] { iOther, iVA, iVB };
+                            MorphMeshFace face = new MorphMeshFace(TriFace);
+                            mesh.AddFace(face);
+                        }
+
+                        */
+
+                        /*
                         Debug.Assert(Math.Abs(iVLower - iVUpper) == 1 || (Math.Abs(iVLower - iVUpper) == Face.Count - 1));
 
                         int iOther = iVLower - 1;
@@ -604,13 +713,16 @@ namespace MorphologyMesh
                                 }
                             }
                         }
+                        */
 
                         //I used to try to get winding correct, the implementation wasn't correct.  Now I handle it at the end of mesh generation.
                         //int[] TriFace = CounterClockwise ? new int[] { iOther, iVLower, iVUpper } : new int[] { iOther, iVUpper, iVLower};
 
+                        /*
                         int[] TriFace = new int[] { iOther, iVLower, iVUpper };
                         MorphMeshFace face = new MorphMeshFace(TriFace.Select(i => Face[i])); 
                         mesh.AddFace(face);
+                        */
                     }
                 }
             }

@@ -83,6 +83,19 @@ namespace MorphologyMesh
         internal virtual bool[] IsUpperPolygon { get; }
 
         private Dictionary<PointIndex, long> PolyIndexToVertex = new Dictionary<PointIndex, long>();
+
+        [NonSerialized]
+        private double? _avgZ = null; //Cached average Z level of polygons use only for sorting purposes
+        public double AverageZ
+        {
+            get
+            {
+                if (_avgZ.HasValue == false)
+                    _avgZ = PolyZ.Average();
+
+                return _avgZ.Value;
+            }
+        }
     
         /// <summary>
         /// Generates a MorphRenderMesh for a set of polygons and ZLevels.
@@ -107,36 +120,6 @@ namespace MorphologyMesh
             //AddCorrespondingVerticies(PolygonsByZ);
 
             PopulateMesh(this);
-        }
-
-        public static void AddCorrespondingVerticies(SortedList<double, SortedList<int, GridPolygon>> PolygonsByZ)
-        {
-            double[] ZLevels = PolygonsByZ.Keys.ToArray();
-            foreach (var combo in ZLevels.CombinationPairs())
-            {
-                double Z_A = combo.A;
-                double Z_B = combo.B;
-
-                SortedList<int, GridPolygon> APolys = PolygonsByZ[Z_A];
-                SortedList<int, GridPolygon> BPolys = PolygonsByZ[Z_B];
-
-                List<GridVector2> added_intersections;
-                foreach (GridPolygon A in APolys.Values)
-                {
-                    foreach (GridPolygon B in BPolys.Values)
-                    {
-                        added_intersections = A.AddPointsAtIntersections(B);
-# if DEBUG
-                        foreach (GridVector2 p in added_intersections)
-                        {
-                            Debug.Assert(A.IsVertex(p));
-                            Debug.Assert(B.IsVertex(p));
-                        }
-#endif
-                        //B.AddPointsAtIntersections(A);
-                    }
-                }
-            }
         }
 
         /// <summary>
@@ -204,12 +187,27 @@ namespace MorphologyMesh
                 {
                     GridVector2 originalPos = v.Position.XY();
                     MorphMeshVertex corresponding = mesh[v.Corresponding.Value];
+
+                    /*
                     double fudgeScale = Math.Min(v.Edges.Where(e => mesh[e].Type != EdgeType.CORRESPONDING).Select(e => mesh.ToSegment(e).Length).Min(),
                                                  corresponding.Edges.Where(e => mesh[e].Type != EdgeType.CORRESPONDING).Select(e => mesh.ToSegment(e).Length).Min());
                     fudgeScale = fudgeScale * 0.05;
                     GridVector3 fudgeFactor = new GridVector3(fudgeScale, fudgeScale, 0);
                     v.Position = v.Position + fudgeFactor;
                     corresponding.Position = corresponding.Position + fudgeFactor;
+                    
+                    */
+                    PointIndex cIndex = corresponding.PolyIndex.Value;
+                    var p1 = cIndex.Previous.Previous.Point(mesh.Polygons);
+                    var p2 = cIndex.Previous.Point(mesh.Polygons);
+                    var p3 = cIndex.Next.Point(mesh.Polygons);
+                    var p4 = cIndex.Next.Next.Point(mesh.Polygons);
+                    var newPositions = CatmullRom.FitCurveSegment(p1, p2, p3, p4,
+                                                        new double[] { GridVector2.Distance(cIndex.Point(mesh.Polygons), p2) / GridVector2.Distance(p3, p2) });
+                    GridVector2 newPosition = newPositions[0];
+
+                    v.Position = newPosition.ToGridVector3(v.Position.Z);
+                    corresponding.Position = newPosition.ToGridVector3(corresponding.Position.Z);
                     //PositionToIndex.Add(v.Position.XY(), corresponding.Index);
                     NudgedVerts.Add(v.Index);
                     NudgedVerts.Add(corresponding.Index);
@@ -465,10 +463,10 @@ namespace MorphologyMesh
 
                         region = new MorphMeshRegion(mesh, listRegionFaces, RegionType.UNTILED);
 
-                        foreach (MorphMeshFace rFace in region.Faces)
+                        /*foreach (MorphMeshFace rFace in region.Faces)
                         {
                             mesh.AddFace(rFace);
-                        }
+                        }*/
 
                         graph.AddNode(region);
                         break;
@@ -546,22 +544,8 @@ namespace MorphologyMesh
             }
             else
             {
-                //Triangulate the region border to identify faces of the region
-                GridVector3[] region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
+                TryRemoveCorrespondingVerticiesFromRegionFaces(mesh, Face);
 
-                //Dictionary<GridVector2, long> PointToMeshIndex = new Dictionary<GridVector2, long>();
-                //Dictionary<GridVector2, int> PointToMeshIndex = Face.ToDictionary<int, GridVector2>(iVert => mesh[iVert].Position.XY());
-
-                //If there are any duplicate points that indicates a corresponding contour was involved.  In this case we cut the polygon into two halves and triangulate those
-                int[] countDuplicatesInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
-
-                //If there are corresponding verticies we can have duplicate points in the set which will break triangulation.
-                if (countDuplicatesInstances.Max() > 1)
-                {
-                    //Break the corresponding verticies into sub-polygons and build triangles for each
-                    throw new NotImplementedException("Corresponding points in region");
-                }
-                
                 //Create a polygon for the region
                 GridPolygon regionBorder = new GridPolygon(Face.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
                 PolygonVertexEnum vertEnumerator = new PolygonVertexEnum(regionBorder);
@@ -614,7 +598,29 @@ namespace MorphologyMesh
                 }
 
                 return listRegionFaces;
+            } 
+        }
+
+        private static List<Face> TryRemoveCorrespondingVerticiesFromRegionFaces(MorphRenderMesh mesh, List<int> Face)
+        {
+            //Triangulate the region border to identify faces of the region
+            GridVector3[] region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
+
+            //If there are any duplicate points that indicates a corresponding contour was involved.  In this case we cut the polygon into two halves and triangulate those
+            int[] countDuplicatesInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
+
+            if (countDuplicatesInstances.Max() == 1)
+            {
+                return new List<Face>();
+                
             }
+
+            throw new NotImplementedException("Corresponding points in region");
+            //If there are corresponding verticies we can have duplicate points in the set which will break triangulation.
+            // //Break the corresponding verticies into sub-polygons and build triangles for each
+            //
+
+            //Find the verticies before and after the corresponding pair and add a face
 
         }
 
@@ -716,7 +722,8 @@ namespace MorphologyMesh
         /// Find all edges that enclose a loop of verticies missing faces
         /// Returns a list of vertex indicies that describe the perimeter of a mesh region without a face, or null if one cannot be found
         /// </summary>
-        public List<int> IdentifyIncompleteFace(IVertex origin)
+        /// <param name="MaxFaceVerts">Optional param to specify a max path length to shorten searches</param>
+        public List<int> IdentifyIncompleteFace(IVertex origin, int? MaxFaceVerts=null)
         {
             //Identify edges missing faces
             List<IEdge> edges = origin.Edges.Select(key => Edges[key]).Where(e => e.Faces.Count < 2 ).ToList();
@@ -724,7 +731,7 @@ namespace MorphologyMesh
             List<int> ShortestFace = null;
             foreach (var edge in edges)
             {
-                List<int> Face = FindAnyCloseableFace(origin.Index, this[edge.OppositeEnd(origin.Index)], edge);
+                List<int> Face = FindAnyCloseableFace(origin.Index, this[edge.OppositeEnd(origin.Index)], edge, MaxPathLength: MaxFaceVerts);
                 if (Face != null)
                 {
                     if (ShortestFace == null)
@@ -763,8 +770,16 @@ namespace MorphologyMesh
         /// <param name="testEdge"></param>
         /// <param name="CheckedEdges"></param>
         /// <param name="Path"></param>
+        /// <param name="MaxPathLength">Maximum length of the path.  If a potential path exceeds this length it is abandoned.</param>
+        /// <param name="EdgeCriteriaFunc">If not null, edgekeys passes to this function must return true to be included in the path</param>
         /// <returns></returns>
-        public List<int> FindAnyCloseableFace(int TargetVert, IVertex current, IEdge testEdge, SortedSet<IEdgeKey> CheckedEdges = null, Stack<int> Path = null)
+        public List<int> FindAnyCloseableFace(  int TargetVert,
+                                                IVertex current,
+                                                IEdge testEdge,
+                                                SortedSet<IEdgeKey> CheckedEdges = null,
+                                                Stack<int> Path = null,
+                                                int? MaxPathLength = null,
+                                                Func<Stack<int>, SortedSet<IEdgeKey>, IVertex, IEdgeKey, bool> EdgeCriteriaFunc=null)
         {
             if(CheckedEdges == null)
             {
@@ -793,6 +808,11 @@ namespace MorphologyMesh
                 //We've looped into our own stack
                 return null;
             }
+            else if (MaxPathLength.HasValue && Path.Count >= MaxPathLength.Value)
+            {
+                //This path is too long, move on
+                return null;
+            }
             else
             {
                 //Make sure the face formed by the top three entries in the path is not already present in the mesh
@@ -812,31 +832,38 @@ namespace MorphologyMesh
             }
 
             List<MorphMeshEdge> EdgesToCheck = new List<MorphMeshEdge>();
-            foreach(IEdgeKey edgekey in current.Edges.Where(e => !CheckedEdges.Contains(e)))
+            if (EdgeCriteriaFunc == null)
+            {   
+                foreach (IEdgeKey edgekey in current.Edges.Where(e => !CheckedEdges.Contains(e)))
+                {
+                    MorphMeshEdge edge = this.Edges[edgekey] as MorphMeshEdge;
+                    if (edge.Type == EdgeType.CONTOUR)
+                    {
+                        //Contour edges only need one face to be complete
+                        if (edge.Faces.Count == 0)
+                        {
+                            EdgesToCheck.Add(edge);
+                        }
+                    }
+                    else
+                    {
+                        if (edge.Faces.Count < 2)
+                        {
+                            EdgesToCheck.Add(edge);
+                        }
+                    }
+                }
+            }
+            else
             {
-                MorphMeshEdge edge = this.Edges[edgekey] as MorphMeshEdge;
-                if(edge.Type == EdgeType.CONTOUR)
-                {
-                    //Contour edges only need one face to be complete
-                    if(edge.Faces.Count == 0)
-                    {
-                        EdgesToCheck.Add(edge);
-                    }
-                }
-                else
-                {
-                    if(edge.Faces.Count < 2)
-                    {
-                        EdgesToCheck.Add(edge);
-                    }
-                }
+                EdgesToCheck = current.Edges.Where(e => EdgeCriteriaFunc(Path, CheckedEdges, current, e)).Select(key => this.Edges[key] as MorphMeshEdge).ToList();
             }
 
             List<int> ShortestFace = null;
             if (EdgesToCheck.Count == 1)
             {
                 MorphMeshEdge edge = EdgesToCheck.First();
-                return FindAnyCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, CheckedEdges, Path);
+                return FindAnyCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, CheckedEdges, Path, MaxPathLength, EdgeCriteriaFunc);
             }
             else if(EdgesToCheck.Count > 1)
             {
@@ -845,7 +872,7 @@ namespace MorphologyMesh
                 
                 foreach (MorphMeshEdge edge in EdgesToCheck.OrderBy(e => e.Type != EdgeType.CORRESPONDING))
                 {                    
-                    List<int> Face = FindAnyCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), new Stack<int>(Path.Reverse()));
+                    List<int> Face = FindAnyCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), new Stack<int>(Path.Reverse()), MaxPathLength, EdgeCriteriaFunc);
 
                     if (Face != null)
                     {

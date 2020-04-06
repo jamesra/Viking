@@ -102,13 +102,13 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Returns a curve over a range, does not return the final value which should match the control point
+        /// Returns a curve over a range, does not return the final value which should match p2
         /// </summary>
         /// <param name="p0"></param>
         /// <param name="p1"></param>
         /// <param name="p2"></param>
         /// <param name="p3"></param>
-        /// <param name="NumInterpolations"></param>
+        /// <param name="NumInterpolations">The number of points we would like returned between p1 and p2</param>
         /// <returns></returns>
         public static GridVector2[] FitCurveSegment(GridVector2 p0, GridVector2 p1,
                                                     GridVector2 p2, GridVector2 p3,
@@ -121,13 +121,45 @@ namespace Geometry
             //double t3 = tj(t2, p2, p3, alpha); //TODO: Check why this is calculated but not used
 
             double[] tvalues = new double[NumInterpolations];
-            SortedSet<double> tPoints = new SortedSet<double>(tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0))));
 
-            double[] tPointsArray = tPoints.ToArray();
-
+            double[] tPointsArray;
+            if (NumInterpolations == 1)
+            {
+                tPointsArray = new double[] { 0.5 };
+            }
+            else
+            {
+                tPointsArray = tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0))).ToArray();
+            }
+               
             tvalues = tPointsArray.Select((t, i) => t1 + tPointsArray[i] * (t2 - t1)).ToArray();
 
-            GridVector2[] output = FitCurveSegment(p0, p1, p2, p3, tvalues);
+            GridVector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
+            return output;
+        }
+
+        /// <summary>
+        /// Returns a curve over a range, does not return the final value which should match p2
+        /// </summary>
+        /// <param name="p0"></param>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="tPointsArray">Fraction distances along curve between p1 & p2 to add points</param>
+        /// <returns></returns>
+        public static GridVector2[] FitCurveSegment(GridVector2 p0, GridVector2 p1,
+                                                    GridVector2 p2, GridVector2 p3,
+                                                    double[] tPointsArray)
+        {
+            double alpha = 0.5;
+            double t0 = 0;
+            double t1 = tj(t0, p0, p1, alpha);
+            double t2 = tj(t1, p1, p2, alpha);
+            //double t3 = tj(t2, p2, p3, alpha); //TODO: Check why this is calculated but not used
+               
+            double[] tvalues = tPointsArray.Select((t, i) => t1 + tPointsArray[i] * (t2 - t1)).ToArray();
+
+            GridVector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
             return output;
         }
 
@@ -138,9 +170,9 @@ namespace Geometry
         /// <param name="p1"></param>
         /// <param name="p2"></param>
         /// <param name="p3"></param>
-        /// <param name="NumInterpolations"></param>
+        /// <param name="tvalues">The fractional distances between P1 and P2 that we would like returned</param>
         /// <returns></returns>
-        private static GridVector2[] FitCurveSegment(GridVector2 p0, GridVector2 p1,
+        private static GridVector2[] FitCurveSegmentWithTValues(GridVector2 p0, GridVector2 p1,
                                                     GridVector2 p2, GridVector2 p3,
                                                     double[] tvalues)
         {
@@ -194,7 +226,7 @@ namespace Geometry
 
             tvalues = tPointsArray.Select((t, i) => t1 + tPointsArray[i] * (t2 - t1)).ToArray();
 
-            GridVector2[] output = FitCurveSegment(p0, p1, p2, p3, tvalues);
+            GridVector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
 
             if (!CurveExtensions.TryAddTPointsAboveThreshold(output, ref tPoints))
             {

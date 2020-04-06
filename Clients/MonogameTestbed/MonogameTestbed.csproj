@@ -51,7 +51,8 @@
     <Compile Include="Cursor2DCameraManipulator.cs" />
     <Compile Include="CurveSimplificationTest.cs" />
     <Compile Include="DataSources.cs" />
-    <Compile Include="Views\SectionAccumulatingMeshModel.cs" />
+    <Compile Include="MeshAssemblyPlanner.cs" />
+    <Compile Include="Views\SliceGraphMeshModel.cs" />
     <Compile Include="VikingDelaunay2DTest.cs" />
     <Compile Include="Delaunay2DTest.cs" />
     <Compile Include="Delaunay3DTest.cs" />

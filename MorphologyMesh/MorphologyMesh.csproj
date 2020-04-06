@@ -74,12 +74,11 @@
     <Compile Include="Generators\BajajMeshGenerator.cs" />
     <Compile Include="ConnectionVerticies.cs" />
     <Compile Include="EdgeType.cs" />
-    <Compile Include="Generators\SliceGraph.cs" />
     <Compile Include="MedialAxis.cs" />
     <Compile Include="MeshGraph.cs" />
     <Compile Include="MeshGraphBuilder.cs" />
     <Compile Include="MorphologyMesh\BajajGeneratorMesh.cs" />
-    <Compile Include="MorphologyMesh\MeshingGraph.cs" />
+    <Compile Include="MorphologyMesh\SliceGraph.cs" />
     <Compile Include="MorphologyMesh\MorphMeshRegion.cs" />
     <Compile Include="MorphologyMesh\MorphMeshEdge.cs" />
     <Compile Include="MorphologyMesh\MorphMeshFace.cs" />
@@ -101,6 +100,10 @@
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj">
       <Project>{a89a628b-3ffa-4271-b99a-e45c3d72d3e3}</Project>
       <Name>AnnotationVizLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Clients\MonogameXNAGraphicsShared\Monographics.csproj">
+      <Project>{5f9caf24-0cf5-481f-b7ec-9327ecb269a7}</Project>
+      <Name>Monographics</Name>
     </ProjectReference>
     <ProjectReference Include="..\Geometry\Geometry.csproj">
       <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
@@ -129,6 +132,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Views\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -1236,16 +1236,18 @@ namespace Geometry
         /// Add verticies at intersection points for all intersection points
         /// </summary>
         /// <param name="Polys"></param>
-        public static void AddCorrespondingVerticies(this IReadOnlyList<GridPolygon> Polys)
+        public static List<GridVector2> AddCorrespondingVerticies(this IReadOnlyList<GridPolygon> Polys)
         {
-            List<GridVector2> added_intersections;
+            List<GridVector2> added_intersections = new List<GridVector2>();
             foreach (var combo in Polys.CombinationPairs())
             {
                 GridPolygon A = combo.A;
                 GridPolygon B = combo.B;
-                added_intersections = A.AddPointsAtIntersections(B);
+                List<GridVector2> newIntersections = A.AddPointsAtIntersections(B);
+                added_intersections.AddRange(newIntersections);
+
 #if DEBUG
-                foreach (GridVector2 p in added_intersections)
+                foreach (GridVector2 p in newIntersections)
                 {
                     Debug.Assert(A.IsVertex(p));
                     Debug.Assert(B.IsVertex(p));
@@ -1253,6 +1255,8 @@ namespace Geometry
 #endif
                 //B.AddPointsAtIntersections(A);
             }
+
+            return added_intersections;
         }
     }
 }
