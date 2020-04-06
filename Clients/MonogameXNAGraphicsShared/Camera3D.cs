@@ -39,9 +39,15 @@ namespace VikingXNA
         {
             Vector3 LineOfSightUnitVector = CalculateLineOfSightUnitVector(Rotation.X, Rotation.Y);
             Vector3 OffsetLookAtVector = Position + LineOfSightUnitVector;
-            if (LineOfSightUnitVector == _Up)
+            //OffsetLookAtVector.Normalize();
+            Vector3 LineOfSightUnitVectorAccountingForRoundingError = Position - OffsetLookAtVector;
+            if (LineOfSightUnitVectorAccountingForRoundingError == _Up)
             {
                 _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, Vector3.UnitY);
+            }
+            else if(LineOfSightUnitVectorAccountingForRoundingError == -_Up)
+            {
+                _View = Matrix.CreateLookAt(Position, OffsetLookAtVector, -Vector3.UnitY);
             }
             else
             {
@@ -56,15 +62,29 @@ namespace VikingXNA
         /// Calculate the lookat vector based on the rotation parameters
         /// </summary>
         /// <returns></returns>
-        private Vector3 CalculateLineOfSightUnitVector(float yaw, float pitch)
-        {
+        private static Vector3 CalculateLineOfSightUnitVector(float yaw, float pitch)
+        { 
+
             Vector3 LineOfSightUnitVector = new Vector3(
                 (float)(Math.Cos(yaw) * Math.Sin(pitch)),
                 (float)(Math.Sin(yaw) * Math.Sin(pitch)),
                 (float)(Math.Cos(pitch)));
 
+            LineOfSightUnitVector.Normalize();
+
             return LineOfSightUnitVector;
 
+        }
+
+        /// <summary>
+        /// Calculate the lookat vector based on the rotation parameters
+        /// </summary>
+        /// <returns></returns>
+        private static void CalculateRotationFromLineOfSightUnitVector(Vector3 v, out double yaw, out double pitch)
+        {
+            v.Normalize();
+            yaw = Math.Asin(-v.Y);
+            pitch = Math.Atan2(v.X, v.Z);
         }
 
         public float Pan
@@ -102,9 +122,17 @@ namespace VikingXNA
             }
             set
             {
+                if (value == _Position)
+                    return;
+
                 _LookAt = value;
-                UpdateViewMatrix();
-                CallOnPropertyChanged();
+                var lineOfSightVector = _LookAt - _Position;
+
+                CalculateRotationFromLineOfSightUnitVector(lineOfSightVector, out double yaw, out double pitch);
+                this.Rotation = new Vector3((float)yaw, (float)pitch, (float)this.Rotation.Z);
+                
+                //UpdateViewMatrix();
+                //CallOnPropertyChanged();
             }
         }
 
