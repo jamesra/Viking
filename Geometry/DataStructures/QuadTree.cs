@@ -406,11 +406,12 @@ namespace Geometry
                     return new List<DistanceToPoint<T>>();
                 }
 
-                SortedList<double, List<DistanceToPoint<T>>> pointList = new SortedList<double, List<DistanceToPoint<T>>>(nPoints + 1);
+                //SortedList<double, List<DistanceToPoint<T>>> pointList = new SortedList<double, List<DistanceToPoint<T>>>(nPoints + 1);
+                DistanceList<T> pointList = new DistanceList<T>(nPoints + 1);
                 Root.FindNearestPoints(point, nPoints, ref pointList);
 
                 listResults = new List<DistanceToPoint<T>>();
-                foreach(double distance in pointList.Keys)
+                foreach(double distance in pointList.Data.Keys)
                 {
                     listResults.AddRange(pointList[distance]);
                     if (listResults.Count >= nPoints)
