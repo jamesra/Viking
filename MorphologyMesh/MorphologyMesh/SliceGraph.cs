@@ -206,7 +206,9 @@ namespace MorphologyMesh
                 SliceTopology st = GetSliceTopology(node, MorphNodeToShape);
 
                 //Add corresponding verticies.  Will insert into the polygons without creating new ones, which will update MorphNodeToShape
-                st.Polygons.AddCorrespondingVerticies();
+                List<GridVector2> correspondingPoints = st.Polygons.AddCorrespondingVerticies();
+                 
+                st.AddPointsBetweenAdjacentCorrespondingVerticies(correspondingPoints);
             }
 
             return;
@@ -262,7 +264,7 @@ namespace MorphologyMesh
             return result;
         }
 
-        public SliceTopology GetTopology(Slice group)
+        public SliceTopology GetTopology(Slice slice)
         {
             if (MorphNodeToShape == null)
                 InitializeShapes();
@@ -270,15 +272,37 @@ namespace MorphologyMesh
             if (SliceToTopology == null)
                 SliceToTopology = new Dictionary<ulong, SliceTopology>(this.Nodes.Count);
 
-            if (false == SliceToTopology.ContainsKey(group.Key))
+            if (false == SliceToTopology.ContainsKey(slice.Key))
             {
                 //If we are taking this path there is a danger corresponding verticies won't exist across multiple slices
-                SliceToTopology[group.Key] = GetSliceTopology(group, MorphNodeToShape);
+                SliceToTopology[slice.Key] = GetSliceTopology(slice, MorphNodeToShape);
             }
 
-            return SliceToTopology[group.Key];
+            return SliceToTopology[slice.Key];
         }
-        
+
+        public SliceTopology GetTopology(ulong sliceKey)
+        {
+            if (MorphNodeToShape == null)
+                InitializeShapes();
+
+            if (SliceToTopology == null)
+                SliceToTopology = new Dictionary<ulong, SliceTopology>(this.Nodes.Count);
+
+            if (false == SliceToTopology.ContainsKey(sliceKey))
+            {
+                //If we are taking this path there is a danger corresponding verticies won't exist across multiple slices
+                SliceToTopology[sliceKey] = GetSliceTopology(sliceKey, MorphNodeToShape);
+            }
+
+            return SliceToTopology[sliceKey];
+        }
+
+        private SliceTopology GetSliceTopology(ulong sliceKey, Dictionary<ulong, GridPolygon> polyLookup = null)
+        {
+            return GetSliceTopology(this[sliceKey], polyLookup);
+        }
+
         private SliceTopology GetSliceTopology(Slice group, Dictionary<ulong, GridPolygon> polyLookup = null)
         {
             var Polygons = new List<GridPolygon>();
@@ -373,8 +397,6 @@ namespace MorphologyMesh
             return sb.ToString();
         }
 
-        
-
         public override bool Equals(object obj)
         {
             var group = obj as Slice;
@@ -459,12 +481,60 @@ namespace MorphologyMesh
             IsUpper = isUpper.ToArray();
             PolyZ = polyZ.ToArray();
 
-            Polygons.AddCorrespondingVerticies();
+            var correspondingPoints = Polygons.AddCorrespondingVerticies();
 
             PolyIndexToMorphNodeIndex = polyIndexToMorphNodeIndex == null ? null : polyIndexToMorphNodeIndex.ToArray();
 
             //Assign polys to sets for convienience later
             CalculateUpperAndLowerPolygons(IsUpper, Polygons, out UpperPolygons, out UpperPolyIndicies, out LowerPolygons, out LowerPolyIndicies);
+
+            AddPointsBetweenAdjacentCorrespondingVerticies(correspondingPoints);
+        }
+
+        /// <summary>
+        /// Due to details of the implementation of our bajaj algorithm we need to add a point between adjacent corresponding points on a polygon
+        /// </summary>
+        internal void AddPointsBetweenAdjacentCorrespondingVerticies(List<GridVector2> correspondingPoints)
+        {
+            foreach(GridPolygon poly in Polygons)
+            { 
+                List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
+                SortedList<PointIndex, GridVector2> PointsToInsert = new SortedList<PointIndex, GridVector2>();
+
+                if (correspondingIndicies == null || correspondingIndicies.Count == 0)
+                    continue;
+
+                correspondingIndicies.Sort(); //Sort the indicies so we can simplify our search.
+
+                IIndexSet loopingIndex = new InfiniteSequentialIndexSet(0, correspondingIndicies.Count, 0);
+                PointIndex Current = correspondingIndicies[0];
+                for (long i = 0; i < correspondingIndicies.Count; i++)
+                {
+                    int iNext = (int)loopingIndex[i + 1];
+                    PointIndex Next = correspondingIndicies[iNext];
+
+                    if(Current.Next == Next)
+                    {
+                        //This means two corresponding points are adjacent and we need to insert a midpoint into the polygon between them.
+                        GridVector2[] midPoint = CatmullRom.FitCurveSegment(Current.Previous.Point(poly),
+                                                   Current.Point(poly),
+                                                   Next.Point(poly),
+                                                   Next.Next.Point(poly),
+                                                   new double[] { 0.5 });
+
+                        //Adding the point will change index of all PointIndex values so we wait until the end
+                        PointsToInsert.Add(Current, midPoint[0]);
+                    }
+
+                    Current = Next; 
+                }
+
+                //Reverse the order of our list of points to add so we do not break polygon indicies.  Then insert our points
+                foreach(var addition in PointsToInsert.Reverse())
+                {
+                    poly.AddVertex(addition.Value, addition.Key);
+                }
+            }
         }
 
         private static void CalculateUpperAndLowerPolygons(bool[] IsUpper, GridPolygon[] Polygons, out GridPolygon[] UpperPolygons, out ImmutableSortedSet<int> UpperPolyIndicies, out GridPolygon[] LowerPolygons, out ImmutableSortedSet<int> LowerPolyIndicies)
