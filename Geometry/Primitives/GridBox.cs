@@ -204,7 +204,7 @@ namespace Geometry
         public GridBox(GridRectangle bound_rect, double minZ, double maxZ)
         {
             minVals = new double[] { bound_rect.Left, bound_rect.Bottom, minZ };
-            maxVals = new double[] { bound_rect.Right, bound_rect.Top, minZ };
+            maxVals = new double[] { bound_rect.Right, bound_rect.Top, maxZ };
 
             _HashCode = new int?();
 
