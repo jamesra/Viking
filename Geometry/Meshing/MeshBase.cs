@@ -413,7 +413,7 @@ namespace Geometry.Meshing
 #endif
 
             Edges.Add(e.Key, e);
-
+            
             _Verticies[(int)e.A].AddEdge(e.Key);
             _Verticies[(int)e.B].AddEdge(e.Key);
         }
@@ -450,11 +450,7 @@ namespace Geometry.Meshing
             Trace.WriteLine(string.Format("Add face {0}", face));
 #endif
 
-            foreach (IEdgeKey e in face.Edges)
-            {
-                AddEdge(e);
-                Edges[e].AddFace(face);
-            }
+            AddFaceToEdges(face);
 
             Faces.Add(face);
         }
@@ -467,12 +463,23 @@ namespace Geometry.Meshing
             AddFace(face);
         }
 
+        private void AddFaceToEdges(IFace face)
+        {
+            foreach (IEdgeKey e in face.Edges)
+            {
+                AddEdge(e);
+                Edges[e].AddFace(face);
+            }
+        }
+
         public void AddFaces(ICollection<IFace> faces)
         {
             foreach (IFace f in faces)
             {
-                AddFace(f);
+                AddFaceToEdges(f);
             }
+
+            Faces.UnionWith(faces);
         }
 
         public void RemoveFace(IFace f)
