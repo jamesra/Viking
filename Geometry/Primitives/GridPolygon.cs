@@ -595,6 +595,41 @@ namespace Geometry
         {
             return new PointIndex(iPoly, this.iInnerPoly, this.iVertex, this.NumUniqueInRing);
         }
+
+        /// <summary>
+        /// Return a copy of this PointIndex that refers to the inner polygon index as an exterior polygon coordinate
+        /// </summary>
+        /// <param name="iPoly">Passing -1 will use the innerPolygon's index as the new iPoly value.  Useful for referencing into arrays of interior polygons from a parent polygon.</param>
+        /// <returns></returns>
+        public PointIndex ReindexToOuter(int iPoly=0)
+        {
+            if(this.IsInner == false)
+            {
+                throw new ArgumentException("Trying to ReindexToOuter using a non-interior polygon's PointIndex");
+            }
+
+            if(iPoly == -1)
+            {
+                iPoly = this.iInnerPoly.Value;
+            }
+
+            return new PointIndex(iPoly, this.iVertex, this.NumUniqueInRing);
+        }
+
+        /// <summary>
+        /// Return a copy of this PointIndex that refers to the inner polygon index as an exterior polygon coordinate
+        /// </summary>
+        /// <param name="iPoly">Passing -1 will use the innerPolygon's index as the new iPoly value.  Useful for referencing into arrays of interior polygons from a parent polygon.</param>
+        /// <returns></returns>
+        public PointIndex ReindexToInner(int iInner, int iPoly=0)
+        {
+            if (this.IsInner == true)
+            {
+                throw new ArgumentException("Trying to ReindexToInner using an interior polygon's PointIndex");
+            }
+
+            return new PointIndex(iPoly, iInner, this.iVertex, this.NumUniqueInRing);
+        }
     }
 
     public class PolygonVertexEnum : IEnumerator<PointIndex>, IEnumerator, IEnumerable<PointIndex>, IEnumerable
@@ -1293,22 +1328,39 @@ namespace Geometry
         {
             //Find the line segment the NewControlPoint intersects
             PointIndex nearestSegment = this.NearestSegment(NewControlPointPosition, out double segment_distance);
-            if (segment_distance == 0)
-            {
-                double distance_squared = GridVector2.DistanceSquared(nearestSegment.Point(this), NewControlPointPosition);
-                if (distance_squared == 0)
-                    return;
-            }
+            AddVertex(NewControlPointPosition, nearestSegment);
+        }
 
-            if(nearestSegment.IsInner)
+        /// <summary>
+        /// Adds a vertex to the polygon after the specified point index
+        /// If the point is already a vertex no action is taken
+        /// </summary>
+        /// <param name="NewControlPointPosition"></param>
+        public void AddVertex(GridVector2 NewControlPointPosition, PointIndex nearestSegment)
+        {
+            if (nearestSegment.IsInner)
             {
-                this.InteriorPolygons[nearestSegment.iInnerPoly.Value].AddVertex(NewControlPointPosition); 
+                this.InteriorPolygons[nearestSegment.iInnerPoly.Value].AddVertex(NewControlPointPosition, nearestSegment.ReindexToOuter(0));
             }
             else
             {
+                //Ensure the new point is not on either endpoint of the segment we are inserting between
+                if (nearestSegment.Point(this) == NewControlPointPosition)
+                    return;
+
+                if (nearestSegment.Next.Point(this) == NewControlPointPosition)
+                    return;
+
+                var original_verts = this.ExteriorRing;
                 GridLineSegment[] updatedSegments = this.ExteriorSegments.Insert(NewControlPointPosition, nearestSegment.iVertex);
                 this.ExteriorRing = updatedSegments.Verticies();
-            }             
+
+                /*if (this.IsValid() == false)
+                {
+                    this.ExteriorRing = original_verts;
+                    throw new ArgumentException("Adding vertex resulted in an invalid state.");
+                }*/
+            }
 
             this._SegmentRTree = null; //Reset our RTree since yanking a polygon and changing the indicies are a pain
         }
@@ -1415,6 +1467,84 @@ namespace Geometry
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Return true if the point is one of the polygon verticies
+        /// </summary>
+        /// <param name="point">The PointIndex of the point if it is a vertex</param>
+        /// <returns></returns>
+        public bool TryGetIndex(GridVector2 point, out PointIndex index)
+        {
+            
+            if (!this.BoundingBox.Contains(point))
+            {
+                index = new PointIndex();
+                return false;
+            }
+
+            int iVert = this.ExteriorRing.IndexOf(point);
+            if (iVert >= 0)
+            {
+                index = new PointIndex(0, iVert, this.ExteriorRing.Length-1);
+                return true;
+            }
+
+            for (int iInner = 0; iInner < InteriorPolygons.Count; iInner++)
+            {
+                GridPolygon inner = InteriorPolygons[iInner];
+                if (!inner.BoundingBox.Contains(point))
+                {
+                    continue;
+                }
+
+                if (inner.TryGetIndex(point, out index))
+                {
+                    index = index.ReindexToInner(iInner, 0);
+                    return true;
+                }
+            }
+
+            index = new PointIndex();
+            return false;
+        }
+
+        /// <summary>
+        /// Return true if the point is one of the polygon verticies
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public List<PointIndex> TryGetIndicies(ICollection<GridVector2> points)
+        {
+            List<PointIndex> found = new List<PointIndex>(points.Count);
+            var candidates = points.Where(p => BoundingBox.Contains(p));
+            List<GridVector2> notExterior = new List<GridVector2>(points.Count);
+
+            foreach (GridVector2 point in points)
+            {
+                int iVert = this.ExteriorRing.IndexOf(point);
+                if (iVert >= 0)
+                {
+                    found.Add(new PointIndex(0, iVert, this.ExteriorRing.Length - 1));
+                    continue;
+                }
+                else
+                {
+                    for(int iInner = 0; iInner < InteriorPolygons.Count; iInner++)
+                    {
+                        if (InteriorPolygons[iInner].Contains(point) == false)
+                            continue;
+
+                        if(this.InteriorPolygons[iInner].TryGetIndex(point, out PointIndex innerIndex))
+                        {
+                            found.Add(innerIndex.ReindexToInner(iInner, 0));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return found;
         }
 
         /// <summary>
@@ -2413,14 +2543,15 @@ namespace Geometry
         /// Add a vertex to our rings everywhere the other polygon intersects one of our segments
         /// </summary>
         /// <param name="other"></param>
+        /// <returns>All intersection points, including pre-existing and added</returns>
         public List<GridVector2> AddPointsAtIntersections(GridPolygon other)
         {
-            List<GridVector2> added_intersections = new List<GridVector2>();
+            List<GridVector2> found_or_added_intersections = new List<GridVector2>();
             GridRectangle? overlap = this.BoundingBox.Intersection(other.BoundingBox);
 
             //No work to do if there is no overlap
             if (!overlap.HasValue)
-                return added_intersections;
+                return found_or_added_intersections;
 
             List<GridVector2> newRing = new List<Geometry.GridVector2>();
 
@@ -2458,20 +2589,20 @@ namespace Geometry
                         {
                             //Vertex exists in the other polygon at exact position
                             newRing.Add(p);
-                            added_intersections.Add(p);
+                            found_or_added_intersections.Add(p);
                         }
                         else if (other_vertex_distance < Global.Epsilon)
                         {
                             //Use the position of the existing vertex in the other polygon for our own position
                             newRing.Add(other_vertex_index.Point(other));
-                            added_intersections.Add(other_vertex_index.Point(other));
+                            found_or_added_intersections.Add(other_vertex_index.Point(other));
                         }
                         else
                         {
                             //Intersection point is not a  vertex on either polygon
                             newRing.Add(p);
                             other.AddVertex(p);
-                            added_intersections.Add(p);
+                            found_or_added_intersections.Add(p);
                         }
                         
 
@@ -2486,19 +2617,21 @@ namespace Geometry
                         //We need the point to be exact, so adjust our point accordingly
                         if (other_vertex_distance == 0)
                         {
-                            //No action needed.  Vertex exists in the other polygon at exact position
+                            //No action needed.  Vertex exists in the other polygon at exact position and in this polygon at exact position.
+                            //We still report the intersection though
+                            found_or_added_intersections.Add(other_vertex_index.Point(other));
                         }
                         else if (other_vertex_distance < Global.Epsilon)
                         {
                             //Use the position of the existing vertex in the other polygon for our own position
                             newRing[existingIndex] = other_vertex_index.Point(other);
-                            added_intersections.Add(other_vertex_index.Point(other));
+                            found_or_added_intersections.Add(other_vertex_index.Point(other));
                         }
                         else
                         {
                             //We have the vertex, but not the other polygon.  Add the vertex to the other polygon
                             other.AddVertex(p);
-                            added_intersections.Add(p);
+                            found_or_added_intersections.Add(p);
                         }
 
                     }
@@ -2514,17 +2647,17 @@ namespace Geometry
 
             foreach (GridPolygon otherInnerPolygon in other.InteriorPolygons)
             {
-                added_intersections.AddRange(this.AddPointsAtIntersections(otherInnerPolygon));
+                found_or_added_intersections.AddRange(this.AddPointsAtIntersections(otherInnerPolygon));
             }
 
             foreach (GridPolygon innerPolygon in this._InteriorPolygons)
             {
-                added_intersections.AddRange(innerPolygon.AddPointsAtIntersections(other));
+                found_or_added_intersections.AddRange(innerPolygon.AddPointsAtIntersections(other));
             }
 
             this._SegmentRTree = null; //Reset our RTree since yanking a polygon and changing the indicies are a pain
 
-            return added_intersections;
+            return found_or_added_intersections;
         }
 
         /// <summary>
