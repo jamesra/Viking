@@ -334,6 +334,25 @@ namespace MorphologyMesh
         /// <param name="midpoint"></param>
         /// <param name="Polygons"></param>
         /// <returns></returns>
+        public static EdgeType GetContourEdgeTypeWithOrientation(this MorphRenderMesh mesh, PointIndex A, PointIndex B, GridVector2? midpoint = new GridVector2?())
+        {
+            if (!midpoint.HasValue)
+            {
+                midpoint = ((mesh[A].Position + mesh[B].Position) / 2.0).XY();
+            }
+
+            EdgeType type = GetContourEdgeTypeWithOrientation(A, B, mesh.Polygons, midpoint.Value);  
+            return type;
+        }
+
+        /// <summary>
+        /// Determines the edge type for two verticies that are both on a contour
+        /// </summary>
+        /// <param name="APoly"></param>
+        /// <param name="BPoly"></param>
+        /// <param name="midpoint"></param>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
         public static EdgeType GetContourEdgeTypeWithOrientation(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons, GridVector2 midpoint)
         {
             EdgeType type = GetEdgeType(APoly, BPoly, Polygons, midpoint); 
