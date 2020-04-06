@@ -35,6 +35,7 @@ namespace VikingXNAGraphics
                 effect = new BasicEffect(device);
             }
 
+            RasterizerState originalRasterizerState = device.RasterizerState;
             if (WireFrame)
             {
                 RasterizerState rstate = new RasterizerState();
@@ -58,6 +59,8 @@ namespace VikingXNAGraphics
             effect.TextureEnabled = false;
             effect.Alpha = 1f;
             effect.DiffuseColor = Color.Wheat.ToVector3();
+            //effect.View = scene.View;
+            //effect.Projection = scene.Projection;
 
             //effect.CurrentTechnique = effect.Techniques[0];
 
@@ -72,7 +75,7 @@ namespace VikingXNAGraphics
                 if (model.Verticies == null)
                     continue;
 
-                effect.World = model.ModelMatrix;
+                effect.World = model.ModelMatrix * scene.World;
                 if (model.Edges.Length == 0)
                     continue; 
 
@@ -93,7 +96,11 @@ namespace VikingXNAGraphics
                       
                     device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
                 } 
-            } 
+            }
+
+
+            if (originalRasterizerState != null)
+                device.RasterizerState = originalRasterizerState;
         }
 
         public static bool VertexHasNormals(VERTEXTYPE[] verticies)
@@ -116,31 +123,49 @@ namespace VikingXNAGraphics
             return elements.Any(e => e.VertexElementUsage == VertexElementUsage.Color);
         }
 
-        public static void Draw(GraphicsDevice device, VikingXNA.Scene scene, ICollection<MeshView<VERTEXTYPE>> meshViews)
+        public static void Draw(GraphicsDevice device, IScene scene, BasicEffect effect = null, CullMode cullmode = CullMode.CullCounterClockwiseFace, ICollection < MeshView<VERTEXTYPE>> meshViews = null)
         {
             if (meshViews == null)
                 return;
 
             IEnumerable<MeshModel<VERTEXTYPE>> all_models = meshViews.SelectMany(mv => mv.models);
 
-            Draw(device, scene, all_models);
+            Draw(device, scene, effect, cullmode,  all_models);
         }
 
-        public static void Draw(GraphicsDevice device, VikingXNA.Scene scene, IEnumerable<MeshModel<VERTEXTYPE>> meshmodels)
+        public static void Draw(GraphicsDevice device, IScene scene, BasicEffect effect=null, CullMode cullmode = CullMode.CullCounterClockwiseFace, IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
         {
             if (meshmodels == null)
                 return;
 
-            PolygonOverlayEffect effect = DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device); 
-            if (effect == null)
-                return;
+            if (effect == null || effect.IsDisposed)
+            {
+                effect = new BasicEffect(device);
+            }
 
             RasterizerState originalRasterizerState = device.RasterizerState;
 
             RasterizerState rstate = new RasterizerState();
-            rstate.CullMode = CullMode.CullClockwiseFace;
-            rstate.FillMode = FillMode.Solid;
+            rstate.CullMode = cullmode;
+            rstate.FillMode = FillMode.Solid; 
+            rstate.DepthClipEnable = true;
             device.RasterizerState = rstate;
+
+            effect.SetScene(scene);
+            effect.AmbientLightColor = Color.White.ToVector3();
+            effect.TextureEnabled = false;
+            effect.Alpha = 1f;
+            effect.DiffuseColor = Color.Wheat.ToVector3();
+            //effect.View = scene.View;
+            //effect.Projection = scene.Projection;
+
+
+
+            /*
+            PolygonOverlayEffect effect = DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device);
+            if (effect == null)
+                return;
+
 
             effect.InputLumaAlphaValue = 0.0f;
 
@@ -164,8 +189,45 @@ namespace VikingXNAGraphics
             }
 
             effect.WorldViewProjMatrix = WorldViewProjOriginal;
+            */
 
-            if(originalRasterizerState != null)
+            foreach (MeshModel<VERTEXTYPE> model in meshmodels)
+            {
+                if (model == null)
+                    continue;
+
+                if (model.Edges == null)
+                    continue;
+
+                if (model.Verticies == null)
+                    continue;
+
+                effect.World = model.ModelMatrix * scene.World;
+                if (model.Edges.Length == 0)
+                    continue;
+
+                if (VertexHasNormals(model.Verticies))
+                {
+                    effect.EnableDefaultLighting();
+                }
+                else
+                {
+                    effect.LightingEnabled = false;
+                }
+
+                effect.VertexColorEnabled = VertexHasColor(model.Verticies);
+
+                foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+
+                    device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
+                }
+            }
+
+
+
+            if (originalRasterizerState != null)
                 device.RasterizerState = originalRasterizerState;
         }
     }
