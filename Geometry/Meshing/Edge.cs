@@ -61,10 +61,10 @@ namespace Geometry.Meshing
 
         public int CompareTo(EdgeKey other)
         {
-            int comparison = other.A - this.A;
+            int comparison = this.A - other.A;
             if (comparison == 0)
             {
-                return other.B - this.B;
+                return this.B - other.B;
             }
 
             return comparison;
@@ -72,10 +72,10 @@ namespace Geometry.Meshing
 
         public int CompareTo(IEdgeKey other)
         {
-            int comparison = other.A - this.A;
-            if(comparison == 0)
+            int comparison = this.A - other.A;
+            if (comparison == 0)
             {
-                return other.B - this.B;
+                return this.B - other.B;
             }
 
             return comparison;
