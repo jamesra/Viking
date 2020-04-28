@@ -302,6 +302,35 @@ namespace RTree
         }
 
         /// <summary>
+        /// Change the value of a rectangle in the RTree
+        /// </summary>
+        /// <param name="oldValue"></param>
+        /// <param name="newValue"></param>
+        /// <returns></returns>
+        public void Update(T oldValue, T newValue)
+        {
+            if(ItemsToIds.ContainsKey(newValue))
+            {
+                throw new ArgumentException(string.Format("{0} is already in the RTree, cannot be used to replace {1}", newValue, oldValue));
+            }
+
+            if(ItemsToIds.TryGetValue(oldValue, out int NodeID) == false)
+            {
+                throw new KeyNotFoundException(string.Format("{0} is not in the RTree and cannot be replaced", oldValue));
+            }
+
+            var rect = ItemsToRects[oldValue];
+
+            ItemsToIds.Remove(oldValue);
+            ItemsToIds.Add(newValue, NodeID);
+
+            ItemsToRects.Remove(oldValue);
+            ItemsToRects.Add(newValue, rect);
+
+            this.IdsToItems[NodeID] = newValue; 
+        }
+
+        /// <summary>
         /// Deletes an item from the spatial index
         /// </summary>
         /// <param name="r"></param>
@@ -601,6 +630,14 @@ namespace RTree
                 {
                     rwLock.ExitReadLock();
                 }
+            }
+        }
+
+        public RTree.Rectangle this[T key]
+        {
+            get
+            {
+                return ItemsToRects[key];
             }
         }
 
