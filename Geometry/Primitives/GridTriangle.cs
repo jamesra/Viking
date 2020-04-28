@@ -66,7 +66,7 @@ namespace Geometry
         readonly GridVector2 _p2;
         readonly GridVector2 _p3;
 
-        Color color; 
+        Color color;
         /*
         public GridTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
             : this(new GridVector2(p1.X, p1.Y), new GridVector2(p2.X, p2.Y), new GridVector2(p3.X, p3.Y), Color.Blue)
@@ -90,7 +90,7 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            return (GridTriangle)obj == this; 
+            return (GridTriangle)obj == this;
         }
 
         int? _HashCode;
@@ -120,20 +120,20 @@ namespace Geometry
         BaryCoefs? _BarycentricCoefficients;
         private BaryCoefs BarycentricCoefficients
         {
-            get{
-                
-                if(!_BarycentricCoefficients.HasValue)
+            get {
+
+                if (!_BarycentricCoefficients.HasValue)
                 {
-                    _BarycentricCoefficients = new BaryCoefs(this); 
+                    _BarycentricCoefficients = new BaryCoefs(this);
                 }
 #if DEBUG
                 else
                 {
                     //Make sure the verticies have not been changed
-                    _BarycentricCoefficients.Value.Validate(this); 
+                    _BarycentricCoefficients.Value.Validate(this);
                 }
 #endif 
-                return _BarycentricCoefficients.Value; 
+                return _BarycentricCoefficients.Value;
             }
         }
 
@@ -143,7 +143,7 @@ namespace Geometry
         /// </summary>
         public void ClearBarycentric()
         {
-            _BarycentricCoefficients = null; 
+            _BarycentricCoefficients = null;
         }
 
         public GridTriangle(GridVector2 p1, GridVector2 p2, GridVector2 p3, Color color)
@@ -155,13 +155,14 @@ namespace Geometry
                GridVector2.Distance(p2, p3) <= Global.Epsilon ||
                GridVector2.Distance(p3, p1) <= Global.Epsilon)
             {
-                
+
                 throw new ArgumentException("This is not a triangle, it is a line");
             }
 
-            this._p1 = p1; 
+            this._p1 = p1;
             this._p2 = p2;
             this._p3 = p3;
+
             /*
             this._p1.X = Math.Round(this._p1.X, 2);
             this._p2.X = Math.Round(this._p2.X, 2);
@@ -171,13 +172,24 @@ namespace Geometry
             this._p3.Y = Math.Round(this._p3.Y, 2);
 
              */
-            this.color = color; 
+            this.color = color;
 
-          //  _v1 = 
-          //  _v2 = new VertexPositionColor(new Vector3(_p2, ZHeight), color);
-          //  _v3 = new VertexPositionColor(new Vector3(_p3, ZHeight), color);
+            //  _v1 = 
+            //  _v2 = new VertexPositionColor(new Vector3(_p2, ZHeight), color);
+            //  _v3 = new VertexPositionColor(new Vector3(_p3, ZHeight), color);
 
             _HashCode = new int?();
+
+            //if (this.Area < Global.EpsilonSquared)
+            //    throw new ArgumentException("This is not a triangle, it is a line");
+
+        }
+
+        public GridVector2 Centroid
+        {
+            get{
+                return GridVector2.FromBarycentric(p1, p2, p3, 1 / 3.0, 1 / 3.0); 
+            }
         }
 
         public GridCircle Circle
