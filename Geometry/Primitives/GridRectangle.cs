@@ -578,6 +578,26 @@ namespace Geometry
             return false;
         }
 
+        public OverlapType ContainsExt(IPoint2D pos)
+        {
+            //Find out if the rectangles can't possibly intersect
+            if (pos.X >= this.Left &&
+               pos.Y >= this.Bottom &&
+               pos.X <= this.Right &&
+               pos.Y <= this.Top)
+            {
+                if (pos.X == this.Left ||
+                    pos.Y == this.Bottom ||
+                    pos.X == this.Right ||
+                    pos.Y == this.Top)
+                    return OverlapType.TOUCHING;
+
+                return OverlapType.CONTAINED;
+            }
+
+            return OverlapType.NONE;
+        }
+
         public bool Contains(GridVector2 pos, double epsilon)
         {
             //Find out if the rectangles can't possibly intersect
