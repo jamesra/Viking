@@ -323,19 +323,21 @@ namespace MorphologyMesh
 
             return result; 
         }
-        
-        public static void AddDelaunayEdges(BajajGeneratorMesh mesh)
+
+        public static void AddDelaunayEdges(BajajGeneratorMesh mesh, TriangulationMesh<Vertex2D<List<int>>>.ProgressUpdate OnProgress=null)
         {
             Geometry.Meshing.TriangulationMesh<Vertex2D<List<int>>> triMesh = null;
 
-            //Copy the array and record the original ID number of each vertex
+            //Create a map of the verticies present at each point, we expect one vertex usually, but two verticies for corresponding verticies
+            //Then use the keys of the dictionary to create a Vertex2D array that we'll triangulate.  Once the triangulation is done
+            //feed the existing contour edges into that triangulation as constraints.  Then add the faces to the passed mesh and classify the 
+            //edges created for those faces.
 
             Dictionary<GridVector2, List<int>> pointToIndexMap = CreatePointToIndexMap(mesh);
 
             Dictionary<int, int> MeshToTriMesh = new Dictionary<int, int>(mesh.Verticies.Count);
             Dictionary<int, List<int>> TriMeshToMesh = new Dictionary<int, List<int>>(mesh.Verticies.Count);
-
-            //Dictionary<GridVector2, List<PointIndex>> pointToPolyMap = GridPolygon.CreatePointToPolyMap(mesh.Polygons);
+             
             GridVector2[] points = pointToIndexMap.Keys.ToArray();
 
             //Adjust the points to the average values to avoid floating point precision errors
@@ -343,17 +345,17 @@ namespace MorphologyMesh
             GridVector2[] translated_points = points.Select(p => p - avg).ToArray();
 
             var verts = points.Select((p,i) => new Vertex2D<List<int>>(translated_points[i], pointToIndexMap[p])).ToArray();
-            triMesh = Geometry.GenericDelaunayMeshGenerator2D<Vertex2D<List<int>>>.TriangulateToMesh(verts, null);
+            triMesh = Geometry.GenericDelaunayMeshGenerator2D<Vertex2D<List<int>>>.TriangulateToMesh(verts, OnProgress);
 
             foreach(var v in verts)
             {
                 List<int> listIndicies = v.Data;//pointToIndexMap[v.Position];
                 foreach(int i in listIndicies)
                 {
-                    MeshToTriMesh[i] = v.Index;
+                    MeshToTriMesh[i] = v.Index; //Map the mesh vertex ID to the vertex ID in the triangulation.  This can be a many to one mapping for corresponding verticies.
                 }
 
-                TriMeshToMesh[v.Index] = listIndicies;
+                TriMeshToMesh[v.Index] = listIndicies; //Map the triangulations vertex ID to the mesh verticies.  This is a one to many mapping for corresponding verticies
             }
              
             var ContourEdges = mesh.MorphEdges.Where(e => e.Type == EdgeType.CONTOUR);
@@ -361,7 +363,7 @@ namespace MorphologyMesh
             {
                 int A = MeshToTriMesh[edge.A];
                 int B = MeshToTriMesh[edge.B];
-                triMesh.AddConstrainedEdge(new Geometry.Meshing.ConstrainedEdge(A,B));
+                triMesh.AddConstrainedEdge(new Geometry.Meshing.ConstrainedEdge(A,B), OnProgress);
             }
             
             foreach(Face f in triMesh.Faces)
@@ -1140,32 +1142,7 @@ namespace MorphologyMesh
 
 
         #endregion
-
-        private static Dictionary<ulong, IShape2D> FindCorrespondences(MorphologyGraph graph)
-        {  
-            Dictionary<ulong, IShape2D> IDToShape = graph.Nodes.AsParallel().ToDictionary(n => n.Key,  n => n.Value.Geometry.ToShape2D());
-              
-            foreach(MorphologyEdge e in graph.Edges.Values)
-            {
-                IShape2D sourceShape = IDToShape[e.SourceNodeKey];
-                IShape2D targetShape = IDToShape[e.TargetNodeKey];
-
-                if(sourceShape.ShapeType == ShapeType2D.POLYGON && targetShape.ShapeType == ShapeType2D.POLYGON)
-                {
-                    GridPolygon sourcePoly = sourceShape as GridPolygon;
-                    GridPolygon targetPoly = targetShape as GridPolygon;
-
-                    sourcePoly.AddPointsAtIntersections(targetPoly);
-                    targetPoly.AddPointsAtIntersections(sourcePoly);
-
-                    IDToShape[e.SourceNodeKey] = sourcePoly;
-                    IDToShape[e.TargetNodeKey] = targetPoly;
-                }
-            }
-
-            return IDToShape;
-        }
-        
+                
         private static void AddIndexSetToMeshIndexMap(Dictionary<GridVector3, long> map, Geometry.Meshing.Mesh3D<IVertex3D<ulong>> mesh, Geometry.IIndexSet set)
         {
             Geometry.Meshing.IVertex3D[] verts = mesh[set].ToArray();

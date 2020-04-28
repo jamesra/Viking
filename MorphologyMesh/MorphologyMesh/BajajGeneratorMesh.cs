@@ -105,6 +105,27 @@ namespace MorphologyMesh
             return SecondPassRegionDetection(this, IncompleteVerticies);
         }
 
+        public GridVector2 CalculateAverageVertexPositionXY()
+        {
+            List<GridVector2> points = new List<GridVector2>(this.Verticies.Count);
+
+            var groups = this.Verticies.GroupBy(v => v.Corresponding.HasValue);
+            foreach(var g in groups)
+            {
+                if(g.Key == true)
+                {
+                    var UniquePoints = g.Select(v => v.Position.XY()).Distinct();
+                    points.AddRange(UniquePoints);
+                }
+                else
+                {
+                    points.AddRange(g.Select(v => v.Position.XY()));
+                }
+            }
+
+            return points.Average();
+        }
+
         /// <summary>
         /// For each vertex, 
         /// find all paths along edges without faces that can return to the that enclose triangles or quads and create faces if they don't exist
