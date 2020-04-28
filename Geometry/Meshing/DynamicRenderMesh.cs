@@ -137,7 +137,7 @@ namespace Geometry.Meshing
             else if (f.IsTriangle())
             {
                 GridTriangle tri = new GridTriangle(this[f.iVerts].Select(v => v.Position.XY()).ToArray());
-                return tri.BaryToVector(new GridVector2(1 / 3.0, 1 / 3.0));
+                return tri.Centroid;
             }
             else
             {
