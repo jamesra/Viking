@@ -108,11 +108,11 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Debug.Assert(newPoints.Length == 4);
-            Debug.Assert(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
-            Debug.Assert(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
-            Debug.Assert(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
-            Debug.Assert(newPoints[3].ControlPoint.X == 2.5 && newPoints[3].ControlPoint.Y == 2.5); 
+            Assert.IsTrue(newPoints.Length == 4);
+            Assert.IsTrue(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
+            Assert.IsTrue(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
+            Assert.IsTrue(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
+            Assert.IsTrue(newPoints[3].ControlPoint.X == 2.5 && newPoints[3].ControlPoint.Y == 2.5); 
         }
 
         [TestMethod]
@@ -150,11 +150,11 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Debug.Assert(newPoints.Length == 4);
-            Debug.Assert(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
-            Debug.Assert(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
-            Debug.Assert(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
-            Debug.Assert(newPoints[3].ControlPoint.X == 2.5 && newPoints[3].ControlPoint.Y == 2.5);
+            Assert.IsTrue(newPoints.Length == 4);
+            Assert.IsTrue(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
+            Assert.IsTrue(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
+            Assert.IsTrue(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
+            Assert.IsTrue(newPoints[3].ControlPoint.X == 2.5 && newPoints[3].ControlPoint.Y == 2.5);
         }
 
         [TestMethod]
@@ -196,11 +196,11 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Debug.Assert(newPoints.Length == 4);
-            Debug.Assert(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
-            Debug.Assert(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
-            Debug.Assert(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
-            Debug.Assert(newPoints[3].ControlPoint.X == 10 && newPoints[3].ControlPoint.Y == 10);
+            Assert.IsTrue(newPoints.Length == 4);
+            Assert.IsTrue(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
+            Assert.IsTrue(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
+            Assert.IsTrue(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
+            Assert.IsTrue(newPoints[3].ControlPoint.X == 10 && newPoints[3].ControlPoint.Y == 10);
         }
 
         [TestMethod]
@@ -239,14 +239,14 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Debug.Assert(newPoints.Length == 3);
-            Debug.Assert(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
-            Debug.Assert(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
-            Debug.Assert(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
+            Assert.IsTrue(newPoints.Length == 3);
+            Assert.IsTrue(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
+            Assert.IsTrue(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
+            Assert.IsTrue(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
 
-            Debug.Assert(newPoints[0].MappedPoint.X == 25 && newPoints[0].MappedPoint.Y == 25);
-            Debug.Assert(newPoints[1].MappedPoint.X == 25 && newPoints[1].MappedPoint.Y == 100);
-            Debug.Assert(newPoints[2].MappedPoint.X == 100 && newPoints[2].MappedPoint.Y == 25);
+            Assert.IsTrue(newPoints[0].MappedPoint.X == 25 && newPoints[0].MappedPoint.Y == 25);
+            Assert.IsTrue(newPoints[1].MappedPoint.X == 25 && newPoints[1].MappedPoint.Y == 100);
+            Assert.IsTrue(newPoints[2].MappedPoint.X == 100 && newPoints[2].MappedPoint.Y == 25);
         }
 
         [TestMethod]
@@ -317,7 +317,7 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Debug.Assert(result.MapPoints.Length == 7); 
+            Assert.IsTrue(result.MapPoints.Length == 7); 
         }
 
         [TestMethod]
@@ -387,7 +387,7 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Debug.Assert(result.MapPoints.Length == 7);
+            Assert.IsTrue(result.MapPoints.Length == 7);
         } 
 
          [TestMethod]
@@ -423,10 +423,10 @@ namespace GeometryTests
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Debug.Assert(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
-            Debug.Assert(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
-            Debug.Assert(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
-            Debug.Assert(newPoints[3].ControlPoint.X == 2.5 && newPoints[3].ControlPoint.Y == 2.5); 
+            Assert.IsTrue(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
+            Assert.IsTrue(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
+            Assert.IsTrue(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
+            Assert.IsTrue(newPoints[3].ControlPoint.X == 2.5 && newPoints[3].ControlPoint.Y == 2.5); 
         }
 
          [TestMethod]
@@ -464,10 +464,10 @@ namespace GeometryTests
 
              MappingGridVector2[] newPoints = result.MapPoints;
 
-             Debug.Assert(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
-             Debug.Assert(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
-             Debug.Assert(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
-             Debug.Assert(newPoints[3].ControlPoint.X == 10 && newPoints[3].ControlPoint.Y == 10);
+             Assert.IsTrue(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
+             Assert.IsTrue(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
+             Assert.IsTrue(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
+             Assert.IsTrue(newPoints[3].ControlPoint.X == 10 && newPoints[3].ControlPoint.Y == 10);
          }
 
         [TestMethod]
