@@ -213,12 +213,37 @@ namespace Geometry
         }
 
 
+        /// <summary>
+        /// Scale outer dimensions without changing center point
+        /// </summary>
+        /// <param name="scalar"></param>
         public void Scale(double scalar)
         {
+            double[] scalars = new double[] { scalar, scalar, scalar };
+            this.Scale(scalars);
+        }
+
+        /// <summary>
+        /// Scale outer dimensions without changing center point
+        /// </summary>
+        /// <param name="scalar"></param>
+        public void Scale(GridVector3 scalar)
+        {
+            double[] scalars = new double[] { scalar.X, scalar.Y, scalar.Z };
+            this.Scale(scalars);
+        }
+
+        /// <summary>
+        /// Scale outer dimensions without changing center point
+        /// </summary>
+        /// <param name="scalar"></param>
+        private void Scale(double[] scalars)
+        {
+            Debug.Assert(scalars.Length == this.dimensions.Length, "Scalar dimension and shape dimension do not match");
             //Have to cache center because it changes as we update points
             double[] center = this.Center;
             double[] dimensions = this.dimensions;
-            double[] new_corner_distance = dimensions.Select(dist => ((dist / 2.0) * scalar)).ToArray();
+            double[] new_corner_distance = dimensions.Select((dist, i) => ((dist / 2.0) * scalars[i])).ToArray();
 
             double[] new_mins = center.Select((c, i) => c - new_corner_distance[i]).ToArray();
             double[] new_maxs = center.Select((c, i) => c + new_corner_distance[i]).ToArray();
