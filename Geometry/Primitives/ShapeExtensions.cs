@@ -693,12 +693,8 @@ namespace Geometry
         /// <param name="lines">Lines we are testing for intersection</param>
         /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
         /// <returns>The lines that intersect the line parameter</returns>
-        public static bool Intersects(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, bool EndpointsOnRingDoNotIntersect = false)
+        public static bool Intersects(this GridLineSegment line, IEnumerable<GridLineSegment> lines, bool EndpointsOnRingDoNotIntersect = false)
         {
-            //Cannot use an out parameter in the anonymous method I use below, so I have a bit of redundancy in tracking added points
-            List<GridVector2> NewPoints = new List<Geometry.GridVector2>(lines.Count);
-            List<GridLineSegment> IntersectingLines = new List<GridLineSegment>(lines.Count);
-
             foreach (GridLineSegment testLine in lines)
             {
                 if (line.Intersects(testLine, EndpointsOnRingDoNotIntersect))
@@ -887,7 +883,7 @@ namespace Geometry
 
             return false;
         }
-            
+
         public static List<GridLineSegment> SubdivideAtIntersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints)
         { 
             List<GridLineSegment> Unused = line.Intersections(lines, out IntersectionPoints);
@@ -1253,10 +1249,30 @@ namespace Geometry
                     Debug.Assert(B.IsVertex(p));
                 }
 #endif
-                //B.AddPointsAtIntersections(A);
             }
 
             return added_intersections;
+        }
+
+        /// <summary>
+        /// Given a PointIndex, return the point we'd predict the point be at using the prior two and next two verticies in the polygon.
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <param name="cIndex"></param>
+        /// <returns></returns>
+        public static GridVector2 PredictPoint(this PointIndex cIndex, GridPolygon[] Polygons)
+        {
+            var p1 = cIndex.Previous.Previous.Point(Polygons);
+            var p2 = cIndex.Previous.Point(Polygons);
+            var p3 = cIndex.Next.Point(Polygons);
+            var p4 = cIndex.Next.Next.Point(Polygons);
+            GridVector2 vPos = cIndex.Point(Polygons);
+
+            //Determine the rough t-value (distance along the curve) and figure out where we'd expect the point to be
+            var newPositions = CatmullRom.FitCurveSegment(p1, p2, p3, p4,
+                                                new double[] { GridVector2.Distance(vPos, p2) / (GridVector2.Distance(p2, vPos) + GridVector2.Distance(vPos, p3)) });
+
+            return newPositions[0];
         }
     }
 }
