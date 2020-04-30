@@ -453,7 +453,7 @@ namespace VikingXNAGraphics
             _IsMeasured = true;
         }
 
-        public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch, VikingXNA.Scene scene)
+        public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch, VikingXNA.IScene scene)
         {
             throw new NotImplementedException();
         }
