@@ -6,11 +6,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Geometry;
+using Geometry.Meshing;
 using VikingXNAGraphics;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using VikingXNA;
 
-namespace MonogameTestbed
+namespace VikingXNAGraphics
 {
     [Flags]
     public enum PointLabelType
@@ -23,7 +25,7 @@ namespace MonogameTestbed
     /// <summary>
     /// Draw a collection of points, optionally labeling by position, index, or both
     /// </summary>
-    class PointSetView : PointViewBase
+    public class PointSetView : PointViewBase
     { 
         public CircleView[] PointViews = new CircleView[0];
         public LabelView[] LabelViews = new LabelView[0]; 
@@ -126,6 +128,22 @@ namespace MonogameTestbed
             }
 
             PointViews = Points.Select(p => new CircleView(new GridCircle(p, PointRadius), Color)).ToArray();
+            GridVector2[] point_array = Points.ToArray();
+
+            //Figure out if we have duplicate points and offset labels as needed
+            Dictionary<GridVector2, int> DuplicatePointsAddedCount = new Dictionary<GridVector2, int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
+            HashSet < GridVector2 > KnownPoints = new HashSet<GridVector2>();
+            foreach(GridVector2 p in point_array)
+            {
+                if(KnownPoints.Contains(p))
+                {
+                    DuplicatePointsAddedCount.Add(p,0); //Set the counter to 0 for when we use it later
+                }
+                else
+                {
+                    KnownPoints.Add(p);
+                }
+            }
 
             if (!LabelIndex && !LabelPosition)
             {
@@ -133,42 +151,71 @@ namespace MonogameTestbed
             }
             else if (LabelIndex && !LabelPosition)
             {
-                LabelViews = Points.Select((p, i) => new LabelView(i.ToString(), p, fontSize: this.PointRadius * 2)).ToArray();
+                LabelViews = point_array.Select((p, i) => new LabelView(i.ToString(), p, fontSize: this.PointRadius * 2)).ToArray();
             }
             else if (!LabelIndex && LabelPosition)
             {
-                LabelViews = Points.Select(p => new LabelView(p.ToLabel(), p, fontSize: this.PointRadius * 2)).ToArray();
+                LabelViews = point_array.Select(p => new LabelView(p.ToLabel(), p, fontSize: this.PointRadius * 2)).ToArray();
             }
             else
             {
-                LabelViews = Points.Select((p, i) => new LabelView(i.ToString() + "\n" + p.ToLabel(), p, fontSize: this.PointRadius * 2)).ToArray();
+                LabelViews = point_array.Select((p, i) => new LabelView(i.ToString() + "\n" + p.ToLabel(), p, fontSize: this.PointRadius * 2)).ToArray();
             }
-
+             
             if (LabelViews != null)
             {
-                foreach (LabelView label in LabelViews)
+                for(int i = 0; i < LabelViews.Length; i++)
                 {
+                    LabelView label = LabelViews[i];
                     label.FontSize = this.PointRadius * 2.0;
                     label.Color = this.LabelColor;
+
+                    if(DuplicatePointsAddedCount.ContainsKey(point_array[i]))
+                    {
+                        //label.Position = label.Position + new GridVector2(0,PointRadius * (DuplicatePointsAddedCount[point_array[i]]-1));
+                        
+                        //label.Position = label.Position + label.
+                        string prepended_newlines = "";
+                        for (int iLine = 0; iLine < DuplicatePointsAddedCount[point_array[i]]; iLine++)
+                            prepended_newlines += "|\n\r"; 
+
+                        label.Text = prepended_newlines + label.Text; //Prepend a line
+                        
+                        DuplicatePointsAddedCount[point_array[i]] = DuplicatePointsAddedCount[point_array[i]] + 1;
+                    }
                 }
             }
         }
 
-        public override void Draw(MonoTestbed window, Scene scene)
-        { 
+        public override void Draw(IRenderInfo window, Scene scene)
+        {   
             if (PointViews != null)
-                CircleView.Draw(window.GraphicsDevice, scene, window.basicEffect, window.overlayEffect, PointViews);
+                CircleView.Draw(window.device, scene, window.basicEffect, window.overlayEffect, PointViews);
 
             if (LabelViews != null)
-                LabelView.Draw(window.spriteBatch, window.fontArial, scene, LabelViews);
+                LabelView.Draw(window.spriteBatch, window.font, scene, LabelViews);
         }
 
-        public static PointSetView CreateFor(MorphologyMesh.MorphRenderMesh mesh)
+        public static PointSetView CreateFor(IReadOnlyMesh2D<IVertex2D> mesh)
         {    
             PointSetView psv = new PointSetView(Color.Gray);
 
-            psv.LabelColor = Color.YellowGreen;
-            psv.PointRadius = 0.5;
+            psv.LabelColor = Color.White;
+            psv.PointRadius = 1;
+            psv.Points = mesh.Verticies.Select(p => p.Position).ToArray();
+            psv.LabelIndex = true;
+            psv.LabelPosition = false;
+            psv.UpdateViews();
+              
+            return psv;
+        }
+
+        public static PointSetView CreateFor(IReadOnlyMesh3D<IVertex3D> mesh)
+        {
+            PointSetView psv = new PointSetView(Color.Gray);
+
+            psv.LabelColor = Color.White;
+            psv.PointRadius = 1;
             psv.Points = mesh.Verticies.Select(p => p.Position.XY()).ToArray();
             psv.LabelIndex = true;
             psv.LabelPosition = false;

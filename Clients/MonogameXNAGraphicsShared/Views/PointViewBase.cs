@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 using Geometry;
 using VikingXNAGraphics;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using VikingXNA;
 using System.Collections.Specialized; 
 
-namespace MonogameTestbed
+namespace VikingXNAGraphics
 {
-    abstract class PointViewBase : IColorView
+    public abstract class PointViewBase : IColorView
     {
         private ICollection<GridVector2> _Points = new List<GridVector2>();
         private Color _Color;
@@ -76,6 +77,7 @@ namespace MonogameTestbed
             UpdateViews();
         }
 
-        public abstract void Draw(MonoTestbed window, Scene scene);
+        public abstract void Draw(IRenderInfo window, Scene scene);
+
     }
 }

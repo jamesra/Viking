@@ -4,8 +4,11 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 
-namespace MonogameTestbed
+namespace VikingXNAGraphics
 {
+    /// <summary>
+    /// A collection of points/circles that notifies about changes
+    /// </summary>
     public class PointSet : INotifyCollectionChanged, ICollection<GridVector2>
     {
         public double PointRadius = 2.0;
