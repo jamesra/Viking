@@ -27,14 +27,30 @@ namespace VikingXNAGraphics
         }
         public VERTEXTYPE[] Verticies
         {
-            get;set;
-        } 
+            get; set;
+        }
 
         public int[] Edges
         {
-            get;set;
+            get; set;
         }
 
+        static MeshModel()
+        {
+            VERTEXTYPE v = new VERTEXTYPE();
+            VertexElement[] vertex_elements = v.VertexDeclaration.GetVertexElements();
+            _HasNormal = vertex_elements.Any(e => e.VertexElementUsage == VertexElementUsage.Normal);
+            _HasColor = vertex_elements.Any(e => e.VertexElementUsage == VertexElementUsage.Color);
+        }
+
+        //private static readonly VertexElement[] vertex_elements;
+
+        private static readonly bool _HasNormal;
+        public bool HasNormal { get => _HasNormal; }
+
+        private static readonly bool _HasColor;
+        public bool HasColor { get => _HasColor; }
+          
         /// <summary>
         /// Adds the passed verticies to the model, returns index at which first vertex was added
         /// </summary>
