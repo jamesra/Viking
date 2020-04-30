@@ -34,7 +34,7 @@ namespace ColladaIOTest
         [TestMethod]
         public void TestDAESerializationForSpecificCell()
         {
-            MorphologyMesh.MorphologyColladaView view = CreateView(new long[] { 2713 }, ENDPOINT.RPC1);
+            MorphologyMesh.MorphologyColladaView view = CreateView(new ulong[] { 2713 }, ENDPOINT.RPC1);
             //MorphologyMesh.MorphologyColladaView view = CreateView(new long[] { 142, 180}, ENDPOINT.INFERIORMONKEY);
 
             ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFile(view, "TestDAESerialization.dae");
@@ -45,7 +45,7 @@ namespace ColladaIOTest
         [TestMethod]
         public void TestDAESerialization()
         { 
-            MorphologyMesh.MorphologyColladaView view = CreateView(new long[] { 180, 172 }, ENDPOINT.RC1);
+            MorphologyMesh.MorphologyColladaView view = CreateView(new ulong[] { 180, 172 }, ENDPOINT.RC1);
             //MorphologyMesh.MorphologyColladaView view = CreateView(new long[] { 142, 180}, ENDPOINT.INFERIORMONKEY);
 
             ColladaIO.DynamicRenderMeshColladaSerializer.SerializeToFile(view, "TestDAESerialization.dae");
@@ -56,7 +56,7 @@ namespace ColladaIOTest
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public MorphologyMesh.MorphologyColladaView CreateView(ICollection<long> CellIDs, ENDPOINT endpoint)
+        public MorphologyMesh.MorphologyColladaView CreateView(ICollection<ulong> CellIDs, ENDPOINT endpoint)
         {
             AnnotationVizLib.StructureMorphologyColorMap colorMap = TestUtils.LoadColorMap("Resources\\RC1ColorMapping");
 

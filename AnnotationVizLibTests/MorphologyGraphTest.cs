@@ -200,7 +200,7 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void TestSaveLoadGraph()
         {
-            SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
+            SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
             Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
 
@@ -224,7 +224,7 @@ namespace AnnotationVizLibTests
         [TestMethod]
         public void TestDistanceMeasurement()
         {
-            SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
+            SharedGraph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 180 }, true, new Uri(GraphTestShared.ODataEndpoint));
             Assert.IsNotNull(SharedGraph);
             Assert.IsTrue(SharedGraph.Subgraphs.Count > 0);
 
