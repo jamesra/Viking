@@ -3098,7 +3098,7 @@ namespace Geometry
         /// </summary>
         /// <param name="bbox"></param>
         /// <returns></returns>
-        public List<GridLineSegment> GetIntersectingSegments(GridLineSegment line)
+        public IEnumerable<GridLineSegment> GetIntersectingSegments(GridLineSegment line)
         {
             GridRectangle bbox = line.BoundingBox;
             if (!this.BoundingBox.Intersects(bbox))
