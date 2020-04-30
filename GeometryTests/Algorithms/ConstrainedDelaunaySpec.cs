@@ -427,11 +427,11 @@ namespace GeometryTests.Algorithms
             public override Property Post(TriangulationMesh<IVertex2D> mesh, ConstrainedDelaunayModel model)
             {
                 bool edgesIntersect = mesh.AnyMeshEdgesIntersect();
-                bool facesCCW = DelaunayTest.AreTriangulatedFacesCCW(mesh);
-                bool facesColinear = DelaunayTest.AreTriangulatedFacesColinear(mesh);
-                bool vertEdges = mesh.Verticies.Count < 3 || DelaunayTest.AreTriangulatedVertexEdgesValid(mesh);
+                bool facesCCW = mesh.AreTriangulatedFacesCCW();
+                bool facesColinear = mesh.AreTriangulatedFacesColinear();
+                bool vertEdges = mesh.Verticies.Count < 3 || mesh.AreTriangulatedVertexEdgesValid();
                 bool HasConstrainedEdges = model.AddedConstraintEdges.All(added_edge => mesh.Contains(added_edge));
-                bool facesAreTriangles = DelaunayTest.AreFacesTriangles(mesh);
+                bool facesAreTriangles = mesh.AreFacesTriangles();
                 bool pass = !edgesIntersect && !facesColinear && facesCCW && vertEdges && HasConstrainedEdges && facesAreTriangles;
 
                 //Trace.WriteLine(pass ? "Pass" : "Fail");

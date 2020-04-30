@@ -119,6 +119,7 @@
     <Compile Include="Algorithms\ConstrainedDelaunaySpec.cs" />
     <Compile Include="Algorithms\MeshCutTest.cs" />
     <Compile Include="Algorithms\DelaunayTest.cs" />
+    <Compile Include="Algorithms\MeshValidationExtensions.cs" />
     <Compile Include="AssemblyInitialize.cs" />
     <Compile Include="CircleFromPoints.cs" />
     <Compile Include="FsCheckGenerators.cs" />

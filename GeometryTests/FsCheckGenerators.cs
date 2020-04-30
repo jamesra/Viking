@@ -28,6 +28,8 @@ namespace GeometryTests
     
     public class TriangulatedMeshGenerators
     {
+        public delegate void OnProgressDelegate(IReadOnlyMesh2D<IVertex2D> mesh);
+        
         /// <summary>
         /// Function to report incremental mesh generation progress to
         /// </summary>
@@ -35,10 +37,17 @@ namespace GeometryTests
 
         public static Gen<TriangulationMesh<IVertex2D>> GenMesh(int nVerts)
         {
+            /*
             return GridVector2Generators.Fresh().ArrayOf(nVerts)
                 .Where(points => points.Distinct().Count() == points.Length)
                 .Select(verts => GenericDelaunayMeshGenerator2D<IVertex2D>
                 .TriangulateToMesh(verts.Select(v => new TriangulationVertex(v)).ToArray(), OnProgress));            
+                */
+            
+
+            return GridVector2Generators.GenDistinctPoints(nVerts)
+                .Select(verts => GenericDelaunayMeshGenerator2D<IVertex2D>
+                .TriangulateToMesh(verts.Select(v => new TriangulationVertex(v)).ToArray(), OnProgress));
             //return GridVector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
         } 
 

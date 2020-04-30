@@ -113,10 +113,16 @@ namespace GeometryTests
 
             else
             {
+                /*
                 var command_generators = new Gen<Command<QuadTree<int>, QuadTreeModel>>[] { GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTree<int>, QuadTreeModel>),
                                                                               Gen.Zip(GridVector2Generators.ArbRandomPoint().Generator, Arb.Default.Byte().Generator.Where(b => b <= value.Count)).Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTree<int>, QuadTreeModel>) };
 
                 return Gen.OneOf(command_generators);
+                */
+
+                return Gen.Frequency(
+                    Tuple.Create(3,  GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTree<int>, QuadTreeModel>)),
+                    Tuple.Create(1, Gen.Zip(GridVector2Generators.ArbRandomPoint().Generator, Arb.Default.Byte().Generator.Where(b => b <= value.Count)).Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTree<int>, QuadTreeModel>)));
             }
 
             //GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTree<int>, QuadTreeModel>);

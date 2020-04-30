@@ -237,8 +237,12 @@ namespace GeometryTests
         {
             GeometryArbitraries.Register();
 
+            Configuration config = Configuration.QuickThrowOnFailure;
+            config.StartSize = 128;
+            config.MaxNbOfTest = 250;
+
             QuadTreeSpec spec = new QuadTreeSpec();
-            spec.ToProperty().QuickCheckThrowOnFailure();
+            spec.ToProperty().Check(config);
 
             /*
             Prop.ForAll<GridVector2[]>(points =>

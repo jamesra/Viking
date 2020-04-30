@@ -54,6 +54,34 @@ namespace GeometryTests.Algorithms
         }
     }
 
+    public static class TriangulationValidation
+    {
+        public static Property ValidatePolygonTriangulation(this GridPolygon p, IReadOnlyMesh2D<IVertex2D> mesh, List<IEdgeKey> expectedConstrainedEdges)
+        {
+            bool edgesIntersect = mesh.AnyMeshEdgesIntersect();
+            bool facesCCW = mesh.AreTriangulatedFacesCCW();
+            bool facesColinear = mesh.AreTriangulatedFacesColinear();
+            bool facesAreTriangles = mesh.AreFacesTriangles();
+            bool[] meshHasConstrainedEdges = DelaunayTest.MeshContainsEdges(mesh, expectedConstrainedEdges);
+            bool meshHasAllConstrainedEdges = meshHasConstrainedEdges.All(b => b);
+            bool[] meshConstrainedEdgesHaveOneFace = DelaunayTest.MeshEdgeFaceCount(mesh, expectedConstrainedEdges, 1);
+            bool meshConstrainedEdgesAllHaveOneFace = meshConstrainedEdgesHaveOneFace.All(b => b);
+
+            bool pass = (edgesIntersect == false) && facesCCW && (facesColinear == false) && facesAreTriangles && meshHasAllConstrainedEdges && meshConstrainedEdgesAllHaveOneFace;
+
+            return ((edgesIntersect == false).Label("Edges intersect"))
+                    .And(facesCCW.Label("Face is clockwise"))
+                    .And((facesColinear == false).Label("Face is colinear"))
+                    .And(facesAreTriangles.Label("Face is not a triangle"))
+                    .And(DelaunayTest.MeshContainsEdgesProperty(mesh, expectedConstrainedEdges))
+                    .And(DelaunayTest.MeshEdgeFaceCountProperty(mesh, expectedConstrainedEdges, 1))
+                    .ClassifySize(p.TotalUniqueVerticies, "Unique Verts:")
+                    .Label(p.ToJSON());
+        }
+    }
+
+
+
     [TestClass]
     public class DelaunayTest
     {
@@ -74,18 +102,21 @@ namespace GeometryTests.Algorithms
         */
         
         [TestMethod]
-        public void DelaunayGeneratorParameterTest()
+        public void DelaunayGeneratorParameterTestFromPoints()
         {
             //A second pass implementation that generates entire meshes as random parameters and not sets of points that I must convert to meshes
             GeometryArbitraries.Register();
             GeometryMeshingArbitraries.Register();
 
             var configuration = Configuration.QuickThrowOnFailure;
-            configuration.MaxNbOfTest = 10000;
+            configuration.MaxNbOfTest = 10;
             configuration.QuietOnSuccess = false;
-            configuration.StartSize = 0;
-            configuration.Replay = Global.StdGenSeed;
-            
+            configuration.StartSize = 10;
+            //configuration.Replay = Global.StdGenSeed;
+
+            Prop.ForAll<GridVector2>((point) => System.Diagnostics.Trace.WriteLine(point.ToString())).Check(configuration); // IsDelaunay(GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray()))).Check(configuration);
+
+
             //Prop.ForAll<TriangulationMesh<Vertex2D>>((mesh) => IsDelaunay(mesh)).Check(configuration);
             Prop.ForAll<GridVector2[]>((points) => IsDelaunay(GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray()))).Check(configuration);
 
@@ -105,33 +136,20 @@ namespace GeometryTests.Algorithms
         }
 
         [TestMethod]
-        public void DelaunayGeneratorParameterTest2()
+        public void DelaunayGeneratorParameterTestFromModel()
         {
             //A second pass implementation that generates entire meshes as random parameters and not sets of points that I must convert to meshes
             GeometryArbitraries.Register();
             GeometryMeshingArbitraries.Register();
 
             var configuration = Configuration.QuickThrowOnFailure;
-            configuration.MaxNbOfTest = 1000;
+            configuration.MaxNbOfTest = 100;
             configuration.QuietOnSuccess = false;
-            configuration.StartSize = 0;
+            configuration.StartSize = 512;
 
             //Prop.ForAll<TriangulationMesh<Vertex2D>>((mesh) => IsDelaunay(mesh)).Check(configuration);
             Prop.ForAll<TriangulationMesh<IVertex2D>>((mesh) => IsDelaunay(mesh)).Check(configuration);
 
-            //    .When(points.Distinct().Count() >= 3)
-            //  .Classify(AllPointsColinear(points), "Colinear"))
-            //.QuickCheckThrowOnFailure();
-
-            /*
-            Prop.ForAll<GridVector2[]>((points) =>
-            GenAndTriangulateMesh(points, out TriangulationMesh<Vertex2D> mesh)
-            
-                .And(() => IsDelaunay(mesh))
-                .When(points.Distinct().Count() >= 3)
-                .Classify((points) => AllPointsColinear(points), "Colinear")
-                .QuickCheckThrowOnFailure();
-                */
         }
 
         private bool IsValidConstrainedDelaunayInput(GridVector2[] points, int[] edges)
@@ -330,11 +348,11 @@ namespace GeometryTests.Algorithms
         {
             //System.Diagnostics.Trace.WriteLine(string.Format("{0}", mesh));
             bool edgesIntersect = mesh.AnyMeshEdgesIntersect();
-            bool facesDelaunay = AreTriangulatedFacesDelaunay(mesh);
-            bool facesCCW = AreTriangulatedFacesCCW(mesh);
-            bool facesColinear = AreTriangulatedFacesColinear(mesh);
-            bool vertEdges = AreTriangulatedVertexEdgesValid(mesh) || mesh.Verticies.Count < 3;
-            bool facesAreTriangles = DelaunayTest.AreFacesTriangles(mesh);
+            bool facesDelaunay = mesh.AreTriangulatedFacesDelaunay();
+            bool facesCCW = mesh.AreTriangulatedFacesCCW();
+            bool facesColinear = mesh.AreTriangulatedFacesColinear();
+            bool vertEdges = mesh.AreTriangulatedVertexEdgesValid() || mesh.Verticies.Count < 3;
+            bool facesAreTriangles = mesh.AreFacesTriangles();
             bool success = (edgesIntersect == false) && facesDelaunay && facesCCW && vertEdges && facesAreTriangles;
             int nVerts = mesh.Verticies.Count;
             return (edgesIntersect == false).Label("Edges intersect")
@@ -370,16 +388,16 @@ namespace GeometryTests.Algorithms
                 Vertex2D[] InputVerts = points.Select(p => new Vertex2D(p)).ToArray();
                 mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(InputVerts, null);
                 
-                if (AreTriangulatedVertexEdgesValid(mesh) == false)
+                if (mesh.AreTriangulatedVertexEdgesValid() == false)
                     return false;
 
                 if (mesh.AnyMeshEdgesIntersect())
                     return false;
 
-                if (AreTriangulatedFacesCCW(mesh) == false)
+                if (mesh.AreTriangulatedFacesCCW() == false)
                     return false;
 
-                if (AreTriangulatedFacesDelaunay(mesh) == false)
+                if (mesh.AreTriangulatedFacesDelaunay() == false)
                     return false;
 
                 return true;
@@ -396,7 +414,7 @@ namespace GeometryTests.Algorithms
             TriangulatePolygonTest(null);
         }
 
-        public void TriangulatePolygonTest(TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
+        public void TriangulatePolygonTest(TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
         {
             GeometryArbitraries.Register();
 
@@ -411,7 +429,7 @@ namespace GeometryTests.Algorithms
                 try
                 {
                     var mesh = TriangulatePoly(p, out List<IEdgeKey> expectedConstrainedEdges, OnProgress);
-                    return ValidatePolygonTriangulation(p, mesh, expectedConstrainedEdges);
+                    return p.ValidatePolygonTriangulation(mesh, expectedConstrainedEdges);
                 }
                 catch (Exception e)
                 {
@@ -422,47 +440,26 @@ namespace GeometryTests.Algorithms
             }).Check(configuration);// QuickCheckThrowOnFailure();    
         }
 
-        public static TriangulationMesh<IVertex2D<int>> TriangulatePoly(GridPolygon p, out List<IEdgeKey> expectedConstrainedEdges, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
+        
+        public static TriangulationMesh<IVertex2D<PointIndex>> TriangulatePoly(GridPolygon p, out List<IEdgeKey> expectedConstrainedEdges, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
         {
             expectedConstrainedEdges = new List<IEdgeKey>();
 
             p = p.Translate(-p.Centroid);
             //var mesh = p.Triangulate(p.ExteriorRing.Distinct().Select(p => new Vertex2D(p)).ToArray(),null,OnProgress);
-            var mesh = Geometry.Meshing.MeshExtensions.Triangulate(p.ExteriorRing.Distinct().Select(t => new Vertex2D(t)).ToArray(), null, OnProgress);
+            var mesh = p.Triangulate(0, OnProgress); // Geometry.Meshing.MeshExtensions.Triangulate(p, 0, OnProgress);//p.ExteriorRing.Select(t => new Vertex2D(t)).ToArray(), OnProgress);
             var PosToVert = mesh.Verticies.ToDictionary(v => v.Position);
             
             foreach (GridLineSegment s in p.AllSegments)
             {
-                    EdgeKey key = new EdgeKey(PosToVert[s.A].Index, PosToVert[s.B].Index);
-                    expectedConstrainedEdges.Add(key);
-                
+                EdgeKey key = new EdgeKey(PosToVert[s.A].Index, PosToVert[s.B].Index);
+                expectedConstrainedEdges.Add(key);
             }
 
             return mesh;
         }
 
-        public static Property ValidatePolygonTriangulation(GridPolygon p, TriangulationMesh<IVertex2D<int>> mesh, List<IEdgeKey> expectedConstrainedEdges)
-        { 
-            bool edgesIntersect = mesh.AnyMeshEdgesIntersect();
-            bool facesCCW = AreTriangulatedFacesCCW(mesh);
-            bool facesColinear = AreTriangulatedFacesColinear(mesh);
-            bool facesAreTriangles = DelaunayTest.AreFacesTriangles(mesh);
-            bool[] meshHasConstrainedEdges = DelaunayTest.MeshContainsEdges(mesh, expectedConstrainedEdges);
-            bool meshHasAllConstrainedEdges = meshHasConstrainedEdges.All(b => b);
-            bool[] meshConstrainedEdgesHaveOneFace = DelaunayTest.MeshEdgeFaceCount(mesh, expectedConstrainedEdges, 1);
-            bool meshConstrainedEdgesAllHaveOneFace = meshConstrainedEdgesHaveOneFace.All(b => b);
-             
-            bool pass = (edgesIntersect == false) && facesCCW && (facesColinear == false) && facesAreTriangles && meshHasAllConstrainedEdges && meshConstrainedEdgesAllHaveOneFace;
-
-            return ((edgesIntersect == false).Label("Edges intersect"))
-                    .And(facesCCW.Label("Face is clockwise"))
-                    .And((facesColinear == false).Label("Face is colinear"))
-                    .And(facesAreTriangles.Label("Face is not a triangle"))
-                    .And(DelaunayTest.MeshContainsEdgesProperty(mesh, expectedConstrainedEdges))
-                    .And(DelaunayTest.MeshEdgeFaceCountProperty(mesh, expectedConstrainedEdges, 1))
-                    .ClassifySize(p.TotalUniqueVerticies, "Unique Verts:")
-                    .Label(p.ToJSON());
-        }
+        
 
         //Todo: Make a generator that pulls polygons from the database and triangulates them
 
@@ -506,7 +503,7 @@ namespace GeometryTests.Algorithms
                 }
 
 
-                return ValidatePolygonTriangulation(p, mesh, expectedConstrainedEdges);
+                return p.ValidatePolygonTriangulation(mesh, expectedConstrainedEdges);
                 /*
                 bool edgesIntersect = mesh.AnyMeshEdgesIntersect();
                 bool facesCCW = AreTriangulatedFacesCCW(mesh);
@@ -600,109 +597,7 @@ namespace GeometryTests.Algorithms
             return false;
         }
         */
-        /// <summary>
-        /// Check that all verticies have at least two edges. 
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <returns></returns>
-        public static bool AreTriangulatedVertexEdgesValid(TriangulationMesh<IVertex2D> mesh)
-        {
-            foreach (var v in mesh.Verticies)
-            {
-                //Assert.IsTrue(v.Edges.Count > 1); //Every vertex must have at least two edges
-                if (v.Edges.Count <= 1)
-                    return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Check that all verticies have at least two edges. 
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <returns></returns>
-        public static bool AreTriangulatedFacesCCW(IReadOnlyMesh2D<IVertex2D> mesh)
-        {
-            foreach (Face f in mesh.Faces)
-            { 
-                bool IsClockwise = mesh.IsClockwise(f);
-                //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
-                //Assert.IsFalse(IsClockwise, string.Format("{0} is clockwise, incorrect winding.", f));
-
-                if (IsClockwise)
-                    return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Check that all verticies have at least two edges. 
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <returns></returns>
-        public static bool AreTriangulatedFacesColinear(IReadOnlyMesh2D<IVertex2D> mesh)
-        {
-            foreach (Face f in mesh.Faces)
-            {
-                RotationDirection winding = mesh.Winding(f);
-                //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
-                //Assert.IsFalse(IsClockwise, string.Format("{0} is clockwise, incorrect winding.", f));
-
-                if (winding == RotationDirection.COLINEAR)
-                    return true;
-
-                if(f.iVerts.Count() == 3)
-                {
-                    GridTriangle tri = new GridTriangle(mesh[f.iVerts].Select(v => v.Position).ToArray());
-                    if (tri.Area == 0)
-                        return true; 
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Check that all verticies have at least two edges. 
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <returns></returns>
-        public static bool AreFacesTriangles(IReadOnlyMesh2D<IVertex2D> mesh)
-        {
-            foreach (IFace f in mesh.Faces)
-            {
-                bool IsTriangle = f.iVerts.Length == 3;
-                //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
-                //Assert.IsFalse(IsClockwise, string.Format("{0} is clockwise, incorrect winding.", f));
-
-                if (!IsTriangle)
-                    return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Check that all verticies have at least two edges. 
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <returns></returns>
-        public static bool AreTriangulatedFacesDelaunay(TriangulationMesh<IVertex2D> mesh)
-        {
-            foreach (Face f in mesh.Faces)
-            {
-                bool IsDelaunay = mesh.IsTriangleDelaunay(f); 
-                //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
-                //Assert.IsFalse(IsClockwise, string.Format("{0} is clockwise, incorrect winding.", f));
-
-                if (!IsDelaunay)
-                    return false;
-            }
-
-            return true;
-        }
+        
 
     }
 }
