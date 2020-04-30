@@ -310,7 +310,7 @@ namespace VikingXNAGraphics
             return verts;
         }
 
-        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, AnnotationOverBackgroundLumaEffect overlayEffect)
+        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, AnnotationOverBackgroundLumaEffect overlayEffect=null)
         {
             DeviceStateManager.SaveDeviceState(device);
             /*DeviceStateManager.SetRenderStateForShapes(device);
@@ -370,7 +370,7 @@ namespace VikingXNAGraphics
 
 
         public static void Draw(GraphicsDevice device,
-                          VikingXNA.Scene scene,
+                          VikingXNA.IScene scene,
                           BasicEffect basicEffect,
                           AnnotationOverBackgroundLumaEffect overlayEffect,
                           CircleView[] listToDraw)
