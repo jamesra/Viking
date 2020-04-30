@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System.Text;
 using System.Threading.Tasks;
 using Geometry.Meshing;
+using Geometry;
 
 namespace VikingXNAGraphics
 {
@@ -97,6 +98,65 @@ namespace VikingXNAGraphics
 
     public static class MeshExtensions 
     {
+        /// <summary>
+        /// Generates a Model for a unit cube
+        /// </summary>
+        /// <returns></returns>
+        public static MeshModel<VertexPositionColor> CreateUnitCube(Color color)
+        {
+            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
+            Vector3[] verts = new Vector3[] {   new Vector3(-1,-1,-1),
+                                                new Vector3(-1,-1, 1),
+                                                new Vector3(-1, 1,-1),
+                                                new Vector3(-1, 1, 1),
+                                                new Vector3( 1,-1,-1),
+                                                new Vector3( 1,-1, 1),
+                                                new Vector3( 1, 1,-1),
+                                                new Vector3( 1, 1, 1) };
+
+            model.Verticies = verts.Select(v => new VertexPositionColor(v, color)).ToArray();
+
+            //Add faces
+            model.Edges = new int[] {0,1,2,
+                                     1,2,3, //A - Normal is -x
+                                     4,5,6,
+                                     5,6,7, //B - Normal is +x
+                                     0,4,1,
+                                     4,1,5, //C - Normal is -y
+                                     6,2,3,
+                                     6,3,7, //D - Normal is +y
+                                     0,4,2,
+                                     4,2,6, //E - Normal is -z
+                                     1,3,5,
+                                     3,5,7  //F - Normal is +z
+            };
+
+            return model; 
+        }
+
+        public static MeshModel<VertexPositionColor> ToMeshModel(this GridBox bbox, Color color)
+        {
+            var model = VikingXNAGraphics.MeshExtensions.CreateUnitCube(color);
+            model.ModelMatrix = Matrix.CreateScale((float)bbox.Width/2, (float)bbox.Height/2, (float)bbox.Depth/2) * Matrix.CreateTranslation(bbox.CenterPoint.ToXNAVector3());
+            return model;
+        }
+
+        public static void SetColor(this MeshModel<VertexPositionColor> model, Color color)
+        {
+            for(int i =0; i < model.Verticies.Length; i++)
+            {
+                model.Verticies[i].Color = color;
+            }
+        }
+
+        public static void SetColor(this MeshModel<VertexPositionNormalColor> model, Color color)
+        {
+            for (int i = 0; i < model.Verticies.Length; i++)
+            {
+                model.Verticies[i].Color = color;
+            }
+        }
+
         public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel<VERTEX,DATA>(this MeshBase3D<VERTEX> mesh, Color color)
             where VERTEX : IVertex3D<DATA>
         {
