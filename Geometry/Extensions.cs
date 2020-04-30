@@ -111,7 +111,7 @@ namespace Geometry
 
     public static class GeometryRTreeExtensions
     {
-        public static RTree.Point ToRTreePoint(this GridVector2 p, double Z)
+        public static RTree.Point ToRTreePoint(this GridVector2 p, double Z=0)
         {
             return new RTree.Point(p.X, p.Y, Z);
         }
@@ -1159,77 +1159,8 @@ namespace Geometry
             return false;
         }
 
-        /// <summary>
-        /// Returns the Polygon segment which intersects the point, if any.  May return interior polygons
-        /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="WorldPosition"></param> 
-        /// <param name="nearestPoly">Nearest polygon</param>
-        /// <param name="intersectingPoly">Index of vertex in the ring</param>
-        /// <returns></returns>
-        public static double NearestVertex(this GridPolygon polygon, GridVector2 WorldPosition, out PointIndex nearestVertex)
-        {
-            nearestVertex = new PointIndex();
-            double nearestPolyDistance = double.MaxValue;
-            for(int iRing = 0; iRing < polygon.InteriorPolygons.Count; iRing++)
-            {
-                GridPolygon innerPoly = polygon.InteriorPolygons[iRing];
-                double distance = innerPoly.NearestVertex(WorldPosition, out PointIndex foundIndex);
-                if (distance < nearestPolyDistance)
-                {
-                    nearestVertex = new PointIndex(0, iRing, foundIndex.iVertex, innerPoly.ExteriorRing.Length - 1);
-                    nearestPolyDistance = distance;
-                }
-            }
-
-            double[] distances = polygon.ExteriorRing.Select(p => GridVector2.Distance(p, WorldPosition)).ToArray();
-            double MinDistance = distances.Min();
-
-            if (MinDistance < nearestPolyDistance)
-            {
-                int iVert = Array.IndexOf(distances, distances.Min());
-                nearestVertex = new PointIndex(0, iVert, polygon.ExteriorRing.Length - 1);
-                nearestPolyDistance = MinDistance;
-            }
-
-            return nearestPolyDistance;
-        }
-        /*
-        /// <summary>
-        /// Returns the nearest segment to the point and the PointIndex of the line, use the Next function to obtain the vertex after the line
-        /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="WorldPosition"></param>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
-        /// <returns></returns>
-        public static double NearestSegment(this GridPolygon polygon, GridVector2 WorldPosition, out PointIndex nearestVertex)
-        {
-            nearestVertex = new PointIndex();
-            double nearestPolyDistance = double.MaxValue;
-
-            for (int iRing = 0; iRing < polygon.InteriorPolygons.Count; iRing++)
-            {
-                GridPolygon innerPoly = polygon.InteriorPolygons[iRing];  
-                double distance = innerPoly.NearestSegment(WorldPosition, out PointIndex foundVertex);
-                if (distance < nearestPolyDistance)
-                {
-                    nearestVertex = new PointIndex(0, iRing, foundVertex.iVertex, innerPoly.ExteriorRing.Length - 1);
-                    nearestPolyDistance = distance;
-                }
-            }
-
-            double MinDistance;
-            int iSegmentIndex = polygon.ExteriorSegments.NearestSegment(WorldPosition, out MinDistance);
-            if (MinDistance < nearestPolyDistance)
-            {
-                nearestVertex = new PointIndex(0, iSegmentIndex, polygon.ExteriorRing.Length - 1);
-                nearestPolyDistance = MinDistance;
-            }
-
-            return nearestPolyDistance;
-        }
-        */
+        
+        
 
            /*
         /// <summary>
@@ -1268,12 +1199,15 @@ namespace Geometry
         */
         private static void AddIntersection(SortedDictionary<double, PointIndex> dict, double key, PointIndex index)
         {
+            dict.Add(key, index);
+            /*
             if(dict.ContainsKey(key))
             {
                 throw new ArgumentException("Intersection dictionary already contains key: " + key.ToString());
             }
 
-            dict[key] = index;
+            dict[key] = index;*/
+
             /*if (!dict.ContainsKey(key))
             {
                 dict.Add(key, new List<PointIndex>());
@@ -1299,6 +1233,53 @@ namespace Geometry
         {
             SortedDictionary<double, PointIndex> output = new SortedDictionary<double, PointIndex>();
 
+            PointIndex[] candidates = polygon.SegmentRTree.Intersects(line.BoundingBox).ToArray();
+            foreach (PointIndex index in candidates)
+            {
+                GridLineSegment segment = index.Segment(polygon);
+                if (segment.Intersects(line, false, out IShape2D intersection))
+                {
+                    double distance;
+                    IPoint2D p = intersection as IPoint2D;
+                    if (p == null) //It is not a point, it is a line.  Therefore distance is zero
+                    {
+                        distance = 0;
+                        if (output.ContainsKey(distance)) //There is an error if we add an endpoint twice, so don't
+                            continue;
+
+                        ILineSegment2D seg = intersection as ILineSegment2D;
+                        AddIntersection(output, 0, index);
+                    }
+                    else //Intersection is a point
+                    {
+                        GridVector2 p2 = new GridVector2(p.X, p.Y);
+                        distance = GridVector2.Distance(line.A, p2);
+
+                        if (segment.IsEndpoint(p2))
+                        {
+                            if (output.ContainsKey(distance)) //There is an error if we add an endpoint twice, so don't
+                                continue;
+
+                            PointIndex intersection_index = index;
+                            //If the endpoint is equal to segment.B it will be added on the next loop iteration
+                            if (p2 == segment.B)
+                            {
+                                //If it is the next segment we can increment to the next segment and skip that iteration
+                                intersection_index = index.Next;
+                            }
+
+                            AddIntersection(output, distance, intersection_index);
+                        }
+                        else
+                        {
+
+                            AddIntersection(output, distance, index);
+                        }
+                    }
+                }
+            }
+
+            /*
             for (int iRing = 0; iRing < polygon.InteriorRings.Count; iRing++)
             {
                 GridPolygon innerPoly = polygon.InteriorPolygons[iRing];// new GridPolygon(polygon.InteriorRings.ToArray()[iRing]);
@@ -1338,7 +1319,7 @@ namespace Geometry
                     }
                 }
             } 
-
+            */
             return output;
         }
 
