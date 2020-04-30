@@ -121,6 +121,48 @@ namespace Geometry.Meshing
         }
 
         /// <summary>
+        /// A function provided to help debug.  Returns true if any edges intersect, other than at endpoints of course
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        public static bool AnyMeshEdgesIntersect(this IReadOnlyMesh2D<IVertex2D> mesh)
+        {
+            RTree.RTree<IEdge> rTree = mesh.GenerateEdgeRTree();
+
+            foreach (var e in mesh.Edges.Keys)
+            {
+                GridLineSegment seg = mesh.ToGridLineSegment(e);
+                foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox))
+                {
+                    if (intersection.Equals(e)) //Don't test for intersecting with ourselves
+                        continue;
+
+                    GridLineSegment testLine = mesh.ToGridLineSegment(intersection);
+                    if (seg.Intersects(testLine, intersection.A == e.A || intersection.B == e.A || intersection.A == e.B || intersection.B == e.B))
+                    {
+                        System.Diagnostics.Trace.WriteLine(string.Format("{0} intersects {1}", e, intersection));
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+
+        public static RTree.RTree<IEdge> GenerateEdgeRTree(this IReadOnlyMesh2D<IVertex2D> mesh)
+        {
+            RTree.RTree<IEdge> rTree = new RTree.RTree<IEdge>();
+            foreach (var e in mesh.Edges.Values)
+            {
+                GridLineSegment seg = mesh.ToGridLineSegment(e);
+                rTree.Add(seg.BoundingBox, e);
+            }
+
+            return rTree;
+        }
+
+        /// <summary>
         /// Create a mesh from a set of triangles
         /// </summary>
         /// <param name="triangles"></param>
@@ -183,15 +225,27 @@ namespace Geometry.Meshing
             SortedSet<IEdgeKey> constrainedEdges = new SortedSet<IEdgeKey>();
 
             //Add constrained edges to the mesh
-            while (vertEnumerator.MoveNext() == true)
+            PointIndex[] pIndicies = vertEnumerator.ToArray();
+
+            Dictionary<PointIndex, Edge> edgeFacesToCheck = new Dictionary<PointIndex, Edge>();
+
+            //while (vertEnumerator.MoveNext() == true)
+            foreach(PointIndex currentVert in pIndicies)
             {
-                PointIndex currentVert = vertEnumerator.Current;
+                //PointIndex currentVert = vertEnumerator.Current;
                 int A = IndexToVert[currentVert].Index;
                 int B = IndexToVert[currentVert.Next].Index;
 
                 Edge e = new ConstrainedEdge(A, B);
-                mesh.AddConstrainedEdge(e);
+                mesh.AddConstrainedEdge(e, OnProgress);
                 constrainedEdges.Add(e.Key);
+
+                //If there are three constrained edges that form an interior polygon that is a triangle the face wont be removed.  This results
+                //in a constrained edge with two faces.  For this case remove the interior face after all constrained edges are added
+                if (currentVert.IsInner && currentVert.NumUniqueInRing == 3)
+                {
+                    edgeFacesToCheck.Add(currentVert, e);
+                }
             }
 
             //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
@@ -203,8 +257,37 @@ namespace Geometry.Meshing
                 if(OverlapType.NONE == centeredPoly.ContainsExt(line.Bisect()))
                 {
                     mesh.RemoveEdge(key);
+
+                    if(OnProgress != null)
+                    {
+                        OnProgress(mesh);
+                    }
                 }
             }
+
+            //If there are three constrained edges that form an interior polygon that is a triangle the face wont be removed.  This results
+            //in a constrained edge with two faces.  For this case remove the interior face
+            foreach(var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.iInnerPoly))
+            {
+                GridPolygon innerPolygon = poly.InteriorPolygons[innerPolyGroup.Key.Value];
+
+                IFace[] allFaces = innerPolyGroup.SelectMany(g => g.Value.Faces).ToArray();
+
+                //Select all of the faces that appear more than once.  I expect the faces we need to remove to appear three times.
+                var facesByCounts = allFaces.GroupBy(g => g).GroupBy(g => g.Count(), g => g.Key).Where(g => g.Key > 1).ToArray();
+
+                IFace[] triangleFaceCandidates = facesByCounts.Where(g => g.Key == 3).Select(g => g.First()).ToArray();
+
+                foreach (var face in triangleFaceCandidates.Where(f => mesh.Contains(f)))
+                { 
+                    
+                    if (innerPolygon.Contains(mesh.Centroid(face)))
+                    {
+                        mesh.RemoveFace(face);
+                    }
+                }
+            }
+            
 
             //System.Diagnostics.Debug.Assert(mesh.Faces.Count > 0, "Triangulation of polygon should create at least one face");
             //System.Diagnostics.Debug.Assert(constrainedEdges.All(e => mesh[e].Faces.Count == 1), "All constrained edges should have one face");

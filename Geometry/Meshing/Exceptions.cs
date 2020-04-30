@@ -34,16 +34,16 @@ namespace Geometry.Meshing
     /// <summary>
     /// This exception is raised when a corresponding point perfectly a vertex that is not an endpoint of the edge.
     /// </summary>
-    internal class CorrespondingEdgeIntersectsVertexException : GeometryMeshExceptionBase
+    internal class EdgeIntersectsVertexException : GeometryMeshExceptionBase
     {
         public int Vertex;
 
-        public CorrespondingEdgeIntersectsVertexException(int iVert) : base()
+        public EdgeIntersectsVertexException(int iVert) : base()
         {
             Vertex = iVert;
         }
 
-        public CorrespondingEdgeIntersectsVertexException(int iVert, string msg) : base(msg)
+        public EdgeIntersectsVertexException(int iVert, string msg) : base(msg)
         {
             Vertex = iVert;
         }
@@ -64,6 +64,27 @@ namespace Geometry.Meshing
         public NonconformingTriangulationException(IFace face, string message, Exception innerException) : base(message, innerException)
         {
             Face = face;
+        }
+    }
+
+    /// <summary>
+    /// Thrown when a delaunay triangulation does not conform to the delaunay requirements
+    /// </summary>
+    public class EdgesIntersectTriangulationException : GeometryMeshExceptionBase
+    {
+        public IEdgeKey Edge;
+        public IEdgeKey[] IntersectedEdges;
+
+        public EdgesIntersectTriangulationException(IEdgeKey edge, ICollection<IEdgeKey> intersected, string msg) : base(msg)
+        {
+            Edge = edge;
+           IntersectedEdges = intersected.ToArray();
+        }
+
+        public EdgesIntersectTriangulationException(IEdgeKey edge, ICollection<IEdgeKey> intersected, string message, Exception innerException) : base(message, innerException)
+        {
+            Edge = edge;
+            IntersectedEdges = intersected.ToArray();
         }
     }
 

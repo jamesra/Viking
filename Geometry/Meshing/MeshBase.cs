@@ -372,29 +372,34 @@ namespace Geometry.Meshing
 
             if (this.Contains(e))
                 return;
-
+                
             if (CreateEdge == null)
                 throw new InvalidOperationException(string.Format("Adding {0}: DuplicateEdge function not specified for DynamicRenderMesh", e));
-            
+            /*
             if (e.A >= _Verticies.Count || e.A < 0)
                 throw new ArgumentException(string.Format("Edge vertex A references non-existent vertex {0}", e));
 
             if (e.B >= _Verticies.Count || e.B < 0)
                 throw new ArgumentException(string.Format("Edge vertex B references non-existent vertex {0}", e));
-
+                */
 #if TRACEMESH
             Trace.WriteLine(string.Format("Add edge {0}", e));
 #endif
 
             IEdge newEdge = CreateEdge(e.A, e.B);
+
+            this.AddEdge(newEdge);
+
+            /*
             Edges.Add(e, newEdge);
 
             _Verticies[(int)e.A].AddEdge(e);
             _Verticies[(int)e.B].AddEdge(e);
+            */
         }
 
 
-        public void AddEdge(IEdge e)
+        public virtual void AddEdge(IEdge e)
         {
             if (e.A == e.B)
                 throw new ArgumentException("Edges cannot have the same start and end point");
@@ -463,7 +468,11 @@ namespace Geometry.Meshing
             AddFace(face);
         }
 
-        private void AddFaceToEdges(IFace face)
+        /// <summary>
+        /// Adds a face to edges.  This is a virtual method so that 2D meshes can throw an error if an edge has more than two faces
+        /// </summary>
+        /// <param name="face"></param>
+        protected virtual void AddFaceToEdges(IFace face)
         {
             foreach (IEdgeKey e in face.Edges)
             {

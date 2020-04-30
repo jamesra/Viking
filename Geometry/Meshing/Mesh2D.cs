@@ -127,6 +127,11 @@ namespace Geometry.Meshing
             return tri;
         }
 
+        public GridVector2 Centroid(IFace f)
+        {
+            return this.ToTriangle(f).Centroid;
+        }
+
         public RotationDirection Winding(IFace f)
         { 
             return this[f].Select(v => v.Position).ToArray().Winding();
@@ -142,48 +147,24 @@ namespace Geometry.Meshing
             return verts.Select(v => this[v].Position).ToArray().AreClockwise();
         }
 
+
         /// <summary>
-        /// A function provided to help debug.  Returns true if any edges intersect, other than at endpoints of course
+        /// Adds a face to edges.  This is a virtual method so that 2D meshes can throw an error if an edge has more than two faces
         /// </summary>
-        /// <param name="mesh"></param>
-        /// <returns></returns>
-        public bool AnyMeshEdgesIntersect()
+        /// <param name="face"></param>
+        protected override void AddFaceToEdges(IFace face)
         {
-            RTree.RTree<IEdge> rTree = GenerateEdgeRTree();
-
-            foreach (var e in Edges.Keys)
+            foreach (IEdgeKey e in face.Edges)
             {
-                GridLineSegment seg = this.ToGridLineSegment(e);
-                foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox))
+                AddEdge(e);
+                Edges[e].AddFace(face);
+                /*
+                if(Edges[e].Faces.Count() > 2)
                 {
-                    if (intersection.Equals(e)) //Don't test for intersecting with ourselves
-                        continue;
-
-                    GridLineSegment testLine = this.ToGridLineSegment(intersection);
-                    if (seg.Intersects(testLine, intersection.A == e.A || intersection.B == e.A || intersection.A == e.B || intersection.B == e.B))
-                    {
-                        System.Diagnostics.Trace.WriteLine(string.Format("{0} intersects {1}", e, intersection));
-                        return true;
-                    }
-                }
+                    throw new ArgumentException("Cannot add more than two faces to a 2D mesh edge");
+                }*/
             }
-
-            return false;
         }
-         
-
-        internal RTree.RTree<IEdge> GenerateEdgeRTree()
-        {
-            RTree.RTree<IEdge> rTree = new RTree.RTree<IEdge>();
-            foreach (var e in Edges.Values)
-            {
-                GridLineSegment seg = this.ToGridLineSegment(e);
-                rTree.Add(seg.BoundingBox, e);
-            }
-
-            return rTree;
-        }
-
 
         public virtual JObject ToJObject()
         {
