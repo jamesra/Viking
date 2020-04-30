@@ -69,6 +69,7 @@ namespace MonogameTestbed
             var existingProperty = Properties.Settings.Default.Properties["Template"];
 
             SettingsProperty prop = new SettingsProperty(name, type, existingProperty.Provider, false, null, SettingsSerializeAs.Xml, null, true, true);
+            Properties.Settings.Default.Properties.Remove(name);
             Properties.Settings.Default.Properties.Add(prop);
             return true;
         }
