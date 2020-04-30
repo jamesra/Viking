@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Immutable;
+using System.Collections.Concurrent;
 using Geometry;
 using SqlGeometryUtils;
 using AnnotationVizLib;
@@ -54,7 +55,7 @@ namespace MorphologyMesh
         /// Caches the shape of each morphology node in the slice graph.  After corresponding verticies are added this cache is used to ensures each section will get the same input shapes
         /// The map can also be used to support simplifying shapes.
         /// </summary>
-        private Dictionary<ulong, GridPolygon> MorphNodeToShape = null;
+        internal Dictionary<ulong, GridPolygon> MorphNodeToShape = null;
 
         private Dictionary<ulong, SliceTopology> SliceToTopology = null;
 
@@ -130,12 +131,14 @@ namespace MorphologyMesh
             }
 
             output.MorphNodeToShape = InitializeShapes(graph, tolerance);
+            output.InitializeSliceTopology(tolerance);
 
-            output.SliceToTopology = new Dictionary<ulong, SliceTopology>(output.Nodes.Count);
+            /*output.SliceToTopology = new Dictionary<ulong, SliceTopology>(output.Nodes.Count);
             foreach(Slice s in output.Nodes.Values)
             {
                 output.SliceToTopology[s.Key] = output.GetTopology(s);
             }
+            */
 
             return output;
         }
@@ -196,20 +199,27 @@ namespace MorphologyMesh
         /// Populates the lookup table mapping morph nodes to shapes.  Allows user option to simplify shapes.  Ensures all shapes have matching corresponding verticies if they participate in two or more slices
         /// </summary>
         /// <param name="tolerance"></param>
-        private void InitializeShapes(double tolerance = 0)
+        private void InitializeSliceTopology(double tolerance = 0)
         {
-            this.MorphNodeToShape = SliceGraph.InitializeShapes(this.Graph, tolerance);
+            if(this.MorphNodeToShape == null)
+                this.MorphNodeToShape = SliceGraph.InitializeShapes(this.Graph, tolerance);
 
+            ConcurrentTopologyInitializer concurrentInitializer = new ConcurrentTopologyInitializer(this);
+
+            this.SliceToTopology = concurrentInitializer.InitializeSliceTopology();
+
+            /*
             //Create corresponding verticies for all shapes
             foreach (var node in this.Nodes.Values)
             {
                 SliceTopology st = GetSliceTopology(node, MorphNodeToShape);
 
                 //Add corresponding verticies.  Will insert into the polygons without creating new ones, which will update MorphNodeToShape
-                List<GridVector2> correspondingPoints = st.Polygons.AddCorrespondingVerticies();
+                //List<GridVector2> correspondingPoints = st.Polygons.AddCorrespondingVerticies();
                  
-                st.AddPointsBetweenAdjacentCorrespondingVerticies(correspondingPoints);
+                //AddPointsBetweenAdjacentCorrespondingVerticies(st.Polygons,  correspondingPoints);
             }
+            */
 
             return;
         }
@@ -266,9 +276,6 @@ namespace MorphologyMesh
 
         public SliceTopology GetTopology(Slice slice)
         {
-            if (MorphNodeToShape == null)
-                InitializeShapes();
-
             if (SliceToTopology == null)
                 SliceToTopology = new Dictionary<ulong, SliceTopology>(this.Nodes.Count);
 
@@ -283,9 +290,6 @@ namespace MorphologyMesh
 
         public SliceTopology GetTopology(ulong sliceKey)
         {
-            if (MorphNodeToShape == null)
-                InitializeShapes();
-
             if (SliceToTopology == null)
                 SliceToTopology = new Dictionary<ulong, SliceTopology>(this.Nodes.Count);
 
@@ -303,23 +307,30 @@ namespace MorphologyMesh
             return GetSliceTopology(this[sliceKey], polyLookup);
         }
 
-        private SliceTopology GetSliceTopology(Slice group, Dictionary<ulong, GridPolygon> polyLookup = null)
+        internal SliceTopology GetSliceTopology(Slice group)
         {
-            var Polygons = new List<GridPolygon>();
+            return this.GetSliceTopology(group, this.MorphNodeToShape);
+        }
+
+        internal SliceTopology GetSliceTopology(Slice group, Dictionary<ulong, GridPolygon> polyLookup = null)
+        {
+            var PolygonList = new List<GridPolygon>();
             var IsUpper = new List<bool>();
             var PolyZ = new List<double>();
             var PolyIndexToMorphNodeIndex = new List<ulong>();
 
             if (polyLookup != null)
             {
-                Polygons.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
-                Polygons.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
+                PolygonList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
+                PolygonList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
             }
             else
             {
-                Polygons.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToPolygon()));
-                Polygons.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToPolygon()));
+                PolygonList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToPolygon()));
+                PolygonList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToPolygon()));
             }
+
+            GridPolygon[] Polygons = PolygonList.ToArray();
 
             PolyIndexToMorphNodeIndex.AddRange(group.NodesAbove);
             PolyIndexToMorphNodeIndex.AddRange(group.NodesBelow);
@@ -330,6 +341,24 @@ namespace MorphologyMesh
             PolyZ.AddRange(group.NodesAbove.Select(id => Graph[id].Z));
             PolyZ.AddRange(group.NodesBelow.Select(id => Graph[id].Z));
 
+            //Todo Monday, this should not be in the constructor or the class I think.
+            //Add corresponding points until we've run out of new correspondances
+            var correspondingPoints = Polygons.AddCorrespondingVerticies();
+            /*
+            List<GridVector2> novelCorrespondingPoints = correspondingPoints.ToList();
+            do
+            {
+                var nudgedPoints = SliceTopology.NudgeCorrespondingVerticies(Polygons, novelCorrespondingPoints);
+                */
+            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polygons, correspondingPoints);
+            /*
+                var NewCorresponingPoints = Polygons.AddCorrespondingVerticies();
+//                novelCorrespondingPoints = NewCorresponingPoints.Where(p => correspondingPoints.Contains(p) == false).ToList();
+                //correspondingPoints = NewCorresponingPoints;
+            }
+            while (novelCorrespondingPoints.Count > 0);
+            */
+            
             SliceTopology output = new SliceTopology(group.Key, Polygons, IsUpper, PolyZ, PolyIndexToMorphNodeIndex);
 
             return output;
@@ -480,30 +509,127 @@ namespace MorphologyMesh
             Polygons = polygons.ToArray();
             IsUpper = isUpper.ToArray();
             PolyZ = polyZ.ToArray();
-
-            var correspondingPoints = Polygons.AddCorrespondingVerticies();
-
+            
             PolyIndexToMorphNodeIndex = polyIndexToMorphNodeIndex == null ? null : polyIndexToMorphNodeIndex.ToArray();
 
             //Assign polys to sets for convienience later
             CalculateUpperAndLowerPolygons(IsUpper, Polygons, out UpperPolygons, out UpperPolyIndicies, out LowerPolygons, out LowerPolyIndicies);
-
-            AddPointsBetweenAdjacentCorrespondingVerticies(correspondingPoints);
         }
+
+        /// <summary>
+        /// The delaunay implementation floating point rounding errors are most common on colinear points.  To mitigate this I nudge corresponding points to match the expected curvature of the shape the correlate with
+        /// </summary>
+        internal static List<GridVector2> NudgeCorrespondingVerticies(GridPolygon[]  Polygons, List<GridVector2> correspondingPoints)
+        {
+            Dictionary<GridVector2, List<PointIndex>> pointToIndexList = new Dictionary<GridVector2, List<PointIndex>>();
+            //GridPolygon[] Polygons = this.Polygons;
+
+            for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)// GridPolygon poly in Polygons)
+            {
+                GridPolygon poly = Polygons[iPoly];
+                List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
+                if (correspondingIndicies == null || correspondingIndicies.Count == 0)
+                    continue;
+
+                for (int i = 0; i < correspondingIndicies.Count; i++)
+                {
+                    PointIndex pi = correspondingIndicies[i];
+                    GridVector2 cp = pi.Point(poly);
+
+                    if (pointToIndexList.ContainsKey(cp))
+                    {
+                        pointToIndexList[cp].Add(pi.Reindex(iPoly));
+                    }
+                    else
+                    {
+                        List<PointIndex> listPI = new List<PointIndex>();
+                        listPI.Add(pi.Reindex(iPoly));
+                        pointToIndexList.Add(cp, listPI);
+                    }
+                }
+            }
+
+            List<GridVector2> UpdatedPoints = new List<GridVector2>();
+
+            foreach (GridVector2 cp in pointToIndexList.Keys)
+            {
+                List<PointIndex> correspondingIndicies = pointToIndexList[cp];
+
+                GridVector2[] points = correspondingIndicies.Select(ci => ci.PredictPoint(Polygons)).ToArray();
+                GridVector2 avg = points.Average();
+                  
+                try
+                {
+                    foreach (PointIndex pi in correspondingIndicies)
+                    {
+                        pi.SetPoint(Polygons, avg);
+                    }
+
+                    UpdatedPoints.Add(avg);
+                }
+                catch(ArgumentException e)
+                {
+                    foreach (PointIndex pi in correspondingIndicies)
+                    {
+                        pi.SetPoint(Polygons, cp);
+                    }
+
+                    UpdatedPoints.Add(cp);
+                }
+                
+            }
+
+            return UpdatedPoints;
+        }
+        /*
+                SortedList<PointIndex, GridVector2> PointsToInsert = new SortedList<PointIndex, GridVector2>();
+
+                correspondingIndicies.Sort(); //Sort the indicies so we can simplify our search.
+
+                IIndexSet loopingIndex = new InfiniteSequentialIndexSet(0, correspondingIndicies.Count, 0);
+                PointIndex Current = correspondingIndicies[0];
+                for (long i = 0; i < correspondingIndicies.Count; i++)
+                {
+                    int iNext = (int)loopingIndex[i + 1];
+                    PointIndex Next = correspondingIndicies[iNext];
+
+                    if (Current.Next == Next)
+                    {
+                        //This means two corresponding points are adjacent and we need to insert a midpoint into the polygon between them.
+                        GridVector2[] midPoint = CatmullRom.FitCurveSegment(Current.Previous.Point(poly),
+                                                   Current.Point(poly),
+                                                   Next.Point(poly),
+                                                   Next.Next.Point(poly),
+                                                   new double[] { 0.5 });
+
+                        //Adding the point will change index of all PointIndex values so we wait until the end
+                        PointsToInsert.Add(Current, midPoint[0]);
+                    }
+
+                    Current = Next;
+                }
+
+                //Reverse the order of our list of points to add so we do not break polygon indicies.  Then insert our points
+                foreach (var addition in PointsToInsert.Reverse())
+                {
+                    poly.AddVertex(addition.Value, addition.Key);
+                }
+            }
+        }
+        */
 
         /// <summary>
         /// Due to details of the implementation of our bajaj algorithm we need to add a point between adjacent corresponding points on a polygon
         /// </summary>
-        internal void AddPointsBetweenAdjacentCorrespondingVerticies(List<GridVector2> correspondingPoints)
+        internal static void AddPointsBetweenAdjacentCorrespondingVerticies(GridPolygon[] Polygons, List<GridVector2> correspondingPoints)
         {
             foreach(GridPolygon poly in Polygons)
             { 
                 List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
-                SortedList<PointIndex, GridVector2> PointsToInsert = new SortedList<PointIndex, GridVector2>();
-
                 if (correspondingIndicies == null || correspondingIndicies.Count == 0)
                     continue;
 
+                SortedList<PointIndex, GridVector2> PointsToInsert = new SortedList<PointIndex, GridVector2>();
                 correspondingIndicies.Sort(); //Sort the indicies so we can simplify our search.
 
                 IIndexSet loopingIndex = new InfiniteSequentialIndexSet(0, correspondingIndicies.Count, 0);
@@ -523,7 +649,7 @@ namespace MorphologyMesh
                                                    new double[] { 0.5 });
 
                         //Adding the point will change index of all PointIndex values so we wait until the end
-                        PointsToInsert.Add(Current, midPoint[0]);
+                        PointsToInsert.Add(Current.Next, midPoint[0]);
                     }
 
                     Current = Next; 
@@ -532,7 +658,8 @@ namespace MorphologyMesh
                 //Reverse the order of our list of points to add so we do not break polygon indicies.  Then insert our points
                 foreach(var addition in PointsToInsert.Reverse())
                 {
-                    poly.AddVertex(addition.Value, addition.Key);
+                    //Trace.WriteLine(string.Format("Add vertex after {0}", addition));
+                    poly.InsertVertex(addition.Value, addition.Key);
                 }
             }
         }
@@ -573,4 +700,135 @@ namespace MorphologyMesh
         }
          
     }
+
+    internal class ConcurrentTopologyInitializer
+    {
+        SliceGraph Graph;
+
+        SortedSet<ulong> UnprocessedSlices = null;
+        SortedSet<ulong> SlicesWithActiveTasks = new SortedSet<ulong>();
+        SortedSet<ulong> CompletedSlices = new SortedSet<ulong>();
+
+        System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
+        System.Threading.ManualResetEventSlim AllDoneEvent = new System.Threading.ManualResetEventSlim();
+
+        Dictionary<ulong, SliceTopology> SliceToTopology;
+
+        public ConcurrentTopologyInitializer(SliceGraph graph)
+        {
+            Graph = graph;
+            UnprocessedSlices = new SortedSet<ulong>(Graph.Nodes.Keys);
+            SliceToTopology = new Dictionary<ulong, SliceTopology>(Graph.Nodes.Count);
+        }
+
+        private void OnTopologyComplete(Slice s, SliceTopology st)
+        {
+            try
+            {
+                rwLock.EnterWriteLock();
+
+                SliceToTopology.Add(s.Key, st);
+
+                SlicesWithActiveTasks.Remove(s.Key);
+                CompletedSlices.Add(s.Key);
+
+                foreach(ulong adjacent in s.Edges.Keys)
+                {
+                    TryStartSlice(adjacent);
+                }
+
+                if(UnprocessedSlices.Count == 0 && SlicesWithActiveTasks.Count == 0)
+                {
+                    AllDoneEvent.Set();
+                }
+            }
+            finally
+            {
+                rwLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Return true if a task can be safely launched for this slice
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns></returns>
+        private bool CanStartSlice(Slice node)
+        { 
+            if (UnprocessedSlices.Contains(node.Key) == false)
+                return false;
+
+            //Do not process a slice if the adjacent slices are being processed and could change the polygons it would be compared against
+            if (node.Edges.Keys.Any(key => SlicesWithActiveTasks.Contains(key)))
+            {
+                return false;
+            }
+
+            return true; 
+        }
+
+        /// <summary>
+        /// If a slice is eligible to be processed then start a task.
+        /// </summary>
+        /// <param name="slice_id"></param>
+        /// <returns></returns>
+        private Task TryStartSlice(ulong slice_id)
+        {
+            Slice slice = Graph[slice_id];
+
+            if (CanStartSlice(slice) == false)
+                return null;
+
+            UnprocessedSlices.Remove(slice_id);
+            SlicesWithActiveTasks.Add(slice_id);
+
+            Task topologyTask = Task.Run(() =>
+            {
+                SliceTopology st;
+                try
+                {
+                    st = Graph.GetSliceTopology(slice);
+                    this.OnTopologyComplete(slice, st);
+                }
+                catch(Exception e)
+                {
+                    this.OnTopologyComplete(slice, new SliceTopology());
+                }
+            });
+
+            return topologyTask;
+        }
+
+        /// <summary>
+        /// Populates the lookup table mapping morph nodes to shapes.  Allows user option to simplify shapes.  Ensures all shapes have matching corresponding verticies if they participate in two or more slices
+        /// </summary>
+        /// <param name="tolerance"></param>
+        public Dictionary<ulong, SliceTopology> InitializeSliceTopology(double tolerance = 0)
+        {
+            var MorphNodeToShape = Graph.MorphNodeToShape;
+             
+            List<Slice> SlicesToStart = new List<Slice>(UnprocessedSlices.Count);
+
+            try
+            {
+                rwLock.EnterWriteLock();
+
+                ulong[] UnprocessedSlicesArray = UnprocessedSlices.ToArray();
+                
+                for (int iSlice = UnprocessedSlices.Count - 1; iSlice >= 0; iSlice--)
+                {
+                    TryStartSlice(UnprocessedSlicesArray[iSlice]);
+                }
+            }
+            finally
+            {
+                rwLock.ExitWriteLock();
+            }
+
+            AllDoneEvent.Wait();
+
+            return this.SliceToTopology;
+        }
+    }
+
 }

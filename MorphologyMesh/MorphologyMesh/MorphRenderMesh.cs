@@ -172,49 +172,39 @@ namespace MorphologyMesh
                 mesh.AddEdge(edge);
             }
 
-            HashSet<int> NudgedVerts = new HashSet<int>();
+            //We need to handle the case where a single vertex is on the other side of the contour boundary.  This
+            //creates two corresponding vertices
+            //      D
+            //     / \
+            // A--1-3-2--B
+            //   /     \
+            //  C       E
 
-            foreach(MorphMeshVertex v in mesh.Verticies.Where(v => v.Corresponding.HasValue))
-            {
-                if(NudgedVerts.Contains(v.Index))
-                {
-                    continue;
-                }
+            //This creates two corresponding verticies 1 & 2.Then the code to prevent adjacent corresponding verticies adds a third point, 3.
+            //todo, fix the case above
 
-                //Nudge the vertex and the corresponding vertex
-                //TODO: For sanity in using the geometry algorithms, nudge corresponding verticies so we don't have two sets of colinear points
-                //that create obscure floating point rounding errors
-                {
-                    GridVector2 originalPos = v.Position.XY();
-                    MorphMeshVertex corresponding = mesh[v.Corresponding.Value];
-
-                    /*
-                    double fudgeScale = Math.Min(v.Edges.Where(e => mesh[e].Type != EdgeType.CORRESPONDING).Select(e => mesh.ToSegment(e).Length).Min(),
-                                                 corresponding.Edges.Where(e => mesh[e].Type != EdgeType.CORRESPONDING).Select(e => mesh.ToSegment(e).Length).Min());
-                    fudgeScale = fudgeScale * 0.05;
-                    GridVector3 fudgeFactor = new GridVector3(fudgeScale, fudgeScale, 0);
-                    v.Position = v.Position + fudgeFactor;
-                    corresponding.Position = corresponding.Position + fudgeFactor;
-                    
-                    */
-                    PointIndex cIndex = corresponding.PolyIndex.Value;
-                    var p1 = cIndex.Previous.Previous.Point(mesh.Polygons);
-                    var p2 = cIndex.Previous.Point(mesh.Polygons);
-                    var p3 = cIndex.Next.Point(mesh.Polygons);
-                    var p4 = cIndex.Next.Next.Point(mesh.Polygons);
-                    var newPositions = CatmullRom.FitCurveSegment(p1, p2, p3, p4,
-                                                        new double[] { GridVector2.Distance(cIndex.Point(mesh.Polygons), p2) / GridVector2.Distance(p3, p2) });
-                    GridVector2 newPosition = newPositions[0];
-
-                    v.Position = newPosition.ToGridVector3(v.Position.Z);
-                    corresponding.Position = newPosition.ToGridVector3(corresponding.Position.Z);
-                    //PositionToIndex.Add(v.Position.XY(), corresponding.Index);
-                    NudgedVerts.Add(v.Index);
-                    NudgedVerts.Add(corresponding.Index);
-                }
-            }
-            
         }
+
+        /// <summary>
+        /// Given a vertex, predict where the vertex would be using the two points before and after and a catmullrom fit
+        /// </summary>
+        /// <param name="corresponding"></param>
+        private static GridVector2 FitCurveMidpoint(MorphRenderMesh mesh, int index)
+        {
+            return FitCurveMidpoint(mesh, mesh[index]);
+        }
+
+        /// <summary>
+        /// Given a vertex, predict where the vertex would be using the two points before and after and a catmullrom fit
+        /// </summary>
+        /// <param name="corresponding"></param>
+        private static GridVector2 FitCurveMidpoint(MorphRenderMesh mesh, MorphMeshVertex v)
+        {
+            PointIndex cIndex = v.PolyIndex.Value;
+            return cIndex.PredictPoint(mesh.Polygons);
+        }
+
+        
 
         /// <summary>
         /// Returns a dictionary mapping points on two Z levels to polygon indicies in the mesh.
@@ -615,13 +605,13 @@ namespace MorphologyMesh
                 
             }
 
-            throw new NotImplementedException("Corresponding points in region");
+            MorphMeshVertex corresponding = mesh[Face].Where(v => v.Corresponding.HasValue).First();
+            throw new NotImplementedException(string.Format("Corresponding points in region {0}", corresponding.PolyIndex));
             //If there are corresponding verticies we can have duplicate points in the set which will break triangulation.
             // //Break the corresponding verticies into sub-polygons and build triangles for each
             //
 
             //Find the verticies before and after the corresponding pair and add a face
-
         }
 
         /// <summary>
