@@ -116,7 +116,7 @@ namespace VikingXNAGraphics
                 lineManager.Draw(renderGroup.Select(rg => rg.line).ToArray(),
                                  renderGroup.Key.width / 2.0f,
                                  renderGroup.Key.color,
-                                 scene.Camera.View * scene.Projection,
+                                 scene.View * scene.Projection,
                                  (float)(DateTime.UtcNow.Millisecond / 1000.0),
                                  renderGroup.Key.style.ToString());
             }
