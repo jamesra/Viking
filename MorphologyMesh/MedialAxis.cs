@@ -4,7 +4,6 @@ using System.Linq;
 using Geometry;
 using System.Text;
 using System.Threading.Tasks;
-using TriangleNet;
 using Geometry.Meshing;
 
 namespace MorphologyMesh
@@ -71,9 +70,11 @@ namespace MorphologyMesh
         static public MedialAxisGraph ApproximateMedialAxis(GridPolygon shape)
         {
             TriangleNet.Meshing.IMesh triangulationMesh = null;
+            TriangulationMesh<IVertex2D<PointIndex>> mesh;
             try
             {
-                triangulationMesh = TriangleExtensions.Triangulate(shape);// shape.Triangulate();
+                mesh = shape.Triangulate();
+                //triangulationMesh = TriangleExtensions.Triangulate(shape);// shape.Triangulate();
             }
             catch (ArgumentException)
             {
@@ -82,25 +83,30 @@ namespace MorphologyMesh
 
             //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(triangulationMesh, shapes);
 
-            List<GridTriangle> triangles = triangulationMesh.ToTriangles();
+            //List<GridTriangle> triangles = triangulationMesh.ToTriangles();
 
-            MedialAxisGraph graph = BuildGraphFromTriangles(triangles.ToArray(), shape);
+            MedialAxisGraph graph = BuildGraphFromMesh2D(mesh, shape);
             return graph;
         }
 
         private static MedialAxisGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon boundary)
         {
-            MedialAxisGraph graph = new MedialAxisGraph();
-
+           
             //Create an index map of points 
             //Dictionary<GridVector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
 
-            Mesh3D mesh = triangles.ToDynamicRenderMesh();
+            Mesh2D mesh = triangles.ToDynamicRenderMesh();
+            return BuildGraphFromMesh2D(mesh, boundary);
+        }
+
+        private static MedialAxisGraph BuildGraphFromMesh2D(IReadOnlyMesh2D<IVertex2D> mesh, GridPolygon boundary)
+        {
+            MedialAxisGraph graph = new MedialAxisGraph();
 
             foreach (var edge in mesh.Edges.Values)
             {
                 //Create a vertex at the edge midpoint
-                GridLineSegment line = mesh.ToSegment(edge);
+                GridLineSegment line = mesh.ToGridLineSegment(edge);
 
                 //If the line is between two different shapes we add a node to the graph
                 if (false == boundary.IsExteriorOrInteriorSegment(line))
@@ -111,10 +117,10 @@ namespace MorphologyMesh
                     {
                         MedialAxisVertex otherNode = null;
 
-                        var edgeCandidates = AdjacentFace.Edges.Where(e => e.Equals(edge) == false && boundary.IsExteriorOrInteriorSegment(mesh.ToSegment(e)) == false).ToList();
+                        var edgeCandidates = AdjacentFace.Edges.Where(e => e.Equals(edge) == false && boundary.IsExteriorOrInteriorSegment(mesh.ToGridLineSegment(e)) == false).ToList();
                         if (edgeCandidates.Count == 1)
                         {
-                            GridLineSegment ConnectedLine = mesh.ToSegment(edgeCandidates.First());
+                            GridLineSegment ConnectedLine = mesh.ToGridLineSegment(edgeCandidates.First());
                             GridLineSegment ProposedMedialLine = new GridLineSegment(node.Key, ConnectedLine.Bisect());
                             if (boundary.Intersects(ProposedMedialLine) == false)
                             {
@@ -122,13 +128,18 @@ namespace MorphologyMesh
                             }
                             else
                             {
-                                GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
+                                GridTriangle tri = new GridTriangle(mesh[AdjacentFace.iVerts].Select(v => v.Position).ToArray());
+                                //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
+                                GridVector2 face_centroid = tri.Centroid;
                                 otherNode = GetOrAddVertex(graph, face_centroid);
                             }
                         }
                         else if (edgeCandidates.Count == 2 || edgeCandidates.Count == 0) ////All edges of the face are part of the medial axis.  Add a vertex at the centroid and connect them all to the centroid
                         {
-                            GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
+                            GridTriangle tri = new GridTriangle(mesh[AdjacentFace.iVerts].Select(v => v.Position).ToArray());
+                            //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
+                            GridVector2 face_centroid = tri.Centroid;
+                            //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
                             otherNode = GetOrAddVertex(graph, face_centroid);
                         }
 
