@@ -134,10 +134,61 @@ namespace VikingXNAGraphics
             return model; 
         }
 
+        /// <summary>
+        /// Generates a Model for a unit cube that uses edges instead of faces to represent the exterior borders.
+        /// </summary>
+        /// <returns></returns>
+        public static MeshModel<VertexPositionColor> CreateUnitBoundingBox(Color color)
+        {
+            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
+            model.Primitive = PrimitiveType.LineList;
+
+            Vector3[] verts = new Vector3[] {   new Vector3(-1,-1,-1),
+                                                new Vector3(-1,-1, 1),
+                                                new Vector3(-1, 1,-1),
+                                                new Vector3(-1, 1, 1),
+                                                new Vector3( 1,-1,-1),
+                                                new Vector3( 1,-1, 1),
+                                                new Vector3( 1, 1,-1),
+                                                new Vector3( 1, 1, 1) };
+
+            model.Verticies = verts.Select(v => new VertexPositionColor(v, color)).ToArray();
+
+            //Add faces
+            model.Edges = new int[] {0,1,
+                                     2,3, //A - Normal is -x
+                                     4,5,
+                                     6,7,
+                                     0,2,2,6,6,4,4,0, //The XY border for Z=-1
+                                     1,3,3,7,7,5,5,1, //The XY Border for Z=1 
+            };
+
+            return model;
+        }
+
+        /// <summary>
+        /// Creates a bounding box model with faces
+        /// </summary>
+        /// <param name="bbox"></param>
+        /// <param name="color"></param>
+        /// <returns></returns>
         public static MeshModel<VertexPositionColor> ToMeshModel(this GridBox bbox, Color color)
         {
             var model = VikingXNAGraphics.MeshExtensions.CreateUnitCube(color);
             model.ModelMatrix = Matrix.CreateScale((float)bbox.Width/2, (float)bbox.Height/2, (float)bbox.Depth/2) * Matrix.CreateTranslation(bbox.CenterPoint.ToXNAVector3());
+            return model;
+        }
+
+        /// <summary>
+        /// Creates a bounding box model that is edges only with no faces
+        /// </summary>
+        /// <param name="bbox"></param>
+        /// <param name="color"></param>
+        /// <returns></returns>
+        public static MeshModel<VertexPositionColor> ToMeshModelEdgesOnly(this GridBox bbox, Color color)
+        {
+            var model = VikingXNAGraphics.MeshExtensions.CreateUnitBoundingBox(color);
+            model.ModelMatrix = Matrix.CreateScale((float)bbox.Width / 2, (float)bbox.Height / 2, (float)bbox.Depth / 2) * Matrix.CreateTranslation(bbox.CenterPoint.ToXNAVector3());
             return model;
         }
 

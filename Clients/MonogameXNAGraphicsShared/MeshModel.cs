@@ -35,6 +35,31 @@ namespace VikingXNAGraphics
             get; set;
         }
 
+        /// <summary>
+        /// Specify the expected renderer behavior for this model
+        /// </summary>
+        public PrimitiveType Primitive { get; set; } = PrimitiveType.TriangleList;
+
+        public int PrimitiveCount
+        {
+            get
+            {
+                switch (Primitive)
+                {
+                    case PrimitiveType.TriangleList:
+                        return this.Edges.Length / 3;
+                    case PrimitiveType.LineList:
+                        return this.Edges.Length / 2;
+                    case PrimitiveType.LineStrip:
+                        return this.Edges.Length - 1;
+                    case PrimitiveType.TriangleStrip:
+                        return this.Edges.Length - 2;
+                    default:
+                        throw new NotImplementedException("Unexpected primitive type");
+                }
+            }
+        }
+
         static MeshModel()
         {
             VERTEXTYPE v = new VERTEXTYPE();
