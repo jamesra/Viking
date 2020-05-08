@@ -39,27 +39,73 @@ namespace MorphologyMesh
     [Flags]
     public enum EdgeType
     {
+        /// <summary>
+        /// An edge of unknown type
+        /// </summary>
         UNKNOWN = 0x00,
         //VALID = 0x01,   //An edge that could be a valid slice chord
 
-        INVALID = 1 << 31, //An edge that cannot be part of the final surface
-        FLIPPED_DIRECTION = 1 << 30, //An edge that would be valid, but the orientation is wrong.  For example, the line has solid material to the left on one vertex and the right on another 
+        /// <summary>
+        /// An edge that cannot be part of the final surface
+        /// </summary>
+        INVALID = 1 << 31,
+
+        /// <summary>
+        /// An edge that would be valid, but the orientation is wrong.  For example, the line has solid material to the left on one vertex and the right on another 
+        /// </summary>
+        FLIPPED_DIRECTION = 1 << 30,
 
         //INVALID Types:
-        FLAT = 1 << 29, //An edge that connects two verticies on the same shape
-        FLYING = 1 << 28, //An edge that crosses empty space, not a valid surface edge                
-        INTERNAL = 1 << 27, //An edge that runs between two sections but is known to be inside the mesh
-        INVAGINATION = 1 << 26, //An edge that spans between the same shape outside of that shape, but passes over a shape on an adjacent section
-        HOLE = 1 << 25, //An edge that spans a hole in a shape
-        UNTILED = 1 << 24, //An edge that crosses an untiled region of a polygon on an adjacent section
+        /// <summary>
+        /// An edge that connects two verticies on the same shape
+        /// </summary>
+        FLAT = 1 << 29,
+        /// <summary>
+        /// An edge that crosses empty space, not a valid surface edge                
+        /// </summary>
+        FLYING = 1 << 28,
+        /// <summary>
+        /// An edge that runs between two sections but is known to be inside the mesh
+        /// </summary>
+        INTERNAL = 1 << 27,
+        /// <summary>
+        /// An edge that spans between the same shape outside of that shape, but passes over a shape on an adjacent section
+        /// </summary>
+        INVAGINATION = 1 << 26,
+        /// <summary>
+        /// An edge that spans a hole in a shape
+        /// </summary>
+        HOLE = 1 << 25,
+        /// <summary>
+        /// An edge that crosses an untiled region of a polygon on an adjacent section
+        /// </summary>
+        UNTILED = 1 << 24,
 
         //VALID Types
-        CONTOUR = 1 << 2, //An edge along the contour, part of either the exterior or inner ring
-        SURFACE = 1 << 3, //An edge that crosses from one Z-LEVEL to another and is part of the surface
-        ARTIFICIAL = 1 << 4, //An edge that is connected to a non-polygon vertex that we added to the mesh
-        CORRESPONDING = 1 << 5,  //An edge that shares XY coordinates with a vertex on a shape on an adjacent section
-        MEDIALAXIS = 1 << 6, //An edge that was added as part of an untiled regions medial axis and is known to be part of the final mesh
-        CONTOUR_TO_MEDIALAXIS = 1 << 7, //An edge that was added as part of an untiled region that runs from a contour boundary to the medial axis and is known to be part of the final mesh
+        /// <summary>
+        /// An edge along the contour, part of either the exterior or inner ring of the input shapes
+        /// </summary>
+        CONTOUR = 1 << 2,
+        /// <summary>
+        /// An edge that crosses from one Z-LEVEL to another and is part of the surface
+        /// </summary>
+        SURFACE = 1 << 3,
+        /// <summary>
+        /// An edge that is connected to a non-polygon vertex that we added to the mesh
+        /// </summary>
+        ARTIFICIAL = 1 << 4,
+        /// <summary>
+        /// An edge that shares XY coordinates with a vertex on a shape on an adjacent section
+        /// </summary>
+        CORRESPONDING = 1 << 5,
+        /// <summary>
+        /// An edge that was added as part of an untiled regions medial axis and is known to be part of the final mesh
+        /// </summary>
+        MEDIALAXIS = 1 << 6,
+        /// <summary>
+        /// An edge that was added as part of an untiled region that runs from a contour boundary to the medial axis and is known to be part of the final mesh
+        /// </summary>
+       CONTOUR_TO_MEDIALAXIS = 1 << 7
     }
 
     public static class EdgeTypeExtensions
@@ -135,13 +181,17 @@ namespace MorphologyMesh
 
             if (APoly.iPoly != BPoly.iPoly)
             {
-                bool midInA = A.Contains(midpoint);
-                bool midInB = B.Contains(midpoint);
+                OverlapType midInA = A.ContainsExt(midpoint);
+                OverlapType midInB = B.ContainsExt(midpoint);
 
-                if (!(midInA ^ midInB)) //Midpoint in both or neither polygon. Line may be on exterior surface
+                if (!(midInA == OverlapType.NONE ^ midInB == OverlapType.NONE)) //Midpoint in both or neither polygon. Line may be on exterior surface
                 {
-                    if (midInA && midInB)
+                    if (midInA == OverlapType.CONTAINED && midInB == OverlapType.CONTAINED)
                         return EdgeType.INTERNAL; //Line is inside the final mesh. Cannot be on surface.
+                    else if (midInA == OverlapType.TOUCHING && midInB == OverlapType.TOUCHING)
+                    {
+                        return EdgeType.CONTOUR;
+                    }
                     else
                     {
                         //return EdgeType.FLYING; //Line covers empty space, could be on surface
@@ -185,7 +235,7 @@ namespace MorphologyMesh
                         }
                         else //Find out if the midpoint is contained by the same polygon with the inner polygon
                         {
-                            if ((midInA && APoly.IsInner) || (midInB && BPoly.IsInner))
+                            if ((!(midInA == OverlapType.NONE) && APoly.IsInner) || (!(midInB == OverlapType.NONE) && BPoly.IsInner))
                             {
                                 return EdgeType.SURFACE;// lineViews[i].Color = Color.Gold;
                             }
@@ -217,7 +267,7 @@ namespace MorphologyMesh
                     bool midInA = A.Contains(midpoint);
                     if (LineIntersectsAnyOtherPoly)
                     {
-                        //Line passes over the other cell.  So
+                        //Line passes over the other cell.
                         return EdgeType.INVALID;
 
                     }
