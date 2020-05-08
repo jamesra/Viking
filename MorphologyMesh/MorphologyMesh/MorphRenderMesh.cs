@@ -426,7 +426,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="IncompleteVerticies"></param>
         /// <returns></returns>
-        public static MorphMeshRegionGraph SecondPassRegionDetection(MorphRenderMesh mesh, List<MorphMeshVertex> IncompleteVerticies)
+        public static MorphMeshRegionGraph SecondPassRegionDetection(MorphRenderMesh mesh, List<MorphMeshVertex> IncompleteVerticies, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
         {
             MorphMeshRegionGraph graph = new MorphMeshRegionGraph();
 
@@ -449,7 +449,7 @@ namespace MorphologyMesh
                         listUnassignedVerticies.RemoveWhere(iVert => Face.Contains(iVert.Index));
                         MorphMeshRegion region = null;
 
-                        List<MorphMeshFace> listRegionFaces = RegionPerimeterToFaces(mesh, Face);
+                        List<MorphMeshFace> listRegionFaces = RegionPerimeterToFaces(mesh, Face, OnProgress);
 
                         region = new MorphMeshRegion(mesh, listRegionFaces, RegionType.UNTILED);
 
@@ -472,7 +472,7 @@ namespace MorphologyMesh
         /// <summary>
         /// Take a list of vertex indicies that describe the closed perimeter of a region without faces in the mesh.  Triangulate the verticies and insert faces based upon the triangulation
         /// </summary>
-        public static List<MorphMeshFace> RegionPerimeterToFaces(MorphRenderMesh mesh, List<int> Face)
+        public static List<MorphMeshFace> RegionPerimeterToFaces(MorphRenderMesh mesh, List<int> Face, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
         {
             if (Face == null)
                 return new List<MorphMeshFace>();
@@ -534,10 +534,10 @@ namespace MorphologyMesh
             }
             else
             {
-                TryRemoveCorrespondingVerticiesFromRegionFaces(mesh, Face);
+                List<int> CleanedFace = TryRemoveCorrespondingVerticiesFromRegionFaces(mesh, Face);
 
                 //Create a polygon for the region
-                GridPolygon regionBorder = new GridPolygon(Face.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
+                GridPolygon regionBorder = new GridPolygon(CleanedFace.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
                 PolygonVertexEnum vertEnumerator = new PolygonVertexEnum(regionBorder);
 
                 var IndexToVertex = vertEnumerator.ToDictionary(pIndex => pIndex, pIndex => pIndex.iVertex); //Converts a PointIndex to a Mesh Index
@@ -546,7 +546,7 @@ namespace MorphologyMesh
 
                 //GridPolygon loadedFromJSON = GeometryJSONExtensions.PolygonFromJSON(json);
                 //Triangulate the region
-                var regionMesh = regionBorder.Triangulate(iPoly: 0);
+                var regionMesh = regionBorder.Triangulate(iPoly: 0, OnProgress: OnProgress);
                                  
                 List<MorphMeshFace> listRegionFaces = new List<MorphMeshFace>(regionMesh.Faces.Count);
 
@@ -574,7 +574,7 @@ namespace MorphologyMesh
                     //try
                     //{
                     //iMeshVerts = f.iVerts.Select(v => IndexToVertex[regionMesh[v].Data]).ToArray();
-                    iMeshVerts = f.iVerts.Select(v => Face[v]).ToArray();
+                    iMeshVerts = f.iVerts.Select(v => CleanedFace[v]).ToArray();
                     //}
                     //catch(System.Collections.Generic.KeyNotFoundException e)
                     //{
@@ -591,21 +591,71 @@ namespace MorphologyMesh
             } 
         }
 
-        private static List<Face> TryRemoveCorrespondingVerticiesFromRegionFaces(MorphRenderMesh mesh, List<int> Face)
+        private static List<int> TryRemoveCorrespondingVerticiesFromRegionFaces(MorphRenderMesh mesh, List<int> Face)
         {
+            Debug.Assert(Face.Count >= 4, "I expect the 3 or 4 vert cases to be handled earlier");
+
             //Triangulate the region border to identify faces of the region
             GridVector3[] region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
 
             //If there are any duplicate points that indicates a corresponding contour was involved.  In this case we cut the polygon into two halves and triangulate those
-            int[] countDuplicatesInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
+            int[] countInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
 
-            if (countDuplicatesInstances.Max() == 1)
+            if (countInstances.Max() <= 1)
             {
-                return new List<Face>();
-                
+                return Face;
+            }
+
+            /////////////////////////////////////////////////////////////
+            //Case 0: 
+            //If the corresponding verticies are adjacent in the face then we can add a quad using the index before and after the corresponding verticies
+            // 
+            // Z = 0    <-- A -- B                  <-- A -- B
+            //                   |      becomes         | \  |  with B,C being removed from the face
+            // Z = 0    <-- D -- C                  <-- D -- C
+
+            InfiniteIndexSet FaceIndex = new InfiniteIndexSet(Face);
+            for(int i = Face.Count-1; i >= 0; i--)
+            {
+                long index = FaceIndex[i];
+                long next_index = FaceIndex[i + 1];
+
+                MorphMeshVertex v1 = mesh[index];
+                MorphMeshVertex v2;
+
+                if (v1.Corresponding.HasValue == false)
+                    continue;
+
+                v2 = mesh[next_index];
+
+                if (v2.Corresponding.HasValue == false)
+                    continue;
+
+                //Not sure how the next vertex could be corresponding and not corresponding to the index because we add a vertex between corresponding verticies.
+                if (v1.Corresponding.Value != next_index)
+                    continue;
+
+                //OK, create a quad using the indicies before and after the adjacent corresponding verts.  Then split the quad.
+                Face quad = new Face(new long[] { FaceIndex[i - 1], FaceIndex[i], FaceIndex[i + 1], FaceIndex[i + 2] });
+
+                mesh.SplitFace(quad);
+
+                //Remove the corresponding verticies we created.
+                Face.RemoveRange(i, 2);
+            }
+
+            region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
+
+            //TODO: The next case is not implemented, so throw an error if corresponding verts remain in region
+            countInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
+
+            if (countInstances.Max() <= 1)
+            {
+                return Face;
             }
 
             MorphMeshVertex corresponding = mesh[Face].Where(v => v.Corresponding.HasValue).First();
+             
             throw new NotImplementedException(string.Format("Corresponding points in region {0}", corresponding.PolyIndex));
             //If there are corresponding verticies we can have duplicate points in the set which will break triangulation.
             // //Break the corresponding verticies into sub-polygons and build triangles for each
@@ -716,7 +766,8 @@ namespace MorphologyMesh
         public List<int> IdentifyIncompleteFace(IVertex origin, int? MaxFaceVerts=null)
         {
             //Identify edges missing faces
-            List<IEdge> edges = origin.Edges.Select(key => Edges[key]).Where(e => e.Faces.Count < 2 ).ToList();
+            List<MorphMeshEdge> edges = origin.Edges.Select(key => (MorphMeshEdge)Edges[key]).Where(e => (e.Type != EdgeType.CONTOUR && e.Faces.Count < 2) ||
+                                                                                                         (e.Type == EdgeType.CONTOUR && e.Faces.Count == 0)).ToList();
 
             List<int> ShortestFace = null;
             foreach (var edge in edges)
