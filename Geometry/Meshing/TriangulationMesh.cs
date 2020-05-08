@@ -1,4 +1,4 @@
-﻿#define TRACEDELAUNAY
+﻿//#define TRACEDELAUNAY
 
 using System;
 using System.Collections.Generic;
@@ -142,7 +142,14 @@ namespace Geometry.Meshing
         public TriangulationVertex(GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
         {
         }
-
+        
+        /// <summary>
+        /// Returns the edges of this vertex sorted by increasing angle off a line originating at this vertex and projecting towards the origin_edge vertex
+        /// </summary>
+        /// <param name="comparer"></param>
+        /// <param name="origin_edge"></param>
+        /// <param name="clockwise"></param>
+        /// <returns></returns>
         public IEnumerable<long> EdgesByAngle(IComparer<IEdgeKey> comparer, long origin_edge, bool clockwise)
         {
             if (false == this.Edges.Contains(new EdgeKey(this.Index, origin_edge)))
@@ -470,6 +477,7 @@ namespace Geometry.Meshing
         }
           
         public RTree.RTree<long> rTree = new RTree.RTree<long>();
+        public RTree.RTree<IEdgeKey> EdgeRTree = new RTree.RTree<IEdgeKey>();
 
         public TriangulationMesh()
         { 
@@ -509,17 +517,21 @@ namespace Geometry.Meshing
             return iNew;
         }
 
-#if DEBUG
+
         public override void AddEdge(IEdge e)
         {
+            if (this.Contains(e))
+                return; 
+
             var seg = this.ToGridLineSegment(e);
 
+#if DEBUG
             try
             {
-                var intersected = this.FindIntersectingEdges(e);
-                if (intersected.Count() > 0)
+                var intersected = this.FindIntersectingEdges(e, out List<IEdgeKey> intersected_edges);
+                if (intersected_edges.Count > 0)
                 {
-                    throw new EdgesIntersectTriangulationException(e, intersected.Select(edge => (IEdgeKey)edge).ToArray(), string.Format("New edge {0} intersects existing edges", e));
+                    throw new EdgesIntersectTriangulationException(e, intersected_edges.Select(edge => (IEdgeKey)edge).ToArray(), string.Format("New edge {0} intersects existing edges: {1}", e, intersected_edges[0]));
                 }
             }
             catch(EdgeIntersectsVertexException except)
@@ -527,13 +539,18 @@ namespace Geometry.Meshing
                 //Should I add two edges?
                 throw except;
             }
-            
+#endif
+
             base.AddEdge(e);
+            EdgeRTree.Add(seg.BoundingBox, e); 
+        } 
 
-
+        public override void RemoveEdge(IEdgeKey e)
+        {
+            base.RemoveEdge(e);
+            EdgeRTree.Delete(e, out IEdgeKey found);
         }
 
-#endif
 
         public override void AddFace(IFace face)
         {
@@ -586,6 +603,47 @@ namespace Geometry.Meshing
             GridLine line = ToGridLine(e);
         }
 
+        public bool FindIntersectingEdges(IEdgeKey e, out List<IEdgeKey> foundEdges)
+        {
+            foundEdges = new List<IEdgeKey>();
+
+            GridLineSegment seg = this.ToGridLineSegment(e);
+
+            var candidates = EdgeRTree.Intersects(seg.BoundingBox);
+
+            foreach(var candidate in candidates)
+            {
+                if (candidate.Equals(e))
+                    continue;
+                
+                if (candidate.Adjacent(e)) //If we share a vertex with the edge we won't count it as an intersection
+                    continue; 
+
+                GridLineSegment candidate_seg = this.ToGridLineSegment(candidate);
+
+                if(candidate_seg.Intersects(seg, false, out IShape2D intersection))
+                {
+                    foundEdges.Add(candidate);
+                    /*
+                    if (intersection.ShapeType == ShapeType2D.POINT)
+                    {
+                        IPoint2D iPoint = intersection as IPoint2D;
+                        if (candidate_seg.IsEndpoint(iPoint))
+                        {
+                            int iIntersectedVert = candidate_seg.A == iPoint ? candidate.A : candidate.B;
+                            throw new EdgeIntersectsVertexException(iIntersectedVert, string.Format("Edge {0} passes directly through vertex {1}", e, iIntersectedVert));
+                        }
+                    }
+
+                    intersected_edges.Add(oppEdge);
+                    */
+                }
+            }
+
+            return foundEdges.Count > 0;
+
+        }
+
         /// <summary>
         /// Add a constrained edge to the mesh.  If the edge A,B perfectly intersects a vertex C anywhere other than an 
         /// endpoint we will add two constrained edges, A,C & C,B.
@@ -620,6 +678,8 @@ namespace Geometry.Meshing
                     {
                         this.AddFace(face);
                     }
+
+                    return EdgesAdded;
                 }
             }
 
@@ -628,7 +688,7 @@ namespace Geometry.Meshing
             List<IEdge> IntersectedEdges;
             try
             {
-                IntersectedEdges = FindIntersectingEdges(constrained_edge);
+                IntersectedEdges = FindIntersectingFaceEdges(constrained_edge);
             }
             catch (EdgeIntersectsVertexException e)
             {
@@ -660,7 +720,7 @@ namespace Geometry.Meshing
                     //Sort the list so we check any untested quads before retesting any edges
 
                     //Handle an edge case where edges do not intersect after flipping some edges
-                    IntersectedEdges = FindIntersectingEdges(constrained_edge);
+                    IntersectedEdges = FindIntersectingFaceEdges(constrained_edge);
                     if(IntersectedEdges.Count == 0)
                     {
                         break;
@@ -736,8 +796,10 @@ namespace Geometry.Meshing
                     bool HasParallelEdges = concavity.Any(c => c == Concavity.PARALLEL);
                     if(HasParallelEdges)
                     {
-                        if(this.ToTriangle(NewFacesTuple.Item1).Area == 0 ||
-                           this.ToTriangle(NewFacesTuple.Item2).Area == 0)
+                        double A_Area = this.ToTriangle(NewFacesTuple.Item1).Area;
+                        double B_Area = this.ToTriangle(NewFacesTuple.Item2).Area;
+                        if (A_Area <= Global.Epsilon || double.IsNaN(A_Area) ||
+                           B_Area <= Global.Epsilon || double.IsNaN(B_Area))
                         {
                             iEdge -= 1;
                             continue;
@@ -883,7 +945,7 @@ namespace Geometry.Meshing
         /// Returns all edges that intersect the edge.  Excluding segments that only intersect at the start and origin vertex
         /// </summary>
         /// <param name="e"></param>
-        public List<IEdge> FindIntersectingEdges(IEdgeKey e)
+        public List<IEdge> FindIntersectingFaceEdges(IEdgeKey e)
         {
             //If the edge is already in the mesh return an empty list
             if (this.Contains(e))
@@ -923,14 +985,14 @@ namespace Geometry.Meshing
                     intersected_edges.Add(oppEdge);
                     
                     //The edge intersects, so check the opposite face for the next intersection, if any
-                    FindIntersectingEdges(face, e, ConstrainedEdge, oppEdge, ref intersected_edges);
+                    FindIntersectingFaceEdges(face, e, ConstrainedEdge, oppEdge, ref intersected_edges);
                 }
             }
 
             return intersected_edges;
         }
 
-        private bool FindIntersectingEdges(ITriangleFace previous_intersected_face, IEdgeKey constrained_edge, GridLineSegment constrained_seg, IEdge previous_intersected_edge, ref List<IEdge> intersected_edges)
+        private bool FindIntersectingFaceEdges(ITriangleFace previous_intersected_face, IEdgeKey constrained_edge, GridLineSegment constrained_seg, IEdge previous_intersected_edge, ref List<IEdge> intersected_edges)
         {
             bool new_edge_found = true;
             while (new_edge_found)
