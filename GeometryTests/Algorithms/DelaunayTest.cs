@@ -479,28 +479,43 @@ namespace GeometryTests.Algorithms
             configuration.StartSize = 2;
             configuration.Replay = Global.StdGenSeed;
 
-            Prop.ForAll<GridPolygon, GridVector2[]>((p,interior) =>
+            
+
+            Prop.ForAll<GridPolygon, GridVector2[]>((p, interior) =>
             {
-                p = p.Translate(-p.Centroid);
+            GridVector2 pCentroid = p.Centroid;
+            p = p.Translate(-pCentroid);
 
-                GridVector2[] qualifiedPoints = interior.Where(i => p.Contains(i)).ToArray();
+            interior = interior.Select(i => i - pCentroid).ToArray();
 
-                //var mesh = p.Triangulate(p.ExteriorRing.Distinct().Select(p => new Vertex2D(p)).ToArray(),null,OnProgress);
-                var mesh = Geometry.Meshing.MeshExtensions.Triangulate(p.ExteriorRing.Distinct().Select((t,i) => new Vertex2D(i,t)).ToArray(), qualifiedPoints.Select(x => new Vertex2D(x)).ToArray(), OnProgress);
+            GridVector2[] qualifiedPoints = interior.Where(i => p.ContainsExt(i) == OverlapType.CONTAINED).ToArray();
 
-                var PosToVert = mesh.Verticies.ToDictionary(v => v.Position);
-                List<IEdgeKey> expectedConstrainedEdges = new List<IEdgeKey>();
+            //var mesh = p.Triangulate(p.ExteriorRing.Distinct().Select(p => new Vertex2D(p)).ToArray(),null,OnProgress);
+            var mesh = Geometry.Meshing.MeshExtensions.Triangulate(p.ExteriorRing.Distinct().Select((t, i) => new Vertex2D(i, t)).ToArray(), qualifiedPoints.Select(x => new Vertex2D(x)).ToArray(), OnProgress);
 
-                //This test has false negative failures because when a corresponding edge perfectly intersects a vertex it is broken
-                //into two halves and the test does not capture that event.
+            if (mesh.Verticies.Count != (p.ExteriorRing.Length - 1) + qualifiedPoints.Length)
+                return false.Label("Mesh did not contain all verticies")
+                        .ClassifyMeshSize((p.ExteriorRing.Length - 1) + qualifiedPoints.Length)
+                        .Label(p.ToJSON());
 
-                foreach (GridLineSegment s in p.AllSegments)
-                {
-                    EdgeKey key = new EdgeKey(PosToVert[s.A].Index, PosToVert[s.B].Index);
-                    expectedConstrainedEdges.Add(key);
+            var PosToVert = mesh.Verticies.ToDictionary(v => v.Position);
+            List<IEdgeKey> expectedConstrainedEdges = new List<IEdgeKey>();
 
-                    
-                }
+            //This test has false negative failures because when a corresponding edge perfectly intersects a vertex it is broken
+            //into two halves and the test does not capture that event.
+
+            foreach (GridLineSegment s in p.ExteriorSegments)
+            {
+                if (PosToVert.ContainsKey(s.A) == false)
+                    return false.Label(string.Format("PosToVert does not contain {0}", s.A))
+                        .ClassifyMeshSize(mesh.Verticies.Count);
+                if(PosToVert.ContainsKey(s.B) == false)
+                    return false.Label(string.Format("PosToVert does not contain {0}", s.B))
+                        .ClassifyMeshSize(mesh.Verticies.Count);
+
+                EdgeKey key = new EdgeKey(PosToVert[s.A].Index, PosToVert[s.B].Index);
+                expectedConstrainedEdges.Add(key);
+            }
 
 
                 return p.ValidatePolygonTriangulation(mesh, expectedConstrainedEdges);
