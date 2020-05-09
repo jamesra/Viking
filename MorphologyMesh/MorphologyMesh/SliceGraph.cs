@@ -127,6 +127,28 @@ namespace MorphologyMesh
                         continue;
 
                     output.AddEdge(edge);
+
+                    ////////////////////////////////////////////////////////////////////////////
+                    //Record that the slices have a connection above/below and do not need a cap
+                    {
+                        Slice A = output[pair.A];
+                        Slice B = output[pair.B];
+
+                        if (A.NodesAbove.Contains(morph_id))
+                        {
+                            A.HasSliceAbove = true;
+                            B.HasSliceBelow = true;
+                        }
+                        else
+                        {
+                            Debug.Assert(B.NodesAbove.Contains(morph_id));
+                            A.HasSliceBelow = true;
+                            B.HasSliceAbove = true;
+                        }
+                    }
+                    ///////////////////////////////////////////////////////////////////////////
+
+
                 }
             }
 
@@ -344,6 +366,7 @@ namespace MorphologyMesh
             //Todo Monday, this should not be in the constructor or the class I think.
             //Add corresponding points until we've run out of new correspondances
             var correspondingPoints = Polygons.AddCorrespondingVerticies();
+
             /*
             List<GridVector2> novelCorrespondingPoints = correspondingPoints.ToList();
             do
@@ -395,7 +418,10 @@ namespace MorphologyMesh
         /// Internal edges
         /// </summary>
         public readonly SortedSet<MorphologyEdge> InternalEdges;
-         
+
+        public bool HasSliceAbove { get; internal set; } = false;
+        public bool HasSliceBelow { get; internal set; } = false;
+
         public Slice(ulong key, SortedSet<ulong> nodesAbove, SortedSet<ulong> nodesBelow, SortedSet<MorphologyEdge> edges) : base(key)
         {
             //this.Graph = graph;
@@ -617,6 +643,51 @@ namespace MorphologyMesh
             }
         }
         */
+
+
+        /// <summary>
+        /// We need to handle the case where a single vertex is on the other side of the contour boundary and creates
+        /// two corresponding vertices which are tightly grouped
+        /// 
+        //       3
+        ///     / \
+        /// A--2-B-4--C
+        ///   /     \
+        ///  1       5
+        /// </summary>
+        internal static void RemoveAdjacentCorrespondingVerticies(GridPolygon[] Polygons, List<GridVector2> correspondingPoints)
+        {
+            foreach (GridPolygon poly in Polygons)
+            {
+                List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
+                if (correspondingIndicies == null || correspondingIndicies.Count == 0)
+                    continue;
+
+            }
+        }
+
+        /// <summary>
+        /// We need to handle the case where the face generated for a corresponding edge will contain other verticies.
+        /// We can do this by subdividing the edge between 1-2 and A-B
+        /// 
+        //         3---4
+        ///       /     \
+        /// A----2B---C--D5
+        /// | X /         \
+        /// |  /           \
+        /// | /             \
+        /// 1                6
+        /// </summary>
+        internal static void HandleCorrespondingFaceContainsVertex(GridPolygon[] Polygons, List<GridVector2> correspondingPoints)
+        {
+            foreach (GridPolygon poly in Polygons)
+            {
+                List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
+                
+
+
+            }
+        }
 
         /// <summary>
         /// Due to details of the implementation of our bajaj algorithm we need to add a point between adjacent corresponding points on a polygon
