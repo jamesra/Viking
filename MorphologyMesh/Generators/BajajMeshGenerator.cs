@@ -301,6 +301,15 @@ namespace MorphologyMesh
                 Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
             }
 
+            if(mesh.Slice != null)
+            {
+                if (mesh.Slice.HasSliceAbove == false)
+                    mesh.CapMeshEnd(true);
+
+                if (mesh.Slice.HasSliceBelow == false)
+                    mesh.CapMeshEnd(false); 
+            }
+
             mesh.EnsureFacesHaveExternalNormals();
             //mesh.RecalculateNormals();
         }
@@ -557,6 +566,35 @@ namespace MorphologyMesh
 
         }
         */
+
+        /// <summary>
+        /// We need to handle the case where a single vertex is on the other side of the contour boundary and creates
+        /// two corresponding vertices which are tightly grouped.
+        /// 
+        //       3
+        ///     / \
+        /// A--2-B-4--C
+        ///   /     \
+        ///  1       5
+        ///  
+        /// This should only be called after the mesh is created when we know there are no faces for edges
+        /// </summary>
+        public static void CompleteAdjacentCorrespondingVertexFaces(MorphRenderMesh mesh)
+        {
+            //Identify any verticies who have a corresponding vertex previous and after thier position
+
+            var polyEnum = new PolySetVertexEnum(mesh.Polygons);
+            foreach (PointIndex pIndex in polyEnum)
+            {
+                MorphMeshVertex vert = mesh[pIndex];
+
+                if (vert.Corresponding.HasValue)
+                    continue; 
+
+
+            }
+        }
+           
         public static void CompleteCorrespondingVertexFaces(MorphRenderMesh mesh)
         {
             //Corresponding edges should have two faces if they are complete
@@ -621,17 +659,26 @@ namespace MorphologyMesh
                         EdgeType PPType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Previous, vCorrespondingIndex.Previous);
                         EdgeType PNType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Previous, vCorrespondingIndex.Next);
 
-                        if(NNType.IsValid() || NNType == EdgeType.FLIPPED_DIRECTION)
+                        bool NNValid = NNType.IsValid() || NNType == EdgeType.FLIPPED_DIRECTION;
+                        bool NPValid = NPType.IsValid() || NPType == EdgeType.FLIPPED_DIRECTION;
+                        bool PPValid = PPType.IsValid() || PPType == EdgeType.FLIPPED_DIRECTION;
+                        bool PNValid = PNType.IsValid() || PNType == EdgeType.FLIPPED_DIRECTION;
+
+                        int nFacesFound = 0;
+
+                        if (NNValid)
                         {
                             int[] TriFace = new int[] { mesh[vPolyIndex.Next].Index, iVA, iVB };
+                            
                             MorphMeshFace face = new MorphMeshFace(TriFace);
                             mesh.AddFace(face);
                             TriFace = new int[] { mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Next].Index, iVB };
                             face = new MorphMeshFace(TriFace);
                             mesh.AddFace(face);
+                            nFacesFound++;
                         }
 
-                        if (NPType.IsValid() || NPType == EdgeType.FLIPPED_DIRECTION)
+                        if (NPValid)
                         {
                             int[] TriFace = new int[] { mesh[vPolyIndex.Next].Index, iVA, iVB };
                             MorphMeshFace face = new MorphMeshFace(TriFace);
@@ -639,9 +686,10 @@ namespace MorphologyMesh
                             TriFace = new int[] { mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Next].Index, iVB };
                             face = new MorphMeshFace(TriFace);
                             mesh.AddFace(face);
+                            nFacesFound++;
                         }
 
-                        if (PPType.IsValid() || PPType == EdgeType.FLIPPED_DIRECTION)
+                        if (PPValid)
                         {
                             int[] TriFace = new int[] { mesh[vPolyIndex.Previous].Index, iVA, iVB };
                             MorphMeshFace face = new MorphMeshFace(TriFace);
@@ -649,9 +697,10 @@ namespace MorphologyMesh
                             TriFace = new int[] { mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Previous].Index, iVB };
                             face = new MorphMeshFace(TriFace);
                             mesh.AddFace(face);
+                            nFacesFound++;
                         }
 
-                        if (PNType.IsValid() || PNType == EdgeType.FLIPPED_DIRECTION)
+                        if (PNValid)
                         {
                             int[] TriFace = new int[] { mesh[vPolyIndex.Previous].Index, iVA, iVB };
                             MorphMeshFace face = new MorphMeshFace(TriFace);
@@ -659,7 +708,16 @@ namespace MorphologyMesh
                             TriFace = new int[] { mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Previous].Index, iVB };
                             face = new MorphMeshFace(TriFace);
                             mesh.AddFace(face);
+                            nFacesFound++;
                         }
+
+                        //Once in a while there is not a valid edge to complete the face. 
+                        if(nFacesFound == 1)
+                        {
+                            break; //This prevents overlapping faces from check the corresponding face
+                        }
+
+
                         /*
 
                         bool NextContains = oppositePolygon.Contains(vPolyIndex.Next.Point(mesh.Polygons));
@@ -941,7 +999,7 @@ namespace MorphologyMesh
                 MorphMeshVertex v = incompleteVerts[0];
                 incompleteVerts.RemoveAt(0);
 
-                List<int> face_path = mesh.IdentifyIncompleteFace(v);
+                List<int> face_path = mesh.IdentifyIncompleteFace(v, MaxFaceVerts: 4);
                 if (face_path != null && face_path.Count <= 4)
                 {
                     MorphMeshFace face = new MorphMeshFace(face_path);

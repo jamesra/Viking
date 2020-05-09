@@ -20,7 +20,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="rTree"></param>
         /// <returns>A list of the OTV tables generated when attempting to merge the regions.  Used for debugging</returns>
-        public static List<OTVTable> MergeAndCloseRegionsPass(this MorphMeshRegionGraph graph, BajajGeneratorMesh mesh, SliceChordRTree rTree = null)
+        public static List<OTVTable> MergeAndCloseRegionsPass(this MorphMeshRegionGraph graph, BajajGeneratorMesh mesh, SliceChordRTree rTree = null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
             while (true)
             {
@@ -28,7 +28,15 @@ namespace MorphologyMesh
                 if (regionNode == null)
                     break;
 
-                TryClosingUntiledRegion(mesh, regionNode.Key, rTree);
+                try
+                {
+                    TryClosingUntiledRegion(mesh, regionNode.Key, rTree, OnProgress);
+                }
+                catch (System.NotImplementedException)
+                {
+
+                }
+
                 /*
                 OTVTable table = 
                 if (table != null)
@@ -165,7 +173,7 @@ namespace MorphologyMesh
             //TODO: This appears to only select verts without faces... shouldn't we look for any vert without a chord?
             List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
 
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].PolyIndex.Value), 
+            BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].PolyIndex.Value),
                                                               mesh.Polygons, mesh.IsUpperPolygon,
                                                               SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.Theorem4,
                                                               out OTVTable, ref rTree);
@@ -236,11 +244,12 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="region"></param>
         /// <param name="rTree"></param>
-        private static void TryClosingUntiledRegion(BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
+        private static void TryClosingUntiledRegion(BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
             GridPolygon regionPolygon = region.Polygon;
             GridVector2 regionPolygonCenter = regionPolygon.Centroid;
             GridPolygon centeredRegionPolygon = regionPolygon.Translate(-regionPolygonCenter);
+
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(centeredRegionPolygon);
             MedialAxisVertex[] NewVerts = MedialAxis.Nodes.Values.ToArray();
             System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredRegionPolygon.Contains(v.Key)), "Interior points must be inside Face");
@@ -249,7 +258,7 @@ namespace MorphologyMesh
 
             if (NewVerts.Length == 0)
             {
-                return; 
+                return;
             }
 
             //double MinZ = region.VertPositions.Min(v => v.Z);
@@ -257,9 +266,10 @@ namespace MorphologyMesh
 
             double MinZ = mesh.LowerPolyIndicies.Max(i => mesh.PolyZ[i]); //Pick the largest of the low-end Z values
             double MaxZ = mesh.UpperPolyIndicies.Min(i => mesh.PolyZ[i]); //Pick the smallest of the high-end Z values
+            double targetZ = (MinZ + MaxZ) / 2.0;
 
             //TODO: Adjust the Z level of the output based on the type of region and verticies we are connecting to.
-            var MedialAxisMeshVerts = NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), (mv.Key + regionPolygonCenter).ToGridVector3((MinZ + MaxZ) / 2.0))).ToArray();
+            var MedialAxisMeshVerts = NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), (mv.Key + regionPolygonCenter).ToGridVector3(targetZ))).ToArray();
             int iNewVerts = mesh.AddVerticies(MedialAxisMeshVerts);
 
             /*
@@ -281,12 +291,13 @@ namespace MorphologyMesh
             */
 
             var polyMesh = Geometry.Meshing.MeshExtensions.Triangulate(region.RegionPerimeter.Cast<IVertex2D>().ToArray(),
-                                                                       MedialAxisMeshVerts.Cast<IVertex2D>().ToArray());
+                                                                       MedialAxisMeshVerts.Cast<IVertex2D>().ToArray(),
+                                                                       OnProgress);
 
             //var polyMesh = regionPolygon.Triangulate(iPoly: 0);
             //TriangleNet.Meshing.IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
 
-            foreach(var e in polyMesh.Edges.Values)
+            foreach (var e in polyMesh.Edges.Values)
             {
                 int iA = polyMesh[e.A].Data; //Find vertex in the input mesh
                 int iB = polyMesh[e.B].Data; //Find vertex in the input mesh
@@ -301,12 +312,230 @@ namespace MorphologyMesh
                 }
             }
 
-            foreach(var polyFace in polyMesh.Faces)
+            foreach (var polyFace in polyMesh.Faces)
             {
                 var MeshFaceVerts = polyFace.iVerts.Select(i => polyMesh[i].Data).ToArray();
 
-                mesh.AddFace(new MorphMeshFace(MeshFaceVerts));
+                var newFace = new MorphMeshFace(MeshFaceVerts);
+
+                if (mesh.FaceHasCCWWinding(newFace))
+                    newFace = new MorphMeshFace(MeshFaceVerts.Reverse());
+
+                newFace.NormalIsKnownCorrect = true;
+                mesh.AddFace(newFace);
             }
+        }
+
+        /// <summary>
+        /// Called on a bajaj mesh to cap either the upper or lower polygons using a method similar to closing an untiled region
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="region"></param>
+        /// <param name="rTree"></param>
+        /// <param name="OnProgress"></param>
+        public static void CapMeshEnd(this BajajGeneratorMesh mesh, bool CloseUpper, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
+        {
+            GridPolygon[] polysToClose = CloseUpper ? mesh.UpperPolygons : mesh.LowerPolygons;
+
+            double MinZ = mesh.LowerPolyIndicies.Max(i => mesh.PolyZ[i]); //Pick the largest of the low-end Z values
+            double MaxZ = mesh.UpperPolyIndicies.Min(i => mesh.PolyZ[i]); //Pick the smallest of the high-end Z values
+
+            double HalfThickness = (MaxZ - MinZ) / 2.0;
+            double targetZ = CloseUpper ? MaxZ + HalfThickness : MinZ - HalfThickness;
+
+            for(int iPoly = 0; iPoly < mesh.Polygons.Length; iPoly++)
+            {
+                bool ClosePoly = CloseUpper ? mesh.IsUpperPolygon[iPoly] : !mesh.IsUpperPolygon[iPoly];
+                if (ClosePoly == false)
+                    continue;
+
+                GridPolygon poly = mesh.Polygons[iPoly];
+                {
+                    GridVector2 polyCenter = poly.Centroid;
+                    GridPolygon centeredPolygon = poly.Translate(-polyCenter);
+
+                    var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(centeredPolygon);
+                    MedialAxisVertex[] NewVerts = MedialAxis.Nodes.Values.ToArray();
+                    System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredPolygon.Contains(v.Key)), "Interior points must be inside Face");
+
+                    //TODO: Split any edges with an existing face into two parts so we can better merge the medial axis with the existing shape
+
+                    if (NewVerts.Length == 0)
+                    {
+                        return;
+                    }
+
+                    //TODO: Adjust the Z level of the output based on the type of region and verticies we are connecting to.
+                    var MedialAxisMeshVerts = NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), (mv.Key + polyCenter).ToGridVector3(targetZ))).ToArray();
+                    int iNewVerts = mesh.AddVerticies(MedialAxisMeshVerts);
+
+                    PolygonVertexEnum polyVertEnum = new PolygonVertexEnum(poly, iPoly);
+                    var PolygonMeshVerticies = polyVertEnum.Select(pi => mesh[pi]).ToList();
+                    PolygonMeshVerticies.AddRange(MedialAxisMeshVerts);
+                    
+                    var capTriangulation = TriangulateCapWithMedialAxis(PolygonMeshVerticies.Select(v => new Vertex2D<MorphMeshVertex>(v.Position.XY(), v)).ToArray(), poly, iPoly,
+                                                                               OnProgress: null);
+
+                    //var polyMesh = regionPolygon.Triangulate(iPoly: 0);
+                    //TriangleNet.Meshing.IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
+
+                    foreach (var e in capTriangulation.Edges.Values)
+                    {
+                        MorphMeshVertex A = capTriangulation[e.A].Data; //Find vertex in the input mesh
+                        MorphMeshVertex B = capTriangulation[e.B].Data; //Find vertex in the input mesh
+
+                        int iA = A.Index;
+                        int iB = B.Index;
+
+                        if (mesh.Contains(iA, iB) == false)
+                        {
+                            EdgeType type = mesh.GetEdgeTypeWithOrientation(iA, iB);
+                            MorphMeshEdge newEdge = new MorphMeshEdge(type, iA, iB);
+                            //Trace.WriteLine(string.Format("Add edge {0}", newEdge));
+                            mesh.AddEdge(newEdge);
+                            //rTree.Add(mesh.ToSegment(newEdge).BoundingBox.ToRTreeRect(0), new MeshChord(mesh, iA, iB));
+                        }
+                    }
+
+                    foreach (var polyFace in capTriangulation.Faces)
+                    {
+                        var TriVerts = polyFace.iVerts.Select(i => capTriangulation[i]).ToArray();
+                        var MeshFaceVerts = TriVerts.Select(tv => tv.Data.Index).ToArray();
+
+                        GridVector3 normal = mesh.Normal(MeshFaceVerts);
+                        MorphMeshFace newFace = null;
+
+                        if (CloseUpper)
+                        {
+                            newFace = normal.Z < 0 ? new MorphMeshFace(MeshFaceVerts) : new MorphMeshFace(MeshFaceVerts.Reverse());
+                        }
+                        else {
+                            newFace = normal.Z > 0 ? new MorphMeshFace(MeshFaceVerts) : new MorphMeshFace(MeshFaceVerts.Reverse());
+                        }
+
+
+                        /*
+                        MorphMeshVertex[] positions = mesh[MeshFaceVerts].ToArray();
+                        RotationDirection winding = .Winding();
+                        MorphMeshFace newFace = null;
+                        if (CloseUpper)
+                            newFace = winding == RotationDirection.CLOCKWISE ? new MorphMeshFace(MeshFaceVerts) : new MorphMeshFace(MeshFaceVerts.Reverse());
+                        else
+                            newFace = winding == RotationDirection.COUNTERCLOCKWISE ? new MorphMeshFace(MeshFaceVerts) : new MorphMeshFace(MeshFaceVerts.Reverse());
+                            */
+
+                        newFace.NormalIsKnownCorrect = true;
+                        mesh.AddFace(newFace);
+                    }
+                }
+            }
+        }
+
+        private static TriangulationMesh<IVertex2D<MorphMeshVertex>> TriangulateCapWithMedialAxis(IVertex2D<MorphMeshVertex>[] verts, GridPolygon poly, int iPoly, TriangulationMesh<IVertex2D<MorphMeshVertex>>.ProgressUpdate OnProgress = null)
+        {
+            TriangulationMesh<IVertex2D<MorphMeshVertex>> triangulation = GenericDelaunayMeshGenerator2D<IVertex2D<MorphMeshVertex>>.TriangulateToMesh(verts, OnProgress);
+
+            PolygonVertexEnum polyVertEnum = new PolygonVertexEnum(poly, iPoly);
+
+            Dictionary<PointIndex, int> polyIndexToTriangulationIndex = new Dictionary<PointIndex, int>();
+
+            //Ensure polygon ring is constrained in the mesh
+            foreach (IVertex2D<MorphMeshVertex> vert in verts)
+            {
+                if (vert.Data.PolyIndex.HasValue == false)
+                    continue;
+
+                polyIndexToTriangulationIndex.Add(vert.Data.PolyIndex.Value, vert.Index);
+            }
+
+            HashSet<IEdge> constrainedEdges = new HashSet<IEdge>();
+            Dictionary<PointIndex, Edge> edgeFacesToCheck = new Dictionary<PointIndex, Edge>();
+
+            foreach (int iPolyVert in polyIndexToTriangulationIndex.Values)
+            {
+                IVertex2D<MorphMeshVertex> A = triangulation[iPolyVert];
+                MorphMeshVertex MMV_A = A.Data;
+
+                IVertex2D<MorphMeshVertex> B = triangulation[polyIndexToTriangulationIndex[MMV_A.PolyIndex.Value.Next]];
+                MorphMeshVertex MMV_B = B.Data; // polyIndexToTriangulationIndex[A.PolyIndex.Value.Next]];
+                PointIndex polyIndex = MMV_A.PolyIndex.Value;
+
+                ConstrainedEdge edge = new ConstrainedEdge(A.Index, B.Index);
+                triangulation.AddConstrainedEdge(edge, OnProgress);
+                constrainedEdges.Add(edge);
+
+                //If there are three constrained edges that form an interior polygon that is a triangle the face wont be removed.  This results
+                //in a constrained edge with two faces.  For this case remove the interior face after all constrained edges are added
+                if (polyIndex.IsInner && polyIndex.NumUniqueInRing == 3)
+                {
+                    edgeFacesToCheck.Add(polyIndex, edge);
+                }
+            }
+
+            //Remove edges that are not contained in the polygon, that means we check that the midpoint of edges that connect points on the same ring which are not constrained edges are inside the polygon
+            var EdgesToCheck = triangulation.Edges.Keys.Where(k => {
+                if (constrainedEdges.Contains(k))
+                    return false;
+
+                IVertex2D<MorphMeshVertex> A = triangulation[k.A];
+                MorphMeshVertex MMV_A = A.Data;
+
+                IVertex2D<MorphMeshVertex> B = triangulation[k.B];
+                MorphMeshVertex MMV_B = B.Data; // polyIndexToTriangulationIndex[A.PolyIndex.Value.Next]];
+
+                if (false == (MMV_A.PolyIndex.HasValue && MMV_B.PolyIndex.HasValue))
+                    return false;
+
+                if (MMV_A.PolyIndex.Value.AreOnSameRing(MMV_B.PolyIndex.Value))
+                    return true;
+
+                //PointIndex polyIndex = MMV_A.PolyIndex.Value;
+
+                return false;
+                }).ToArray();
+
+
+            foreach (EdgeKey key in EdgesToCheck)
+            {
+                GridLineSegment line = triangulation.ToGridLineSegment(key);
+
+                if (OverlapType.NONE == poly.ContainsExt(line.Bisect()))
+                {
+                    triangulation.RemoveEdge(key);
+
+                    if (OnProgress != null)
+                    {
+                        OnProgress(triangulation);
+                    }
+                }
+            }
+
+            //If there are three constrained edges that form an interior polygon that is a triangle the face wont be removed.  This results
+            //in a constrained edge with two faces.  For this case remove the interior face
+            foreach (var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.iInnerPoly))
+            {
+                GridPolygon innerPolygon = poly.InteriorPolygons[innerPolyGroup.Key.Value];
+                GridVector2 Centroid = innerPolygon.Centroid;
+
+                //Figure out the inner polygon vertex numbers in the mesh
+                SortedSet<int> innerPolyTriangulationVertIndicies = new SortedSet<int>(innerPolyGroup.SelectMany(g => new int[] { g.Value.A, g.Value.B }));
+                IFace[] allFaces = innerPolyGroup.SelectMany(g => g.Value.Faces).Distinct().ToArray();
+
+                IFace[] InteriorFaces = allFaces.Where(f => f.iVerts.All(iVert => innerPolyTriangulationVertIndicies.Contains(iVert))).ToArray();
+
+                //Should only ever be one interior face for a 3 vert interior polygon, unless someone adds interior polygons to interior polygons later <shudder/>
+                foreach (IFace f in InteriorFaces)
+                {
+                    triangulation.RemoveFace(f);
+
+                    if (OnProgress != null)
+                    {
+                        OnProgress(triangulation);
+                    }
+                }
+            }
+
+            return triangulation;
         }
     }
 }
