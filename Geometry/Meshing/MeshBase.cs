@@ -423,7 +423,7 @@ namespace Geometry.Meshing
             _Verticies[(int)e.B].AddEdge(e.Key);
         }
 
-        public void RemoveEdge(IEdgeKey e)
+        public virtual void RemoveEdge(IEdgeKey e)
         {
 #if TRACEMESH
             Trace.WriteLine(string.Format("Remove edge {0}", e));
@@ -501,13 +501,13 @@ namespace Geometry.Meshing
 #endif
 
                 Faces.Remove(f);
+
+                foreach (IEdgeKey e in f.Edges)
+                {
+                    IEdge existing = Edges[e];
+                    existing.RemoveFace(f);
+                }
             }
-            foreach (IEdgeKey e in f.Edges)
-            {
-                IEdge existing = Edges[e];
-                existing.RemoveFace(f);
-            }
-            
         }
 
         #region Path finding along faces
