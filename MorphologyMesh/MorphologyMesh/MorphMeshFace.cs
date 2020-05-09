@@ -18,6 +18,8 @@ namespace MorphologyMesh
         /// </summary>
         public RegionType Type { get; private set; }
 
+        public bool NormalIsKnownCorrect = false;
+
         public MorphMeshFace(int A, int B, int C) : base(A, B, C)
         {
         }

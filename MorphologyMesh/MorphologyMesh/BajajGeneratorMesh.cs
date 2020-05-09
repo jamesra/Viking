@@ -256,12 +256,21 @@ namespace MorphologyMesh
         /// </summary>
         public void EnsureFacesHaveExternalNormals()
         {
-            MorphMeshFace[] faces = this.MorphFaces.ToArray();
+            MorphMeshFace[] faces = this.MorphFaces.Where(f => f.NormalIsKnownCorrect == false).ToArray();
             for (int i = 0; i < faces.Length; i++)
             {
                 MorphMeshFace f = faces[i];
+                MorphMeshVertex[] verts = this[f.iVerts].ToArray();
+                if (verts.Any(v => v.MedialAxisIndex.HasValue))
+                {
+                    //Medial axis verts are caps and always have normals that point either up or down.  They should be set correctly at creation.
+                    continue;
+                }
+
                 if (this.FaceHasCCWWinding(f))
                     this.ReverseFace(f);
+
+                f.NormalIsKnownCorrect = true;
             }
 
         }
@@ -277,7 +286,6 @@ namespace MorphologyMesh
             GridVector2 face_center;
 
             bool CheckAgainstUpperPolygons; //True if we check if the centroid is contained in upper polygons, false if centroid needs to be checked against lower polygons
-
             //Check if the normal is oriented up or down.  If it is up, then check that the face centroid is not contained within the upper polygons, and vice versa.
             if (n.Z == 0)
             {
