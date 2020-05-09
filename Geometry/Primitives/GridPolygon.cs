@@ -36,7 +36,7 @@ namespace Geometry
         /// </summary>
         public readonly int iVertex;
 
-        internal readonly int NumUniqueInRing; //The total number of verticies in the ring iVertex indexes into
+        public readonly int NumUniqueInRing; //The total number of verticies in the ring iVertex indexes into
 
         /// <summary>
         /// True if the vertex is part of an inner polygon
@@ -2382,7 +2382,14 @@ namespace Geometry
 
             if (Angle == 0)
                 return Concavity.PARALLEL;
-            else if(Angle > Math.PI)
+            else if(Angle < Global.Epsilon)
+            {
+                var AB = new GridLineSegment(ExteriorRing[A], ExteriorRing[B]);
+                if (AB.DistanceToPoint(ExteriorRing[iVert]) < Global.Epsilon)
+                    return Concavity.PARALLEL;
+            }
+
+            if(Angle > Math.PI)
             {
                 return Concavity.CONCAVE;
             }
