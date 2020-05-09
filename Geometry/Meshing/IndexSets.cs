@@ -440,6 +440,11 @@ namespace Geometry
             }
         }
 
+        public InfiniteIndexSet(IReadOnlyList<int> set, long startIndex = 0, bool reverse = false) : this(set.Select(v => (long)v).ToArray(), startIndex, reverse)
+        {
+            
+        }
+
         /// <summary>
         /// 
         /// </summary>

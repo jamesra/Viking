@@ -137,6 +137,10 @@ namespace Geometry.Meshing
             this._Edges = edges.ToImmutableArray();
         }
 
+        public Face(IEnumerable<long> vertex_indicies) : this(vertex_indicies.Select(i => (int)i).ToArray())
+        {
+
+        }
 
         public Face(IEnumerable<int> vertex_indicies)
         {

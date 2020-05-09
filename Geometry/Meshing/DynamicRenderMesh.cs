@@ -240,6 +240,22 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="f"></param>
         /// <returns></returns>
+        public GridVector3 Normal(IEnumerable<int> iVerts)
+        {
+            VERTEX[] verticies = this[iVerts].ToArray();
+            if (verticies.Length != 3)
+                throw new NotImplementedException("Normal calculation for non-triangular faces not possible.");
+
+            GridVector3 normal = GridVector3.Cross(verticies[0].Position, verticies[1].Position, verticies[2].Position);
+            normal.Normalize();
+            return normal;
+        }
+
+        /// <summary>
+        /// Returns the normal vector for a triangular face
+        /// </summary>
+        /// <param name="f"></param>
+        /// <returns></returns>
         public GridVector3 Normal(IFace f)
         {
             if (f.IsTriangle() == false)

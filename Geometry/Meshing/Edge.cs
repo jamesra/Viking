@@ -469,16 +469,16 @@ namespace Geometry.Meshing
             IFace FaceA = Faces[0] as IFace;
             IFace FaceB = Faces[1] as IFace;
 
-            IIndexSet IndexerA = new InfiniteIndexSet(FaceA.iVerts.Select(i => (long)i).ToArray(), FaceA.iVerts.IndexOf(this.A));
+            IIndexSet IndexerA = new InfiniteIndexSet(FaceA.iVerts, FaceA.iVerts.IndexOf(this.A));
             IIndexSet IndexerB;
             if (IndexerA[1] == B)
             {
                 IndexerA = IndexerA.Reverse();
-                IndexerB = new InfiniteIndexSet(FaceB.iVerts.Select(i => (long)i).ToArray(), FaceB.iVerts.IndexOf(this.A));
+                IndexerB = new InfiniteIndexSet(FaceB.iVerts, FaceB.iVerts.IndexOf(this.A));
             }
             else
             {
-                IndexerB = new InfiniteIndexSet(FaceB.iVerts.Select(i => (long)i).ToArray(), FaceB.iVerts.IndexOf(this.B));
+                IndexerB = new InfiniteIndexSet(FaceB.iVerts, FaceB.iVerts.IndexOf(this.B));
             }
 
             List<long> boundary = new List<long>(FaceA.iVerts.Length + FaceB.iVerts.Length);

@@ -167,14 +167,14 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="triangles"></param>
         /// <returns></returns>
-        public static Mesh3D ToDynamicRenderMesh(this ICollection<GridTriangle> triangles)
+        public static Mesh2D ToDynamicRenderMesh(this ICollection<GridTriangle> triangles)
         {
-            Mesh3D mesh = new Meshing.Mesh3D();
+            Mesh2D mesh = new Meshing.Mesh2D();
             Dictionary<GridVector2, int> PointToVertexIndex = new Dictionary<GridVector2, int>();
 
             foreach (GridVector2 v in triangles.SelectMany(tri => tri.Points).Distinct())
             {
-                int index = mesh.AddVertex(new Vertex3D(v.ToGridVector3(0)));
+                int index = mesh.AddVertex(new Vertex2D(v));
                 PointToVertexIndex.Add(v, index);
             }
 
@@ -209,10 +209,10 @@ namespace Geometry.Meshing
 
         public static TriangulationMesh<IVertex2D<PointIndex>> Triangulate(this GridPolygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress=null)
         {
-            var polyCopy = (GridPolygon)poly.Clone();
+            //var polyCopy = (GridPolygon)poly.Clone();
 
             //Center the polygon on 0,0 to reduce floating point error
-            var centeredPoly = polyCopy.Translate(-polyCopy.Centroid);
+            var centeredPoly = poly.Translate(-poly.Centroid);
 
             PolygonVertexEnum vertEnumerator = new PolygonVertexEnum(centeredPoly, iPoly);
 
@@ -270,20 +270,22 @@ namespace Geometry.Meshing
             foreach(var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.iInnerPoly))
             {
                 GridPolygon innerPolygon = poly.InteriorPolygons[innerPolyGroup.Key.Value];
+                GridVector2 Centroid = innerPolygon.Centroid;
 
-                IFace[] allFaces = innerPolyGroup.SelectMany(g => g.Value.Faces).ToArray();
+                //Figure out the inner polygon vertex numbers in the mesh
+                SortedSet<int> innerPolyVerts = new SortedSet<int>(innerPolyGroup.SelectMany(g => new int[] { g.Value.A, g.Value.B }));
+                IFace[] allFaces = innerPolyGroup.SelectMany(g => g.Value.Faces).Distinct().ToArray();
 
-                //Select all of the faces that appear more than once.  I expect the faces we need to remove to appear three times.
-                var facesByCounts = allFaces.GroupBy(g => g).GroupBy(g => g.Count(), g => g.Key).Where(g => g.Key > 1).ToArray();
+                IFace[] InteriorFaces = allFaces.Where(f => f.iVerts.All(iVert => innerPolyVerts.Contains(iVert))).ToArray();
 
-                IFace[] triangleFaceCandidates = facesByCounts.Where(g => g.Key == 3).Select(g => g.First()).ToArray();
+                //Should only ever be one interior face for a 3 vert interior polygon, unless someone adds interior polygons to interior polygons later <shudder/>
+                foreach(IFace f in InteriorFaces)
+                {
+                    mesh.RemoveFace(f);
 
-                foreach (var face in triangleFaceCandidates.Where(f => mesh.Contains(f)))
-                { 
-                    
-                    if (innerPolygon.Contains(mesh.Centroid(face)))
+                    if (OnProgress != null)
                     {
-                        mesh.RemoveFace(face);
+                        OnProgress(mesh);
                     }
                 }
             }
@@ -297,20 +299,20 @@ namespace Geometry.Meshing
         /// <summary>
         /// Triangulate a set of points on a face, that include a set of points inside the faces.
         /// </summary>
-        /// <param name="face">Exterior ring of a polygon</param>
+        /// <param name="verts">Exterior ring of a polygon</param>
         /// <param name="InteriorPoints">These points must be contained by the polygon defined by face</param>
         /// <param name="OnProgress"></param>
         /// <returns></returns>
-        public static TriangulationMesh<IVertex2D<int>> Triangulate(IVertex2D[] face, IVertex2D[] InteriorPoints=null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
+        public static TriangulationMesh<IVertex2D<int>> Triangulate(IVertex2D[] verts, IVertex2D[] InteriorPoints=null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
-            if(face.Last() == face.First())
+            if(verts.Last() == verts.First())
             {
-                var faceList = face.ToList();
+                var faceList = verts.ToList();
                 faceList.RemoveAt(faceList.Count-1);
-                face = faceList.ToArray();
+                verts = faceList.ToArray();
             }
 
-            GridVector2 faceCenter = face.Select(v => v.Position).ToArray().Average();
+            GridVector2 faceCenter = verts.Select(v => v.Position).ToArray().Average();
 
             if(GridVector2.Magnitude(faceCenter) < 100)
             {
@@ -318,7 +320,7 @@ namespace Geometry.Meshing
             }
 
             //Center the verts on 0,0 to reduce floating point error
-            var faceVerts = face.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray(); 
+            var faceVerts = verts.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray(); 
             var interiorVerts = InteriorPoints == null ? new Vertex2D<int>[0] : InteriorPoints.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
 
             GridPolygon centeredPoly = new GridPolygon(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
@@ -327,6 +329,9 @@ namespace Geometry.Meshing
             var tri_mesh_verts = faceVerts.Union(interiorVerts).ToArray();
 
             TriangulationMesh<IVertex2D<int>> tri_mesh = GenericDelaunayMeshGenerator2D<IVertex2D<int>>.TriangulateToMesh(tri_mesh_verts, OnProgress);
+
+            if (OnProgress != null)
+                OnProgress(tri_mesh);
 
             SortedSet<IEdgeKey> expectedConstrainedEdges = new SortedSet<IEdgeKey>();
 
