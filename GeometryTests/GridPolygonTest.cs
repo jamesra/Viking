@@ -169,7 +169,7 @@ namespace GeometryTests
         }
 
         [TestMethod]
-        public void TestGenerator()
+        public void TestPolygonGenerator()
         {
             GeometryArbitraries.Register();
 

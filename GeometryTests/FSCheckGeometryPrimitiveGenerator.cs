@@ -19,6 +19,8 @@ namespace GeometryTests
             Arb.Register<GridVector2Generators>();
             Arb.Register<GridLineSegmentGenerators>();
             Arb.Register<GridPolygonGenerators>();
+
+             Global.ResetRollingSeed();
         }
 
         public static Arbitrary<GridVector2> PointGenerator()
@@ -563,6 +565,11 @@ namespace GeometryTests
             {
                 //Any 3 distinct points will not intersect
                 var output = new GridPolygon(points.EnsureClosedRing());
+                if(output.Area < Geometry.Global.Epsilon)
+                {
+                    return null;
+                }
+
                 Debug.Assert(output.IsValid(), "Invalid polygon generated");
                 return output;
             }
@@ -578,6 +585,11 @@ namespace GeometryTests
                 while (output_mesh.Faces.Count > 0 && output.InteriorPolygons.Count < maxHoles)
                 {
                     GridPolygon inner = GenConcavePolygonFromMesh(output_mesh, maxInnerLines, true, out output_mesh);
+                    if (inner.Area < Geometry.Global.Epsilon)
+                    {
+                        continue;
+                    }
+
                     output.AddInteriorRing(inner);
                 }
 
@@ -1064,9 +1076,10 @@ namespace GeometryTests
         {
             //return Gen<GridVector2> RandPoints = GenPoint();
             //return GenPoint();
+            //return GridPoints;
             return Gen.Frequency(
                 Tuple.Create(1, GenPoint()),
-                Tuple.Create(1, GridPoints));
+                Tuple.Create(3, GridPoints));
 
         }
 
@@ -1075,9 +1088,9 @@ namespace GeometryTests
             GridVector2[,] points = PointsOnGrid(GridDimX, GridDimY, bounds);
             List<GridVector2> listPoints = new List<GridVector2>(GridDimX * GridDimY);
 
-            for (int i = 0; i < points.GetLength(0); i++)
+            for (int i = 0; i < points.GetLength(0); i += 5)
             {
-                for (int j = 0; j < points.GetLength(1); j++)
+                for (int j = 0; j < points.GetLength(1); j += 5)
                 {
                     listPoints.Add(points[i, j]);
                 }
