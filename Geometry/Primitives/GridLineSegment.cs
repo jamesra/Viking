@@ -322,8 +322,13 @@ namespace Geometry
                     return 0; //This means the points are on a line
                 }
 
-                if (double.IsNaN(tri.Area) || tri.Area == 0 )
+                if (double.IsNaN(tri.Area))
                     return 0; 
+
+                if(tri.Area < Global.Epsilon)
+                {
+                    return 0;
+                }
 
             }
 
