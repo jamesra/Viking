@@ -1,4 +1,4 @@
-﻿#define TRACEDELAUNAY
+﻿//#define TRACEDELAUNAY
 //#define VERIFYDELAUNAY
 
 
@@ -174,7 +174,7 @@ namespace Geometry
                 }
 
                 return mesh;
-            }
+            }/*
             else if (VertSet.Count == 3)
             {
 #if TRACEDELAUNAY
@@ -203,7 +203,7 @@ namespace Geometry
                         newFace = new TriangleFace((int)VertSet[0], (int)VertSet[2], (int)VertSet[1]);
                     }
 
-                    if(mesh.ToTriangle(newFace).Area > 0) //Do not create a face for colinear points
+                    if(mesh.ToTriangle(newFace).Area >= Global.Epsilon) //Do not create a face for colinear points
                         mesh.AddFace(newFace);
                 }
 
@@ -214,7 +214,7 @@ namespace Geometry
 
                 return mesh;
             }
-
+            */
             VertSet.SplitIntoHalves(verts, out MeshCut FirstHalfSet, out MeshCut SecondHalfSet);
 
             TriangulationMesh<VERTEX> FirstHalfMesh = RecursiveDivideAndConquerDelaunay(mesh, FirstHalfSet, verts, ReportProgress);
@@ -561,6 +561,74 @@ namespace Geometry
             UpperOrigin = R;
             return;
         }
+        /*
+        private static FindBaselineByIntersectionTest(TriangulationMesh<VERTEX> mesh, MeshCut LowerHalfSet, MeshCut UpperHalfSet, out VERTEX LowerOrigin, out VERTEX UpperOrigin)
+        {
+            VERTEX L;
+            VERTEX R;
+
+            if (LowerHalfSet.CutAxis == CutDirection.HORIZONTAL)
+            {
+                L = mesh[LowerHalfSet.SortedAlongCutAxisVertSet.Last()];
+                R = mesh[UpperHalfSet.SortedAlongCutAxisVertSet.Last()];
+            }
+            else
+            {
+                L = mesh[LowerHalfSet.SortedAlongCutAxisVertSet.First()];
+                R = mesh[UpperHalfSet.SortedAlongCutAxisVertSet.First()];
+            }
+
+            GridLineSegment LR_baseline_candidate;
+            GridLineSegment RL_baseline_candidate;
+
+            Dictionary<int, SortedSet<int>> RejectedBaselinePairs = new Dictionary<int, SortedSet<int>>();
+            int iLoopCount = 0;
+
+            while (true)
+            {
+                iLoopCount += 1;
+
+                //Debug.Assert(iLoopCount <= (LowerHalfSet.Count + UpperHalfSet.Count) * 2, "FindBaselineByLeftOfLineTest: Taking an unreasonably long time to identify baseline.");
+                if (iLoopCount > (LowerHalfSet.Count + UpperHalfSet.Count) * 2)
+                {
+                    Trace.WriteLine(string.Format("FindBaselineByLeftOfLineTest: Taking an unreasonably long time to identify baseline for {0}.  Bailing out", mesh.ToString()));
+                    //Are these points all colinear?
+                    break;
+                }
+
+                LR_baseline_candidate = mesh.ToGridLineSegment(L.Index, R.Index);
+                RL_baseline_candidate = mesh.ToGridLineSegment(R.Index, L.Index);
+
+                SortedSet<int> L_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(R.Index) ? RejectedBaselinePairs[R.Index] : new SortedSet<int>();
+
+
+                EdgeAngle[] L_C = EdgesByAngle(mesh, L, R.Index, false);
+
+
+                int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).Where(id => L_Rejected_Candidates.Contains(id) == false).ToArray();
+                //int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).ToArray();
+                int[] L_Origin_Candidates_IsLeft = L_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
+
+
+                if (mesh.FindIntersectingEdges(new EdgeKey(L.Index, R.Index), out List<IEdgeKey> intersections))
+                {
+                    RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that the candidate baseline pairing intersects an existing edge so we don't test it again
+                    RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that the candidate baseline pairing intersects an existing edge so we don't test it again
+
+                    //If the intersecting edge is in the left set we know the left origin must be incorrect, change to our first L_Candidate and move on. 
+                    foreach (IEdgeKey intersection in intersections)
+                    {
+                        if (LowerHalfSet.Contains(intersection.A) && L_Origin_Candidates.Length > 0)
+                        {
+                            L = mesh[L_Origin_Candidates[0]];
+                        }
+                    }
+                    //L_Origin_Candidates[0]; 
+                    continue;
+                }
+            }
+
+        }*/
 
         /// <summary>
         /// Checks for a baseline vertex by ensuring no vertex is to the left of the Lower and Upper set's first vertex.
@@ -591,6 +659,8 @@ namespace Geometry
             GridLineSegment LR_baseline_candidate;
             GridLineSegment RL_baseline_candidate;
 
+            
+
             //L = mesh[FirstHalfSet.SortedOppositeCutAxisVertSet.First()];
             //R = mesh[SecondHalfSet.SortedOppositeCutAxisVertSet.First()];
 
@@ -605,17 +675,30 @@ namespace Geometry
             //TODO: This code needs to remove edges when the candidate is invalid and check in angle order.  This solution doesn't always work.
             Dictionary<int, SortedSet<int>> RejectedBaselinePairs = new Dictionary<int, SortedSet<int>>();
 
+            SortedSet<int> L_Rejected_Candidates;
+            EdgeAngle[] L_C;
+            int[] L_Origin_Candidates;
+            //int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).ToArray();
+            int[] L_Origin_Candidates_IsLeft;
+
+            SortedSet<int> R_Rejected_Candidates;
+            EdgeAngle[] R_C;
+
+            int[] R_Origin_Candidates;
+            //int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).ToArray();
+            int[] R_Origin_Candidates_IsLeft;
+
             while (true)
             {
                 iLoopCount += 1;
 
                 //Debug.Assert(iLoopCount <= (LowerHalfSet.Count + UpperHalfSet.Count) * 2, "FindBaselineByLeftOfLineTest: Taking an unreasonably long time to identify baseline.");
-                if (iLoopCount > (LowerHalfSet.Count + UpperHalfSet.Count) * 2)
+                /*if (iLoopCount > (LowerHalfSet.Count + UpperHalfSet.Count) * 2)
                 {
                     Trace.WriteLine(string.Format("FindBaselineByLeftOfLineTest: Taking an unreasonably long time to identify baseline for {0}.  Bailing out", mesh.ToString()));
                     //Are these points all colinear?
                     break;
-                }
+                }*/
                 //throw new ArgumentException("FindBaselineByLeftOfLineTest: Taking an unreasonably long time to identify baseline.");
 
 
@@ -638,15 +721,69 @@ namespace Geometry
                 LR_baseline_candidate = mesh.ToGridLineSegment(L.Index, R.Index);
                 RL_baseline_candidate = mesh.ToGridLineSegment(R.Index, L.Index);
 
-                SortedSet<int> L_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(R.Index) ? RejectedBaselinePairs[R.Index] : new SortedSet<int>();
+                L_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(R.Index) ? RejectedBaselinePairs[R.Index] : new SortedSet<int>();
 
 
-                //EdgeAngle[] L_C = EdgesByAngle(mesh, L, R.Index, false);
-                int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).Where(id => L_Rejected_Candidates.Contains(id) == false).ToArray();
+                L_C = EdgesByAngle(mesh, L, R.Index, false);
+
+
+                L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).Where(id => L_Rejected_Candidates.Contains(id) == false).ToArray();
                 //int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).ToArray();
-                int[] L_Origin_Candidates_IsLeft = L_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
-                
+                L_Origin_Candidates_IsLeft = L_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
 
+
+                bool NewCandidateFound = false;
+                /*
+                bool HasIntersections = mesh.FindIntersectingEdges(new EdgeKey(L.Index, R.Index), out List<IEdgeKey> intersections);
+                if (HasIntersections)
+                {
+
+                    R_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(L.Index) ? RejectedBaselinePairs[L.Index] : new SortedSet<int>();
+
+                    //Reverse the IsLeft result for the Upper->Lower line
+                    R_C = EdgesByAngle(mesh, R, L.Index, true);
+
+                    R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).Where(id => R_Rejected_Candidates.Contains(id) == false).ToArray();
+                    //int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).ToArray();
+                    R_Origin_Candidates_IsLeft = R_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
+
+
+                    RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that the candidate baseline pairing intersects an existing edge so we don't test it again
+                    RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that the candidate baseline pairing intersects an existing edge so we don't test it again
+
+                    //If the intersecting edge is in the left set we know the left origin must be incorrect, change to our first L_Candidate and move on. 
+                    bool LUpdated = false;
+                    bool RUpdated = false;
+                    foreach(IEdgeKey intersection in intersections)
+                    {
+                        if(LowerHalfSet.Contains(intersection.A) && L_Origin_Candidates.Length > 0 && !LUpdated)
+                        {
+#if TRACEDELAUNAY
+                            Trace.WriteLine(string.Format("Reject Left Baseline due to intersection: {0}-{1} for {2}", L.Index, R.Index, L_Origin_Candidates[0]));
+#endif
+                            L = mesh[L_Origin_Candidates[0]];
+                            LUpdated = true;
+                        }
+
+                        if(UpperHalfSet.Contains(intersection.A) && R_Origin_Candidates.Length > 0 && !RUpdated)
+                        {
+#if TRACEDELAUNAY
+                            Trace.WriteLine(string.Format("Reject Right Baseline due to intersection: {0}-{1} for {2}", L.Index, R.Index, R_Origin_Candidates[0]));
+#endif
+                            R = mesh[R_Origin_Candidates[0]];
+                            RUpdated = true;
+                        }
+
+                        if (LUpdated && RUpdated)
+                            NewCandidateFound = true;
+                            break;
+                    }
+
+                    //L_Origin_Candidates[0]; 
+                    if(NewCandidateFound)
+                        continue;
+                }
+                */
                 /*
                 if (LowerHalfSet.CutAxis == CutDirection.HORIZONTAL)
                 {
@@ -658,14 +795,26 @@ namespace Geometry
                 }
                 */
 
-                bool NewCandidateFound = false;
 
                 for (int i = 0; i < L_Origin_Candidates.Length; i++)
                 {
                     int L_Candidate = L_Origin_Candidates[i];
 
+                    //If we are going to replace the origin because the candidate is on or left of the baseline make sure the new candidate baseline will not contain the point we are ruling out
+                    if (L_Origin_Candidates_IsLeft[i] <= 0)
+                    {
+                        GridLineSegment candidate_seg = mesh.ToGridLineSegment(L_Candidate, R.Index);
+                        if (candidate_seg.Contains(L.Position))
+                        {
+                            RejectedBaselinePairs.AddToSet(L_Candidate, R.Index); //Record that this baseline pairing does not work so we don't test it again
+                            RejectedBaselinePairs.AddToSet(R.Index, L_Candidate); //Record that this baseline pairing does not work so we don't test it again
+                            continue;
+                        }
+                    }
+
                     //For the case of a point on the line we use the closer point to the R origin
-                    
+
+
                     if (LR_baseline_candidate.Contains(mesh[L_Candidate].Position))
                     {
                         #if TRACEDELAUNAY
@@ -673,6 +822,8 @@ namespace Geometry
                         #endif
 
                         RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that this baseline pairing does not work so we don't test it again
+                        RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that this baseline pairing does not work so we don't test it again
+
                         L = mesh[L_Candidate];
                         if (RejectedBaselinePairs[R.Index].Contains(L.Index))
                         {
@@ -695,7 +846,8 @@ namespace Geometry
                             Trace.WriteLine(string.Format("Reject Left Baseline: {0}-{1} for {2}", L.Index, R.Index, L_Candidate));
 #endif
                             RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that this baseline pairing does not work so we don't test it again
-                            
+                            RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that this baseline pairing does not work so we don't test it again
+
                             L = mesh[L_Candidate];
                             if (RejectedBaselinePairs[R.Index].Contains(L.Index))
                             {
@@ -709,10 +861,19 @@ namespace Geometry
                     }
                     else if (L_Origin_Candidates_IsLeft[i] < 0)
                     {
+                        //Double check that the proposed new line does not intersect an existing mesh line
+                        //if (mesh.FindIntersectingEdges(new EdgeKey(L_Candidate, R.Index), out List<IEdgeKey> intersections))
+                        //{
+                            //RejectedBaselinePairs.AddToSet(R.Index, L_Candidate); //Record that the candidate baseline pairing intersects an existing edge so we don't test it again
+                            //continue;
+                        //}
+
+
 #if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("Reject Left Baseline: {0}-{1} for {2}-{1}", L.Index, R.Index, L_Candidate));
 #endif
                         RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that this baseline pairing does not work so we don't test it again
+                        RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that this baseline pairing does not work so we don't test it again
 
                         L = mesh[L_Candidate];
                         NewCandidateFound = true;
@@ -725,19 +886,32 @@ namespace Geometry
                     continue;
 
                 
-                SortedSet<int> R_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(L.Index) ? RejectedBaselinePairs[L.Index] : new SortedSet<int>();
+                R_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(L.Index) ? RejectedBaselinePairs[L.Index] : new SortedSet<int>();
 
                 //Reverse the IsLeft result for the Upper->Lower line
-                //EdgeAngle[] R_C = EdgesByAngle(mesh, R, L.Index, true);
+                R_C = EdgesByAngle(mesh, R, L.Index, true);
                     
-                int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).Where(id => R_Rejected_Candidates.Contains(id) == false).ToArray();
+                R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).Where(id => R_Rejected_Candidates.Contains(id) == false).ToArray();
                 //int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).ToArray();
-                int[] R_Origin_Candidates_IsLeft = R_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
+                R_Origin_Candidates_IsLeft = R_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
 
                 for (int i = 0; i < R_Origin_Candidates.Length; i++)
                 {
                     int R_Candidate = R_Origin_Candidates[i];
 
+                    //If we are going to replace the origin because the candidate is on or left of the baseline make sure the new candidate baseline will not contain the point we are ruling out
+                    if (R_Origin_Candidates_IsLeft[i] <= 0)
+                    {
+                        GridLineSegment candidate_seg = mesh.ToGridLineSegment(L.Index, R_Candidate);
+                        if (candidate_seg.Contains(R.Position))
+                        {
+                            RejectedBaselinePairs.AddToSet(L.Index, R_Candidate); //Record that this baseline pairing does not work so we don't test it again
+                            RejectedBaselinePairs.AddToSet(R_Candidate, L.Index); //Record that this baseline pairing does not work so we don't test it again
+                            continue; 
+                        }
+                    }
+
+                    
                     //For the case of a point on the line we use the closer point to the R origin 
                     if (RL_baseline_candidate.Contains(mesh[R_Candidate].Position))
                     {
@@ -746,6 +920,8 @@ namespace Geometry
 #endif
 
                         RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that this baseline pairing does not work so we don't test it again
+                        RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that this baseline pairing does not work so we don't test it again
+
                         R = mesh[R_Candidate];
 
                         if (RejectedBaselinePairs[L.Index].Contains(R.Index))
@@ -769,6 +945,8 @@ namespace Geometry
                             Trace.WriteLine(string.Format("Reject Right Baseline: {0}-{1} for {2}", L.Index, R.Index, R_Candidate));
 #endif
                             RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that this baseline pairing does not work so we don't test it again
+                            RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that this baseline pairing does not work so we don't test it again
+
                             R = mesh[R_Candidate];
 
                             if (RejectedBaselinePairs[L.Index].Contains(R.Index))
@@ -782,11 +960,22 @@ namespace Geometry
                         }
                     }
                     else if (R_Origin_Candidates_IsLeft[i] < 0)
-                    { 
+                    {
+                        //if (mesh.FindIntersectingEdges(new EdgeKey(L.Index, R_Candidate), out List<IEdgeKey> intersections))
+                        //{
+                        //RejectedBaselinePairs.AddToSet(L.Index, R_Candidate); //Record that the candidate baseline pairing intersects an existing edge so we don't test it again
+                        //continue;
+                        //}
+                        
+
+
+
 #if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("Reject Right Baseline: {0}-{1} for {0}-{2}", L.Index, R.Index, R_Candidate));
 #endif
                         RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that this baseline pairing does not work so we don't test it again
+                        RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that this baseline pairing does not work so we don't test it again
+
 
                         R = mesh[R_Candidate];
                         NewCandidateFound = true;
@@ -939,7 +1128,7 @@ namespace Geometry
                             return null;
                         }
 
-                        mesh.FindIntersectingEdges(key);
+                        mesh.FindIntersectingFaceEdges(key);
                     }
                     catch(EdgeIntersectsVertexException e)
                     {
