@@ -7,120 +7,6 @@ using System.Text;
 
 namespace Geometry
 {
-    public struct DistanceToPoint<T> : IComparable<DistanceToPoint<T>>, IEquatable<DistanceToPoint<T>>
-    {
-        public readonly GridVector2 Point;
-        public readonly double Distance;
-        public readonly T Value;
-
-        public DistanceToPoint(GridVector2 point, double distance, T value)
-        {
-            Point = point;
-            Distance = distance;
-            Value = value;
-        }
-
-        public int CompareTo(DistanceToPoint<T> other)
-        {
-            return this.Distance.CompareTo(other.Distance);
-        }
-
-        public bool Equals(DistanceToPoint<T> other)
-        {
-            if (object.ReferenceEquals(this, other))
-                return true;
-
-            if (object.ReferenceEquals(other, null))
-                return false;
-
-            return this.Distance.Equals(other.Distance) && this.Point.Equals(other.Point);
-        }
-
-        public override string ToString()
-        {
-            return string.Format("{0} {1}", Point, Distance);
-        }
-    }
-
-    public class DistanceList<T>
-    {
-        public SortedList<double, List<DistanceToPoint<T>>> Data = null;// new SortedList<double, List<Geometry.DistanceToPoint<T>>>();
-
-        public double MaxDistance;
-        public int Count;
-
-        public DistanceList(int capacity)
-        {
-            Data = new SortedList<double, List<Geometry.DistanceToPoint<T>>>(capacity);
-        }
-
-        public void Add(GridVector2 point, double distance, T value)
-        {
-            DistanceToPoint<T> item = new DistanceToPoint<T>(point, distance, value);
-            Add(item);
-        }
-
-        public void Add(DistanceToPoint<T> item)
-        {
-            Count = Count + 1; //Increment our count
-
-            if (Data.ContainsKey(item.Distance))
-            {
-                Debug.Assert(Data[item.Distance].Any(entry => entry.Equals(item)) == false, "Item should not already exist in the distance list");
-                Data[item.Distance].Add(item);
-                return;
-            }
-
-            if (item.Distance > this.MaxDistance)
-            {
-                this.MaxDistance = item.Distance;
-            }
-
-            List<DistanceToPoint<T>> newList = new List<DistanceToPoint<T>>(2);
-            newList.Add(item);
-
-            Data.Add(item.Distance, newList);
-            return;
-        }
-
-        public List<Geometry.DistanceToPoint<T>> this[double distance]
-        {
-            get 
-            {
-                return Data[distance];
-            }
-        }
-
-        public void RemoveAt(int index)
-        {
-            Count = Count - 1;
-
-            Data.RemoveAt(index);
-
-            if (index == Data.Count)
-            {
-                this.MaxDistance = Data.Last().Key;
-            }
-        }
-
-        /*
-        private static int NumPointsFound(SortedList<double, List<DistanceToPoint<T>>> distanceList)
-        {
-            return distanceList.Values.Sum(l => l.Count);
-        }
-        */
-
-    }
-
-
-    public class DistanceToPointSorter<T> : IComparer<DistanceToPoint<T>>
-    {
-        public int Compare(DistanceToPoint<T> x, DistanceToPoint<T> y)
-        {
-            return x.Distance.CompareTo(y.Distance);
-        }
-    }
-
     internal enum Quadrant
     {
         UPPERLEFT = 0,
@@ -159,10 +45,6 @@ namespace Geometry
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
-        
-
-        
-
         private readonly QuadTreeNode<T>[] _quadrants = new QuadTreeNode<T>[] { null, null, null, null };
 
         /// <summary>
@@ -218,16 +100,6 @@ namespace Geometry
             get
             {
                 int count = _quadrants.Count(q => q != null);
-                /*
-                if (_quadrants[(int)Quadrant.UPPERLEFT] != null)
-                    count++;
-                if (_quadrants[(int)Quadrant.UPPERRIGHT] != null)
-                    count++;
-                if (_quadrants[(int)Quadrant.LOWERLEFT] != null)
-                    count++;
-                if (_quadrants[(int)Quadrant.LOWERRIGHT] != null)
-                    count++;
-                */
                 return count;
             }
         }
@@ -409,14 +281,14 @@ namespace Geometry
                 //Check that the point we are being asked to insert is not a duplicate of our current point
                 else if (this.Point == point)
                 {
-                    //throw new ArgumentException("The point being inserted into the quad tree is a duplicate point: " + point.ToString(), "point");
-                    return null;
+                    throw new QuadTree<T>.DuplicateItemException(point);
+                    //return null;
                 }
                 else // It is a new point.  We need to create children for this node and insert the points
                 {
                     //First create a child for the existing point
 
-                    //REmove ourselves from the table, must be done before constructor
+                    //Remove ourselves from the table, must be done before constructor
                     Tree.ValueToNodeTable.Remove(this.Value);
 
                     Quadrant quad = GetQuad(this.Point);
@@ -489,6 +361,15 @@ namespace Geometry
 
                     Debug.Assert(Bounds.Contains(Point), "The border specified must include the node's point");
                     Debug.Assert(Bounds.Contains(point), "The border specified must include the new point");
+                    if (Bounds.Contains(Point) == false)
+                    {
+                        throw new ArgumentException("The border specified must include the node's point");
+                    }
+                    if (Bounds.Contains(point) == false)
+                    {
+                        throw new ArgumentException("The border specified must include the new point");
+                    }
+
                     new_root = this;
                     
                     //Trace.WriteLine(string.Format("Calculated border of {0}", Bounds));
@@ -536,10 +417,15 @@ namespace Geometry
             this.Parent = new_parent;
 
             //Trace.WriteLine(string.Format("Expanded border from {0} to {1}", this.Border, parent_bounds));
-
+            /*
             Debug.Assert(parent_bounds.Contains(this.Center), "New root node must include center of this quad");
+            if(parent_bounds.Contains(this.Center) == false)
+            {
+                throw new ArgumentException("New root node must include center of this quad");
+            }
 
-           
+           */
+
             if (new_parent.ExpandBorder(point, out new_root))
             {
                 Debug.Assert((this.IsLeaf == false) || new_root.Border.Contains(Point), "New root node must include our point");
@@ -622,6 +508,12 @@ namespace Geometry
                     retValue = _quadrants[(int)quad].FindNearest(point, out nodePoint, ref distance);
                 }
 
+                if (distance == 0)
+                {
+                    //Can't get any closer than 0.  Stop looking
+                    return retValue;
+                }
+
                 //Next we check our other quadrants to see if it is possible they could have a closer point
                 //It is OK if we didn't have a quadrant for the point in the earlier check because then the default values for 
                 //distance force the adjacent quadrants to be checked
@@ -643,14 +535,22 @@ namespace Geometry
                             double newDistance = double.MaxValue;
                             GridVector2 foundNode;
                             T foundValue = _quadrants[iQuad].FindNearest(point, out foundNode, ref newDistance);
-
+                            
                             if (newDistance < distance)
                             {
                                 nodePoint = foundNode;
                                 retValue = foundValue;
                                 distance = newDistance;
+                                if (newDistance == 0)
+                                {
+                                    //Can't get any closer than 0.  Stop looking
+                                    return retValue;
+                                }
+
                                 rect = new GridRectangle(point, distance);
                             }
+
+                            
                         }
                     }
                 }
@@ -659,34 +559,6 @@ namespace Geometry
                 return retValue;
             }
         }
-        /*
-        private static void AddToDistanceList(GridVector2 point, double distance, T value, ref SortedList<double, List<DistanceToPoint<T>>> distanceList)
-        {
-            DistanceToPoint<T> item = new DistanceToPoint<T>(point, distance, value);
-            AddToDistanceList(item, ref distanceList);
-        }
-
-        private static void AddToDistanceList(DistanceToPoint<T> item, ref SortedList<double, List<DistanceToPoint<T>>> distanceList)
-        {
-            if (distanceList.ContainsKey(item.Distance))
-            {
-                Debug.Assert(distanceList[item.Distance].Any(entry => entry.Equals(item)) == false, "Item should not already exist in the distance list");
-                distanceList[item.Distance].Add(item);
-                return;
-            }
-
-            List<DistanceToPoint<T>> newList = new List<DistanceToPoint<T>>(2);
-            newList.Add(item);
-
-
-            distanceList.Add(item.Distance, newList);
-            return;
-        }
-        
-        private static int NumPointsFound(SortedList<double, List<DistanceToPoint<T>>> distanceList)
-        {
-            return distanceList.Values.Sum(l => l.Count);
-        }*/
 
         /// <summary>
         /// Returns the value associated with the point nearest to the passed input parameter point
@@ -695,7 +567,7 @@ namespace Geometry
         /// <param name="nodePoint">Nearest point in QuadTree to query point</param>
         /// <param name="distance">Distance from query point to nodePoint</param>
         /// <returns>Data value associated with nearest point</returns>
-        public bool FindNearestPoints(GridVector2 point, int nPoints, ref DistanceList<T> distanceList)
+        public bool FindNearestPoints(GridVector2 point, int nPoints, ref FixedSizeDistanceList<T> distanceList)
         {
             if (nPoints == 0)
             {
@@ -707,25 +579,7 @@ namespace Geometry
                 Debug.Assert(this.HasValue);
                 double distance = GridVector2.Distance(this.Point, point);
 
-                //This is a sorted list, so don't add if our distance is greater than the nth item.
-                //TODO: this code breaks with a duplicate key exception if the distances are equal
-                int ptsFound = distanceList.Count;// NumPointsFound(distanceList);
-                if (ptsFound < nPoints)
-                {
-                    distanceList.Add(new DistanceToPoint<T>(this.Point, distance, Value));
-                    return true;
-                }
-
-                double furthestDistance = distanceList.MaxDistance;
-                if (distance < furthestDistance)
-                {
-                    distanceList.Add(new DistanceToPoint<T>(this.Point, distance, Value));
-                    if(ptsFound - distanceList[furthestDistance].Count >= nPoints)
-                        distanceList.RemoveAt(nPoints);             //Remove the largest entry so we stay below the nPoints size request, but make sure we aren't removing too many points if there is a duplicate distance
-                    return true;
-                }
-
-                return false;
+                return distanceList.TryAdd(new DistanceToPoint<T>(this.Point, distance, Value));
             }
             else
             {
@@ -747,6 +601,7 @@ namespace Geometry
 
                 double maxDistance = double.MaxValue;
 
+                //If we've already located enough points to fill our list, then only search for points that may be closer than points in the list
                 if (distanceList.Count >= nPoints)
                     maxDistance = distanceList.MaxDistance;
 

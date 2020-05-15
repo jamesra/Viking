@@ -1,18 +1,55 @@
 ﻿using System;
-using System.Diagnostics; 
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
 using System.Text;
 using Geometry;
+using System.Runtime.Serialization;
 
 namespace Geometry
 {
+   
+
     /// <summary>
     /// Stores a quadtree.  Should be safe for concurrent access
     /// </summary>
-     public class QuadTree<T>  : IDisposable
+    public class QuadTree<T>  : IDisposable
     {
+        /// <summary>
+        /// Used by QuadTree when a duplicate point is added
+        /// </summary>
+        internal class DuplicateItemException : ArgumentException
+        {
+            public DuplicateItemException()
+            {
+            }
+
+            public DuplicateItemException(GridVector2 point) : base("The point being inserted into the quad tree is a duplicate point: " + point.ToString())
+            {
+            }
+
+            public DuplicateItemException(string message) : base(message)
+            {
+            }
+
+            public DuplicateItemException(string message, Exception innerException) : base(message, innerException)
+            {
+            }
+
+            public DuplicateItemException(string message, string paramName) : base(message, paramName)
+            {
+            }
+
+            public DuplicateItemException(string message, string paramName, Exception innerException) : base(message, paramName, innerException)
+            {
+            }
+
+            protected DuplicateItemException(SerializationInfo info, StreamingContext context) : base(info, context)
+            {
+            }
+        }
+
         //GridVector2[] _points;
         QuadTreeNode<T> Root;
 
@@ -177,7 +214,7 @@ namespace Geometry
                     this.Root.Insert(point, value);
                     return true;
                 }
-                catch (Exception)
+                catch (DuplicateItemException)
                 {
                     return false; 
                 }
@@ -205,6 +242,13 @@ namespace Geometry
             {
                 rwLock.ExitReadLock(); 
             }
+        }
+
+        public bool Contains(GridVector2 p)
+        {
+            var output = this.FindNearest(p, out GridVector2 foundPoint, out double distance);
+
+            return foundPoint == p;
         }
 
         /// <summary>
@@ -365,15 +409,21 @@ namespace Geometry
         }
 
         public T FindNearest(GridVector2 point, out double distance)
+        {
+            return FindNearest(point, out GridVector2 found_point, out distance);
+        }
+
+        public T FindNearest(GridVector2 point, out GridVector2 found_point, out double distance)
         { 
             try
             {
-                rwLock.EnterReadLock(); 
-
-                GridVector2 nodePoint;
+                found_point = GridVector2.Zero;
                 distance = double.MaxValue;
+
+                rwLock.EnterReadLock();
+                
                 if (Root == null)
-                {
+                {   
                     return default(T); 
                 }
                 else if (Root.IsLeaf == true && Root.HasValue == false)
@@ -381,7 +431,7 @@ namespace Geometry
                     return default(T); 
                 }
 
-                return Root.FindNearest(point, out nodePoint, ref distance);
+                return Root.FindNearest(point, out found_point, ref distance);
             }
             finally
             {
@@ -407,7 +457,7 @@ namespace Geometry
                 }
 
                 //SortedList<double, List<DistanceToPoint<T>>> pointList = new SortedList<double, List<DistanceToPoint<T>>>(nPoints + 1);
-                DistanceList<T> pointList = new DistanceList<T>(nPoints + 1);
+                FixedSizeDistanceList<T> pointList = new FixedSizeDistanceList<T>(nPoints + 1);
                 Root.FindNearestPoints(point, nPoints, ref pointList);
 
                 listResults = new List<DistanceToPoint<T>>();
