@@ -24,6 +24,24 @@ namespace Geometry
                 }
             }
         }
+
+        /// <summary>
+        /// Returns all possible pairing of items from A with items from B
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        public static IEnumerable<Combo<T>> CombinationPairs<T>(this IReadOnlyList<T> A, IReadOnlyList<T> B)
+        {
+            for (int i = 0; i < A.Count; i++)
+            {
+                for (int j = 0; j < B.Count; j++)
+                {
+                    yield return new Combo<T>(A[i], B[j], i, j);
+                }
+            }
+        }
     }
 
     public struct Combo<T>
