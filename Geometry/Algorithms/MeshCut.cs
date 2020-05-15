@@ -120,7 +120,90 @@ namespace Geometry.Meshing
 
             return sb.ToString();
         }
+        
+        /// <summary>
+        /// In edge cases we'll have points at the cut axis that within an epsilon distance along the cut axis. 
+        /// For example:
+        ///     A
+        ///     |
+        ///     B
+        ///     |
+        ///     C
+        /// 
+        /// Before this function was added we'd have A & C sort into one set and B sort into the other half.  This function groups all points within an epsilon distance
+        /// of the cut and sorts them along the 2nd axis correctly. 
+        /// 
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="cutDirection"></param>
+        /// <param name="NewSortedAlongCutAxisVertSet"></param>
+        private static void AdjustCutAxisOrderForEpsilon(IReadOnlyList<IVertex2D> mesh, CutDirection cutDirection, ref long[] NewSortedAlongCutAxisVertSet)
+        {
+            long nLowerHalf = NewSortedAlongCutAxisVertSet.LongLength / 2;
+            long nUpperHalf = NewSortedAlongCutAxisVertSet.LongLength - nLowerHalf;
 
+            GridVector2 L = mesh[(int)NewSortedAlongCutAxisVertSet[nLowerHalf - 1]].Position;
+            GridVector2 U = mesh[(int)NewSortedAlongCutAxisVertSet[nLowerHalf]].Position;
+
+            double OffAxisDividingLine = cutDirection == CutDirection.HORIZONTAL ? L.X : L.Y;
+
+            //Find the start of points that are near the dividing line
+            List<int> PointsToSort = new List<int>();
+            long iStart = nLowerHalf - 1;
+            while(iStart >= 0)
+            {
+                GridVector2 p = mesh[(int)iStart].Position;
+                double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.X : p.Y;
+                if (Math.Abs(LinePos - OffAxisDividingLine) < Global.Epsilon)
+                    iStart -= 1;
+                else
+                {
+                    iStart += 1;
+                    break;
+                }
+            }
+
+            //Find the end of points that are near the dividing line
+            long iEnd = nLowerHalf - 1;
+            while (iEnd < NewSortedAlongCutAxisVertSet.Length)
+            {
+                GridVector2 p = mesh[(int)iEnd].Position;
+                double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.X : p.Y;
+                if (Math.Abs(LinePos - OffAxisDividingLine) < Global.Epsilon)
+                    iEnd += 1;
+                else
+                {
+                    iEnd -= 1;
+                    break;
+                }
+            }
+
+            //If only one point is on the dividing line we are done
+            if (iEnd - iStart <= 1)
+                return;
+
+            //OK, sort the points that we know are on the dividing line
+            long[] toSort = new long[iEnd - iStart];
+            GridVector2[] sortPos = new GridVector2[toSort.Length];
+            double[] sortVals = new double[toSort.Length];
+            for(long i = iStart; i < iEnd; i++)
+            {
+                long iArray = i - iStart;
+                toSort[iArray] = NewSortedAlongCutAxisVertSet[i];
+                sortPos[iArray] = mesh[(int)toSort[iArray]].Position;
+                sortVals[iArray] = cutDirection == CutDirection.HORIZONTAL ? sortPos[iArray].Y : sortPos[iArray].X;
+            }
+
+            int[] iSorted = sortVals.SortAndIndex();
+            long[] correctOrder = iSorted.Select(i => toSort[i]).ToArray();
+
+            for(long i = iStart; i < iEnd; i++)
+            {
+                long iArray = i - iStart;
+                NewSortedAlongCutAxisVertSet[i] = correctOrder[iArray];
+            }
+
+        }
 
         public void SplitIntoHalves(IReadOnlyList<IVertex2D> mesh, out MeshCut LowerSubset, out MeshCut UpperSubset)
         {
@@ -174,6 +257,7 @@ namespace Geometry.Meshing
             // 3, 1, 4, 0      YSorted Indicies            
             //E0, D1, B3, F4, YSorted Set
 
+            AdjustCutAxisOrderForEpsilon(mesh, cutDirection, ref NewSortedAlongCutAxisVertSet);
 
             //Divide verticies into two groups along the axis
             long nLowerHalf = NewSortedAlongCutAxisVertSet.LongLength / 2;
@@ -195,7 +279,7 @@ namespace Geometry.Meshing
             long iUpperHalfAdd = 0;
 
 #if TRACEDELAUNAY
-            Debug.WriteLine(string.Format("{0}--------{1}-------",cutDirection, DivisionPoint));
+            Trace.WriteLine(string.Format("{0}--------{1}-------",cutDirection, DivisionPoint));
 #endif
             GridVector2[] vertPosArray = NewSortedAlongCutAxisVertSet.Select(i => mesh[(int)i].Position).ToArray();
             for (long i = 0; i < NewSortedAlongCutAxisVertSet.LongLength; i++)
@@ -237,7 +321,7 @@ namespace Geometry.Meshing
                 if (AssignToLower)
                 {
 #if TRACEDELAUNAY
-                    Debug.WriteLine(string.Format("1st <- {0}: {1}", iVert, vertPos));
+                    Trace.WriteLine(string.Format("1st <- {0}: {1}", iVert, vertPos));
 #endif
 
                     LowerHalfAlongAxis[iLowerHalfAdd] = iVert;
@@ -247,7 +331,7 @@ namespace Geometry.Meshing
                 {
 
 #if TRACEDELAUNAY
-                    Debug.WriteLine(string.Format("2nd <- {0}: {1}", iVert, vertPos));
+                    Trace.WriteLine(string.Format("2nd <- {0}: {1}", iVert, vertPos));
 #endif
 
                     UpperHalfAlongAxis[iUpperHalfAdd] = iVert;
