@@ -135,6 +135,7 @@
     <Compile Include="CurveFitting\Smoothing.cs" />
     <Compile Include="DataStructures\BoundlessRegionPyramid.cs" />
     <Compile Include="DataStructures\Coord.cs" />
+    <Compile Include="DataStructures\DistanceDataStructures.cs" />
     <Compile Include="DataStructures\IndexedGridVector2.cs" />
     <Compile Include="DataStructures\LineSearchGrid.cs" />
     <Compile Include="DataStructures\PairedLineSearchGrid.cs" />
