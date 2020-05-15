@@ -131,9 +131,14 @@ namespace Geometry
             return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, Z, Z);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, int Z)
+        /// <summary>
+        /// Converts to an RTree.Rectangle, but pads an epsilon value to the bounding box
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <returns></returns>
+        public static RTree.Rectangle ToRTreeRectEpsilonPadded(this GridRectangle rect, double Z = 0)
         {
-            return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, (double)Z, (double)Z);
+            return new RTree.Rectangle(rect.Left - Global.Epsilon,  rect.Bottom - Global.Epsilon, rect.Right + Global.Epsilon, rect.Top + Global.Epsilon, (double)Z, (double)Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this GridVector2 p, double Z)
