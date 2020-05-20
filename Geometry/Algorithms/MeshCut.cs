@@ -152,7 +152,7 @@ namespace Geometry.Meshing
             long iStart = nLowerHalf - 1;
             while(iStart >= 0)
             {
-                GridVector2 p = mesh[(int)iStart].Position;
+                GridVector2 p = mesh[(int)NewSortedAlongCutAxisVertSet[iStart]].Position;
                 double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.X : p.Y;
                 if (Math.Abs(LinePos - OffAxisDividingLine) < Global.Epsilon)
                     iStart -= 1;
@@ -163,11 +163,14 @@ namespace Geometry.Meshing
                 }
             }
 
+            if (iStart < 0)
+                iStart = 0; 
+
             //Find the end of points that are near the dividing line
             long iEnd = nLowerHalf - 1;
             while (iEnd < NewSortedAlongCutAxisVertSet.Length)
             {
-                GridVector2 p = mesh[(int)iEnd].Position;
+                GridVector2 p = mesh[(int)NewSortedAlongCutAxisVertSet[iEnd]].Position;
                 double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.X : p.Y;
                 if (Math.Abs(LinePos - OffAxisDividingLine) < Global.Epsilon)
                     iEnd += 1;
