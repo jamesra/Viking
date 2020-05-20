@@ -106,6 +106,7 @@ namespace Geometry
 #endif
 
 #if DEBUG
+            /*
             foreach (Face f in mesh.Faces.ToArray())
             {
                 if (mesh.ToTriangle(f).Area <= 0)
@@ -121,6 +122,7 @@ namespace Geometry
 #endif
 
             }
+            */
 #endif
             //return TriangleIndicies;
             return mesh;
@@ -1209,11 +1211,13 @@ namespace Geometry
                 if (AlreadyChecked.Contains(oppositeFace))
                     continue;
 
+                int face_opposite_vert = f.OppositeVertex(edge);
+
                 //AlreadyChecked.Add(oppositeFace);
 
                 int other_opposite_vert = oppositeFace.OppositeVertex(edge);
 
-                var flippedEdgeCandidate = mesh.ToGridLineSegment(f.OppositeVertex(edge), other_opposite_vert);
+                var flippedEdgeCandidate = mesh.ToGridLineSegment(face_opposite_vert, other_opposite_vert);
                 var existingEdge = mesh.ToGridLineSegment(edge);
 
                 //If the two triangles are not a convex polygon then we need to skip flipping this edge.  Otherwise we will cover an area already
@@ -1225,8 +1229,24 @@ namespace Geometry
                 if (GridCircle.Contains(circlePoints, mesh[other_opposite_vert].Position) == OverlapType.CONTAINED)
                 {
                     //OK, need to flip the edge
+                    
+                    Edge proposedEdge = new Edge(face_opposite_vert, other_opposite_vert);
 
-                    int face_opposite_vert = f.OppositeVertex(edge);
+                    int[] AVerts = new int[] { face_opposite_vert, other_opposite_vert, edge.A };
+                    int[] BVerts = new int[] { face_opposite_vert, other_opposite_vert, edge.B };
+
+                    TriangleFace A = mesh.IsClockwise(AVerts) ? new TriangleFace(AVerts.Reverse()) : new TriangleFace(AVerts);
+                    TriangleFace B = mesh.IsClockwise(BVerts) ? new TriangleFace(BVerts.Reverse()) : new TriangleFace(BVerts);
+
+                    //Sanity check: Ensure the edge endpoints will not be in the flipped triangles and we won't infinitely recurse
+                    {
+                        if (GridCircle.Contains(mesh[A.iVerts].Select(v => v.Position).ToArray(), mesh[edge.B].Position) == OverlapType.CONTAINED)
+                            continue;
+                        if (GridCircle.Contains(mesh[B.iVerts].Select(v => v.Position).ToArray(), mesh[edge.A].Position) == OverlapType.CONTAINED)
+                            continue;
+                    }
+
+                    
 #if TRACEDELAUNAY 
                     Trace.WriteLine(string.Format("Flip {0} with {1}", f, oppositeFace));
                     Debug.WriteLine(string.Format("Remove Edge: {0}", edge));
@@ -1251,11 +1271,9 @@ namespace Geometry
                     TriangleFace B = new TriangleFace(BVerts);
                     */
 
-                    int[] AVerts = new int[] { face_opposite_vert, other_opposite_vert, edge.A };
-                    int[] BVerts = new int[] { face_opposite_vert, other_opposite_vert, edge.B };
+                    
 
-                    TriangleFace A = mesh.IsClockwise(AVerts) ? new TriangleFace(AVerts.Reverse()) : new TriangleFace(AVerts);
-                    TriangleFace B = mesh.IsClockwise(BVerts) ? new TriangleFace(BVerts.Reverse()) : new TriangleFace(BVerts);
+                    
 
 #if TRACEDELAUNAY
                     Trace.WriteLine(string.Format("Edge Flip Face {0} Clockwise = {1}", A, mesh.IsClockwise(AVerts)));
