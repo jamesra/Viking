@@ -588,7 +588,15 @@ namespace Geometry.Meshing
             {
                 if (results[i] == OverlapType.CONTAINED)
                 {
+                    //If all points are equidistant then don't call this a failure
+                    double distanceSquared = GridVector2.DistanceSquared(circle.Center, candidates[i]);
+                    if(Math.Abs(distanceSquared - circle.RadiusSquared) < Global.EpsilonSquared)
+                    {
+                        continue;
+                    }
+
 #if TRACEDELAUNAY
+                    //TODO: Check that we create the reciprocal of the circle with this point and the other two shared points that we aren't also contained
                     Debug.WriteLine(string.Format("{0} is inside {1}, not a delaunay triangle", candidate_indicies[i], f));
 #endif
                     return false;
@@ -761,7 +769,13 @@ namespace Geometry.Meshing
 
                 //Is the quad formed by the two faces of the edge convex?
                 if (edge.Faces.Count() != 2)
-                    throw new InvalidOperationException("Expect two faces for any edge removed for intersecting an edge constraint.");
+                {
+                    string error = string.Format("Expect two faces for any edge removed for intersecting an edge constraint. {0} intersected edge {1}", constrained_edge, edge);
+                    error += edge.Faces.Count > 0 ? string.Format(" with one face {0}", edge.Faces[0]) :
+                                                           " with no faces";
+                    throw new InvalidOperationException(error);
+                }
+                    
                 //Debug.Assert(edge.Faces.Count() == 2, "Expect two faces for any edge intersecting an edge constraint.");
 
                 TriangleFace A = edge.Faces[0] as TriangleFace;
