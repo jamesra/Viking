@@ -37,7 +37,8 @@ Contents
 .. toctree::
    User Documentation <client/toctree>
    Exporting Data <export/toctree>
-   Developer Documentation <server/toctree>
+   Developer Documentation <developerdocs/toctree>
+   Server Operation Documentation <server/toctree>
    Deployment <deployment/toctree>
    About <about>
    :maxdepth: 2
