@@ -381,16 +381,13 @@ namespace Geometry.Meshing
                 //SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
                 IVertex3D v = this[i];
 
-                IEnumerable<IFace> vertFaces = this[v.Edges].SelectMany(e => e.Faces).Distinct();
-                /*foreach (IEdgeKey ek in v.Edges)
-                {
-                    vertFaces.UnionWith(Edges[ek].Faces);
-                }
-                */
+                IFace[] vertFaces = this[v.Edges].SelectMany(e => e.Faces).Distinct().ToArray();
                 
                 GridVector3 avgNormal = GridVector3.Zero;
-                foreach (IFace f in vertFaces)
+                for(int iFace = 0; iFace < vertFaces.Length; iFace++)
                 {
+                    IFace f = vertFaces[iFace]; 
+
                     bool face_has_normal = face_normals_cache.TryGetValue(f, out GridVector3 normal);
                     if(face_has_normal == false)
                     {
@@ -438,6 +435,68 @@ namespace Geometry.Meshing
             }
 
             return startingAppendIndex;
+        } 
+
+
+        /// <summary>
+        /// Returns true if a line from A to B intersects the given face.
+        /// 
+        /// This function is not tested yet.  It was added as a potential Bajaj SliceChord criterion but never added.
+        /// </summary>
+        /// <param name="face"></param>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        public bool Intersects(IFace face, GridVector3 A, GridVector3 B)
+        {
+            Debug.Assert(face.iVerts.Length == 3);
+            if(face.iVerts.Length != 3)
+            {
+                throw new ArgumentException("Intersects requires a triangular face");
+            }
+
+            GridVector3 v0 = this[face.iVerts[0]].Position;
+            GridVector3 v1 = this[face.iVerts[1]].Position;
+            GridVector3 v2 = this[face.iVerts[2]].Position; 
+
+            GridVector3 direction = B - A;
+            GridVector3 origin = A;
+
+            GridVector3 v1_v0 = v1 - v0;
+            GridVector3 v2_v0 = v2 - v0;
+
+            GridVector3 d_e2_cross = GridVector3.Cross(direction, v2_v0);
+            double dotProduct = GridVector3.Dot(v1_v0, d_e2_cross);
+
+            //Check for invalid triangle
+            if (dotProduct < Global.Epsilon && dotProduct > -Global.Epsilon)
+                return false;
+
+            double f = 1.0 / dotProduct;
+
+            GridVector3 A_v0 = A - v0;
+
+            double u = f * GridVector3.Dot(A_v0, d_e2_cross);
+
+            //Check for invalid triangle
+            if (u < 0 || u > 1.0)
+                return false;
+
+            GridVector3 A_ = GridVector3.Cross(A_v0, v1_v0);
+            double v = f = GridVector3.Dot(direction, v1_v0);
+
+            if (v < 0 || v + u > 1.0)
+                return false;
+
+            //Find intersection point on the line
+            double t = f * GridVector3.Dot(v2_v0, d_e2_cross);
+
+            if (t >= 0 && t <= 1.0) //For Ray intersection don't check t <= 1.0;
+            {
+                return true;
+            }
+
+            return false;
         }
 
     }
