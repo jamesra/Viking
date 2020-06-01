@@ -666,6 +666,17 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Return a copy of this PointIndex with a different size of ring
+        /// This is used if the polygon we reference may have changed ring size but we know our index is still correct
+        /// </summary>
+        /// <param name="old"></param>
+        /// <returns></returns>
+        public PointIndex ReindexToSize(IReadOnlyList<GridPolygon> Polygons)
+        {
+            return this.ReindexToSize(this.Polygon(Polygons).ExteriorRing.Length - 1);
+        }
+
+        /// <summary>
         /// Return a copy of this PointIndex that refers to the inner polygon index as an exterior polygon coordinate
         /// </summary>
         /// <param name="iPoly">Passing -1 will use the innerPolygon's index as the new iPoly value.  Useful for referencing into arrays of interior polygons from a parent polygon.</param>
@@ -1193,7 +1204,7 @@ namespace Geometry
             else
             {
                 //return ExteriorSegmentRTree.Intersects(segment.BoundingBox.ToRTreeRect(0)).Contains(segment);  //No need to check in further detail because they should be identical GridLineSegments
-                return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRect(0)).Where(i => i.IsInner == false).Select(p => p.Segment(this)).Contains(segment);  //No need to check in further detail because they should be identical GridLineSegments
+                return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRectEpsilonPadded()).Where(i => i.IsInner == false).Select(p => p.Segment(this)).Contains(segment);  //No need to check in further detail because they should be identical GridLineSegments
             }
         }
 
@@ -1204,7 +1215,7 @@ namespace Geometry
         /// <returns></returns>
         public bool IsExteriorOrInteriorSegment(GridLineSegment segment)
         {
-            return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRect(0)).Where(p => p.Segment(this) == segment).Any();  //No need to check in further detail because they should be identical GridLineSegments
+            return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRectEpsilonPadded()).Where(p => p.Segment(this) == segment).Any();  //No need to check in further detail because they should be identical GridLineSegments
         }
         
         /// <summary>
@@ -1561,8 +1572,11 @@ namespace Geometry
         /// </summary>
         /// <param name="iVertex">The point we will be inserting before, the new points index will be this index when we are done</param>
         /// <param name="NewControlPointPosition"></param>
-        public void InsertVertex(GridVector2 NewControlPointPosition, PointIndex iVertex)
+        /// <returns>True if the vertex was inserted.  False if it was not inserted because it already exists.</returns>
+        public bool InsertVertex(GridVector2 NewControlPointPosition, PointIndex iVertex)
         {
+            //Trace.WriteLine(string.Format("Add new Vertex {0} at {1}", iVertex, NewControlPointPosition));
+
             if (iVertex.iPoly != 0)
                 iVertex = iVertex.Reindex(0);
 
@@ -1571,36 +1585,40 @@ namespace Geometry
                 GridPolygon original_poly = iVertex.Polygon(this).Clone() as GridPolygon;
 
                 //If InserrVertex throws an exception it should have restored the inner polygon state, so we don't need to react to an exception here
-                this.InteriorPolygons[iVertex.iInnerPoly.Value].InsertVertex(NewControlPointPosition, iVertex.ReindexToOuter(0));
 
-                //However, after the update we need to make sure the new inner polygon is valid in the context of the outer polygon
-                //so restore our state if we throw an exception
-                try
+                //If InsertVertex returns false, the vertex already existed and we don't need to update our own data structures or check validity.
+                if (this.InteriorPolygons[iVertex.iInnerPoly.Value].InsertVertex(NewControlPointPosition, iVertex.ReindexToOuter(0)))
                 {
-                    if (IsInnerValid(iVertex.iInnerPoly.Value, CheckForIntersectionWithOtherInnerPolygons: true))
+
+                    //However, after the update we need to make sure the new inner polygon is valid in the context of the outer polygon
+                    //so restore our state if we throw an exception
+                    try
                     {
-                        UpdateSegmentRTreeForInsert(iVertex);
+                        if (IsInnerValid(iVertex.iInnerPoly.Value, CheckForIntersectionWithOtherInnerPolygons: true))
+                        {
+                            UpdateSegmentRTreeForInsert(iVertex);
+                        }
+                        else
+                        {
+                            throw new ArgumentException("Inner polygon was valid itself, but invalid in the context of the exterior polygon");
+                        }
                     }
-                    else
+                    catch (ArgumentException e)
                     {
-                        throw new ArgumentException("Inner polygon was valid itself, but invalid in the context of the exterior polygon");
+                        //Restore the inner polygon to a known good state before forwarding the exception
+                        ReplaceInteriorRing(iVertex.iInnerPoly.Value, original_poly);
+                        throw e;
                     }
-                }
-                catch (ArgumentException e)
-                {   
-                    //Restore the inner polygon to a known good state before forwarding the exception
-                    ReplaceInteriorRing(iVertex.iInnerPoly.Value, original_poly);
-                    throw e;
                 }
             }
             else
             {
                 //Ensure the new point is not on either endpoint of the segment we are inserting between
                 if (iVertex.Point(this) == NewControlPointPosition)
-                    return;
+                    return false;
 
                 if (iVertex.Next.Point(this) == NewControlPointPosition)
-                    return;
+                    return false;
 
                 var original_verts = this.ExteriorRing;
                 var original_bbox = this.BoundingBox;
@@ -1610,7 +1628,7 @@ namespace Geometry
 
                 //Insert the new vertex into a copy of our exterior segments
                 GridVector2[] updated_ring = this.ExteriorRing.InsertIntoClosedRing(iVertex.iVertex, NewControlPointPosition);
-                
+
                 //GridLineSegment[] updatedSegments = this.ExteriorSegments.Insert(NewControlPointPosition, iVertex.iVertex);
                 //GridVector2[] updated_ring = updatedSegments.Verticies();
                 double updated_area = updated_ring.PolygonArea();
@@ -1638,7 +1656,7 @@ namespace Geometry
                     //Restore our state to a known good state before throwing the exception
                     //this.ExteriorRing = original_verts;
 
-                    
+
                     this._ExteriorRingArea = original_area;
                     this._BoundingRect = original_bbox;
                     this._ExteriorRing = original_verts;
@@ -1652,6 +1670,7 @@ namespace Geometry
             }
 
             //this._SegmentRTree = null; //Reset our RTree since yanking a polygon and changing the indicies are a pain
+            return true;
         }
 
         /// <summary>
@@ -2422,7 +2441,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Returns true if the vertex on the exterior ring is concave
+        /// Returns true if all verticies on the exterior ring are convex or parallel
         /// </summary>
         /// <param name="iVert"></param>
         /// <returns></returns>
@@ -2842,18 +2861,129 @@ namespace Geometry
             return new GridCircle(center, Radius);
         }
 
-        private static OverlapType IsPointInsidePolygonByWindingTest(List<GridLineSegment> polygonSegments, GridLine test_line)
+        /// <summary>
+        /// The results of whether a polygon segment is left, right, or on a test line
+        /// </summary>
+        private struct SegmentIsLeftData
+        {
+            /// <summary>
+            /// Is S.A left of the line?
+            /// </summary>
+            public int A_is_left;
+
+            /// <summary>
+            /// Is S.B left of the line?
+            /// </summary>
+            public int B_is_left;
+
+            /// <summary>
+            /// The polygon segment that was tested.  (Not the 
+            /// </summary>
+            public GridLineSegment S;
+             
+            public int? IsPLeftOfSeg;
+
+            public bool CrossesLine
+            {
+                get
+                {
+                    return A_is_left != B_is_left;
+                }
+            }
+
+            public bool OnTheLine {
+                get
+                {
+                    return A_is_left == 0 && B_is_left == 0;
+                }
+            }
+
+            public bool SameSideOfLine
+            {
+                get
+                {
+                    return A_is_left == B_is_left && A_is_left != 0;
+                }
+            }
+  
+        }
+        /*
+        private static List<IsLeftData> RemoveSameSideSegments(List<GridLineSegment> polygonSegments, GridLine test_line)
         {
             GridVector2 test_point = test_line.Origin;
 
+            var IsLeft = polygonSegments.Select((s, i) => new IsLeftData { A = test_line.IsLeft(s.A), B = test_line.IsLeft(s.B), S = s, IsPLeftOfSeg = new int?() }).Where(seg => seg.SameSideOfLine == false).ToList();
+
+            //List<IsLeftData> SortedKeepList = new List<IsLeftData>(polygonSegments.Count);
+
+            //OK, now we need to condense any instance where IsLeft.A or IsLeft.B == 0.  That is, the segment does not cross the line, mearly touches it. 
+            //If we have opposite IsLeftValues we create a new edge that entirely crosses the line.  Otherwise we ignore the edge, which is the case where the segment touches the test_line but does not cross.
+            
+            for (int i = 0; i < polygonSegments.Count; i++)
+            {
+                var seg = new IsLeftData { A = test_line.IsLeft(s.A), B = test_line.IsLeft(s.B), S = s, IsPLeftOfSeg = new int?() };
+
+                if (seg.SameSideOfLine) //Remove all segments that are on the same side of the line or parallel to the line.  This leaves only segments that cross or touch the line
+                {
+                    //We can remove this segment entirely as it is perfectly parallel to our test line
+                    //polygonSegments.RemoveAt(i); 
+                    //IsLeft.RemoveAt(i);
+                    //i = i - 1;
+                    continue;
+                }
+
+                SortedKeepList.Add(seg);
+            }
+            
+
+            //return IsLeft;
+
+            return IsLeft;
+        }*/
+
+        private static OverlapType IsPointInsidePolygonByWindingTest(List<GridLineSegment> polygonSegments, GridLine test_line)
+        {
+            GridVector2 test_point = test_line.Origin;
+            /*
             if (polygonSegments.Any(ps => ps.IsEndpoint(test_line.Origin)))
                 return OverlapType.TOUCHING;
-
+            */
 #if DEBUG
             var OriginalSegments = polygonSegments.ToList(); //Create a copy so we can examine the debugger
 #endif
+            //OK, now we need to condense any instance where IsLeft.A or IsLeft.B == 0.  That is, the segment does not cross the line, mearly touches it. 
+            //If we have opposite IsLeftValues we create a new edge that entirely crosses the line.  Otherwise we ignore the edge, which is the case where the segment touches the test_line but does not cross.
 
-            var IsLeft = polygonSegments.Select((s,i) => new { A = test_line.IsLeft(s.A), B = test_line.IsLeft(s.B), S = s, IsPLeftOfSeg=new int?()}).ToList();
+            List<SegmentIsLeftData> IsLeft = new List<SegmentIsLeftData>(polygonSegments.Count);
+
+            for (int i = 0; i < polygonSegments.Count; i++)
+            {
+                GridLineSegment s = polygonSegments[i];
+                if(s.IsEndpoint(test_line.Origin))
+                {
+                    return OverlapType.TOUCHING;
+                }
+
+                var seg = new SegmentIsLeftData { A_is_left = test_line.IsLeft(s.A), B_is_left = test_line.IsLeft(s.B), S = s, IsPLeftOfSeg = new int?() };
+                if (seg.CrossesLine || seg.OnTheLine)
+                {
+                    //Check the case of the point exactly on the line
+                    if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
+                        return OverlapType.TOUCHING;
+                } 
+
+                if(seg.SameSideOfLine)
+                {
+                    continue; 
+                }
+
+                IsLeft.Add(seg);
+            }
+
+            /*
+            //var IsLeft = polygonSegments.Select((s,i) => new { A = test_line.IsLeft(s.A), B = test_line.IsLeft(s.B), S = s, IsPLeftOfSeg=new int?()}).ToList();
+
+
 
             //OK, now we need to condense any instance where IsLeft.A or IsLeft.B == 0.  That is, the segment does not cross the line, mearly touches it. 
             //If we have opposite IsLeftValues we create a new edge that entirely crosses the line.  Otherwise we ignore the edge, which is the case where the segment touches the test_line but does not cross.
@@ -2870,15 +3000,18 @@ namespace Geometry
                 if (seg.A == seg.B) //Remove all segments that are on the same side of the line or parallel to the line.  This leaves only segments that cross or touch the line
                 {
                     //We can remove this segment entirely as it is perfectly parallel to our test line
-                    polygonSegments.RemoveAt(i); 
+                    //polygonSegments.RemoveAt(i); 
                     IsLeft.RemoveAt(i);
                     i = i - 1;
                     continue;
                 }
             }
+            */
 
             if (IsLeft.Count == 0)
                 return OverlapType.NONE;
+
+            polygonSegments = IsLeft.Select(left => left.S).ToList();
 
             //Find all segments that touch the line.  Remove the endpoints that touch the line and create a virtual segment that runs between the endpoints that did not touch the line.  This prevents double-counting windings.
             //InfiniteSequentialIndexSet SegEnumerator = new InfiniteSequentialIndexSet(0, IsLeft.Count, 0);
@@ -2886,7 +3019,7 @@ namespace Geometry
             {
                 int iNext = i + 1 >= IsLeft.Count ? 0 : i + 1; //The index of the next entry in the list
                 var seg = IsLeft[i];
-                if (seg.A != 0 && seg.B != 0)
+                if (seg.A_is_left != 0 && seg.B_is_left != 0)
                 {
                     //Check the case of the point exactly on the line
                     if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
@@ -2895,15 +3028,15 @@ namespace Geometry
                     continue;   //Segment does not end on the line, continue;
                 }
                   
-                if(seg.B == 0) //Seg.A == 0 will be caught by a later iteration
+                if(seg.B_is_left == 0) //Seg.A == 0 will be caught by a later iteration
                 {
                     var nextSeg = IsLeft[iNext];
-                    int nextSegIsLeft = nextSeg.A != 0 ? nextSeg.A : nextSeg.B; //Figure out which part of the next line is not on the test line.  Create a new virtual line or delete
-                    GridVector2 nextSegEndpoint = nextSeg.A != 0 ? nextSeg.S.A : nextSeg.S.B;
+                    int nextSegIsLeft = nextSeg.A_is_left != 0 ? nextSeg.A_is_left : nextSeg.B_is_left; //Figure out which part of the next line is not on the test line.  Create a new virtual line or delete
+                    GridVector2 nextSegEndpoint = nextSeg.A_is_left != 0 ? nextSeg.S.A : nextSeg.S.B;
 
                     Debug.Assert(nextSeg.S.OppositeEndpoint(nextSegEndpoint).Y == seg.S.B.Y, "We expect the lines to be input in the order they appear in the ring.  Lines sharing endpoints must be adjacent.");
                     
-                    if (nextSegIsLeft == seg.A) //We touch the line and retreat.  We can remove both entries 
+                    if (nextSegIsLeft == seg.A_is_left) //We touch the line and retreat.  We can remove both entries 
                     { 
                         polygonSegments.RemoveAt(Math.Max(i, iNext));
                         polygonSegments.RemoveAt(Math.Min(i, iNext));
@@ -2920,7 +3053,7 @@ namespace Geometry
                         polygonSegments.Insert(i, virtualPolySegment);
                         polygonSegments.RemoveAt(iNext);
 
-                        var newEntry = new { A = seg.A, B = nextSegIsLeft, S = virtualPolySegment, IsPLeftOfSeg= new int?(seg.S.IsLeft(test_point))}; //Record whether the lines were left of the test_point in case the new line moves to the other side of the point.
+                        var newEntry = new SegmentIsLeftData { A_is_left = seg.A_is_left, B_is_left = nextSegIsLeft, S = virtualPolySegment, IsPLeftOfSeg= new int?(seg.S.IsLeft(test_point))}; //Record whether the lines were left of the test_point in case the new line moves to the other side of the point.
                         IsLeft.RemoveAt(i);
                         IsLeft.Insert(i, newEntry);
                         IsLeft.RemoveAt(iNext);
@@ -3073,7 +3206,7 @@ namespace Geometry
 
             foreach(GridLineSegment l in segments)
             {
-                R.Add(l.BoundingBox.ToRTreeRect(0), l);
+                R.Add(l.BoundingBox.ToRTreeRectEpsilonPadded(0), l);
             }
               
             return R;
@@ -3094,7 +3227,7 @@ namespace Geometry
             foreach(PointIndex p in enumerator)
             {
                 GridLineSegment s = p.Segment(poly);
-                R.Add(s.BoundingBox.ToRTreeRect(0), p);
+                R.Add(s.BoundingBox.ToRTreeRectEpsilonPadded(0), p);
             }
 
             return R;
@@ -3114,7 +3247,7 @@ namespace Geometry
             }
 
             //return SegmentRTree.Intersects(bbox.ToRTreeRect(0)).Select(p => p.Segment(this)).Where(segment => line.Intersects(segment, false)).ToList();
-            return SegmentRTree.IntersectionGenerator(bbox.ToRTreeRect(0)).Select(p => p.Segment(this)).Where(segment => line.Intersects(segment, false));
+            return SegmentRTree.IntersectionGenerator(bbox.ToRTreeRectEpsilonPadded(0)).Select(p => p.Segment(this)).Where(segment => line.Intersects(segment, false));
         }
 
         /// <summary>
@@ -3129,7 +3262,7 @@ namespace Geometry
                 return new List<Geometry.GridLineSegment>(0);
             }
 
-            return SegmentRTree.Intersects(bbox.ToRTreeRect(0)).Select(p => p.Segment(this)).Where(segment => bbox.Intersects(segment)).ToList();
+            return SegmentRTree.Intersects(bbox.ToRTreeRectEpsilonPadded(0)).Select(p => p.Segment(this)).Where(segment => bbox.Intersects(segment)).ToList();
         }
 
         /// <summary>
@@ -3352,6 +3485,30 @@ namespace Geometry
             foreach(GridPolygon innerPoly in this.InteriorPolygons)
             {
                 GridPolygon innerClone = innerPoly.Clone() as GridPolygon;
+                clone.AddInteriorRing(innerClone);
+            }
+
+            return clone;
+        }
+
+        /// <summary>
+        /// Round all coordinates in the clone of the GridPolygon to the nearest precision
+        /// </summary>
+        /// <param name="precision"></param>
+        /// <returns></returns>
+        public GridPolygon Round(int precision)
+        {
+            GridVector2[] roundedPoints = this.ExteriorRing.Select(e => e.Round(precision)).ToArray();
+            for(int i = roundedPoints.Length-1; i > 0; i--)
+            {
+                if (roundedPoints[i] == roundedPoints[i - 1])
+                    roundedPoints.RemoveAt(i);
+            }
+
+            GridPolygon clone = new Geometry.GridPolygon(roundedPoints);
+            foreach (GridPolygon innerPoly in this.InteriorPolygons)
+            {
+                GridPolygon innerClone = innerPoly.Round(precision);
                 clone.AddInteriorRing(innerClone);
             }
 
@@ -3639,20 +3796,6 @@ namespace Geometry
                 //i = i + 1;
             }
 
-            //newRing.Add(ExteriorRing[ExteriorRing.Length - 1]);
-            
-            //Ensure we are not accidentally adding duplicate points, other than to close the ring
-            //System.Diagnostics.Debug.Assert(newRing.Count == newRing.Distinct().Count() + 1);
-
-            //this.ExteriorRing = newRing.ToArray();
-            /*
-            foreach (GridPolygon innerPolygon in this._InteriorPolygons)
-            {
-                found_or_added_intersections.AddRange(innerPolygon.AddPointsAtIntersections(other));
-            }
-            */
-            //this._SegmentRTree = null; //Reset our RTree since yanking a polygon and changing the indicies are a pain
-
             return found_or_added_intersections;
         }
 
@@ -3933,7 +4076,6 @@ namespace Geometry
                     else
                     {
                     }
-                    
                 }
                 else if(intersections.Count == 1)
                 {
@@ -3973,9 +4115,14 @@ namespace Geometry
                 throw new ArgumentException("Cut line must cross segments on the same ring of the polygon");
             }
 
+            if (FirstIntersection == LastIntersection)
+            {
+                throw new ArgumentException(string.Format("Start and End index must be different to cut polygon. Both are {0}", FirstIntersection));
+            }
+
             //Drop the first cut intersection because it will be on the wrong side of the polygon border
             //intersecting_cutline_verts.RemoveAt(0);
-             
+
             return WalkPolygonCut(FirstIntersection,
                                   LastIntersection,
                                   output,
@@ -3999,6 +4146,11 @@ namespace Geometry
             if (false == end_index.AreOnSameRing(start_index))
             {
                 throw new ArgumentException("Cut must run between the same ring of the polygon without intersecting other rings");
+            }
+
+            if(start_index == end_index)
+            {
+                throw new ArgumentException(string.Format("Start and End index must be different to cut polygon. Both are {0}", start_index));
             }
 
             //Walk the ring using Next to find perimeter on one side, the walk using prev to find perimeter on the other
