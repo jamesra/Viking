@@ -246,13 +246,30 @@ namespace MorphologyMesh
         /// <param name="rTree"></param>
         private static void TryClosingUntiledRegion(BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
+            if(region.Verticies.Length == 3)
+            {
+                MorphMeshFace face = new MorphMeshFace(region.Verticies);
+                mesh.AddFace(face); 
+                return; 
+            }
+            else if (region.Verticies.Length == 4)
+            {
+                MorphMeshFace face = new MorphMeshFace(region.Verticies); 
+                //Split face will add the face too
+                mesh.SplitFace(face);
+                return;
+            }
+
             GridPolygon regionPolygon = region.Polygon;
             GridVector2 regionPolygonCenter = regionPolygon.Centroid;
             GridPolygon centeredRegionPolygon = regionPolygon.Translate(-regionPolygonCenter);
 
+            //centeredRegionPolygon.IsConvex();
+
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(centeredRegionPolygon);
             MedialAxisVertex[] NewVerts = MedialAxis.Nodes.Values.ToArray();
-            System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredRegionPolygon.Contains(v.Key)), "Interior points must be inside Face");
+
+            System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredRegionPolygon.ContainsExt(v.Key) == OverlapType.CONTAINED), "Interior points must be inside Face");   
 
             //TODO: Split any edges with an existing face into two parts so we can better merge the medial axis with the existing shape
 
