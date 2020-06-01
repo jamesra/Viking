@@ -134,14 +134,14 @@ namespace MorphologyMesh
                         Slice A = output[pair.A];
                         Slice B = output[pair.B];
 
-                        if (A.NodesAbove.Contains(morph_id))
+                        if (A.NodesAbove.Contains(morph_id) && B.NodesBelow.Contains(morph_id))
                         {
                             A.HasSliceAbove = true;
                             B.HasSliceBelow = true;
                         }
-                        else
+                        else if(B.NodesAbove.Contains(morph_id) && A.NodesBelow.Contains(morph_id))
                         {
-                            Debug.Assert(B.NodesAbove.Contains(morph_id));
+                            //Debug.Assert(B.NodesAbove.Contains(morph_id));
                             A.HasSliceBelow = true;
                             B.HasSliceAbove = true;
                         }
@@ -289,7 +289,8 @@ namespace MorphologyMesh
 
                 if (task.IsCompleted)
                 {
-                    result[(ulong)((MorphologyNode)(task.AsyncState)).ID] = task.Result;
+                    //Rounding exposed a rare bug on 82682, 82680 RPC1 where the inner hole was exactly over the exterior ring of the opposite polygon
+                    result[(ulong)((MorphologyNode)(task.AsyncState)).ID] = task.Result.Round(Global.SignificantDigits); 
                 }
             }
 
@@ -680,11 +681,95 @@ namespace MorphologyMesh
         /// </summary>
         internal static void HandleCorrespondingFaceContainsVertex(GridPolygon[] Polygons, List<GridVector2> correspondingPoints)
         {
+            GridRectangle bbox = Polygons.BoundingBox();
+            bbox.Scale(1.05); //Grow the box slightly so the QuadTree will never resize for a rounding error
+            QuadTree<List<PointIndex>> tree = new QuadTree<List<PointIndex>>(bbox);
+
+            PolySetVertexEnum indexEnum = new PolySetVertexEnum(Polygons);
+            foreach(PointIndex index in indexEnum)
+            {
+                GridVector2 p = index.Point(Polygons);
+                List<PointIndex> existing = tree.FindNearest(p, out GridVector2 foundPoint, out double distance);
+                if (foundPoint == p) //A corresponding point has already been added
+                {
+                    existing.Add(index);
+                }
+                else
+                {
+                    existing = new List<PointIndex>(2);
+                    existing.Add(index);
+                    tree.Add(p, existing);
+                }
+            }
+
+            var PointIndexArrays = Polygons.IndiciesForPoints(correspondingPoints);
+
+            foreach (PointIndex[] indicies in PointIndexArrays)
+            {
+                if (indicies.Length == 0)
+                    continue;
+
+                double minDistance;
+                GridVector2 vertexPosition = indicies[0].Point(Polygons); //The corresponding point position
+                var nearestIndexList = tree.FindNearestPoints(vertexPosition, 2); //Find the nearest two points. The first should be ourselves at 0 distance.  The 2nd should be the closest point to us.
+
+                if(nearestIndexList.Count < 2)
+                {
+                    throw new InvalidOperationException("We should be able to find at least two points when searching a QuadTree containing multiple polygons");
+                }
+
+                Debug.Assert(nearestIndexList[0].Point == vertexPosition, "I expected the vertex to be the closest vertex to itself, why wasn't it found?");
+                
+                minDistance = nearestIndexList[1].Distance;
+                var nearestIndex = nearestIndexList[1].Value;
+
+                foreach (PointIndex pi in indicies)
+                {
+                    GridPolygon poly = pi.Polygon(Polygons);
+                    
+                    GridVector2 vertex = pi.Point(Polygons);
+                    GridVector2 next = pi.Next.Point(Polygons);
+                    GridVector2 prev = pi.Previous.Point(Polygons);
+
+                    if (nearestIndex.Contains(pi.Next) == false) //Don't add a vertex that is already there and risk a rounding error
+                    {
+                        GridLineSegment lineToNext = new GridLine(vertex, next).ToLine(minDistance);
+                        poly.AddVertex(lineToNext.B);
+                    }
+
+                    if(nearestIndex.Contains(pi.Previous) == false) //Don't add a vertex that is already there and risk a rounding error
+                    {
+                        GridLineSegment lineToPrev = new GridLine(vertex, prev).ToLine(minDistance);
+                        poly.AddVertex(lineToPrev.B);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// We need to handle the case where the face generated for a corresponding edge will contain other verticies.
+        /// We can do this by subdividing the edge between 1-2 and A-B
+        /// 
+        //         3---4
+        ///       /     \
+        /// A----2B---C--D5
+        /// | X /         \
+        /// |  /           \
+        /// | /             \
+        /// 1                6
+        /// 
+        /// This implementation simply adds additional verticies that bracket the corresponding vertex at equidistant points to the nearest non-corresponding vertex
+        /// </summary>
+        internal static void BracketCorrespondingPoints(GridPolygon[] Polygons, List<GridVector2> correspondingPoints)
+        {
             foreach (GridPolygon poly in Polygons)
             {
                 List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
-                
+                if (correspondingIndicies == null || correspondingIndicies.Count == 0)
+                    continue;
 
+                SortedList<PointIndex, GridVector2> PointsToInsert = new SortedList<PointIndex, GridVector2>();
+                correspondingIndicies.Sort(); //Sort the indicies so we can simplify our search.
 
             }
         }
@@ -730,7 +815,8 @@ namespace MorphologyMesh
                 foreach(var addition in PointsToInsert.Reverse())
                 {
                     //Trace.WriteLine(string.Format("Add vertex after {0}", addition));
-                    poly.InsertVertex(addition.Value, addition.Key);
+                    //Insert the vertex, adjust the size of the ring in case we've already inserted into it.
+                    poly.InsertVertex(addition.Value, addition.Key.ReindexToSize(poly));
                 }
             }
         }
@@ -772,6 +858,9 @@ namespace MorphologyMesh
          
     }
 
+    /// <summary>
+    /// Creates the topology for all nodes in a SliceGraph in parallel while ensuring that at no time is a single shape being modified for two slice nodes at the same time.
+    /// </summary>
     internal class ConcurrentTopologyInitializer
     {
         SliceGraph Graph;
