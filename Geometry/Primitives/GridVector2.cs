@@ -176,7 +176,7 @@ namespace Geometry
         /// <returns></returns>
         public bool Equals(GridVector2 B)
         {
-            return DistanceSquared(this, B) <= Global.EpsilonSquared;
+            return GridVector2.Equals(this, B);
         }
 
         /// <summary>
@@ -187,7 +187,16 @@ namespace Geometry
         /// <returns></returns>
         public static bool Equals(GridVector2 A, GridVector2 B)
         {
-            return DistanceSquared(A, B) <= Global.EpsilonSquared;
+            double XDelta = A.X - B.X;
+            
+            if (XDelta < -Global.Epsilon || XDelta > Global.Epsilon)
+                return false;
+
+            double YDelta = A.Y - B.Y;
+            if (YDelta < -Global.Epsilon || YDelta > Global.Epsilon)
+                return false;
+
+            return ((XDelta * XDelta) + (YDelta * YDelta)) <= Global.EpsilonSquared;
         }
 
         bool IEquatable<IShape2D>.Equals(IShape2D other)
@@ -200,16 +209,27 @@ namespace Geometry
         }
 
         bool IEquatable<GridVector2>.Equals(GridVector2 B)
-        { 
-            return DistanceSquared(this, B) <= Global.EpsilonSquared;
+        {
+            return GridVector2.Equals(this, B);
         }
 
         bool IEquatable<IPoint2D>.Equals(IPoint2D B)
         {
             if (object.ReferenceEquals(B, null))
                 return false;
-             
-            return DistanceSquared((IPoint2D)this, B) <= Global.EpsilonSquared;
+
+            double XDelta = X - B.X;
+
+            if (XDelta < -Global.Epsilon || XDelta > Global.Epsilon)
+                return false;
+
+            double YDelta = Y - B.Y;
+            if (YDelta < -Global.Epsilon || YDelta > Global.Epsilon)
+                return false;
+
+            return ((XDelta * XDelta) + (YDelta * YDelta)) <= Global.EpsilonSquared;
+
+            //return DistanceSquared((IPoint2D)this, B) <= Global.EpsilonSquared;
         }
 
         public override bool Equals(object obj)
@@ -219,7 +239,7 @@ namespace Geometry
 
             GridVector2 B = (GridVector2)obj;
 
-            return this == B;
+            return this.Equals(B);
         }
 
         /*
@@ -392,6 +412,16 @@ namespace Geometry
             double dY = A.Y - B.Y;
 
             return (dX * dX) + (dY * dY);
+        }
+
+        /// <summary>
+        /// Rounds coordinates to nearest precision
+        /// </summary>
+        /// <param name="precision">Number of decimal places in the result</param>
+        /// <returns></returns>
+        public GridVector2 Round(int precision)
+        {
+            return new GridVector2(Math.Round(this.X, precision), Math.Round(this.Y, precision));
         }
 
         /// <summary>
