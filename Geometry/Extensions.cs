@@ -1233,17 +1233,26 @@ namespace Geometry
         /// <param name="WorldPosition"></param>
         /// <param name="A"></param>
         /// <param name="B"></param>
-        /// <returns></returns>
+        /// <returns>A dictionary of Polygon vertex indicies and a distance from that vertex.  </returns>
         public static SortedDictionary<double, PointIndex> IntersectingSegments(this GridPolygon polygon, GridLineSegment line)
         {
             SortedDictionary<double, PointIndex> output = new SortedDictionary<double, PointIndex>();
 
             PointIndex[] candidates = polygon.SegmentRTree.Intersects(line.BoundingBox).ToArray();
+
+            //Due to epsilon factors a single line may intersect the same vertex twice when a line passes near the vertex.
+            //We control this by keeping a list of verticies we've already added and not adding them again
+
+            List<PointIndex> AddedVerticies = new List<PointIndex>();
+
             foreach (PointIndex index in candidates)
             {
+                if (AddedVerticies.Contains(index)) //There is an error if we add a vertex twice, so don't.
+                    continue;
+
                 GridLineSegment segment = index.Segment(polygon);
                 if (segment.Intersects(line, false, out IShape2D intersection))
-                {
+                {  
                     double distance;
                     IPoint2D p = intersection as IPoint2D;
                     if (p == null) //It is not a point, it is a line.  Therefore distance is zero
@@ -1251,9 +1260,10 @@ namespace Geometry
                         distance = 0;
                         if (output.ContainsKey(distance)) //There is an error if we add an endpoint twice, so don't
                             continue;
-
+                         
                         ILineSegment2D seg = intersection as ILineSegment2D;
                         AddIntersection(output, 0, index);
+                        AddedVerticies.Add(index);
                     }
                     else //Intersection is a point
                     {
@@ -1271,14 +1281,17 @@ namespace Geometry
                             {
                                 //If it is the next segment we can increment to the next segment and skip that iteration
                                 intersection_index = index.Next;
+                                if (AddedVerticies.Contains(intersection_index))
+                                    continue; //Skip if we've already added this index.  (Should we check for a different distance?)
                             }
 
                             AddIntersection(output, distance, intersection_index);
+                            AddedVerticies.Add(intersection_index);
                         }
                         else
                         {
-
                             AddIntersection(output, distance, index);
+                            AddedVerticies.Add(index);
                         }
                     }
                 }
