@@ -450,6 +450,11 @@ namespace MorphologyMesh
                         MorphMeshRegion region = null;
 
                         List<MorphMeshFace> listRegionFaces = RegionPerimeterToFaces(mesh, Face, OnProgress);
+                        if(listRegionFaces.Count == 0)
+                        {
+                            //We probably removed corresponding verticies and had no faces left.
+                            break;
+                        }
 
                         region = new MorphMeshRegion(mesh, listRegionFaces, RegionType.UNTILED);
 
@@ -536,6 +541,16 @@ namespace MorphologyMesh
             {
                 List<int> CleanedFace = TryRemoveCorrespondingVerticiesFromRegionFaces(mesh, Face);
 
+                if (CleanedFace.Count <= 2)
+                    return new List<MorphMeshFace>();
+
+                //Nothing left but a single face we can create
+                if(CleanedFace.Count == 3)
+                {
+                    MorphMeshFace newFace = new MorphMeshFace(Face);
+                    return new MorphMeshFace[] { newFace }.ToList();
+                }
+
                 //Create a polygon for the region
                 GridPolygon regionBorder = new GridPolygon(CleanedFace.EnsureClosedRing().Select(iVert => mesh[iVert].Position.XY()).ToArray());
                 PolygonVertexEnum vertEnumerator = new PolygonVertexEnum(regionBorder);
@@ -591,21 +606,23 @@ namespace MorphologyMesh
             } 
         }
 
-        private static List<int> TryRemoveCorrespondingVerticiesFromRegionFaces(MorphRenderMesh mesh, List<int> Face)
+        /// <summary>
+        ///If the corresponding verticies are adjacent in the face then we can add a quad using the index before and after the corresponding verticies
+        /// 
+        /// Z = 0    <-- A -- B                  <-- A -- B
+        ///                   |      becomes         | \  |  with B,C being removed from the face
+        /// Z = 0    <-- D -- C                  <-- D -- C
+        /// 
+        /// This function removes the first instance found from the passed list, removes the corresponding verticies from the Face.
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="Face"></param>
+        /// <returns>True if an adjacent corresponding vertex pair was found and removed</returns>
+        private static bool RemoveFirstAdjacentCorrespondingVerticies(MorphRenderMesh mesh, ref List<int> Face)
         {
-            Debug.Assert(Face.Count >= 4, "I expect the 3 or 4 vert cases to be handled earlier");
-
-            //Triangulate the region border to identify faces of the region
-            GridVector3[] region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
-
-            //If there are any duplicate points that indicates a corresponding contour was involved.  In this case we cut the polygon into two halves and triangulate those
-            int[] countInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
-
-            if (countInstances.Max() <= 1)
-            {
-                return Face;
-            }
-
+            //This test is only possible if we can create a quad.  If we have three verts we return false and the caller should manage to create a triangle face with three verts.
+            if (Face.Count <= 3)
+                return false;
             /////////////////////////////////////////////////////////////
             //Case 0: 
             //If the corresponding verticies are adjacent in the face then we can add a quad using the index before and after the corresponding verticies
@@ -615,7 +632,7 @@ namespace MorphologyMesh
             // Z = 0    <-- D -- C                  <-- D -- C
 
             InfiniteIndexSet FaceIndex = new InfiniteIndexSet(Face);
-            for(int i = Face.Count-1; i >= 0; i--)
+            for (int i = Face.Count - 1; i >= 0; i--)
             {
                 long index = FaceIndex[i];
                 long next_index = FaceIndex[i + 1];
@@ -641,8 +658,60 @@ namespace MorphologyMesh
                 mesh.SplitFace(quad);
 
                 //Remove the corresponding verticies we created.
-                Face.RemoveRange(i, 2);
+                if (i <= Face.Count - 2)
+                    Face.RemoveRange(i, 2);
+                else
+                {
+                    Face.RemoveAt(i);
+                    Face.RemoveAt(0);
+                }
+
+                return true;
             }
+
+            return false;
+        }
+
+        /// <summary>
+        /// The region mesh generator cannot accurately triangulate regions with two corresponding verticies at the same X,Y position.
+        /// This function attempts to remove such verticies from the region.
+        /// At this time it only handles cases where there is one face on the corresponding edge. It could be improved by handling the case where the 
+        /// corresponding edge is missing both faces.  This would be done by splitting the region at the corresponding vertex into two parts and meshing both separately.       
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="Face"></param>
+        /// <returns></returns>
+        private static List<int> TryRemoveCorrespondingVerticiesFromRegionFaces(MorphRenderMesh mesh, List<int> Face)
+        {
+            Debug.Assert(Face.Count >= 4, "I expect the 3 or 4 vert cases to be handled earlier");
+
+            //Triangulate the region border to identify faces of the region
+            GridVector3[] region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
+
+            //If there are any duplicate points that indicates a corresponding contour was involved.  In this case we cut the polygon into two halves and triangulate those
+            int[] countInstances = region_border_points.Select(v => region_border_points.Count(v2 => v2.XY() == v.XY())).ToArray();
+
+            if (countInstances.Max() <= 1)
+            {
+                return Face;
+            }
+
+            /////////////////////////////////////////////////////////////
+            //Case 0: 
+            //If the corresponding verticies are adjacent in the face then we can add a quad using the index before and after the corresponding verticies
+            // 
+            // Z = 0    <-- A -- B                  <-- A -- B
+            //                   |      becomes         | \  |  with B,C being removed from the face
+            // Z = 0    <-- D -- C                  <-- D -- C
+            
+            while(RemoveFirstAdjacentCorrespondingVerticies(mesh, ref Face))
+            {
+                //Remove every instance of an adjacent corresponding vertex we can find
+            }
+
+            //If there are only 3 verts remaining in the face the caller can create a region...
+            if (Face.Count <= 3)
+                return Face;
 
             region_border_points = Face.Select(iVert => mesh[iVert].Position).ToArray();
 
@@ -655,8 +724,12 @@ namespace MorphologyMesh
             }
 
             MorphMeshVertex corresponding = mesh[Face].Where(v => v.Corresponding.HasValue).First();
-             
+
+#if DEBUG
             throw new NotImplementedException(string.Format("Corresponding points in region {0}", corresponding.PolyIndex));
+#else
+            return new List<int>();
+#endif
             //If there are corresponding verticies we can have duplicate points in the set which will break triangulation.
             // //Break the corresponding verticies into sub-polygons and build triangles for each
             //
