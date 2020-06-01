@@ -109,9 +109,10 @@ namespace MorphologyMesh
                 GridLineSegment line = mesh.ToGridLineSegment(edge);
 
                 //If the line is between two different shapes we add a node to the graph
-                if (false == boundary.IsExteriorOrInteriorSegment(line))
+                if (false == boundary.IsExteriorOrInteriorSegment(line) && boundary.ContainsExt(line.Bisect()) == OverlapType.CONTAINED)
                 {
                     MedialAxisVertex node = GetOrAddLineBisectorVertex(graph, line);
+                    System.Diagnostics.Debug.Assert(boundary.ContainsExt(node.Key) == OverlapType.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
 
                     foreach (IFace AdjacentFace in edge.Faces)
                     {
@@ -121,10 +122,12 @@ namespace MorphologyMesh
                         if (edgeCandidates.Count == 1)
                         {
                             GridLineSegment ConnectedLine = mesh.ToGridLineSegment(edgeCandidates.First());
-                            GridLineSegment ProposedMedialLine = new GridLineSegment(node.Key, ConnectedLine.Bisect());
-                            if (boundary.Intersects(ProposedMedialLine) == false)
+                            GridVector2 midpoint = ConnectedLine.Bisect();
+                            GridLineSegment ProposedMedialLine = new GridLineSegment(node.Key, midpoint);
+                            if (boundary.Intersects(ProposedMedialLine) == false && boundary.ContainsExt(midpoint) == OverlapType.CONTAINED) //Checking for containment handles a rare edge case
                             {
                                 otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
+                                System.Diagnostics.Debug.Assert(boundary.ContainsExt(otherNode.Key) == OverlapType.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
                             }
                             else
                             {
@@ -132,6 +135,7 @@ namespace MorphologyMesh
                                 //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
                                 GridVector2 face_centroid = tri.Centroid;
                                 otherNode = GetOrAddVertex(graph, face_centroid);
+                                System.Diagnostics.Debug.Assert(boundary.ContainsExt(face_centroid) == OverlapType.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
                             }
                         }
                         else if (edgeCandidates.Count == 2 || edgeCandidates.Count == 0) ////All edges of the face are part of the medial axis.  Add a vertex at the centroid and connect them all to the centroid
@@ -141,6 +145,7 @@ namespace MorphologyMesh
                             GridVector2 face_centroid = tri.Centroid;
                             //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
                             otherNode = GetOrAddVertex(graph, face_centroid);
+                            System.Diagnostics.Debug.Assert(boundary.ContainsExt(face_centroid) == OverlapType.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
                         }
 
                         if (otherNode != null)
