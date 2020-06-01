@@ -56,7 +56,7 @@ namespace Geometry
         /// <summary>
         /// 
         /// </summary>
-        public double MaxDistance = double.MaxValue;
+        public double MaxDistance = double.MinValue;
         public int Count;
 
         public DistanceList(int capacity)
@@ -174,15 +174,18 @@ namespace Geometry
         {
             while (this.Count > this.MaxCapacity)
             {
-                var furthestEntry = this.Data.Last();
+                var furthestEntry = this.Data[MaxDistance];
 
                 //Check for multiple equidistant points.  If removing the entries will bring us under max capacity instead of equal to max capacity we need to hold on to the duplicates.
-                if (this.Count - furthestEntry.Value.Count < this.MaxCapacity)
+                if (this.Count - furthestEntry.Count < this.MaxCapacity)
                     break;
 
                 //Remove the furthest entry.
-                this.Count -= furthestEntry.Value.Count;
-                this.Data.Remove(furthestEntry.Key);
+                this.Count -= furthestEntry.Count;
+                this.Data.RemoveAt(Data.Count - 1);
+
+                MaxDistance = Data.Keys[Data.Keys.Count - 1];
+                //MaxDistance = this.Data.Keys[Data.Count - 1];
             }
 
             return;
