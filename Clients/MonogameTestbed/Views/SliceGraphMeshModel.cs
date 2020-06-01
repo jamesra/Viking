@@ -123,22 +123,32 @@ namespace MonogameTestbed
         /// <returns></returns>
         private int[] AddFacesToComposite(SortedSet<IFace> faces, int[] mesh_to_global)
         {
+            Face[] composite_faces = new Face[faces.Count];
             int[] NewModelEdges = new int[faces.Count * 3];
+
+            int iCompositeFace = 0;
+
             int iModelFace = 0;
             foreach (Face f in faces)
             {
+
                 int[] iMapped = new int[f.iVerts.Length];
                 for (int i = 0; i < f.iVerts.Length; i++)
                     iMapped[i] = mesh_to_global[f.iVerts[i]];
 
                 Face composite_face = new Face(iMapped);
-                composite.AddFace(composite_face);
+                //composite.AddFace(composite_face);
+                composite_faces[iCompositeFace] = composite_face;
 
                 Array.Copy(iMapped, 0, NewModelEdges, iModelFace, iMapped.Length);
 
                 //Add the face to our model
                 iModelFace += iMapped.Length;
+                iCompositeFace += 1;
             }
+            
+            //Add the composite faces in one bulk move
+            composite.AddFaces(composite_faces);
 
             return NewModelEdges;
         }
