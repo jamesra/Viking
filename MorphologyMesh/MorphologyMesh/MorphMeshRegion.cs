@@ -135,7 +135,10 @@ namespace MorphologyMesh
                     IEdgeKey connected_edge = all_exterior_edges.FirstOrDefault(e => e.A == LastVertIndex || e.B == LastVertIndex || e.A == FirstVertIndex || e.B == FirstVertIndex);
                     if (connected_edge == null)
                     {
+#if DEBUG
                         throw new InvalidOperationException("We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges");
+#endif
+                        break; //In Release just use what we found
                     }
                     else if (connected_edge.A == LastVertIndex || connected_edge.B == LastVertIndex)
                     {
