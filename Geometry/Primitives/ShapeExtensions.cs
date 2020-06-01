@@ -999,8 +999,8 @@ namespace Geometry
         public static bool Intersects(GridPolygon poly, GridLineSegment line)
         {
             return LineIntersectionExtensions.Intersects(line, poly);
-        } 
-         
+        }
+
         public static bool Intersections(GridPolygon A, GridPolygon B, out GridLineSegment[] AIntersections, out GridLineSegment[] BIntersections)
         {
             if (false == A.BoundingBox.Intersects(B.BoundingBox))
@@ -1012,21 +1012,21 @@ namespace Geometry
 
             List<GridLineSegment> AMatches = new List<Geometry.GridLineSegment>();
             List<GridLineSegment> BMatches = new List<Geometry.GridLineSegment>();
-  
-            foreach(GridLineSegment ALine in A.ExteriorSegments)
+
+            foreach (GridLineSegment ALine in A.ExteriorSegments)
             {
                 bool AAdded = false;
                 IEnumerable<GridLineSegment> BCandidates = B.SegmentRTree.Intersects(ALine.BoundingBox.ToRTreeRect(0)).Select(p => p.Segment(B));
                 foreach (GridLineSegment BLine in BCandidates)
                 {
-                    if(ALine.Intersects(BLine))
+                    if (ALine.Intersects(BLine))
                     {
                         BMatches.Add(BLine);
                         if (!AAdded)
                         {
                             AMatches.Add(ALine);
                             AAdded = true;
-                        }   
+                        }
                     }
                 }
             }
@@ -1049,7 +1049,7 @@ namespace Geometry
                 rTree.Add(l.BoundingBox.ToRTreeRect(0), l);
             }
 
-            foreach(GridPolygon innerPoly in poly.InteriorPolygons)
+            foreach (GridPolygon innerPoly in poly.InteriorPolygons)
             {
                 AddPolygonSegmentsToRTree(rTree, innerPoly);
             }
@@ -1102,7 +1102,7 @@ namespace Geometry
 
             NonIntersecting = FindNonIntersectingSegments(rTree, poly.ExteriorSegments);
 
-            foreach(GridPolygon innerPoly in poly.InteriorPolygons)
+            foreach (GridPolygon innerPoly in poly.InteriorPolygons)
             {
                 NonIntersecting.AddRange(FindNonIntersectingSegments(rTree, innerPoly));
             }
@@ -1120,12 +1120,12 @@ namespace Geometry
         {
             List<GridLineSegment> NonIntersecting = new List<Geometry.GridLineSegment>();
 
-            foreach(GridLineSegment l in segments)
+            foreach (GridLineSegment l in segments)
             {
                 List<GridLineSegment> Candidates = rTree.Intersects(l.BoundingBox.ToRTreeRect(0));
 
                 //Find out if there is a segment that we aren't sharing an endpoint with (part of same polygon border) and is not ourselves
-                if(Candidates.Where(c => c != l && !c.SharedEndPoint(l) && c.Intersects(l)).Any())
+                if (Candidates.Where(c => c != l && !c.SharedEndPoint(l) && c.Intersects(l)).Any())
                 {
                     continue;
                 }
@@ -1171,17 +1171,17 @@ namespace Geometry
         {
             RTree.RTree<GridLineSegment> SegmentRTree = new RTree<GridLineSegment>();
 
-            foreach(GridPolygon poly in Polygons)
+            foreach (GridPolygon poly in Polygons)
             {
                 AddPolygonSegmentsToRTree(SegmentRTree, poly);
             }
 
             List<GridLineSegment> NonIntersecting = new List<Geometry.GridLineSegment>();
-              
+
             //Identify which line segments do not intersect with segments in the RTree
-            foreach(GridPolygon poly in Polygons)
+            foreach (GridPolygon poly in Polygons)
             {
-                NonIntersecting.AddRange(FindNonIntersectingSegments(SegmentRTree, poly)); 
+                NonIntersecting.AddRange(FindNonIntersectingSegments(SegmentRTree, poly));
             }
 
             return NonIntersecting;
@@ -1212,7 +1212,7 @@ namespace Geometry
                 NonIntersecting.Union(FindNonIntersectingSegments(SegmentRTree, poly));
             }
 
-            if(!AddPointsAtIntersections)
+            if (!AddPointsAtIntersections)
             {
                 return NonIntersecting;
             }
@@ -1273,6 +1273,32 @@ namespace Geometry
                                                 new double[] { GridVector2.Distance(vPos, p2) / (GridVector2.Distance(p2, vPos) + GridVector2.Distance(vPos, p3)) });
 
             return newPositions[0];
+        }
+
+        /// <summary>
+        /// Given an array of polygons and an array of points, returns the PointIndex of points that are exact verticies on the polygons
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <param name="correspondingPoints"></param>
+        public static PointIndex[][] IndiciesForPoints(this IReadOnlyList<GridPolygon> Polygons, ICollection<GridVector2> correspondingPoints)
+        {
+            //List<PointIndex[]> output = new List<PointIndex[]>(correspondingPoints.Count);
+            PointIndex[][] output = new PointIndex[correspondingPoints.Count][];
+            int iOutput = 0;
+            foreach (GridVector2 correspondingPoint in correspondingPoints)
+            {
+                //Determine polygon indicies of corresponding verticies
+                output[iOutput] = Polygons.Select((poly, iPoly) =>
+                {
+                    if (poly.TryGetIndex(correspondingPoint, out PointIndex index))
+                        return index.Reindex(iPoly);
+                    else
+                        return new PointIndex?();
+                }).Where(index => index.HasValue).Select(index => index.Value).ToArray();
+                iOutput += 1;
+            }
+
+            return output;
         }
     }
 }
