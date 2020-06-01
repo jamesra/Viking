@@ -6,7 +6,6 @@ using System.Collections.Concurrent;
 using System.Linq;
 using Geometry;
 
-
 namespace WebAnnotationModel
 {
     /// <summary>
@@ -202,6 +201,11 @@ namespace WebAnnotationModel
             {
                 return; 
             }
+            /*
+#if REGION_LOADING_TRACE
+            Trace.WriteLine(string.Format("Loading section {0} annotation region {1}", SectionNumber, VolumeBounds.Value)) 
+#endif
+            */
 
             RegionPyramid<OBJECT> RegionPyramid = GetOrAddRegionPyramidForSection(SectionNumber);
             //If we change the magnification factor we should stop loading regions
