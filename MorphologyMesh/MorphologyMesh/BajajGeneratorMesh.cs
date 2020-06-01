@@ -51,6 +51,11 @@ namespace MorphologyMesh
         /// </summary>
         public Slice Slice;
 
+        /// <summary>
+        /// A cache for failures when finding slice chords
+        /// </summary>
+        internal SliceChordsTestResultsCache SliceChordCandidateCache = new SliceChordsTestResultsCache();
+
         public override string ToString()
         {
             string output = "";

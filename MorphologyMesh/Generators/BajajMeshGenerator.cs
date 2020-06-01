@@ -81,15 +81,44 @@ namespace MorphologyMesh
         Decreasing
     }
 
+    /// <summary>
+    /// Flag enumeration indicating a set of tests.
+    /// </summary>
     [Flags]
     public enum SliceChordTestType
     {
-        Correspondance = 1,     //Allow the chord if the endpoints share an X,Y position
-        ChordIntersection = 2,  //Allow the chord if it does not intersect an existing chord
-        Theorem2 = 4,           //Allow the chord if the endpoints are on the correct side of the contours
-        Theorem4 = 8,           //Allow the chord if the chord is only entirely inside or outside the polygons but not both
-        LineOrientation = 16,    //Allow the chord if the contours are not more than 90 degrees different in orientation
-        EdgeType = 32,          //Allow the chord if the edge is considered valid according to EdgeType criteria
+        /// <summary>
+        /// No test flags set
+        /// </summary>
+        None = 0,
+        /// <summary>
+        /// Allow the chord if the endpoints share an X,Y position
+        /// </summary>
+        Correspondance = 1,
+        /// <summary>
+        /// Allow the chord if it does not intersect an existing chord
+        /// </summary>
+        ChordIntersection = 2,
+        /// <summary>
+        /// Allow the chord if the endpoints are on the correct side of the contours
+        /// </summary>
+        Theorem2 = 4,
+        /// <summary>
+        /// Allow if the chord is only entirely inside or outside the polygons but not both
+        /// </summary>
+        Theorem4 = 8,
+        /// <summary>
+        /// Allow the chord if the contours are not more than 90 degrees different in orientation
+        /// </summary>
+        LineOrientation = 16,
+        /// <summary>
+        /// Allow the chord if the edge is considered valid according to EdgeType criteria
+        /// </summary>
+        EdgeType = 32,        
+        /// <summary>
+        /// Allow the chord if the chord will not intersect an existing face
+        /// </summary>
+        Face = 64
     }
 
     [Flags]
@@ -98,13 +127,156 @@ namespace MorphologyMesh
         Distance = 1, //Add chords shortest to longest
         Orientation = 2, //Add chords with the closest orientation of contours first
     }
-    
+
+    /// <summary>
+    /// Stores the results for a single origin and all tested candidates
+    /// </summary>
+    public class SliceChordOriginTestResultsCache
+    {
+        Dictionary<int, SliceChordTestType> KnownCandidateFailures = new Dictionary<int, SliceChordTestType>();
+
+        public SliceChordOriginTestResultsCache()
+        {
+
+        }
+
+        public SliceChordTestType GetFailures(int Target, SliceChordTestType requested)
+        {
+            if (KnownCandidateFailures.TryGetValue(Target, out SliceChordTestType knownFailures))
+            {
+                return knownFailures & requested;
+            }
+
+            return SliceChordTestType.None;
+        }
+
+        public void RecordFailure(int Target, SliceChordTestType failures)
+        {
+            //Don't bother if nothing failed
+            if (failures == SliceChordTestType.None)
+            {
+                return;
+            }  
+
+            if (KnownCandidateFailures.TryGetValue(Target, out SliceChordTestType knownFailures))
+                KnownCandidateFailures[Target] = failures | knownFailures;
+            else
+                KnownCandidateFailures.Add(Target, failures); 
+        }
+         
+        /// <summary>
+        /// Removes a target vertex. 
+        /// </summary>
+        /// <param name="Origin"></param>
+        public void Remove(int Target)
+        {
+            if(KnownCandidateFailures.ContainsKey(Target))
+                KnownCandidateFailures.Remove(Target);
+        }
+
+        /// <summary>
+        /// Clear all results
+        /// </summary>
+        public void Clear()
+        {
+            KnownCandidateFailures.Clear();
+        }
+    }
+
+    public class SliceChordsTestResultsCache
+    {
+        /// <summary>
+        /// Record failures.  First level is the origin, then the targets for that origin.
+        /// </summary>
+        private Dictionary<int, SliceChordOriginTestResultsCache> Failures;
+        
+        public SliceChordsTestResultsCache()
+        {
+            Failures = new Dictionary<int, SliceChordOriginTestResultsCache>();
+        }
+
+        /// <summary>
+        /// Given a set of tests, returns which tests are known to have failed
+        /// </summary>
+        /// <param name="candidate"></param>
+        /// <param name="requested"></param>
+        /// <returns></returns>
+        public SliceChordOriginTestResultsCache GetFailuresForOrigin(int Origin)
+        {
+            if (Failures.TryGetValue(Origin, out SliceChordOriginTestResultsCache knownCandidates))
+            {
+                return knownCandidates;
+            }
+            else
+            {
+                SliceChordOriginTestResultsCache Obj = new SliceChordOriginTestResultsCache();
+                Failures.Add(Origin, Obj);
+                return Obj;
+            }
+        }
+
+        /// <summary>
+        /// Given a set of tests, returns which tests are known to have failed
+        /// </summary>
+        /// <param name="candidate"></param>
+        /// <param name="requested"></param>
+        /// <returns></returns>
+        public SliceChordTestType GetFailures(int Origin, int Target, SliceChordTestType requested)
+        {
+            SliceChordOriginTestResultsCache knownCandidates;
+            if (Failures.TryGetValue(Origin, out knownCandidates) == false)
+            {
+                return SliceChordTestType.None;
+            }
+            else
+            {
+                return knownCandidates.GetFailures(Target, requested);
+            }
+        }
+
+        public void RecordFailure(int Origin, int Target, SliceChordTestType failures)
+        {
+            //Don't bother if nothing failed
+            if(failures == SliceChordTestType.None)
+            {
+                return;
+            }
+
+            SliceChordOriginTestResultsCache knownCandidates;
+
+            if (false == Failures.TryGetValue(Origin, out knownCandidates))
+            {   
+                knownCandidates = new SliceChordOriginTestResultsCache();
+                Failures.Add(Origin, knownCandidates);
+            }
+            
+            knownCandidates.RecordFailure(Target, failures);
+        }
+
+        /// <summary>
+        /// Removes a vertex.  This is done when we know the vertex is complete and no longer under consideration
+        /// </summary>
+        /// <param name="Origin"></param>
+        public void Remove(int Origin)
+        {
+            Failures.Remove(Origin);
+        }
+
+        /// <summary>
+        /// Clear all results
+        /// </summary>
+        public void Clear()
+        {
+            Failures.Clear();
+        }
+    }
+
+
 
     public static class BajajMeshGenerator
     {
 
         public delegate void OnMeshGeneratedEventHandler(BajajGeneratorMesh mesh, bool Success);
-
 
         /// <summary>
         /// Convert a morphology graph to an unprocessed mesh graph
@@ -301,13 +473,17 @@ namespace MorphologyMesh
                 Trace.WriteLine(string.Format("Exception building mesh {0}\n{1}", mesh.ToString(), e));
             }
 
-            if(mesh.Slice != null)
+            BajajMeshGenerator.FirstPassFaceGeneration(mesh);
+
+            if (mesh.Slice != null)
             {
+                
                 if (mesh.Slice.HasSliceAbove == false)
                     mesh.CapMeshEnd(true);
 
                 if (mesh.Slice.HasSliceBelow == false)
                     mesh.CapMeshEnd(false); 
+                    
             }
 
             mesh.EnsureFacesHaveExternalNormals();
@@ -385,6 +561,39 @@ namespace MorphologyMesh
                 {
                     MorphMeshFace mesh_face = new MorphMeshFace(A_List[0], B_List[0], C_List[0]);
                     mesh.AddFace(mesh_face);
+                }
+                else
+                {
+                    /* Adding edges instead of faces seems like a good idea, but it causes a lot of issues with extra, incorrect, and missing faces on corresponding verticies even though it solves some cases*/
+                    /*
+                    //Add the edges, but not the face
+                    foreach(var combo in A_List.CombinationPairs(B_List))
+                    {
+                        if(mesh.Contains(combo.A, combo.B) == false)
+                        {
+                            MorphMeshEdge edge = new MorphMeshEdge(EdgeType.UNKNOWN, combo.A, combo.B);
+                            mesh.AddEdge(edge);
+                        }
+                    }
+
+                    foreach (var combo in B_List.CombinationPairs(C_List))
+                    {
+                        if (mesh.Contains(combo.A, combo.B) == false)
+                        {
+                            MorphMeshEdge edge = new MorphMeshEdge(EdgeType.UNKNOWN, combo.A, combo.B);
+                            mesh.AddEdge(edge);
+                        }
+                    }
+
+                    foreach (var combo in C_List.CombinationPairs(A_List))
+                    {
+                        if (mesh.Contains(combo.A, combo.B) == false)
+                        {
+                            MorphMeshEdge edge = new MorphMeshEdge(EdgeType.UNKNOWN, combo.A, combo.B);
+                            mesh.AddEdge(edge);
+                        }
+                    }
+                    */
                 }
             }
 
@@ -625,7 +834,7 @@ namespace MorphologyMesh
                     if (Face?.Count <= 4)
                     {
                         MorphMeshFace face = new MorphMeshFace(Face);
-                        mesh.AddFace(face);
+                        //mesh.AddFace(face);  //Split face will add the faces, so there is no need to add before we split
 
                         if (Face.Count == 4)
                         {
@@ -646,14 +855,7 @@ namespace MorphologyMesh
                         PointIndex vCorrespondingIndex = mesh[iVB].PolyIndex.Value;
                         GridPolygon oppositePolygon = mesh.Polygons[vCorrespondingIndex.iPoly];
 
-                        //Check all of the edge cases
-
-                        /*MorphMeshEdge testNextNext = new MorphMeshEdge(EdgeType.UNKNOWN, mesh[vPolyIndex.Next].Index, mesh[vCorrespondingIndex.Next].Index);
-                        MorphMeshEdge testNextPrev = new MorphMeshEdge(EdgeType.UNKNOWN, mesh[vPolyIndex.Next].Index, mesh[vCorrespondingIndex.Previous].Index);
-                        MorphMeshEdge testPrevPrev = new MorphMeshEdge(EdgeType.UNKNOWN, mesh[vPolyIndex.Previous].Index, mesh[vCorrespondingIndex.Previous].Index);
-                        MorphMeshEdge testPrevNext = new MorphMeshEdge(EdgeType.UNKNOWN, mesh[vPolyIndex.Previous].Index, mesh[vCorrespondingIndex.Next].Index);
-                        */
-
+                        //Check all of the edge cases 
                         EdgeType NNType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Next, vCorrespondingIndex.Next);
                         EdgeType NPType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Next, vCorrespondingIndex.Previous);
                         EdgeType PPType = mesh.GetContourEdgeTypeWithOrientation(vPolyIndex.Previous, vCorrespondingIndex.Previous);
@@ -669,13 +871,17 @@ namespace MorphologyMesh
                         if (NNValid)
                         {
                             int[] TriFace = new int[] { mesh[vPolyIndex.Next].Index, iVA, iVB };
-                            
+
                             MorphMeshFace face = new MorphMeshFace(TriFace);
                             mesh.AddFace(face);
                             TriFace = new int[] { mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Next].Index, iVB };
                             face = new MorphMeshFace(TriFace);
-                            mesh.AddFace(face);
-                            nFacesFound++;
+
+                            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
+                            {
+                                mesh.AddFace(face);
+                                nFacesFound++;
+                            }
                         }
 
                         if (NPValid)
@@ -685,8 +891,11 @@ namespace MorphologyMesh
                             mesh.AddFace(face);
                             TriFace = new int[] { mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Next].Index, iVB };
                             face = new MorphMeshFace(TriFace);
-                            mesh.AddFace(face);
-                            nFacesFound++;
+                            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
+                            {
+                                mesh.AddFace(face);
+                                nFacesFound++;
+                            }
                         }
 
                         if (PPValid)
@@ -696,8 +905,11 @@ namespace MorphologyMesh
                             mesh.AddFace(face);
                             TriFace = new int[] { mesh[vCorrespondingIndex.Previous].Index, mesh[vPolyIndex.Previous].Index, iVB };
                             face = new MorphMeshFace(TriFace);
-                            mesh.AddFace(face);
-                            nFacesFound++;
+                            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
+                            {
+                                mesh.AddFace(face);
+                                nFacesFound++;
+                            }
                         }
 
                         if (PNValid)
@@ -707,11 +919,15 @@ namespace MorphologyMesh
                             mesh.AddFace(face);
                             TriFace = new int[] { mesh[vCorrespondingIndex.Next].Index, mesh[vPolyIndex.Previous].Index, iVB };
                             face = new MorphMeshFace(TriFace);
-                            mesh.AddFace(face);
-                            nFacesFound++;
+                            if (FaceContainsVerticies(mesh, face, out MorphMeshVertex[] contained_verts) == false)
+                            {
+                                mesh.AddFace(face);
+                                nFacesFound++;
+                            }
                         }
 
-                        //Once in a while there is not a valid edge to complete the face. 
+                        //Once in a while there are not two valid edges to complete the face.  
+                        //TODO: This case would be better handled by triangulating verticies contained in the face.  It would solve some of the known failures in mesh generation.
                         if(nFacesFound == 1)
                         {
                             break; //This prevents overlapping faces from check the corresponding face
@@ -788,7 +1004,30 @@ namespace MorphologyMesh
             }
         }
 
+        /// <summary>
+        /// Returns any verticies that are inside the XY projection of a given face.
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="face"></param>
+        /// <param name="contained_verts"></param>
+        /// <returns>True if the face contains verticies</returns>
+        private static bool FaceContainsVerticies(MorphRenderMesh mesh, MorphMeshFace face, out MorphMeshVertex[] contained_verts)
+        {
+            GridTriangle tri;
+            try
+            {
+                tri = new GridTriangle(face.iVerts.Select(i => mesh.Verticies[i].Position.XY()).ToArray());
+            }
+            catch(ArgumentException)
+            {
+                //A zero size triangle means it cannot contain verticies
+                contained_verts = new MorphMeshVertex[0];
+                return false;
+            }
 
+            contained_verts = mesh.Verticies.Where(v => face.iVerts.Contains(v.Index) == false && tri.Contains(v.Position.XY())).ToArray();
+            return contained_verts.Length > 0;
+        }
 
         public static MorphMeshRegionGraph GenerateRegionConnectionGraph(BajajGeneratorMesh mesh)
         {
@@ -888,8 +1127,9 @@ namespace MorphologyMesh
         /// <returns></returns>
         private static bool TryAddSliceChord(BajajGeneratorMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests)
         {
-            if (BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc), mesh.GetAdjacentLevelPolygons(sc), sc.Target, ChordRTree, Tests))
+            if (BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc), mesh.GetAdjacentLevelPolygons(sc), sc.Target, ChordRTree, Tests, out SliceChordTestType failures))
             {
+                
                 var edge = new MorphMeshEdge(EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Polygons[sc.Origin.iPoly], mesh.Polygons[sc.Target.iPoly]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
                 if (mesh.Contains(edge))
                     return false;
@@ -898,6 +1138,10 @@ namespace MorphologyMesh
                 ChordRTree.Add(sc.Line.BoundingBox.ToRTreeRect(0), sc);
 
                 return true;
+            }
+            else
+            {
+                mesh.SliceChordCandidateCache.RecordFailure(mesh[sc.Origin].Index, mesh[sc.Target].Index, failures);
             }
 
             return false;
@@ -914,25 +1158,44 @@ namespace MorphologyMesh
             mesh.CloseFaces();
             List<MorphMeshVertex> IncompleteVerticies = mesh.MorphVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
 
-            SliceChordTestType FirstPassTests = SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4;
-            SliceChordTestType SecondPassTests = SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4;
-            SliceChordTestType ThirdPassTests = SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2;
+            SliceChordTestType[] PassCriteria = new SliceChordTestType[]
+            {
+                SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4 | SliceChordTestType.LineOrientation,
+                SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4,
+                SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4 | SliceChordTestType.LineOrientation,
+                SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.EdgeType | SliceChordTestType.Theorem4,
+                //SliceChordTestType.Correspondance | SliceChordTestType.Theorem2 | SliceChordTestType.LineOrientation
+            };
 
+            //Precalulate the quad tree data structures
+            var VertexQuadTrees = mesh.CreateQuadTreesForContours();
+
+            foreach (SliceChordTestType passTestCriteria in PassCriteria)
+            {
+                while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, passTestCriteria, VertexQuadTrees) == true)
+                {
+                    mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
+                    IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
+                }
+            }
+
+            mesh.SliceChordCandidateCache.Clear();
+            /*
             while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, FirstPassTests) == true)
             {
                 //Try to remove any verticies we've completed the faces for from the search
                 mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
                 IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
             }
-
-
-            while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, SecondPassTests) == true)
+            */
+            /*
+             while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, SecondPassTests) == true)
             {
                 //Try to remove any verticies we've completed the faces for from the search
                 mesh.CloseFaces(IncompleteVerticies.Cast<Geometry.Meshing.IVertex>());
                 IncompleteVerticies = IncompleteVerticies.Where(v => false == v.IsFaceSurfaceComplete(mesh)).ToList();
             }
-
+            */
             /*
             
             while (SliceChordGenerationPass(mesh, rTree, IncompleteVerticies, ThirdPassTests) == true)
@@ -953,12 +1216,16 @@ namespace MorphologyMesh
         /// Generate slice chords for the remaining unknown chords, returns true if any chords were generated
         /// </summary>
         /// <param name="mesh">The mesh, which may contain edges we cannot cross</param>
-        private static bool SliceChordGenerationPass(BajajGeneratorMesh mesh, SliceChordRTree rTree, List<MorphMeshVertex> IncompleteVerticies, SliceChordTestType TestSuite)
+        /// <param name="LevelTree">An optional parameter containing quadtrees for verticies on the upper and lower polygon sets.  It can be calculated once and passed as this parameter or left null and the function will build it.</param>
+        private static bool SliceChordGenerationPass(BajajGeneratorMesh mesh, SliceChordRTree rTree, List<MorphMeshVertex> IncompleteVerticies, SliceChordTestType TestSuite, SliceTopologyQuadTrees<MorphMeshVertex>? LevelTree=null)
         {
             ConcurrentDictionary<MorphMeshVertex, MorphMeshVertex> OTVTable;
 
+            if(LevelTree.HasValue == false)
+                LevelTree = mesh.CreateQuadTreesForContours();
+
             BajajMeshGenerator.CreateOptimalTilingVertexTable(mesh, IncompleteVerticies,
-                                                              TestSuite,
+                                                              LevelTree.Value, TestSuite,
                                                               out OTVTable, ref rTree);
 
             List<SliceChord> CandidateChords = CreateChordCandidateList(mesh, OTVTable);
@@ -1345,9 +1612,24 @@ namespace MorphologyMesh
             return !LineIntersectionExtensions.Intersects(line, poly, true, out intersections);
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="vertex"></param>
+        /// <param name="Polygons"></param>
+        /// <param name="SameLevelPolys"></param>
+        /// <param name="AdjacentLevelPolys"></param>
+        /// <param name="candidate"></param>
+        /// <param name="chordTree"></param>
+        /// <param name="TestsToRun"></param>
+        /// <param name="results">Flags are set for any failing tests, though other tests may also fail but were not run due to short circuiting.</param>
+        /// <returns></returns>
         public static bool IsSliceChordValid(PointIndex vertex, GridPolygon[] Polygons, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys, 
-                                                       PointIndex candidate, SliceChordRTree chordTree, SliceChordTestType TestsToRun)
+                                                       PointIndex candidate, SliceChordRTree chordTree, SliceChordTestType TestsToRun, out SliceChordTestType results)
         {
+            results = SliceChordTestType.None;
+
             GridVector2 p1 = vertex.Point(Polygons);
             GridVector2 p2 = candidate.Point(Polygons);
             if (p1 == p2)
@@ -1359,14 +1641,20 @@ namespace MorphologyMesh
             {
                 //IEnumerable<ISliceChord> existingChords = chordTree.Intersects(ChordLine.BoundingBox.ToRTreeRect(0));
                 if (chordTree.IntersectionGenerator(ChordLine.BoundingBox.ToRTreeRect(0)).Any(c => c.Line.Intersects(ChordLine, true)))
+                {
+                    results |= SliceChordTestType.ChordIntersection;
                     return false;
+                }
             }
 
             if((TestsToRun & SliceChordTestType.EdgeType) > 0)
             {
                 EdgeType edgeType = EdgeTypeExtensions.GetEdgeType(vertex, candidate, Polygons, ChordLine.PointAlongLine(0.5));
                 if (!edgeType.IsValid())
+                {
+                    results |= SliceChordTestType.EdgeType;
                     return false;
+                }
             }
 
             bool AngleOrientation = true;
@@ -1379,14 +1667,21 @@ namespace MorphologyMesh
             {
                 AngleOrientation = EdgeTypeExtensions.OrientationsAreMatched(vertex, candidate, Polygons);
                 if (!AngleOrientation)
+                {
+                    results |= SliceChordTestType.LineOrientation;
                     return false;
+                }
             }
 
             if ((TestsToRun & SliceChordTestType.Theorem2) > 0)
             {
                 T2 = Theorem2(Polygons, vertex, candidate);
                 if (!T2)
+                {
+                    results |= SliceChordTestType.Theorem2;
                     return false;
+                }
+                    
             }
 
             //bool T2 = true;
@@ -1395,12 +1690,17 @@ namespace MorphologyMesh
             {
                 T4Opp = Theorem4(AdjacentLevelPolys, ChordLine);
                 if (!T4Opp)
+                {
+                    results |= SliceChordTestType.Theorem4;
                     return false;
+                }
 
                 T4 = Theorem4(SameLevelPolys, ChordLine);
                 if (!T4)
+                {
+                    results |= SliceChordTestType.Theorem4;
                     return false;
-                
+                }
             }
 
             return AngleOrientation && T2 && T2Opp && T4 && T4Opp;
@@ -1408,12 +1708,13 @@ namespace MorphologyMesh
         }
 
         public static bool IsSliceChordValid(MorphRenderMesh mesh, MorphMeshVertex vertex, IReadOnlyList<GridPolygon> SameLevelPolys, IReadOnlyList<GridPolygon> AdjacentLevelPolys,
-                                                       MorphMeshVertex candidate, SliceChordRTree chordTree, SliceChordTestType TestsToRun)
+                                                       MorphMeshVertex candidate, SliceChordRTree chordTree, SliceChordTestType TestsToRun, out SliceChordTestType failures)
         {
+            failures = SliceChordTestType.None;
             if (candidate.FacesAreComplete)
                 return false;
-
-            return IsSliceChordValid(vertex.PolyIndex.Value, mesh.Polygons, SameLevelPolys, AdjacentLevelPolys, candidate.PolyIndex.Value, chordTree, TestsToRun);
+             
+            return IsSliceChordValid(vertex.PolyIndex.Value, mesh.Polygons, SameLevelPolys, AdjacentLevelPolys, candidate.PolyIndex.Value, chordTree, TestsToRun, out failures);
 
             /*
             GridVector2 p1 = vertex.Position.XY();
@@ -1498,7 +1799,7 @@ namespace MorphologyMesh
 
             foreach(PointIndex opposite in OppositeVerticies)
             {
-                if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, opposite, chordTree, TestsToRun))
+                if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, opposite, chordTree, TestsToRun, out SliceChordTestType failures))
                 {
                     SliceChord sc = new SliceChord(vertex, opposite, Polygons);
                     listValid.Add(sc);
@@ -1524,8 +1825,9 @@ namespace MorphologyMesh
             double distance;
             GridVector2 p = vertex.Point(Polygons);
             PointIndex NearestPoint = OppositeVertexTree.FindNearest(p, out distance);
+            SliceChordTestType failures;
 
-            if(IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, NearestPoint, chordTree, TestsToRun))
+            if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, NearestPoint, chordTree, TestsToRun, out failures))
             {
                 return NearestPoint;
             }
@@ -1556,7 +1858,7 @@ namespace MorphologyMesh
                 {
                     PointIndex testPoint = NearestList[iNextTest].Value;
 
-                    if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, testPoint, chordTree, TestsToRun))
+                    if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, testPoint, chordTree, TestsToRun, out failures))
                         return testPoint;
                 }
 
@@ -1580,12 +1882,19 @@ namespace MorphologyMesh
             double distance;
             GridVector2 p = vertex.Position.XY();
             MorphMeshVertex NearestPoint = OppositeVertexTree.FindNearest(p, out distance);
+            BajajGeneratorMesh bajajMesh = mesh as BajajGeneratorMesh;
+            SliceChordOriginTestResultsCache KnownCandidateFailures = bajajMesh == null ? null : bajajMesh.SliceChordCandidateCache.GetFailuresForOrigin(vertex.Index);
+            SliceChordTestType failures;
 
             if (NearestPoint.FacesAreComplete == false) //An optimization from profiling. 
             {
-                if (IsSliceChordValid(mesh, vertex, SameLevelPolys, AdjacentLevelPolys, NearestPoint, chordTree, TestsToRun))
+                if (IsSliceChordValid(mesh, vertex, SameLevelPolys, AdjacentLevelPolys, NearestPoint, chordTree, TestsToRun, out failures))
                 {
                     return NearestPoint;
+                }
+                else if(KnownCandidateFailures != null)
+                {
+                    KnownCandidateFailures.RecordFailure(NearestPoint.Index, failures);
                 }
             }
 
@@ -1618,8 +1927,21 @@ namespace MorphologyMesh
 
                     if (testPoint.FacesAreComplete == false) //An optimization from profiling. 
                     {
-                        if (IsSliceChordValid(mesh, vertex, SameLevelPolys, AdjacentLevelPolys, testPoint, chordTree, TestsToRun))
+                        if(KnownCandidateFailures != null)
+                        {
+                            if (KnownCandidateFailures.GetFailures(testPoint.Index, TestsToRun) != SliceChordTestType.None) //Check if another pass checked any of these test conditions and already failed
+                            {
+                                iNextTest++;
+                                continue;
+                            }
+                        }
+
+                        if (IsSliceChordValid(mesh, vertex, SameLevelPolys, AdjacentLevelPolys, testPoint, chordTree, TestsToRun, out failures))
                             return testPoint;
+                        else if (KnownCandidateFailures != null)
+                        { 
+                            KnownCandidateFailures.RecordFailure(NearestPoint.Index, failures); //Record the failure for any future passes
+                        }
                     }
                 }
 
@@ -1664,6 +1986,7 @@ namespace MorphologyMesh
             return levels;
         }
 
+        /*
         public static void CreateOptimalTilingVertexTable(GridPolygon[] polygons, bool[] IsPolyAbove, SliceChordTestType TestsToRun, out OTVTable OTVTable)
         { 
             SliceChordRTree chordTree = new SliceChordRTree();
@@ -1677,7 +2000,7 @@ namespace MorphologyMesh
             ////////////////////////////////////////////////////
             CreateOptimalTilingVertexTable(VerticiesToMap, polygons, IsPolyAbove, LevelTree, TestsToRun, out Table, ref chordTree);
         }
-        /*
+        
         public static ConcurrentDictionary<PointIndex, List<SliceChord>> CreateFullOptimalTilingVertexTable(IEnumerable<PointIndex> VerticiesToMap, IEnumerable<PointIndex> MatchCandidates, GridPolygon[] polygons, bool[] PolyZ, SortedList<int, QuadTree<PointIndex>> CandidateTreeByLevel, SliceChordTestType TestsToRun,
                                                          ref SliceChordRTree chordTree)
         {
@@ -1859,7 +2182,7 @@ namespace MorphologyMesh
             var Verts = mesh.MorphVerticies.Where(v => v.Type == VertexOrigin.CONTOUR && v.PolyIndex.HasValue && polyset.Contains(v.PolyIndex.Value.iPoly));
             foreach (var vertex in Verts)
             {
-                quadTree.Add(vertex.Position.XY(), vertex);
+                quadTree.TryAdd(vertex.Position.XY(), vertex);
             } 
 
             return quadTree;
