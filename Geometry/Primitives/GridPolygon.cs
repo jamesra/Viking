@@ -1098,7 +1098,7 @@ namespace Geometry
     /// Uses Counter-Clockwise winding order
     /// </summary>
     [Serializable()]
-    public class GridPolygon : ICloneable, IPolygon2D
+    public class GridPolygon : ICloneable, IPolygon2D, IEquatable<GridPolygon>
     {
         /// <summary>
         /// Cached area of ExteriorRing, not subtracting any interior holes.
@@ -1254,7 +1254,7 @@ namespace Geometry
         /// <summary>
         /// Read only please
         /// </summary>
-        public IList<GridVector2[]> InteriorRings
+        public IReadOnlyList<GridVector2[]> InteriorRings
         {
             get
             {
@@ -1392,7 +1392,7 @@ namespace Geometry
             }
         }
 
-        ICollection<IPoint2D> IPolygon2D.ExteriorRing
+        IReadOnlyList<IPoint2D> IPolygon2D.ExteriorRing
         {
             get
             {
@@ -1400,13 +1400,15 @@ namespace Geometry
             }
         }
 
-        ICollection<IPoint2D[]> IPolygon2D.InteriorRings
+        IReadOnlyList<IPoint2D[]> IPolygon2D.InteriorRings
         {
             get
             {
                 return this.InteriorRings.Select(ir => ir.Select(p => p as IPoint2D).ToArray()).ToArray(); 
             }
         }
+
+        IReadOnlyList<IPolygon2D> IPolygon2D.InteriorPolygons => this._InteriorPolygons; //.Select(inner => inner as IPolygon2D).ToArray();
 
         /// <summary>
         /// All unique verticies.  This is calculated for every use
@@ -1448,6 +1450,8 @@ namespace Geometry
                 return this.Centroid;
             }
         }
+
+       
 
         /// <summary>
         /// Adds an Interior Ring to this polygon.  Input must not intersect the exterior ring or existing interior rings.
@@ -1546,7 +1550,21 @@ namespace Geometry
 
             return false;
         }
-        
+
+        /// <summary>
+        /// Remove the interior polygon that contains the hole position
+        /// </summary>
+        /// <param name="holePosition"></param>
+        public bool TryRemoveInteriorRing(int innerPoly)
+        {
+            if (innerPoly >= this.InteriorPolygons.Count || innerPoly < 0)
+                return false; 
+
+            _InteriorPolygons.RemoveAt(innerPoly);
+            RemoveRingFromRTree(innerPoly);
+            return true;
+        }
+
         /// <summary>
         /// Adds a vertex to the polygon on the segment nearest to the point, including interior polygons.
         /// If the point is already a vertex no action is taken
@@ -1693,7 +1711,6 @@ namespace Geometry
                     GridPolygon poly = iVertex.Polygon(this);
                     poly.SetVertex(iVertex.ReindexToOuter(), value);
 
-                    this.InteriorRings[iVertex.iInnerPoly.Value] = poly.ExteriorRing;
                     this._InteriorPolygons[iVertex.iInnerPoly.Value] = poly;
 
                     UpdateSegmentRTreeForUpdate(iVertex);
@@ -1775,8 +1792,8 @@ namespace Geometry
             {
                 GridPolygon original_poly = iVertex.Polygon(this).Clone() as GridPolygon;
 
-                this.InteriorPolygons[iVertex.iInnerPoly.Value].RemoveVertex(iVertex.ReindexToOuter());
-                this.InteriorRings[iVertex.iInnerPoly.Value] = this.InteriorPolygons[iVertex.iInnerPoly.Value]._ExteriorRing;
+                this._InteriorPolygons[iVertex.iInnerPoly.Value].RemoveVertex(iVertex.ReindexToOuter());
+                //this.InteriorRings[iVertex.iInnerPoly.Value] = this.InteriorPolygons[iVertex.iInnerPoly.Value]._ExteriorRing;
                 try
                 {
                     if (this.IsInnerValid(iVertex.iInnerPoly.Value, CheckForIntersectionWithOtherInnerPolygons: true))
@@ -4228,6 +4245,86 @@ namespace Geometry
             }
             return output;
         }
-         
+
+
+        public bool Equals(IShape2D other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (object.ReferenceEquals(this, other))
+                return true;
+
+            if (other.ShapeType != this.ShapeType)
+                return false;
+
+            IPolygon2D other_poly = other as IPolygon2D;
+            if (other_poly == null)
+                return false;
+
+            return this.Equals(other_poly);
+        }
+
+        public bool Equals(IPolygon2D other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (object.ReferenceEquals(this, other))
+                return true;
+
+            if (this.ExteriorRing.Length != other.ExteriorRing.Count)
+                return false;
+
+            if (this.TotalUniqueVerticies != other.TotalUniqueVerticies)
+                return false;
+
+            if (this._InteriorPolygons.Count != other.InteriorRings.Count)
+                return false;
+
+            for (int iVert = 0; iVert < this.ExteriorRing.Length; iVert++)
+            {
+                if (false == ExteriorRing[iVert].Equals(other.ExteriorRing[iVert]))
+                    return false;
+            }
+
+            for (int iInner = 0; iInner < this._InteriorPolygons.Count; iInner++)
+            {
+                if (false == this.InteriorPolygons[iInner].Equals(other.InteriorPolygons[iInner]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public bool Equals(GridPolygon other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false; 
+
+            if (this.ExteriorRing.Length != other.ExteriorRing.Length)
+                return false;
+
+            if (this.TotalUniqueVerticies != other.TotalUniqueVerticies)
+                return false;
+
+            if (this._InteriorPolygons.Count != other._InteriorPolygons.Count)
+                return false;
+
+            for (int iVert = 0; iVert < this.ExteriorRing.Length; iVert++)
+            {
+                if (false == ExteriorRing[iVert].Equals(other.ExteriorRing[iVert]))
+                    return false; 
+            }    
+
+            for (int iInner = 0; iInner < this._InteriorPolygons.Count; iInner++)
+            {
+                if (false == this.InteriorPolygons[iInner].Equals(other.InteriorPolygons[iInner]))
+                    return false;
+            }
+
+            return true; 
+        }
+
     }
 }
