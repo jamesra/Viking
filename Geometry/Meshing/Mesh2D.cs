@@ -147,6 +147,39 @@ namespace Geometry.Meshing
             return verts.Select(v => this[v].Position).ToArray().AreClockwise();
         }
 
+        /// <summary>
+        /// Given a face that is not a triangle, return an array of triangles describing the face.
+        /// For now this assumes convex faces with 3 or 4 verticies.  It removes the face and adds the split faces from the mesh
+        /// </summary>
+        /// <param name="Duplicator">A constructor that can copy attributes of a face object</param>
+        /// <returns></returns>
+        public override void SplitFace(IFace face)
+        {
+            if (face.IsTriangle())
+                return;
+
+            if (face.IsQuad())
+            {
+                RemoveFace(face);
+
+                GridVector2[] positions = this[face.iVerts].Select(v => v.Position).ToArray();
+                if (GridVector2.Distance(positions[0], positions[2]) < GridVector2.Distance(positions[1], positions[3]))
+                {
+                    IFace ABC = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
+                    IFace ACD = CreateFace(new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
+                    AddFace(ABC);
+                    AddFace(ACD);
+                }
+                else
+                {
+                    IFace ABD = CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
+                    IFace BCD = CreateFace(new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
+                    AddFace(ABD);
+                    AddFace(BCD);
+                }
+            }
+        }
+
 
         /// <summary>
         /// Adds a face to edges.  This is a virtual method so that 2D meshes can throw an error if an edge has more than two faces

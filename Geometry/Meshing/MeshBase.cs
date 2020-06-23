@@ -28,8 +28,8 @@ namespace Geometry.Meshing
     public interface IMesh2D<VERTEX> : IReadOnlyMesh2D<VERTEX>, IMesh<VERTEX>
         where VERTEX : IVertex2D
     {
-
-}
+        
+    }
 
     public interface IReadOnlyMesh2D<out VERTEX> : IReadOnlyMesh<VERTEX>
     where VERTEX : IVertex2D
@@ -108,6 +108,8 @@ namespace Geometry.Meshing
         void AddFaces(ICollection<IFace> faces);
 
         void RemoveFace(IFace f);
+
+        void SplitFace(IFace face);
     }
 
     /*
@@ -637,6 +639,8 @@ namespace Geometry.Meshing
         { 
             return face.Edges.SelectMany(e => this[e].Faces.Where(f => f != face)).ToArray();
         }
+
+        public abstract void SplitFace(IFace face);
 
 
 
