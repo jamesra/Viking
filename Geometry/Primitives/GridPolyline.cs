@@ -10,11 +10,27 @@ namespace Geometry
     /// <summary>
     /// A set of lines where the endpoint of each line in the set is the starting point of the next
     /// </summary>
-    public class GridPolyline : IPolyLine2D
+    public class GridPolyline : IPolyLine2D, IEquatable<GridPolyline>
     {
         protected List<IPoint2D> _Points;
 
         public readonly bool AllowsSelfIntersection = false;
+
+        private GridLineSegment? KnownSelfIntersection;
+
+        public bool HasSelfIntersection
+        {
+            get
+            {
+                if (AllowsSelfIntersection == false)
+                    return false;
+
+                if (KnownSelfIntersection.HasValue)
+                    return true;
+
+                return false;
+            }
+        }
 
         private RTree.RTree<GridLineSegment> rTree = null;
 
@@ -35,29 +51,24 @@ namespace Geometry
         public GridPolyline(IEnumerable<IPoint2D> points, bool AllowSelfIntersection = false)
         {
             this.AllowsSelfIntersection = AllowSelfIntersection;
+             
+            _Points = new List<IPoint2D>(points.Count());
 
-            if (!AllowSelfIntersection)
+            foreach (var p in points)
             {
-                _Points = new List<IPoint2D>(points.Count());
-
-                foreach (var p in points)
-                {
-                    this.Add(p);
-                }
-            }
-            else
-            {
-                _Points = new List<Geometry.IPoint2D>(points);
-            }
+                this.Add(p);
+            } 
         }
 
-        public GridPolyline(IEnumerable<GridVector2> points)
+        public GridPolyline(IEnumerable<GridVector2> points, bool AllowSelfIntersection = false)
         {
-            _Points = new List<Geometry.IPoint2D>(points.Cast<IPoint2D>());
-            rTree = new RTree.RTree<GridLineSegment>();
-            foreach(GridLineSegment line in this.LineSegments)
+            this.AllowsSelfIntersection = AllowSelfIntersection;
+
+            _Points = new List<IPoint2D>(points.Count());
+
+            foreach (var p in points)
             {
-                rTree.Add(line.BoundingBox, line);
+                this.Add(p);
             }
         }
 
@@ -94,48 +105,48 @@ namespace Geometry
 
         public void Add(IPoint2D next)
         {
-            if (AllowsSelfIntersection)
+            if (rTree == null)
+                rTree = new RTree.RTree<GridLineSegment>();
+
+            if (_Points.Count == 0)
             {
                 _Points.Add(next);
                 return;
             }
-            else
+
+            //Figure out why we can't add and throw an exception
+            if (_Points.Contains(next))
+                throw new ArgumentException("Point already in Polyline that does not allow self-intersection");
+
+            GridLineSegment line = new GridLineSegment(_Points.Last(), next);
+
+            if (_Points.Count == 1)
             {
-                if (rTree == null)
-                    rTree = new RTree.RTree<GridLineSegment>();
-
-                if (_Points.Count == 0)
-                {
-                    _Points.Add(next);
-                    return;
-                }
-
-                //Figure out why we can't add and throw an exception
-                if (_Points.Contains(next))
-                    throw new ArgumentException("Point already in Polyline that does not allow self-intersection");
-
-                GridLineSegment line = new GridLineSegment(_Points.Last(), next);
-
-                if (_Points.Count == 1)
-                {
-                    _Points.Add(next);
-                    rTree.Add(line.BoundingBox, line);
-                }
-                else
-                {
-                    List<GridLineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox);
-                    if (line.SelfIntersects(this.LineSegments.Where(l => intersectionCandidates.Contains(l)).ToList(), LineSetOrdering.POLYLINE))
-                    {
-                        throw new ArgumentException("Added point created self-intersecting line in Polyline");
-                    } 
-
-                    _Points.Add(next);
-                    var Existing = this.LineSegments;
-                    Existing.Add(line);
-                    rTree.Add(line.BoundingBox, line);
-                    this._LineSegments = Existing;
-                }
+                _Points.Add(next);
+                rTree.Add(line.BoundingBox, line);
             }
+            else if(AllowsSelfIntersection == false)
+            {
+                List<GridLineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox);
+
+                if (AllowsSelfIntersection == false || AllowsSelfIntersection && KnownSelfIntersection.HasValue == false)
+                {
+                    if (line.SelfIntersects(this.LineSegments.Where(l => intersectionCandidates.Contains(l)).ToList(), LineSetOrdering.POLYLINE, out GridLineSegment? intersected))
+                    {
+                        if (AllowsSelfIntersection == false)
+                            throw new ArgumentException("Added point created self-intersecting line in Polyline");
+                        else
+                            this.KnownSelfIntersection = intersected;
+                    }
+                }
+
+                _Points.Add(next);
+                var Existing = this.LineSegments;
+                Existing.Add(line);
+                rTree.Add(line.BoundingBox, line);
+                this._LineSegments = Existing;
+            }
+            
         }
 
         public double Area
@@ -231,6 +242,31 @@ namespace Geometry
         public GridPolyline Clone()
         {
             return new GridPolyline(this.Points.ToArray(), this.AllowsSelfIntersection);
+        }
+
+        public GridPolyline Smooth(uint NumInterpolations)
+        {
+            return this.CalculateCurvePoints(NumInterpolations);
+        }
+
+        public bool Equals(GridPolyline other)
+        {
+            if (object.ReferenceEquals(this, other))
+                return true;
+
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (this.PointCount != other.PointCount)
+                return false;
+
+            for(int i = 0; i < this.PointCount; i++)
+            {
+                if (this._Points[i] != other._Points[i])
+                    return false;
+            }
+
+            return true;
         }
     }
 }
