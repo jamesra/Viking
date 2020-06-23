@@ -831,8 +831,10 @@ namespace Geometry
         /// <param name="lines">A set of lines</param>
         /// <param name="order">Information as to how the lines are connected. </param>
         /// <returns></returns>
-        public static bool SelfIntersects(this GridLineSegment addition, IReadOnlyList<GridLineSegment> lines, LineSetOrdering order)
+        public static bool SelfIntersects(this GridLineSegment addition, IReadOnlyList<GridLineSegment> lines, LineSetOrdering order, out GridLineSegment? intersected)
         {
+            intersected = null;
+
             for (int iLine = 0; iLine < lines.Count; iLine++)
             {
                 GridLineSegment line = lines[iLine];
@@ -849,10 +851,27 @@ namespace Geometry
                 bool EndpointsOnRingDoNotIntersect = order.IsEndpointIntersectionExpected(iLine, lines.Count, lines.Count+1);
 
                 if (line.Intersects(addition, EndpointsOnRingDoNotIntersect: EndpointsOnRingDoNotIntersect))
+                {
+                    intersected = line;
                     return true;
+                }   
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Return true if the passed test line intersects any of the set of other lines, which may be part of a closed or polyline.
+        /// In the case of a polyline or closed line, the test line is considered to be the last element of the set, and the set 
+        /// is assumed to not have any self-intersections already.
+        /// </summary>
+        /// <param name="test">The line being checked</param>
+        /// <param name="lines">A set of lines</param>
+        /// <param name="order">Information as to how the lines are connected. </param>
+        /// <returns></returns>
+        public static bool SelfIntersects(this GridLineSegment addition, IReadOnlyList<GridLineSegment> lines, LineSetOrdering order)
+        {
+            return SelfIntersects(addition, lines, order, out GridLineSegment? intersected);
         }
 
         /// <summary>
