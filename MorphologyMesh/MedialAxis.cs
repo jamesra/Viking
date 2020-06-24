@@ -99,6 +99,14 @@ namespace MorphologyMesh
             return BuildGraphFromMesh2D(mesh, boundary);
         }
 
+        /// <summary>
+        /// Converts a triangulation of a polygon into an approximated medial axis graph. 
+        /// This is 
+        /// 
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="boundary"></param>
+        /// <returns></returns>
         private static MedialAxisGraph BuildGraphFromMesh2D(IReadOnlyMesh2D<IVertex2D> mesh, GridPolygon boundary)
         {
             MedialAxisGraph graph = new MedialAxisGraph();
@@ -108,7 +116,7 @@ namespace MorphologyMesh
                 //Create a vertex at the edge midpoint
                 GridLineSegment line = mesh.ToGridLineSegment(edge);
 
-                //If the line is between two different shapes we add a node to the graph
+                //If the line is not part of the polygons outer or inner ring and falls within the polygon (In rare edge cases it can be outside the polygon even though it should have been trimmed by the triangulation) we should add it to the graph.
                 if (false == boundary.IsExteriorOrInteriorSegment(line) && boundary.ContainsExt(line.Bisect()) == OverlapType.CONTAINED)
                 {
                     MedialAxisVertex node = GetOrAddLineBisectorVertex(graph, line);
