@@ -14,38 +14,131 @@ namespace VikingXNAGraphics
         public enum Techniques
         {
             /// <summary>
-            /// Color defined by effect. Luma blend defined by effect.
+            /// Color defined by effect. 
+            /// Normal alpha blending
             /// </summary>
-            EffectColorOverBackgroundValueOverlayEffect,
+            SingleColorAlphaOverlayEffect,
             /// <summary>
-            /// Color defined by effect.  Greyscale + Alpha texture defines blending
-            /// Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
+            /// Color defined by vertex. 
+            /// Normal alpha blending
             /// </summary>
-            EffectColorTextureOverBackgroundValueOverlayEffect,
+            VertexColorAlphaOverlayEffect,
             /// <summary>
-            /// Color defined by vertex. Luma blend defined by effect.
+            /// Color defined by RGBA Texture
+            /// Normal alpha blending
             /// </summary>
-            VertexColorOverBackgroundValueOverlayEffect,
+            TextureAlphaOverlayEffect,
             /// <summary>
-            /// Color defined by vertex, Texture defines blending
+            /// Color defined by effect
+            /// Level defined by grayscale texture
+            /// Alpha defined by texture
             /// </summary>
-            VertexColorTextureOverBackgroundValueOverlayEffect,
+            SingleColorTextureAlphaOverlayEffect,
             /// <summary>
-            /// Rendering limited to unit circle.  Color defined by effect. Luma blend defined by effect.
+            /// Color defined by vertex
+            /// Level defined by grayscale texture (Color * texture)
+            /// Alpha defined by texture
             /// </summary>
-            CircleEffectColorOverBackgroundValueOverlayEffect,
+            VertexColorTextureAlphaOverlayEffect,
+
             /// <summary>
-            /// Rendering limited to unit circle.  Color defined by effect.  Texture defines luma blending
+            /// Color defined by effect. 
+            /// Normal alpha blending
+            /// Output limited to unit circle
             /// </summary>
-            CircleEffectColorTextureOverBackgroundValueOverlayEffect,
+            CircleSingleColorAlphaOverlayEffect,
             /// <summary>
-            /// Rendering limited to unit circle.  Color defined by vertex. Luma blend defined by effect.
+            /// Color defined by vertex. 
+            /// Normal alpha blending
+            /// Output limited to unit circle
             /// </summary>
-            CircleVertexColorOverBackgroundValueOverlayEffect,
+            CircleVertexColorAlphaOverlayEffect,
             /// <summary>
-            /// Rendering limited to unit circle.  Color defined by vertex.  Texture defines luma blending
+            /// Color defined by RGBA Texture
+            /// Normal alpha blending
+            /// Output limited to unit circle
             /// </summary>
-            CircleVertexColorTextureOverBackgroundValueOverlayEffect
+            CircleTextureAlphaOverlayEffect,
+            /// <summary>
+            /// Color defined by effect
+            /// Level defined by grayscale texture
+            /// Alpha defined by texture
+            /// Output limited to unit circle
+            /// </summary>
+            CircleSingleColorTextureAlphaOverlayEffect,
+            /// <summary>
+            /// Color defined by vertex
+            /// Level defined by grayscale texture (Color * texture)
+            /// Alpha defined by texture
+            /// Output limited to unit circle
+            /// </summary>
+            CircleVertexColorTextureAlphaOverlayEffect,
+
+            /// <summary>
+            /// Color defined by effect. 
+            /// Background luma determines blending
+            /// </summary>
+            SingleColorLumaOverlayEffect,
+            /// <summary>
+            /// Color defined by vertex. 
+            /// Background luma determines blending
+            /// </summary>
+            VertexColorLumaOverlayEffect,
+            /// <summary>
+            /// Color defined by RGBA Texture
+            /// Background luma determines blending
+            /// </summary>
+            TextureLumaOverlayEffect,
+            /// <summary>
+            /// Color defined by effect
+            /// Level defined by grayscale texture
+            /// Background luma determines blending
+            /// Alpha defined by texture
+            /// </summary>
+            SingleColorTextureLumaOverlayEffect,
+            /// <summary>
+            /// Color defined by vertex
+            /// Level defined by grayscale texture (Color * texture)
+            /// Background luma determines blending
+            /// Alpha defined by texture
+            /// </summary>
+            VertexColorTextureLumaOverlayEffect,
+
+
+            /// <summary>
+            /// Color defined by effect. 
+            /// Background luma determines blending
+            /// Output limited to unit circle
+            /// </summary>
+            CircleSingleColorLumaOverlayEffect,
+            /// <summary>
+            /// Color defined by vertex. 
+            /// Background luma determines blending
+            /// Output limited to unit circle
+            /// </summary>
+            CircleVertexColorLumaOverlayEffect,
+            /// <summary>
+            /// Color defined by RGBA Texture
+            /// Background luma determines blending
+            /// Output limited to unit circle
+            /// </summary>
+            CircleTextureLumaOverlayEffect,
+            /// <summary>
+            /// Color defined by effect
+            /// Level defined by grayscale texture
+            /// Background luma determines blending
+            /// Alpha defined by texture
+            /// Output limited to unit circle
+            /// </summary>
+            CircleSingleColorTextureLumaOverlayEffect,
+            /// <summary>
+            /// Color defined by vertex
+            /// Level defined by grayscale texture (Color * texture)
+            /// Background luma determines blending
+            /// Alpha defined by texture
+            /// Output limited to unit circle
+            /// </summary>
+            CircleVertexColorTextureLumaOverlayEffect
         };
 
         public Effect effect;
@@ -110,11 +203,11 @@ namespace VikingXNAGraphics
                 effect.CurrentTechnique = effect.Techniques[techniqueName];
                 /*switch (value)
                 {
-                    case Techniques.RGBCircleOverBackgroundValueOverlayEffect:
-                        effect.CurrentTechnique = effect.Techniques["RGBCircleOverBackgroundValueOverlayEffect"];
+                    case Techniques.RGBCircleLumaOverlayEffect:
+                        effect.CurrentTechnique = effect.Techniques["RGBCircleLumaOverlayEffect"];
                         break;
-                    case Techniques.RGBTextureOverBackgroundValueOverlayEffect:
-                        effect.CurrentTechnique = effect.Techniques["RGBTextureOverBackgroundValueOverlayEffect"];
+                    case Techniques.RGBTextureLumaOverlayEffect:
+                        effect.CurrentTechnique = effect.Techniques["RGBTextureLumaOverlayEffect"];
                         break;
                     default:
                         throw new ArgumentException("Unknown technique");
@@ -150,7 +243,7 @@ namespace VikingXNAGraphics
         {
             this.effect = content.Load<Effect>("BillboardAnnotation");
             LoadParameters(this.effect);
-            //this.Technique = Techniques.EffectColorOverBackgroundValueOverlayEffect;
+            //this.Technique = Techniques.EffectColorLumaOverlayEffect;
         }
 
         /*
@@ -160,7 +253,7 @@ namespace VikingXNAGraphics
 
             obj.effect = effect;
             obj.LoadParameters(effect);
-            obj.Technique = Techniques.RGBTextureOverBackgroundValueOverlayEffect;
+            obj.Technique = Techniques.RGBTextureLumaOverlayEffect;
 
             return obj;
         }

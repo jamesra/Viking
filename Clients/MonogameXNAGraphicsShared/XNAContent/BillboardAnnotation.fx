@@ -5,7 +5,7 @@
 #include "HSLRGBLib.fx"
 #include "OverlayShaderShared.fx"
 
-uniform const float radiusSquared = 0.5*0.5;
+uniform const float radiusSquared = 1;
 
 uniform const float borderStartRadius = 0.475;
 uniform const float borderStartSquared = 0.475 * 0.475;
@@ -23,6 +23,10 @@ uniform const float borderBlendStartSquared = 0.45 * 0.45;
 //The program determines the hue via converting the RGB color attribute of the vertex.
 //The alpha channel of vertex color indicates how much the texture value is blended with the background value.
 
+
+/////////////////////////////////////////////////////
+// Vertex Shader Input
+/////////////////////////////////////////////////////
 
 //Input is always expected to be four corners at -1,-1 and 1,1
 struct VertexShaderInput
@@ -53,6 +57,10 @@ struct ColorTextureVertexShaderInput
 };
 
 
+/////////////////////////////////////////////////////
+// Vertex Shader Output
+/////////////////////////////////////////////////////
+
 //Output for vertex shader when color is set by vertex or effect
 struct SolidVertexShaderOutput
 {
@@ -68,7 +76,7 @@ struct TextureVertexShaderOutput
 	float2 TexCoord : TEXCOORD0;
 	float2 CenterDistance : TEXCOORD1;
 };
- 
+
 //Output for vertex shader when color is set by vertex or effect but blended depending on 
 //the grayscale texture luminance
 struct ColorizedGrayscaleTextureVertexShaderOutput
@@ -80,6 +88,19 @@ struct ColorizedGrayscaleTextureVertexShaderOutput
 };
 
 
+/////////////////////////////////////////////////////
+// Pixel Shader Input
+/////////////////////////////////////////////////////
+
+//Input for a pixel shader that pulls color from a texture
+struct TexturePixelShaderInput
+{
+	float4 Position : POSITION0;
+	float2 TexCoord : TEXCOORD0;
+	float2 CenterDistance : TEXCOORD1;
+};
+
+//Input for a pixel shader that pulls color from a vertex or the effect and renders a solid color
 struct SolidColorPixelShaderInput
 {
 	float4 Position : POSITION0;
@@ -88,8 +109,8 @@ struct SolidColorPixelShaderInput
 	float2 CenterDistance : TEXCOORD0;
 };
 
-
-struct TexturePixelShaderInput
+//Input for a pixel shader that pulls color from a vertex or the effect and adjusts blending using a grayscale texture
+struct LumaTexturePixelShaderInput
 {
 	float4 Position : POSITION0;
 	float4 HSLColor : COLOR0;
@@ -98,6 +119,11 @@ struct TexturePixelShaderInput
 	float2 ScreenTexCoord : SV_Position;
 };
 
+
+/////////////////////////////////////////////////////
+// Pixel Shader Output
+/////////////////////////////////////////////////////
+
 struct PixelShaderOutput
 {
 	float4 Color : COLOR0;
@@ -105,18 +131,49 @@ struct PixelShaderOutput
 };
 
 
+////////////////
+//Vertex Shaders
+////////////////
+
+
+//Color is taken from effect parameter
 SolidVertexShaderOutput EffectColorVertexShaderFunction(VertexShaderInput input)
 {
 	SolidVertexShaderOutput output;
 	output.CenterDistance = input.Position.xy;
 	output.Position = mul(input.Position, mWorldViewProj);
 	output.HSLColor = AnnotationHSLColor;  //output.HSLColor = RGBToHCL(input.Color);
-	 
+
+	return output;
+}
+
+//Color is taken from vertex
+SolidVertexShaderOutput ColorVertexShaderFunction(ColorVertexShaderInput input)
+{
+	SolidVertexShaderOutput output;
+	output.CenterDistance = input.Position.xy;
+	output.Position = mul(input.Position, mWorldViewProj);
+	output.HSLColor = input.Color;  //output.HSLColor = RGBToHCL(input.Color);
+
 	return output;
 }
 
 
-ColorizedGrayscaleTextureVertexShaderOutput EffectColorTextureVertexShaderFunction(TextureVertexShaderInput input)
+//Color is taken from texture
+TextureVertexShaderOutput TextureShaderFunction(TextureVertexShaderInput input)
+{
+	TextureVertexShaderOutput output;
+	output.TexCoord = input.TexCoord;
+	output.Position = mul(input.Position, mWorldViewProj);
+	output.CenterDistance = input.TexCoord.xy - 0.5;
+	return output;
+}
+
+
+
+//Color is taken from effect parameter
+//Texture is present
+ColorizedGrayscaleTextureVertexShaderOutput EffectColorLumaTextureVertexShaderFunction(TextureVertexShaderInput input)
 {
 	ColorizedGrayscaleTextureVertexShaderOutput output;
 	output.TexCoord = input.TexCoord;
@@ -128,18 +185,9 @@ ColorizedGrayscaleTextureVertexShaderOutput EffectColorTextureVertexShaderFuncti
 }
 
 
-SolidVertexShaderOutput ColorVertexShaderFunction(ColorVertexShaderInput input)
-{
-	SolidVertexShaderOutput output;
-	output.CenterDistance = input.Position.xy;
-	output.Position = mul(input.Position, mWorldViewProj);
-	output.HSLColor = input.Color;  //output.HSLColor = RGBToHCL(input.Color);
-	 
-	return output;
-}
-
-
-ColorizedGrayscaleTextureVertexShaderOutput TextureColorVertexShaderFunction(ColorTextureVertexShaderInput input)
+//Color is taken from vertex
+//Texture is present
+ColorizedGrayscaleTextureVertexShaderOutput VertexColorLumaTextureVertexShaderFunction(ColorTextureVertexShaderInput input)
 {
 	ColorizedGrayscaleTextureVertexShaderOutput output;
 	output.TexCoord = input.TexCoord;
@@ -148,7 +196,7 @@ ColorizedGrayscaleTextureVertexShaderOutput TextureColorVertexShaderFunction(Col
 	output.CenterDistance = input.TexCoord.xy - 0.5;
 
 	return output;
-} 
+}
 
 
 float CenterDistanceSquared(float2 CenterDistance)
@@ -158,6 +206,10 @@ float CenterDistanceSquared(float2 CenterDistance)
 	return (XDist * XDist) + (YDist * YDist);
 }
 
+
+///////////////
+//Pixel Shaders
+///////////////
 
 //Renders the billboard verts as a solid color and uses the graphics device alpha blend settings
 PixelShaderOutput SolidColorPixelShaderFunction(SolidColorPixelShaderInput input)
@@ -177,15 +229,13 @@ PixelShaderOutput SolidColorCirclePixelShaderFunction(SolidColorPixelShaderInput
 	float CenterDistSquared = CenterDistanceSquared(input.CenterDistance);
 	clip(CenterDistSquared > radiusSquared ? -1 : 1); //remove pixels outside the circle
 
-	output.Depth = input.CenterDistance.x + input.CenterDistance.y;
-	output.Color = HCLToRGB(input.HSLColor);
-	output.Color.a = input.HSLColor.a;
+	output = SolidColorPixelShaderFunction(input);
 	return output;
 }
 
-//Draws a texture on a billboard.  Textures are a greyscale+Alpha image
-//Uses the graphics device alpha blend settings
-PixelShaderOutput RGBATexturePixelShaderFunction(TexturePixelShaderInput input)
+//Draws a texture on a billboard.  Directly maps textures RGBA values to output.
+//Uses the graphics device blend settings
+PixelShaderOutput TexturePixelShaderFunction(TexturePixelShaderInput input)
 {
 	//Blends a greyscale texture, where the grey value indicates luma.
 	PixelShaderOutput output;
@@ -198,24 +248,48 @@ PixelShaderOutput RGBATexturePixelShaderFunction(TexturePixelShaderInput input)
 	return output;
 }
 
-//Draws a texture on a billboard.  Any pixels outside the unit circle are clipped.
+//Draws a texture on a billboard.  Directly maps textures RGBA values to output.  Any pixels outside the unit circle are clipped.
 //Uses the graphics device alpha blend settings
-PixelShaderOutput CircleTextureOverBackgroundLumaPixelShaderFunction(TexturePixelShaderInput input)
+PixelShaderOutput CircleTexturePixelShaderFunction(TexturePixelShaderInput input)
 {
 	//Blends a greyscale texture, where the grey value indicates luma.
 	PixelShaderOutput output;
 	float CenterDistSquared = CenterDistanceSquared(input.CenterDistance);
 	clip(CenterDistSquared > radiusSquared ? -1 : 1); //remove pixels outside the circle
+	output = TexturePixelShaderFunction(input);
 	output.Depth = CenterDistSquared;
+
+	return output;
+}
+
+//Draws a grayscale texture on a billboard.  Multiplies input.Color by Grayscale value to determine output color
+//Uses the graphics device blend settings
+PixelShaderOutput GrayscaleTexturePixelShaderFunction(LumaTexturePixelShaderInput input)
+{
+	//Blends a greyscale texture, where the grey value indicates luma.
+	PixelShaderOutput output;
+	output.Depth = input.CenterDistance.x + input.CenterDistance.y;
 
 	float4 RGBColor = tex2D(AnnotationTextureSampler, input.TexCoord);
 	clip(RGBColor.a <= 0.0 ? -1.0 : 1.0);
+	output.Color = RGBColor.r *  HCLToRGB(input.HSLColor);
+	output.Color.a = RGBColor.a;
 
-	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
+	return output;
+}
 
-	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy)));
-	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
-	output.Color.a = RGBColor.r * input.HSLColor.a;
+//Draws a grayscale texture on a billboard.  Multiplies input.Color by Grayscale value to determine output color
+//Any pixels outside the unit circle are clipped.
+//Uses the graphics device alpha blend settings
+PixelShaderOutput CircleGrayscaleTexturePixelShaderFunction(LumaTexturePixelShaderInput input)
+{
+	//Blends a greyscale texture, where the grey value indicates luma.
+	PixelShaderOutput output;
+	float CenterDistSquared = CenterDistanceSquared(input.CenterDistance);
+	clip(CenterDistSquared > radiusSquared ? -1 : 1); //remove pixels outside the circle
+
+	output = GrayscaleTexturePixelShaderFunction(input);
+	output.Depth = CenterDistSquared; 
 
 	return output;
 }
@@ -225,8 +299,8 @@ PixelShaderOutput CircleTextureOverBackgroundLumaPixelShaderFunction(TexturePixe
 //The pixel shaders below this point blend with the background texture by using my HSL blending technique
 
 PixelShaderOutput SolidColorOverBackgroundLumaPixelShaderFunction(SolidColorPixelShaderInput input)
-{ 
-	PixelShaderOutput output; 
+{
+	PixelShaderOutput output;
 
 	output.Depth = input.CenterDistance.x + input.CenterDistance.y;
 
@@ -236,89 +310,216 @@ PixelShaderOutput SolidColorOverBackgroundLumaPixelShaderFunction(SolidColorPixe
 	return output;
 }
 
+
+//Draws a solid color circle.  Any pixels outside the unit circle are clipped
+PixelShaderOutput SolidColorCircleOverBackgroundLumaPixelShaderFunction(SolidColorPixelShaderInput input)
+{
+	PixelShaderOutput output;
+	float CenterDistSquared = CenterDistanceSquared(input.CenterDistance); 
+	clip(CenterDistSquared > radiusSquared ? -1 : 1); //remove pixels outside the circle
+	output = SolidColorOverBackgroundLumaPixelShaderFunction(input);
+	output.Depth = CenterDistSquared;
+	return output;
+}
+
+
 //Draws a texture on a billboard.  Textures are a greyscale+Alpha image
 //Color is from the pixel input, Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
-PixelShaderOutput RGBATextureOverBackgroundLumaPixelShaderFunction(TexturePixelShaderInput input)
+//To use this one should render a RGB texture to an HSL version.  Then pass the HSL texture to this shader
+PixelShaderOutput HSLATextureOverBackgroundLumaPixelShaderFunction(LumaTexturePixelShaderInput input)
 {
 	//Blends a greyscale texture, where the grey value indicates luma.
 	PixelShaderOutput output;
 	output.Depth = input.CenterDistance.x + input.CenterDistance.y;
 
-	float4 RGBColor = tex2D(AnnotationTextureSampler, input.TexCoord);  
-	clip(RGBColor.a <= 0.0 ? -1.0 : 1.0); 
+	float4 HSLColor = tex2D(AnnotationTextureSampler, input.TexCoord);
+	clip(HSLColor.a <= 0.0 ? -1.0 : 1.0);
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
-
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy)));
-	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
-	output.Color.a = RGBColor.r * input.HSLColor.a;
+	output.Color = BlendHSLColorOverBackground(HSLColor, RGBBackgroundColor, 1.0f - HSLColor.a);
+	output.Color.a = 1.0;
 
 	return output;
 }
 
-//Draws a solid color circle.  Any pixels outside the unit circle are clipped
-PixelShaderOutput SolidColorCircleOverBackgroundLumaPixelShaderFunction(SolidColorPixelShaderInput input)
-{ 
+
+
+//Draws a texture on a billboard.  Any pixels outside the unit circle are clipped.  Textures are a greyscale+Alpha image
+//Color is from the pixel input, Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
+PixelShaderOutput CircleHSLATextureOverBackgroundLumaPixelShaderFunction(LumaTexturePixelShaderInput input)
+{
+	//Blends a greyscale texture, where the grey value indicates luma.
 	PixelShaderOutput output;
 	float CenterDistSquared = CenterDistanceSquared(input.CenterDistance);
-
 	clip(CenterDistSquared > radiusSquared ? -1 : 1); //remove pixels outside the circle
+	output = HSLATextureOverBackgroundLumaPixelShaderFunction(input);
 	output.Depth = CenterDistSquared;
-	//output.Depth = 0;
 
-	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / RenderTargetSize.xy));
-	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, InputLumaAlpha);
-	output.Color.a = input.HSLColor.a;
+	return output;
+}
+
+
+//Draws a texture on a billboard.  Textures are a greyscale+Alpha image
+//Color is from the pixel input, Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
+PixelShaderOutput GrayscaleTextureOverBackgroundLumaPixelShaderFunction(LumaTexturePixelShaderInput input)
+{
+	//Blends a greyscale texture, where the grey value indicates luma.
+	PixelShaderOutput output;
+	output.Depth = input.CenterDistance.x + input.CenterDistance.y;
+
+	float4 RGBColor = tex2D(AnnotationTextureSampler, input.TexCoord);
+	clip(RGBColor.a <= 0.0 ? -1.0 : 1.0);
+
+	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
+	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy)));
+	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
+	output.Color.a = RGBColor.r * input.HSLColor.a;
+
 	return output;
 }
 
 
 //Draws a texture on a billboard.  Any pixels outside the unit circle are clipped.  Textures are a greyscale+Alpha image
 //Color is from the pixel input, Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
-PixelShaderOutput CircleTextureOverBackgroundLumaPixelShaderFunction(TexturePixelShaderInput input)
+PixelShaderOutput CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction(LumaTexturePixelShaderInput input)
 {
 	//Blends a greyscale texture, where the grey value indicates luma.
 	PixelShaderOutput output;
 	float CenterDistSquared = CenterDistanceSquared(input.CenterDistance);
 	clip(CenterDistSquared > radiusSquared ? -1 : 1); //remove pixels outside the circle
+	output = GrayscaleTextureOverBackgroundLumaPixelShaderFunction(input);
 	output.Depth = CenterDistSquared;
-	
-	float4 RGBColor = tex2D(AnnotationTextureSampler, input.TexCoord);
-	clip(RGBColor.a <= 0.0 ? -1.0 : 1.0);
-
-	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
-
-	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy)));
-	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
-	output.Color.a = RGBColor.r * input.HSLColor.a;
 
 	return output;
 }
 
 
 
+////////////////////////////////////////////
+// Standard alpha blending billboard effects
+////////////////////////////////////////////
+
+technique SingleColorAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 EffectColorVertexShaderFunction();
+		PixelShader = compile ps_3_0 SolidColorPixelShaderFunction();
+	}
+}
 
 
-technique EffectColorOverBackgroundValueOverlayEffect
+technique VertexColorAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 ColorVertexShaderFunction();
+		PixelShader = compile ps_3_0 SolidColorPixelShaderFunction();
+	}
+}
+
+
+technique TextureAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 TextureShaderFunction();
+		PixelShader = compile ps_3_0 TexturePixelShaderFunction();
+	}
+}
+
+
+technique SingleColorTextureAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 EffectColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_3_0 GrayscaleTexturePixelShaderFunction();
+	}
+}
+
+
+technique VertexColorTextureAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 VertexColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_3_0 GrayscaleTexturePixelShaderFunction();
+	}
+}
+
+////////////////////////////////////////////
+// Standard alpha blending circle effects
+////////////////////////////////////////////
+
+
+technique CircleSingleColorAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 EffectColorVertexShaderFunction();
+		PixelShader = compile ps_3_0 SolidColorCirclePixelShaderFunction();
+	}
+}
+
+
+technique CircleVertexColorAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 ColorVertexShaderFunction();
+		PixelShader = compile ps_3_0 SolidColorCirclePixelShaderFunction();
+	}
+}
+
+
+technique CircleTextureAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 TextureShaderFunction();
+		PixelShader = compile ps_3_0 CircleTexturePixelShaderFunction();
+	}
+}
+
+
+technique CircleSingleColorTextureAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 EffectColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_3_0 CircleGrayscaleTexturePixelShaderFunction();
+	}
+}
+
+
+technique CircleVertexColorTextureAlphaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 VertexColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_3_0 CircleGrayscaleTexturePixelShaderFunction();
+	}
+}
+
+
+////////////////////////////////////////
+// Luma overlay effect definitions below
+////////////////////////////////////////
+
+
+technique SingleColorLumaOverlayEffect
 {
 	pass
 	{
 		VertexShader = compile vs_3_0 EffectColorVertexShaderFunction();
 		PixelShader = compile ps_3_0 SolidColorOverBackgroundLumaPixelShaderFunction();
 	}
-
 }
 
-technique EffectColorTextureOverBackgroundValueOverlayEffect
-{
-	pass
-	{
-		VertexShader = compile vs_3_0 EffectColorTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 RGBATextureOverBackgroundLumaPixelShaderFunction();
-	}
-}
 
-technique VertexColorOverBackgroundValueOverlayEffect
+technique VertexColorLumaOverlayEffect
 {
 	pass
 	{
@@ -327,36 +528,54 @@ technique VertexColorOverBackgroundValueOverlayEffect
 	}
 }
 
-technique VertexColorTextureOverBackgroundValueOverlayEffect
+
+technique TextureLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 TextureColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 RGBATextureOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_3_0 TextureShaderFunction();
+		PixelShader = compile ps_3_0 HSLATextureOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
 
-technique CircleEffectColorOverBackgroundValueOverlayEffect
+technique SingleColorTextureLumaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 EffectColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_3_0 GrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+	}
+}
+
+
+technique VertexColorTextureLumaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 VertexColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_3_0 GrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+	}
+}
+
+
+
+////////////////////////////////////////
+// Circle Luma overlay effect definitions below
+////////////////////////////////////////
+
+
+technique CircleSingleColorLumaOverlayEffect
 {
 	pass
 	{
 		VertexShader = compile vs_3_0 EffectColorVertexShaderFunction();
 		PixelShader = compile ps_3_0 SolidColorCircleOverBackgroundLumaPixelShaderFunction();
 	}
-
 }
 
-technique CircleEffectColorTextureOverBackgroundValueOverlayEffect
-{
-	pass
-	{
-		VertexShader = compile vs_3_0 EffectColorTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 CircleTextureOverBackgroundLumaPixelShaderFunction();
-	}
-}
 
-technique CircleVertexColorOverBackgroundValueOverlayEffect
+technique CircleVertexColorLumaOverlayEffect
 {
 	pass
 	{
@@ -365,11 +584,32 @@ technique CircleVertexColorOverBackgroundValueOverlayEffect
 	}
 }
 
-technique CircleVertexColorTextureOverBackgroundValueOverlayEffect
+
+technique CircleTextureLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 TextureColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 CircleTextureOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_3_0 TextureShaderFunction();
+		PixelShader = compile ps_3_0 CircleHSLATextureOverBackgroundLumaPixelShaderFunction();
+	}
+}
+
+
+technique CircleSingleColorTextureLumaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 EffectColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_3_0 CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+	}
+}
+
+
+technique CircleVertexColorTextureLumaOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_3_0 VertexColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_3_0 CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction();
 	}
 }
