@@ -30,16 +30,21 @@ namespace Geometry.Meshing
         GridVector2 Position { get; }
     }
 
+    public interface INormal
+    {
+        GridVector3 Normal { get; }
+    }
+
     public interface IVertex2D<out T> : IVertex2D
     {
         T Data { get; }
     }
 
 
-    public interface IVertex3D : IVertex, IComparable<IVertex3D>, IEquatable<IVertex3D>
+    public interface IVertex3D : IVertex, INormal, IComparable<IVertex3D>, IEquatable<IVertex3D>
     {
         GridVector3 Position { get; set; }
-        GridVector3 Normal { get; set; }
+        new GridVector3 Normal { get; set; }
     }
 
     public interface IVertex3D<out T> : IVertex3D
