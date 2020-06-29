@@ -564,7 +564,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Angle to B from A
+        /// Angle to B from A from the X-Axis
         /// </summary>
         /// <param name="A"></param>
         /// <param name="B"></param>
