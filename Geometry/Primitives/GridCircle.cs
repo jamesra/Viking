@@ -184,8 +184,7 @@ namespace Geometry
             else if (det >= 0 && det <= Global.EpsilonSquared)
                 return OverlapType.TOUCHING;
             else
-                return OverlapType.NONE;
-
+                return OverlapType.NONE; 
         }
 
         /// <summary>
@@ -221,7 +220,7 @@ namespace Geometry
 
                 if (det < 0)
                     results[i] = OverlapType.NONE;
-                else if (det < Global.EpsilonSquared)
+                else if (det <= Global.EpsilonSquared)
                     results[i] = OverlapType.TOUCHING;
                 else if (det > 0)
                     results[i] = OverlapType.CONTAINED;
@@ -293,6 +292,42 @@ namespace Geometry
             double YDist = p.Y - this.Center.Y;
 
             return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
+        }
+
+        public bool Contains(GridPolygon poly)
+        {
+            //if (this.BoundingBox.ContainsExt(poly.BoundingBox) == OverlapType.CONTAINED)
+            //    return true;
+
+            foreach(GridVector2 p in poly.ExteriorRing)
+            {
+                if (!this.Contains(p))
+                    return false;
+            }
+
+            return false;
+        }
+
+        public bool Contains(GridLineSegment line)
+        {   
+            if (!this.Contains(line.A))
+                return false;
+
+            if (!this.Contains(line.B))
+                return false;
+
+
+            return false;
+        }
+
+        /// <summary>
+        /// Returns true if the shape is entirely inside the circle
+        /// </summary>
+        /// <param name="shape"></param>
+        /// <returns></returns>
+        public bool Contains(IShape2D shape)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
