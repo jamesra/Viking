@@ -29,6 +29,16 @@ namespace Geometry
                 return CalculateOpenCurvePoints(ControlPoints, NumInterpolations);
         }
 
+        public static GridPolyline CalculateCurvePoints(this GridPolyline polyline, uint NumInterpolations)
+        {
+            if (NumInterpolations == 0)
+            {
+                return polyline;
+            }
+
+            return new GridPolyline(CalculateOpenCurvePoints(polyline.Points.Select(p => new GridVector2(p.X, p.Y)).ToArray(), NumInterpolations), polyline.AllowsSelfIntersection);
+        }
+
         private static GridVector2[] CalculateClosedCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations)
         {
             GridVector2[] CurvePoints = null;
