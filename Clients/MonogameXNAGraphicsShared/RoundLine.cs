@@ -409,8 +409,12 @@ namespace RoundLineCode
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];
 
+            VikingXNAGraphics.DeviceStateManager.SaveDeviceState(this.device);
+
             DrawOnConfiguredDevice(roundLine, lineRadius, lineColor, DefaultBlurThreshold);
-            
+
+            VikingXNAGraphics.DeviceStateManager.RestoreDeviceState(this.device);
+
             device.SetVertexBuffer(null);
             device.Indices = null;
         }
@@ -429,10 +433,14 @@ namespace RoundLineCode
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];
 
+            VikingXNAGraphics.DeviceStateManager.SaveDeviceState(this.device);
+
             for (int i = 0; i < roundLines.Length; i++)
             {
                 DrawOnConfiguredDevice(roundLines[i], lineRadius[i], lineColor[i], this.DefaultBlurThreshold);
             }
+
+            VikingXNAGraphics.DeviceStateManager.RestoreDeviceState(this.device);
 
             device.SetVertexBuffer(null);
             device.Indices = null;

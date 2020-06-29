@@ -7,7 +7,6 @@ using Geometry;
 
 namespace VikingXNAGraphics
 {
-
     /// <summary>
     /// This interface is implemented by objects that require hit-testing
     /// </summary>

@@ -169,3 +169,9 @@
 /processorParam:TextureFormat=NoChange
 /build:Circle2Plus.png
 
+#begin BillboardAnnotation.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:BillboardAnnotation.fx
+

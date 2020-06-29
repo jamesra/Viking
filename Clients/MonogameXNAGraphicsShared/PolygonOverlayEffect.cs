@@ -18,6 +18,8 @@ namespace VikingXNAGraphics
 
         public Effect effect;
 
+        public static implicit operator Effect(PolygonOverlayEffect e) => e.effect;
+
         private EffectParameter _WorldViewProjMatrix;
         private EffectParameter _BackgroundTexture;
         private EffectParameter _OverlayTexture;

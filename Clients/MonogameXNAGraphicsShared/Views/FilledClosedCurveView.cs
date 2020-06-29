@@ -55,9 +55,9 @@ namespace VikingXNAGraphics
             return mesh;
         }
 
-        public static void Draw(GraphicsDevice device, Scene scene, IEnumerable<FilledClosedCurvePolygonView> views)
+        public static void Draw(GraphicsDevice device, IScene scene, IEnumerable<FilledClosedCurvePolygonView> views)
         {
-            MeshView<VertexPositionColor>.Draw(device, scene, views.Select(v => v._mesh));
+            MeshView<VertexPositionColor>.Draw(device, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device), meshmodels: views.Select(v => v._mesh));
         }
     }
 }

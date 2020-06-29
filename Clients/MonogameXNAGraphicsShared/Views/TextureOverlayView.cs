@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using Geometry;
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {
@@ -24,13 +25,20 @@ namespace VikingXNAGraphics
         public Texture2D Texture;
         bool FlipTexture = false;
          
-        private GridRectangle _BoundingRect;
+        private GridRectangle _BoundingRect; 
 
         public GridRectangle BoundingRect
         {
-            get;
-            set;
-        } 
+            get { return _BoundingRect; }
+            set
+            {
+                if (_BoundingRect != value)
+                {
+                    _BoundingRect = value;
+                    ClearCachedData();
+                }
+            }
+        }
 
         public override GridVector2 Position
         {
@@ -71,18 +79,40 @@ namespace VikingXNAGraphics
             this.BoundingRect = boundingRect;
         }
 
+        public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
+        {
+            OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
+            if (overlayEffect == null)
+                return;
+
+            overlayEffect.Technique = Overlay == OverlayStyle.Alpha ?
+                    OverlayShaderEffect.Techniques.TextureAlphaOverlayEffect :
+                    OverlayShaderEffect.Techniques.TextureLumaOverlayEffect;
+
+            TextureOverlayView.Draw(device, scene, overlayEffect, items.Select(i => i as TextureOverlayView).Where(i => i != null).ToArray());
+        }
+
+        public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
+        {
+            OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
+            if (overlayEffect == null)
+                return;
+
+            overlayEffect.Technique = Overlay == OverlayStyle.Alpha ?
+                    OverlayShaderEffect.Techniques.TextureAlphaOverlayEffect :
+                    OverlayShaderEffect.Techniques.TextureLumaOverlayEffect;
+
+            TextureOverlayView.Draw(device, scene, overlayEffect, new TextureOverlayView[] { this });
+        }
 
         public static void Draw(GraphicsDevice device,
-                          VikingXNA.Scene scene,
-                          BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          VikingXNA.IScene scene,
+                          OverlayShaderEffect overlayEffect,
                           TextureOverlayView[] listToDraw)
         {
             if (listToDraw.Length == 0)
                 return;
-
-            BillboardViewBase.SetupGraphicsDevice(device, basicEffect, overlayEffect);
-
+              
             BlendState originalState = device.BlendState;
             device.BlendState = BlendState.NonPremultiplied;
 
@@ -90,29 +120,32 @@ namespace VikingXNAGraphics
             foreach (var textureGroup in textureGroups)
             {
                 TextureOverlayView[] views = textureGroup.ToArray();
-                overlayEffect.AnnotateWithTexture(textureGroup.Key);
-                basicEffect.Texture = textureGroup.Key;
 
-                int[] indicies;
-                VertexPositionColorTexture[] VertArray = AggregatePrimitives(views, out indicies);
+                //overlayEffect.AnnotateWithTexture(textureGroup.Key);
+                overlayEffect.AnnotationTexture = textureGroup.Key;
 
-                foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+                foreach (TextureOverlayView rv in listToDraw)
                 {
-                    pass.Apply();
+                    overlayEffect.AnnotationColorHSL = rv.HSLColor;
+                    overlayEffect.WorldViewProjMatrix = (rv.ModelMatrix * scene.World) * scene.ViewProj;
+                    //TODO: Use GlobalPrimitives and model matricies instead of verticies
 
-                    device.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
-                                                                                         VertArray,
-                                                                                         0,
-                                                                                         VertArray.Length,
-                                                                                         indicies,
-                                                                                         0,
-                                                                                         indicies.Length / 3);
+                    foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+                    {
+                        pass.Apply();
+
+                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
+                            0,
+                            0,
+                            6,
+                            0,
+                            2);
+                    }
                 }
             }
 
             device.BlendState = originalState;
-
-            //TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
         }
+
     }
 }

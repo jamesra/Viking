@@ -66,11 +66,14 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AnnotationLumaBlendingEffect.cs" />
     <Compile Include="AnnotationOverBackgroundLumaEffect.cs" />
     <Compile Include="Camera.cs" />
     <Compile Include="Camera3D.cs" />
     <Compile Include="ChannelOverlayEffect.cs" />
+    <Compile Include="Data\PointSet.cs" />
     <Compile Include="DeviceEffectStore.cs" />
+    <Compile Include="DeviceFontStore.cs" />
     <Compile Include="DrawExtensions.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Interfaces\IScene.cs" />
@@ -94,16 +97,23 @@
     <Compile Include="Views\DeviceStateManager.cs" />
     <Compile Include="Views\Extensions.cs" />
     <Compile Include="Views\Global.cs" />
+    <Compile Include="Views\Interfaces\ICanvasView.cs" />
     <Compile Include="Views\Interfaces\IColorView.cs" />
+    <Compile Include="Views\Interfaces\IRenderable.cs" />
     <Compile Include="Views\Interfaces\IScale.cs" />
     <Compile Include="Views\Interfaces\IText.cs" />
     <Compile Include="Views\Interfaces\IViewPosition.cs" />
+    <Compile Include="Views\Interfaces\IRenderInfo.cs" />
     <Compile Include="Views\LabelView.cs" />
     <Compile Include="Views\LineView.cs" />
     <Compile Include="Views\LinkedLineView.cs" />
     <Compile Include="Views\MeshView.cs" />
+    <Compile Include="Views\PointSetView.cs" />
+    <Compile Include="Views\PointViewBase.cs" />
     <Compile Include="Views\PolyLineView.cs" />
     <Compile Include="Views\SharedEffectFunctions.cs" />
+    <Compile Include="Views\SolidPolygonView.cs" />
+    <Compile Include="Views\TriangulationView.cs" />
   </ItemGroup>
   <ItemGroup>
     <MonoGameContentReference Include="MonogameContent\Content.mgcb">
@@ -150,6 +160,7 @@
     <None Include="MonogameContent\OverlayShaderShared.fx" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="MonogameContent\BillboardAnnotation.fx" />
     <Content Include="MonogameContent\LineCurvePixelShaderShared.fx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

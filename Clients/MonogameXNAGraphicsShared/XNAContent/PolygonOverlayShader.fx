@@ -15,7 +15,7 @@
 struct PolygonVertexShaderInput
 {
     float4 Position : POSITION0;
-    float4 Color : COLOR0;
+    float4 HSLColor : COLOR0;
 };
 
 struct VertexShaderOutput
@@ -42,7 +42,7 @@ VertexShaderOutput PolygonVertexShaderFunction(PolygonVertexShaderInput input)
 {
     VertexShaderOutput output; 
     output.Position = mul(input.Position, mWorldViewProj);
-    output.HSLColor = input.Color;
+    output.HSLColor = input.HSLColor;
 
     return output;
 }

@@ -268,7 +268,6 @@ technique Tubular
 		BlendOp = Add;
 		StencilFunc = Equal;
 		ZFunc = Equal;
-		StencilFunc = Equal;
 		vertexShader = compile vs_3_0 LineVertexShader();
 		pixelShader = compile ps_3_0 MyPSTubular();
 	}

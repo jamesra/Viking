@@ -49,7 +49,113 @@ namespace VikingXNAGraphics
 
         static readonly public int[] SquareIndicies = new int[] { 2, 1, 0, 3, 1, 2 };
 
-//        static public VertexDeclaration VertexPositionColorTextureDecl = null;
+        /// <summary>
+        /// Stores a unit circle/square index buffer for each device we know about.
+        /// </summary>
+        private static Dictionary<GraphicsDevice, IndexBuffer> unit_circle_index_buffers = new Dictionary<GraphicsDevice, IndexBuffer>();
+
+        /// <summary>
+        /// Gets the index buffer for unit square built with two triangles
+        /// </summary>
+        /// <param name="device"></param>
+        /// <returns></returns>
+        public static IndexBuffer GetUnitSquareIndexBuffer(GraphicsDevice device)
+        {
+            return GetUnitCircleIndexBuffer(device);
+        }
+
+        /// <summary>
+        /// Gets the index buffer for unit circle built with two triangles
+        /// </summary>
+        /// <param name="device"></param>
+        /// <returns></returns>
+        public static IndexBuffer GetUnitCircleIndexBuffer(GraphicsDevice device)
+        {
+            IndexBuffer ib = null;
+
+            if (unit_circle_index_buffers.ContainsKey(device))
+            {
+                ib = unit_circle_index_buffers[device];
+                if (ib.IsDisposed)
+                {
+                    unit_circle_index_buffers.Remove(device);
+                    ib = CreateUnitCircleIndexBuffer(device);
+                    unit_circle_index_buffers[device] = ib;
+                }
+
+                return ib;
+            }
+
+            ib = CreateUnitCircleIndexBuffer(device);
+            unit_circle_index_buffers[device] = ib;
+            return ib;
+        }
+         
+
+        public static IndexBuffer CreateUnitCircleIndexBuffer(GraphicsDevice device)
+        {
+            IndexBuffer ib = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, SquareIndicies.Length, BufferUsage.WriteOnly);
+            ib.SetData<int>(SquareIndicies);
+            return ib; 
+        }
+
+
+        /// <summary>
+        /// Stores a unit circle vertex buffer for each device we know about
+        /// </summary>
+        private static Dictionary<GraphicsDevice, VertexBuffer> unit_circle_vertex_buffers = new Dictionary<GraphicsDevice, VertexBuffer>();
+
+
+        // <summary>
+        /// Gets vertxe buffer of four vertcies with corners at -1,1.  
+        /// </summary>
+        /// <param name="device"></param>
+        /// <returns></returns>
+        public static VertexBuffer GetUnitSquareVertexBuffer(GraphicsDevice device)
+        {
+            return GetUnitCircleVertexBuffer(device);
+        }
+
+        // <summary>
+        /// Gets vertxe buffer of four vertcies with corners at -1,1.  Pixel shader should clip pixels outside the unit circle.
+        /// </summary>
+        /// <param name="device"></param>
+        /// <returns></returns>
+        public static VertexBuffer GetUnitCircleVertexBuffer(GraphicsDevice device)
+        {
+            VertexBuffer vb = null; 
+
+            if (unit_circle_vertex_buffers.ContainsKey(device))
+            {
+                vb = unit_circle_vertex_buffers[device];
+                if (vb.IsDisposed)
+                {
+                    unit_circle_vertex_buffers.Remove(device);
+                    vb = CreateUnitCircleVertexBuffer(device);
+                    unit_circle_vertex_buffers[device] = vb;
+                }
+
+                return vb;
+            }
+
+            vb = CreateUnitCircleVertexBuffer(device);
+            unit_circle_vertex_buffers[device] = vb;
+            return vb;
+        }
+          
+        private static VertexBuffer CreateUnitCircleVertexBuffer(GraphicsDevice device)
+        {
+            return CreateUnitSquareVertexBuffer(device);
+        }
+         
+        private static VertexBuffer CreateUnitSquareVertexBuffer(GraphicsDevice device)
+        {
+            var vb = new VertexBuffer(device, typeof(VertexPositionColorTexture), SquareVerts.Length, BufferUsage.WriteOnly);
+            vb.SetData<VertexPositionColorTexture>(SquareVerts);
+            return vb;
+        }
+
+        //        static public VertexDeclaration VertexPositionColorTextureDecl = null;
 
         static VertexPositionColor[] _UpTriVerts = null;
         static public VertexPositionColor[] UpTriVerts

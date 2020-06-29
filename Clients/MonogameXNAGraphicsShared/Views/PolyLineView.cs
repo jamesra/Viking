@@ -3,10 +3,11 @@ using System.Linq;
 using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {
-    public class PolyLineView : IColorView
+    public class PolyLineView : IColorView, IRenderable
     {
         private Texture2D _ControlPointTexture;
         public Texture2D ControlPointTexture
@@ -165,11 +166,20 @@ namespace VikingXNAGraphics
                             Texture2D texture = null,
                             double lineWidth = 16.0,
                             LineStyle lineStyle = LineStyle.Standard) 
-            : this(null, color, texture, lineWidth, lineStyle)
+            : this(null as GridVector2[], color, texture, lineWidth, lineStyle)
         {
         }
 
-        public PolyLineView(IReadOnlyList<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard)
+        public PolyLineView(GridPolyline polyline, 
+                            Microsoft.Xna.Framework.Color color,
+                            Texture2D texture = null,
+                            double lineWidth = 16.0,
+                            LineStyle lineStyle = LineStyle.Standard)
+            : this(polyline.Points, color, texture, lineWidth, lineStyle)
+        {
+        }
+
+        public PolyLineView(IEnumerable<GridVector2> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard)
         {
             this._ControlPointTexture = texture;
             this.LineWidth = lineWidth;
@@ -178,6 +188,11 @@ namespace VikingXNAGraphics
             this.Style = lineStyle;
             this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.ControlPointRadius, color, texture);
             this.LineViews = CreateLineViews(this.ControlPoints, lineWidth, color, lineStyle);
+        }
+
+        public PolyLineView(IEnumerable<IPoint2D> controlPoints, Microsoft.Xna.Framework.Color color, Texture2D texture = null, double lineWidth = 16.0, LineStyle lineStyle = LineStyle.Standard) :
+            this(controlPoints.Select(p => new GridVector2(p.X, p.Y)), color, texture, lineWidth, lineStyle)
+        {
         }
 
         /// <summary>
@@ -306,30 +321,26 @@ namespace VikingXNAGraphics
             //return color;
         }
 
+
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
-                          VikingXNA.Scene scene,
-                          RoundLineCode.RoundLineManager lineManager,
-                          Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
-                          PolyLineView[] listToDraw)
+                          VikingXNA.IScene scene,
+                           OverlayStyle Overlay,
+                           PolyLineView[] listToDraw)
         {
+            DrawControlPoints(device, scene, Overlay, listToDraw);
+
             int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
             CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
+            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, CompareFunction.GreaterEqual);
 
-            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue + 1);
-
-            IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints && cv.ControlPointViews != null).SelectMany(cv => cv.ControlPointViews);
-            CircleView.Draw(device, scene, basicEffect, overlayEffect, controlPointViews.ToArray());
-
-            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue);
-
+            RoundLineCode.RoundLineManager lineManager = Overlay.GetLineManager(device);
             bool UseHSLColor = lineManager.UseHSLColor;
 
-            var renderGroups = listToDraw.Where(pl => pl.LineViews != null).GroupBy(pl => new { color = UseHSLColor ? pl._HSLColor : pl.Color, style = pl.Style, width = pl.LineWidth, dashLength = pl.DashLength});
+            var renderGroups = listToDraw.Where(pl => pl.LineViews != null).GroupBy(pl => new { color = UseHSLColor ? pl._HSLColor : pl.Color, style = pl.Style, width = pl.LineWidth, dashLength = pl.DashLength });
 
-            foreach(var renderGroup in renderGroups)
+            foreach (var renderGroup in renderGroups)
             {
-                if(renderGroup.Key.dashLength.HasValue)
+                if (renderGroup.Key.dashLength.HasValue)
                 {
                     lineManager.DashLength = renderGroup.Key.dashLength.Value;
                 }
@@ -338,12 +349,43 @@ namespace VikingXNAGraphics
                 lineManager.Draw(lineViews.Select(l => l.line),
                              (float)(renderGroup.Key.width / 2.0),
                              renderGroup.Key.color,
-                             scene.Camera.View * scene.Projection,
+                             scene.ViewProj,
                              (float)(System.DateTime.UtcNow.Millisecond / 1000.0),
                              renderGroup.Key.style.ToString());
             }
-            
+
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
+        }
+
+
+        /// <summary>
+        /// Draw only the control points
+        /// </summary>
+        /// <param name="device"></param>
+        /// <param name="scene"></param>
+        /// <param name="Overlay"></param>
+        public static void DrawControlPoints(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
+                          VikingXNA.IScene scene, OverlayStyle Overlay, PolyLineView[] listToDraw)
+        {
+            int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
+            CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
+
+            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue + 1);
+
+            IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints && cv.ControlPointViews != null).SelectMany(cv => cv.ControlPointViews);
+            CircleView.Draw(device, scene, Overlay, controlPointViews.ToArray());
+                 
+            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
+        }
+
+        public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
+        {
+            PolyLineView.Draw(device, scene, Overlay, items.Select(i => i as PolyLineView).Where(i => i != null).ToArray());
+        }
+
+        public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
+        {
+            PolyLineView.Draw(device, scene, Overlay, new PolyLineView[] { this });
         }
     }
 }

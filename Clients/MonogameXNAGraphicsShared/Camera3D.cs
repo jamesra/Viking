@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 
 namespace VikingXNA
 {
-    public class Camera3D : INotifyPropertyChanged
+    public class Camera3D : INotifyPropertyChanged, ICamera
     {
         public event PropertyChangedEventHandler PropertyChanged;
 

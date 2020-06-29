@@ -2,11 +2,12 @@
 using System.Linq;
 using Geometry;
 using Microsoft.Xna.Framework.Graphics;
+using VikingXNA;
 using VikingXNAGraphics;
 
 namespace VikingXNAGraphics
 {
-    public class LineView : IColorView, IViewPosition2D
+    public class LineView : IColorView, IViewPosition2D, IRenderable
     {
         public static double time = 0;
         internal RoundLineCode.RoundLine line;
@@ -98,7 +99,7 @@ namespace VikingXNAGraphics
         }
 
         public static void Draw(GraphicsDevice device,
-                          VikingXNA.Scene scene,
+                          VikingXNA.IScene scene,
                           RoundLineCode.RoundLineManager lineManager,
                           LineView[] listToDraw)
         {
@@ -116,10 +117,58 @@ namespace VikingXNAGraphics
                 lineManager.Draw(renderGroup.Select(rg => rg.line).ToArray(),
                                  renderGroup.Key.width / 2.0f,
                                  renderGroup.Key.color,
-                                 scene.View * scene.Projection,
+                                 scene.ViewProj,
                                  (float)(DateTime.UtcNow.Millisecond / 1000.0),
                                  renderGroup.Key.style.ToString());
             }
+        }
+
+        public static void Draw(GraphicsDevice device, IScene scene, OverlayStyle overlay, LineView[] items)
+        {
+            RoundLineCode.RoundLineManager line_manager = overlay.GetLineManager(device);
+            bool UseHSLColor = line_manager.UseHSLColor;
+
+            var listToDraw = items.Select(i => i as LineView).Where(i => i != null).ToArray();
+
+            var renderGroups = listToDraw.GroupBy(l => new { color = UseHSLColor ? l._HSLColor : l.Color, style = l.Style, width = l.LineWidth, dashLength = l.DashLength });
+
+            foreach (var renderGroup in renderGroups)
+            {
+                if (renderGroup.Key.dashLength.HasValue)
+                {
+                    line_manager.DashLength = renderGroup.Key.dashLength.Value;
+                }
+
+                line_manager.Draw(renderGroup.Select(rg => rg.line).ToArray(),
+                                 renderGroup.Key.width / 2.0f,
+                                 renderGroup.Key.color,
+                                 scene.ViewProj,
+                                 (float)(DateTime.UtcNow.Millisecond / 1000.0),
+                                 renderGroup.Key.style.ToString());
+            }
+        }
+
+        public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle overlay, IRenderable[] items)
+        {
+            Draw(device, scene, overlay, items.Select(i => i as LineView).Where(i => i != null).ToArray());
+        }
+
+        public void Draw(GraphicsDevice device, IScene scene, OverlayStyle overlay)
+        {
+            RoundLineCode.RoundLineManager line_manager = overlay.GetLineManager(device);
+            bool UseHSLColor = line_manager.UseHSLColor;
+            var color = UseHSLColor ? this._HSLColor : this.Color;
+            if(this.DashLength.HasValue)
+            {
+                line_manager.DashLength = this.DashLength.Value;
+            }
+
+            line_manager.Draw(this.line, 
+                              this.LineWidth / 2.0f, 
+                              color, 
+                              scene.ViewProj,
+                              (float)(DateTime.UtcNow.Millisecond / 1000.0),
+                              this.Style.ToString());
         }
     }
 }

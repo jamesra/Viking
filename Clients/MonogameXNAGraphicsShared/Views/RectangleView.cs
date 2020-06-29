@@ -6,17 +6,24 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Geometry;
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {
-    public class RectangleView : BillboardViewBase
+    public class RectangleView : BillboardViewBase, IRenderable
     {
         private GridRectangle _BoundingRect;
 
         public GridRectangle BoundingRect
         {
-            get;
-            set;
+            get { return _BoundingRect; }
+            set {
+                if(_BoundingRect != value)
+                {
+                    _BoundingRect = value;
+                    ClearCachedData();
+                } 
+            }
         }
 
         public override GridVector2 Position
@@ -47,80 +54,61 @@ namespace VikingXNAGraphics
             this.BoundingRect = boundingRect;
         }
 
-        protected static VertexPositionColor[] AggregatePrimitives(RectangleView[] listToDraw, out int[] indicies)
+        public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
         {
-            VertexPositionColor[] VertArray = new VertexPositionColor[listToDraw.Length * 4];
-            indicies = new int[listToDraw.Length * 6];
+            RectangleView.Draw(device, scene, Overlay, items.Select(i => i as RectangleView).Where(i => i != null).ToArray());
+        }
 
-            int iNextVert = 0;
-            int iNextVertIndex = 0;
-
-            for (int iObj = 0; iObj < listToDraw.Length; iObj++)
-            {
-                RectangleView locToDraw = listToDraw[iObj];
-                int[] locIndicies;
-                VertexPositionColorTexture[] objVerts = RectangleView.GetRenderableVerticies(locToDraw.BackgroundVerts, locToDraw.HSLColor, out locIndicies);
-
-                if (objVerts == null)
-                    continue;
-
-                VertexPositionColor[] VPC_Verts = objVerts.Select(v => new VertexPositionColor(v.Position, v.Color)).ToArray();
-
-                Array.Copy(VPC_Verts, 0, VertArray, iNextVert, objVerts.Length);
-
-                for (int iVert = 0; iVert < locIndicies.Length; iVert++)
-                {
-                    indicies[iNextVertIndex + iVert] = locIndicies[iVert] + iNextVert;
-                }
-
-                iNextVert += objVerts.Length;
-                iNextVertIndex += locIndicies.Length;
-            }
-
-            return VertArray;
+        public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
+        {
+            RectangleView.Draw(device, scene, Overlay, new RectangleView[] { this });
         }
 
         public static void Draw(GraphicsDevice device,
-                          VikingXNA.Scene scene,
-                          BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          VikingXNA.IScene scene,
+                          OverlayStyle Overlay,
                           RectangleView[] listToDraw)
         {
             if (listToDraw.Length == 0)
                 return;
 
-            BillboardViewBase.SetupGraphicsDevice(device, basicEffect, overlayEffect);
+            device.SetVertexBuffer(GlobalPrimitives.GetUnitSquareVertexBuffer(device));
+            device.Indices = GlobalPrimitives.GetUnitSquareIndexBuffer(device);
+            //BillboardViewBase.SetupGraphicsDevice(device, basicEffect, overlayEffect);
 
+            OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
+            if (overlayEffect == null)
+                return;
+            
             BlendState originalState = device.BlendState;
             device.BlendState = BlendState.NonPremultiplied;
 
-
             RectangleView[] views = listToDraw.Where(v => v != null).ToArray();
-            overlayEffect.AnnotateWithTexture(null);
-            basicEffect.Texture = null;
+            //overlayEffect.AnnotateWithTexture(null);
+            overlayEffect.Technique = Overlay == OverlayStyle.Alpha ?
+                OverlayShaderEffect.Techniques.SingleColorAlphaOverlayEffect :
+                OverlayShaderEffect.Techniques.SingleColorLumaOverlayEffect;
 
-            int[] indicies;
-            VertexPositionColor[] VertArray = RectangleView.AggregatePrimitives(views, out indicies);
-
-            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
+            foreach (RectangleView rv in listToDraw)
             {
-                pass.Apply();
+                overlayEffect.AnnotationColorHSL = rv.HSLColor;
+                overlayEffect.WorldViewProjMatrix = (rv.ModelMatrix * scene.World) * scene.ViewProj;
+                //TODO: Use GlobalPrimitives and model matricies instead of verticies
 
-                device.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.TriangleList,
-                                                                                        VertArray,
-                                                                                        0,
-                                                                                        VertArray.Length,
-                                                                                        indicies,
-                                                                                        0,
-                                                                                        indicies.Length / 3);
+                foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
+                        0,
+                        0,
+                        6,
+                        0,
+                        2);
+                }
             }
-            
 
-            device.BlendState = originalState;
-
-            BillboardViewBase.RestoreGraphicsDevice(device, basicEffect); 
-
-            //TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
+            device.BlendState = originalState; 
         }
     }
 }

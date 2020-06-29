@@ -4,13 +4,14 @@ using System.Linq;
 using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {  
     /// <summary>
     /// Draws a closed curve through the control points using Catmull-rom
     /// </summary>
-    public class CurveView : IColorView
+    public class CurveView : IColorView, IRenderable
     {
         public LineStyle Style;
 
@@ -223,12 +224,12 @@ namespace VikingXNAGraphics
                           VikingXNA.Scene scene,
                           RoundCurve.CurveManager curveManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlayShaderEffect overlayEffect,
                           float time,
                           CurveView[] listToDraw)
         { 
             IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints).SelectMany(cv => cv.ControlPointViews);            
-            CircleView.Draw(device, scene, basicEffect, overlayEffect, controlPointViews.ToArray());
+            CircleView.Draw(device, scene, OverlayStyle.Luma, controlPointViews.ToArray());
            
             int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
             CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
@@ -250,6 +251,40 @@ namespace VikingXNAGraphics
 
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
         }
+
+
+        public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
+                          VikingXNA.IScene scene,
+                          OverlayStyle overlayStyle,
+                          float time,
+                          CurveView[] listToDraw)
+        {
+            IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints).SelectMany(cv => cv.ControlPointViews);
+            CircleView.Draw(device, scene, overlayStyle, controlPointViews.ToArray());
+
+            int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
+            CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
+
+            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue - 1, originalStencilFunction); //Annotation overlay renders twice, so this needs to be greaterequal for second pass
+
+            Matrix ViewProj = scene.ViewProj;
+
+            RoundCurve.CurveManager curveManager = overlayStyle.GetCurveManager(device);
+
+            var renderGroups = listToDraw.Where(cv => cv != null).GroupBy(cv => new { color = curveManager.UseHSLColor ? cv._HSLColor : cv.Color, style = cv.Style, width = cv.LineWidth });
+            foreach (var renderGroup in renderGroups)
+            {
+                curveManager.Draw(renderGroup.Select(cv => cv.Curve),
+                            (float)(renderGroup.Key.width / 2.0),
+                                  renderGroup.Key.color,
+                                  ViewProj,
+                                  time,
+                                  renderGroup.Key.style.ToString());
+            }
+
+            DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
+        }
+
 
         public void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device, RoundLineCode.RoundLineManager LineManager, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
@@ -280,6 +315,24 @@ namespace VikingXNAGraphics
             }
 
             return false;
+        }
+
+        public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
+        {
+            Draw(device,
+                 scene,
+                 Overlay,
+                 DateTime.Now.Millisecond / 1000.0f,
+                 items.Select(i => i as CurveView).Where(i => i != null).ToArray());
+        }
+
+        public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
+        {
+            Draw(device,
+                 scene,
+                 Overlay,
+                 DateTime.Now.Millisecond / 1000.0f,
+                 new CurveView[] { this });
         }
     }
 }

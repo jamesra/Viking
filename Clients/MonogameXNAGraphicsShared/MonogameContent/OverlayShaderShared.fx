@@ -33,3 +33,7 @@ uniform const float InputLumaAlpha = 1.0f; //Defines how we weight blending the 
 //The program determines Saturation via converting the RGB color attribute of the vertex.
 //The program determines the hue via converting the RGB color attribute of the vertex.
 //The alpha channel of vertex color indicates how much the texture value is blended with the background value.
+
+// 6/26/2020 Well after I wrote this I decided I never use per-vertex coloring and it was also nice to set a uniform color via an effect.
+//Set to the desired foreground color of the annotation if using effect color and not vertex/texture color
+float4 AnnotationHSLColor;

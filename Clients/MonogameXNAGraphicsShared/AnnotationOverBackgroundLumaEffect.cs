@@ -7,31 +7,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace VikingXNAGraphics
-{
-    /*
-    // A vertex type for drawing RoundLines, including an instance index
-    struct AnnotationOverlayVertex
-    {
-        public Vector3 pos;
-        public Vector2 AnnotationTextureCoords;
-        public Vector2 ScreenTextureCoords;
-
-        public AnnotationOverlayVertex(Vector3 pos, Vector2 annotationTextureCoords, Vector2 screenTextureCoords)
-        {
-            this.pos = pos;
-            this.AnnotationTextureCoords = annotationTextureCoords;
-            this.ScreenTextureCoords = screenTextureCoords;
-        }
-
-        public static int SizeInBytes = 7 * sizeof(float);
-
-        public static VertexElement[] VertexElements = new VertexElement[] 
-            {
-                new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
-                new VertexElement(3 * sizeof(float), VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
-            };
-    }
-    */
+{ 
 
     public class AnnotationOverBackgroundLumaEffect : IInitEffect
     {

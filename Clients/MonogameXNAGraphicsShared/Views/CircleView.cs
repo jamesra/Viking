@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using Geometry;
 using VikingXNAGraphics;
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {  
@@ -52,6 +53,10 @@ namespace VikingXNAGraphics
                 if (_BackgroundVerts == null)
                 {
                     _BackgroundVerts = CircleView.VerticiesForCircle(this.Circle);
+                    for(int i = 0; i < _BackgroundVerts.Length; i++)
+                    {
+                        _BackgroundVerts[i].Color = Color;
+                    }
                 }
 
                 return _BackgroundVerts;
@@ -59,7 +64,7 @@ namespace VikingXNAGraphics
         }
 
 
-        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, AnnotationOverBackgroundLumaEffect overlayEffect)
+        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect)
         {
             //Note one still needs to set the texture for the effect before rendering after calling this method
             //DeviceStateManager.SaveDeviceState(device);
@@ -72,6 +77,16 @@ namespace VikingXNAGraphics
             
         }
 
+        
+        public static void SetupGraphicsDevice(GraphicsDevice device, OverlayShaderEffect overlayEffect)
+        {
+            //Note one still needs to set the texture for the effect before rendering after calling this method
+            //DeviceStateManager.SaveDeviceState(device);
+            //DeviceStateManager.SetRenderStateForShapes(device);
+            //DeviceStateManager.SetRasterizerStateForShapes(device);
+        }
+        
+
         public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
         {
             //DeviceStateManager.RestoreDeviceState(graphicsDevice);
@@ -81,28 +96,32 @@ namespace VikingXNAGraphics
             basicEffect.VertexColorEnabled = false;
         }
 
+        public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, OverlayShaderEffect overlayEffect)
+        {
+            //DeviceStateManager.RestoreDeviceState(graphicsDevice); 
+        }
+
         public static void Draw(GraphicsDevice device,
-                          VikingXNA.Scene scene,
-                          BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          VikingXNA.IScene scene,
+                          BasicEffect basicEffect, 
                           TextureCircleView[] listToDraw)
         {
             if (listToDraw.Length == 0)
                 return;
 
-            TextureCircleView.SetupGraphicsDevice(device, basicEffect, overlayEffect);
+            TextureCircleView.SetupGraphicsDevice(device, basicEffect);
 
             var textureGroups = listToDraw.GroupBy(l => l.Texture);
             foreach(var textureGroup in textureGroups)
             {
                 TextureCircleView[] views = textureGroup.ToArray();
-                overlayEffect.AnnotateWithTexture(textureGroup.Key);
                 basicEffect.Texture = textureGroup.Key;
-
+                basicEffect.TextureEnabled = true;
+                
                 int[] indicies;
                 VertexPositionColorTexture[] VertArray = AggregatePrimitives(views, out indicies);
 
-                foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+                foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
                 {
                     pass.Apply();
 
@@ -118,10 +137,87 @@ namespace VikingXNAGraphics
             
             TextureCircleView.RestoreGraphicsDevice(device, basicEffect);
         }
+
+        public static void Draw(GraphicsDevice device,
+                          VikingXNA.IScene scene, 
+                          OverlayShaderEffect overlayEffect,
+                          TextureCircleView[] listToDraw)
+        {
+            if (listToDraw.Length == 0)
+                return;
+
+            //var rstate = new RasterizerState();
+            //rstate.CullMode = CullMode.None;
+            //device.RasterizerState = rstate; 
+
+            TextureCircleView.SetupGraphicsDevice(device, overlayEffect);
+
+            device.Indices = GlobalPrimitives.GetUnitCircleIndexBuffer(device);
+            device.SetVertexBuffer(GlobalPrimitives.GetUnitCircleVertexBuffer(device));
+
+            //overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOverlayEffect;
+            var textureGroups = listToDraw.GroupBy(l => l.Texture);
+            foreach (var textureGroup in textureGroups)
+            {
+                TextureCircleView[] views = textureGroup.ToArray();
+                overlayEffect.AnnotationTexture = textureGroup.Key;
+
+                foreach (TextureCircleView cv in textureGroup)
+                {
+                    overlayEffect.AnnotationColorHSL = cv.HSLColor;
+                    overlayEffect.WorldViewProjMatrix = (cv.ModelMatrix * scene.World) * scene.ViewProj;
+                    overlayEffect.InputLumaAlphaValue = 0f;
+                    /*
+                    int[] indicies;
+                    VertexPositionColorTexture[] VertArray = AggregatePrimitives(views, out indicies);
+                    */
+                    foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+                    {
+                        pass.Apply();
+
+                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
+                            0,
+                            0,
+                            6,
+                            0,
+                            2);
+
+                        /*device.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
+                                                                                             VertArray,
+                                                                                             0,
+                                                                                             VertArray.Length,
+                                                                                             indicies,
+                                                                                             0,
+                                                                                             indicies.Length / 3);
+                                                                                             */
+                    }
+                }
+            }
+
+            TextureCircleView.RestoreGraphicsDevice(device, overlayEffect);
+        }
+
+        public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
+        {
+            switch (Overlay)
+            {
+                case OverlayStyle.Alpha:
+                    BasicEffect effect = new BasicEffect(device);
+                    effect.World = scene.World;
+                    effect.View = scene.View;
+                    effect.Projection = scene.Projection;
+                    TextureCircleView.Draw(device, scene, effect, new CircleView[] { this });
+                    break;
+                case OverlayStyle.Luma:
+                    OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
+                    TextureCircleView.Draw(device, scene, overlayEffect, new CircleView[] { this });
+                    break;
+            }
+        }
     }
      
 
-    public class CircleView : IColorView, IViewPosition2D
+    public class CircleView : IColorView, IViewPosition2D, IRenderable
     {
         #region static
 
@@ -129,6 +225,9 @@ namespace VikingXNAGraphics
         static double InvisibleCutoff = 1.5f;
 
         #endregion
+
+        protected Matrix ModelMatrix = Matrix.Identity;
+
           
         private GridCircle _Circle;
         public GridCircle Circle
@@ -141,6 +240,7 @@ namespace VikingXNAGraphics
             {
                 ClearCachedData();
                 _Circle = value;
+                UpdateModelMatrix();
             }
         }
 
@@ -200,7 +300,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public void ClearCachedData()
         {
-            _BackgroundVerts = null;
+            _BackgroundVerts = null;            
         }
 
         /// <summary>
@@ -228,7 +328,17 @@ namespace VikingXNAGraphics
         public CircleView(GridCircle circle, Color color)
         {
             this.Circle = circle;
-            this.Color = color; 
+            this.Color = color;
+
+            UpdateModelMatrix();
+            //this.ModelMatrix = Matrix.CreateTranslation(circle.Center.ToXNAVector3(0)) * Matrix.CreateScale((float)circle.Radius);
+        }
+
+        private void UpdateModelMatrix()
+        {
+            this.ModelMatrix = Matrix.CreateScale((float)_Circle.Radius,
+                                                  (float)_Circle.Radius,
+                                                  1f) * Matrix.CreateTranslation(_Circle.Center.ToXNAVector3(0));
         }
 
         #region Render Code
@@ -310,7 +420,7 @@ namespace VikingXNAGraphics
             return verts;
         }
 
-        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, AnnotationOverBackgroundLumaEffect overlayEffect=null)
+        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect)
         {
             DeviceStateManager.SaveDeviceState(device);
             /*DeviceStateManager.SetRenderStateForShapes(device);
@@ -320,10 +430,17 @@ namespace VikingXNAGraphics
             basicEffect.TextureEnabled = false;
             basicEffect.VertexColorEnabled = true;
             basicEffect.LightingEnabled = false;
-            
+        }
 
-            if(overlayEffect != null)
-                overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
+
+        public static void SetupGraphicsDevice(GraphicsDevice device, OverlayShaderEffect overlayEffect)
+        {
+            DeviceStateManager.SaveDeviceState(device);
+
+            if (overlayEffect != null)
+            {
+                //overlayEffect.AnnotateWithCircle((float)0.05, 0.5f);
+            }
         }
 
         public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
@@ -332,6 +449,11 @@ namespace VikingXNAGraphics
 
             basicEffect.TextureEnabled = false;
             basicEffect.VertexColorEnabled = false;
+        }
+
+        public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, OverlayShaderEffect overlayEffect)
+        {
+            DeviceStateManager.RestoreDeviceState(graphicsDevice); 
         }
 
         protected static VertexPositionColorTexture[] AggregatePrimitives(CircleView[] listToDraw, out int[] indicies)
@@ -372,7 +494,6 @@ namespace VikingXNAGraphics
         public static void Draw(GraphicsDevice device,
                           VikingXNA.IScene scene,
                           BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
                           CircleView[] listToDraw)
         {
             if (listToDraw.Length == 0)
@@ -380,18 +501,18 @@ namespace VikingXNAGraphics
 
             //Draw textured circles in the array
             TextureCircleView[] arrayTextureCircles = listToDraw.Select(c => c as TextureCircleView).Where(c => c as TextureCircleView != null).ToArray();
-            TextureCircleView.Draw(device, scene, basicEffect, overlayEffect, arrayTextureCircles);
+            TextureCircleView.Draw(device, scene, basicEffect, arrayTextureCircles);
 
             //Draw untextured circles in the array
             listToDraw = listToDraw.Where(c => c as TextureCircleView == null).ToArray();
             if (listToDraw.Length == 0)
                 return;
 
-            CircleView.SetupGraphicsDevice(device, basicEffect, overlayEffect);
+            CircleView.SetupGraphicsDevice(device, basicEffect);
             int[] indicies;
             VertexPositionColorTexture[] VertArray = AggregatePrimitives(listToDraw, out indicies);
 
-            foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+            foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
             {
                 pass.Apply();
 
@@ -406,6 +527,86 @@ namespace VikingXNAGraphics
 
             CircleView.RestoreGraphicsDevice(device, basicEffect);
         }
+
+        public static void Draw(GraphicsDevice device,
+                          VikingXNA.IScene scene,
+                          OverlayShaderEffect overlayEffect,
+                          CircleView[] listToDraw)
+        {
+            if (listToDraw.Length == 0)
+                return;
+
+            device.Indices = GlobalPrimitives.GetUnitCircleIndexBuffer(device);
+            device.SetVertexBuffer(GlobalPrimitives.GetUnitCircleVertexBuffer(device));
+
+            //Draw textured circles in the array
+            TextureCircleView[] arrayTextureCircles = listToDraw.Select(c => c as TextureCircleView).Where(c => c as TextureCircleView != null).ToArray();
+            TextureCircleView.Draw(device, scene, overlayEffect, arrayTextureCircles);
+
+            //Draw untextured circles in the array
+            listToDraw = listToDraw.Where(c => c as TextureCircleView == null).ToArray();
+            if (listToDraw.Length == 0)
+                return;
+
+            CircleView[] arraySolidCircles = listToDraw.Where(c => c as TextureCircleView == null).ToArray();
+
+            //CircleView.SetupGraphicsDevice(device, overlayEffect);
+            
+            foreach (CircleView cv in arraySolidCircles)
+            {
+                overlayEffect.AnnotationColorHSL = cv.HSLColor;
+                overlayEffect.WorldViewProjMatrix = (cv.ModelMatrix * scene.World) * scene.ViewProj;
+                overlayEffect.InputLumaAlphaValue = 0f;
+
+                //int[] indicies;
+                //VertexPositionColorTexture[] VertArray = AggregatePrimitives(listToDraw, out indicies);
+
+                foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
+                            0,
+                            0,
+                            6,
+                            0,
+                            2);
+
+                    /*device.DrawUserIndexedPrimitives<VertexPositionColorTexture>(PrimitiveType.TriangleList,
+                                                                                         VertArray,
+                                                                                         0,
+                                                                                         VertArray.Length,
+                                                                                         indicies,
+                                                                                         0,
+                                                                                         indicies.Length / 3);
+                                                                                         */
+                }
+            }
+
+            CircleView.RestoreGraphicsDevice(device, overlayEffect);
+        }
+
+
+        public static void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
+        {
+            OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
+            overlayEffect.Technique = Overlay == OverlayStyle.Alpha ? OverlayShaderEffect.Techniques.CircleSingleColorAlphaOverlayEffect :
+                OverlayShaderEffect.Techniques.CircleSingleColorLumaOverlayEffect;
+
+            CircleView.Draw(device, scene, overlayEffect, items.Select(i => i as CircleView).Where(i => i != null).ToArray());
+            TextureCircleView.Draw(device, scene, overlayEffect, items.Select(i => i as TextureCircleView).Where(i => i != null).ToArray());
+        }
+
+        public virtual void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
+        {
+            CircleView.Draw(device, scene, Overlay, items);
+        }
+
+        public virtual void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
+        {
+            CircleView.Draw(device, scene, Overlay, new IRenderable[] { this });
+        }
+
         #endregion
     }
 }

@@ -100,26 +100,6 @@ namespace VikingXNAGraphics
                 device.RasterizerState = originalRasterizerState;
         }
 
-        /*
-        public static bool VertexHasNormals(VERTEXTYPE[] verticies)
-        {
-            if (verticies.Length == 0)
-                return false;
-
-            VertexElement[] elements = verticies[0].VertexDeclaration.GetVertexElements();
-
-            return elements.Any(e => e.VertexElementUsage == VertexElementUsage.Normal);
-        }
-
-        public static bool VertexHasColor(VERTEXTYPE[] verticies)
-        {
-            if (verticies.Length == 0)
-                return false;
-
-            VertexElement[] elements = verticies[0].VertexDeclaration.GetVertexElements();
-
-            return elements.Any(e => e.VertexElementUsage == VertexElementUsage.Color);
-        }*/
 
         public static void Draw(GraphicsDevice device, IScene scene, BasicEffect effect = null, CullMode cullmode = CullMode.CullCounterClockwiseFace, FillMode fillMode = FillMode.Solid, ICollection < MeshView<VERTEXTYPE>> meshViews = null)
         {
@@ -131,6 +111,58 @@ namespace VikingXNAGraphics
             Draw(device, scene, effect, cullmode, fillMode,  all_models);
         }
 
+        public void Draw(GraphicsDevice device, IScene scene, PolygonOverlayEffect effect = null, CullMode cullmode = CullMode.CullCounterClockwiseFace)
+        {  
+            FillMode fillMode = this.WireFrame ? FillMode.WireFrame : FillMode.Solid;
+             
+            Draw(device, scene, effect, cullmode, fillMode, models);
+        }
+
+        public static void Draw(GraphicsDevice device, IScene scene, PolygonOverlayEffect effect = null, CullMode cullmode = CullMode.CullCounterClockwiseFace, FillMode fillMode = FillMode.Solid, IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
+        {
+            if (effect == null)
+            {
+                effect = DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device);
+                if (effect == null)
+                    return;
+
+                effect.InputLumaAlphaValue = 0.0f;
+            }
+
+
+            RasterizerState originalRasterizerState = device.RasterizerState;
+
+            RasterizerState rstate = new RasterizerState();
+            rstate.CullMode = cullmode;
+            rstate.FillMode = fillMode;
+            // rstate.DepthClipEnable = true;
+            device.RasterizerState = rstate;
+
+            Matrix WorldViewProjOriginal = effect.WorldViewProjMatrix;
+
+            foreach (MeshModel<VERTEXTYPE> model in meshmodels)
+            {
+                effect.WorldViewProjMatrix = (model.ModelMatrix * scene.World) * scene.ViewProj ;
+
+                if (model.Verticies.Length == 0 || model.Edges.Length == 0)
+                {
+                    continue;
+                }
+
+                foreach (EffectPass pass in effect.effect.CurrentTechnique.Passes)
+                {
+                    pass.Apply();
+
+                    device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
+                }
+            }
+
+            effect.WorldViewProjMatrix = WorldViewProjOriginal;
+
+            if (originalRasterizerState != null)
+                device.RasterizerState = originalRasterizerState;
+        }
+
         public static void Draw(GraphicsDevice device, IScene scene, BasicEffect effect=null, CullMode cullmode = CullMode.CullCounterClockwiseFace, FillMode fillMode = FillMode.Solid, IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
         {
             if (meshmodels == null)
@@ -140,7 +172,7 @@ namespace VikingXNAGraphics
             {
                 effect = new BasicEffect(device);
             }
-
+             
             RasterizerState originalRasterizerState = device.RasterizerState;
 
             RasterizerState rstate = new RasterizerState();
@@ -160,33 +192,7 @@ namespace VikingXNAGraphics
 
 
             /*
-            PolygonOverlayEffect effect = DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device);
-            if (effect == null)
-                return;
-
-
-            effect.InputLumaAlphaValue = 0.0f;
-
-            Matrix WorldViewProjOriginal = effect.WorldViewProjMatrix;
-
-            foreach (MeshModel<VERTEXTYPE> model in meshmodels)
-            {
-                effect.WorldViewProjMatrix = scene.ViewProj * model.ModelMatrix;    
-                
-                if(model.Verticies.Length == 0 || model.Edges.Length == 0)
-                {
-                    continue; 
-                }            
-
-                foreach (EffectPass pass in effect.effect.CurrentTechnique.Passes)
-                {
-                     pass.Apply();
-
-                    device.DrawUserIndexedPrimitives<VERTEXTYPE>(PrimitiveType.TriangleList, model.Verticies, 0, model.Verticies.Length, model.Edges, 0, model.Edges.Length / 3);
-                }
-            }
-
-            effect.WorldViewProjMatrix = WorldViewProjOriginal;
+            
             */
             var modelGroups = meshmodels.Where(m => m != null &&
                                                 m.Edges != null &&

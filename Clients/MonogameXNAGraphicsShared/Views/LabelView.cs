@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using Geometry;
 using VikingXNAGraphics;
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {
@@ -22,7 +23,7 @@ namespace VikingXNAGraphics
         BOTTOM
     };
 
-    public class LabelView : IText, IColorView, IViewPosition2D
+    public class LabelView : IText, IColorView, IViewPosition2D, IRenderable
     {
         public HorizontalAlignment HorzAlign = HorizontalAlignment.CENTER;
         public VerticalAlignment VertAlign = VerticalAlignment.CENTER;
@@ -228,9 +229,12 @@ namespace VikingXNAGraphics
         /// </summary>
         /// <param name="MagnificationFactor"></param>
         /// <returns></returns>
-        private static double ScaleFontSizeForMagnification(double FontSize, VikingXNA.Scene scene)
+        private double ScaleFontSizeForMagnification(double FontSize, VikingXNA.IScene scene)
         {
-            return FontSize / scene.Camera.Downsample;
+            Vector3 center  = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
+            Vector3 topedge = scene.Viewport.Project(Position.ToXNAVector3(0) - new Vector3(0, (float)FontSize / 2, 0), scene.Projection, scene.View, scene.World);
+            //return FontSize / scene.Camera.Downsample;
+            return (topedge.Y - center.Y) * 2;
         }
 
         private static int NumberOfNewlines(string label)
@@ -341,13 +345,16 @@ namespace VikingXNAGraphics
 
         #endregion
 
-        public static void Draw(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene, ICollection<LabelView> Labels)
+        public static void Draw(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.IScene scene, ICollection<LabelView> Labels)
         {
             if (Labels == null)
                 return;
 
             if (Labels.Count == 0)
                 return;
+
+            if (font == null)
+                font = Global.DefaultFont;
 
             BlendState originalBlendState = spriteBatch.GraphicsDevice.BlendState;
             DepthStencilState originalDepthState = spriteBatch.GraphicsDevice.DepthStencilState;
@@ -360,14 +367,19 @@ namespace VikingXNAGraphics
 
             foreach(LabelView label in Labels.Where(l => l != null))
             {
-                label.Draw(spriteBatch, font, scene);
+                label.Draw(spriteBatch, font, scene as VikingXNA.Scene);
             }
 
             spriteBatch.End();
 
-            spriteBatch.GraphicsDevice.BlendState = originalBlendState;
-            spriteBatch.GraphicsDevice.DepthStencilState = originalDepthState;
-            spriteBatch.GraphicsDevice.RasterizerState = originalRasterizerState;
+            if(originalBlendState != null)
+                spriteBatch.GraphicsDevice.BlendState = originalBlendState;
+
+            if (originalDepthState != null)
+                spriteBatch.GraphicsDevice.DepthStencilState = originalDepthState;
+
+            if(originalRasterizerState != null)
+                spriteBatch.GraphicsDevice.RasterizerState = originalRasterizerState;
 
             if(originalSamplerState != null)
                 spriteBatch.GraphicsDevice.SamplerStates[0] = originalSamplerState;
@@ -452,12 +464,7 @@ namespace VikingXNAGraphics
             this._Rows = WrapText(this.Text, this.font, FontScaleForVolume, this.MaxLineWidth, out this._RowMeasurements);
             _IsMeasured = true;
         }
-
-        public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch, VikingXNA.IScene scene)
-        {
-            throw new NotImplementedException();
-        }
-
+        
         /// <summary>
         /// Draw a single label. 
         /// The caller is expected to call Begin and End on the sprite batch.  They should also preserve all state on the graphics device. 
@@ -467,7 +474,7 @@ namespace VikingXNAGraphics
         /// <param name="scene"></param>
         public void Draw(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                             Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                            VikingXNA.Scene scene)
+                            VikingXNA.IScene scene)
         {
             double fontSizeInScreenPixels = ScaleFontSizeForMagnification(this.FontSize, scene);
 
@@ -492,9 +499,12 @@ namespace VikingXNAGraphics
             }
 
             if (this._Rows == null || this._Rows.Length == 0)
-                return; 
+                return;
 
-            Vector2 LocationCenterScreenPosition = scene.WorldToScreen(this.Position).ToXNAVector2();
+            Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
+            Vector2 LocationCenterScreenPosition = new Vector2(LocationCenterScreenPosition_v3.X, LocationCenterScreenPosition_v3.Y);
+
+    //scene.WorldToScreen(this.Position).ToXNAVector2();
 
             float fontScale = this.ScaleFontWithScene ? (float)ScaleFontSizeForMagnification(FontScaleForVolume, scene) : (float)FontScaleForVolume;
 
@@ -514,15 +524,27 @@ namespace VikingXNAGraphics
                 Vector2 origin = OriginForRow(_RowMeasurements[iRow], max_row_size, HorzAlign, VertAlign);
                 
                 spriteBatch.DrawString(font,
-                    _Rows[iRow],
-                    DrawPosition,
-                    this._Color,
-                    this.Rotation,
-                    origin, //_RowMeasurements[iRow] / 2.0f, //The string is centered on the drawing position, instead of starting at the top left
-                    fontScale,
-                    SpriteEffects.None,
-                    0);
+                                       _Rows[iRow],
+                                       DrawPosition,
+                                       this._Color,
+                                       this.Rotation,
+                                       origin, //_RowMeasurements[iRow] / 2.0f, //The string is centered on the drawing position, instead of starting at the top left
+                                       fontScale,
+                                       SpriteEffects.None,
+                                       0);
             }
+        }
+
+        public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
+        {
+            var fontData = DeviceFontStore.TryGet(device);
+            LabelView.Draw(fontData.SpriteBatch, fontData.Font, scene, items.Select(i => i as LabelView).Where(i => i != null).ToArray());
+        }
+
+        public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
+        {
+            var fontData = DeviceFontStore.TryGet(device);
+            LabelView.Draw(fontData.SpriteBatch, fontData.Font, scene, new LabelView[] { this });
         }
     }
 }

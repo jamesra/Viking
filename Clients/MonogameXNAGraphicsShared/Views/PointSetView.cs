@@ -186,14 +186,33 @@ namespace VikingXNAGraphics
                 }
             }
         }
-
-        public override void Draw(IRenderInfo window, Scene scene)
+        /*
+        public void Draw(IRenderInfo window, IScene scene, OverlayStyle overlayStyle)
         {   
             if (PointViews != null)
-                CircleView.Draw(window.device, scene, window.basicEffect, window.overlayEffect, PointViews);
+                CircleView.Draw(window.device, scene, overlayStyle, PointViews);
 
             if (LabelViews != null)
                 LabelView.Draw(window.spriteBatch, window.font, scene, LabelViews);
+        }*/
+         
+        public override void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle overlayStyle)
+        {
+            if(PointViews != null)
+            {
+                CircleView.Draw(device, scene, overlayStyle, PointViews);
+            }
+
+            if(LabelViews != null)
+            {
+                var fontData = DeviceFontStore.TryGet(device);
+                LabelView.Draw(fontData.SpriteBatch, fontData.Font, scene, LabelViews);
+            }
         }
 
         public static PointSetView CreateFor(IReadOnlyMesh2D<IVertex2D> mesh)
@@ -201,7 +220,7 @@ namespace VikingXNAGraphics
             PointSetView psv = new PointSetView(Color.Gray);
 
             psv.LabelColor = Color.White;
-            psv.PointRadius = 1;
+            psv.PointRadius = 2;
             psv.Points = mesh.Verticies.Select(p => p.Position).ToArray();
             psv.LabelIndex = true;
             psv.LabelPosition = false;
@@ -215,7 +234,7 @@ namespace VikingXNAGraphics
             PointSetView psv = new PointSetView(Color.Gray);
 
             psv.LabelColor = Color.White;
-            psv.PointRadius = 1;
+            psv.PointRadius = 2;
             psv.Points = mesh.Verticies.Select(p => p.Position.XY()).ToArray();
             psv.LabelIndex = true;
             psv.LabelPosition = false;
@@ -223,5 +242,6 @@ namespace VikingXNAGraphics
 
             return psv;
         }
+
     }
 }

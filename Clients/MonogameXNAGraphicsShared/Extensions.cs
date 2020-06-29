@@ -208,6 +208,32 @@ namespace VikingXNAGraphics
             }
         }
 
+        /// <summary>
+        /// Returns a model with counter-clockwise faces
+        /// </summary>
+        /// <param name="mesh">A mesh at Z=0</param>
+        /// <param name="color"></param>
+        /// <returns></returns>
+        public static PositionColorMeshModel ToVertexPositionColorMeshModel(this IReadOnlyMesh2D<IVertex2D> mesh, Color color)
+        {
+            PositionColorMeshModel meshModel = new PositionColorMeshModel();
+            VertexPositionColor[] vertArray = mesh.Verticies.Select(v => new VertexPositionColor(v.Position.ToXNAVector3(0), color)).ToArray();
+            meshModel.Verticies = vertArray;
+
+            List<int> edges = new List<int>(mesh.Faces.Count * 3);
+
+            foreach (var face in mesh.Faces)
+            {
+                if (face.IsTriangle())
+                {
+                    edges.AddRange(face.iVerts);
+                }
+            }
+
+            meshModel.Edges = edges.ToArray();
+            return meshModel;
+        }
+
         public static MeshModel<VertexPositionColor> ToVertexPositionColorMeshModel<VERTEX,DATA>(this MeshBase3D<VERTEX> mesh, Color color)
             where VERTEX : IVertex3D<DATA>
         {
@@ -657,14 +683,14 @@ namespace VikingXNAGraphics
 
     public static class BasicEffectExtensions
     {
-        public static void SetScene(this BasicEffect basicEffect, VikingXNA.Scene scene)
+        public static void SetScene(this IEffectMatrices basicEffect, VikingXNA.Scene scene)
         {
             basicEffect.Projection = scene.Projection;
             basicEffect.View = scene.View;
             basicEffect.World = scene.World;
         }
 
-        public static void SetScene(this BasicEffect basicEffect, VikingXNA.IScene scene)
+        public static void SetScene(this IEffectMatrices basicEffect, VikingXNA.IScene scene)
         {
             basicEffect.Projection = scene.Projection;
             basicEffect.View = scene.View;

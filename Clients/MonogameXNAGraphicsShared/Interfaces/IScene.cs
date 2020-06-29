@@ -17,6 +17,8 @@ namespace VikingXNA
         Matrix ViewProj { get; }
 
         Matrix WorldViewProj { get; }
+
+        Microsoft.Xna.Framework.Graphics.Viewport Viewport { get; }
     }
 
     /// <summary>

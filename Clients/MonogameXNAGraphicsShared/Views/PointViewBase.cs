@@ -12,7 +12,7 @@ using System.Collections.Specialized;
 
 namespace VikingXNAGraphics
 {
-    public abstract class PointViewBase : IColorView
+    public abstract class PointViewBase : IColorView, IRenderable
     {
         private ICollection<GridVector2> _Points = new List<GridVector2>();
         private Color _Color;
@@ -77,7 +77,7 @@ namespace VikingXNAGraphics
             UpdateViews();
         }
 
-        public abstract void Draw(IRenderInfo window, Scene scene);
-
+        public abstract void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items);
+        public abstract void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay);
     }
 }

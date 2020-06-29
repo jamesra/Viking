@@ -8,11 +8,15 @@ using Microsoft.Xna.Framework.Content;
 
 namespace VikingXNAGraphics
 {
+    /// <summary>
+    /// Associates objects of a given type with a GraphicsDevice so they can be accessed from across the app in a consistent way
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public static class DeviceEffectsStore<T> where
         T : class, IInitEffect, new()
     {
         private static Dictionary<GraphicsDevice, T> ManagersForDevice = new Dictionary<GraphicsDevice, T>();
-         
+        
         public static T GetOrCreateForDevice(GraphicsDevice device, ContentManager content)
         {
             if (ManagersForDevice.ContainsKey(device))
@@ -20,14 +24,14 @@ namespace VikingXNAGraphics
                 return ManagersForDevice[device];
             }
 
-            T curveManager = new T();
-            curveManager.Init(device, content);
+            T manager = new T();
+            manager.Init(device, content);
 
-            ManagersForDevice[device] = curveManager;
+            ManagersForDevice[device] = manager;
 
             //device.DeviceLost += OnDeviceLostOrReset;
             //device.DeviceResetting += OnDeviceLostOrReset;
-            return curveManager;
+            return manager;
         }
 
         public static T TryGet(GraphicsDevice device)

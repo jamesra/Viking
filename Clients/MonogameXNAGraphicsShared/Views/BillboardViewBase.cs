@@ -4,12 +4,25 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using Geometry;
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {
-    public abstract class BillboardViewBase : IColorView, IViewPosition2D
+    public abstract class BillboardViewBase : IColorView, IViewPosition2D, IRenderable
     {
         public abstract IShape2D Shape { get; }
+
+        /// <summary>
+        /// Positions the billboard in the world
+        /// </summary>
+        protected Matrix ModelMatrix = Matrix.Identity;
+
+        protected virtual void UpdateModelMatrix()
+        {
+            this.ModelMatrix = Matrix.CreateScale((float)Shape.BoundingBox.Width,
+                                                  (float)Shape.BoundingBox.Height,
+                                                  1f) * Matrix.CreateTranslation(Shape.BoundingBox.Center.ToXNAVector3(0));
+        }
 
         public BillboardViewBase(Color color)
         { 
@@ -52,19 +65,6 @@ namespace VikingXNAGraphics
             }
         }
 
-        protected VertexPositionColorTexture[] _BackgroundVerts = null;
-        public virtual VertexPositionColorTexture[] BackgroundVerts
-        {
-            get
-            {
-                if (_BackgroundVerts == null)
-                {
-                    _BackgroundVerts = CreateVerticies(this.Shape);
-                }
-
-                return _BackgroundVerts;
-            }
-        }
 
         public abstract GridVector2 Position { get; set; }
 
@@ -73,7 +73,7 @@ namespace VikingXNAGraphics
         /// </summary>
         protected virtual void ClearCachedData()
         {
-            _BackgroundVerts = null;
+            UpdateModelMatrix();
         }
 
         /// <summary>
@@ -128,7 +128,7 @@ namespace VikingXNAGraphics
             return PositionedVerticies;
         }
 
-        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, AnnotationOverBackgroundLumaEffect overlayEffect)
+        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect, OverlayShaderEffect overlayEffect)
         {
             DeviceStateManager.SaveDeviceState(device);
             //DeviceStateManager.SetRenderStateForShapes(device);
@@ -147,36 +147,7 @@ namespace VikingXNAGraphics
             basicEffect.VertexColorEnabled = false;
         }
 
-        protected static VertexPositionColorTexture[] AggregatePrimitives(BillboardViewBase[] listToDraw, out int[] indicies)
-        {
-            VertexPositionColorTexture[] VertArray = new VertexPositionColorTexture[listToDraw.Length * 4];
-            indicies = new int[listToDraw.Length * 6];
-
-            int iNextVert = 0;
-            int iNextVertIndex = 0;
-
-            for (int iObj = 0; iObj < listToDraw.Length; iObj++)
-            {
-                BillboardViewBase locToDraw = listToDraw[iObj];
-                int[] locIndicies;
-                VertexPositionColorTexture[] objVerts = BillboardViewBase.GetRenderableVerticies(locToDraw.BackgroundVerts, locToDraw.HSLColor, out locIndicies);
-
-                if (objVerts == null)
-                    continue;
-
-                Array.Copy(objVerts, 0, VertArray, iNextVert, objVerts.Length);
-
-                for (int iVert = 0; iVert < locIndicies.Length; iVert++)
-                {
-                    indicies[iNextVertIndex + iVert] = locIndicies[iVert] + iNextVert;
-                }
-
-                iNextVert += objVerts.Length;
-                iNextVertIndex += locIndicies.Length;
-            }
-
-            return VertArray;
-        }
-
+        public abstract void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items);
+        public abstract void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay);
     }
 }
