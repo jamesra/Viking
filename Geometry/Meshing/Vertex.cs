@@ -201,6 +201,16 @@ namespace Geometry.Meshing
         {
             return this.Index == other.Index;
         }
+
+        int IComparable<IVertex3D>.CompareTo(IVertex3D other)
+        {
+            return this.Index.CompareTo(other.Index);
+        }
+
+        bool IEquatable<IVertex3D>.Equals(IVertex3D other)
+        {
+            return this.Index == other.Index;
+        }
     }
 
 
