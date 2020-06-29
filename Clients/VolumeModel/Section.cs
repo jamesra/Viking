@@ -332,7 +332,7 @@ namespace Viking.VolumeModel
             {
                 this.Number = System.Convert.ToInt32(sectionNumber);
             }
-            catch (Exception e)
+            catch (FormatException e)
             {
                 throw new ArgumentException("The name of each directory in a volume must start with a number indicating which section the directory contains.\n" +
                                                      "This directory did not have a section number: " + path, e); 

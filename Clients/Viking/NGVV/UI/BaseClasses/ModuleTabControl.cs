@@ -38,7 +38,7 @@ namespace Viking.UI.BaseClasses
                 {
                     Trace.WriteLine("Error Loading Module Tab Control: " + ModuleTabType.ToString(), "UI");
                     Trace.WriteLine(Except.ToString(), "UI");
-                    throw Except;
+                    throw;
                 }
 #endif
             }

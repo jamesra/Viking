@@ -214,9 +214,10 @@ namespace Viking.VolumeModel
                     transforms = binFormatter.Deserialize(fstream) as ITransform[];
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 transforms = null;
+                Trace.WriteLine(string.Format("Unable to load {0} from cache", CachedTransformsFileName));
                 System.IO.File.Delete(CachedTransformsFileName);
             }
             

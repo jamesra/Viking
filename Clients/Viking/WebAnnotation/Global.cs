@@ -365,12 +365,13 @@ namespace WebAnnotation
  //               HandleIncorrectXSDMessage();
  //               LoadBookmarksFromBackup();
             }
+            /*
             catch (Exception )
             {
                 //We found it, but could not parse it
   //              HandleIncorrectXSDMessage();
    //             LoadBookmarksFromBackup();
-            }
+            }*/
         }
 
         /// <summary>

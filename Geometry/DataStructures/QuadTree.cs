@@ -372,7 +372,8 @@ namespace Geometry
                 }
                 catch (Exception )
                 {
-                    return false;
+                    throw;
+                    //return false;
                 }
                 finally
                 {

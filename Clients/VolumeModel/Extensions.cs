@@ -131,6 +131,26 @@ namespace Viking.VolumeModel
 
     public static class VolumeToSectionMappingExtensions
     {
+        public static bool[] TrySectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out GridVector2[] output)
+        {
+            return mapper.TrySectionToVolume(points.Select(p => new GridVector2(p.X, p.Y)).ToArray(), out output);
+        }
+
+        public static GridVector2[] SectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points)
+        {
+            return mapper.SectionToVolume(points.Select(p => new GridVector2(p.X, p.Y)).ToArray());
+        }
+
+        public static bool[] TryVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out GridVector2[] output)
+        {
+            return mapper.TryVolumeToSection(points.Select(p => new GridVector2(p.X, p.Y)).ToArray(), out output);
+        }
+
+        public static GridVector2[] VolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points)
+        {
+            return mapper.VolumeToSection(points.Select(p => new GridVector2(p.X, p.Y)).ToArray());
+        }
+
         public static GridPolygon TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolygon shape)
         {
             GridVector2[] VolumePositions; 
@@ -179,6 +199,38 @@ namespace Viking.VolumeModel
             }
 
             return transformed_polygon;
+        }
+
+        public static GridPolyline TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolyline shape)
+        {
+            GridVector2[] VolumePositions;
+
+            bool[] mappedPosition = mapper.TrySectionToVolume(shape.Points, out VolumePositions);
+            if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
+            {
+                Trace.WriteLine("TryMapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                return null;
+            }
+
+            GridPolyline transformed_shape = new GridPolyline(VolumePositions, shape.AllowsSelfIntersection);
+
+            return transformed_shape;
+        }
+
+        public static GridPolyline TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolyline shape)
+        {
+            GridVector2[] SectionPositions;
+
+            bool[] mappedPosition = mapper.TryVolumeToSection(shape.Points, out SectionPositions);
+            if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
+            {
+                Trace.WriteLine("TryMapShapeVolumeToSection: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                return null;
+            }
+
+            GridPolyline transformed_shape = new GridPolyline(SectionPositions, shape.AllowsSelfIntersection);
+
+            return transformed_shape;
         }
     }
 }

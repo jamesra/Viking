@@ -139,7 +139,7 @@ namespace LocalBookmarks
                 
                 System.Windows.Forms.MessageBox.Show("An exception occurred saving the bookmark file: " + e.ToString());
 
-                throw e; 
+                throw; 
             }
 
             if (System.IO.File.Exists(BookmarkFilePath) == false)

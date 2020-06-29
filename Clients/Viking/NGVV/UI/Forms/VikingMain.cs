@@ -193,7 +193,9 @@ namespace Viking
             catch (Exception )
             {
                 //Oh well, just go to the default
-                UseDefaultPosition = true; 
+
+                Trace.WriteLine("Unable to restore view position from application settings.");
+                UseDefaultPosition = true;
             }
 
             //Adjust the downsample level
@@ -208,6 +210,7 @@ namespace Viking
             }
             catch (Exception )
             {
+                Trace.WriteLine("Unable to restore downsample level from application settings.");
             }
 
             if (UseDefaultPosition)

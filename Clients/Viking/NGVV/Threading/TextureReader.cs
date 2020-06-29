@@ -363,7 +363,7 @@ namespace Viking
             catch (Exception e)
             {
                 HandleCachedFileException(e, CacheFilename);
-                throw e;
+                throw;
             }
 
             return TileStream; 
@@ -528,7 +528,7 @@ namespace Viking
                     Trace.WriteLine(e.Message, "TextureUse");
 
                     this.SetTexture(null);
-                    throw e; 
+                    throw; 
                 }
             }
         }
@@ -724,7 +724,7 @@ namespace Viking
                             TextureErrorReported = true;
                         }
 
-                        throw e;
+                        throw;
                     }
                 }
 
@@ -826,7 +826,7 @@ namespace Viking
                 {
                     this.SetTexture(null);
                     Trace.WriteLine(string.Format("Excpetion loading texture: {0}", this.Filename.ToString()));
-                    throw e;
+                    throw;
                 }
             });
 
@@ -969,7 +969,7 @@ namespace Viking
                     tex.Dispose();
                     tex = null;
                 }
-                throw e;
+                throw;
             }
 
             return tex;

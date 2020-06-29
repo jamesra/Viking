@@ -514,7 +514,7 @@ namespace Viking.VolumeModel
             }
             catch (Exception e)
             {
-                Trace.WriteLine("Could not open StosZip file", "VolumeModel");
+                Trace.WriteLine(string.Format("Could not open StosZip file: {0}", StosZipPath), "VolumeModel");
             }
 
             return true;
@@ -953,6 +953,7 @@ namespace Viking.VolumeModel
             }
             catch (Exception)
             {
+                Trace.WriteLine(string.Format("Exception loading {0}, deleting", CacheStosPath));
                 Geometry.Global.TryDeleteCacheFile(CacheStosPath);
 
                 return null;
@@ -991,6 +992,7 @@ namespace Viking.VolumeModel
             }
             catch (Exception)
             {
+                Trace.WriteLine(string.Format("Exception loading {0}, deleting", CacheStosPath));
                 Geometry.Global.TryDeleteCacheFile(CacheStosPath);
 
                 return null;
@@ -1118,6 +1120,7 @@ namespace Viking.VolumeModel
                                     }
                                     catch (Exception)
                                     {
+                                        Trace.WriteLine(string.Format("Exception adding transforms {0} to {1}", trans.ToString(), ControlTrans.ToString()));
                                         trans = TList[childSection];
                                     }
                                     

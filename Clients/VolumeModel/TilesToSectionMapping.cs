@@ -194,6 +194,7 @@ namespace Viking.VolumeModel
                             //On any error, use the traditional path
                             this._TileTransforms = null;
                             LoadedFromCache = false;
+                            Trace.WriteLine(string.Format("Could not load {0} from cache even though file existed", CachedTransformsFileName));
                         }
 
                         if (this._TileTransforms == null)

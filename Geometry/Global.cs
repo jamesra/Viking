@@ -55,7 +55,7 @@ namespace Geometry
                     System.IO.File.Delete(FilePath);
                     return true;
                 }
-                catch (Exception e)
+                catch (System.IO.IOException e)
                 {
                     System.Diagnostics.Trace.WriteLine("Unable to delete cache file " + FilePath);
                 }

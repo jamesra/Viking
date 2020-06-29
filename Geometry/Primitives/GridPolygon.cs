@@ -1625,7 +1625,7 @@ namespace Geometry
                     {
                         //Restore the inner polygon to a known good state before forwarding the exception
                         ReplaceInteriorRing(iVertex.iInnerPoly.Value, original_poly);
-                        throw e;
+                        throw;
                     }
                 }
             }
@@ -1725,7 +1725,7 @@ namespace Geometry
                 {
                     //Restore our state
                     ReplaceInteriorRing(iVertex.iInnerPoly.Value, original_poly);
-                    throw e;
+                    throw;
                 }
             }
             else

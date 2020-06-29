@@ -21,7 +21,7 @@ namespace Utils
                 System.Diagnostics.Trace.WriteLine(string.Format("Could not get {0} attribute from <{1}> Element", AttribName, element.Name));
                 System.Diagnostics.Trace.WriteLine(e.Message);
 
-                throw e;
+                throw;
             }
         }
 

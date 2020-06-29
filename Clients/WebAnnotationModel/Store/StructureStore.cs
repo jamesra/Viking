@@ -361,7 +361,7 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-                throw e;
+                throw;
             }
             finally
             {
@@ -396,7 +396,7 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-                throw e;
+                throw;
             }
             finally
             {
