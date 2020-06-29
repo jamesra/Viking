@@ -210,7 +210,10 @@ namespace AnnotationVizLib
 
                         GridBox subgraph_bbox = subgraphBoxes.Aggregate((a, b) => GridBox.Union(a, b));
 
-                        _BoundingBox = GridBox.Union(_BoundingBox, subgraph_bbox);
+                        if (_BoundingBox != null)
+                            _BoundingBox = GridBox.Union(_BoundingBox, subgraph_bbox);
+                        else
+                            _BoundingBox = subgraph_bbox;
                     }  
                 }
 
