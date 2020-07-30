@@ -11,14 +11,14 @@ using System.Xml.Serialization;
 
 namespace ColladaIO
 {
-    public class DynamicRenderMeshColladaSerializer
+    public static class DynamicRenderMeshColladaSerializer
     {
 
         public static void SerializeToFile(IColladaScene scene, String Filename)
         {
             COLLADA dae = new COLLADA();
 
-            dae.asset = AddStandardAssets();
+            dae.asset = AddStandardAssets(scene);
 
             List<object> listElements = new List<object>();
               
@@ -47,7 +47,7 @@ namespace ColladaIO
             //////////////////////////////////////
             //Create a file to hold all materials
             COLLADA materialDae = new COLLADA();
-            materialDae.asset = AddStandardAssets();
+            materialDae.asset = AddStandardAssets(scene);
 
             string MaterialsURL = "Materials.dae";
             string MaterialsFullPath = System.IO.Path.Combine(Foldername, MaterialsURL);
@@ -63,14 +63,14 @@ namespace ColladaIO
             foreach (StructureModel model in scene.RootModels.Values)
             {
                 model.GeometryURL = string.Format("{0}.dae", model.ID);
-                Serialize(model, MaterialsURL, System.IO.Path.Combine(Foldername, model.GeometryURL));
+                Serialize(model, scene.Scale, MaterialsURL, System.IO.Path.Combine(Foldername, model.GeometryURL));
             }
             ///////////////////////////////////////////
 
             /////////////////////////////////////////////////////////////////////
             //Create a scene file to instantiate every model in the various files
             COLLADA SceneDAE = new ColladaIO.COLLADA();
-            SceneDAE.asset = AddStandardAssets();
+            SceneDAE.asset = AddStandardAssets(scene);
             SceneDAE.scene = CreateScene();
 
             List<object> listNodes = new List<object>();
@@ -89,14 +89,14 @@ namespace ColladaIO
         /// </summary>
         /// <param name="mesh"></param>
         /// <param name="Filename"></param>
-        public static void Serialize(StructureModel model, String MaterialURL, String Filename)
+        public static void Serialize(StructureModel model, AxisUnits scale, String MaterialURL, String Filename)
         {  
             COLLADA dae = new COLLADA();
 
             ColladaIO.mesh_type mtype = new mesh_type();
             mtype.vertices = new vertices_type();
 
-            dae.asset = AddStandardAssets();
+            dae.asset = AddStandardAssets(scale);
 
             List<object> listElements = new List<object>();
             List<StructureModel> modelArray = model.ModelsInTree();
@@ -190,7 +190,12 @@ namespace ColladaIO
             return node;
         }
 
-        private static asset_type AddStandardAssets()
+        private static asset_type AddStandardAssets(IColladaScene scene)
+        {
+            return AddStandardAssets(scene.Scale);
+        }
+
+        private static asset_type AddStandardAssets(AxisUnits scale)
         {
             asset_type asset = new asset_type();
             asset.contributor = new asset_typeContributor[] { CreateVikingContributorAsset() };
@@ -200,12 +205,17 @@ namespace ColladaIO
             asset.modified = rightNow;
             asset.up_axis = up_axis_enum.Z_UP;
 
-            asset_typeUnit unit = new asset_typeUnit();
-            unit.meter = 1;
-            unit.name = "um";
-            asset.unit = unit;
+            asset.unit = scale.AsTypeUnit();
 
             return asset;
+        }
+
+        public static asset_typeUnit AsTypeUnit(this AxisUnits axis)
+        {
+            asset_typeUnit unit = new asset_typeUnit();
+            unit.meter = axis.Value;
+            unit.name = axis.Units;
+            return unit;
         }
 
         private static asset_typeContributor CreateVikingContributorAsset()
