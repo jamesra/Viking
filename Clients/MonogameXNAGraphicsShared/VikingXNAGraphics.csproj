@@ -161,6 +161,7 @@
     <Compile Include="Views\Global.cs" />
     <Compile Include="Views\Interfaces\ICanvasView.cs" />
     <Compile Include="Views\Interfaces\IColorView.cs" />
+    <Compile Include="Views\Interfaces\IHitTesting.cs" />
     <Compile Include="Views\Interfaces\IRenderable.cs" />
     <Compile Include="Views\Interfaces\IRenderInfo.cs" />
     <Compile Include="Views\Interfaces\IScale.cs" />
@@ -254,8 +255,8 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>mkdir $(SolutionDir)Viking\Viking\Content
-copy $(TargetDir)Content\* $(SolutionDir)Viking\Viking\Content /Y</PostBuildEvent>
+    <PostBuildEvent>mkdir $(SolutionDir)Viking\Content\$(ProjectName)
+(robocopy $(TargetDir)Content $(SolutionDir)Viking\Content\$(ProjectName) * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
