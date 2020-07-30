@@ -28,7 +28,10 @@ namespace WebAnnotation.UI
             }
             set
             {
-                textKeepID.Text = value.ToString();
+                if (value > 0)
+                    textKeepID.Text = value.ToString();
+                else
+                    textKeepID.Text = "";
             }
         }
 
@@ -47,7 +50,10 @@ namespace WebAnnotation.UI
             }
             set
             {
-                textSplitID.Text = value.ToString();
+                if (value > 0)
+                    textSplitID.Text = value.ToString();
+                else
+                    textKeepID.Text = "";
             }
         }
 
@@ -134,7 +140,6 @@ namespace WebAnnotation.UI
 
             LocationObj keepLoc = Store.Locations.GetObjectByID(KeepID);
             LocationObj splitLoc = Store.Locations.GetObjectByID(SplitID);
-
 
             if (keepLoc == null && splitLoc == null)
             {
@@ -292,6 +297,14 @@ namespace WebAnnotation.UI
                 btnSplit.Enabled = true;
                 textInfo.Text = null;
             }
-        } 
+        }
+
+        private void btnFlip_Click(object sender, EventArgs e)
+        {
+
+            long temp = KeepID;
+            KeepID = SplitID;
+            SplitID = temp;
+        }
     }
 }
