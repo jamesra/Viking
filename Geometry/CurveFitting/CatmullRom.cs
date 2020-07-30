@@ -408,6 +408,10 @@ namespace Geometry
             {
                 if (IsClosed && i == curved_path.Length - 1)
                     continue; //Skip the last point which is a duplicate in a closed curve
+
+                if (point_to_ideal_curve_index.ContainsKey(curved_path[i]))
+                    continue; 
+
                 point_to_ideal_curve_index.Add(curved_path[i], i);
             }
 
