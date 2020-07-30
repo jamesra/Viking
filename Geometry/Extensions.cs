@@ -595,6 +595,23 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Create a polyline from points in the collection
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridPolyline ToPolyline(this ICollection<GridVector2> points, bool AllowSelfIntersection=false)
+        {
+            if (points == null)
+                return null;
+
+            if (points.Count <= 1)
+                throw new ArgumentException("Must have two points to create line segments");
+
+            GridPolyline polyline = new GridPolyline(points, AllowSelfIntersection);
+            return polyline;
+        }
+
+        /// <summary>
         /// Remove all of the adjacent duplicate points and return as a new array
         /// </summary>
         /// <param name="points"></param>
@@ -1434,7 +1451,31 @@ namespace Geometry
 
             return bbox;
         }
-        
+
+        public static GridRectangle BoundingBox(this IEnumerable<GridPolygon> polygons)
+        {
+            if (!polygons.Any())
+            {
+                throw new ArgumentException("No polygons in array to calculate bounding box");
+            }
+
+            bool first = true;
+            GridRectangle bbox = new GridRectangle();
+            foreach (var poly in polygons)
+            {
+                if (first)
+                {
+                    bbox = poly.BoundingBox;
+                    first = false;
+                }
+                else
+                {
+                    bbox.Union(poly.BoundingBox);
+                }
+            } 
+            return bbox;
+        }
+
     }
 
     public static class MappingGridVector2Extensions
