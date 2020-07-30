@@ -8,6 +8,9 @@ using VikingXNAGraphics;
 
 namespace WebAnnotation.Actions
 {
+    /// <summary>
+    /// Fades an IColorView object 
+    /// </summary>
     class MouseOverLocationCanvasViewEffect
     {
         private object _viewObj = null;
