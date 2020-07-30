@@ -1481,7 +1481,8 @@ namespace Geometry
             int iInner = _InteriorPolygons.Count;
             this._InteriorPolygons.Add(innerPoly);
 
-            if (this.IsInnerValid(iInner, true) == false)
+            //We don't pass True to checking for intersections with other interior polygons because we checked at the start of this function
+            if (this.IsInnerValid(iInner, false) == false) 
             {
                 this._InteriorPolygons.RemoveAt(iInner);
                 throw new ArgumentException("Replacement inner polygon is not a valid addition");
@@ -2727,6 +2728,9 @@ namespace Geometry
 
         public bool Contains(GridLineSegment line)
         {
+            if (line.BoundingBox.ContainsExt(this.BoundingBox) == OverlapType.NONE)
+                return false; 
+
             //Ensure both endpoints are inside and a point in the center.
             //Test the center because if the line crosses a concave region with both endpoints exactly on the exterior ring we'd not have any intersections but the poly would not contain the line.
             if (!(this.Contains(line.A) && this.Contains(line.B) && this.Contains(line.PointAlongLine(0.5))))
@@ -2757,6 +2761,46 @@ namespace Geometry
             }
 
             return true;
+        }
+
+        public OverlapType ContainsExt(GridLineSegment line)
+        {
+            if (line.BoundingBox.ContainsExt(this.BoundingBox) == OverlapType.NONE)
+                return OverlapType.NONE;
+            
+            //Ensure both endpoints are inside and a point in the center.
+            //Test the center because if the line crosses a concave region with both endpoints exactly on the exterior ring we'd not have any intersections but the poly would not contain the line.
+            if (!(this.Contains(line.A) && this.Contains(line.B) && this.Contains(line.PointAlongLine(0.5))))
+                return OverlapType.NONE;
+
+            IEnumerable<GridLineSegment> segmentsToTest;
+
+            if (_ExteriorSegments.Length > 32 || HasInteriorRings)
+            {
+                segmentsToTest = this.GetIntersectingSegments(line);
+            }
+            else
+            {
+                segmentsToTest = _ExteriorSegments.ToList();
+            }
+
+            bool intersects = line.Intersects(segmentsToTest, true); //It is OK for endpoints to be on the exterior ring.
+            if (intersects)
+            {
+                //The line intersects some of the polygon segments, but was it just the endpoint?
+                return OverlapType.INTERSECTING; //Line is not entirely inside the polygon
+            }
+
+            foreach (GridPolygon innerPoly in this.InteriorPolygons)
+            {
+                var innerResult = innerPoly.ContainsExt(line);
+                if (innerResult == OverlapType.INTERSECTING || innerResult == OverlapType.TOUCHING)
+                    return innerResult;
+                else if (innerResult == OverlapType.CONTAINED)
+                    return OverlapType.NONE; //It is entirely inside the hole, so it has no overlap 
+            }
+
+            return OverlapType.CONTAINED;
         }
 
 
@@ -2811,15 +2855,48 @@ namespace Geometry
             //We cannot contain the other shape if the overlapping bounding box is not identical
             if (overlap.Value != other.BoundingBox)
                 return false;
-            
+
+            bool HasInteriorVertex = this.Contains(other.ExteriorRing[0]);
+            bool HasSegmentIntersections = GridPolygon.SegmentsIntersect(this, other);
+            if (HasSegmentIntersections == false && HasInteriorVertex)
+                //return OverlapType.INTERSECTING;
+                return true;
+
+            return false;
+            /*
             //Check case of interior polygon intersection
-            if(!other.ExteriorRing.All(p => this.Contains(p)))
+            if (!other.ExteriorRing.All(p => this.Contains(p)))
             {
                 return false;
             }
 
             //Check case of line segment passing through a convex polygon or an interior polygon
             return !GridPolygon.SegmentsIntersect(this, other);
+            */
+        }
+
+
+        /// <summary>
+        /// Return true if the polygon is completely inside the other
+        /// </summary>
+        /// <param name="poly"></param>
+        /// <returns></returns>
+        public OverlapType ContainsExt(GridPolygon other)
+        {
+            GridRectangle? overlap = BoundingBox.Intersection(other.BoundingBox);
+            if (!overlap.HasValue)
+                return OverlapType.NONE;
+            
+            bool HasSegmentIntersections = GridPolygon.SegmentsIntersect(this, other);
+            if (HasSegmentIntersections)
+                return OverlapType.INTERSECTING;
+
+            bool HasInteriorVertex = this.Contains(other.ExteriorRing[0]);
+            if (HasInteriorVertex)
+                return OverlapType.CONTAINED;
+
+            //TODO: OverlapType.Touching is not implemented
+            return OverlapType.NONE;
         }
 
         public bool InteriorPolygonContains(GridVector2 p)
@@ -3390,7 +3467,7 @@ namespace Geometry
         }
 
         public static GridPolygon Smooth(GridPolygon poly, uint NumInterpolationPoints)
-        {
+        { 
             GridVector2[] smoothedCurve = poly.ExteriorRing.CalculateCurvePoints(NumInterpolationPoints, true);
 
             //GridVector2[] simplifiedCurve = smoothedCurve.DouglasPeuckerReduction(.5, poly.ExteriorRing).EnsureClosedRing().ToArray();
@@ -3402,6 +3479,8 @@ namespace Geometry
                 GridPolygon smoother_inner_poly = GridPolygon.Smooth(inner_poly, NumInterpolationPoints);
                 smoothed_poly.AddInteriorRing(smoother_inner_poly);
             }
+
+            Trace.WriteLine(string.Format("Smooth Polygon {0} into {1}", poly, smoothed_poly));
 
             return smoothed_poly;
         }
