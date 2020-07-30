@@ -492,5 +492,79 @@ namespace GeometryTests
             Assert.IsTrue(path.HasSelfIntersection);
             CompareWithExpectedLoop(path.Loop, expected_loop);
         }
+
+        /// <summary>
+        ///      E----D
+        ///      |    |    
+        ///      F    C   
+        ///      |    |      \ 
+        ///      |    |        \
+        ///      A----B
+        ///      |
+        ///      |
+        ///      |
+        ///      |
+        ///      F
+        /// 
+        /// We expect to find the loop A,B,C,A
+        /// 
+        /// </summary>
+        [TestMethod]
+        public void TestLoopOnEndpointDetectionWithBox3()
+        {
+            GridVector2[] expected_loop = new GridVector2[]
+            {
+                new GridVector2(0,0),
+                new GridVector2(10,0),
+                new GridVector2(10,5),
+                new GridVector2(10,10),
+                new GridVector2(0,10),
+                new GridVector2(0,5),
+                new GridVector2(0,0)
+            };
+
+            Path path = new Path();
+
+            //Build our path until we have a loop
+            Assert.IsFalse(path.HasSelfIntersection);
+            path.Push(new GridVector2(0, 0));
+            Assert.IsFalse(path.HasSelfIntersection);
+            path.Push(new GridVector2(10, 0));
+            Assert.IsFalse(path.HasSelfIntersection);
+            path.Push(new GridVector2(10, 5));
+            Assert.IsFalse(path.HasSelfIntersection);
+            path.Push(new GridVector2(10, 10));
+            Assert.IsFalse(path.HasSelfIntersection);
+            path.Push(new GridVector2(0, 10));
+            Assert.IsFalse(path.HasSelfIntersection);
+            path.Push(new GridVector2(0, 5));
+            Assert.IsFalse(path.HasSelfIntersection);
+
+            //Make sure the loop was found
+            path.Push(new GridVector2(0, 0));
+            Assert.IsTrue(path.HasSelfIntersection);
+            CompareWithExpectedLoop(path.Loop, expected_loop);
+
+            //Make sure the loop doesn't change with an extra random point
+            path.Push(new GridVector2(0, -10));
+            Assert.IsTrue(path.HasSelfIntersection);
+            CompareWithExpectedLoop(path.Loop, expected_loop);
+
+            //Remove a point and ensure the loop doesn't change
+            path.Pop();
+            Assert.IsTrue(path.HasSelfIntersection);
+            CompareWithExpectedLoop(path.Loop, expected_loop);
+
+            //Remove the point needed for an intersection and ensure the loop goes away
+            path.Pop();
+            Assert.IsFalse(path.HasSelfIntersection);
+
+            //Replace the point needed for an intersection and ensure the loop comes back
+            path.Push(new GridVector2(0, -10));
+
+            //Make sure the loop was found
+            Assert.IsTrue(path.HasSelfIntersection);
+            CompareWithExpectedLoop(path.Loop, expected_loop);
+        }
     }
 }
