@@ -29,7 +29,8 @@ namespace Viking
                 }
                 catch(Exception e)
                 {
-                    Trace.WriteLine("Exception caught disposing of texture: " + e.ToString(), "TextureUse"); 
+                    Trace.WriteLine("Exception caught disposing of texture: " + e.ToString(), "TextureUse");
+                    throw;
                 }
             } 
             
