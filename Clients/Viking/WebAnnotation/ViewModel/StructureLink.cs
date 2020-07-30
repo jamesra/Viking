@@ -32,12 +32,17 @@ namespace WebAnnotation.ViewModel
             this.TargetLocID = Target;
         }
          
-        public static SectionStructureLinkViewKey CreateForNearestLocations(StructureLinkKey linkKey, IEnumerable<LocationCanvasView> SourceLocations, IEnumerable<LocationCanvasView> TargetLocations)
+        public static SectionStructureLinkViewKey CreateForNearestLocations(StructureLinkKey linkKey, ICollection<LocationCanvasView> SourceLocations, ICollection<LocationCanvasView> TargetLocations)
         {
             //Brute force a search for the shortest distance between the two structures.
             double MinDistance = double.MaxValue;
             LocationCanvasView BestSourceLoc = null;
             LocationCanvasView BestTargetLoc = null;
+
+            if(SourceLocations.Count == 1 && TargetLocations.Count == 1)
+            {
+                return new SectionStructureLinkViewKey(linkKey, SourceLocations.First().ID, TargetLocations.First().ID);
+            }
 
             foreach (LocationCanvasView SourceLoc in SourceLocations)
             {

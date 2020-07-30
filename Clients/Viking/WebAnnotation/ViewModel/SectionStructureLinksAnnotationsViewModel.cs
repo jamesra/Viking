@@ -166,8 +166,8 @@ namespace WebAnnotation.ViewModel
             if (Success == false)
                 return null;
 
-            IEnumerable<LocationCanvasView> SourceLocations = SourceLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null);
-            IEnumerable<LocationCanvasView> TargetLocations = TargetLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null);
+            ICollection<LocationCanvasView> SourceLocations = SourceLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null).ToArray();
+            ICollection<LocationCanvasView> TargetLocations = TargetLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null).ToArray();
 
             SectionStructureLinkViewKey linkViewKey = SectionStructureLinkViewKey.CreateForNearestLocations(structLinkObj.ID, SourceLocations, TargetLocations);
             if (linkViewKey == null)
