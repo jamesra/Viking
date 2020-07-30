@@ -189,8 +189,8 @@ namespace Viking.UI
     {
         public readonly PointerMessageFlags Flags;
 
-        public int X { get { return msg.LParam.LowWord(); } }
-        public int Y { get { return msg.LParam.HiWord(); } }
+        public int X { get { return (int)msg.LParam.SignedLowWord(); } }
+        public int Y { get { return (int)msg.LParam.SignedHiWord(); } }
 
         public System.UInt32 PointerID { get { return msg.WParam.LowWord(); } }
 
@@ -324,13 +324,17 @@ namespace Viking.UI
         /// Used to convert pen pressure from 0 to 1 range
         /// </summary>
         public double minPenPressure = 0;
-        public double maxPenPressure = 5000;
+        public double maxPenPressure = 1024;
 
         public double NormalizeStylusPressure(double pressure)
         {
             if (pressure < 0)
             {
-                throw new ArgumentException("Stylus Pressure not expected to be negative");
+                throw new ArgumentException(string.Format("Stylus Pressure not expected to be below minimum: {0} < {1}", pressure, minPenPressure));
+            }
+            if (pressure > maxPenPressure)
+            {
+                throw new ArgumentException(string.Format("Stylus Pressure not expected to be above maximum: {0} > {1}", pressure, maxPenPressure));
             }
 
             double fraction = pressure / maxPenPressure;
@@ -362,6 +366,25 @@ namespace Viking.UI
 
         public static System.UInt16 HiWord(this IntPtr param) { return (System.UInt16)(param.ToInt32() >> 16); } //Shift away the low word
         public static System.UInt16 LowWord(this IntPtr param) { return (System.UInt16)(param.ToInt32() & 0xFFFF); }
+
+
+        public static System.Int16 SignedHiWord(this IntPtr param)
+        {
+            UInt16 val = HiWord(param);
+            unchecked
+            {
+                return (Int16)val;
+            }
+        }
+
+        public static System.Int16 SignedLowWord(this IntPtr param)
+        {
+            UInt16 val = LowWord(param);
+            unchecked
+            {
+                return (Int16)val;
+            }
+        }
 
         public static int HiWord(this int param) { return (int)(param & 0xFFFF0000); }
         public static int LowWord(this int param) { return (int)(param & 0xFFFF); }
@@ -416,6 +439,9 @@ namespace Viking.UI
 
         public static void LogPenData(System.Windows.Forms.Message msg, string Header)
         {
+            if (Global.TracePenEvents == false)
+                return;
+
             PointerMessageData data = new PointerMessageData(msg);
             
             bool success = Touch.GetPointerPenInfo(data.PointerID, out PointerPenInfo info);
