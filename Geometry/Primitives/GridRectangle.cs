@@ -625,6 +625,39 @@ namespace Geometry
             return false;
         }
 
+        public OverlapType ContainsExt(GridRectangle rect)
+        {
+            //Find out if the rectangles can't possibly intersect
+            if (rect.Right < this.Left ||
+               rect.Top < this.Bottom ||
+               rect.Left > this.Right ||
+               rect.Bottom > this.Top)
+                return OverlapType.NONE;
+
+            if (rect.Right <= this.Right &&
+               rect.Top <= this.Top &&
+               rect.Left >= this.Left &&
+               rect.Bottom >= this.Bottom)
+                return OverlapType.CONTAINED;
+
+            bool LRIntersect = (this.Left > rect.Left && this.Left < rect.Right) ||
+                               (this.Right > rect.Left && this.Right < rect.Right);
+            bool UDIntersect = (this.Bottom > rect.Bottom && this.Bottom < rect.Top) ||
+                               (this.Top > rect.Bottom && this.Top < rect.Top);
+
+            if (LRIntersect && UDIntersect)
+                return OverlapType.INTERSECTING;
+
+            bool LRTouch = this.Left == rect.Right || this.Right == rect.Left;
+            bool UDTouch = this.Bottom == rect.Top || this.Top == rect.Bottom;
+
+            if (LRTouch && UDTouch)
+                return OverlapType.TOUCHING;
+
+            System.Diagnostics.Debug.Assert(false, "Every case should be handled at this point...");
+            return OverlapType.NONE;
+        }
+
         int? _HashCode;
 
         public override int GetHashCode()
