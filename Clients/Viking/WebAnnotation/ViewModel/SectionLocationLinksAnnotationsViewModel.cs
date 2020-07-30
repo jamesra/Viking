@@ -206,5 +206,17 @@ namespace WebAnnotation.ViewModel
             }
             ).Where(l => l != null && l.Intersects(line)).ToList();
         }
+
+        public ICollection<LocationLinkView> GetLocationLinks(GridRectangle rect)
+        {
+            List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(rect.ToRTreeRect((float)this.Section.Number));
+            return intersectingIDs.Select(id =>
+            {
+                if (LocationLinks.ContainsKey(id))
+                    return LocationLinks[id];
+                return null;
+            }
+            ).Where(l => l != null).ToList();
+        }
     }
 }
