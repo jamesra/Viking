@@ -130,9 +130,15 @@ namespace Viking.VolumeModel
             return mapping;
         }
         */
-        public void AddLevel(int level, string path)
+        public bool AddLevel(int level, string path)
         {
-            LevelsToPaths.Add(level, path);
+            if (LevelsToPaths.ContainsKey(level) == false)
+            {
+                LevelsToPaths.Add(level, path);
+                return true;
+            }
+
+            return false;
         }
 
         public IList<int> GetLevels()
