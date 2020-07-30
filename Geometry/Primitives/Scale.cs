@@ -5,6 +5,9 @@ using System.Text;
 
 namespace Geometry
 { 
+    /// <summary>
+    /// Describes scale along an axis
+    /// </summary>
     [Serializable]
     public class AxisUnits
     {
@@ -18,6 +21,9 @@ namespace Geometry
         }
     }
 
+    /// <summary>
+    /// Describes the scale for each axis in a 3D scene
+    /// </summary>
     [Serializable]
     public class Scale
     {
