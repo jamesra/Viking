@@ -22,6 +22,8 @@ namespace Viking
 
         static private Dictionary<int,string> AllocatedTextures = new Dictionary<int,string>();
 
+        static public bool TracePenEvents = false; 
+
         static public void AddTexture(Microsoft.Xna.Framework.Graphics.Texture tex, string msg)
         {
             //            Trace.WriteLine("Adding Texture: " + tex.GetHashCode().ToString(), "TextureUse");
