@@ -311,7 +311,7 @@ namespace Viking.Common
                 }
                 else
                 {
-                    throw except;
+                    throw;
                 }
             }
 
@@ -593,7 +593,8 @@ namespace Viking.Common
                 {
                     System.Windows.Forms.MessageBox.Show("Failed to create overlay: " + ObjType.ToString() + " Removing from overlay list. Exception: " + e.ToString(), "Error");
                     ExtensionManager.SectionOverlayList.RemoveAt(i);
-                    i--; 
+                    i--;
+                    throw;
                 }
             }
              
@@ -618,6 +619,7 @@ namespace Viking.Common
                     System.Windows.Forms.MessageBox.Show("Failed to create contect menu provider: " + ObjType.ToString() + " Removing from overlay list. Exception: " + e.ToString(), "Error");
                     ExtensionManager.ContextMenuProviderList.RemoveAt(i);
                     i--;
+                    throw;
                 }
             } 
 
