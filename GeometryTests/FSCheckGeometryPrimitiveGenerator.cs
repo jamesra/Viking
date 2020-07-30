@@ -590,7 +590,14 @@ namespace GeometryTests
                         continue;
                     }
 
-                    output.AddInteriorRing(inner);
+                    try
+                    {
+                        output.AddInteriorRing(inner);
+                    }
+                    catch(ArgumentException e)
+                    {
+                        Trace.WriteLine("Exception adding interior ring to generated polygon");
+                    }
                 }
 
                 return output;

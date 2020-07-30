@@ -46,6 +46,9 @@ namespace MorphologyMesh
     ///Then we ask B,E for nodes below B,I -> D,J.  Then we ask for nodes above: D,J -> A.  Continuing 
     ///until no new nodes are added.  These nodes are then combined and sent to the Bajaj generator
     ///
+    /// A SliceGraph translates all polygons to the center of the bounding box of the MorphologyGraph it is passed.  To 
+    /// position the SliceGraph in volume space you should translate it to the center of the bounding box of the Morhphology
+    /// graph.
     /// </summary>
     public class SliceGraph : Graph<ulong, Slice, Edge<ulong>>
     {
@@ -59,6 +62,11 @@ namespace MorphologyMesh
 
         private Dictionary<ulong, SliceTopology> SliceToTopology = null;
 
+        /// <summary>
+        /// The center of the bounding box of all slices in the graph
+        /// </summary>
+        public GridBox BoundingBox { get { return Graph.BoundingBox; } }
+        
         private SliceGraph(MorphologyGraph graph)
         {
             this.Graph = graph;
@@ -202,6 +210,12 @@ namespace MorphologyMesh
             NewNodesBelow = new SortedSet<ulong>(NewNodesAbove.SelectMany(n => graph[n].GetEdgesBelow(graph)));
             NewNodesAbove = new SortedSet<ulong>(NewNodesBelow.SelectMany(n => graph[n].GetEdgesAbove(graph)));
 
+            var CycleWithAbove = NodesAbove.Intersect(NewNodesBelow).ToArray();
+            CheckForCycle(CycleWithAbove);
+
+            var CycleWithBelow = NodesBelow.Intersect(NewNodesAbove).ToArray();
+            CheckForCycle(CycleWithBelow);
+
             NewNodesAbove.ExceptWith(NodesAbove);
             NewNodesBelow.ExceptWith(NodesBelow);
 
@@ -214,6 +228,22 @@ namespace MorphologyMesh
                 BuildMeshingCrossSection(graph, ref NodesAbove, ref NodesBelow, NewNodesAbove, NewNodesBelow, ref FollowedEdges);
                 return;
             }
+        }
+
+        private static bool CheckForCycle(ulong[] cycle_ids)
+        {
+            if (cycle_ids.Length > 0)
+            {
+                foreach (var id in cycle_ids)
+                {
+                    Trace.WriteLine(string.Format("{0} forms a cycle in the morphology graph", id));
+                }
+
+                Debug.Assert(cycle_ids.Length == 0, string.Format("Cycle found in graph: {0}", cycle_ids[0]));
+                return true;
+            }
+
+            return false;
         }
 
 
@@ -269,7 +299,7 @@ namespace MorphologyMesh
                 }
 
                 //Start a task to simplify the polygon
-                Task<GridPolygon> t = new Task<GridPolygon>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Simplify(tolerance), node);
+                Task<GridPolygon> t = new Task<GridPolygon>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Translate(-graph.BoundingBox.CenterPoint.XY()).Simplify(tolerance), node);
 
                 t.Start();
                 tasks.Add(t);
@@ -523,6 +553,11 @@ namespace MorphologyMesh
         /// </summary>
         internal readonly GridPolygon[] LowerPolygons;
 
+        /// <summary>
+        /// The translation vector to position this slice in world space.
+        /// </summary>
+        //public readonly GridVector2 Offset;
+
         public SliceTopology(ulong key, IEnumerable<GridPolygon> polygons, IEnumerable<bool> isUpper, IEnumerable<double> polyZ, IEnumerable<ulong> polyIndexToMorphNodeIndex)
             : this(polygons, isUpper, polyZ, polyIndexToMorphNodeIndex)
         {
@@ -533,10 +568,15 @@ namespace MorphologyMesh
         {
             SliceKey = 0;
 
+            //GridVector2 Center = polygons.BoundingBox().Center;
+
+            //Translate all polygons as close to the origin as possible.  We'll move them back once we assemble the mesh.
+            //Polygons = polygons.Select(p => p.Translate(-Center)).ToArray();
+            //Offset = Center;
             Polygons = polygons.ToArray();
             IsUpper = isUpper.ToArray();
             PolyZ = polyZ.ToArray();
-            
+
             PolyIndexToMorphNodeIndex = polyIndexToMorphNodeIndex == null ? null : polyIndexToMorphNodeIndex.ToArray();
 
             //Assign polys to sets for convienience later
@@ -968,7 +1008,7 @@ namespace MorphologyMesh
             var MorphNodeToShape = Graph.MorphNodeToShape;
              
             List<Slice> SlicesToStart = new List<Slice>(UnprocessedSlices.Count);
-
+            bool TasksStarted = false;
             try
             {
                 rwLock.EnterWriteLock();
@@ -977,15 +1017,18 @@ namespace MorphologyMesh
                 
                 for (int iSlice = UnprocessedSlices.Count - 1; iSlice >= 0; iSlice--)
                 {
-                    TryStartSlice(UnprocessedSlicesArray[iSlice]);
+                    var outputTask = TryStartSlice(UnprocessedSlicesArray[iSlice]);
+                    TasksStarted = TasksStarted || outputTask != null;
                 }
             }
             finally
             {
                 rwLock.ExitWriteLock();
             }
-
-            AllDoneEvent.Wait();
+            
+            //We need to ensure there are tasks to wait on. This was an edge case for structures with one annotation.
+            if(TasksStarted)
+               AllDoneEvent.Wait();
 
             return this.SliceToTopology;
         }

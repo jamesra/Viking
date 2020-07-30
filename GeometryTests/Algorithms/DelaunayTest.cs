@@ -112,7 +112,7 @@ namespace GeometryTests.Algorithms
             configuration.MaxNbOfTest = 10;
             configuration.QuietOnSuccess = false;
             configuration.StartSize = 10;
-            //configuration.Replay = Global.StdGenSeed;
+            configuration.Replay = Global.StdGenSeed;
 
             Prop.ForAll<GridVector2>((point) => System.Diagnostics.Trace.WriteLine(point.ToString())).Check(configuration); // IsDelaunay(GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray()))).Check(configuration);
 
@@ -145,7 +145,7 @@ namespace GeometryTests.Algorithms
             var configuration = Configuration.QuickThrowOnFailure;
             configuration.MaxNbOfTest = 100;
             configuration.QuietOnSuccess = false;
-            configuration.StartSize = 512;
+            configuration.StartSize = 10;
 
             //Prop.ForAll<TriangulationMesh<Vertex2D>>((mesh) => IsDelaunay(mesh)).Check(configuration);
             Prop.ForAll<TriangulationMesh<IVertex2D>>((mesh) => IsDelaunay(mesh)).Check(configuration);
@@ -348,15 +348,19 @@ namespace GeometryTests.Algorithms
         {
             //System.Diagnostics.Trace.WriteLine(string.Format("{0}", mesh));
             bool edgesIntersect = mesh.AnyMeshEdgesIntersect();
-            bool facesDelaunay = mesh.AreTriangulatedFacesDelaunay();
+            Property facesDelaunay = mesh.AreTriangulatedFacesDelaunay(out bool facesDelaunayResult);
             bool facesCCW = mesh.AreTriangulatedFacesCCW();
             bool facesColinear = mesh.AreTriangulatedFacesColinear();
             bool vertEdges = mesh.AreTriangulatedVertexEdgesValid() || mesh.Verticies.Count < 3;
             bool facesAreTriangles = mesh.AreFacesTriangles();
-            bool success = (edgesIntersect == false) && facesDelaunay && facesCCW && vertEdges && facesAreTriangles;
+            bool success = (edgesIntersect == false) && facesDelaunayResult && facesCCW && vertEdges && facesAreTriangles;
+
+            if (success == false)
+                System.Threading.Thread.Sleep(200); //Sleep to allow screent to update 
+
             int nVerts = mesh.Verticies.Count;
             return (edgesIntersect == false).Label("Edges intersect")
-               .And(facesDelaunay.Label("Faces not Delaunay"))
+               .And(facesDelaunay)//.Label("Faces not Delaunay"))
                .And(facesCCW.Label("Faces Clockwise"))
                .And((facesColinear == false).Label("Faces colinear"))
                .And(facesAreTriangles.Label("Faces aren't triangles"))
@@ -366,7 +370,7 @@ namespace GeometryTests.Algorithms
         }
 
         
-
+        /*
         public bool GenAndTriangulateMesh(GridVector2[] points)
         {
             return GenAndTriangulateMesh(points, out TriangulationMesh<IVertex2D> mesh);
@@ -406,7 +410,7 @@ namespace GeometryTests.Algorithms
             {
                 return false;
             }
-        }
+        }*/
 
         [TestMethod]
         public void TriangulatePolygonTest()

@@ -70,15 +70,15 @@ namespace UtilitiesTests
             double PI4 = Math.PI / 4;
 
             double angle = GridVector3.Angle(A, B);
-            Assert.IsTrue(angle - Global.Epsilon < (3.0 * PI4) &&
-                         angle + Global.Epsilon > (3.0 * PI4));
+            Assert.IsTrue(angle - Global.Epsilon < (1.0 * PI4) &&
+                         angle + Global.Epsilon > (1.0 * PI4));
 
             A = new GridVector3(5, 0,0);
             B = new GridVector3(2.5, -2.5,0);
 
             angle = GridVector3.Angle(A, B);
-            Assert.IsTrue(angle - Global.Epsilon < (-3.0 * PI4) &&
-                         angle + Global.Epsilon > (-3.0 * PI4));
+            Assert.IsTrue(angle - Global.Epsilon < (1.0 * PI4) &&
+                         angle + Global.Epsilon > (1.0 * PI4));
 
             //
             // TODO: Add test logic	here
@@ -128,6 +128,31 @@ namespace UtilitiesTests
             double result = GridVector3.Angle(Origin, D);
             Assert.AreEqual(degree45, Pi4);
             Assert.AreEqual(result, Pi4);
+        }
+
+        [TestMethod]
+        public void TestArcAngle()
+        {
+            GridVector3 O = new GridVector3(0, 0, 0);
+            GridVector3 A = new GridVector3(5, 0, 0);
+            GridVector3 B = new GridVector3(2.5, 2.5, 0);
+
+            double PI4 = Math.PI / 4;
+
+            double angle = GridVector3.ArcAngle(O, A, B);
+            Assert.IsTrue(angle - Global.Epsilon < (1.0 * PI4) &&
+                         angle + Global.Epsilon > (1.0 * PI4));
+
+            A = new GridVector3(5, 0, 0);
+            B = new GridVector3(-2.5, -2.5, 0);
+
+            angle = GridVector3.ArcAngle(O, A, B);
+            Assert.IsTrue(angle - Global.Epsilon < (3.0 * PI4) &&
+                         angle + Global.Epsilon > (3.0 * PI4));
+
+            //
+            // TODO: Add test logic	here
+            //
         }
 
         [TestMethod]

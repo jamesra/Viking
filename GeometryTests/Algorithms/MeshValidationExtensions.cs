@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Geometry;
 using GeometryTests;
 using Geometry.Meshing;
+using FsCheck;
 
 namespace GeometryTests.Algorithms
 {
@@ -102,8 +103,9 @@ namespace GeometryTests.Algorithms
         /// </summary>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        public static bool AreTriangulatedFacesDelaunay(this TriangulationMesh<IVertex2D> mesh)
+        public static Property AreTriangulatedFacesDelaunay(this TriangulationMesh<IVertex2D> mesh, out bool result)
         {
+            result = true;
             foreach (Face f in mesh.Faces)
             {
                 bool IsDelaunay = mesh.IsTriangleDelaunay(f);
@@ -111,10 +113,13 @@ namespace GeometryTests.Algorithms
                 //Assert.IsFalse(IsClockwise, string.Format("{0} is clockwise, incorrect winding.", f));
 
                 if (!IsDelaunay)
-                    return false;
+                {
+                    result = false;
+                    return false.Label(string.Format("Face {0} is not delaunay", f));
+                }
             }
 
-            return true;
+            return true.ToProperty();
         }
 
         

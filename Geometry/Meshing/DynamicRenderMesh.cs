@@ -202,7 +202,7 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="Duplicator">A constructor that can copy attributes of a face object</param>
         /// <returns></returns>
-        public void SplitFace(IFace face)
+        public override void SplitFace(IFace face)
         {
             if (face.IsTriangle())
                 return;

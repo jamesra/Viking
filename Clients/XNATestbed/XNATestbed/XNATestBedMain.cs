@@ -40,7 +40,7 @@ namespace XNATestbed
         public VikingXNA.Camera Camera;
         public SpriteFont fontArial;
         public BasicEffect basicEffect;
-        public AnnotationOverBackgroundLumaEffect overlayEffect;
+        public OverlayShaderEffect overlayEffect;
 
         CurveTest curveTest = new CurveTest();
         CurveViewTest curveViewTest = new CurveViewTest();
@@ -139,7 +139,7 @@ namespace XNATestbed
 
             Matrix WorldViewProj = Scene.WorldViewProj;
              
-            this.overlayEffect = DeviceEffectsStore<AnnotationOverBackgroundLumaEffect>.GetOrCreateForDevice(this.GraphicsDevice, this.Content);
+            this.overlayEffect = DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(this.GraphicsDevice, this.Content);
             this.overlayEffect.WorldViewProjMatrix = WorldViewProj;
 
 

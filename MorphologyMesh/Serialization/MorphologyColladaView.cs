@@ -137,11 +137,11 @@ namespace MorphologyMesh
             Mesh = mesh;
             Material = mat;
             
-            GridVector3 TranslationVector = mesh.BoundingBox.CenterPoint;
+            //GridVector3 TranslationVector = mesh.BoundingBox.CenterPoint;
 
             //Mesh.Translate(TranslationVector);
 
-            Translation = TranslationVector;
+            //Translation = TranslationVector;
         }
 
         private GridVector3 _Translation;
@@ -188,7 +188,10 @@ namespace MorphologyMesh
 
         string Title { get; }
 
-        Scale Scale { get; }
+        /// <summary>
+        /// Scale should be the same in all three axes in a DAE scene
+        /// </summary>
+        AxisUnits Scale { get; }
 
         IReadOnlyDictionary<ulong, StructureModel> RootModels { get; }
         IReadOnlyDictionary<ulong, StructureModel> StructureModels { get; }
@@ -200,8 +203,6 @@ namespace MorphologyMesh
     /// </summary>
     public class BasicColladaView : IColladaScene
     {
-        public readonly Scale Scale;
-
         public string SceneTitle = null;
 
 
@@ -216,7 +217,7 @@ namespace MorphologyMesh
         #region IColladaScene
         string IColladaScene.Title => SceneTitle;
 
-        Scale IColladaScene.Scale => Scale;
+        public AxisUnits Scale { get; private set; }
 
         IReadOnlyDictionary<ulong, StructureModel> IColladaScene.RootModels => RootModels;
 
@@ -226,13 +227,13 @@ namespace MorphologyMesh
         #endregion
 
 
-        public BasicColladaView(Geometry.Scale scale, StructureMorphologyColorMap colormap)
+        public BasicColladaView(AxisUnits scale, StructureMorphologyColorMap colormap)
         {
             Colormap = colormap;
             if (Colormap == null)
                 Colormap = new StructureColorMap(null, null);
 
-            Scale = scale;
+            this.Scale = scale;
         }
 
         /// <summary>
@@ -343,7 +344,7 @@ namespace MorphologyMesh
         #region IColladaScene
         string IColladaScene.Title => SceneTitle;
 
-        Scale IColladaScene.Scale => Scale;
+        AxisUnits IColladaScene.Scale => Scale.X;
 
         IReadOnlyDictionary<ulong, StructureModel> IColladaScene.RootModels => RootModels;
 

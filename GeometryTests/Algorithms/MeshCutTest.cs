@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using FsCheck;
 using Geometry;
 using Geometry.Meshing;
+using FsCheck; 
 
 namespace GeometryTests.Algorithms
 {
@@ -146,6 +147,25 @@ namespace GeometryTests.Algorithms
 
             RecursivelyCutMesh(mesh, LowerSubset);
             RecursivelyCutMesh(mesh, UpperSubset);
+        }
+
+        static Property PropertyEachPointInOrder(TriangulationMesh<Vertex2D> mesh)
+        {
+            for(int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
+            {
+                long iA = mesh.XSorted[iVert];
+                long iB = mesh.YSorted[iVert];
+
+                GridVector2 A = mesh[iA].Position;
+                GridVector2 B = mesh[iB].Position;
+
+                if (A.X > B.X)
+                    return false.Label(string.Format("X is not sorted {0} > {1}", A.X, B.X));
+                if (A.X == B.X && A.Y > B.Y)
+                    return false.Label(string.Format("Equal X is not sorted on Y {0} > {1}", A, B)); 
+            }
+
+            return true.Label("Mesh verticies properly sorted");
         }
     }
 }

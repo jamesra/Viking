@@ -330,7 +330,6 @@ namespace GeometryTests
                 return (PolysIntersect.Label("Polygons intersect"))
                        .And((IntersectionsIncludingEndpoints.Count > 0).Label("Intersection points are all endpoints"))
                        .And((IntersectionsExcludingEndpoints.Count == 0).Label("Intersections points are not all at endpoints"));
-                       
                            
             }).QuickCheckThrowOnFailure();
         }

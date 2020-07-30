@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
@@ -22,6 +23,8 @@ namespace Geometry
 
         private void FireOnLoopChangedEvent(bool HasLoop)
         {
+            Trace.WriteLine(string.Format("FireOnLoopChangedEvent: {0}", HasLoop));
+
             if (this.OnLoopChanged != null)
             {
                 this.OnLoopChanged(this, HasLoop);
@@ -51,12 +54,7 @@ namespace Geometry
         }
 
         public List<GridVector2> Points = new List<GridVector2>();
-
-        public uint NumCurveInterpolations
-        {
-            get;
-        }
-
+         
         /// <summary>
         /// Sets how far from the actual path is a simplified path is allowed to stray.
         /// </summary>
@@ -95,12 +93,12 @@ namespace Geometry
             }
         }
 
-        public GridLineSegment NewestSegent
+        public GridLineSegment NewestSegment
         {
             get
             {
-                int count = Points.Count;
-                return new GridLineSegment(Points[0], Points[1]);
+                int count = Points.Count;  
+                return new GridLineSegment(Points[count-1], Points[count-2]);
             }
         }
 
@@ -113,6 +111,17 @@ namespace Geometry
             get
             {
                 return _Segments;
+            }
+        }
+
+        /// <summary>
+        /// True if the path has at least two points
+        /// </summary>
+        public bool HasSegment
+        {
+            get
+            {
+                return Points.Count >= 2;
             }
         }
 
@@ -247,7 +256,7 @@ namespace Geometry
                 _Segments.Add(newSegment);
             }
 
-            this.Points.Insert(0, p);
+            this.Points.Add(p);
             _SimplifiedPath = null;  //TODO: This could be optimized to only calculate the new segment
               
             //Make sure we have the right number of segments for points in the path
@@ -275,7 +284,7 @@ namespace Geometry
             CheckForSelfIntersectionLossBeforePop();
 
             GridVector2 p = this.Points.First();
-            this.Points.RemoveAt(0);
+            this.Points.RemoveAt(this.Points.Count - 1);
 
             if (this._Segments.Count > 0)
             {
@@ -291,7 +300,7 @@ namespace Geometry
 
         public GridVector2 Peek()
         {
-            return this.Points.First();
+            return this.Points[this.Points.Count-1];
         }
 
         public void Clear()
@@ -320,20 +329,21 @@ namespace Geometry
             {
                 bool HadLoop = this.HasSelfIntersection;
 
-                GridVector2[] removedEntries = new GridVector2[iDeletePoint + 1];
-                Points.CopyTo(0, removedEntries, 0, iDeletePoint + 1);
+                int NumExpectedToDelete = Points.Count - iDeletePoint;
+                GridVector2[] removedEntries = new GridVector2[NumExpectedToDelete];
+                Points.CopyTo(iDeletePoint, removedEntries, 0, NumExpectedToDelete);
 
                 int NumDeleted = 0;
 
-                while (iDeletePoint >= 0)
+                while(NumDeleted < NumExpectedToDelete)
+                //while (iDeletePoint >= 0)
                 {
                     this.Pop_NoEvent();
-                    iDeletePoint -= 1;
                     NumDeleted++;
                 }
                 System.Diagnostics.Debug.Assert(NumDeleted == removedEntries.Length);
 
-                FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedEntries, 0));
+                FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedEntries, iDeletePoint));
 
                 if (HadLoop != this.HasSelfIntersection)
                 {
@@ -359,36 +369,6 @@ namespace Geometry
             int iDeletePoint = Array.IndexOf(distances, distances.Min());
 
             return this.Erase(iDeletePoint);
-
-            /*
-            if (iDeletePoint >= 0)
-            {
-                bool HadLoop = this.HasSelfIntersection;
-
-                GridVector2[] removedEntries = new GridVector2[iDeletePoint+1];
-                Points.CopyTo(0, removedEntries, 0, iDeletePoint+1);
-
-                int NumDeleted = 0;
-
-                while (iDeletePoint >= 0)
-                {
-                    this.Pop_NoEvent();
-                    iDeletePoint -= 1;
-                    NumDeleted++;
-                }
-                System.Diagnostics.Debug.Assert(NumDeleted == removedEntries.Length);
-
-                FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedEntries, 0));
-
-                if (HadLoop != this.HasSelfIntersection)
-                {
-                    FireOnLoopChangedEvent(this.HasSelfIntersection);
-                }
-
-                return true;
-            }
-
-            return false;*/
         }
 
         /// <summary>
@@ -408,7 +388,7 @@ namespace Geometry
 
             bool HasLoopAfterPush = this.HasSelfIntersection;
 
-            FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, p, oldValue, 0));
+            FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, p, oldValue, Points.Count-1));
 
             //Check if we added a loop, or if we removed a loop and then re-added it.
             if (HadLoop != HasLoopAfterPush || HadLoop != HadLoopAfterPop)
@@ -465,8 +445,7 @@ namespace Geometry
             List<GridLineSegment> loopSegments = new List<GridLineSegment>(this._Segments.Count);
 
             List<GridVector2> loopPoints = new List<GridVector2>();
-
-
+            
             //This function looks odd because the lines are reversed. A is closer to the most recently placed point in the path
 
             int IntersectionCount = 0;
@@ -477,7 +456,6 @@ namespace Geometry
                 {
                     IntersectionCount += 1;
 
-                    GridLineSegment loop_segment;
                     if (IntersectionCount == 1)
                     {
                         //Add the line from the intersection to the near point of the path
@@ -583,7 +561,12 @@ namespace Geometry
         /// <returns>True if popping the point will break an existing loop</returns>
         public bool CheckForSelfIntersectionLossBeforePop()
         {
-            GridLineSegment lostSegment = this.NewestSegent;
+            if(false == this.HasSegment)
+            {
+                return false;
+            }
+
+            GridLineSegment lostSegment = this.NewestSegment;
             if (false == this.HasSelfIntersection)
             {
                 return false;

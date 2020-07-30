@@ -145,7 +145,7 @@ namespace Geometry.Meshing
             GridVector2 L = mesh[(int)NewSortedAlongCutAxisVertSet[nLowerHalf - 1]].Position;
             GridVector2 U = mesh[(int)NewSortedAlongCutAxisVertSet[nLowerHalf]].Position;
 
-            double OffAxisDividingLine = cutDirection == CutDirection.HORIZONTAL ? L.X : L.Y;
+            double OffAxisDividingLine = cutDirection == CutDirection.HORIZONTAL ? L.Y : L.X;
 
             //Find the start of points that are near the dividing line
             List<int> PointsToSort = new List<int>();
@@ -153,7 +153,7 @@ namespace Geometry.Meshing
             while(iStart >= 0)
             {
                 GridVector2 p = mesh[(int)NewSortedAlongCutAxisVertSet[iStart]].Position;
-                double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.X : p.Y;
+                double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.Y : p.X;
                 if (Math.Abs(LinePos - OffAxisDividingLine) < Global.Epsilon)
                     iStart -= 1;
                 else
@@ -171,7 +171,7 @@ namespace Geometry.Meshing
             while (iEnd < NewSortedAlongCutAxisVertSet.Length)
             {
                 GridVector2 p = mesh[(int)NewSortedAlongCutAxisVertSet[iEnd]].Position;
-                double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.X : p.Y;
+                double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.Y: p.X;
                 if (Math.Abs(LinePos - OffAxisDividingLine) < Global.Epsilon)
                     iEnd += 1;
                 else
@@ -194,7 +194,7 @@ namespace Geometry.Meshing
                 long iArray = i - iStart;
                 toSort[iArray] = NewSortedAlongCutAxisVertSet[i];
                 sortPos[iArray] = mesh[(int)toSort[iArray]].Position;
-                sortVals[iArray] = cutDirection == CutDirection.HORIZONTAL ? sortPos[iArray].Y : sortPos[iArray].X;
+                sortVals[iArray] = cutDirection == CutDirection.HORIZONTAL ? sortPos[iArray].X : sortPos[iArray].Y;
             }
 
             int[] iSorted = sortVals.SortAndIndex();
@@ -285,6 +285,9 @@ namespace Geometry.Meshing
             Trace.WriteLine(string.Format("{0}--------{1}-------",cutDirection, DivisionPoint));
 #endif
             GridVector2[] vertPosArray = NewSortedAlongCutAxisVertSet.Select(i => mesh[(int)i].Position).ToArray();
+
+            GridVector2 nudgedDivisionPoint = DivisionPoint;
+
             for (long i = 0; i < NewSortedAlongCutAxisVertSet.LongLength; i++)
             {
                 long iVert = NewSortedAlongCutAxisVertSet[i];
@@ -292,13 +295,14 @@ namespace Geometry.Meshing
                 bool AssignToLower = false;
                 if (cutDirection == CutDirection.HORIZONTAL)
                 {
-                    if (vertPos.Y < DivisionPoint.Y)
-                    {
-                        AssignToLower = true;
-                    }
-                    else if (vertPos.Y == DivisionPoint.Y)
+                    if (Math.Abs(vertPos.Y - DivisionPoint.Y) < Global.Epsilon)
                     {
                         AssignToLower = iVert == LowerHalfOppAxis.Last() || LowerHalfOppAxis.Contains(iVert);
+                        nudgedDivisionPoint.Y = Math.Max(vertPos.Y, DivisionPoint.Y);
+                    }
+                    else if (vertPos.Y < DivisionPoint.Y)
+                    {
+                        AssignToLower = true;
                     }
                     else
                     {
@@ -307,13 +311,14 @@ namespace Geometry.Meshing
                 }
                 else
                 {
-                    if (vertPos.X < DivisionPoint.X)
-                    {
-                        AssignToLower = true;
-                    }
-                    else if (vertPos.X == DivisionPoint.X)
+                    if (Math.Abs(vertPos.X - DivisionPoint.X) < Global.Epsilon)
                     {
                         AssignToLower = iVert == LowerHalfOppAxis.Last() || LowerHalfOppAxis.Contains(iVert);
+                        nudgedDivisionPoint.X = Math.Max(vertPos.X, DivisionPoint.X);
+                    }
+                    else if (vertPos.X < DivisionPoint.X)
+                    {
+                        AssignToLower = true;
                     }
                     else
                     {
@@ -346,16 +351,16 @@ namespace Geometry.Meshing
             GridRectangle UpperHalfBBox;
             if (cutDirection == CutDirection.HORIZONTAL)
             {
-                LowerHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, mesh[(int)LowerHalfOppAxis[0]].Position.Y, mesh[(int)LowerHalfOppAxis.Last()].Position.Y);
-                UpperHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, mesh[(int)UpperHalfOppAxis[0]].Position.Y, mesh[(int)UpperHalfOppAxis.Last()].Position.Y);
+                LowerHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, BoundingBox.Bottom, nudgedDivisionPoint.Y);
+                UpperHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, nudgedDivisionPoint.Y, BoundingBox.Top);
 
                 LowerSubset = new MeshCut(LowerHalfAlongAxis, LowerHalfOppAxis, cutDirection, LowerHalfBBox);
                 UpperSubset = new MeshCut(UpperHalfAlongAxis, UpperHalfOppAxis, cutDirection, UpperHalfBBox);
             }
             else
             {
-                LowerHalfBBox = new GridRectangle(mesh[(int)LowerHalfOppAxis[0]].Position.X, mesh[(int)LowerHalfOppAxis.Last()].Position.X, BoundingBox.Bottom, BoundingBox.Top);
-                UpperHalfBBox = new GridRectangle(mesh[(int)UpperHalfOppAxis[0]].Position.X, mesh[(int)UpperHalfOppAxis.Last()].Position.X, BoundingBox.Bottom, BoundingBox.Top);
+                LowerHalfBBox = new GridRectangle(BoundingBox.Left, nudgedDivisionPoint.X, BoundingBox.Bottom, BoundingBox.Top);
+                UpperHalfBBox = new GridRectangle(nudgedDivisionPoint.X, BoundingBox.Right, BoundingBox.Bottom, BoundingBox.Top);
 
                 LowerSubset = new MeshCut(LowerHalfAlongAxis, LowerHalfOppAxis, cutDirection, LowerHalfBBox);
                 UpperSubset = new MeshCut(UpperHalfAlongAxis, UpperHalfOppAxis, cutDirection, UpperHalfBBox);

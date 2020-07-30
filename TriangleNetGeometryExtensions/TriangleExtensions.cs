@@ -113,7 +113,7 @@ namespace TriangleNet
             return listTriangles;
         }
 
-        public static TriangleNet.Geometry.Polygon CreatePolygon(this ICollection<GridVector2> Verticies, ICollection<GridVector2[]> InteriorPolygons = null)
+        public static TriangleNet.Geometry.Polygon CreatePolygon(this IEnumerable<GridVector2> Verticies, IEnumerable<GridVector2[]> InteriorPolygons = null)
         {
             IPoint2D[] v = Verticies.Select(p => p as IPoint2D).ToArray();
             IPoint2D[][] ip = null;
@@ -122,10 +122,10 @@ namespace TriangleNet
             return CreatePolygon(v, ip);
         }
 
-        public static TriangleNet.Geometry.Polygon CreatePolygon(this ICollection<IPoint2D> Verticies, ICollection<IPoint2D[]> InteriorPolygons = null)
+        public static TriangleNet.Geometry.Polygon CreatePolygon(this IEnumerable<IPoint2D> Verticies, IEnumerable<IPoint2D[]> InteriorPolygons = null)
         {
-            TriangleNet.Geometry.Polygon poly = new TriangleNet.Geometry.Polygon(Verticies.Count);
             TriangleNet.Geometry.Vertex[] points = Verticies.Select((v, i) => new TriangleNet.Geometry.Vertex(v.X, v.Y)).ToArray();
+            TriangleNet.Geometry.Polygon poly = new TriangleNet.Geometry.Polygon(points.Length);
 
             TriangleNet.Geometry.Contour contour = new TriangleNet.Geometry.Contour(points);
 
@@ -551,6 +551,7 @@ namespace TriangleNet
                 }
                 catch (Exception ex)
                 {
+                    Trace.WriteLine(string.Format("Exception performing voronoi {0}", ex));
                     return null;
                 }
             }

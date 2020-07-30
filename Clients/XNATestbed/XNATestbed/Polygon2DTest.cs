@@ -73,7 +73,7 @@ namespace XNATestbed
 
         public void Draw(XNATestBedMain window)
         {
-            meshView.Draw(window.GraphicsDevice, window.Scene);
+            meshView.Draw(window.GraphicsDevice, window.Scene as VikingXNA.IScene, CullMode.CullCounterClockwiseFace);
         }
     }
 }
