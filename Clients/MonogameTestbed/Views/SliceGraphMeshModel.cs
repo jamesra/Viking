@@ -18,7 +18,7 @@ namespace MonogameTestbed
     /// Builds a single merged mesh from all of the completed slices of a slice graph. 
     /// Exposes a lock for using the model safely from a renderer.
     /// </summary>
-    public class SliceGraphMeshModel
+    public class SliceGraphMeshModel : IColorView
     {
         //SliceGraph Graph;
 
@@ -36,15 +36,31 @@ namespace MonogameTestbed
 
         public ReaderWriterLockSlim ModelLock = new ReaderWriterLockSlim();
 
-        public SliceGraphMeshModel()
-        {
-        }
-        /*
-        public SliceGraphMeshModel(SliceGraph graph)
-        {
-            Graph = graph;
-        }*/
+        private Color _color = Color.CornflowerBlue;
+        public Color Color { get { return _color; }
+            set
+            {
+                if(value != _color)
+                {
+                    model.SetColor(value);
+                    _color = value; 
+                }
+            }
+        } 
+        public float Alpha { get { return Color.GetAlpha(); } set { Color = Color.SetAlpha(value); } }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="position">Where in world space we want the model displayed</param>
+        public SliceGraphMeshModel(GridVector3 position)
+        {
+            model.Position = position;
+        } 
+
+        /// <summary>
+        /// </summary>
+        /// <param name="mesh"></param>
         public void AddSlice(BajajGeneratorMesh mesh)
         {
             //Maps mesh vertex index to the global vertex index
@@ -63,7 +79,7 @@ namespace MonogameTestbed
                     var composite_vertex = MorphMeshVertex.Duplicate(vertex);
                     int iNewVert = composite.AddVertex(composite_vertex);
 
-                    modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color.CornflowerBlue));
+                    modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color));
 
                     mesh_to_global[iVert] = iNewVert;
                 }
@@ -80,7 +96,7 @@ namespace MonogameTestbed
                         iGlobalVert = composite.AddVertex(composite_vertex);
                         PolyIndexToVertex.Add(composite_vertex.PolyIndex.Value, iGlobalVert);
 
-                        modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero,  Color.CornflowerBlue));
+                        modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color));
                     }
 
                     mesh_to_global[iVert] = iGlobalVert;
@@ -212,7 +228,7 @@ namespace MonogameTestbed
                     
                     int iNewVert = composite.AddVertex(composite_vertex);
 
-                    modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color.CornflowerBlue));
+                    modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color));
 
                     mesh_to_global[iVert] = iNewVert;
                 }
@@ -228,7 +244,7 @@ namespace MonogameTestbed
                         iGlobalVert = composite.AddVertex(composite_vertex);
                         PolyIndexToVertex.Add(composite_vertex.PolyIndex.Value, iGlobalVert);
 
-                        modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color.CornflowerBlue));
+                        modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color));
                     }
 
                     mesh_to_global[iVert] = iGlobalVert;
