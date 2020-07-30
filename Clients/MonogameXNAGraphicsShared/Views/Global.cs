@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework; 
 using Microsoft.Xna.Framework.Graphics;
-using Geometry; 
+using Geometry;
 
 namespace VikingXNAGraphics
 {
@@ -12,7 +12,7 @@ namespace VikingXNAGraphics
     {
         public const uint NumCurveInterpolationsDefault = 5;
 
-        public static Microsoft.Xna.Framework.Content.ContentManager Content {get;set;}
+        public static Microsoft.Xna.Framework.Content.ContentManager Content { get; set; }
 
         private static Microsoft.Xna.Framework.Graphics.SpriteFont _DefaultFont = null;
         /// <summary>
@@ -33,6 +33,39 @@ namespace VikingXNAGraphics
         }
     }
 
+    /// <summary>
+    /// This lists the built-in textures we have embedded in circles
+    /// </summary>
+    public enum BuiltinTexture
+    {
+        /// <summary>
+        /// A solid color icon with no texture.
+        /// </summary>
+        None,
+        /// <summary>
+        /// An outline of a circle
+        /// </summary>
+        Circle,
+        Plus,
+        Minus,
+        UpArrow,
+        DownArrow,
+        Chain,
+        /// <summary>
+        /// A half circle surrounding a circle.  Used for Structure Links
+        /// </summary>
+        Connect,
+        /// <summary>
+        /// A large X, typically indicates a cancel action
+        /// </summary>
+        X
+    }
+
+    public interface IIconTexture
+    {
+        BuiltinTexture Icon { get; }
+    }
+
     public static class GlobalPrimitives
     {
         static public Texture2D CircleTexture;
@@ -40,6 +73,36 @@ namespace VikingXNAGraphics
         static public Texture2D MinusTexture;
         static public Texture2D UpArrowTexture;
         static public Texture2D DownArrowTexture;
+        static public Texture2D ChainTexture;
+        static public Texture2D ConnectTexture;
+        static public Texture2D CircleXTexture;
+
+        public static Texture2D GetTexture(this BuiltinTexture tex)
+        {
+            switch(tex)
+            {
+                case BuiltinTexture.None:
+                    return null;
+                case BuiltinTexture.Circle:
+                    return CircleTexture;
+                case BuiltinTexture.Plus:
+                    return PlusTexture;
+                case BuiltinTexture.Minus:
+                    return MinusTexture;
+                case BuiltinTexture.UpArrow:
+                    return UpArrowTexture;
+                case BuiltinTexture.DownArrow:
+                    return DownArrowTexture;
+                case BuiltinTexture.Chain:
+                    return ChainTexture;
+                case BuiltinTexture.Connect:
+                    return ConnectTexture;
+                case BuiltinTexture.X:
+                    return CircleXTexture;
+                default:
+                    throw new NotImplementedException(string.Format("Missing texture for CircleIcon enumeration value {0}", tex));
+            }
+        }
 
         static readonly public VertexPositionColorTexture[] SquareVerts = new VertexPositionColorTexture[] {
             new VertexPositionColorTexture(new Vector3(-1,1,0), Color.White, Vector2.Zero), 
