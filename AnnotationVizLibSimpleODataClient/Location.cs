@@ -8,7 +8,7 @@ using Geometry;
 
 namespace AnnotationVizLib.SimpleOData
 {
-    public class Location : ILocation
+    public class Location : ILocation, IEquatable<Location>
     {
         public Geometry.Scale scale { get; set; }
 
@@ -136,6 +136,22 @@ namespace AnnotationVizLib.SimpleOData
         public override string ToString()
         {
             return ID.ToString();
+        }
+
+        public bool Equals(ILocation other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (other.ID == this.ID)
+                return true;
+
+            return false;
+        }
+
+        public bool Equals(Location other)
+        {
+            return this.Equals((ILocation)other);
         }
     }
 }

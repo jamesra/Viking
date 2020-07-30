@@ -77,5 +77,16 @@ namespace AnnotationVizLib.WCFClient
                 return (ulong)structure.TypeID;
             }
         }
+
+        public bool Equals(IStructure other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (other.ID == this.ID)
+                return true;
+
+            return false;
+        }
     }
 }

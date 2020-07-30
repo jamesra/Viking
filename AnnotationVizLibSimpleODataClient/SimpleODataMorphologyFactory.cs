@@ -70,7 +70,7 @@ namespace AnnotationVizLib.SimpleOData
             //Download the initial set of locations
             List<Task<Location>> listLocationFetchTasks = new List<Task<SimpleOData.Location>>(LocationIDs.Count);
 
-            foreach (ulong ID in LocationIDs)
+            foreach (ulong ID in LocationIDs.Distinct())
             {
                 long lID = (long)ID; //ulong is not supported by the library so we need to cast
                 Task<Location> t = client.For<Location>().Filter(l => (long)l.ID == lID).FindEntryAsync();  
@@ -150,7 +150,7 @@ namespace AnnotationVizLib.SimpleOData
 
             //LoadStructureLocationLinks(client, new Structure[] { Parent });
 
-            foreach (Location loc in listLocations)
+            foreach (Location loc in listLocations.Distinct())
             {
                 //TODO: REMOVE Z * 10
                 //loc.Z *= 10;

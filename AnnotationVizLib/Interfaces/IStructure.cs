@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AnnotationVizLib
 {
-    public interface IStructure
+    public interface IStructure : IEquatable<IStructure>
     {
         ulong ID { get; }
 

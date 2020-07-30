@@ -80,5 +80,21 @@ namespace AnnotationVizLib.OData
                 return (ulong)structure.TypeID;
             }
         }
+
+        public bool Equals(IStructure other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (other.ID == this.ID)
+                return true;
+
+            return false;
+        }
+
+        public bool Equals(Structure other)
+        {
+            return this.Equals((IStructure)other);
+        }
     }
 }

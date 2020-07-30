@@ -46,5 +46,16 @@ namespace AnnotationVizLib.WCFClient
                 return type.Tags;
             }
         }
+
+        public bool Equals(IStructureType other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (other.ID == this.ID)
+                return true;
+
+            return false;
+        }
     }
 }

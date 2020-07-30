@@ -149,5 +149,16 @@ namespace AnnotationVizLib.WCFClient
                 return _BoundingBox;
             }
         }
+
+        public bool Equals(ILocation other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (other.ID == this.ID)
+                return true;
+
+            return false;
+        }
     }
 }

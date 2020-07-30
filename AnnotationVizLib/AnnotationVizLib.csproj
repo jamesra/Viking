@@ -128,6 +128,7 @@
     <Compile Include="Interfaces\IAttributes.cs" />
     <Compile Include="Interfaces\IGeometry.cs" />
     <Compile Include="Interfaces\ILocation.cs" />
+    <Compile Include="Interfaces\ILocationLink.cs" />
     <Compile Include="Interfaces\IStructure.cs" />
     <Compile Include="Interfaces\IStructureLink.cs" />
     <Compile Include="Interfaces\IStructureType.cs" />

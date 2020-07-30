@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AnnotationVizLib.SimpleOData
 {
-    class StructureLink : IStructureLink
+    class StructureLink : IStructureLink, IEquatable<StructureLink>
     {
         public static StructureLink FromDictionary(IDictionary<string, object> dict)
         {
@@ -48,6 +48,24 @@ namespace AnnotationVizLib.SimpleOData
                 return string.Format("{0} <-> {1}", SourceID, TargetID);
             else
                 return string.Format("{0}  -> {1}", SourceID, TargetID);
+        }
+
+        public bool Equals(IStructureLink other)
+        { 
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (other.SourceID == this.SourceID && 
+                other.TargetID == this.TargetID &&
+                other.Directional == this.Directional)
+                return true;
+
+            return false; 
+        }
+
+        public bool Equals(StructureLink other)
+        {
+            return this.Equals((IStructureLink)other);
         }
     }
 }

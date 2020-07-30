@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AnnotationVizLib.SimpleOData
 {
-    class StructureType : IStructureType
+    class StructureType : IStructureType, IEquatable<StructureType>
     {
         public StructureType()
         {
@@ -31,6 +31,22 @@ namespace AnnotationVizLib.SimpleOData
         public string[] Tags
         {
             get; private set;
+        }
+
+        public bool Equals(IStructureType other)
+        { 
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (other.ID == this.ID)
+                return true; 
+
+            return false; 
+        }
+
+        public bool Equals(StructureType other)
+        {
+            return this.Equals((IStructureType)other);
         }
     }
 }

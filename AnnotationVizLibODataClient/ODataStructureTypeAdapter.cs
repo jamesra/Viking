@@ -48,5 +48,21 @@ namespace AnnotationVizLib.OData
                 return ObjAttribute.Parse(type.Tags).Select(a => a.ToString()).ToArray();
             }
         }
+
+        public bool Equals(IStructureType other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (other.ID == this.ID)
+                return true;
+
+            return false;
+        }
+
+        public bool Equals(StructureType other)
+        {
+            return this.Equals((IStructureType)other);
+        }
     }
 }

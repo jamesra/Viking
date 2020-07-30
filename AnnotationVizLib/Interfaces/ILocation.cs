@@ -8,7 +8,7 @@ using Microsoft.SqlServer.Types;
 namespace AnnotationVizLib
 {
     
-    public interface ILocation : IGeometry
+    public interface ILocation : IGeometry, IEquatable<ILocation>
     {
         ulong ID { get; }
 

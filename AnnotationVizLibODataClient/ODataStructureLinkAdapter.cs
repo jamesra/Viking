@@ -40,5 +40,22 @@ namespace AnnotationVizLib.OData
             }
         }
 
+        public bool Equals(IStructureLink other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            if (other.SourceID == this.SourceID &&
+                other.TargetID == this.TargetID &&
+                other.Directional == this.Directional)
+                return true;
+
+            return false;
+        }
+
+        public bool Equals(StructureLink other)
+        {
+            return this.Equals((IStructureLink)other);
+        }
     }
 }
