@@ -1,0 +1,11 @@
+﻿<MockData:MockStructureTypes
+    xmlns:MockData="clr-namespace:WebAnnotation.WPF.MockData"
+    xmlns:System="clr-namespace:System;assembly=mscorlib"
+    xmlns:Markup="clr-namespace:System.Windows.Markup;assembly=System.Xaml">
+    <MockData:MockStructureType ID="0" Color="0xFF808080" Name="Cell">
+     <MockData:MockStructureType.Children>
+            <MockData:MockStructureType ID="1" ParentID="0" Color="0xFF00FF00" Name="Ribbon"/>
+            <MockData:MockStructureType ID="2" ParentID="0" Color="0xFFFF0000" Name="Synapse"/>
+        </MockData:MockStructureType.Children> 
+    </MockData:MockStructureType>
+</MockData:MockStructureTypes>

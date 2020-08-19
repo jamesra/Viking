@@ -14,11 +14,11 @@ using AnnotationService.Types;
 namespace WebAnnotationModel
 {
     public class StructureTypeStore : StoreBaseWithIndexKeyAndParent<AnnotateStructureTypesClient,
-                                         IAnnotateStructureTypes,
+                                        IAnnotateStructureTypes,
                                         long, 
                                         LongIndexGenerator,
                                         StructureTypeObj,
-                                         StructureType>
+                                        StructureType>
     {
         #region Proxy
 

@@ -5,13 +5,13 @@ using System.Text;
 using System.Diagnostics;
 using System.Collections.ObjectModel;
 using WebAnnotationModel.Objects;
-
+using Annotation.Interfaces;
 using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {
 
-    public class StructureObj : WCFObjBaseWithParent<long, Structure, StructureObj>
+    public class StructureObj : WCFObjBaseWithParent<long, Structure, StructureObj>, IStructure
     {
         public override long ID
         {
@@ -401,6 +401,18 @@ namespace WebAnnotationModel
             }
         }
 
+        ulong IStructure.ID => (ulong)this.ID;
+
+        ulong? IStructure.ParentID => this.ParentID.HasValue ? new ulong?((ulong)ParentID.Value) : new ulong?();
+
+        ulong IStructure.TypeID => (ulong)this.TypeID;
+
+        ICollection<IStructureLink> IStructure.Links => this.Links.Select(sl => (IStructureLink)sl).ToList();
+
+        IStructureType IStructure.Type => this.Type;
+
+        public string TagsXML => this.TagsXML;
+
         protected override StructureObj OnMissingParent()
         {
             return Store.Structures.GetObjectByID(ParentID.Value, true);
@@ -416,6 +428,12 @@ namespace WebAnnotationModel
                 OnCreate(this, null); 
             }
         }
+
+        public bool Equals(IStructure other)
+        {
+            throw new NotImplementedException();
+        }
+
         public static event EventHandler Create
         {
             add { OnCreate += value; }

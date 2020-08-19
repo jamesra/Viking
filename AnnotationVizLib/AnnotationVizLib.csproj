@@ -125,13 +125,7 @@
     <Compile Include="Graph\Neurons\NeuronTLPView.cs" />
     <Compile Include="Graph\Morphology\MorphologyTLPView.cs" />
     <Compile Include="Graph\Morphology\MorphologyGraph.cs" />
-    <Compile Include="Interfaces\IAttributes.cs" />
     <Compile Include="Interfaces\IGeometry.cs" />
-    <Compile Include="Interfaces\ILocation.cs" />
-    <Compile Include="Interfaces\ILocationLink.cs" />
-    <Compile Include="Interfaces\IStructure.cs" />
-    <Compile Include="Interfaces\IStructureLink.cs" />
-    <Compile Include="Interfaces\IStructureType.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="ViewModels\GMLView.cs" />
@@ -150,6 +144,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj">
+      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
+      <Name>AnnotationInterfaces</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Geometry\Geometry.csproj">
       <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
       <Name>Geometry</Name>

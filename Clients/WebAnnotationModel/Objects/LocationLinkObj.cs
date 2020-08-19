@@ -6,13 +6,18 @@ using WebAnnotationModel.Service;
 using WebAnnotationModel.Objects;
 using System.Diagnostics;
 using AnnotationService.Types;
+using Annotation.Interfaces;
 
 namespace WebAnnotationModel
 {
-    public struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>
+    public struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, ILocationLink
     {
         public readonly long A;
         public readonly long B;
+
+        ulong ILocationLink.A => (ulong)A;
+
+        ulong ILocationLink.B => (ulong)B;
 
         public LocationLinkKey(long a, long b)
         {
@@ -91,6 +96,14 @@ namespace WebAnnotationModel
                 return false;
 
             return (this.A == other.A && this.B == other.B);
+        }
+
+        bool IEquatable<ILocationLink>.Equals(ILocationLink other)
+        {
+            if ((object)other == null)
+                return false;
+
+            return ((ulong)this.A == other.A && (ulong)this.B == other.B) || ((ulong)this.B == other.A && (ulong)this.A == other.B);
         }
     }
 

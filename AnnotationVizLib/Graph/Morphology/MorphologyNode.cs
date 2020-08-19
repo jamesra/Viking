@@ -6,7 +6,7 @@ using GraphLib;
 using SqlGeometryUtils;
 using Microsoft.SqlServer.Types;
 using Geometry;
-
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib
 {
@@ -28,10 +28,21 @@ namespace AnnotationVizLib
             this.Location = Location;
         }
 
+        private SqlGeometry _geometry = null;
         public SqlGeometry Geometry {
             get
-            { return Location.Geometry; }
-            set { Location.Geometry = value; }
+            {
+                if (_geometry == null)
+                {
+                    _geometry = Location.Geometry;
+                }
+                return _geometry;
+            }
+            set
+            {
+                _geometry = value;
+            }
+
         }
         
         public double Z { get { return Location.Z; }}

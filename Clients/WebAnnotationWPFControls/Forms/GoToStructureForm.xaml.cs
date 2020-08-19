@@ -42,7 +42,8 @@ namespace WebAnnotation.UI.Forms
 
             if (Store.Locations.GetObjectByID(this.ID, true) != null)
             {
-                WebAnnotation.AnnotationOverlay.GoToStructure(this.ID);
+                //Todo: Fire an event or set a property the creator can subscribe to, or pass a delegate
+                //WebAnnotation.AnnotationOverlay.GoToStructure(this.ID);
                 this.Close();
             }
         }
@@ -58,7 +59,7 @@ namespace WebAnnotation.UI.Forms
                 return;
             }
 
-            WebAnnotation.AnnotationOverlay.GoToStructure(this.ID);
+            //WebAnnotation.AnnotationOverlay.GoToStructure(this.ID);
         }
 
         private void Cancel_Button_Click(object sender, RoutedEventArgs e)

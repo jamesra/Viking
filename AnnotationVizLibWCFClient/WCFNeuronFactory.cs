@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AnnotationVizLib.WCFClient.AnnotationClient;
 using AnnotationService.Types;
 using System.Diagnostics;
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib.WCFClient
 {

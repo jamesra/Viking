@@ -4,10 +4,11 @@ using System.Linq;
 using System.Text; 
 using WebAnnotationModel.Objects;
 using AnnotationService.Types;
+using Annotation.Interfaces;
 
 namespace WebAnnotationModel
 {
-    public struct StructureLinkKey : IEquatable<StructureLinkKey>, IComparable<StructureLinkKey>
+    public struct StructureLinkKey : IEquatable<StructureLinkKey>, IComparable<StructureLinkKey>, IStructureLink
     {
         readonly long _SourceID;
         readonly long _TargetID;
@@ -20,6 +21,12 @@ namespace WebAnnotationModel
         public long TargetID { get { return _TargetID; } }
 
         public bool Bidirectional { get { return _Bidirectional; } }
+
+        ulong IStructureLink.SourceID => (ulong)SourceID;
+
+        ulong IStructureLink.TargetID => (ulong)TargetID;
+
+        bool IStructureLink.Directional => this.Bidirectional == false; 
 
         public StructureLinkKey(StructureLink obj)
         {
@@ -82,6 +89,11 @@ namespace WebAnnotationModel
                 return TargetCompare;
 
             return this.Bidirectional.CompareTo(other.Bidirectional);
+        }
+
+        bool IEquatable<IStructureLink>.Equals(IStructureLink other)
+        {
+            throw new NotImplementedException();
         }
 
         public static bool operator ==(StructureLinkKey A, StructureLinkKey B)

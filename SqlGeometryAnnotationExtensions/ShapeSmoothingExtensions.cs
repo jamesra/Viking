@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Geometry;
 using SqlGeometryUtils;
+using Annotation.Interfaces;
 
 namespace Viking.VolumeModel
 {
@@ -14,47 +15,47 @@ namespace Viking.VolumeModel
         public static uint NumOpenCurveInterpolationPoints = 3;
         public static uint NumClosedCurveInterpolationPoints = 10;
 
-        public static Microsoft.SqlServer.Types.SqlGeometry GetShape(this WebAnnotationModel.LocationType shapeType, GridVector2[] points, ICollection<GridVector2[]> innerRingPoints = null)
+        public static Microsoft.SqlServer.Types.SqlGeometry GetShape(this LocationType shapeType, GridVector2[] points, ICollection<GridVector2[]> innerRingPoints = null)
         {
             Microsoft.SqlServer.Types.SqlGeometry shape = null;
 
             switch (shapeType)
             {
-                case WebAnnotationModel.LocationType.POINT:
+                case LocationType.POINT:
                     return points[0].ToSqlGeometry();
-                case WebAnnotationModel.LocationType.CIRCLE:
+                case LocationType.CIRCLE:
                     return points.ToCircle();
-                case WebAnnotationModel.LocationType.OPENCURVE:
-                case WebAnnotationModel.LocationType.POLYLINE:
-                case WebAnnotationModel.LocationType.CLOSEDCURVE:
+                case LocationType.OPENCURVE:
+                case LocationType.POLYLINE:
+                case LocationType.CLOSEDCURVE:
                     return points.ToSqlGeometry();
-                case WebAnnotationModel.LocationType.POLYGON:
-                case WebAnnotationModel.LocationType.CURVEPOLYGON:
+                case LocationType.POLYGON:
+                case LocationType.CURVEPOLYGON:
                     return points.ToPolygon(innerRingPoints);
                 default:
                     throw new ArgumentException("Unexpected location type " + shapeType.ToString());
             }
         }
 
-        public static Microsoft.SqlServer.Types.SqlGeometry GetSmoothedShape(this WebAnnotationModel.LocationType shapeType, Microsoft.SqlServer.Types.SqlGeometry shape)
+        public static Microsoft.SqlServer.Types.SqlGeometry GetSmoothedShape(this LocationType shapeType, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             GridVector2[] points = shape.ToPoints();
 
             switch (shapeType)
             {
-                case WebAnnotationModel.LocationType.POINT:
+                case LocationType.POINT:
                     return points[0].ToSqlGeometry();
-                case WebAnnotationModel.LocationType.CIRCLE:
+                case LocationType.CIRCLE:
                     return points.ToCircle();
-                case WebAnnotationModel.LocationType.OPENCURVE:
+                case LocationType.OPENCURVE:
                     return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumOpenCurveInterpolationPoints, false).ToArray().ToSqlGeometry();
-                case WebAnnotationModel.LocationType.POLYLINE:
+                case LocationType.POLYLINE:
                     return points.ToSqlGeometry();
-                case WebAnnotationModel.LocationType.POLYGON:
+                case LocationType.POLYGON:
                     return points.ToPolygon(shape.InteriorRingPoints());
-                case WebAnnotationModel.LocationType.CLOSEDCURVE:
+                case LocationType.CLOSEDCURVE:
                     return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints, true).ToArray().ToSqlGeometry();
-                case WebAnnotationModel.LocationType.CURVEPOLYGON:
+                case LocationType.CURVEPOLYGON:
                     List<GridVector2[]> curved_innerRingPoints = InnerRingPointsToCurvedRingPoints(shape.InteriorRingPoints());
                     GridVector2[] curved_outerRing = points.CalculateCurvePoints(ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints, true).ToArray();
                     return curved_outerRing.ToPolygon(curved_innerRingPoints);
@@ -63,25 +64,25 @@ namespace Viking.VolumeModel
             }
         }
 
-        public static Microsoft.SqlServer.Types.SqlGeometry GetSmoothedShape(this WebAnnotationModel.LocationType shapeType, GridVector2[] points, ICollection<GridVector2[]> innerRingPoints = null)
+        public static Microsoft.SqlServer.Types.SqlGeometry GetSmoothedShape(this LocationType shapeType, GridVector2[] points, ICollection<GridVector2[]> innerRingPoints = null)
         {
             Microsoft.SqlServer.Types.SqlGeometry shape = null;
 
             switch (shapeType)
             {
-                case WebAnnotationModel.LocationType.POINT:
+                case LocationType.POINT:
                     return points[0].ToSqlGeometry();
-                case WebAnnotationModel.LocationType.CIRCLE:
+                case LocationType.CIRCLE:
                     return points.ToCircle();
-                case WebAnnotationModel.LocationType.OPENCURVE:
+                case LocationType.OPENCURVE:
                     return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumOpenCurveInterpolationPoints, false).ToArray().ToSqlGeometry();
-                case WebAnnotationModel.LocationType.CLOSEDCURVE:
+                case LocationType.CLOSEDCURVE:
                     return points.CalculateCurvePoints(ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints, true).ToArray().ToSqlGeometry();
-                case WebAnnotationModel.LocationType.POLYLINE:
+                case LocationType.POLYLINE:
                     return points.ToSqlGeometry();
-                case WebAnnotationModel.LocationType.POLYGON:
+                case LocationType.POLYGON:
                     return points.ToPolygon(innerRingPoints);
-                case WebAnnotationModel.LocationType.CURVEPOLYGON:
+                case LocationType.CURVEPOLYGON:
                     ICollection<GridVector2[]> curved_innerRingPoints = InnerRingPointsToCurvedRingPoints(innerRingPoints);
                     GridVector2[] curved_outerRing = points.CalculateCurvePoints(ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints, true).ToArray();
                     return curved_outerRing.ToPolygon(curved_innerRingPoints);

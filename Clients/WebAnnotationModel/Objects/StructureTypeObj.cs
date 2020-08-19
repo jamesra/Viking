@@ -6,15 +6,21 @@ using System.Diagnostics;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using AnnotationService.Types;
+using Annotation.Interfaces;
 
 namespace WebAnnotationModel
 {
-    public class StructureTypeObj : WCFObjBaseWithParent<long, StructureType, StructureTypeObj>
+    public class StructureTypeObj : WCFObjBaseWithParent<long, StructureType, StructureTypeObj>, IStructureType
     {
         public override long ID
         {
             get { return Data.ID; } 
         }
+
+        ulong IStructureType.ID => (ulong)this.ID;
+        ulong? IStructureType.ParentID => this.ParentID.HasValue ? new ulong?((ulong)ParentID.Value) : new ulong?();
+
+        string[] IStructureType.Tags => this.Data.Tags;
 
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.
@@ -121,6 +127,14 @@ namespace WebAnnotationModel
         protected override StructureTypeObj OnMissingParent()
         {
             return Store.StructureTypes.GetObjectByID(this.ParentID.Value, true); 
+        }
+
+        public bool Equals(IStructureType other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            return other.ID == (ulong)this.ID;
         }
 
         /*

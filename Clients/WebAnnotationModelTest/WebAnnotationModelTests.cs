@@ -18,7 +18,7 @@ using Microsoft.SqlServer.Types;
 namespace WebAnnotationModelTest
 {
     [TestClass]
-    public class TestWebAnnotation
+    public class WebAnnotationModelTests
     {
         static public System.Net.NetworkCredential TestCredentials = new System.Net.NetworkCredential("VikingUnitTests", "4%w%o06");
         static public EndpointAddress Endpoint;

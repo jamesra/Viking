@@ -8,20 +8,12 @@ using System.Diagnostics;
 using SqlGeometryUtils; 
 using Geometry;
 using RTree;
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib
-{ 
-    public enum LocationType
-    {
-        POINT = 0,
-        CIRCLE = 1,
-        ELLIPSE = 2,
-        POLYLINE = 3,
-        POLYGON = 4,
-        OPENCURVE = 5,
-        CLOSEDCURVE = 6
-    };
+{
     
+
     [Serializable]
     public partial class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
     {

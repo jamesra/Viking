@@ -32,56 +32,6 @@ namespace AnnotationService.Types
         }
     }
 
-    /*
-    /// <summary>
-    /// A generic database object that exposes a key value
-    /// </summary>
-    [DataContract] 
-    [ProtoContract]
-    [ProtoInclude(1, typeof(DataObjectWithParent<Int64>))]
-    [ProtoInclude(2, typeof(Location))]
-    [ProtoInclude(3, typeof(LocationPositionOnly))]
-    public class DataObjectWithKey<T>  : DataObject where T : struct, IComparable, IEquatable<T>, IComparable<T>
-    {
-        protected T _ID; 
-
-        [ProtoMember(10)]
-        [DataMember]
-        public T ID
-        {
-            get { return _ID; }
-            set { _ID = value; }
-        }
-    }
-
-    /// <summary>
-    /// A generic database object that exposes an ID value and Parent of
-    /// the same type referring to a row in the same table
-    /// </summary>
-    [DataContract]
-    [ProtoContract]
-    [ProtoInclude(1, typeof(Structure))]
-    [ProtoInclude(2, typeof(StructureType))] 
-    public class DataObjectWithParent<IDTYPE> : DataObjectWithKey<IDTYPE> where IDTYPE : struct, IComparable, IEquatable<IDTYPE>, IComparable<IDTYPE>
-    {
-        protected Nullable<IDTYPE> _ParentID;
-
-        [ProtoMember(10)]
-        [DataMember]
-        public Nullable<IDTYPE> ParentID
-        {
-            get { if(_ParentID.HasValue)
-                    return _ParentID;
-                  else
-                  {
-                      return new Nullable<IDTYPE>();
-                  }
-            }
-            set { _ParentID = value; }
-        }
-    }
-    */
-
     /// <summary>
     /// A generic database object that exposes a key value
     /// </summary>

@@ -43,7 +43,8 @@ namespace WebAnnotation.UI.Forms
 
             if(Store.Locations.GetObjectByID(this.LocationID, true) != null)
             {
-                WebAnnotation.AnnotationOverlay.GoToLocation(this.LocationID);
+                //TODO: Set a property that fires an event so WebAnnotation can travel where it needs to go
+                //WebAnnotation.AnnotationOverlay.GoToLocation(this.LocationID);
                 this.Close();
             }
         }
@@ -59,7 +60,7 @@ namespace WebAnnotation.UI.Forms
                 return;
             }
 
-            WebAnnotation.AnnotationOverlay.GoToLocation(this.LocationID);
+            //WebAnnotation.AnnotationOverlay.GoToLocation(this.LocationID);
         }
 
         private void Cancel_Button_Click(object sender, RoutedEventArgs e)

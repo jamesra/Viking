@@ -14,6 +14,7 @@ using WebAnnotationModel;
 using Geometry;
 using SqlGeometryUtils;
 using Microsoft.SqlServer.Types;
+using Annotation.Interfaces;
 
 namespace Viking.AU
 {
@@ -296,8 +297,15 @@ namespace Viking.AU
 
             if (NumUpdated > 0)
             {
-                threadLocationStore.Save(); 
-                //Console.Write("...Locations updated");
+                try
+                {
+                    threadLocationStore.Save();
+                }
+                catch(System.ServiceModel.FaultException e)
+                {
+                    Trace.WriteLine(string.Format("Exception saving volume locations:\n{0}", e));
+                    //Console.Write("...Locations updated");
+                }
             }
 
             string Result = string.Format("Section {0} : {1} / {2} locations needed updates", SectionNumber, NumUpdated, LocDict.Count);

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AnnotationVizLib.Interfaces
+namespace Annotation.Interfaces
 {
     public interface IAttributes
     {

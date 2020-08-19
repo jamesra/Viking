@@ -7,9 +7,8 @@ using Geometry;
 using WebAnnotationModel.Service;
 using System.Data.SqlTypes;
 using Microsoft.SqlServer.Types;
-using SqlGeometryUtils; 
-
-
+using SqlGeometryUtils;
+using Annotation.Interfaces;
 
 namespace WebAnnotationModel
 {

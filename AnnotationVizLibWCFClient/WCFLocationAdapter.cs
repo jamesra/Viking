@@ -7,6 +7,7 @@ using SqlGeometryUtils;
 using Geometry;
 using AnnotationVizLib.WCFClient.AnnotationClient;
 using AnnotationService.Types;
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib.WCFClient
 {
@@ -52,6 +53,32 @@ namespace AnnotationVizLib.WCFClient
             set
             {
                 _VolumeShape = value;
+            }
+        }
+
+        private SqlGeometry _MosaicShape = null;
+        public SqlGeometry MosaicGeometry
+        {
+            get
+            {
+                if (_MosaicShape == null)
+                {
+                    if (loc.MosaicShape.WellKnownValue.WellKnownBinary != null)
+                        _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.MosaicShape.WellKnownValue.WellKnownBinary), loc.MosaicShape.CoordinateSystemId);
+                    else if (loc.MosaicShape.WellKnownValue.WellKnownText != null)
+                        _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(loc.MosaicShape.WellKnownValue.WellKnownText), loc.MosaicShape.CoordinateSystemId);
+                    else
+                        throw new InvalidOperationException("No well known text or binary to create SQLGeometry object: Location ID = " + loc.ID.ToString());
+
+                    _MosaicShape = _MosaicShape.Scale(scale);
+                }
+
+                return _MosaicShape;
+            }
+
+            set
+            {
+                _MosaicShape = value;
             }
         }
 

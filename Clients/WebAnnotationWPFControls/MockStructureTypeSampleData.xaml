@@ -1,0 +1,22 @@
+﻿<MockData:MockStructureType xmlns:MockData="clr-namespace:WebAnnotation.WPF.MockData" xmlns:System="clr-namespace:System;assembly=mscorlib" xmlns:Markup="clr-namespace:System.Windows.Markup;assembly=System.Xaml" Name="Aliquam vestibulum curabitur integer">
+	<MockData:MockStructureType.ID>
+		<System:UInt64/>
+	</MockData:MockStructureType.ID>
+	<MockData:MockStructureType.Tags>
+		<Markup:Array Type="{Markup:Type System:String}">
+			<System:String>Nam aenean adipiscing class quisque</System:String>
+			<System:String>Mauris curae sed parturient phasellus</System:String>
+			<System:String>Donec etiam fusce cras</System:String>
+			<System:String>Duis consequat</System:String>
+			<System:String>Vivamus nullam aptent</System:String>
+			<System:String>Aliquam dis nunc auctor convallis</System:String>
+			<System:String>Aliquet blandit congue</System:String>
+			<System:String>Cursus dictum vestibulum est</System:String>
+			<System:String>Hac leo lorem</System:String>
+			<System:String>Morbi maecenas vestibulum</System:String>
+		</Markup:Array>
+	</MockData:MockStructureType.Tags>
+	<MockData:MockStructureType.Color>
+		<System:UInt32/>
+	</MockData:MockStructureType.Color>
+</MockData:MockStructureType>

@@ -2,32 +2,22 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Diagnostics; 
+using System.Diagnostics;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects; 
+using WebAnnotationModel.Objects;
 using WebAnnotationModel.Service;
 using SqlGeometryUtils;
 using System.Data.Entity.Spatial;
 using AnnotationService.Types;
 
 using Geometry;
-
+using Annotation.Interfaces;
+using Microsoft.SqlServer.Types;
 
 namespace WebAnnotationModel
-{
-    public enum LocationType
-    {
-        POINT = 0,
-        CIRCLE = 1,
-        ELLIPSE = 2,
-        POLYLINE = 3,
-        POLYGON = 4,     //Polygon, no smoothing of exterior verticies with curve fitting
-        OPENCURVE = 5,   //Line segments with a line width, additional control points created using curve fitting function
-        CURVEPOLYGON = 6, //Polygon whose outer and inner verticies are supplimented with a curve fitting function
-        CLOSEDCURVE = 7 //Ring of line segments with a line width
-    };
+{ 
 
     public static class LocationTypeExtensions
     {
@@ -69,7 +59,7 @@ namespace WebAnnotationModel
         }
     }
 
-    public class LocationObj : WCFObjBaseWithKey<long, Location>
+    public class LocationObj : WCFObjBaseWithKey<long, Location>, ILocation
     {
         public static bool IsPositionProperty(string propertyName)
         {
@@ -761,6 +751,30 @@ namespace WebAnnotationModel
             }
         }
 
+        ulong ILocation.ID => (ulong)this.ID;
+
+        ulong ILocation.ParentID => (ulong)this.ParentID;
+
+        bool ILocation.Terminal => this.Terminal;
+
+        bool ILocation.OffEdge => this.OffEdge;
+
+        bool ILocation.IsVericosityCap => this.VericosityCap;
+
+        bool ILocation.IsUntraceable => this.Untraceable;
+
+        IDictionary<string, string> ILocation.Attributes => this.Attributes.ToDictionary(i => i.Name, i => i.Value);
+
+        long ILocation.UnscaledZ => (long)this.Data.Position.Z;
+
+        string ILocation.TagsXml => this.Data.AttributesXml;
+
+        LocationType ILocation.TypeCode => this.TypeCode;
+
+        double ILocation.Z => throw new NotImplementedException(); //Need to know scale of volume
+
+        SqlGeometry ILocation.Geometry => this.VolumeShape;
+
         /// <summary>
         /// Add the specified name to the attributes if it does not exists, removes it 
         /// </summary>
@@ -879,6 +893,14 @@ namespace WebAnnotationModel
                 //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
                 OnCreate(this, null); 
             }
+        }
+
+        bool IEquatable<ILocation>.Equals(ILocation other)
+        {
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            return other.ID == (ulong)this.ID;
         }
 
         public static event EventHandler Create

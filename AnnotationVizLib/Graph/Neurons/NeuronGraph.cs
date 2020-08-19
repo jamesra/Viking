@@ -5,6 +5,7 @@ using System.Text;
 using GraphLib;
 using System.Threading.Tasks; 
 using System.Diagnostics;
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib
 {

@@ -252,9 +252,10 @@ namespace WebAnnotationModel
                         Trace.WriteLine("Removing childless structure: " + obj.ToString(), "WebAnnotation");
 
                     }
-                    catch (Exception )
+                    catch (FaultException )
                     {
-           //             System.Windows.Forms.MessageBox.Show("Delete failed.  Structure may have had child location added or already been deleted. Exception: " + e.ToString(), "Survivable error"); 
+                    //             System.Windows.Forms.MessageBox.Show("Delete failed.  Structure may have had child location added or already been deleted. Exception: " + e.ToString(), "Survivable error"); 
+                        throw;
                     }
               //  }
             }

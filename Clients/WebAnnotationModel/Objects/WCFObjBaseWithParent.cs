@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel; 
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
 using WebAnnotationModel.Service;
 using AnnotationService.Types;
+using System.Collections.Specialized;
 
 namespace WebAnnotationModel.Objects
 {
-    abstract public class WCFObjBaseWithParent<KEY, T, THISTYPE> : WCFObjBaseWithKey<KEY, T>
+    abstract public class WCFObjBaseWithParent<KEY, T, THISTYPE> : WCFObjBaseWithKey<KEY, T>, System.Collections.Specialized.INotifyCollectionChanged
         where KEY : struct, IEquatable<KEY>
         where T : AnnotationService.Types.DataObjectWithParentOfLong, new()
         where THISTYPE : WCFObjBaseWithParent<KEY, T, THISTYPE>, new() 
@@ -129,7 +130,20 @@ namespace WebAnnotationModel.Objects
             add { _Children.CollectionChanged += value; }
             remove { _Children.CollectionChanged -= value; }
         }
-         
+
+        public event NotifyCollectionChangedEventHandler CollectionChanged
+        {
+            add
+            {
+                ((INotifyCollectionChanged)_Children).CollectionChanged += value;
+            }
+
+            remove
+            {
+                ((INotifyCollectionChanged)_Children).CollectionChanged -= value;
+            }
+        }
+
         /// <summary>
         /// Called when the database is queried and the results might have new values for our object
         /// </summary>

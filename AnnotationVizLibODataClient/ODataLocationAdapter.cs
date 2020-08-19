@@ -5,7 +5,8 @@ using System.Text;
 using Microsoft.SqlServer.Types;
 using ODataClient.ConnectomeDataModel;
 using SqlGeometryUtils;
-using Geometry;
+using Geometry; 
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib.OData
 {

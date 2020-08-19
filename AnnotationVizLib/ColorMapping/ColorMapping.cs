@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using Geometry;
 using SqlGeometryUtils;
-
+using Annotation.Interfaces;
 
 
 namespace AnnotationVizLib

@@ -67,6 +67,7 @@ namespace WebAnnotationModel
                     {
                         //TODO: Better message
                         Trace.WriteLine("Error creating link between locations, link not created: " + e.Message);
+                        throw;
                     }
                     finally
                     {

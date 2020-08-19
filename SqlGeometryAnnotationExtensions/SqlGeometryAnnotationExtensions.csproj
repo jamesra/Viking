@@ -58,6 +58,10 @@
     <Compile Include="ShapeSmoothingExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj">
+      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
+      <Name>AnnotationInterfaces</Name>
+    </ProjectReference>
     <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
       <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
       <Name>AnnotationServiceTypes</Name>

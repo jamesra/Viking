@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Simple.OData.Client;
 using AnnotationVizLib.SimpleOData;
 using System.Diagnostics;
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib.SimpleOData
 {

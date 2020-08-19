@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ODataClient.ConnectomeDataModel;
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib.OData
 {

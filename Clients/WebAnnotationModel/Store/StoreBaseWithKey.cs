@@ -1018,6 +1018,7 @@ namespace WebAnnotationModel
         /// This implementation assumes that the user/programmer provides a key which is either unique in the database
         /// or repeatable and that the database does not update the key value on insert.
         /// </summary>
+        /// <exception cref="FaultException"></exception>
         protected virtual bool Save(List<OBJECT> changedObjects)
         {
             Trace.WriteLine("Saving this number of objects: " + changedObjects.Count, "WebAnnotation");
@@ -1092,10 +1093,10 @@ namespace WebAnnotationModel
                 inventory.DeletedObjects.AddRange(InternalDelete(delObjList.ToArray()));
                 CallOnCollectionChanged(inventory); 
             }
-            catch (FaultException )
+            catch (FaultException e)
             {
                 //  System.Windows.Forms.MessageBox.Show("An exception occurred while saving structure types.  Viking is pretending none of the changes happened.  Exception Data: " + e.Message, "Error");
-
+                System.Diagnostics.Trace.WriteLine(string.Format("Exception saving: {0}", e));
                 if (changedDBObj != null)
                 {
                     //Remove new objects and rescue deleted objects
@@ -1116,7 +1117,7 @@ namespace WebAnnotationModel
                 }
 
                 //If we caught an exception return false
-                return false;
+                throw;
             }
             
             //CallOnAllUpdatesCompleted(new OnAllUpdatesCompletedEventArgs(output.ToArray()));

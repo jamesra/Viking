@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using GraphLib;
 using System.Diagnostics;
-
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib
 {

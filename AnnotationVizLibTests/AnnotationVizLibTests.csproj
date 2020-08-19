@@ -177,6 +177,10 @@
     <None Include="Properties\DataSources\AnnotationVizLib.WCFClient.AnnotationService.SynapseObject1.datasource" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj">
+      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
+      <Name>AnnotationInterfaces</Name>
+    </ProjectReference>
     <ProjectReference Include="..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj">
       <Project>{ff2c1828-20ca-47c0-9b69-85694cccecd3}</Project>
       <Name>AnnotationVizLibODataClient</Name>

@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using Geometry;
+using Annotation.Interfaces;
 
 namespace AnnotationVizLib.SimpleOData
 {
@@ -45,7 +46,29 @@ namespace AnnotationVizLib.SimpleOData
                 _VolumeShape = value;
             }
         }
-        
+
+        public System.Data.Entity.Spatial.DbGeometry MosaicShape { get; set; }
+
+        private SqlGeometry _MosaicShape = null;
+        public SqlGeometry MosaicGeometry
+        {
+            get
+            {
+                if (_MosaicShape == null)
+                {
+                    _MosaicShape = this.MosaicShape.ToSqlGeometry();
+                    _MosaicShape = _MosaicShape.Scale(scale);
+                }
+
+                return _MosaicShape;
+            }
+
+            set
+            {
+                _MosaicShape = value;
+            }
+        }
+
 
         public ulong ID
         {
@@ -90,7 +113,7 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
-        double IGeometry.Z
+        double ILocation.Z
         {
             get { return (double)UnscaledZ * scale.Z.Value; }
         }
@@ -125,8 +148,8 @@ namespace AnnotationVizLib.SimpleOData
             {
                 if (_BoundingBox == null)
                 {
-                    GridRectangle bound_rect = Geometry.BoundingBox();
-                    _BoundingBox = new GridBox(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
+                    GridRectangle bound_rect = VolumeShape.BoundingBox();
+                    _BoundingBox = new GridBox(bound_rect, Z - (scale.Z.Value / 2.0), Z + (scale.Z.Value/2.0));
                 }
 
                 return _BoundingBox;

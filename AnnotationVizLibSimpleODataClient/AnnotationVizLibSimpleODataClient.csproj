@@ -109,6 +109,10 @@
     <Compile Include="StructureType.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj">
+      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
+      <Name>AnnotationInterfaces</Name>
+    </ProjectReference>
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj">
       <Project>{a89a628b-3ffa-4271-b99a-e45c3d72d3e3}</Project>
       <Name>AnnotationVizLib</Name>
