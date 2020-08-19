@@ -26,12 +26,16 @@ namespace WebAnnotation.WPF.Converters
                 string strVal = (string)value;
                 val = System.Convert.ToUInt32(value);
             }
-            else
+            else if (value is int)
             {
-                if ((value is int || value is uint) == false)
-                    throw new NotImplementedException(string.Format("IntToBrush expects an int, but got {0}", value.ToString()));
-
+                val = (uint)(int)value;
+            }  
+            else if (value is uint)
+            {
                 val = (uint)value;
+            }
+            else{
+                throw new NotImplementedException(string.Format("IntToBrush expects an int, but got {0}", value.ToString()));
             }
 
             byte a = (byte)((val & 0xFF000000) >> 24);

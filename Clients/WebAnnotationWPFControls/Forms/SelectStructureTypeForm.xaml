@@ -17,27 +17,49 @@
             Name="_this">
     <Window.Resources>
         <conv:StructureIDsToStructureObjsConverter x:Key="StructureIDsToStructureObjsConverter"/>
+        <conv:IntToBrushConverter x:Key="IntToBrushConverter"/>
+
+        <DataTemplate x:Key="ItemsPanelForFavoriteList">
+            <DockPanel>
+                <Border DockPanel.Dock="Left"  BorderThickness="2" BorderBrush="{Binding Color, Converter={StaticResource IntToBrushConverter}}">
+                    <TextBlock FontWeight="Bold" Text="{Binding Code}" Padding="2,2,2,2"  VerticalAlignment="Center" />
+                </Border>
+                <TextBlock  Text="{Binding Name}" Padding="8,0,8,0" VerticalAlignment="Center"/>
+                <Button DockPanel.Dock="Right"  HorizontalAlignment="Right" BorderBrush="Black" Padding="3,3,3,3">X</Button>
+            </DockPanel>
+        </DataTemplate> 
+        
+
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition />
-            <ColumnDefinition />
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition  />
         </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions> 
-            <RowDefinition/>
-            <RowDefinition/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition  />
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ListBox Grid.Row="0" Grid.Column="0" ItemsSource="{Binding Source={x:Static properties:Settings.Default},
+        <TextBox Text="Favorites" Grid.Row="0" Grid.Column="0"></TextBox>
+        <TextBox Text="Types" Grid.Row="0" Grid.Column="1"></TextBox>
+        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Source={x:Static properties:Settings.Default},
                                                             Path=FavoriteStructureIDs,
-                                                            Mode=TwoWay,
-                                                            Converter={StaticResource StructureIDsToStructureObjsConverter}}">
-             
-            
+                                                            Mode=TwoWay, 
+                                                            Converter={StaticResource StructureIDsToStructureObjsConverter}}"
+                                                            ItemTemplate="{StaticResource ItemsPanelForFavoriteList}"
+                                                            HorizontalContentAlignment="Stretch" >          
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
         </ListBox>
-        <ctrl:StructureTypeTree x:Name="StructureTypesTree" Grid.Column="1" Grid.Row="0" DataContext="{Binding ElementName=_this, Path=RootStructureTypes, Mode=TwoWay}">
+        <ctrl:StructureTypeTree x:Name="StructureTypesTree" Grid.Column="1" Grid.Row="1"
+                                DataContext="{Binding ElementName=_this, Path=RootStructureTypes, Mode=TwoWay}">
         </ctrl:StructureTypeTree>
-        <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
+        <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" >
             Done!
         </Button>
     </Grid>

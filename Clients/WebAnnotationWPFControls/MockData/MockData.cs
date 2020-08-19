@@ -62,6 +62,8 @@ namespace WebAnnotation.WPF.MockData
         }
 
         public IStructureType[] Children { get; internal set; }
+
+        public string Code { get; internal set; }
     }
 
     public class MockStructure : IStructure

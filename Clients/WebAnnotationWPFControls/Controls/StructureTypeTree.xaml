@@ -12,17 +12,42 @@
              Name="_this" 
              d:DataContext="{d:DesignData /SampleData/MockDataSampleData.xaml}"
              >
-    <UserControl.Resources> 
+    <UserControl.Resources>
+        <ItemsPanelTemplate x:Key="ItemsPanelForHorizontalItems">
+                <StackPanel Orientation="Horizontal"/>
+        </ItemsPanelTemplate>
         <conv:StructureIDsToStructureObjsConverter x:Key="StructureIDsToStructureObjsConverter"/>
         <conv:IntToBrushConverter x:Key="IntToBrushConverter"/>
         <HierarchicalDataTemplate x:Key="StructureTypeTemplate"
-                              ItemsSource="{Binding Children}" >
-            <TreeViewItem Header="{Binding Name}" Background="{Binding Color, Converter={StaticResource IntToBrushConverter}}" IsExpanded="True" />
-
+                              ItemsSource="{Binding Children}"> 
+            <TreeViewItem HorizontalAlignment="Left"   Padding="0,5,0,0">
+                
+                <TreeViewItem.Header>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Row="0" Grid.Column="0" BorderThickness="2" BorderBrush="{Binding Color, Converter={StaticResource IntToBrushConverter}}">
+                            <TextBlock FontWeight="Bold" Text="{Binding Code}" Padding="2,2,2,2"  VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock  Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Padding="8,0,8,0" TextAlignment="Right" VerticalAlignment="Center" HorizontalAlignment="Left"></TextBlock>
+                        <Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" BorderBrush="Black" Padding="3,3,3,3">Add</Button>
+                     
+                    </Grid>
+                </TreeViewItem.Header>
+            </TreeViewItem>
         </HierarchicalDataTemplate>
     </UserControl.Resources>
 
     <Grid>
-        <TreeView Name="tree_view" ItemTemplate="{StaticResource StructureTypeTemplate}" ItemsSource="{Binding Mode=OneWay}"/>
+        <TreeView Name="tree_view" ItemTemplate="{StaticResource StructureTypeTemplate}" ItemsSource="{Binding Mode=OneWay}" HorizontalContentAlignment="Stretch">
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                </Style>
+            </TreeView.ItemContainerStyle>
+        </TreeView>
     </Grid>
 </UserControl>
