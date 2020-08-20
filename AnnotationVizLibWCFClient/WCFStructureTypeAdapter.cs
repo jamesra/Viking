@@ -32,6 +32,14 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
+        public string Code
+        {
+            get
+            {
+                return type.Code;
+            }
+        }
+
         public ulong? ParentID
         {
             get

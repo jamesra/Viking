@@ -10,7 +10,11 @@ namespace Annotation.Interfaces
     {
         ulong ID { get; }
         ulong? ParentID { get; }
-        string Name { get; } 
+        string Name { get; }
+        /// <summary>
+        /// Shorthand name 
+        /// </summary>
+        string Code { get; }
         string[] Tags { get; }
     }
 }

@@ -34,6 +34,14 @@ namespace AnnotationVizLib.OData
             }
         }
 
+        public string Code
+        {
+            get
+            {
+                return type.Code;
+            }
+        }
+
         public ulong? ParentID
         {
             get

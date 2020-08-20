@@ -11,7 +11,7 @@ namespace AnnotationVizLib.SimpleOData
     {
         public StructureType()
         {
-        
+
         }
 
         public ulong ID
@@ -20,6 +20,11 @@ namespace AnnotationVizLib.SimpleOData
         }
 
         public string Name
+        {
+            get; private set;
+        }
+
+        public string Code
         {
             get; private set;
         }
