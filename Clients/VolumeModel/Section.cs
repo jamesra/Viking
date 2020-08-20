@@ -247,6 +247,10 @@ namespace Viking.VolumeModel
 
                         if (!this.ImagePyramids.ContainsKey(pyramid.Name))
                             this.ImagePyramids.Add(pyramid.Name, pyramid);
+                        else
+                        {
+                            Debug.WriteLine(string.Format("Duplicate Image Pyramid Level {0}-{1}", this.Number, pyramid.Path));
+                        }
 
                         if (DefaultPyramid == null || DefaultPyramid.Length == 0)
                             DefaultPyramid = pyramid.Name;

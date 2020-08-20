@@ -243,7 +243,14 @@ namespace Viking.VolumeModel
                 this.MinDownsample = Downsample;
 
             GridInfo Level = new GridInfo(GridDimX, GridDimY, Downsample, LevelPath);
-            LevelToGridInfo.Add(Downsample, Level);
+            if(false == LevelToGridInfo.ContainsKey(Downsample))
+            { 
+                LevelToGridInfo.Add(Downsample, Level);
+            }
+            else
+            {
+                System.Diagnostics.Trace.WriteLine(string.Format("Duplicate Tileset Level {0}-{1}", this.Section.Number, LevelPath));
+            }
             this._AvailableLevels = null;
         }
 
