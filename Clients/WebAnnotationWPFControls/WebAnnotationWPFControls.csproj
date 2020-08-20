@@ -135,6 +135,10 @@
       <Project>{709a3c16-7218-4ff0-9a2d-6bf015c243bf}</Project>
       <Name>WebAnnotationModel</Name>
     </ProjectReference>
+    <ProjectReference Include="..\WebAnnotationViewModels\WebAnnotationViewModels.csproj">
+      <Project>{c4401c6e-e354-420e-8373-36a71b9b6290}</Project>
+      <Name>WebAnnotationViewModels</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="SqlServerTypes\readme.htm" />
@@ -150,6 +154,9 @@
     <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ViewModels\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -51,5 +51,10 @@ namespace WebAnnotation.UI.Controls
                 tree_view.ItemsSource = RootStructureTypes;
             }
         }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

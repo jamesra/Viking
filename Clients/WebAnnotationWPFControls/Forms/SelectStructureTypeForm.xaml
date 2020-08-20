@@ -12,9 +12,11 @@
             Width="200" Height="200"
             SizeToContent="WidthAndHeight"
             Topmost="True"
-            Title="Select Structure Type"
-            d:DataContext="{d:DesignData /SampleData/MockDataSampleData.xaml}"
-            Name="_this">
+            Title="Select Favorite Structure Types"
+            d:DataContext="{d:DesignData /SampleData/MockDataSampleData.xaml, IsDesignTimeCreatable=True}"
+            Name="_this"
+            MinHeight="400"
+            MinWidth="400">
     <Window.Resources>
         <conv:StructureIDsToStructureObjsConverter x:Key="StructureIDsToStructureObjsConverter"/>
         <conv:IntToBrushConverter x:Key="IntToBrushConverter"/>
@@ -25,11 +27,41 @@
                     <TextBlock FontWeight="Bold" Text="{Binding Code}" Padding="2,2,2,2"  VerticalAlignment="Center" />
                 </Border>
                 <TextBlock  Text="{Binding Name}" Padding="8,0,8,0" VerticalAlignment="Center"/>
-                <Button DockPanel.Dock="Right"  HorizontalAlignment="Right" BorderBrush="Black" Padding="3,3,3,3">X</Button>
+                <Button DockPanel.Dock="Right" HorizontalAlignment="Right"
+                        BorderBrush="Black" Padding="3,3,3,3"
+                        Command="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=DataContext.DeleteFavoriteCommand}" 
+                        CommandParameter="{Binding ID}"
+                         >X</Button>
             </DockPanel>
-        </DataTemplate> 
-        
+        </DataTemplate>
 
+        <HierarchicalDataTemplate x:Key="StructureTypeTreeItemTemplate"
+                              ItemsSource="{Binding Children}">
+            <TreeViewItem HorizontalAlignment="Left"   Padding="0,5,0,0">
+
+                <TreeViewItem.Header>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Row="0" Grid.Column="0" BorderThickness="2" BorderBrush="{Binding Color, Converter={StaticResource IntToBrushConverter}}">
+                            <TextBlock FontWeight="Bold" Text="{Binding Code}" Padding="2,2,2,2"  VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock  Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Padding="8,0,8,0" TextAlignment="Right" VerticalAlignment="Center" HorizontalAlignment="Left"></TextBlock>
+                        <Button Command="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=DataContext.AddFavoriteCommand}"
+                                CommandParameter="{Binding ID}"
+                                Grid.Row="0" Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                BorderBrush="Black" 
+                                Padding="3,3,3,3" 
+                                >Add</Button>
+
+                    </Grid>
+                </TreeViewItem.Header>
+            </TreeViewItem>
+        </HierarchicalDataTemplate>
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
@@ -44,21 +76,27 @@
 
         <TextBox Text="Favorites" Grid.Row="0" Grid.Column="0"></TextBox>
         <TextBox Text="Types" Grid.Row="0" Grid.Column="1"></TextBox>
-        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Source={x:Static properties:Settings.Default},
-                                                            Path=FavoriteStructureIDs,
-                                                            Mode=TwoWay, 
-                                                            Converter={StaticResource StructureIDsToStructureObjsConverter}}"
-                                                            ItemTemplate="{StaticResource ItemsPanelForFavoriteList}"
-                                                            HorizontalContentAlignment="Stretch" >          
+        <ListBox x:Name="favorite_list" Grid.Row="1" Grid.Column="0"  ItemsSource="{Binding
+                                                              Path=FavoriteStructureTypeIDs, Mode=OneWay,
+                                                            Converter={StaticResource StructureIDsToStructureObjsConverter}
+                                                            }"
+                                              ItemTemplate="{StaticResource ItemsPanelForFavoriteList}"
+                                              HorizontalContentAlignment="Stretch" >          
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                 </Style>
             </ListBox.ItemContainerStyle>
         </ListBox>
-        <ctrl:StructureTypeTree x:Name="StructureTypesTree" Grid.Column="1" Grid.Row="1"
-                                DataContext="{Binding ElementName=_this, Path=RootStructureTypes, Mode=TwoWay}">
-        </ctrl:StructureTypeTree>
+        <TreeView Grid.Column="1" Grid.Row="1" Name="StructureTypesTree" ItemTemplate="{StaticResource StructureTypeTreeItemTemplate}"
+                   ItemsSource="{Binding  Path=RootStructureTypes, Mode=OneWay}" HorizontalContentAlignment="Stretch">
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                </Style>
+            </TreeView.ItemContainerStyle>
+        </TreeView>
+         
         <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" >
             Done!
         </Button>

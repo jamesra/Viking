@@ -29,11 +29,9 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Row="0" Grid.Column="0" BorderThickness="2" BorderBrush="{Binding Color, Converter={StaticResource IntToBrushConverter}}">
-                            <TextBlock FontWeight="Bold" Text="{Binding Code}" Padding="2,2,2,2"  VerticalAlignment="Center" />
-                        </Border>
+                        <TextBlock  Grid.Row="0" Grid.Column="0" Text="{Binding Code}" Padding="0,0,0,0" VerticalAlignment="Center" Background="{Binding Color, Converter={StaticResource IntToBrushConverter}}"></TextBlock>
                         <TextBlock  Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Padding="8,0,8,0" TextAlignment="Right" VerticalAlignment="Center" HorizontalAlignment="Left"></TextBlock>
-                        <Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" BorderBrush="Black" Padding="3,3,3,3">Add</Button>
+                        <Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" Background="Green" BorderBrush="Black" Padding="3,3,3,3">Add</Button>
                      
                     </Grid>
                 </TreeViewItem.Header>

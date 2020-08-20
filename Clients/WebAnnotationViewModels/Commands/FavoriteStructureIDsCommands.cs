@@ -4,11 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace VikingXNAGraphics
+namespace Annotation.ViewModels.Commands
 {
-    public interface IText
+    class FavoriteStructureIDsCommands
     {
-        string Text { get; set; }
-        double FontSize { get; set; }
     }
 }

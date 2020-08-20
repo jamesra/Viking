@@ -16,6 +16,8 @@ using System.Windows.Shapes;
 using WebAnnotationModel;
 using Annotation.Interfaces;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using Annotation.ViewModels;
 
 namespace WebAnnotation.UI.Forms
 {
@@ -24,7 +26,8 @@ namespace WebAnnotation.UI.Forms
     /// </summary>
     public partial class SelectStructureTypeForm 
     {
-        public System.Collections.ObjectModel.ObservableCollection<IStructureType> RootStructureTypes
+
+        /*public System.Collections.ObjectModel.ObservableCollection<IStructureType> RootStructureTypes
         {
             get { return (System.Collections.ObjectModel.ObservableCollection<IStructureType>)GetValue(RootStructureTypesProperty); }
             set { SetValue(RootStructureTypesProperty, value); }
@@ -35,12 +38,68 @@ namespace WebAnnotation.UI.Forms
             DependencyProperty.Register("RootStructureTypes", typeof(ObservableCollection<IStructureType>),
                 typeof(SelectStructureTypeForm), new PropertyMetadata());
          
-        public SelectStructureTypeForm()
+        public ObservableCollection<ulong> FavoriteStructureTypeIDs
         {
-            InitializeComponent();
+            get { return (ObservableCollection<ulong>)GetValue(FavoriteStructureTypeIDsProperty); }
+            set { SetValue(FavoriteStructureTypeIDsProperty, value); }
+        }
 
+        // Using a DependencyProperty as the backing store for FavoriteStructureTypeIDs.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty FavoriteStructureTypeIDsProperty =
+            DependencyProperty.Register("FavoriteStructureTypeIDs", typeof(ObservableCollection<ulong>), typeof(SelectStructureTypeForm), new PropertyMetadata());
+        */
 
+        public SelectStructureTypeForm( )
+        { 
+            InitializeComponent(); 
+        }
 
+        private void StructureTypeTreeItem_Click(object sender, RoutedEventArgs e)
+        {
+            Control ctrl = sender as Control;
+            if(ctrl == null)
+            { 
+                Trace.WriteLine(string.Format("Clicked {0} which was not a control, exiting handler", ctrl.DataContext));
+                return;
+            }
+            else
+            {
+                Trace.WriteLine(string.Format("Clicked {0}", ctrl.DataContext));
+            }
+
+            var StructureType = ctrl.DataContext as IStructureType;
+            if(StructureType == null)
+            {
+                throw new ArgumentException(string.Format("Expected an IStructureType in Data Context"));
+            }
+
+            var viewModel = this.DataContext as FavoriteStructureIDsViewModel;
+
+            viewModel.FavoriteStructureTypeIDs.Add(StructureType.ID); 
+        }
+
+        private void FavoriteStructureTypes_DeleteClick(object sender, RoutedEventArgs e)
+        {
+            Control ctrl = sender as Control;
+            if (ctrl == null)
+            {
+                Trace.WriteLine(string.Format("Clicked {0} which was not a control, exiting handler", ctrl.DataContext));
+                return;
+            }
+            else
+            {
+                Trace.WriteLine(string.Format("Clicked {0}", ctrl.DataContext));
+            }
+
+            var StructureType = ctrl.DataContext as IStructureType;
+            if (StructureType == null)
+            {
+                throw new ArgumentException(string.Format("Expected an IStructureType in Data Context"));
+            }
+
+            var viewModel = this.DataContext as FavoriteStructureIDsViewModel;
+
+            viewModel.FavoriteStructureTypeIDs.Remove(StructureType.ID); 
         }
     }
 }
