@@ -97,7 +97,7 @@ namespace AnnotationVizLib.WCFClient
         public static Structure[] GetStructuresByIDs(AnnotateStructuresClient proxy, long[] IDs, bool include_children=false)
         {
             int i = 0;
-            int ChunkSize = 4096;
+            int ChunkSize = 1024 * 8;
             List<Structure> listStructures = new List<Structure>(IDs.Length);
             while (i < IDs.Length)
             {

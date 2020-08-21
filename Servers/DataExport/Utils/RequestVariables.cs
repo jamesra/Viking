@@ -11,6 +11,52 @@ using System.Threading.Tasks;
 namespace DataExport.Controllers
 {
     /// <summary>
+    /// Helper class to generate names for generated files
+    /// </summary>
+    public static class OutputNameGenerator {
+        public static string GetFileFriendlyDateString()
+        {
+            
+            bool first = true;
+            
+
+            DateTime now = System.DateTime.Now;
+
+            return string.Format("nw-{0,04:d4}-{1,02:d2}-{2,02:d2} {3,02:d2}{4,02:d2}{5,02:d2}", now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
+        }
+
+        public static string GetFileFriendlyIDList(ICollection<long> requestIDs, int max_length=140)
+        {
+            if (requestIDs.Count == 0)
+                return "ALL";
+
+            System.Text.StringBuilder sb = new System.Text.StringBuilder(max_length);
+
+            bool first = true;
+            foreach (long ID in requestIDs)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    sb.Append("_");
+                }
+
+                sb.Append(ID.ToString());
+                if (sb.Length > max_length)
+                {
+                    sb.Append("etc");
+                    break;
+                }
+            }
+
+            return sb.ToString();
+        }
+    }
+
+    /// <summary>
     /// A helper class to pull common URL query parameters from our requests
     /// </summary>
     public static class RequestVariables
