@@ -203,6 +203,16 @@ namespace Annotation
             }
         }
 
+        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        public AnnotationService.Types.PermittedStructureLink[] GetPermittedStructureLinks()
+        {
+            using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
+            {
+                IQueryable<ConnectomeDataModel.PermittedStructureLink> queryResults = from psl in db.PermittedStructureLink select psl;
+                return queryResults.ToArray().Select(psl => psl.Create()).ToArray();
+            }
+        }
+
         /*
         public StructureTemplate[] GetStructureTemplates()
         {
@@ -688,94 +698,104 @@ namespace Annotation
             return null;
         }
 
+        /// <summary>
+        /// Fetch a list of IDs, the input must be smaller than our chunk size.  Used to divide requests into tasks
+        /// </summary>
+        /// <param name="IDs"></param>
+        /// <param name="IncludeChildren"></param>
+        /// <returns></returns>
+        private List<AnnotationService.Types.Structure> GetStructureByIDsChunk(long[] IDs, bool IncludeChildren)
+        {
+            List<AnnotationService.Types.Structure> ListStructures = new List<AnnotationService.Types.Structure>(IDs.Length);
+            //I do this hoping that it will allow SQL to not check the entire table for each chunk
+            long minIDValue = IDs[0];
+            long maxIDValue = IDs[IDs.Length - 1];
+
+            using (var db = GetOrCreateReadOnlyContext())
+            {
+                try
+                {
+                    IQueryable<ConnectomeDataModel.Structure> structObjs = from s in db.Structures.AsNoTracking()
+                                                                           where s.ID >= minIDValue &&
+                                                                                 s.ID <= maxIDValue &&
+                                                                                 IDs.Contains(s.ID)
+                                                                           select s;
+
+                    IQueryable<ConnectomeDataModel.StructureLink> structLinks = from sl in db.StructureLinks.AsNoTracking()
+                                                                                where IDs.Contains(sl.SourceID) ||
+                                                                                      IDs.Contains(sl.TargetID)
+                                                                                select sl;
+
+                    Dictionary<long, ConnectomeDataModel.Structure> dictStructures = structObjs.ToDictionary(s => s.ID);
+                    db.AppendLinksToStructures(dictStructures, structLinks.ToList());
+
+                    Dictionary<long, AnnotationService.Types.Structure> selected_structures = structObjs.ToList().Select(s => s.Create(false)).ToDictionary(s => s.ID);
+
+                    if (IncludeChildren)
+                    {
+                        var childStructGroups = (from s in db.Structures.AsNoTracking()
+                                                 where s.ParentID.HasValue && IDs.Contains(s.ParentID.Value)
+                                                 group s.ID by s.ParentID.Value into ParentIDGroup
+                                                 select ParentIDGroup);
+
+                        foreach (var ParentStructure in childStructGroups)
+                        {
+                            if (selected_structures.ContainsKey(ParentStructure.Key))
+                            {
+                                selected_structures[ParentStructure.Key].ChildIDs = ParentStructure.ToArray();
+                            }
+                        }
+                    }
+
+                    if (structObjs == null)
+                        return new List<AnnotationService.Types.Structure>();
+
+                    ListStructures.AddRange(selected_structures.Values);
+                }
+                catch (System.ArgumentNullException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find requested structure IDs: " + IDs.ToString());
+                }
+                catch (System.InvalidOperationException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find requested structure IDs: " + IDs.ToString());
+                }
+            }
+
+            return ListStructures;
+        }
+
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
         public AnnotationService.Types.Structure[] GetStructuresByIDs(long[] IDs, bool IncludeChildren)
         {
 
-            List<long> ListIDs = new List<long>(IDs);
             List<AnnotationService.Types.Structure> ListStructures = new List<AnnotationService.Types.Structure>(IDs.Length);
-
             //LINQ creates a SQL query with parameters when using contains, and there is a 2100 parameter limit.  So we cut the query into smaller chunks and run 
-            //multiple queries
-            ListIDs.Sort();  //Sort the list to slightly optimize the query
+            //multiple queries.  Since we are stuck doing this I run the query in parallel
+            uint QueryChunkSize = 1024;
 
-            int QueryChunkSize = 2000;
+            var chunks = IDs.SortAndChunk(QueryChunkSize);
 
-            using (var db = GetOrCreateReadOnlyContext())
+            if(chunks.Count > 1)
+                Trace.WriteLine(string.Format("Dividing GetStructuresByIDs for {0} keys in {1} chunks", IDs.Length, chunks.Count));
+
+            //We won't spawn any tasks if we only have one chunk.
+            Task<List<AnnotationService.Types.Structure>>[] tasks = new Task<List<AnnotationService.Types.Structure>>[chunks.Count];
+            
+            for(int iChunk = 1; iChunk < chunks.Count; iChunk++)
             {
+                long[] chunk = chunks[iChunk];
+                tasks[iChunk] = Task.Run(() => GetStructureByIDsChunk(chunk, IncludeChildren));
+            }
+             
+            ListStructures = GetStructureByIDsChunk(chunks[0], IncludeChildren);
 
-                while (ListIDs.Count > 0)
-                {
-                    int NumIDs = ListIDs.Count < QueryChunkSize ? ListIDs.Count : QueryChunkSize;
-
-                    long[] ShorterIDArray = new long[NumIDs];
-
-                    ListIDs.CopyTo(0, ShorterIDArray, 0, NumIDs);
-                    ListIDs.RemoveRange(0, NumIDs);
-
-                    //I do this hoping that it will allow SQL to not check the entire table for each chunk
-                    long minIDValue = ShorterIDArray[0];
-                    long maxIDValue = ShorterIDArray[ShorterIDArray.Length - 1];
-
-                    List<long> ShorterListIDs = new List<long>(ShorterIDArray);
-
-                    try
-                    {
-                        IQueryable<ConnectomeDataModel.Structure> structObjs = from s in db.Structures.AsNoTracking()
-                                                                               where s.ID >= minIDValue &&
-                                                                                     s.ID <= maxIDValue &&
-                                                                                     ShorterListIDs.Contains(s.ID)
-                                                                               select s;
-
-                        IQueryable<ConnectomeDataModel.StructureLink> structLinks = from sl in db.StructureLinks.AsNoTracking()
-                                                                                    where ShorterListIDs.Contains(sl.SourceID) ||
-                                                                                          ShorterListIDs.Contains(sl.TargetID)
-                                                                                    select sl;
-
-                        Dictionary<long, ConnectomeDataModel.Structure> dictStructures = structObjs.ToDictionary(s => s.ID);
-                        db.AppendLinksToStructures(dictStructures, structLinks.ToList());
-
-                        Dictionary<long, AnnotationService.Types.Structure> selected_structures = structObjs.ToList().Select(s => s.Create(false)).ToDictionary(s => s.ID);
-
-                        if (IncludeChildren)
-                        {
-                            var childStructGroups = (from s in db.Structures.AsNoTracking()
-                                                     where s.ParentID.HasValue && ShorterListIDs.Contains(s.ParentID.Value)
-                                                     group s.ID by s.ParentID.Value into ParentIDGroup
-                                                     select ParentIDGroup);
-
-                            foreach (var ParentStructure in childStructGroups)
-                            {
-                                if (selected_structures.ContainsKey(ParentStructure.Key))
-                                {
-                                    selected_structures[ParentStructure.Key].ChildIDs = ParentStructure.ToArray();
-                                }
-                            }
-                        }
-
-                        if (structObjs == null)
-                            return new AnnotationService.Types.Structure[0];
-
-                        ListStructures.AddRange(selected_structures.Values);
-                    }
-                    catch (System.ArgumentNullException)
-                    {
-                        //This means there was no row with that ID; 
-                        Debug.WriteLine("Could not find requested structure IDs: " + IDs.ToString());
-                    }
-                    catch (System.InvalidOperationException)
-                    {
-                        //This means there was no row with that ID; 
-                        Debug.WriteLine("Could not find requested structure IDs: " + IDs.ToString());
-                    }
-
-                }
-
-                if (ListStructures.Count > QueryChunkSize)
-                {
-                    Trace.Write("GetStructuresByID count > 2000.  Would have been affected by truncation bug in the past.");
-                }
+            for (int iChunk = 1; iChunk < chunks.Count; iChunk++)
+            {
+                ListStructures.AddRange(tasks[iChunk].Result);
             }
 
             return ListStructures.ToArray();
@@ -1416,12 +1436,70 @@ namespace Annotation
         }
 
         /// <summary>
-        /// Fetch database objects for the IDs in bulk
+        /// Used with tasks, expects the input to be a chunk size small enough the generated SQL query won't exceed size limit
         /// </summary>
         /// <param name="db"></param>
         /// <param name="IDs"></param>
+        /// <param name="IncludeLinks"></param>
         /// <returns></returns>
-        private List<ConnectomeDataModel.Location> _GetLocationsByID(ConnectomeEntities db, long[] IDs, bool IncludeLinks)
+        private List<AnnotationService.Types.Location> _GetReadOnlyLocationsByIDChunked(long[] IDs, bool IncludeLinks)
+        {
+            //I do this hoping that it will allow SQL to not check the entire table for each chunk
+            long minIDValue = IDs[0];
+            long maxIDValue = IDs[IDs.Length - 1];
+            List<AnnotationService.Types.Location> ListLocations = new List<AnnotationService.Types.Location>(IDs.Length);
+
+            using (var db = GetOrCreateReadOnlyContext())
+            { 
+
+                try
+                {
+                    IQueryable<ConnectomeDataModel.Location> locObjs;
+                    if (IncludeLinks)
+                    {
+                        locObjs = from s in db.Locations.Include("LocationLinksA").Include("LocationLinksB").AsNoTracking()
+                                  where s.ID >= minIDValue &&
+                                          s.ID <= maxIDValue &&
+                                          IDs.Contains(s.ID)
+                                  select s;
+                    }
+                    else
+                    {
+                        locObjs = from s in db.Locations.AsNoTracking()
+                                  where s.ID >= minIDValue &&
+                                          s.ID <= maxIDValue &&
+                                          IDs.Contains(s.ID)
+                                  select s;
+                    }
+
+
+                    if (locObjs == null)
+                        return null;
+
+                    ListLocations.AddRange(locObjs.Select(l => l.Create(IncludeLinks)));
+                }
+                catch (System.ArgumentNullException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find requested location IDs: " + IDs.ToString());
+                }
+                catch (System.InvalidOperationException)
+                {
+                    //This means there was no row with that ID; 
+                    Debug.WriteLine("Could not find requested location IDs: " + IDs.ToString());
+                }
+            }
+
+            return ListLocations;
+        }
+
+            /// <summary>
+            /// Fetch database objects for the IDs in bulk
+            /// </summary>
+            /// <param name="db"></param>
+            /// <param name="IDs"></param>
+            /// <returns></returns>
+            private List<ConnectomeDataModel.Location> _GetLocationsByID(ConnectomeEntities db, long[] IDs, bool IncludeLinks)
         {
             List<long> ListIDs = new List<long>(IDs);
             ListIDs.Sort();  //Sort the list to slightly optimize the query
@@ -1488,6 +1566,37 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
         public AnnotationService.Types.Location[] GetLocationsByID(long[] IDs)
         {
+
+            List<AnnotationService.Types.Location> listObjs;
+
+            //LINQ creates a SQL query with parameters when using contains, and there is a 2100 parameter limit.  So we cut the query into smaller chunks and run 
+            //multiple queries.  Since we are stuck doing this I run the query in parallel
+            uint QueryChunkSize = 2000;
+
+            var chunks = IDs.SortAndChunk(QueryChunkSize);
+
+            if (chunks.Count > 1)
+                Trace.WriteLine(string.Format("Dividing GetLocationsByID for {0} keys in {1} chunks", IDs.Length, chunks.Count));
+
+            //We won't spawn any tasks if we only have one chunk.
+            Task<List<AnnotationService.Types.Location>>[] tasks = new Task<List<AnnotationService.Types.Location>>[chunks.Count];
+            
+            for(int iChunk = 1; iChunk < chunks.Count; iChunk++)
+            {
+                long[] chunk = chunks[iChunk];
+                tasks[iChunk] = Task.Run(() => _GetReadOnlyLocationsByIDChunked(chunk, true));
+            }
+
+            listObjs = _GetReadOnlyLocationsByIDChunked(chunks[0], true);
+
+            for (int iChunk = 1; iChunk < chunks.Count; iChunk++)
+            {
+                listObjs.AddRange(tasks[iChunk].Result);
+            }
+
+            return listObjs.ToArray();
+            /*
+
             List<ConnectomeDataModel.Location> listObjs;
 
             using (var db = GetOrCreateReadOnlyContext())
@@ -1496,6 +1605,7 @@ namespace Annotation
             }
 
             return listObjs.Select(obj => obj.Create(true)).ToArray();
+            */
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
@@ -1537,7 +1647,7 @@ namespace Annotation
                     var dbLocs = db.ReadSectionLocations(section, new DateTime?());
                     */
 
-                    var dbLocs = db.ReadSectionLocationsAndLinks(section, new DateTime?());
+            var dbLocs = db.ReadSectionLocationsAndLinks(section, new DateTime?());
                     elapsed = new TimeSpan(DateTime.UtcNow.Ticks - start.Ticks);
                     Debug.WriteLine(section.ToString() + ": Query Locations: " + elapsed.TotalMilliseconds);
 

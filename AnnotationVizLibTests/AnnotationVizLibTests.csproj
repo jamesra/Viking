@@ -83,14 +83,14 @@
       <HintPath>..\Packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Simple.OData.Client.Core, Version=4.27.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Simple.OData.V4.Client.4.27.0\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Core.dll</HintPath>
+    <Reference Include="Simple.OData.Client.Core, Version=5.9.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Simple.OData.V4.Client.5.9.1\lib\net452\Simple.OData.Client.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Simple.OData.Client.Dynamic, Version=4.27.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Simple.OData.V4.Client.4.27.0\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.Dynamic.dll</HintPath>
+    <Reference Include="Simple.OData.Client.Dynamic, Version=5.9.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Simple.OData.V4.Client.5.9.1\lib\net452\Simple.OData.Client.Dynamic.dll</HintPath>
     </Reference>
-    <Reference Include="Simple.OData.Client.V4.Adapter, Version=4.27.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\Packages\Simple.OData.V4.Client.4.27.0\lib\portable-net45+win8+wp8+wpa81\Simple.OData.Client.V4.Adapter.dll</HintPath>
+    <Reference Include="Simple.OData.Client.V4.Adapter, Version=5.9.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Packages\Simple.OData.V4.Client.5.9.1\lib\net452\Simple.OData.Client.V4.Adapter.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
