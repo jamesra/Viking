@@ -19,7 +19,10 @@ namespace Annotation
 {
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single, ConcurrencyMode = ConcurrencyMode.Multiple)]
     [AspNetCompatibilityRequirements(RequirementsMode = AspNetCompatibilityRequirementsMode.Required)]
-    public class AnnotateService : IAnnotateStructureTypes, IAnnotateStructures, IAnnotateLocations, ICircuit, ICredentials, IVolumeMeta
+    public class AnnotateService : IAnnotateStructureTypes,
+        IAnnotatePermittedStructureLinks,
+        IAnnotateStructures,
+        IAnnotateLocations, ICircuit, ICredentials, IVolumeMeta
     {
         static bool _isSqlTypesLoaded = false;
 

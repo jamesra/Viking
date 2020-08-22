@@ -69,8 +69,7 @@ namespace AnnotationService.Types
             type.Name = st.Name;
             type.Notes = st.Notes;
             type.MarkupType = st.MarkupType;
-
-
+            
             string tags = "";
             foreach (string s in st.Tags)
             {

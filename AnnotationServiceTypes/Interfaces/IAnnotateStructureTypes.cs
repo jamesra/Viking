@@ -50,6 +50,8 @@ namespace AnnotationService.Interfaces
         //[OperationContract]
         //Structure[] GetStructuresForType(Int64 typeID);
 
+        
+
         /// <summary>
         /// Updates or creates a new structure type 
         /// </summary>
@@ -57,19 +59,7 @@ namespace AnnotationService.Interfaces
         /// <returns></returns>
         [OperationContract]
         Int64[] UpdateStructureTypes(StructureType[] structType);
-
-
-        [OperationContract]
-        PermittedStructureLink CreatePermittedStructureLink(PermittedStructureLink link);
-
-        /// <summary>
-        /// Updates or creates structure links
-        /// </summary>
-        /// <param name="structType"></param>
-        /// <returns>IDs of updated</returns.
-        [OperationContract]
-        void UpdatePermittedStructureLinks(PermittedStructureLink[] permittedStructureLinks);
-
+         
         /// <summary>
         /// A test method used to ensure the service can handle a basic call
         /// </summary>
