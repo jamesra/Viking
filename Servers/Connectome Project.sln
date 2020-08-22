@@ -84,6 +84,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TriangleNetGeometryExtensio
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IdentityServer", "IdentityServer\IdentityServer\IdentityServer.csproj", "{D2AB177C-D93E-4E41-A18A-793AE04F41AB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationInterfaces", "..\AnnotationInterfaces\AnnotationInterfaces.csproj", "{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -292,6 +294,12 @@ Global
 		{D2AB177C-D93E-4E41-A18A-793AE04F41AB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D2AB177C-D93E-4E41-A18A-793AE04F41AB}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{D2AB177C-D93E-4E41-A18A-793AE04F41AB}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -11,6 +11,7 @@ using SqlGeometryUtils;
 using TriangleNet;
 using TriangleNet.Meshing;
 using TriangleNet.Geometry;
+using Annotation.Interfaces;
 
 namespace MorphologyMesh
 {  

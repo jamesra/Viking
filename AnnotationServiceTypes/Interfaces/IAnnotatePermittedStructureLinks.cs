@@ -7,7 +7,7 @@ using System.ServiceModel;
 using AnnotationService.Types;
 
 
-namespace AnnotationServiceTypes.Interfaces
+namespace AnnotationService.Interfaces
 {
     [ServiceContract]
     public interface IAnnotatePermittedStructureLinks

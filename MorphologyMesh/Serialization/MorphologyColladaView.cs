@@ -7,6 +7,7 @@ using Geometry.Meshing;
 using Geometry;
 using AnnotationVizLib;
 using System.Drawing;
+using Annotation.Interfaces;
 
 namespace MorphologyMesh
 {

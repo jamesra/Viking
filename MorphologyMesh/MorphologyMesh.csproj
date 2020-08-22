@@ -97,13 +97,13 @@
     <Compile Include="Generators\TopologyMeshGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj">
+      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
+      <Name>AnnotationInterfaces</Name>
+    </ProjectReference>
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj">
       <Project>{a89a628b-3ffa-4271-b99a-e45c3d72d3e3}</Project>
       <Name>AnnotationVizLib</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Clients\MonogameXNAGraphicsShared\Monographics.csproj">
-      <Project>{5f9caf24-0cf5-481f-b7ec-9327ecb269a7}</Project>
-      <Name>Monographics</Name>
     </ProjectReference>
     <ProjectReference Include="..\Geometry\Geometry.csproj">
       <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
