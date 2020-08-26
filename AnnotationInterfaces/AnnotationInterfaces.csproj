@@ -47,6 +47,7 @@
     <Compile Include="IAttributes.cs" />
     <Compile Include="ILocation.cs" />
     <Compile Include="ILocationLink.cs" />
+    <Compile Include="IPermittedStructureLink.cs" />
     <Compile Include="IStructure.cs" />
     <Compile Include="IStructureLink.cs" />
     <Compile Include="IStructureType.cs" />
