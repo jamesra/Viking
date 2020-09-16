@@ -253,8 +253,8 @@ namespace RoundCurve
         /// </remarks>
         protected void CreateRoundLineMesh()
         {
-            const int primsPerCap = 9; // A higher primsPerCap produces rounder endcaps at the cost of more vertices
-            const int verticesPerCap = primsPerCap * 2 + 2;
+            //const int primsPerCap = 9; // A higher primsPerCap produces rounder endcaps at the cost of more vertices
+            //const int verticesPerCap = primsPerCap * 2 + 2;
             const int primsPerCore = 4;
             const int verticesPerCore = 3;
             const float pi2 = MathHelper.PiOver2;
@@ -273,7 +273,7 @@ namespace RoundCurve
             int iv = 0;
             int ii = 0;
             int iVertex;
-            int iIndex;
+            //int iIndex;
             for (int instance = 0; instance < MaxInstancesPerBatch; instance++)
             {
                 //Each control point has three verticies, one centered on the line, and two more a lineradius distance away from the center on opposite sides.
