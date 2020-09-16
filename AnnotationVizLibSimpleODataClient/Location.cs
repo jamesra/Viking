@@ -146,6 +146,10 @@ namespace AnnotationVizLib.SimpleOData
         {
             get
             {
+
+                if (VolumeShape == null)
+                    return null;
+
                 if (_BoundingBox == null)
                 {
                     GridRectangle bound_rect = VolumeShape.BoundingBox();
