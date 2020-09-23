@@ -286,7 +286,7 @@ namespace MorphologyMesh
         public static List<BajajGeneratorMesh> ConvertToMesh(MorphologyGraph graph, OnMeshGeneratedEventHandler OnMeshGenerated = null)
         {
             Trace.WriteLine("Begin Slice graph construction");
-            SliceGraph sliceGraph = SliceGraph.Create(graph, 2.0);
+            SliceGraph sliceGraph = SliceGraph.Create(graph, 2.0).Result;
             Trace.WriteLine("End Slice graph construction");
 
             return ConvertToMesh(sliceGraph, OnMeshGenerated);
