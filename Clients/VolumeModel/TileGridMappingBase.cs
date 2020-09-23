@@ -74,7 +74,7 @@ namespace Viking.VolumeModel
         {
             get 
             {
-                GridInfo Level = LevelToGridInfo[MaxDownsample];
+                GridInfo Level = LevelToGridInfo[MinDownsample];
                 return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
                                          0, Level.GridYDim * Level.Downsample * TileSizeY); 
             }
@@ -84,7 +84,7 @@ namespace Viking.VolumeModel
         {
             get
             {
-                GridInfo Level = LevelToGridInfo[MaxDownsample];
+                GridInfo Level = LevelToGridInfo[MinDownsample];
                 return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
                                          0, Level.GridYDim * Level.Downsample * TileSizeY);
             }
@@ -94,7 +94,7 @@ namespace Viking.VolumeModel
         {
             get
             {
-                GridInfo Level = LevelToGridInfo[MaxDownsample];
+                GridInfo Level = LevelToGridInfo[MinDownsample];
                 return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
                                          0, Level.GridYDim * Level.Downsample * TileSizeY);
             }
