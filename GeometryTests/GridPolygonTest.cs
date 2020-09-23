@@ -14,135 +14,11 @@ namespace GeometryTests
     {
         public delegate void OnPolygonIntersectionProgress(GridPolygon[] polygons, List<GridVector2> foundPoints, List<GridVector2> expectedPoints);
 
-        /// <summary>
-        /// Create a box, note I've added an extra vertex on the X:-1 vertical line
-        /// 
-        ///  * - - - *
-        ///  |       |
-        ///  *       |
-        ///  |       |
-        ///  * - - - *
-        /// 
-        /// </summary>
-        /// <param name="scale"></param>
-        /// <returns></returns>
-        public static GridVector2[] BoxVerticies(double scale)
-        {
-            GridVector2[] ExteriorPoints =
-            {
-                new GridVector2(-1, -1),
-                new GridVector2(-1, 0),
-                new GridVector2(-1, 1),
-                new GridVector2(1,1),
-                new GridVector2(1,-1),
-                new GridVector2(-1,-1)
-            };
-
-            GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
-            return ExteriorPointsScaled;
-        }
-
-
-        public static GridVector2[] ConcaveUVerticies(double scale)
-        {
-            //  *--*    *--*
-            //  |  |    |  |
-            //  |  |    |  |  
-            //  |  *----*  |
-            //  *----------*
-            GridVector2[] ExteriorPoints =
-            {
-                new GridVector2(-1, -1),
-                new GridVector2(-1, 1),
-                new GridVector2(-0.5, 1),
-                new GridVector2(-0.5, -0.5),
-                new GridVector2(0.5,-0.5),
-                new GridVector2(0.5,1),
-                new GridVector2(1,1),
-                new GridVector2(1,-1),
-                new GridVector2(-1,-1)
-            };
-
-            GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
-            return ExteriorPointsScaled;
-        }
-
-        public static GridVector2[] ConcaveCheckVerticies(double scale)
-        {
-            //          *
-            //         /|
-            //  *_    / /
-            //   \ \ / /
-            //    \ * /
-            //     \ / 
-            //      *
-
-            GridVector2[] ExteriorPoints =
-            {
-                new GridVector2(-1, 0),
-                new GridVector2(0, -0.5),
-                new GridVector2(1, 1),
-                new GridVector2(0, -1),
-                new GridVector2(-1, 0)
-            };
-
-            GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
-            return ExteriorPointsScaled;
-        }
-
-        public static GridVector2[] DiamondVerticies(double scale)
-        {
-            //          *
-            //        _/|  
-            //      _/  |
-            //    _/    |
-            //   *    _-*
-            //   | _--
-            //   *-  
-            //    
-
-            GridVector2[] ExteriorPoints =
-            {
-                new GridVector2(-1, 0),
-                new GridVector2(-1, -0.5),
-                new GridVector2(1, 0),
-                new GridVector2(1, 1),
-                new GridVector2(-1, 0)
-            };
-
-            GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
-            return ExteriorPointsScaled;
-        }
-
-        public static GridVector2[] NotchedBoxVerticies(double scale)
-        {
-            /// 
-            ///  *     *
-            ///  |\   /|
-            ///  | \ / |
-            ///  *  *  |
-            ///  |     |
-            ///  *-----*
-            /// 
-
-            GridVector2[] ExteriorPoints =
-            {
-                new GridVector2(-1, -1),
-                new GridVector2(-1, 0),
-                new GridVector2(-1, 1),
-                new GridVector2(0, 0),
-                new GridVector2(1, 1),
-                new GridVector2(1, -1),
-                new GridVector2(-1, -1)
-            };
-
-            GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
-            return ExteriorPointsScaled;
-        }
+        
 
         GridPolygon CreateBoxPolygon(double scale)
         {
-            GridVector2[] ExteriorPointsScaled = BoxVerticies(scale);
+            GridVector2[] ExteriorPointsScaled = Primitives.BoxVerticies(scale);
 
             return new GridPolygon(ExteriorPointsScaled);
         }
@@ -163,7 +39,7 @@ namespace GeometryTests
 
         GridPolygon CreateUPolygon(double scale)
         {
-            GridVector2[] ExteriorPointsScaled = ConcaveUVerticies(scale);
+            GridVector2[] ExteriorPointsScaled = Primitives.ConcaveUVerticies(scale);
 
             return new GridPolygon(ExteriorPointsScaled);
         }
@@ -441,7 +317,7 @@ namespace GeometryTests
         [TestMethod]
         public void ClockwiseTest()
         {
-            GridVector2[] clockwisePoints = BoxVerticies(1);
+            GridVector2[] clockwisePoints = Primitives.BoxVerticies(1);
             Assert.IsTrue(clockwisePoints.AreClockwise());
 
             GridVector2[] counterClockwisePoints = clockwisePoints.Reverse().ToArray();
@@ -545,7 +421,7 @@ namespace GeometryTests
         public void PolygonContainsReproTest()
         {
             //Test for an edge case I hit once 
-            GridPolygon diamond = new GridPolygon(DiamondVerticies(10));
+            GridPolygon diamond = new GridPolygon(Primitives.DiamondVerticies(10));
 
             Assert.IsFalse(diamond.Contains(new GridVector2(-11, 0)));
             Assert.IsTrue(diamond.Contains(new GridVector2(-9, 0)));
@@ -557,7 +433,7 @@ namespace GeometryTests
         public void PolygonContainsReproTest2()
         {
             //Test for an edge case I hit once 
-            GridPolygon shape = new GridPolygon(NotchedBoxVerticies(10));
+            GridPolygon shape = new GridPolygon(Primitives.NotchedBoxVerticies(10));
 
             Assert.IsFalse(shape.Contains(new GridVector2(0, 10)));
             Assert.IsTrue(shape.Contains(new GridVector2(-10, 10)));
@@ -1498,7 +1374,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestExternalPolygonCut_NoExternalVerts()
         {
-            GridPolygon uBox = new GridPolygon(ConcaveUVerticies(10));
+            GridPolygon uBox = new GridPolygon(Primitives.ConcaveUVerticies(10));
 
             GridVector2 A = new GridVector2(-7.5, 7.5);
             GridVector2 B = new GridVector2(7.5, 7.5);
@@ -1550,7 +1426,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestExternalPolygonCut_NoExternalVerts_ExtraVerts()
         {
-            GridPolygon uBox = new GridPolygon(ConcaveUVerticies(10));
+            GridPolygon uBox = new GridPolygon(Primitives.ConcaveUVerticies(10));
 
             GridVector2 A = new GridVector2(-8  , 7.5);
             GridVector2 B = new GridVector2(-7.5, 7.5);
