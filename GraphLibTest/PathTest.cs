@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using GraphLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace GraphLibTest
@@ -91,6 +93,32 @@ namespace GraphLibTest
             SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
 
             IList<long> path = SimpleGraph.ShortestPath(graph, 1, 9);
+            Assert.IsNull(path);
+        }
+
+        [TestMethod]
+        public void TestCycleDetection1()
+        {
+            SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
+            IList<long> path = graph.FindCycle(3);
+            long[] expected_path = new long[] { 11,6,5,4,3,11 };
+            long[] reverse_expected_path = new long[] { 4, 5, 6, 11, 3, 4 };
+            Assert.IsTrue(IsPathEqual(path, expected_path) || IsPathEqual(path, reverse_expected_path));
+        }
+
+        [TestMethod]
+        public void TestCycleDetection2()
+        {
+            SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
+            IList<long> path = graph.FindCycle(2);
+            Assert.IsNull(path);
+        }
+
+        [TestMethod]
+        public void TestCycleDetection3()
+        {
+            SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
+            IList<long> path = graph.FindCycle(7);
             Assert.IsNull(path);
         }
 
