@@ -257,6 +257,41 @@ namespace SqlGeometryUtils
             return builder.ConstructedGeometry;
         }
 
+        public static SqlGeometry ToSqlGeometry(this IShape2D shape)
+        {
+            if(shape is GridPolygon)
+            {
+                return ((GridPolygon)shape).ToSqlGeometry();
+            }
+            else if (shape is GridPolyline)
+            {
+                return ((GridPolyline)shape).ToSqlGeometry();
+            }
+            else if (shape is GridCircle)
+            {
+                return ((GridCircle)shape).ToSqlGeometry();
+            }
+
+            throw new NotImplementedException(string.Format("Missing ToSqlGeometry implementation for {0}", shape.ShapeType.ToString()));
+        }
+
+        public static IShape2D ToIShape2D(this SqlGeometry shape)
+        {
+            switch (shape.GeometryType())
+            {
+                case SupportedGeometryType.POINT:
+                    throw new NotImplementedException("Point cannot be converted to IShape2D");
+                case SupportedGeometryType.POLYLINE:
+                    return shape.ToPolyLine();
+                case SupportedGeometryType.POLYGON:
+                    return shape.ToPolygon();
+                case SupportedGeometryType.CURVEPOLYGON:
+                    return shape.ToPolygon();
+            }
+
+            throw new NotImplementedException(string.Format("shape cannot be converted to IShape2D {0}", shape));
+        }
+
         public static SqlGeometry ToPolygon(this GridVector2[] points, ICollection<GridVector2[]> InteriorRings = null)
         {             
             SqlGeometryBuilder builder = new SqlGeometryBuilder();
