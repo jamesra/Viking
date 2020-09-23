@@ -385,7 +385,7 @@ namespace MonogameTestbed
         public bool Initialized { get { return _initialized; } }
 
         //Polygons with internal polygon merging with external concavity
-        long[] TroubleIDS = new long[] {
+        ulong[] TroubleIDS = new ulong[] {
           1333661, //Z = 2
           1333662, //Z = 3
           1333665 //Z =2 

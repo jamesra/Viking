@@ -18,13 +18,18 @@ namespace VikingXNA
         private float _Tilt = MathHelper.ToRadians(0f);
         private float _Rotation = MathHelper.ToRadians(0f);
 
-        private double _Downsample = 256.0;
+        private double _Downsample = 1;
 
         /// <summary>
         /// View Matrix is only worth updating when the LookAt parameter changes.
         /// </summary>
         private Matrix _View;
         public Matrix View { get { return _View; } }
+
+        public Camera()
+        {
+            UpdateViewMatrix();
+        }
 
         private void UpdateViewMatrix()
         {

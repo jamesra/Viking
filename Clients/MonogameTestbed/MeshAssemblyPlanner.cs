@@ -1,4 +1,5 @@
 ﻿using System;
+using Geometry;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,8 @@ using Geometry.Meshing;
 using MorphologyMesh;
 using VikingXNA;
 using VikingXNAGraphics;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace MonogameTestbed
 {
@@ -23,46 +26,43 @@ namespace MonogameTestbed
         /// </summary>
         public readonly SortedList<ulong, AssemblyPlannerLeaf> Slices;
 
-        private ReaderWriterLockSlim ReadyModelLock = new ReaderWriterLockSlim();
+        /// <summary>
+        /// Allows mapping a node key (including slice id or branch id) to the original leaf node
+        /// </summary>
+        private readonly Dictionary<ulong, IAssemblyPlannerNode> Nodes;
 
         /// <summary>
-        /// A mapping of all nodes with completed models we can show as part of an incremental view
+        /// Set when the entire assembly plan has completed
         /// </summary>
-        public SortedList<ulong, SliceGraphMeshModel> ReadyModels = new SortedList<ulong, SliceGraphMeshModel>();
-
         public System.Threading.ManualResetEventSlim MeshAssembledEvent = new ManualResetEventSlim();
 
-        private MeshModel<VertexPositionNormalColor>[] _MeshModels = null;
-        public MeshModel<VertexPositionNormalColor>[] MeshModels {
-            get
-            {
-                
-                try
-                {
-                    ReadyModelLock.EnterReadLock();
+        public delegate void OnNodeMeshCompletedDelegate(IAssemblyPlannerNode node, bool success);
+         
+        /// <summary>
+        /// Called when a node in the assembly plan either completes mesh generation or knows an error occurred and it will not be generating a mesh
+        /// </summary>
+        public event OnNodeMeshCompletedDelegate OnNodeCompleted;
 
-                    if (_MeshModels == null)
-                    {
-                        _MeshModels = ReadyModels.Values.Select(rm => rm.model).ToArray();
-                    }
+        public delegate void OnPlanCompletedDelegate(MeshAssemblyPlanner plan);
 
-                    return _MeshModels;
-                }
-                finally
-                {
-                    ReadyModelLock.ExitReadLock();
-                }
-            }
-        }
- 
+        /// <summary>
+        /// Called when a node in the assembly plan either completes mesh generation or knows an error occurred and it will not be generating a mesh
+        /// </summary>
+        public event OnPlanCompletedDelegate OnPlanCompleted;
+
         public MeshAssemblyPlanner(SliceGraph sliceGraph)
         {
             //AssemblyPlannerLeaf[] firstLayer = sliceGraph.Nodes.Keys.OrderBy(k => k).Select(k => new AssemblyPlannerLeaf(k)).ToArray();
-            AssemblyPlannerLeaf[] firstLayer = sliceGraph.Nodes.Keys.OrderBy(k => sliceGraph.GetTopology(k).PolyZ.Average()).Select(k => new AssemblyPlannerLeaf(k)).ToArray();
+            AssemblyPlannerLeaf[] firstLayer = sliceGraph.Nodes.Keys.OrderBy(k => {
+                                                                                SliceTopology t = sliceGraph.GetTopology(k);
+                                                                                return t.PolyZ != null ? t.PolyZ.Average() : -1;
+                                                                            }).Select(k => new AssemblyPlannerLeaf(k, sliceGraph.BoundingBox.CenterPoint)).ToArray();
+            Nodes = new Dictionary<ulong, IAssemblyPlannerNode>(sliceGraph.Nodes.Count * 2);
             Slices = new SortedList<ulong, AssemblyPlannerLeaf>(firstLayer.Length);
             foreach(var leaf in firstLayer)
             {
                 Slices.Add(leaf.Key, leaf);
+                Nodes.Add(leaf.Key, leaf);
             }
 
             IAssemblyPlannerNode[] currentLayer = firstLayer;
@@ -71,10 +71,17 @@ namespace MonogameTestbed
             while(currentLayer.Length > 1)
             {
                 currentLayer = BuildLayer(currentLayer);
+
+                foreach(var item in currentLayer)
+                {
+                    //The last node can be a carryover, so use index instead of add to prevent errors
+                    Nodes[item.Key] = item;
+                }
             }
 
             Root = currentLayer[0];
-        }
+        } 
+         
 
         /// <summary>
         /// Given a list of nodes, build branch nodes that connect each odd and even node.  Then append a remainder node to the list.
@@ -112,6 +119,14 @@ namespace MonogameTestbed
             return layer;
         }
 
+        public IAssemblyPlannerNode this[ulong id]
+        {
+            get
+            {
+                return Nodes[id];
+            }
+        }
+
         /// <summary>
         /// Called when a mesh is completed.  Generates a model and attempts to merge that model up the tree.
         /// Thread safe
@@ -122,6 +137,12 @@ namespace MonogameTestbed
             AssemblyPlannerLeaf leaf = this.Slices[mesh.Slice.Key];
             leaf.OnMeshCompletion(mesh);
 
+            if(OnNodeCompleted != null)
+            {
+                OnNodeCompleted(leaf, Success); 
+            }
+
+            /*
             try
             {
                 ReadyModelLock.EnterWriteLock();
@@ -132,6 +153,7 @@ namespace MonogameTestbed
             {
                 ReadyModelLock.ExitWriteLock();
             }
+            */
 
             CheckForMerge(leaf.Parent);
         }
@@ -145,6 +167,7 @@ namespace MonogameTestbed
             AssemblyPlannerBranch parent = node;
             while(parent != null)
             {
+                bool MergePerformed = false;
                 //We try because there is a chance another thread will be running merge before us and we don't want to wait.
                 try
                 {
@@ -164,7 +187,8 @@ namespace MonogameTestbed
                                     parent.Left.MeshModel.Merge(parent.Right.MeshModel);
                                     parent.MeshModel = parent.Left.MeshModel;
 
-                                    try
+                                    MergePerformed = true;
+                                    /*try
                                     {
                                         ReadyModelLock.EnterWriteLock();
                                         ReadyModels.Remove(parent.Left.Key);
@@ -176,6 +200,7 @@ namespace MonogameTestbed
                                     {
                                         ReadyModelLock.ExitWriteLock();
                                     }
+                                    */
 
                                     parent.Left.MeshModel = null; //Free memory
                                     parent.Right.MeshModel = null; //Free memory
@@ -190,6 +215,11 @@ namespace MonogameTestbed
                 finally
                 {
                     parent.BranchLock.ExitUpgradeableReadLock();
+                }
+
+                if (MergePerformed && OnNodeCompleted != null)
+                {
+                    OnNodeCompleted(parent, true);
                 }
                 //}
 
@@ -206,8 +236,12 @@ namespace MonogameTestbed
         }
     }
 
-    interface IAssemblyPlannerNode 
+    interface IAssemblyPlannerNode
     {
+        /// <summary>
+        /// A leaf's key matches the slice graph's node key
+        /// A branch's key is a generated value starting at max value and decrementing for each branch created
+        /// </summary>
         ulong Key { get; }
         int Depth { get; }
 
@@ -235,6 +269,12 @@ namespace MonogameTestbed
         SliceGraphMeshModel MeshModel { get; set; }
     }
 
+    interface IAssemblyPlannerBranch : IAssemblyPlannerNode
+    {  
+        IAssemblyPlannerNode Left { get; set;  }
+        IAssemblyPlannerNode Right { get; set; }
+    }
+
     abstract class AssemblyPlannerNode : IAssemblyPlannerNode
     {
         private SliceGraphMeshModel _MeshModel = null;
@@ -247,7 +287,7 @@ namespace MonogameTestbed
         public SliceGraphMeshModel MeshModel { get { return _MeshModel; }
             set {
                 _MeshModel = value;
-                MeshComplete = true; 
+                MeshComplete = true;
             }
         }
 
@@ -267,6 +307,7 @@ namespace MonogameTestbed
 
         public abstract ulong Key { get; }
 
+
         /// <summary>
         /// Parent node in the tree, null if the root node
         /// </summary>
@@ -285,12 +326,15 @@ namespace MonogameTestbed
         {
             return this.Key.GetHashCode();
         }
-    } 
+    }
 
-    class AssemblyPlannerBranch : AssemblyPlannerNode
+    class AssemblyPlannerBranch : AssemblyPlannerNode, IAssemblyPlannerBranch
     {
         public ReaderWriterLockSlim BranchLock = new ReaderWriterLockSlim();
 
+        /// <summary>
+        /// A branch key is a generated value that begins at maxint and decrements for each branch created
+        /// </summary>
         public override ulong Key { get; }
 
         public override int Depth
@@ -302,7 +346,7 @@ namespace MonogameTestbed
         }
 
         public override bool IsLeaf => false;
-          
+
         /// <summary>
         /// True if both children are ready to merge
         /// </summary>
@@ -323,10 +367,11 @@ namespace MonogameTestbed
         }
 
         IAssemblyPlannerNode[] Children = new IAssemblyPlannerNode[2];
+         
 
         public IAssemblyPlannerNode Left { get => Children[0]; set { Children[0] = value; } }
         public IAssemblyPlannerNode Right { get => Children[1]; set { Children[1] = value; } }
-
+        
         static ulong NextKey = ulong.MaxValue;
 
         public AssemblyPlannerBranch(AssemblyPlannerBranch parent = null)
@@ -352,18 +397,24 @@ namespace MonogameTestbed
     class AssemblyPlannerLeaf : AssemblyPlannerNode
     {
         /// <summary>
-        /// Key to the slice this leaf represents
+        /// A leaf's key matches the Slice Graph nodes (Slice object) key
         /// </summary>
         public override ulong Key { get; }
 
         public override int Depth { get { return 0; } }
 
         public override bool IsLeaf { get; } = true;
+
+        /// <summary>
+        /// Where to position the mesh model this leaf generates in world space;
+        /// </summary>
+        public readonly GridVector3 Position;
         
-        public AssemblyPlannerLeaf(ulong sliceKey, AssemblyPlannerBranch parent = null)
+        public AssemblyPlannerLeaf(ulong sliceKey, GridVector3 Position, AssemblyPlannerBranch parent = null)
         {
             this.Key = sliceKey;
-            this.Parent = parent; 
+            this.Parent = parent;
+            this.Position = Position;
         }
 
         /// <summary>
@@ -373,7 +424,7 @@ namespace MonogameTestbed
         /// <param name="completedMesh"></param>
         public void OnMeshCompletion(BajajGeneratorMesh completedMesh)
         {
-            SliceGraphMeshModel model = new SliceGraphMeshModel();
+            SliceGraphMeshModel model = new SliceGraphMeshModel(Position.XY().ToGridVector3(0));
             if (completedMesh == null)
             {   
                 this.MeshModel = model;
@@ -388,6 +439,322 @@ namespace MonogameTestbed
         public override string ToString()
         {
             return string.Format("Leaf: {2}{0}{3} Parent: {1}", Key, Parent == null ? "NULL" : Parent.Key.ToString(), this.MeshModel != null ? "*" : "", this.MeshComplete ? "F" : "" );
+        }
+    }
+
+    abstract class MeshAssemblyPlannerViewBase
+    {
+        protected MeshAssemblyPlanner Plan;
+
+        public abstract void OnNodeCompleted(IAssemblyPlannerNode node, bool success);
+
+        public MeshAssemblyPlannerViewBase(MeshAssemblyPlanner plan)
+        {
+            Plan = plan;
+            Plan.OnNodeCompleted += this.OnNodeCompleted;  
+        }
+    }
+
+
+    /// <summary>
+    /// Visualize the completed slices of a mesh assembly plan
+    /// </summary>
+    class MeshAssemblyPlannerCompletedView : MeshAssemblyPlannerViewBase, IColorView
+    {
+        /// <summary>
+        /// A mapping of all nodes with completed models we can show as part of an incremental view
+        /// </summary>
+        public SortedList<ulong, SliceGraphMeshModel> ReadyModels = new SortedList<ulong, SliceGraphMeshModel>();
+
+        private ReaderWriterLockSlim ReadyModelLock = new ReaderWriterLockSlim();
+
+        private MeshModel<VertexPositionNormalColor>[] _MeshModels = null;
+        public MeshModel<VertexPositionNormalColor>[] MeshModels
+        {
+            get
+            {
+                try
+                {
+                    ReadyModelLock.EnterReadLock();
+
+                    if (_MeshModels == null)
+                    {
+                        _MeshModels = ReadyModels.Values.Select(rm => rm.model).ToArray();
+                    }
+
+                    return _MeshModels;
+                }
+                finally
+                {
+                    ReadyModelLock.ExitReadLock();
+                }
+            }
+        }
+
+        public Color Color { get; set; } = Color.CornflowerBlue;
+        public float Alpha { get { return Color.GetAlpha(); } set { Color = Color.SetAlpha(value); } }
+
+        /// <summary>
+        /// The default position to translate our completed mesh model to
+        /// </summary>
+        readonly GridVector3 Position;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="plan"></param>
+        /// <param name="position">Where in volume space the world matrix should position the model by default</param>
+        public MeshAssemblyPlannerCompletedView(MeshAssemblyPlanner plan, GridVector3 position) : base(plan)
+        {
+            Position = position;
+        }
+
+        public override void OnNodeCompleted(IAssemblyPlannerNode node, bool success)
+        {
+            try
+            {
+                ReadyModelLock.EnterWriteLock();
+                if (node.MeshModel != null)
+                {
+                    node.MeshModel.Color = this.Color;
+                    node.MeshModel.model.Position = Position.XY().ToGridVector3(0);
+                    ReadyModels.Add(node.Key, node.MeshModel);
+                }
+                
+                if(node.IsLeaf == false)
+                {
+                    IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
+                    ReadyModels.Remove(branch.Left.Key);
+                    ReadyModels.Remove(branch.Right.Key);
+                }
+
+                _MeshModels = null;
+                
+            }
+            finally
+            {
+                ReadyModelLock.ExitWriteLock();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Visualize the incomplete nodes of a mesh assembly plan
+    /// </summary>
+    class MeshAssemblyPlannerIncompleteView : MeshAssemblyPlannerViewBase
+    {
+        /// <summary>
+        /// A mapping of all nodes that are incomplete to a boundingbox
+        /// </summary>
+        public SortedList<ulong, MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>> BoundingBoxModels = new SortedList<ulong, MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>>();
+
+        /// <summary>
+        /// A mapping of all nodes to their bounding box
+        /// </summary>
+        public Dictionary<ulong, GridBox> NodeBoundingBox = new Dictionary<ulong, GridBox>();
+
+        private ReaderWriterLockSlim ReadyModelLock = new ReaderWriterLockSlim(); 
+        private SortedSet<ulong> NodesThatFailedMeshing = new SortedSet<ulong>();
+
+        private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] _MeshModels = null;
+        public MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] MeshModels
+        {
+            get
+            {
+                try
+                {
+                    ReadyModelLock.EnterReadLock();
+
+                    if (_MeshModels == null)
+                    {
+                        //_MeshModels = BoundingBoxModels.Values.ToArray();
+                        _MeshModels = GetVisibleBoundingBoxModels().ToArray();
+                    }
+
+                    return _MeshModels;
+                }
+                finally
+                {
+                    ReadyModelLock.ExitReadLock();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Show bounding box models whose siblings have meshes or no siblings
+        /// Branches decide for their children whether to add the children or themselves
+        /// </summary>
+        private List<MeshModel<VertexPositionColor>> GetVisibleBoundingBoxModels()
+        {
+            List<MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>> listModels = new List<MeshModel<VertexPositionColor>>(BoundingBoxModels.Count);
+            foreach (var item in BoundingBoxModels)
+            {
+                if (NodesThatFailedMeshing.Contains(item.Key))
+                    listModels.Add(item.Value);
+                else if(CanShowBoundingBoxModel(this.Plan[item.Key]))
+                {
+                    listModels.Add(item.Value);
+                }    
+            }
+
+            return listModels;
+        }
+
+        /// <summary>
+        /// Determine which bounding box models to show based on whether children are completed. 
+        /// </summary>
+        private bool CanShowBoundingBoxModel(IAssemblyPlannerNode node)
+        {
+            if (node.Parent == null)
+                return !node.MeshComplete; //Only show the root bounding box if the mesh isn't done
+
+            //if (node.MeshComplete)
+            //    return false;
+
+            var parent = node.Parent;
+            bool showLeft = !parent.Left.MeshComplete;
+            bool showRight = !parent.Right.MeshComplete;
+
+            return showLeft ^ showRight;
+        }
+
+
+        public MeshAssemblyPlannerIncompleteView(MeshAssemblyPlanner plan, SliceGraph sliceGraph) : base(plan)
+        {
+            CalculateAllBoundingBoxes(plan, sliceGraph);
+            try
+            {
+                ReadyModelLock.EnterWriteLock();
+                GenerateAllBoundingBoxMeshesRecursive(plan.Root);
+            }
+            finally
+            {
+                ReadyModelLock.ExitWriteLock();
+            }
+        }
+
+        public override void OnNodeCompleted(IAssemblyPlannerNode node, bool success)
+        {
+            try
+            {
+                ReadyModelLock.EnterWriteLock();
+
+                if (success)
+                {
+                    BoundingBoxModels.Remove(node.Key);
+                    this._MeshModels = null;
+                }
+                else if (BoundingBoxModels.TryGetValue(node.Key, out MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor> model))
+                {
+                    NodesThatFailedMeshing.Add(node.Key);
+                    Color color = success ? Color.LightGreen.SetAlpha(0.33f) : Color.Red.SetAlpha(0.5f); 
+                    model.SetColor(color);
+                }
+            }
+            finally
+            {
+                ReadyModelLock.ExitWriteLock();
+            }
+        }
+
+        private void GenerateAllBoundingBoxMeshesRecursive(IAssemblyPlannerNode node)
+        {
+            if (node == null)
+                return;
+
+            IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
+            if (branch != null)
+            { 
+                if (branch.Left != null)
+                {
+                    GenerateAllBoundingBoxMeshesRecursive(branch.Left);
+                }
+
+                if (branch.Right != null)
+                {
+                    GenerateAllBoundingBoxMeshesRecursive(branch.Right);
+                } 
+            }
+
+            //Generate our bounding box mesh
+            var model = GenerateBoundingBoxMesh(node);
+            if (model != null)
+                BoundingBoxModels[node.Key] = model;
+        }
+         
+        /// <summary>
+        /// Create a 3D Box of triangles showing the boundaries of the node
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns></returns>
+        private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor> GenerateBoundingBoxMesh(IAssemblyPlannerNode node)
+        {
+            IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
+            if(NodeBoundingBox.TryGetValue(node.Key, out GridBox bbox))
+            {
+                
+                if (node.Depth > 0)
+                {
+                    //For branches we scale the bounding box visual a bit to prevent overdrawing the leaf bounding box
+                    bbox = bbox.Clone();
+                    bbox.Scale(new GridVector3(1.02, 1.02, 1));
+                }
+
+                //We have a bounding box from the cache, now build the mesh
+                var Color = node.IsLeaf ? Microsoft.Xna.Framework.Color.LightGray.SetAlpha(0.5f) : Microsoft.Xna.Framework.Color.DarkBlue.SetAlpha(0.5f);
+                var model = bbox.ToMeshModelEdgesOnly(Color);
+
+                //Scale the bounding box slightly based on the node depth
+                
+                return model;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="plan"></param>
+        /// <param name="sliceGraph"></param>
+        /// <returns></returns>
+        private GridBox CalculateAllBoundingBoxes(MeshAssemblyPlanner plan, SliceGraph sliceGraph)
+        {
+            return CalculateBoundingBox(plan.Root, sliceGraph); //Populate our bounding boxes from the root on down
+        }
+
+        private GridBox CalculateBoundingBox(IAssemblyPlannerNode node, SliceGraph sliceGraph)
+        {
+            IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
+            if(branch != null)
+            {
+                GridBox bbox = null;
+                if(branch.Left != null)
+                {
+                    bbox = CalculateBoundingBox(branch.Left, sliceGraph);
+                }
+
+                if(branch.Right != null)
+                {
+                    if (bbox == null) //We don't have a bbox from the left branch
+                        bbox = CalculateBoundingBox(branch.Right, sliceGraph);
+                    else
+                    {
+                        bbox.Union(CalculateBoundingBox(branch.Right, sliceGraph));
+                    }
+                }
+
+                NodeBoundingBox[branch.Key] = bbox;
+                return bbox; 
+            }
+            else //Is a leaf
+            {
+                var topology = sliceGraph.GetTopology(node.Key);
+                GridRectangle boundingRect = topology.Polygons.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
+                GridBox bbox = new GridBox(boundingRect, topology.PolyZ.Min(), topology.PolyZ.Max());
+                NodeBoundingBox[node.Key] = bbox;
+                return bbox;
+            }
         }
     }
 }

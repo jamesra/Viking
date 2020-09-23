@@ -426,14 +426,14 @@ namespace MonogameTestbed
                 lineViews.Add(lineView);
 
                 /*CurveLabel lineLabel = CurveLabel.CreateLineLabel(edge.Type.ToString(), segment, Color.White, lineWidth: lineWidth);*/
-                LabelView lineLabel = new LabelView(edge.Type.ToString(), segment, Color.White, lineWidth: lineWidth, scaleFontWithScene: true);
+                LabelView lineLabel = new LabelView(edge.Type.ToString() + " " + edgeKey.ToString(), segment, Color.White, lineWidth: lineWidth, scaleFontWithScene: true);
                 lineLabels.Add(lineLabel);
             }
             
 
             TrianglesView.color = Color.Red;
             TrianglesView.LineViews = lineViews;
-            TrianglesView.LineLables = lineLabels;
+            TrianglesView.LineLabels = lineLabels;
             TrianglesView.Name = Name;
             return TrianglesView;
         }
@@ -590,7 +590,7 @@ namespace MonogameTestbed
 
             if(MeshVertsView != null && ShowFaces)
             {
-                MeshVertsView.Draw(window, scene);
+                MeshVertsView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
             }
 
             if(RegionPolygonViews != null && ShowRegionPolygons)
@@ -602,7 +602,7 @@ namespace MonogameTestbed
             {
                 foreach (PointSetView psv in PolyPointsView)
                 {
-                    psv.Draw(window, scene);
+                    psv.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
                 }
             }
         }
@@ -685,7 +685,7 @@ namespace MonogameTestbed
         */
 
         //Polygons with internal polygon merging with external concavity
-        long[] TroubleIDS = new long[] {
+        ulong[] TroubleIDS = new ulong[] {
           1333661, //Z = 2
           1333662, //Z = 3
           1333665 //Z =2

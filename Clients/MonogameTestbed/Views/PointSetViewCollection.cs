@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using System.Collections.Specialized;
 using System.Linq;
 using VikingXNA;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
@@ -73,7 +74,7 @@ namespace MonogameTestbed
             //          if(VoronoiView.LineViews != null)
             //              LineView.Draw(window.GraphicsDevice, scene, window.lineManager, VoronoiView.LineViews.ToArray());
 
-            PointsView.Draw(window, scene);
+            PointsView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
 
             //       if (CVView.LineViews != null)
             //           LineView.Draw(window.GraphicsDevice, scene, window.lineManager, CVView.LineViews.ToArray());

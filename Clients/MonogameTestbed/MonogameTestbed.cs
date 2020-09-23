@@ -17,6 +17,7 @@ namespace MonogameTestbed
     enum TestMode
     {
         TEXT,
+        LABELED_RECTANGLES,
         CURVE_LABEL,
         CURVE,
         CURVE_SIMPLIFICATION,
@@ -24,6 +25,7 @@ namespace MonogameTestbed
         CURVESTYLES,
         CLOSEDCURVE,
         POLYGON2D, 
+        POLYGONINTERSECTION,
         MESH,
         GEOMETRY,
         MORPHOLOGY,
@@ -41,7 +43,7 @@ namespace MonogameTestbed
     /// <summary>
     /// This is the main type for your game.
     /// </summary>
-    public class MonoTestbed : Game
+    public class MonoTestbed : Game, IRenderInfo
     {
         GraphicsDeviceManager graphics;
         public SpriteBatch spriteBatch;
@@ -52,7 +54,7 @@ namespace MonogameTestbed
         public VikingXNA.Camera Camera;
         public SpriteFont fontArial;
         public BasicEffect basicEffect;
-        public AnnotationOverBackgroundLumaEffect overlayEffect;
+        public OverlayShaderEffect overlayEffect;
 
         CurveTest curveTest = new CurveTest();
         CurveViewTest curveViewTest = new CurveViewTest();
@@ -74,14 +76,29 @@ namespace MonogameTestbed
         BajajAssignmentTest bajajTest = new BajajAssignmentTest();
         BajajMultiAssignmentTest bajajMultiTest = new BajajMultiAssignmentTest();
         VikingDelaunay2DTest constrainedDelaunay2DTest = new VikingDelaunay2DTest();
+        PolygonIntersectionTest polygonIntersectionTest = new PolygonIntersectionTest();
+        LabeledRectangleTests labeledRectangleTests = new LabeledRectangleTests();
 
         SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
-        TestMode Mode = TestMode.CONSTRAINEDDELAUNAY2D;
+        /// <summary>
+        /// Test to run at startup
+        /// </summary>
+        TestMode Mode = TestMode.BAJAJMULTITEST;
 
         LabelView testLabel = null;
 
         public static uint NumCurveInterpolations = 10;
+
+        GraphicsDevice IPrimitiveRenderInfo.device => this.GraphicsDevice;
+
+        BasicEffect IPrimitiveRenderInfo.basicEffect => this.basicEffect;
+
+        OverlayShaderEffect IPrimitiveRenderInfo.overlayEffect => this.overlayEffect;
+
+        SpriteBatch ILabelRenderInfo.spriteBatch => this.spriteBatch;
+
+        SpriteFont ILabelRenderInfo.font => this.fontArial;
 
         public MonoTestbed()
         {
@@ -93,8 +110,8 @@ namespace MonogameTestbed
 
         private void graphics_PreparingDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
         {  
-            graphics.PreferredBackBufferWidth = 1280;
-            graphics.PreferredBackBufferHeight = 800;
+            graphics.PreferredBackBufferWidth = 1600;
+            graphics.PreferredBackBufferHeight = 1200;
             graphics.PreferMultiSampling = true;
             graphics.GraphicsProfile = GraphicsProfile.HiDef;
             graphics.SynchronizeWithVerticalRetrace = true;
@@ -127,10 +144,13 @@ namespace MonogameTestbed
         {
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
-            
+
             fontArial = Content.Load<SpriteFont>("Arial");
 
-            Camera = new VikingXNA.Camera();
+            //Load the default font
+            var fontData = DeviceFontStore.GetOrCreateForDevice(GraphicsDevice, Content);
+
+            Camera = new VikingXNA.Camera { Downsample = 256 };
             Camera.LookAt = new Vector2(0, 0);
             Camera.Downsample = 0.5;
             Scene = new VikingXNA.Scene(graphics.GraphicsDevice.Viewport, Camera);
@@ -146,10 +166,11 @@ namespace MonogameTestbed
 
             InitializeEffects();
 
+            listTests.Add(TestMode.TEXT, labelTest);
+            listTests.Add(TestMode.LABELED_RECTANGLES, labeledRectangleTests);
             listTests.Add(TestMode.CURVE, curveTest);
             listTests.Add(TestMode.CURVE_LABEL, curveViewTest);
             listTests.Add(TestMode.CURVE_SIMPLIFICATION, curveSimplificationTest);
-            listTests.Add(TestMode.TEXT, labelTest);
             listTests.Add(TestMode.LINESTYLES, lineStyleTest);
             listTests.Add(TestMode.CURVESTYLES, curveStyleTest);
             listTests.Add(TestMode.CLOSEDCURVE, closedCurveTest);
@@ -166,6 +187,7 @@ namespace MonogameTestbed
             listTests.Add(TestMode.BAJAJTEST, bajajTest);
             listTests.Add(TestMode.BAJAJMULTITEST, bajajMultiTest);
             listTests.Add(TestMode.CONSTRAINEDDELAUNAY2D, constrainedDelaunay2DTest);
+            listTests.Add(TestMode.POLYGONINTERSECTION, polygonIntersectionTest);
             
         }
 
@@ -188,12 +210,17 @@ namespace MonogameTestbed
             */
 
             Matrix WorldViewProj = Scene.WorldViewProj;
-             
-            this.overlayEffect = DeviceEffectsStore<AnnotationOverBackgroundLumaEffect>.GetOrCreateForDevice(this.GraphicsDevice, Content);
-            this.overlayEffect.WorldViewProjMatrix = WorldViewProj;
-
+            
             PolygonOverlayEffect polyEffect = DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.GraphicsDevice, Content);
             polyEffect.WorldViewProjMatrix = WorldViewProj;
+
+            this.overlayEffect = DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(this.GraphicsDevice, Content);
+            this.overlayEffect.WorldViewProjMatrix = WorldViewProj;
+
+            DeviceEffectsStore<RoundLineManager>.GetOrCreateForDevice(GraphicsDevice, Content);
+            DeviceEffectsStore<LumaOverlayRoundLineManager>.GetOrCreateForDevice(GraphicsDevice, Content);
+            DeviceEffectsStore<CurveManager>.GetOrCreateForDevice(GraphicsDevice, Content);
+            DeviceEffectsStore<CurveManagerHSV>.GetOrCreateForDevice(GraphicsDevice, Content);
 
             //this.channelEffect.WorldMatrix = worldMatrix;
             //this.channelEffect.ProjectionMatrix = projectionMatrix;
@@ -202,6 +229,11 @@ namespace MonogameTestbed
 
         private void ProcessKeyboard()
         {
+            KeyboardState keyboardState = Keyboard.GetState();
+            Keys[] pressedKeys = keyboardState.GetPressedKeys();
+            if (pressedKeys.Length == 0)
+                return;
+
             var StartMode = this.Mode;
             if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F1))
                 this.Mode = TestMode.CURVE;
@@ -215,35 +247,39 @@ namespace MonogameTestbed
                 this.Mode = TestMode.CURVESTYLES;
             if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F6))
                 this.Mode = TestMode.CLOSEDCURVE;
-            if (Keyboard.GetState().IsKeyDown(Keys.F7))
+            if (keyboardState.IsKeyDown(Keys.F7))
                 this.Mode = TestMode.POLYGON2D;
-            if (Keyboard.GetState().IsKeyDown(Keys.F8))
+            if (keyboardState.IsKeyDown(Keys.F8))
                 this.Mode = TestMode.MESH;
-            if (Keyboard.GetState().IsKeyDown(Keys.F9))
+            if (keyboardState.IsKeyDown(Keys.F9))
                 this.Mode = TestMode.GEOMETRY;
-            if (Keyboard.GetState().IsKeyDown(Keys.F10))
+            if (keyboardState.IsKeyDown(Keys.F10))
                 this.Mode = TestMode.MORPHOLOGY;
-            if (Keyboard.GetState().IsKeyDown(Keys.F11))
+            if (keyboardState.IsKeyDown(Keys.F11))
                 this.Mode = TestMode.TRIANGLEALGORITHM;
-            if (Keyboard.GetState().IsKeyDown(Keys.F12))
+            if (keyboardState.IsKeyDown(Keys.F12))
                 this.Mode = TestMode.BRANCHPORT;
-            if (Keyboard.GetState().IsKeyDown(Keys.NumPad1))
+            if (keyboardState.IsKeyDown(Keys.NumPad1) || keyboardState.IsKeyDown(Keys.D1))
                 this.Mode = TestMode.POLYWRAPPING;
-            if (Keyboard.GetState().IsKeyDown(Keys.NumPad2))
+            if (keyboardState.IsKeyDown(Keys.NumPad2) || keyboardState.IsKeyDown(Keys.D2))
                 this.Mode = TestMode.BRANCHASSIGNMENT;
-            if (Keyboard.GetState().IsKeyDown(Keys.NumPad3))
+            if (keyboardState.IsKeyDown(Keys.NumPad3) || keyboardState.IsKeyDown(Keys.D3))
                 this.Mode = TestMode.DELAUNAY3D;
-            if (Keyboard.GetState().IsKeyDown(Keys.NumPad4))
+            if (keyboardState.IsKeyDown(Keys.NumPad4) || keyboardState.IsKeyDown(Keys.D4))
                 this.Mode = TestMode.BAJAJTEST;
-            if (Keyboard.GetState().IsKeyDown(Keys.NumPad5))
+            if (keyboardState.IsKeyDown(Keys.NumPad5) || keyboardState.IsKeyDown(Keys.D5))
                 this.Mode = TestMode.DELAUNAY2D;
-            if (Keyboard.GetState().IsKeyDown(Keys.NumPad6))
+            if (keyboardState.IsKeyDown(Keys.NumPad6) || keyboardState.IsKeyDown(Keys.D6))
                 this.Mode = TestMode.CURVE_SIMPLIFICATION;
-            if (Keyboard.GetState().IsKeyDown(Keys.NumPad7))
+            if (keyboardState.IsKeyDown(Keys.NumPad7) || keyboardState.IsKeyDown(Keys.D7))
                 this.Mode = TestMode.BAJAJMULTITEST;
-            if (Keyboard.GetState().IsKeyDown(Keys.NumPad8))
+            if (keyboardState.IsKeyDown(Keys.NumPad8) || keyboardState.IsKeyDown(Keys.D8))
                 this.Mode = TestMode.CONSTRAINEDDELAUNAY2D;
-
+            if (keyboardState.IsKeyDown(Keys.NumPad9) || keyboardState.IsKeyDown(Keys.D9))
+                this.Mode = TestMode.POLYGONINTERSECTION;
+            if (keyboardState.IsKeyDown(Keys.NumPad0) || keyboardState.IsKeyDown(Keys.D0))
+                this.Mode = TestMode.LABELED_RECTANGLES;
+            
             if (!listTests[Mode].Initialized)
             {
                 listTests[Mode].Init(this);
@@ -252,7 +288,7 @@ namespace MonogameTestbed
 
             if(StartMode != this.Mode)
             {
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, hAlign: VikingXNAGraphics.HorizontalAlignment.RIGHT, scaleFontWithScene : true);
+                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperRight, anchor: Anchor.TopRight, scaleFontWithScene : true);
             }
         }
 
@@ -291,7 +327,7 @@ namespace MonogameTestbed
             if (!listTests[Mode].Initialized)
             {
                 listTests[Mode].Init(this);
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, hAlign: VikingXNAGraphics.HorizontalAlignment.RIGHT);
+                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight);
                 Debug.Assert(listTests[Mode].Initialized);
             }
 
@@ -319,7 +355,7 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.DarkGray);
+            GraphicsDevice.Clear(new Color(1.0f / 8.0f, 1.0f / 8.0f, 1.0f / 8.0f));
 
             //GraphicsDevice.SetRenderTarget(renderTarget);
             //meshView.Draw(GraphicsDevice);
@@ -338,25 +374,25 @@ namespace MonogameTestbed
 
             UpdateEffectMatricies(this.Scene);
 
-            SamplerState sampler = new SamplerState();
+            //SamplerState sampler = new SamplerState();
             GraphicsDevice.RasterizerState = state;
             
            // spriteBatch.Begin();
            if(!listTests[Mode].Initialized)
            {
                 listTests[Mode].Init(this);
-                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, hAlign: VikingXNAGraphics.HorizontalAlignment.RIGHT, scaleFontWithScene: false);
+                testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight, scaleFontWithScene: false);
                 Debug.Assert(listTests[Mode].Initialized);
            }
 
             listTests[Mode].Draw(this);
-
+            /*
             testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new GridVector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
             testLabel.ScaleFontWithScene = false;
             testLabel.HorzAlign = VikingXNAGraphics.HorizontalAlignment.LEFT;
             testLabel.VertAlign = VikingXNAGraphics.VerticalAlignment.BOTTOM;
             LabelView.Draw(this.spriteBatch, this.fontArial, this.Scene, new LabelView[] { testLabel });
-
+            */
             //  spriteBatch.End();
 
             base.Draw(gameTime);
@@ -530,7 +566,7 @@ namespace MonogameTestbed
             leftLagrangeCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(leftLagrangeCurveLabel.Text.Length / totalLabelLength);
             rightLagrangeCurveLabel.Max_Curve_Length_To_Use_Normalized = (float)(rightLagrangeCurveLabel.Text.Length / totalLabelLength);
 
-            CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, new CurveView[] { curveViewLagrange, curveViewCatmull });
+            CurveView.Draw(window.GraphicsDevice, scene,  OverlayStyle.Alpha, time, new CurveView[] { curveViewLagrange, curveViewCatmull });
             CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { leftLagrangeCurveLabel, rightLagrangeCurveLabel, leftCatmullCurveLabel, rightCatmullCurveLabel});
 
         }
@@ -688,7 +724,7 @@ namespace MonogameTestbed
 
                 Y += YStep;
 
-                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-100, 0), hAlign: VikingXNAGraphics.HorizontalAlignment.RIGHT, vAlign: VerticalAlignment.CENTER));
+                listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-100, 0), anchor: Anchor.CenterRight));
             }
         }
 
@@ -769,7 +805,7 @@ namespace MonogameTestbed
 
             
 
-            CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, this.listLineViews.ToArray());
+            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, this.listLineViews.ToArray());
 
             window.spriteBatch.Begin();
             listLabelViews.ForEach(lv => { lv.Draw(window.spriteBatch, window.fontArial, scene); });
@@ -811,7 +847,7 @@ namespace MonogameTestbed
 
             curveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;
 
-            CurveView.Draw(window.GraphicsDevice, scene, window.curveManager, window.basicEffect, window.overlayEffect, time, new CurveView[] { curveView });
+            CurveView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, time, new CurveView[] { curveView });
             CurveLabel.Draw(window.GraphicsDevice, scene, window.spriteBatch, window.fontArial, window.curveManager, new CurveLabel[] { curveLabel });
 
         }

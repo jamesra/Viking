@@ -207,7 +207,7 @@ namespace MonogameTestbed
 
         public static GridPolygon[] PolygonFromServer(out double[] Z, out GraphLib.Edge<ulong>[] edges, out MeshGraph mGraph)
         {
-            long[] TroubleIDS = new long[] {
+            ulong[] TroubleIDS = new ulong[] {
               1333661, //Z = 2
               1333662, //Z = 3
               1333665 //Z =2

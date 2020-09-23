@@ -15,7 +15,7 @@ namespace MonogameTestbed
     public class LineSetView
     {
         public List<LineView> LineViews = new List<LineView>();
-        public List<LabelView> LineLables = new List<LabelView>();
+        public List<LabelView> LineLabels = new List<LabelView>();
         public double LineRadius = 1;
         public Color color;
         public LineStyle Style = LineStyle.Standard;

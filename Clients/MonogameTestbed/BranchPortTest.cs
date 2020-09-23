@@ -361,11 +361,11 @@ namespace MonogameTestbed
 
             foreach(var view in PointSetViews)
             {
-                view.Draw(window, scene);
+                view.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
             }
 
             if (cursorView != null)
-                CircleView.Draw(window.GraphicsDevice, this.scene, window.basicEffect, window.overlayEffect, new CircleView[] { cursorView });
+                CircleView.Draw(window.GraphicsDevice, this.scene, OverlayStyle.Alpha, new CircleView[] { cursorView });
 
             if (cursorLabel != null)
                 LabelView.Draw(window.spriteBatch, window.fontArial, this.scene, new LabelView[] { cursorLabel });

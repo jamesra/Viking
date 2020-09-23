@@ -115,12 +115,12 @@ namespace MonogameTestbed
             return PointToShapeIndex[line.A] != PointToShapeIndex[line.B];
         }
 
-        private static List<IEdge> LinesOfFaceBetweenShapes(Mesh3D mesh, IFace face, Dictionary<GridVector2, int> PointToShapeIndex)
+        private static List<IEdge> LinesOfFaceBetweenShapes(IReadOnlyMesh2D<IVertex2D> mesh, IFace face, Dictionary<GridVector2, int> PointToShapeIndex)
         {
             List<IEdge> edges = new List<IEdge>(); 
             foreach(var edge in face.Edges)
             {
-                GridLineSegment line = mesh.ToSegment(edge);
+                GridLineSegment line = mesh.ToGridLineSegment(edge);
                 if(LineConnectsShapes(line, PointToShapeIndex))
                 {
                     edges.Add(mesh.Edges[edge]);
@@ -161,12 +161,12 @@ namespace MonogameTestbed
             Dictionary<GridVector2, SortedSet<int>> PointToTrianglesIndex = CreatePointToConnectedTrianglesIndexLookup(triangles);
             Dictionary<GridVector2, int> PointToShapeIndex = CreatePointToShapeIndexLookup(shapes);
 
-            Mesh3D mesh = triangles.ToDynamicRenderMesh();
+            Mesh2D mesh = triangles.ToDynamicRenderMesh();
 
             foreach(var edge in mesh.Edges.Values)
             {
                 //Create a vertex at the edge midpoint
-                GridLineSegment line = mesh.ToSegment(edge);
+                GridLineSegment line = mesh.ToGridLineSegment(edge);
 
                 //If the line is between two different shapes we add a node to the graph
                 if (LineConnectsShapes(line, PointToShapeIndex))
@@ -176,7 +176,7 @@ namespace MonogameTestbed
                     //Check the faces of this edge for lines to connect to.
                     foreach (var AdjacentEdge in edge.Faces.SelectMany(f => LinesOfFaceBetweenShapes(mesh, f, PointToShapeIndex)).Where(foundEdge => foundEdge != edge))
                     {
-                        GridLineSegment ConnectedLine = mesh.ToSegment(AdjacentEdge);
+                        GridLineSegment ConnectedLine = mesh.ToGridLineSegment(AdjacentEdge);
                         MedialAxisVertex otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
 
                         MedialAxisEdge borderEdge = new MedialAxisEdge(node.Key, otherNode.Key);

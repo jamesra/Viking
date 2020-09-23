@@ -324,10 +324,10 @@ namespace MonogameTestbed
             }
 
             if (PolyA != null)
-                PolyA.Draw(window, scene);
+                PolyA.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
 
             if (PolyB != null)
-                PolyB.Draw(window, scene); 
+                PolyB.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha); 
 
             if(StartingLine != null)
             {
@@ -452,8 +452,8 @@ namespace MonogameTestbed
             A = A.Translate(-Centroid);
             B = B.Translate(-Centroid);
 
-            Points_A.Points = new MonogameTestbed.PointSet(A.ExteriorRing);
-            Points_B.Points = new MonogameTestbed.PointSet(B.ExteriorRing);
+            Points_A.Points = new PointSet(A.ExteriorRing);
+            Points_B.Points = new PointSet(B.ExteriorRing);
 
             GridPolygon SimpleA = StandardGeometryModels.CreateTestPolygon(false);
             //GridPolygon SimpleB = StandardGeometryModels.CreateBoxPolygon(new GridRectangle(-5, 5, -10, 10));

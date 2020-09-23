@@ -52,10 +52,7 @@ namespace MonogameTestbed
         public void Draw(MonoTestbed window)
         {
             PolyLineView.Draw(window.GraphicsDevice,
-                scene, 
-                window.lineManager, 
-                window.basicEffect, 
-                window.overlayEffect, 
+                scene, OverlayStyle.Alpha,
                 new PolyLineView[] {
                     RawPolyLine,
                     //RawInflectionPolyLine,
@@ -69,7 +66,7 @@ namespace MonogameTestbed
                     MinimalCatmullFitCurvedPolyLine
                 });
 
-            CircleView.Draw(window.GraphicsDevice, scene, window.basicEffect, window.overlayEffect, new CircleView[] { cursorView });
+            CircleView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha, new CircleView[] { cursorView });
             LabelView.Draw(window.spriteBatch, window.fontArial, scene, new LabelView[] { cursorLabel });
         }
 

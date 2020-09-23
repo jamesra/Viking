@@ -236,7 +236,7 @@ namespace MonogameTestbed
 
                     CircleView firstIndexView = new CircleView(new GridCircle(poly.ExteriorRing[FirstIndex], Math.Sqrt(poly.Area) / 10), Color.Black);
                     CircleView centroidView = new CircleView(new GridCircle(poly.Centroid, Math.Sqrt(poly.Area) / 20), Color.Yellow);
-                    CircleView.Draw(window.GraphicsDevice, window.Scene, window.basicEffect, window.overlayEffect, new CircleView[] { firstIndexView, centroidView });
+                    CircleView.Draw(window.GraphicsDevice, window.Scene, OverlayStyle.Alpha, new CircleView[] { firstIndexView, centroidView });
                 }
             }
         }
@@ -254,7 +254,7 @@ namespace MonogameTestbed
                 }
                 else if(view is CircleView)
                 {
-                    CircleView.Draw(window.GraphicsDevice, window.Scene, window.basicEffect, window.overlayEffect, new CircleView[] { view as CircleView });
+                    CircleView.Draw(window.GraphicsDevice, window.Scene, OverlayStyle.Alpha, new CircleView[] { view as CircleView });
                 }
                 else if(view is PositionColorMeshModel)
                 {

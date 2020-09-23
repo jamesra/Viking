@@ -110,7 +110,7 @@ namespace MonogameTestbed
         public void Draw(MonoTestbed window)
         {
             if(cursorView != null)
-                CircleView.Draw(window.GraphicsDevice, this.scene, window.basicEffect, window.overlayEffect, new CircleView[] { cursorView });
+                CircleView.Draw(window.GraphicsDevice, this.scene, OverlayStyle.Alpha, new CircleView[] { cursorView });
              
             PolyBorderView.Draw(window, scene);
 

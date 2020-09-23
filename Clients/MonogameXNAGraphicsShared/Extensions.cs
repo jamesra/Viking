@@ -438,6 +438,15 @@ namespace VikingXNAGraphics
                                                     ARGB[0]);
         }
 
+
+        private static Microsoft.Xna.Framework.Color ToXNAColor(byte[] ARGB)
+        {
+            return new Microsoft.Xna.Framework.Color(ARGB[1],
+                                                    ARGB[2],
+                                                    ARGB[3],
+                                                    ARGB[0]);
+        }
+
         private enum ColorComponent
         {
             ALPHA = 24,
@@ -486,15 +495,33 @@ namespace VikingXNAGraphics
         /// </summary>
         /// <param name="color"></param>
         /// <returns></returns>
-        private static int[] GetColorComponents(int color)
+        private static byte[] GetColorComponents(int color)
         {
             int mask = 0x000000FF;
 
-            int[] ARGB = new int[4];
-            ARGB[0] = (color >> 24) & mask;
-            ARGB[1] = (color >> 16) & mask;
-            ARGB[2] = (color >> 8) & mask;
-            ARGB[3] = color & mask;
+            byte[] ARGB = new byte[4];
+            ARGB[0] = (byte)((color >> 24) & mask);
+            ARGB[1] = (byte)((color >> 16) & mask);
+            ARGB[2] = (byte)((color >> 8) & mask);
+            ARGB[3] = (byte)(color & mask);
+
+            return ARGB;
+        }
+
+        /// <summary>
+        /// Convert an integer color into an array of ARGB bytes
+        /// </summary>
+        /// <param name="color"></param>
+        /// <returns></returns>
+        private static byte[] GetColorComponents(uint color)
+        {
+            int mask = 0x000000FF;
+
+            byte[] ARGB = new byte[4];
+            ARGB[0] = (byte)((color >> 24) & mask);
+            ARGB[1] = (byte)((color >> 16) & mask);
+            ARGB[2] = (byte)((color >> 8) & mask);
+            ARGB[3] = (byte)(color & mask);
 
             return ARGB;
         }
@@ -507,7 +534,7 @@ namespace VikingXNAGraphics
         private static float[] GetColorFloatComponents(int color)
         {
             float[] ARGB = new float[4];
-            int[] iARGB = GetColorComponents(color);
+            byte[] iARGB = GetColorComponents(color);
 
             ARGB[0] = ((float)iARGB[0]) / 256f;
             ARGB[1] = ((float)iARGB[1]) / 256f;
@@ -552,14 +579,27 @@ namespace VikingXNAGraphics
 
         public static Microsoft.Xna.Framework.Color ToXNAColor(this int color, float alpha)
         {
-            int[] ARGB = GetColorComponents(color);
-            ARGB[0] = (int)(alpha * 255.0f);
+            byte[] ARGB = GetColorComponents(color);
+            ARGB[0] = (byte)(alpha * 255.0f);
             return ToXNAColor(ARGB);
         }
 
         public static Microsoft.Xna.Framework.Color ToXNAColor(this int color)
         {
-            int[] ARGB = GetColorComponents(color);
+            byte[] ARGB = GetColorComponents(color);
+            return ToXNAColor(ARGB);
+        }
+
+        public static Microsoft.Xna.Framework.Color ToXNAColor(this uint color, float alpha)
+        {
+            byte[] ARGB = GetColorComponents(color);
+            ARGB[0] = (byte)(alpha * 255.0f);
+            return ToXNAColor(ARGB);
+        }
+
+        public static Microsoft.Xna.Framework.Color ToXNAColor(this uint color)
+        {
+            byte[] ARGB = GetColorComponents(color);
             return ToXNAColor(ARGB);
         }
 

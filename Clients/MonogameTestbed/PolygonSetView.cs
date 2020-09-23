@@ -117,12 +117,46 @@ namespace MonogameTestbed
         {
             List<LabelView> listPointLabels = new List<LabelView>();
 
-            foreach(PointIndex pi in new PolySetVertexEnum(Polygons))
+            //Figure out if we have duplicate points and offset labels as needed
+            var pointEnum = new PolySetVertexEnum(Polygons);
+            GridVector2[] point_array = pointEnum.Select(i => i.Point(Polygons)).ToArray();
+
+            Dictionary<GridVector2, int> DuplicatePointsAddedCount = new Dictionary<GridVector2, int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
+            HashSet<GridVector2> KnownPoints = new HashSet<GridVector2>();
+            foreach (GridVector2 p in point_array)
+            {
+                if (KnownPoints.Contains(p))
+                {
+                    DuplicatePointsAddedCount.Add(p, 0); //Set the counter to 0 for when we use it later
+                }
+                else
+                {
+                    KnownPoints.Add(p);
+                }
+            }
+
+            foreach (PointIndex pi in new PolySetVertexEnum(Polygons))
             {
                 GridVector2 point = pi.Point(Polygons);
-                LabelView label = new LabelView(pi.ToString(), point);
+                GridVector2 offset_point = point - new GridVector2(0, (pointradius * 2));
+                LabelView label = new LabelView(pi.ToString(), offset_point);
                 listPointLabels.Add(label);
                 label.FontSize = pointradius * 2.0;
+
+                if (DuplicatePointsAddedCount.ContainsKey(point))
+                {
+                    //label.Position = label.Position + label.
+                    //label.Position = label.Position + new GridVector2(0, pointradius * (DuplicatePointsAddedCount[point]-1));
+
+                    
+                    string prepended_newlines = "";
+                    for (int iLine = 0; iLine < DuplicatePointsAddedCount[point]; iLine++)
+                        prepended_newlines += "|\n\r";
+
+                    label.Text = prepended_newlines + label.Text; //Prepend a line
+                    
+                    DuplicatePointsAddedCount[point] = DuplicatePointsAddedCount[point] + 1;
+                }
             }
 
             return listPointLabels;
@@ -184,7 +218,7 @@ namespace MonogameTestbed
             {
                 foreach (PointSetView psv in PolyPointsView)
                 {
-                    psv.Draw(window, scene);
+                    psv.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
                 }
             }
 

@@ -12,7 +12,7 @@ namespace VikingXNAGraphics
     public class TextureCircleView : CircleView
     {
         public Texture2D Texture;
-        bool FlipTexture = false;
+        //bool FlipTexture = false;
 
         public TextureCircleView(Texture2D texture, GridCircle circle, Color color) : base(circle, color)
         {
@@ -43,6 +43,12 @@ namespace VikingXNAGraphics
         public static TextureCircleView CreateCircle(GridCircle circle, Color color)
         {
             TextureCircleView view = new TextureCircleView(GlobalPrimitives.CircleTexture, circle, color);
+            return view;
+        }
+
+        public static TextureCircleView CreateChainCircle(GridCircle circle, Color color)
+        {
+            TextureCircleView view = new TextureCircleView(GlobalPrimitives.ChainTexture, circle, color);
             return view;
         }
 
@@ -161,6 +167,7 @@ namespace VikingXNAGraphics
             {
                 TextureCircleView[] views = textureGroup.ToArray();
                 overlayEffect.AnnotationTexture = textureGroup.Key;
+                overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOverlayEffect;
 
                 foreach (TextureCircleView cv in textureGroup)
                 {
@@ -221,7 +228,7 @@ namespace VikingXNAGraphics
     {
         #region static
 
-        static double BeginFadeCutoff = 0.1;
+        //static double BeginFadeCutoff = 0.1;
         static double InvisibleCutoff = 1.5f;
 
         #endregion
@@ -551,10 +558,11 @@ namespace VikingXNAGraphics
             CircleView[] arraySolidCircles = listToDraw.Where(c => c as TextureCircleView == null).ToArray();
 
             //CircleView.SetupGraphicsDevice(device, overlayEffect);
+            //overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorAlphaOverlayEffect;
             
             foreach (CircleView cv in arraySolidCircles)
             {
-                overlayEffect.AnnotationColorHSL = cv.HSLColor;
+                overlayEffect.AnnotationColorHSL = cv.HSLColor.SetAlpha(0.5f);
                 overlayEffect.WorldViewProjMatrix = (cv.ModelMatrix * scene.World) * scene.ViewProj;
                 overlayEffect.InputLumaAlphaValue = 0f;
 
