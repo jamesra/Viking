@@ -25,7 +25,7 @@ namespace AnnotationVizLib.SimpleOData
             }
         }
 
-        public System.Data.Entity.Spatial.DbGeometry VolumeShape { get; set; }
+        public System.Data.Entity.Spatial.DbGeometry VolumeShape { get; internal set; }
 
         private SqlGeometry _VolumeShape = null;
         public SqlGeometry Geometry
@@ -47,7 +47,7 @@ namespace AnnotationVizLib.SimpleOData
             }
         }
 
-        public System.Data.Entity.Spatial.DbGeometry MosaicShape { get; set; }
+        public System.Data.Entity.Spatial.DbGeometry MosaicShape { get; internal set; }
 
         private SqlGeometry _MosaicShape = null;
         public SqlGeometry MosaicGeometry

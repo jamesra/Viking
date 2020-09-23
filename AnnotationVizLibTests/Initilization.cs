@@ -13,7 +13,7 @@ namespace AnnotationVizLibTests
         [AssemblyInitialize]
         public static void AssemblyInit(TestContext context)
         { 
-            SqlServerTypes.TestUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            //SqlServerTypes.TestUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
         }
     }
 }
