@@ -7,6 +7,22 @@ using System.Diagnostics;
 
 namespace GraphLib
 {
+    public partial class GraphSubGraphExtensions
+    {
+        /// <summary>
+        /// Returns a list of sorted sets containing the node keys that exist in each subgraph
+        /// </summary>
+        /// <param name="graph"></param>
+        /// <returns></returns>
+        public static IList<SortedSet<KEY>> IsolatedSubgraphs<KEY, NODETYPE, EDGETYPE>(Graph<KEY, NODETYPE, EDGETYPE> graph)
+            where KEY : IComparable<KEY>, IEquatable<KEY>
+            where NODETYPE : Node<KEY, EDGETYPE>
+            where EDGETYPE : Edge<KEY>
+        {
+            return Graph<KEY, NODETYPE, EDGETYPE>.IsolatedSubgraphs(graph); 
+        }
+    }
+        
     public partial class Graph<KEY, NODETYPE, EDGETYPE>
     {
         /// <summary>

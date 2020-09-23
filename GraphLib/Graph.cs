@@ -43,7 +43,30 @@ namespace GraphLib
         {
             get { return this.Nodes[key]; }
         }
-        
+
+        /// <summary>
+        /// Returns the set of edges from Source to Target, or an empty set
+        /// if the edge does not exist
+        /// </summary>
+        /// <param name="Source"></param>
+        /// <param name="Target"></param>
+        /// <returns></returns>
+        public SortedSet<EDGETYPE> this[KEY Source, KEY Target]
+        {
+            get 
+            {
+                if(this.Nodes.TryGetValue(Source, out NODETYPE node))
+                {
+                    if(node.Edges.TryGetValue(Target, out var Result))
+                    {
+                        return Result;
+                    }
+                }
+
+                return new SortedSet<EDGETYPE>(); 
+            }
+        }
+
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             info.AddValue("Edges", Edges, typeof(SortedList<EDGETYPE, EDGETYPE>));
