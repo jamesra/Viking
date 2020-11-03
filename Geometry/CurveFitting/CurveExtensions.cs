@@ -118,6 +118,11 @@ namespace Geometry
                     Angles[i] = 0;
                     continue;
                 }
+                else if (GridVector2.DistanceSquared(ControlPoints[i], ControlPoints[i - 1]) < Global.EpsilonSquared)
+                {
+                    Angles[i] = 0;
+                    continue; 
+                }
 
                 //Extrapolate a line past the control point, and measure how much we deviate from it
                 GridLineSegment line = new GridLineSegment(ControlPoints[i - 1], ControlPoints[i]);
@@ -162,8 +167,24 @@ namespace Geometry
         public static bool TryAddTPointsAboveThreshold(GridVector2[] output, ref SortedSet<double> TPoints, double angleThresholdInDegrees=10.0)
         {
             double[] TPointsArray = TPoints.ToArray();
-            double[] degrees = output.MeasureCurvature();
 
+            for (int i = 1; i < output.Length - 1; i++)
+            {
+                if(GridVector2.DistanceSquared(output[i-1], output[i]) < Global.EpsilonSquared ||
+                   GridVector2.DistanceSquared(output[i], output[i+1]) < Global.EpsilonSquared)
+                {
+                    output = output.RemoveAt(i);
+                    TPoints.Remove(TPointsArray[i]);
+                    TPointsArray = TPointsArray.RemoveAt(i);
+
+                    i = i - 1;
+                }
+            }
+
+            
+            double[] degrees;
+              
+            degrees = output.MeasureCurvature(); 
             degrees = degrees.Select(d => Math.Abs(d)).ToArray();
 
             const double onedegree = (Math.PI * 2.0 / 360);

@@ -20,6 +20,16 @@ namespace Geometry
             /// We need to input E - A - B - C - D - E - A - B to return a complete curve with the same starting/ending point as the input
             ///
 
+            //Remove any points that are closer than epsilon distanceu04908
+            for(int i = 1; i < cp.Count-1; i++)
+            {
+                if(GridVector2.DistanceSquared(cp[i-1], cp[i]) < Global.EpsilonSquared)
+                {
+                    cp.RemoveAt(i);
+                    i = i - 1;
+                }
+            }
+
             List<GridVector2> output = cp.ToList();
             /*
             if (output.First() != output.Last())
@@ -97,6 +107,13 @@ namespace Geometry
             //return cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations)).ToArray();
             GridVector2[] points = cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => RecursivelyFitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], null, NumInterpolations: NumInterpolations)).ToArray();
             points = points.RemoveAdjacentDuplicates();
+
+#if DEBUG
+            for (int i = 0; i < ControlPoints.Count; i++)
+            {
+                Debug.Assert(points.Contains(ControlPoints[i]), string.Format("FitCurve output is missing control point #{0} of {1} {2}", i, ControlPoints.Count, ControlPoints[i] ));
+            }
+#endif
 
             return points;
         }
@@ -415,6 +432,13 @@ namespace Geometry
                 point_to_ideal_curve_index.Add(curved_path[i], i);
             }
 
+#if DEBUG
+            for(int i = 0; i < path.Count; i++)
+            {
+                Debug.Assert(point_to_ideal_curve_index.ContainsKey(path[i]), string.Format("Ideal curve dictionary is missing path point #{0} {1}", i, path[i]));
+            }
+#endif
+
             //int[] inflectionIndicies = curved_path.InflectionPointIndicies();
             //GridVector2[] inflectionPoints = inflectionIndicies.Select(i => curved_path[i]).ToArray();
             //List<GridVector2> simplified_inflection_points = inflectionPoints.DouglasPeuckerReduction(Tolerance: MaxDistanceFromSimplifiedToIdeal * 10);
@@ -442,6 +466,19 @@ namespace Geometry
 
                 //Find the subset of the real curve this proposed curve should accurately represent
                 //identify the segment on the ideal curve we are comparing against
+
+                if (false == point_to_ideal_curve_index.ContainsKey(proposedCurve.First()))
+                {
+                    iProposedVertex = iProposedVertex + 1;
+                    continue;
+                }
+
+                if (false == point_to_ideal_curve_index.ContainsKey(proposedCurve.Last()))
+                {
+                    iProposedVertex = iProposedVertex + 1;
+                    continue;
+                }
+
                 int iIdealStart = point_to_ideal_curve_index[proposedCurve.First()];
                 int iIdealEnd = point_to_ideal_curve_index[proposedCurve.Last()];
 
