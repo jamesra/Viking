@@ -221,9 +221,9 @@ namespace Viking.VolumeModel
             get { return Sections.Count; }
         }
 
-        private AxisUnits _DefaultXYScale;
+        private UnitsAndScale.IAxisUnits _DefaultXYScale;
 
-        public Geometry.AxisUnits DefaultXYScale
+        public UnitsAndScale.IAxisUnits DefaultXYScale
         {
             get { return _DefaultXYScale;}
         }

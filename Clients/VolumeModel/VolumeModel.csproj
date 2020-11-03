@@ -125,6 +125,10 @@
     <Compile Include="VolumeToSectionTransform.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj">
+      <Project>{d451457b-2782-4473-a935-efa25c4fad7c}</Project>
+      <Name>UnitsAndScale</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Common\Common.csproj">
       <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
       <Name>Common</Name>

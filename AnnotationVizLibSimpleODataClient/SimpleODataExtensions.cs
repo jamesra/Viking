@@ -5,26 +5,27 @@ using System.Text;
 using System.Threading.Tasks;
 using Simple.OData.Client;
 using System.Diagnostics;
+using UnitsAndScale;
 
 namespace AnnotationVizLib.SimpleOData
 {
     static class SimpleODataExtensions
     {
-        public static Geometry.Scale GetScale(this Simple.OData.Client.ODataClient client)
+        public static Scale GetScale(this Simple.OData.Client.ODataClient client)
         {
             Task<IDictionary<string, object>> t = client.ExecuteFunctionAsSingleAsync("Scale", null);
             t.Wait();
             var scale = t.Result;
             Debug.Assert(scale != null);
 
-            return new Geometry.Scale(ConvertToAxisScale((IDictionary<string, object>)scale["X"]),
+            return new Scale(ConvertToAxisScale((IDictionary<string, object>)scale["X"]),
                                       ConvertToAxisScale((IDictionary<string, object>)scale["Y"]),
                                       ConvertToAxisScale((IDictionary<string, object>)scale["Z"]));
         }
 
-        private static Geometry.AxisUnits ConvertToAxisScale(IDictionary<string, object> axis)
+        private static AxisUnits ConvertToAxisScale(IDictionary<string, object> axis)
         {
-            return new Geometry.AxisUnits((double)axis["Value"], (string)axis["Units"]);
+            return new AxisUnits((double)axis["Value"], (string)axis["Units"]);
         }
 
         internal static string ToODataArrayParameterString(this ICollection<long> IDs)

@@ -21,7 +21,7 @@ namespace Viking.VolumeModel
         /// </summary>
         private SortedList<int, string> LevelsToPaths = new SortedList<int, string>();
 
-        public Geometry.AxisUnits XYScale { get; protected set; }
+        public UnitsAndScale.IAxisUnits XYScale { get; protected set; }
 
 
         protected Pyramid(string name, string path)

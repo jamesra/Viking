@@ -9,6 +9,7 @@ using SqlGeometryUtils;
 using Geometry;
 using RTree;
 using Annotation.Interfaces;
+using UnitsAndScale;
 
 namespace AnnotationVizLib
 {
@@ -25,7 +26,7 @@ namespace AnnotationVizLib
 
         public IStructure structure = null;
 
-        public readonly Geometry.Scale scale = null;
+        public readonly IScale scale = null;
 
         public virtual double SectionThickness
         {
@@ -60,14 +61,14 @@ namespace AnnotationVizLib
 
         internal ConcurrentDictionary<ulong, ulong> NearestNodeToSubgraph = new ConcurrentDictionary<ulong, ulong>();
 
-        public MorphologyGraph(ulong subgraph_id, Geometry.Scale scale)
+        public MorphologyGraph(ulong subgraph_id, IScale scale)
         {
             this.StructureID = subgraph_id;
             this.structure = null;
             this.scale = scale;
         }
 
-        public MorphologyGraph(ulong subgraph_id, Geometry.Scale scale, IStructure structure)
+        public MorphologyGraph(ulong subgraph_id, IScale scale, IStructure structure)
         {
             this.StructureID = subgraph_id;
             this.structure = structure;

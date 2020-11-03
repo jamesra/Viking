@@ -761,7 +761,7 @@ namespace SqlGeometryUtils
         /// <param name="geometry"></param>
         /// <param name="scale"></param>
         /// <returns></returns>
-        public static SqlGeometry Scale(this SqlGeometry geometry, Scale scale)
+        public static SqlGeometry Scale(this SqlGeometry geometry, UnitsAndScale.IScale scale)
         {
             if(geometry.HasInteriorRings())
             {
@@ -776,7 +776,7 @@ namespace SqlGeometryUtils
             
         }
 
-        private static SqlGeometry ScaleShapeWithInnerRings(this SqlGeometry geometry, Scale scale)
+        private static SqlGeometry ScaleShapeWithInnerRings(this SqlGeometry geometry, UnitsAndScale.IScale scale)
         {
             System.Diagnostics.Debug.Assert(geometry.GeometryType() == SupportedGeometryType.POLYGON);
 

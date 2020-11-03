@@ -67,7 +67,7 @@ namespace Viking.VolumeModel
                                int TileSizeX, int TileSizeY, 
                                string GridTilePath, 
                                string GridCoordFormat,
-                               AxisUnits XYScale) :
+                               UnitsAndScale.IAxisUnits XYScale) :
             base(section, name, Prefix, Postfix, TileSizeX, TileSizeY, GridTilePath, GridCoordFormat, XYScale)
         { 
         }
@@ -84,7 +84,7 @@ namespace Viking.VolumeModel
             string GridTileFormat = null;
 
             XElement scale_elem = TilesetNode.Elements().Where(elem => elem.Name.LocalName == "Scale").FirstOrDefault();
-            AxisUnits XYScale = null;
+            UnitsAndScale.IAxisUnits XYScale = null;
             if (scale_elem != null)
                 XYScale = scale_elem.ParseScale();
             else

@@ -6,12 +6,13 @@ using System.Text;
 using Geometry;
 using SqlGeometryUtils;
 using Annotation.Interfaces;
+using UnitsAndScale;
 
 namespace AnnotationVizLib
 {
     public class MorphologyTLPView : TLPView<ulong>
     {
-        public readonly Geometry.Scale scale;
+        public readonly IScale scale;
         public readonly System.Drawing.Color structure_color;
 
         public SortedDictionary<MorphologyEdge, ulong> MorphologyEdgeToTulipID = new SortedDictionary<MorphologyEdge, ulong>();
@@ -21,7 +22,7 @@ namespace AnnotationVizLib
             get { return TLPAttributes.DefaultForMorphologyAttribute; }
         }
 
-        public MorphologyTLPView(Geometry.Scale scale, System.Drawing.Color ColorMap, string VolumeURL) : base(VolumeURL)
+        public MorphologyTLPView(IScale scale, System.Drawing.Color ColorMap, string VolumeURL) : base(VolumeURL)
         {
             this.scale = scale;
             this.structure_color = ColorMap;
@@ -112,7 +113,7 @@ namespace AnnotationVizLib
             return string.Format("({0},{1},{2})", pos.X, pos.Y, node.Z);
         }
 
-        public static string NodeSize(MorphologyNode node, Geometry.Scale scale)
+        public static string NodeSize(MorphologyNode node, UnitsAndScale.IScale scale)
         {
             GridRectangle bbox = node.Geometry.BoundingBox();
             //OK, tulip treats the location property as the center of the shape.  The size is centered on the origin.  So if a cell is centered on 0, and the radius is 50.  We need to use the diamater to ensure the size is correct.
@@ -211,7 +212,7 @@ namespace AnnotationVizLib
             return colorMap.GetColor(graph); 
         }
 
-        public static MorphologyTLPView ToTLP(MorphologyGraph graph, Geometry.Scale scale, StructureMorphologyColorMap colorMap, string VolumeURL)
+        public static MorphologyTLPView ToTLP(MorphologyGraph graph, UnitsAndScale.IScale scale, StructureMorphologyColorMap colorMap, string VolumeURL)
         {
             MorphologyTLPView view = new MorphologyTLPView(scale, GetStructureColor(graph, colorMap), VolumeURL);
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.Configuration;
-using Geometry;
+using UnitsAndScale;
 
 namespace VikingWebAppSettings
 {
@@ -168,7 +168,6 @@ namespace VikingWebAppSettings
                 Z = new AxisUnits(90, "nm");
             }
 #endif
-
             return new Scale(X, Y, Z); 
         } 
     }

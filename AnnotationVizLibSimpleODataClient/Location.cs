@@ -6,12 +6,13 @@ using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using Geometry;
 using Annotation.Interfaces;
+using UnitsAndScale;
 
 namespace AnnotationVizLib.SimpleOData
 {
     public class Location : ILocation, IEquatable<Location>
     {
-        public Geometry.Scale scale { get; set; }
+        public IScale scale { get; set; }
 
         public Location()
         {

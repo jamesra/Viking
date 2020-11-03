@@ -124,7 +124,7 @@ namespace Viking.VolumeModel
         /// </summary>
         public List<string> VolumeTransformList = new List<string>();
          
-        public Geometry.AxisUnits XYScale
+        public UnitsAndScale.IAxisUnits XYScale
         {
             get
             { 

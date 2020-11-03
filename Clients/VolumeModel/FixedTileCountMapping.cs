@@ -62,7 +62,7 @@ namespace Viking.VolumeModel
             }
         }
 
-        public override Geometry.AxisUnits XYScale
+        public override UnitsAndScale.IAxisUnits XYScale
         {
             get
             {

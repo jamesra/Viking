@@ -10,6 +10,7 @@ using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using Geometry;
 using AnnotationVizLib.SimpleOData;
+using UnitsAndScale;
 
 namespace AnnotationVizLib.SimpleOData
 {  
@@ -174,7 +175,7 @@ namespace AnnotationVizLib.SimpleOData
         /// <returns></returns>
         private static List<Location> WaitForLocations(Simple.OData.Client.ODataClient client,
                                                         List<Task<Location>> listLocationFetchTasks,
-                                                        Scale scale,
+                                                        IScale scale,
                                                         ref long StructureID,
                                                         out Task<Structure> st_task,
                                                         out Task<IEnumerable<IDictionary<string, object>>> st_loc_links_task)
@@ -227,7 +228,7 @@ namespace AnnotationVizLib.SimpleOData
         /// <param name="StructureIDs"></param>
         /// <param name="scale"></param>
         /// <returns></returns>
-        private static List<Structure> LoadRootStructures(Simple.OData.Client.ODataClient client, Geometry.Scale scale)
+        private static List<Structure> LoadRootStructures(Simple.OData.Client.ODataClient client, IScale scale)
         {
             List<Structure> listStructures = new List<Structure>();
              
@@ -254,7 +255,7 @@ namespace AnnotationVizLib.SimpleOData
         /// <param name="StructureIDs"></param>
         /// <param name="scale"></param>
         /// <returns></returns>
-        private static List<Structure> LoadStructures(Simple.OData.Client.ODataClient client, IEnumerable<ulong> StructureIDs, Geometry.Scale scale)
+        private static List<Structure> LoadStructures(Simple.OData.Client.ODataClient client, IEnumerable<ulong> StructureIDs, UnitsAndScale.IScale scale)
         {
             List<Structure> listStructures = new List<Structure>();
 
@@ -415,7 +416,7 @@ namespace AnnotationVizLib.SimpleOData
         /// </summary>
         /// <param name="rootGraph"></param>
         /// <param name="StructureIDs"></param>
-        private static async void MorphologyForStructures(Uri Endpoint, MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, Geometry.Scale scale)
+        private static async void MorphologyForStructures(Uri Endpoint, MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, UnitsAndScale.IScale scale)
         {
             //Queries.PopulateStructureTypes();
 
@@ -447,7 +448,7 @@ namespace AnnotationVizLib.SimpleOData
             //);
         }
 
-        private static MorphologyGraph MorphologyForStructure(Structure s, Geometry.Scale scale)
+        private static MorphologyGraph MorphologyForStructure(Structure s, UnitsAndScale.IScale scale)
         {
             if (s.Locations == null)
                 return null; 

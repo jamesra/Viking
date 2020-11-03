@@ -60,7 +60,7 @@ namespace AnnotationVizLib.OData
         /// </summary>
         /// <param name="rootGraph"></param>
         /// <param name="StructureIDs"></param>
-        private static void MorphologyForStructures(Container container, MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, Geometry.Scale scale)
+        private static void MorphologyForStructures(Container container, MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, UnitsAndScale.IScale scale)
         {
             //Queries.PopulateStructureTypes();
 
@@ -86,7 +86,7 @@ namespace AnnotationVizLib.OData
             );
         }
 
-        private static MorphologyGraph MorphologyForStructure(Structure s, Geometry.Scale scale)
+        private static MorphologyGraph MorphologyForStructure(Structure s, UnitsAndScale.IScale scale)
         {
             Location[] locations = s.Locations.ToArray();
             LocationLink[] location_links = s.LocationLinks.ToArray();

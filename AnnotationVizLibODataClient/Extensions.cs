@@ -10,11 +10,11 @@ namespace AnnotationVizLib.OData
    
     public static class ODataExtensions
     {
-        public static Geometry.Scale ToGeometryScale(this ODataClient.Geometry.Scale scale)
+        public static UnitsAndScale.Scale ToGeometryScale(this ODataClient.Geometry.Scale scale)
         {
-            return new Geometry.Scale(new Geometry.AxisUnits(scale.X.Value, scale.X.Units),
-                                      new Geometry.AxisUnits(scale.Y.Value, scale.Y.Units),
-                                      new Geometry.AxisUnits(scale.Z.Value, scale.Z.Units));
+            return new UnitsAndScale.Scale(new UnitsAndScale.AxisUnits(scale.X.Value, scale.X.Units),
+                                      new UnitsAndScale.AxisUnits(scale.Y.Value, scale.Y.Units),
+                                      new UnitsAndScale.AxisUnits(scale.Z.Value, scale.Z.Units));
         }
     }
 }

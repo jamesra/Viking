@@ -14,9 +14,9 @@ namespace AnnotationVizLib.OData
     public class ODataLocationAdapter : ILocation
     {
         private readonly Location loc;
-        public readonly Geometry.Scale scale;
+        public readonly UnitsAndScale.IScale scale;
 
-        public ODataLocationAdapter(Location l, Geometry.Scale scale)
+        public ODataLocationAdapter(Location l, UnitsAndScale.IScale scale)
         {
             if (l == null)
                 throw new ArgumentNullException();

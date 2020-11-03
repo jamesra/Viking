@@ -214,7 +214,7 @@ namespace Viking.VolumeModel
             }
         }
 
-        public TileGridMappingBase(Section section, string name, string Prefix, string Postfix, int TileSizeX, int TileSizeY, string TileGridPath, string GridCoordFormat, AxisUnits XYScale) :
+        public TileGridMappingBase(Section section, string name, string Prefix, string Postfix, int TileSizeX, int TileSizeY, string TileGridPath, string GridCoordFormat, UnitsAndScale.IAxisUnits XYScale) :
             base(section, name, Prefix, Postfix )
         {
             this.TileSizeX = TileSizeX;

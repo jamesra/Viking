@@ -14,7 +14,7 @@ namespace AnnotationVizLib.WCFClient
         {
             ConnectionFactory.SetConnection(Endpoint, userCredentials);
 
-            Geometry.Scale scale = Queries.GetScale().ToGeometryScale();
+            UnitsAndScale.IScale scale = Queries.GetScale().ToGeometryScale();
 
             MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
             
@@ -28,7 +28,7 @@ namespace AnnotationVizLib.WCFClient
         /// </summary>
         /// <param name="rootGraph"></param>
         /// <param name="StructureIDs"></param>
-        private static void MorphologyForStructures(MorphologyGraph rootGraph, ICollection<long> StructureIDs, bool include_children, Geometry.Scale scale)
+        private static void MorphologyForStructures(MorphologyGraph rootGraph, ICollection<long> StructureIDs, bool include_children, UnitsAndScale.IScale scale)
         {
             if (StructureIDs == null)
                 return;
@@ -58,7 +58,7 @@ namespace AnnotationVizLib.WCFClient
             );
         }
 
-        private static MorphologyGraph MorphologyForStructure(Structure s, Geometry.Scale scale)
+        private static MorphologyGraph MorphologyForStructure(Structure s, UnitsAndScale.IScale scale)
         {
             MorphologyGraph root_graph = null;
             System.Diagnostics.Debug.Assert(s != null);
@@ -75,7 +75,7 @@ namespace AnnotationVizLib.WCFClient
             return root_graph;
         }
 
-        private static MorphologyGraph BuildGraphFromLocations(Structure s, Location[] locations, Geometry.Scale scale)
+        private static MorphologyGraph BuildGraphFromLocations(Structure s, Location[] locations, UnitsAndScale.IScale scale)
         {
             if (locations == null)
                 return null; 

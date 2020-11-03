@@ -160,8 +160,8 @@ namespace Viking.VolumeModel
             get;
         }
 
-        protected AxisUnits _XYScale;
-        public virtual Geometry.AxisUnits XYScale
+        protected UnitsAndScale.IAxisUnits _XYScale;
+        public virtual UnitsAndScale.IAxisUnits XYScale
         {
             get
             {

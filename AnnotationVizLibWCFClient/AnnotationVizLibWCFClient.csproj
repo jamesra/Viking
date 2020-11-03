@@ -92,6 +92,10 @@
       <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
       <Name>SqlGeometryUtils</Name>
     </ProjectReference>
+    <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj">
+      <Project>{d451457b-2782-4473-a935-efa25c4fad7c}</Project>
+      <Name>UnitsAndScale</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -176,7 +180,7 @@
       <Version>2.2.29</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.SqlServer.Types">
-      <Version>14.0.1016.290</Version>
+      <Version>14.0.314.76</Version>
     </PackageReference>
     <PackageReference Include="protobuf-net">
       <Version>2.0.0.668</Version>

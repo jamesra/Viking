@@ -4,16 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AnnotationService.Types;
+using UnitsAndScale;
 
 namespace AnnotationVizLib.WCFClient
 { 
     public static class WCFExtensions
     {
-        public static Geometry.Scale ToGeometryScale(this Scale scale)
+        public static UnitsAndScale.Scale ToGeometryScale(this AnnotationService.Types.Scale scale)
         {
-            return new Geometry.Scale(new Geometry.AxisUnits(scale.X.Value, scale.X.Units),
-                                        new Geometry.AxisUnits(scale.Y.Value, scale.Y.Units),
-                                        new Geometry.AxisUnits(scale.Z.Value, scale.Z.Units));
+            return new UnitsAndScale.Scale(new UnitsAndScale.AxisUnits(scale.X.Value, scale.X.Units),
+                             new UnitsAndScale.AxisUnits(scale.Y.Value, scale.Y.Units),
+                             new UnitsAndScale.AxisUnits(scale.Z.Value, scale.Z.Units));
         }
     } 
 }

@@ -408,11 +408,11 @@ namespace AnnotationVizLibTests
             
         }
 
-        public static Geometry.Scale DefaultScale()
+        public static UnitsAndScale.Scale DefaultScale()
         {
-            return new Geometry.Scale(new Geometry.AxisUnits(2.18, "nm"),
-                                      new Geometry.AxisUnits(2.18, "nm"),
-                                      new Geometry.AxisUnits(90, "nm"));
+            return new UnitsAndScale.Scale(new UnitsAndScale.AxisUnits(2.18, "nm"),
+                                      new UnitsAndScale.AxisUnits(2.18, "nm"),
+                                      new UnitsAndScale.AxisUnits(90, "nm"));
         }
         
         [TestMethod]
@@ -737,11 +737,11 @@ namespace AnnotationVizLibTests
 
         }
 
-        public static Geometry.Scale DefaultScale()
+        public static UnitsAndScale.Scale DefaultScale()
         {
-            return new Geometry.Scale(new Geometry.AxisUnits(2.18, "nm"),
-                                      new Geometry.AxisUnits(2.18, "nm"),
-                                      new Geometry.AxisUnits(90, "nm"));
+            return new UnitsAndScale.Scale(new UnitsAndScale.AxisUnits(2.18, "nm"),
+                                      new UnitsAndScale.AxisUnits(2.18, "nm"),
+                                      new UnitsAndScale.AxisUnits(90, "nm"));
         }
 
         [TestMethod]

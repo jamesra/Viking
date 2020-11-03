@@ -8,15 +8,16 @@ using Geometry;
 using AnnotationVizLib.WCFClient.AnnotationClient;
 using AnnotationService.Types;
 using Annotation.Interfaces;
+using UnitsAndScale;
 
 namespace AnnotationVizLib.WCFClient
 {
     class WCFLocationAdapter : ILocation
     {
         private readonly Location loc;
-        public readonly Geometry.Scale scale;
+        public readonly IScale scale;
 
-        public WCFLocationAdapter(Location l, Geometry.Scale scale)
+        public WCFLocationAdapter(Location l, IScale scale)
         {
             this.loc = l;
             this.scale = scale;

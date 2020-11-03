@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Geometry;
+using UnitsAndScale;
 
 using AnnotationVizLib;
 
