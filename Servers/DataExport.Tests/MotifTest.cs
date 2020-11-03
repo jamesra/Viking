@@ -55,7 +55,7 @@ namespace DataExport.Tests
         }
 
         [TestMethod]
-        public void TestMorphologyGraphs()
+        public async void TestMorphologyGraphs()
         {
             NameValueCollection queryParams = new NameValueCollection();
             queryParams.Add("id", "180;476");
@@ -71,7 +71,7 @@ namespace DataExport.Tests
             DataExport.Controllers.MorphologyController controller = new Controllers.MorphologyController();
             controller.ControllerContext = new ControllerContext(mockedhttpContext.Object, new System.Web.Routing.RouteData(), controller);
             
-            ActionResult result = controller.GetTLP();
+            ActionResult result = await controller.GetTLP();
             Assert.IsTrue(result.GetType() == typeof(FilePathResult));
 
         }

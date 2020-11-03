@@ -9,6 +9,7 @@ using GraphLib;
 using VikingWebAppSettings;
 using Geometry;
 using AnnotationVizLib.WCFClient;
+using System.Threading.Tasks;
 
 namespace DataExport.Controllers
 {
@@ -34,9 +35,9 @@ namespace DataExport.Controllers
 
         [HttpPost()]
         [AcceptVerbs(HttpVerbs.Post)]
-        public ActionResult PostTLP()
+        public async Task<ActionResult> PostTLP()
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
 
             string OutputFile = GetOutputFilename(requestIDs, "tlp");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -58,9 +59,9 @@ namespace DataExport.Controllers
 
         [HttpPost()]
         [AcceptVerbs(HttpVerbs.Post)]
-        public ActionResult PostJSON()
+        public async Task<ActionResult> PostJSON()
         { 
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
+            ICollection<long> requestIDs = await RequestVariables.GetIDsFromQueryData(Request.QueryString);
 
             string OutputFile = GetOutputFilename(requestIDs, "json");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -78,9 +79,9 @@ namespace DataExport.Controllers
 
         [HttpPost()]
         [AcceptVerbs(HttpVerbs.Post)]
-        public ActionResult PostDAE()
+        public async Task<ActionResult> PostDAE()
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
+            ICollection<long> requestIDs = await RequestVariables.GetIDsFromQueryData(Request.QueryString);
 
             string OutputFile = GetOutputFilename(requestIDs, "dae");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -102,9 +103,9 @@ namespace DataExport.Controllers
 
 
         [ActionName("GetTLP")]
-        public ActionResult GetTLP()
+        public async Task<ActionResult> GetTLP()
         { 
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
 
             string OutputFile = GetOutputFilename(requestIDs, "tlp");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -124,10 +125,10 @@ namespace DataExport.Controllers
         }
 
         [ActionName("GetJSON")]
-        public ActionResult GetJSON()
+        public async Task<ActionResult> GetJSON()
         {
 
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
+            ICollection<long> requestIDs = await RequestVariables.GetIDsFromQueryData(Request.QueryString);
 
             string OutputFile = GetOutputFilename(requestIDs, "json");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -144,9 +145,9 @@ namespace DataExport.Controllers
         }
 
         [ActionName("GetDAE")]
-        public ActionResult GetDAE()
+        public async Task<ActionResult> GetDAE()
         { 
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
+            ICollection<long> requestIDs = await RequestVariables.GetIDsFromQueryData(Request.QueryString);
 
             string OutputFile = GetOutputFilename(requestIDs, "dae");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -224,7 +225,7 @@ namespace DataExport.Controllers
             return output_dir;
         }
           
-        private MorphologyGraph GetGraph(ICollection<long> requestIDs)
+        private async Task<MorphologyGraph> GetGraph(ICollection<long> requestIDs)
         {
             AnnotationVizLib.WCFClient.ConnectionFactory.SetConnection(AppSettings.WebServiceURL , AppSettings.EndpointCredentials);
 
