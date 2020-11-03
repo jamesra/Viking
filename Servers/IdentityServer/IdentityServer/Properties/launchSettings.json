@@ -1,9 +1,9 @@
 {
   "iisSettings": {
-    "windowsAuthentication": false,
+    "windowsAuthentication": true,
     "anonymousAuthentication": true,
     "iis": {
-      "applicationUrl": "http://localhost/IdentityServer",
+      "applicationUrl": "https://identity.connectomes.utah.edu/",
       "sslPort": 0
     },
     "iisExpress": {
@@ -21,13 +21,21 @@
       }
     },
     "IdentityServer": {
-      "commandName": "Project",
+      "commandName": "IIS",
       "launchBrowser": true,
       "launchUrl": "http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "applicationUrl": "http://localhost:5000"
+    },
+    "IdentityServerIISRemote": {
+      "commandName": "IIS",
+      "launchBrowser": true,
+      "launchUrl": "https://identity.connectomes.utah.edu/",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
     }
   }
 }

@@ -36,7 +36,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var applicationUser = await _context.ApplicationUser.Include("OrganizationAssignments.Organization")
+            var applicationUser = await _context.ApplicationUser.Include("GroupAssignments.Group")
                 .SingleOrDefaultAsync(m => m.Id == id);
             if (applicationUser == null)
             {
@@ -57,12 +57,14 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount")] ApplicationUser applicationUser)
+        //public async Task<IActionResult> Create([Bind("Id,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount")] ApplicationUser applicationUser)
+        public async Task<IActionResult> Create([Bind("Id,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PhoneNumber,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnd,LockoutEnabled,AccessFailedCount")] ApplicationUser applicationUser)
         {
             if (ModelState.IsValid)
             {
                 _context.Add(applicationUser);
                 await _context.SaveChangesAsync();
+
                 return RedirectToAction(nameof(Index));
             }
             return View(applicationUser);
@@ -76,7 +78,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var applicationUser = await _context.ApplicationUser.Include("GroupAssignments.Organization").SingleOrDefaultAsync(m => m.Id == id);
+            var applicationUser = await _context.ApplicationUser.Include("GroupAssignments.Group").SingleOrDefaultAsync(m => m.Id == id);
             if (applicationUser == null)
             {
                 return NotFound();
@@ -145,7 +147,7 @@ namespace IdentityServer.Controllers
             return View(applicationUser);
         }
 
-        public async Task<IActionResult> EditOrganizations(string id, IEnumerable<GroupSelectedViewModel> Organizations)
+        public async Task<IActionResult> EditOrganizations(string id)
         {
             if (id == null)
             {
@@ -159,16 +161,18 @@ namespace IdentityServer.Controllers
             }
              
              
-            var organizationEditDetails = await _context.Group.Include("GroupAssignments").Select(org => new GroupSelectedViewModel
+            var groups = await _context.Group.Include("GroupAssignments").ToListAsync();
+
+            var groupEditDetails = groups.Select(org => new GroupSelectedViewModel
             {
                 Name = org.Name,
                 Id = org.Id,
                 Selected = applicationUser.GroupAssignments.Any(oa => oa.GroupId == org.Id)
-            }).ToListAsync();
+            }).ToList();
 
-            var UserOrganizations = new UserGroupsViewModel { Id = id, Name = applicationUser.UserName, Organizations = organizationEditDetails };
+            var UserOrganizations = new UserGroupsViewModel { Id = id, Name = applicationUser.UserName, Organizations = groupEditDetails };
 
-            if (organizationEditDetails == null)
+            if (groupEditDetails == null)
             {
                 return NotFound();
             }

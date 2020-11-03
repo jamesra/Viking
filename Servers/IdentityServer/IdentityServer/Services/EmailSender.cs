@@ -22,11 +22,12 @@ namespace IdentityServer.Services
         public string Username { get; set; }
         public string Password { get; set; }
     }
+
     // This class is used by the application to send email for account confirmation and password reset.
     // For more details see https://go.microsoft.com/fwlink/?LinkID=532713
     public class EmailSender : IEmailSender
     {
-        ILogger<EmailSender> Log; 
+        //readonly ILogger<EmailSender> Log; 
 
         public EmailSender(IOptions<SMTPOptions> optionsAccessor, ILogger<EmailSender> logger)
         {
@@ -42,7 +43,7 @@ namespace IdentityServer.Services
                 logger.LogError("SMTP.Server configuration parameter not specified.");
             }
 
-            Log = logger;
+            //Log = logger;
         }
 
         public SMTPOptions Options { get; }

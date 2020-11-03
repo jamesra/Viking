@@ -23,13 +23,17 @@
         <dd>
             @Html.DisplayFor(model => model.NormalizedName)
         </dd>
-        <dt>
-            @Html.DisplayNameFor(model => model.ConcurrencyStamp)
-        </dt>
-        <dd>
-            @Html.DisplayFor(model => model.ConcurrencyStamp)
-        </dd>
-    </dl>
+
+        @if (this.User.IsInRole("Access Manager"))
+        {
+            <dt>
+                @Html.DisplayNameFor(model => model.ConcurrencyStamp)
+            </dt>
+            <dd>
+                @Html.DisplayFor(model => model.ConcurrencyStamp)
+            </dd>
+        }
+        </dl>
 </div>
 <div>
     <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a> |

@@ -8,7 +8,9 @@ namespace IdentityServer
 {
     public static class Config
     {
-        public static string AdminRoleName = "Access Manager";
+        public const string AdminRoleName = "Access Manager";
+        public static string AdminRoleId { get; set; }
+
         // scopes define the resources in your system
         public static IEnumerable<IdentityResource> GetIdentityResources()
         { 
@@ -51,10 +53,9 @@ namespace IdentityServer
 
                     ClientSecrets =
                     {
-                        new Secret("secret".Sha256())
+                        new Secret("secret".Sha256()) //"My co-workers remove eyeballs from cute mammals for a living"
                     },
-                    AllowedScopes = AnnotationScopes
-                    
+                    AllowedScopes = AnnotationScopes 
                 },
 
                 // resource owner password grant client
@@ -68,8 +69,7 @@ namespace IdentityServer
                         new Secret("secret".Sha256())
                     },
                     AllowedScopes = AnnotationScopes
-
-},
+                },
 
                 // OpenID Connect hybrid flow and client credentials client (MVC)
                 new Client

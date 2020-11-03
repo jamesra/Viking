@@ -30,10 +30,10 @@
 
         </dd>
         <dt>
-            @Html.DisplayNameFor(model => model.ShortName)
+            @Html.DisplayNameFor(model => model.Description)
         </dt>
         <dd>
-            @Html.DisplayFor(model => model.ShortName)
+            @Html.DisplayFor(model => model.Description)
         </dd>
         <dt>
             @Html.DisplayNameFor(model => Model.Users)
@@ -47,7 +47,6 @@
                             @Html.DisplayFor(x => Model.GroupAssignments.ElementAt(i).User.UserName)
                         </td>
                     </tr>
-
                 }
             </table>
         </dd>
@@ -60,7 +59,6 @@
                             @Html.DisplayFor(x => Model.Children.ElementAt(i).Name)
                         </td>
                     </tr>
-
                 }
             </table>
         </dd>

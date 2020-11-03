@@ -1,11 +1,14 @@
 ﻿@model IEnumerable<IdentityServer.Models.UserViewModels.UserRolesViewModel>
 
 @{
-    ViewData["Title"] = "View";
+    ViewData["Title"] = "Roles";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <h2>User Role Assignments</h2>
+<p>Users can be associated with any number of the roles listed below.  Role membership is used by the web service to determine which functions a user can perform.
+   Roles currently apply to all volumes.  However for finer grain control an additional test for group membership may be added in the future.</p>
+
 
 <table class="table">
     <thead>
@@ -31,7 +34,6 @@
     <tbody>
         @foreach (var item in Model)
         {
-
             <tr>
                 @if (User.IsInRole("Access Manager"))
                 {

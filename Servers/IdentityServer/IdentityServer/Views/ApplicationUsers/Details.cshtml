@@ -36,19 +36,19 @@
             @Html.DisplayFor(model => model.NormalizedUserName)
         </dd>
         <dt>
-            @Html.DisplayNameFor(model => model.Organizations)
+            @Html.DisplayNameFor(model => model.Groups)
         </dt>
         <dd>
             <a asp-action="EditOrganizations" asp-route-id="@Model.Id">Edit</a>
             <table>
-                @foreach (var org in Model.Organizations)
-            {
-                <tr>
-                    <td>
-                        @org.Name;
-                    </td>
-                </tr>
-        }
+                @foreach (var org in Model.Groups)
+                {
+                    <tr>
+                        <td>
+                            @org.Name;
+                        </td>
+                    </tr>
+                }
             </table>
         </dd>
         <dt>
@@ -69,12 +69,15 @@
         <dd>
             @Html.DisplayFor(model => model.EmailConfirmed)
         </dd>
-        <dt>
-            @Html.DisplayNameFor(model => model.PasswordHash)
-        </dt>
-        <dd>
-            @Html.DisplayFor(model => model.PasswordHash)
-        </dd>
+        @if (this.User.IsInRole("Access Manager"))
+        {
+            <dt>
+                @Html.DisplayNameFor(model => model.PasswordHash)
+            </dt>
+            <dd>
+                @Html.DisplayFor(model => model.PasswordHash)
+            </dd>
+            <!--
         <dt>
             @Html.DisplayNameFor(model => model.SecurityStamp)
         </dt>
@@ -84,9 +87,13 @@
         <dt>
             @Html.DisplayNameFor(model => model.ConcurrencyStamp)
         </dt>
-        <dd>
-            @Html.DisplayFor(model => model.ConcurrencyStamp)
-        </dd>
+        -->
+
+            <dd>
+                @Html.DisplayFor(model => model.ConcurrencyStamp)
+            </dd>
+        }
+        
         <dt>
             @Html.DisplayNameFor(model => model.PhoneNumber)
         </dt>

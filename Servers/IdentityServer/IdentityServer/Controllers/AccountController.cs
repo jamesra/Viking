@@ -15,6 +15,7 @@ using IdentityServer.Models.AccountViewModels;
 using IdentityServer.Services;
 using IdentityServer.Data;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 
 namespace IdentityServer.Controllers
 {
@@ -27,7 +28,7 @@ namespace IdentityServer.Controllers
         private readonly IEmailSender _emailSender;
         private readonly ILogger _logger;
         private readonly ApplicationDbContext _context;
-        private readonly IHostingEnvironment _env;
+        private readonly Microsoft.AspNetCore.Hosting.IWebHostEnvironment _env;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
@@ -35,7 +36,7 @@ namespace IdentityServer.Controllers
             IEmailSender emailSender,
             ApplicationDbContext context,
             ILogger<AccountController> logger,
-            IHostingEnvironment env)
+            IWebHostEnvironment env)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -227,11 +228,15 @@ namespace IdentityServer.Controllers
             ViewData["ReturnUrl"] = returnUrl;
             if (ModelState.IsValid)
             {
+                bool firstUser = _userManager.Users.Any() == false; 
                 var user = new ApplicationUser { UserName = model.Username, Email = model.Email, GivenName = model.GivenName, FamilyName = model.FamilyName};
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User created a new account with password.");
+
+                    if (firstUser)
+                        await _userManager.AddToRoleAsync(user, Config.AdminRoleName);
 
                     try
                     {
@@ -245,6 +250,7 @@ namespace IdentityServer.Controllers
                     catch (System.Net.Mail.SmtpException e)
                     {
                         _logger.LogError("SMTP Error sending confirmation E-mail.\n" + e.ToString());
+                        AddErrors(IdentityResult.Failed( new IdentityError() { Description = "SMTP server could not send confirmation E-mail", Code = "500" } ));
                     }
 
                     await _signInManager.SignInAsync(user, isPersistent: false);

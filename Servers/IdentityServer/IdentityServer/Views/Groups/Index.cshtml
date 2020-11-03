@@ -1,11 +1,12 @@
 ﻿@model IEnumerable<IdentityServer.Models.Group>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Groups";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Index</h2>
+<h2>Groups</h2>
+<p>Users can be associated with any number of the groups listed below.  The meaning of group membership is arbitrary.  The description for a group should indicate its purpose.</p>
 
 <p>
     <a asp-action="Create">Create New</a>
@@ -16,8 +17,11 @@
                 <th>
                     @Html.DisplayNameFor(model => model.Name)
                 </th>
+            <th>
+                Number of Users:
+            </th>
                 <th>
-                    @Html.DisplayNameFor(model => model.ShortName)
+                    @Html.DisplayNameFor(model => model.Description)
                 </th>
             <th>
 
@@ -31,7 +35,10 @@
                 @Html.DisplayFor(modelItem => item.Name)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.ShortName)
+                @Html.DisplayFor(modelItem => item.UsersCount)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Description)
             </td>
             <td>
                 <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |

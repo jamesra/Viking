@@ -27,6 +27,10 @@ namespace IdentityServer.Data
             builder.Entity<GroupAssignment>().HasKey(oa => new { oa.GroupId, oa.UserId});
             builder.Entity<GroupAssignment>().HasOne(oa => oa.Group).WithMany("GroupAssignments").HasForeignKey(oa => oa.GroupId);
             builder.Entity<GroupAssignment>().HasOne(oa => oa.User).WithMany("GroupAssignments").HasForeignKey(oa => oa.UserId);
+
+            builder.Entity<ApplicationRole>().HasData(
+                new ApplicationRole() { Name = Config.AdminRoleName, NormalizedName = Config.AdminRoleName });
+
         }
 
         public DbSet<IdentityServer.Models.ApplicationRole> ApplicationRole { get; set; }

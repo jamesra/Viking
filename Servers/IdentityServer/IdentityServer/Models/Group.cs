@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityServer.Models
 {
@@ -21,22 +22,29 @@ namespace IdentityServer.Models
         [Display(Name = "ParentID", Description = "Optional parent group ID")]
         public long? ParentID { get; set; }
 
+        /// <summary>
+        /// null if there is no parent
+        /// </summary>
         [ForeignKey("ParentID")]
         public Group Parent { get; set; }
 
         [Required(AllowEmptyStrings = false)]
-        [MaxLength(450)]
-        [Display(Name = "Name", Description ="Name of the organization")]
+        [MaxLength(128)]
+        [Remote(action: "VerifyUniqueGroupName", controller: "Groups")]
+        [Display(Name = "Name", Description ="Name of the group")]
         public string Name { get; set; }
 
-        [Display(Name = "Short Unique Identifier", Description = "A unique short identifier for the organization")]
-        [Required(AllowEmptyStrings = false)]
-        [MaxLength(64)]
-        public string ShortName { get; set; }
+        [Display(Name = "Description", Description = "Information about the group")] 
+        [MaxLength(2048)]
+        public string Description { get; set; }
 
         public ICollection<GroupAssignment> GroupAssignments { get; } = new List<GroupAssignment>();
+
         [NotMapped]
         public virtual List<ApplicationUser> Users => GroupAssignments.Select(oa => oa.User).ToList();
+         
+        [NotMapped]
+        public virtual int UsersCount { get { return GroupAssignments.Select(oa => oa.User).Count(); } }
 
         public ICollection<Group> Children { get; } = new List<Group>();
     }

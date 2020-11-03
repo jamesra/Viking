@@ -122,7 +122,7 @@ namespace IdentityServer.Controllers
                 throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             }
 
-            UserClaimRequestViewModel claimsRequest = user.CreateUserClaimsRequest(_context);
+            UserClaimRequestViewModel claimsRequest = await user.CreateUserClaimsRequest(_context);
 
             return View(claimsRequest);
         }
@@ -140,7 +140,7 @@ namespace IdentityServer.Controllers
 
             var AdminUsers = _context.GetAdminUsers();
 
-            UserClaimRequestViewModel ExistingClaims = User.CreateUserClaimsRequest(_context);
+            UserClaimRequestViewModel ExistingClaims = await User.CreateUserClaimsRequest(_context);
 
             var ExistingOrganziationClaims = ExistingClaims.AvailableOrganizations.Where(o => o.Selected).ToList();
             var ExistingRoleClaims = ExistingClaims.AvailableRoles.Where(r => r.Selected).ToList();
@@ -155,7 +155,7 @@ namespace IdentityServer.Controllers
             string OrgMessage = "";
             string NewOrgMessage = "";
 
-            if (Roles.Any(r => r.Selected))
+            if (Roles != null && Roles.Any(r => r.Selected))
             {
                 RoleMessage = "Roles:\n";
                 foreach (var role in Roles.Where(r => r.Selected && !ExistingRoleClaims.Any(erc => erc.Id == r.Id)))
@@ -164,7 +164,7 @@ namespace IdentityServer.Controllers
                 }
             }
 
-            if(Organizations.Any(o => o.Selected))
+            if(Organizations != null && Organizations.Any(o => o.Selected))
             {
                 OrgMessage = "Organizations:\n";
                 foreach (var org in Organizations.Where(o => o.Selected && !ExistingOrganziationClaims.Any(oa => oa.Id == o.Id)))

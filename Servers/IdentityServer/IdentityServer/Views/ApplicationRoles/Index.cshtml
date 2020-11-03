@@ -1,11 +1,16 @@
 ﻿@model IEnumerable<IdentityServer.Models.ApplicationRole>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Roles";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Index</h2>
+<h2>Roles</h2>
+
+@if (this.User.IsInRole("Access Manager"))
+{
+    <p>There is no benefit to adding additional roles without also recompiling the web services code to provide the roles meaning.  Similarly, renaming an existing role is almost certain to break something.</p>
+}
 
 <p>
     <a asp-action="Create">Create New</a>
@@ -19,9 +24,13 @@
             <th>
                 @Html.DisplayNameFor(model => model.NormalizedName)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.ConcurrencyStamp)
-            </th>
+            @if (this.User.IsInRole("Access Manager"))
+            {
+                <th>
+
+                    @Html.DisplayNameFor(model => model.ConcurrencyStamp)
+                </th>
+            }
             <th></th>
         </tr>
     </thead>
@@ -35,9 +44,12 @@
                 <td>
                     @Html.DisplayFor(modelItem => item.NormalizedName)
                 </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.ConcurrencyStamp)
-                </td>
+                @if (this.User.IsInRole("Access Manager"))
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.ConcurrencyStamp)
+                    </td>
+                }
                 <td>
                     @if (this.User.IsInRole("Access Manager"))
                     {

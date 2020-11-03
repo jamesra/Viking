@@ -68,6 +68,9 @@ namespace IdentityServer.Controllers
         {
             if (ModelState.IsValid)
             {
+                if (_context.Roles.Any(r => r.Name == applicationRole.Name))
+                    return Json($"A role named {applicationRole.Name} already exists");
+
                 _context.Add(applicationRole);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));

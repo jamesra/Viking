@@ -1,4 +1,4 @@
-﻿@model IdentityServer.Models.UserViewModels.UserOrganizationsViewModel
+﻿@model IdentityServer.Models.UserViewModels.UserGroupsViewModel
 
 @{
     ViewData["Title"] = "EditOrganizations";
@@ -16,7 +16,7 @@
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="Name" />
             <div class="form-group">
-                @Html.Partial("OrganizationSelectedChecklist", Model.Organizations)
+                @Html.Partial("~/Views/Shared/GroupSelectedChecklist", Model.Organizations)
             </div>
             <div class="form-group">
                 <input type="submit" value="Save" class="btn btn-default" />

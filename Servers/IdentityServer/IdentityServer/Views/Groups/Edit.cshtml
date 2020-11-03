@@ -20,13 +20,17 @@
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="ShortName" class="control-label"></label>
-                <input asp-for="ShortName" class="form-control" />
-                <span asp-validation-for="ShortName" class="text-danger"></span>
+                <label asp-for="Description" class="control-label"></label>
+                <input asp-for="Description" class="form-control" />
+                <span asp-validation-for="Description" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="UserList" class="control-label"></label>
-                @Html.Partial("UserSelectedList", Model.UserList)
+                @Html.Partial("~/Views/Shared/UserSelectedList.cshtml", Model.UserList)
+            </div>
+            <div class="form-group">
+                <label asp-for="Children" class="control-label"></label>
+                @Html.Partial("~/Views/Shared/GroupChildrenTreeView.cshtml", Model.Children)
             </div>
             <div class="form-group">
                 <input type="submit" value="Save" class="btn btn-default" />
