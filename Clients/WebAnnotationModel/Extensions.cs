@@ -9,6 +9,7 @@ using System.Data.SqlTypes;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using Annotation.Interfaces;
+using System.ComponentModel;
 
 namespace WebAnnotationModel
 {
@@ -38,6 +39,36 @@ namespace WebAnnotationModel
             }
 
             throw new ArgumentException(string.Format("Unknown location type {0}", type));
+        }
+         
+        /// <summary>
+        /// A helper function to raise events on the UI thread if needed. 
+        /// From: https://stackoverflow.com/questions/1698889/raise-events-in-net-on-the-main-ui-thread
+        /// </summary>
+        /// <param name="theEvent"></param>
+        /// <param name="args"></param>
+        public static void RaiseEventOnUIThread(this Delegate theEvent, object[] args)
+        {
+            if (theEvent == null)
+                return; 
+
+            foreach (Delegate d in theEvent.GetInvocationList())
+            {
+                ISynchronizeInvoke syncer = d.Target as ISynchronizeInvoke;
+                if (syncer == null)
+                {
+                    d.DynamicInvoke(args);
+                }
+                else
+                {
+                    syncer.BeginInvoke(d, args);  // cleanup omitted
+                }
+            }
+        }
+
+        public static void RaiseEventOnUIThread(this PropertyChangedEventHandler theEvent, PropertyChangedEventArgs args)
+        {
+            theEvent.RaiseEventOnUIThread(new object[] { args });
         }
     }
 
