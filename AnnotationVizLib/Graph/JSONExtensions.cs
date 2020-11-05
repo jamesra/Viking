@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using Annotation.Interfaces;
 using Newtonsoft.Json.Linq;
-using Annotation.Interfaces;
+using System.Collections.Generic;
 
 
 namespace AnnotationVizLib
@@ -34,7 +29,7 @@ namespace AnnotationVizLib
         public static JArray ToJArray(this IEnumerable<IStructure> structs)
         {
             JArray arr = new JArray();
-            foreach(IStructure s in structs)
+            foreach (IStructure s in structs)
             {
                 JObject obj = s.ToJObject();
                 arr.Add(obj);
@@ -51,8 +46,8 @@ namespace AnnotationVizLib
             obj.ParentID = s.ParentID;
             obj.Tags = s.TagsXML;
             obj.TypeID = s.TypeID;
-            
+
             return obj;
         }
-    } 
+    }
 }

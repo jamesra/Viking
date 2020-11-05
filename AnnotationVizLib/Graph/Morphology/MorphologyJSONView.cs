@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Web;
+using System.Text;
 using System.Web.Script.Serialization;
 
 namespace AnnotationVizLib
@@ -16,7 +11,7 @@ namespace AnnotationVizLib
         public ulong StructureID;
         public List<object> Nodes = new List<object>();
         public List<object> Edges = new List<object>();
-        public List<JSONStructureMorphology> Children = new List<JSONStructureMorphology>(); 
+        public List<JSONStructureMorphology> Children = new List<JSONStructureMorphology>();
     }
 
     public class MorphologyJSONView
@@ -32,7 +27,7 @@ namespace AnnotationVizLib
         {
             MorphologyJSONView JSONView = new MorphologyJSONView();
 
-            foreach(MorphologyGraph g in graph.Subgraphs.Values)
+            foreach (MorphologyGraph g in graph.Subgraphs.Values)
             {
                 JSONView.StructureMorphologies.Add(MorphologyGraphToJSONStructureMorphology(g));
             }

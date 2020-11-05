@@ -1,21 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using Viking.Common;
-using System.Diagnostics; 
 
 namespace Viking.UI.Forms
 {
-   
+
 
     public partial class PropertySheetForm : Form
     {
-        
+
         public System.Windows.Forms.DialogResult Result = DialogResult.Cancel;
 
         protected PropertySheetForm(IUIObjectBasic Object)
@@ -24,12 +19,12 @@ namespace Viking.UI.Forms
             this.Text = Object.ToString() + " Properties";
 
             //BUG: This was preventing the form from displaying, so I removed it temporarily.  Will prevent property pages from closing on app exit
-//            this.MdiParent = UI.State.Appwindow;
+            //            this.MdiParent = UI.State.Appwindow;
 
             InitializeComponent();
         }
 
-#region Variables
+        #region Variables
 
         public IUIObjectBasic Object;
 
@@ -37,11 +32,11 @@ namespace Viking.UI.Forms
         /// Mapping of DBObject.Row instances to property sheets. Used so we only display one property sheet
         /// for any given object
         /// </summary>
-        static private  Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = new  Dictionary<IUIObjectBasic, PropertySheetForm>();
-     
-#endregion
+        static private Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = new Dictionary<IUIObjectBasic, PropertySheetForm>();
 
-#region Static Methods
+        #endregion
+
+        #region Static Methods
 
         public static PropertySheetForm Show(IUIObjectBasic Object)
         {
@@ -96,9 +91,9 @@ namespace Viking.UI.Forms
             }
         }
 
-#endregion
+        #endregion
 
-#region Control Events
+        #region Control Events
 
         private void PropertySheetForm_Load(object sender, System.EventArgs e)
         {
@@ -147,9 +142,9 @@ namespace Viking.UI.Forms
             this.Close();
         }
 
-#endregion
+        #endregion
 
-#region Methods
+        #region Methods
 
         void LayoutPropertySheetForm()
         {
@@ -175,7 +170,7 @@ namespace Viking.UI.Forms
             }
         }
 
-#endregion
+        #endregion
 
         /// <summary>
         /// Removes the object we were showing from the property list
@@ -185,13 +180,13 @@ namespace Viking.UI.Forms
         private void PropertySheetForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             //            if (Object.Deleted == false)
-//            {
-                if (ShownProperties.ContainsKey(Object as IUIObject))
-                    ShownProperties.Remove(Object as IUIObject);
-//            }
+            //            {
+            if (ShownProperties.ContainsKey(Object as IUIObject))
+                ShownProperties.Remove(Object as IUIObject);
+            //            }
 
             return;
         }
-        
+
     }
 }

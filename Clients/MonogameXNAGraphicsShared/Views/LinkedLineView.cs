@@ -61,7 +61,7 @@ namespace VikingXNAGraphics
                 GridVector2 intersectionPoint;
                 return !LineA.Intersects(LineB, out intersectionPoint);
             }
-            catch(ArgumentException e)
+            catch(ArgumentException)
             {
                 //This occurs when the source and target points are identical
                 return false; 
@@ -126,11 +126,12 @@ namespace VikingXNAGraphics
             //Draw triangles from each vertex on source to each vertex on target
             List<int> indicies = new List<int>(source.Length * 3);
             List<GridVector2> verticies = new List<GridVector2>((source.Length + target.Length) * 3);
-            int iTarget = 0;
+            //int iTarget = 0;
+            /*
             for(int iSource = 0; iSource < source.Length; iSource++)
             {
                 
-            }
+            }*/
         }
     }
 }

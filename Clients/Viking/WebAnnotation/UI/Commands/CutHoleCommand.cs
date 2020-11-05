@@ -1,21 +1,7 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using Geometry;
-using WebAnnotation.View;
-using Viking.VolumeModel;
-using SqlGeometryUtils;
-using VikingXNAGraphics;
-using System.Windows.Forms;
-using System.Diagnostics;
-using WebAnnotation;
 using System.Collections.ObjectModel;
-using VikingXNAWinForms;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {

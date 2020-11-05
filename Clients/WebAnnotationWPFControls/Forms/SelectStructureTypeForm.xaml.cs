@@ -51,7 +51,8 @@ namespace WebAnnotation.UI.Forms
 
         public SelectStructureTypeForm( )
         { 
-            InitializeComponent(); 
+            InitializeComponent();
+            this.MaxHeight = System.Windows.SystemParameters.FullPrimaryScreenHeight / 2;
         }
 
         private void StructureTypeTreeItem_Click(object sender, RoutedEventArgs e)

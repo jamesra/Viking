@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using System.IO;
-using System.Diagnostics;
 
 namespace Geometry.Transforms
 {
     public static class Serialization
-    { 
+    {
         public static IContinuousTransform LoadOrCreateContinuousTransform(string SerializerCacheFullPath, IDiscreteTransform discreteTransform)
         {
             if (discreteTransform as IContinuousTransform != null)
@@ -43,7 +38,7 @@ namespace Geometry.Transforms
                 {
                     var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
                     object trans = binaryFormatter.Deserialize(binFile);
-                    return trans as ITransform; 
+                    return trans as ITransform;
 
                 }
             }

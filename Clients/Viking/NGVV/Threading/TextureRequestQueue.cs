@@ -1,13 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Collections.Concurrent;
-using System.Threading;
-using Viking.Common;
-using Microsoft.Xna.Framework.Graphics;
-
-namespace Viking.Threading
+﻿namespace Viking.Threading
 {
     /*
     class TextureEntry : CacheEntry<Texture2D>

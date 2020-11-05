@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
@@ -89,12 +86,12 @@ namespace Geometry.Meshing
 
         public Face(int A, int B, int C)
         {
-            if(A == B || A == C || B == C)
+            if (A == B || A == C || B == C)
             {
                 throw new ArgumentException("Vertex indicies must be unique");
             }
 
-            _iVerts = (new int[] { A, B, C}).ToImmutableArray();
+            _iVerts = (new int[] { A, B, C }).ToImmutableArray();
             _Edges = CalculateEdges().ToImmutableArray();
 
             SortedSet<int> s = new SortedSet<int>(_iVerts);
@@ -108,7 +105,7 @@ namespace Geometry.Meshing
 
         public Face(int A, int B, int C, int D)
         {
-            if (A == B || A == C || A == D || 
+            if (A == B || A == C || A == D ||
                 B == C || B == D ||
                 C == D)
             {
@@ -146,7 +143,7 @@ namespace Geometry.Meshing
         {
             _iVerts = vertex_indicies.ToImmutableArray();
             SortedSet<int> s = new SortedSet<int>(iVerts);
-            if(s.Count != iVerts.Length)
+            if (s.Count != iVerts.Length)
             {
                 throw new ArgumentException("Vertex indicies must be unique");
             }
@@ -202,7 +199,7 @@ namespace Geometry.Meshing
         public static bool operator ==(Face A, Face B)
         {
             if (object.ReferenceEquals(A, B))
-                return true; 
+                return true;
 
             return A.Equals(B);
         }
@@ -238,7 +235,7 @@ namespace Geometry.Meshing
                 return iVerts.Length == 4;
             }
         }
-          
+
         public int CompareTo(Face other)
         {
             return CompareTo(other as IFace);
@@ -267,7 +264,7 @@ namespace Geometry.Meshing
         {
             return Equals(other as IFace);
         }
-         
+
         /// <summary>
         /// Equals ignores clockwise or counter-clockwise at this time
         /// </summary>
@@ -283,7 +280,7 @@ namespace Geometry.Meshing
             if (other.iVerts.Length != this.iVerts.Length)
                 return false;
 
-           ImmutableArray<int> B = other.sortedVerts;
+            ImmutableArray<int> B = other.sortedVerts;
 
             for (int i = 0; i < iVerts.Length; i++)
             {

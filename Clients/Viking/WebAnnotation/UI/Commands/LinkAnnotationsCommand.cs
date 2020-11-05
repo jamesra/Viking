@@ -1,22 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-
-using System.Diagnostics;
-using WebAnnotation;
+﻿using Annotation.Interfaces;
 using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using RoundLineCode;
-using WebAnnotation.View;
-using WebAnnotation.ViewModel;
-using WebAnnotationModel; 
-using VikingXNAGraphics;
 using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows.Forms;
+using VikingXNAGraphics;
 using VikingXNAWinForms;
+using WebAnnotation.ViewModel;
+using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -52,7 +48,7 @@ namespace WebAnnotation.UI.Commands
 
         private static GridVector2 GetOriginForLocation(LocationObj obj)
         {
-            switch(obj.TypeCode)
+            switch (obj.TypeCode)
             {
                 case LocationType.CIRCLE:
                     return obj.VolumePosition;
@@ -73,9 +69,9 @@ namespace WebAnnotation.UI.Commands
             return array[i];
         }
 
-        public static IViewLocation FindBestLinkCandidate(SectionAnnotationsView sectionView,  GridVector2 WorldPos, LocationObj OriginObj)
+        public static IViewLocation FindBestLinkCandidate(SectionAnnotationsView sectionView, GridVector2 WorldPos, LocationObj OriginObj)
         {
-            List<HitTestResult> listHitTestResults = sectionView.GetIntersectedAnnotations(WorldPos).Where(ht => ht.obj != null).ToList();
+            List<HitTestResult> listHitTestResults = sectionView.GetAnnotations(WorldPos).Where(ht => ht.obj != null).ToList();
             listHitTestResults = listHitTestResults.ExpandICanvasViewContainers(WorldPos);
 
             //Find locations that are not equal to our origin location
@@ -110,7 +106,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-    
+
             //Find if we are close enough to a location to "snap" the line to the target
             double distance;
 
@@ -131,7 +127,7 @@ namespace WebAnnotation.UI.Commands
         protected LocationObj TrySetTarget(LocationObj nearest_target)
         {
             if (nearest_target == null)
-                return null; 
+                return null;
 
             if (LocationLinkView.IsValidLocationLinkTarget(nearest_target, OriginObj))
                 return nearest_target;
@@ -139,7 +135,7 @@ namespace WebAnnotation.UI.Commands
             if (StructureLinkViewModelBase.IsValidStructureLinkTarget(nearest_target, OriginObj))
                 return nearest_target;
 
-            return nearest_target; 
+            return nearest_target;
         }
 
         protected override void OnMouseUp(object sender, MouseEventArgs e)
@@ -148,7 +144,7 @@ namespace WebAnnotation.UI.Commands
             if (e.Button.Left())
             {
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-                
+
                 //Find if we are close enough to a location to "snap" the line to the target
                 IViewLocation nearest = FindBestLinkCandidate(WorldPos);
                 NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
@@ -157,11 +153,11 @@ namespace WebAnnotation.UI.Commands
 
                 if (NearestTarget == null)
                 {
-                    this.Deactivated = true; 
-                    return; 
+                    this.Deactivated = true;
+                    return;
                 }
 
-                if(LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
+                if (LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
                 {
                     try
                     {
@@ -176,7 +172,7 @@ namespace WebAnnotation.UI.Commands
                         this.Deactivated = true;
                     }
                 }
-                else if(StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
+                else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
                 {
                     try
                     {
@@ -198,7 +194,7 @@ namespace WebAnnotation.UI.Commands
                     //sectionAnnotations.AddStructureLinks(NearestTarget.Parent);
                 }
 
-                this.Execute(); 
+                this.Execute();
             }
 
             base.OnMouseDown(sender, e);
@@ -253,7 +249,7 @@ namespace WebAnnotation.UI.Commands
             try
             {
             }
-            catch (ArgumentOutOfRangeException )
+            catch (ArgumentOutOfRangeException)
             {
                 MessageBox.Show("The chosen point is outside mappable volume space, location not created", "Recoverable Error");
             }
@@ -293,7 +289,7 @@ namespace WebAnnotation.UI.Commands
         {
             if (this.oldMouse == null)
                 return;
-            
+
             GridVector2 OriginPosition = GetOriginForLocation(OriginObj);
 
             Vector3 target;
@@ -301,7 +297,7 @@ namespace WebAnnotation.UI.Commands
             {
                 //Snap the line to a nearby target if it exists
                 GridVector2 targetPos = GetOriginForLocation(NearestTarget);
-                
+
                 target = new Vector3((float)targetPos.X, (float)targetPos.Y, 0f);
             }
             else
@@ -317,20 +313,20 @@ namespace WebAnnotation.UI.Commands
 
             if (NearestTarget != null)
             {
-                if(LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
+                if (LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
                 {
                     lineColor = validTarget;
                     lineStyle = LocationLinkStyle;
                     lineRadius = LineRadiusForLocationLink();
                     UseLumaLineManager = true;
                 }
-                else if(StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
+                else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
                 {
                     lineColor = validTarget;
                     lineStyle = StructureLinkStyle;
                     lineRadius = LineRadiusForStructureLink();
                     UseLumaLineManager = false;
-                } 
+                }
                 else
                 {
                     lineColor = invalidTarget;
@@ -344,7 +340,7 @@ namespace WebAnnotation.UI.Commands
                                                    (float)OriginPosition.Y,
                                                    (float)target.X,
                                                    (float)target.Y);
-               
+
             float Time = (float)TimeSpan.FromTicks(DateTime.Now.Ticks - DateTime.Today.Ticks).TotalSeconds;
             RoundLineManager lineManager = UseLumaLineManager ? Parent.LumaOverlayLineManager : Parent.LineManager;
             lineColor = UseLumaLineManager ? lineColor.ConvertToHSL() : lineColor;

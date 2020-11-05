@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Geometry;
+﻿using Geometry;
 using Geometry.Transforms;
+using System;
 using System.Diagnostics;
-using System.Web;
 using System.IO;
+using System.Linq;
 using System.Net;
 
 namespace Viking.VolumeModel
@@ -24,19 +21,19 @@ namespace Viking.VolumeModel
 
         public override ITransform[] TileTransforms
         {
-            get 
+            get
             {
                 if (HasBeenLoaded == false)
                     LoadTransform();
 
                 if (_TileTransforms == null)
-                    return new ITransform[0]; 
+                    return new ITransform[0];
 
                 return _TileTransforms;
             }
         }
 
-        protected string RootPath; 
+        protected string RootPath;
         /// <summary>
         /// Path to the .mosaic file containing the transforms
         /// </summary>
@@ -45,13 +42,14 @@ namespace Viking.VolumeModel
 
         public override string CachedTransformsFileName
         {
-            get {
+            get
+            {
                 string mosaicName = System.IO.Path.GetFileNameWithoutExtension(MosaicPath);
                 return System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, Section.Number.ToString("D4") + "_" + mosaicName + ".cache");
             }
         }
 
-        
+
 
         public TilesToSectionMapping(Section section, string name, string rootPath, string mosaicPath, string tilePrefix, string tilePostfix) :
             base(section, name, tilePrefix, tilePostfix)
@@ -62,14 +60,14 @@ namespace Viking.VolumeModel
 
         public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
         {
-            transformedP = P; 
-            return true; 
+            transformedP = P;
+            return true;
         }
 
         public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
         {
-            transformedP = P; 
-            return true; 
+            transformedP = P;
+            return true;
         }
 
         public override GridVector2[] VolumeToSection(GridVector2[] P)
@@ -116,7 +114,7 @@ namespace Viking.VolumeModel
             lock (LockObj)
             {
                 HasBeenLoaded = false;
-                _TileTransforms = null; 
+                _TileTransforms = null;
             }
         }
 
@@ -160,7 +158,7 @@ namespace Viking.VolumeModel
                 DateTime serverlastModified = DateTime.MaxValue;
                 try
                 {
-                    serverlastModified = ServerSideLastModifed(mosaicURI); 
+                    serverlastModified = ServerSideLastModifed(mosaicURI);
 
                     //Do we need to delete a stale version of the cache file?
                     if (System.IO.File.Exists(this.CachedTransformsFileName))
@@ -172,7 +170,7 @@ namespace Viking.VolumeModel
                             {
                                 System.IO.File.Delete(this.CachedTransformsFileName);
                             }
-                            catch(System.IO.IOException e)
+                            catch (System.IO.IOException e)
                             {
                                 Trace.WriteLine("Failed to delete stale cache file: " + this.CachedTransformsFileName);
                             }
@@ -229,10 +227,10 @@ namespace Viking.VolumeModel
                 {
                     Trace.WriteLine("Could not load transform: " + mosaicURI);
                     Trace.WriteLine(webException.ToString());
-                }  
+                }
             }
         }
-        
+
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {
             return base.VisibleTiles(VisibleBounds, null, DownSample);

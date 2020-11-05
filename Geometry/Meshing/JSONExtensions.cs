@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using Geometry.JSON;
-using Newtonsoft.Json;
+﻿using Geometry.JSON;
 using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace Geometry.Meshing
 {
@@ -33,6 +27,6 @@ namespace Geometry.Meshing
             dynamic jObj = new JObject();
             jObj.iVerts = new JArray(f.iVerts.ToArray());
             return jObj;
-        } 
+        }
     }
 }

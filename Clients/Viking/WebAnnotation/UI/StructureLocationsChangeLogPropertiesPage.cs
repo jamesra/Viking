@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
-using System.Windows.Forms;
-using System.Linq;
-using Viking.Common;
 using System.Diagnostics;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -22,11 +16,11 @@ namespace WebAnnotation.UI
 
         BindingList<WebAnnotationModel.ObjAttribute> ListTags = null;
 
-        bool listLoaded = false; 
+        bool listLoaded = false;
 
         public StructureLocationsChangeLogPropertiesPage()
         {
-            
+
             InitializeComponent();
             this.Title = "Location Change Log";
         }
@@ -52,10 +46,10 @@ namespace WebAnnotation.UI
                     listLocationViews.Add(new Location_PropertyPageViewModel(loc.ID));
                 }
 
-                listLocations.SetLocations(listLocationViews.ToArray()); 
+                listLocations.SetLocations(listLocationViews.ToArray());
 
                 this.UseWaitCursor = false;
             }
         }
-    } 
+    }
 }

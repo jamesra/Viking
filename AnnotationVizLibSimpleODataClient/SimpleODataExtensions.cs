@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
-using Simple.OData.Client;
-using System.Diagnostics;
 using UnitsAndScale;
 
 namespace AnnotationVizLib.SimpleOData
@@ -33,10 +30,10 @@ namespace AnnotationVizLib.SimpleOData
             StringBuilder sb = new StringBuilder();
             sb.Append('[');
             bool FirstEntry = true;
-            foreach(long ID in IDs)
+            foreach (long ID in IDs)
             {
-                if(FirstEntry)
-                { 
+                if (FirstEntry)
+                {
                     sb.AppendFormat("{0}", ID);
                     FirstEntry = false;
                 }
@@ -45,7 +42,7 @@ namespace AnnotationVizLib.SimpleOData
                     sb.AppendFormat(",{0}", ID);
                 }
             }
-            
+
             sb.Append(']');
 
             return sb.ToString();

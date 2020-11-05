@@ -7,16 +7,16 @@
              xmlns:local="clr-namespace:WebAnnotation.UI.Controls"
              xmlns:mock="clr-namespace:WebAnnotation.WPF.MockData"
              xmlns:model="clr-namespace:WebAnnotationModel;assembly=WebAnnotationModel"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800"
-             Name="_this" 
-             d:DataContext="{d:DesignData /SampleData/MockDataSampleData.xaml}"
+             mc:Ignorable="d"
+             d:DesignHeight="200" d:DesignWidth="300"
+             Name="_this"
+             d:DataContext="{d:DesignData /SampleData/MockStructureTypeCollection.xaml}"
              >
     <UserControl.Resources>
         <ItemsPanelTemplate x:Key="ItemsPanelForHorizontalItems">
                 <StackPanel Orientation="Horizontal"/>
         </ItemsPanelTemplate>
-        <conv:StructureIDsToStructureObjsConverter x:Key="StructureIDsToStructureObjsConverter"/>
+        <conv:StructureTypeIDsToStructureTypeObjsConverter x:Key="StructureIDsToStructureObjsConverter"/>
         <conv:IntToBrushConverter x:Key="IntToBrushConverter"/>
         <HierarchicalDataTemplate x:Key="StructureTypeTemplate"
                               ItemsSource="{Binding Children}"> 

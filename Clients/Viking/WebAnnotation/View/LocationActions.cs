@@ -1,36 +1,77 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using Annotation.Interfaces;
 using Geometry;
-using WebAnnotation.ViewModel;
+using Microsoft.SqlServer.Types;
+using SqlGeometryUtils;
+using System;
+using System.Windows.Forms;
+using Viking.VolumeModel;
+using VikingXNAGraphics;
+using VikingXNAWinForms;
 using WebAnnotation.UI.Commands;
 using WebAnnotationModel;
-using SqlGeometryUtils;
-using VikingXNAGraphics;
-using Viking.VolumeModel;
-using Microsoft.SqlServer.Types;
-using VikingXNAWinForms;
 
-namespace WebAnnotation.View
+namespace WebAnnotation
 {
+    /// <summary>
+    /// Describes the action/command that will occur if the user clicks the mouse at a given position on the screen.
+    /// </summary>
     public enum LocationAction
     {
+        /// <summary>
+        /// No action
+        /// </summary>
         NONE,
-        TRANSLATE, //Move the annotation
-        SCALE,     //Scale the size of the annotation
-        ADJUST,    //Adjust a specific control point
-        ADDCONTROLPOINT, //Add a control point
-        REMOVECONTROLPOINT, //Remove a control point
-        CREATESTRUCTURE, //Create a structure and add the first location for that structure
-        CREATELINK, //Create a link to an adjacent location or structure,
-        CREATELINKEDLOCATION, //Create a new location and link to it
-        CUTHOLE, //Cut a hole from the interior of an annotation
-        REMOVEHOLE, //Remove a hole from the interior of an annotation
-        RETRACEANDREPLACE //Trace a new path from the perimeter of an annotation to another point on the perimeter and replace points in between with the new path
+        /// <summary>
+        /// Move the annotation
+        /// </summary>
+        TRANSLATE,
+        /// <summary>
+        /// Scale the size of the annotation
+        /// </summary>
+        SCALE,
+        /// <summary>
+        /// Adjust a specific control point
+        /// </summary>
+        ADJUST,
+        /// <summary>
+        /// Add a control point
+        /// </summary>
+        ADDCONTROLPOINT,
+        /// <summary>
+        /// Remove a control point
+        /// </summary>
+        REMOVECONTROLPOINT,
+        /// <summary>
+        /// Create a structure and add the first location for that structure
+        /// </summary>
+        CREATESTRUCTURE,
+        /// <summary>
+        /// Create a link to an adjacent location or structure,
+        /// </summary>
+        CREATELINK,
+        /// <summary>
+        /// Create a new location and link to it
+        /// </summary>
+        CREATELINKEDLOCATION,
+        /// <summary>
+        /// Cut a hole from the interior of an annotation
+        /// </summary>
+        CUTHOLE,
+        /// <summary>
+        /// Remove a hole from the interior of an annotation
+        /// </summary>
+        REMOVEHOLE,
+        /// <summary>
+        /// Trace a new path from the perimeter of an annotation to another point on the perimeter and replace points in between with the new path
+        /// </summary>
+        CHANGEBOUNDARY,
+        /// <summary>
+        /// Change the type of shape used to represent the location
+        /// </summary>
+        CHANGETYPE
     }
+
+
 
     /// <summary>
     /// Manage actions available to locations
@@ -39,7 +80,7 @@ namespace WebAnnotation.View
     {
         public static Cursor GetCursor(this LocationAction action)
         {
-            switch(action)
+            switch (action)
             {
                 case LocationAction.NONE:
                     return Cursors.Default;
@@ -59,9 +100,9 @@ namespace WebAnnotation.View
                     return Cursors.Cross;
                 case LocationAction.CUTHOLE:
                     return new Cursor(Viking.Properties.Resources.Scissors2.Handle);
-                case LocationAction.REMOVEHOLE: 
+                case LocationAction.REMOVEHOLE:
                     return new Cursor(Viking.Properties.Resources.PaintBucketFill.Handle);
-                case LocationAction.RETRACEANDREPLACE:
+                case LocationAction.CHANGEBOUNDARY:
                     return Cursors.Cross;
                 default:
                     return Cursors.Default;
@@ -76,13 +117,13 @@ namespace WebAnnotation.View
         /// <param name="loc">The annotation we are creating the command for</param>
         /// <param name="volumePosition">The position in volume space the command should instantiate at.  For example a new annotation command would create the annotation at this point</param>
         /// <returns></returns>
-        public static Viking.UI.Commands.Command CreateCommand(this LocationAction action, 
-                                                               Viking.UI.Controls.SectionViewerControl Parent, 
-                                                               LocationObj loc, 
+        public static Viking.UI.Commands.Command CreateCommand(this LocationAction action,
+                                                               Viking.UI.Controls.SectionViewerControl Parent,
+                                                               LocationObj loc,
                                                                GridVector2 volumePosition)
         {
             Viking.UI.State.SelectedObject = null;
-//            CreateNewLinkedLocationCommand.LastEditedLocation = null; 
+            //            CreateNewLinkedLocationCommand.LastEditedLocation = null; 
 
             switch (loc.TypeCode)
             {
@@ -127,11 +168,11 @@ namespace WebAnnotation.View
                 case LocationAction.SCALE:
                     VolumeCircleCenter = section_mapper.SectionToVolume(loc.Position);
                     return new ResizeCircleCommand(Parent,
-                            System.Drawing.Color.FromArgb(loc.Parent.Type.Color).SetAlpha(0.5f),
+                            System.Drawing.Color.FromArgb((int)loc.Parent.Type.Color).SetAlpha(0.5f),
                             VolumeCircleCenter,
-                            (radius) => 
+                            (radius) =>
                             {
-                                WebAnnotation.View.LocationActions.UpdateCircleLocationCallback(loc, loc.VolumePosition, loc.Position, radius);
+                                WebAnnotation.LocationActions.UpdateCircleLocationCallback(loc, loc.VolumePosition, loc.Position, radius);
                             });
                 case LocationAction.ADJUST:
                     return null;
@@ -141,7 +182,7 @@ namespace WebAnnotation.View
                     return new LinkAnnotationsCommand(Parent, loc);
                 case LocationAction.CREATELINKEDLOCATION:
 
-                    
+
                     return new TranslateCircleLocationCommand(Parent,
                                                                 new GridCircle(volumePosition, loc.Radius),
                                                                 loc.Parent.Type.Color.ToXNAColor(1f),
@@ -158,7 +199,7 @@ namespace WebAnnotation.View
                                                                             VolumeShape,
                                                                             Parent.Section.Number,
                                                                             loc.TypeCode);
-                                                                         
+
                                                                        section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
                                                                        NewMosaicPosition = section_mapper.VolumeToSection(NewVolumePosition);
                                                                        UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
@@ -195,7 +236,7 @@ namespace WebAnnotation.View
                                                              loc.Width.HasValue ? loc.Width.Value : 16.0,
                                                              (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
                 case LocationAction.SCALE:
-                    return null; 
+                    return null;
                 case LocationAction.ADJUST:
                     return new AdjustCurveControlPointCommand(Parent, loc.MosaicShape.ToPoints(),
                                                                       loc.Parent.Type.Color.ToXNAColor(0.5f),
@@ -205,7 +246,7 @@ namespace WebAnnotation.View
                 case LocationAction.CREATELINK:
                     return new LinkAnnotationsCommand(Parent, loc);
                 case LocationAction.ADDCONTROLPOINT:
-                    return new AddLineControlPointCommand(Parent, 
+                    return new AddLineControlPointCommand(Parent,
                                                       loc.MosaicShape.ToPoints(),
                                                       (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.REMOVECONTROLPOINT:
@@ -225,8 +266,8 @@ namespace WebAnnotation.View
 
                     SqlGeometry VolumeShape;
                     SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-                   
-                     
+
+
                     return new TranslateOpenCurveCommand(Parent,
                                                              volumePosition,
                                                              MosaicShape.ToPoints(),
@@ -239,7 +280,7 @@ namespace WebAnnotation.View
                                                                        VolumeShape,
                                                                        Parent.Section.Number,
                                                                        loc.TypeCode);
-                                                                    
+
                                                                     IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
                                                                     NewMosaicControlPoints = section_mapper.VolumeToSection(NewVolumeControlPoints);
 
@@ -356,10 +397,10 @@ namespace WebAnnotation.View
                                                                loc.MosaicShape.ToPolygon(),
                                                                volumePosition,
                                                                loc.Parent.Type.Color.ToXNAColor().SetAlpha(0.5f),
-                                                               (MosaicPolygon) => 
+                                                               (MosaicPolygon) =>
                                                                     {
                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                                        Store.Locations.Save();
+                                                                        AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                                                                     });
                 case LocationAction.SCALE:
                     return null;
@@ -373,9 +414,13 @@ namespace WebAnnotation.View
                                                                                loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
                                                                                Store.Locations.Save();
                                                                            }
-                                                                           catch(ArgumentException e)
+                                                                           catch (ArgumentException e)
                                                                            {
                                                                                MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                           }
+                                                                           catch (System.ServiceModel.FaultException e)
+                                                                           {
+                                                                               AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                                                                            }
                                                                        });
                 case LocationAction.CREATELINK:
@@ -385,14 +430,18 @@ namespace WebAnnotation.View
                                                       loc.MosaicShape.ToPolygon(),
                                                       (MosaicPolygon, VolumePolygon) =>
                                                       {
-                                                      try
-                                                      {
-                                                          loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                          Store.Locations.Save();
+                                                          try
+                                                          {
+                                                              loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
+                                                              Store.Locations.Save();
                                                           }
                                                           catch (ArgumentException e)
                                                           {
                                                               MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                          }
+                                                          catch (System.ServiceModel.FaultException e)
+                                                          {
+                                                              AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                                                           }
                                                       });
                 case LocationAction.REMOVECONTROLPOINT:
@@ -409,34 +458,38 @@ namespace WebAnnotation.View
                                                           {
                                                               MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                                           }
+                                                          catch (System.ServiceModel.FaultException e)
+                                                          {
+                                                              AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+                                                          }
                                                       });
                 case LocationAction.CUTHOLE:
                     {
                         if (Global.PenMode)
                         {
-                            
+
                             return new CutHoleWithPenCommand(Parent,
-                                                                 loc.MosaicShape.ToPolygon(),
-                                                                 Microsoft.Xna.Framework.Color.White.SetAlpha(0.5f),//loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                                 volumePosition,
-                                                                 loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
-                                                                 (sender, volume_points) =>
-                                                                 {
-                                                                     GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
-                                                                     SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+                                                                loc.MosaicShape.ToPolygon(),
+                                                                Microsoft.Xna.Framework.Color.White.SetAlpha(0.5f),//loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                volumePosition,
+                                                                loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
+                                                                (sender, volume_points) =>
+                                                                {
+                                                                    GridVector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                                                    SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
 
-                                                                     try
-                                                                     {
-                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
-                                                                     }
-                                                                     catch (ArgumentException e)
-                                                                     {
-                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                                     }
+                                                                    try
+                                                                    {
+                                                                        loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
+                                                                    }
+                                                                    catch (ArgumentException e)
+                                                                    {
+                                                                        MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                    }
 
-                                                                     Store.Locations.Save();
-                                                                 }
-                                                                 );
+                                                                    AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                }
+                                                                );
 
                         }
                         else
@@ -455,7 +508,7 @@ namespace WebAnnotation.View
                                     MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 }
 
-                                Store.Locations.Save();
+                                AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                             }
                             );
                         }
@@ -504,7 +557,7 @@ namespace WebAnnotation.View
                                                                  }
                                                                  );
                     }
-                case LocationAction.RETRACEANDREPLACE:
+                case LocationAction.CHANGEBOUNDARY:
                     {
                         IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
                         GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
@@ -520,18 +573,18 @@ namespace WebAnnotation.View
                                                                  {
                                                                      //Drawing from inside to outside:
                                                                      var cmd = (RetraceAndReplacePathCommand)sender;
-                                                                     
-                                                                         try
-                                                                         {
-                                                                             loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
-                                                                         }
-                                                                         catch (ArgumentException e)
-                                                                         {
-                                                                             MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                                         }
-                                                                     
 
-                                                                     Store.Locations.Save();
+                                                                     try
+                                                                     {
+                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
+                                                                     }
+                                                                     catch (ArgumentException e)
+                                                                     {
+                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                     }
+
+
+                                                                     AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
 
                                                                  }
                                                                  );
@@ -550,7 +603,7 @@ namespace WebAnnotation.View
         /// <param name="SourceShape"></param>
         /// <param name="SourceSection"></param>
         /// <param name="DestinationSection"></param>
-        private static Microsoft.SqlServer.Types.SqlGeometry TransformMosaicShapeToSection(Viking.ViewModels.VolumeViewModel volume, 
+        private static Microsoft.SqlServer.Types.SqlGeometry TransformMosaicShapeToSection(Viking.ViewModels.VolumeViewModel volume,
                                                                                            Microsoft.SqlServer.Types.SqlGeometry SourceShape,
                                                                                            int SourceSection,
                                                                                            int DestinationSection,
@@ -561,7 +614,7 @@ namespace WebAnnotation.View
             VolumeShape = SourceSectionTransform.TryMapShapeSectionToVolume(SourceShape);
             return DestinationSectionTransform.TryMapShapeVolumeToSection(VolumeShape);
         }
-         
+
         private static bool IsClosedCurve(LocationObj loc)
         {
             return loc.TypeCode == LocationType.CLOSEDCURVE;
@@ -571,7 +624,7 @@ namespace WebAnnotation.View
         static void UpdateLineLocationCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
-            Store.Locations.Save();
+            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         static void UpdateLineLocationNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
@@ -585,8 +638,8 @@ namespace WebAnnotation.View
 
         static void UpdateLineLocationCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
         {
-            UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints, NewWidth); 
-            Store.Locations.Save();
+            UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints, NewWidth);
+            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         static void UpdateLineLocationNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
@@ -598,13 +651,13 @@ namespace WebAnnotation.View
         public static void UpdateCircleLocationCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition, double NewRadius)
         {
             UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition, NewRadius);
-            Store.Locations.Save();
+            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         public static void UpdateCircleLocationCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition)
         {
             UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition);
-            Store.Locations.Save();
+            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition)
@@ -612,11 +665,11 @@ namespace WebAnnotation.View
             loc.MosaicShape = loc.MosaicShape.MoveTo(MosaicPosition);
             loc.VolumeShape = loc.VolumeShape.MoveTo(WorldPosition);
 
-            
+
         }
 
         public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition, double NewRadius)
-        { 
+        {
             loc.MosaicShape = SqlGeometryUtils.Extensions.ToCircle(MosaicPosition.X,
                                            MosaicPosition.Y,
                                            loc.Z,

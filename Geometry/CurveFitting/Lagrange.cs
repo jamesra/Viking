@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry
 {
@@ -28,7 +26,7 @@ namespace Geometry
             }
 
             NumInterpolations = TPoints.Count;
-             
+
             double[] TPointsArray = new double[NumInterpolations];
             TPointsArray = TPoints.ToArray();
 
@@ -38,7 +36,7 @@ namespace Geometry
             GridVector2[] output = XOutput.Select((x, i) => new GridVector2(x, YOutput[i])).ToArray();
 
 #if DEBUG
-            foreach(GridVector2 p in cp)
+            foreach (GridVector2 p in cp)
             {
                 Debug.Assert(output.Contains(p));
             }
@@ -82,10 +80,10 @@ namespace Geometry
             int nPoints = cp.Length;
             Debug.Assert(nPoints >= 3);
             //Linearly space space the t values along the array
-            double[] TValues = cp.Select((p, i) => (double)i / ((double)nPoints-1)).ToArray();
+            double[] TValues = cp.Select((p, i) => (double)i / ((double)nPoints - 1)).ToArray();
             double[] XValues = cp.Select(p => p.X).ToArray();
             double[] YValues = cp.Select(p => p.Y).ToArray();
-             
+
             SortedSet<double> TPoints = GenerateTPoints(TValues, NumInterpolations);
 
             double[] TPointsArray = TPoints.ToArray();
@@ -114,7 +112,7 @@ namespace Geometry
 
             return Product;
         }
-    
+
 
         /// <summary>
         /// Returns the weight at point T along a 1D line. 
@@ -124,14 +122,14 @@ namespace Geometry
         /// <param name="InputValues"></param>
         /// <returns></returns>
         private static double WeightForT(double T, IReadOnlyList<double> TArray, int j)
-        { 
-            double Numerator = TArray.Select((t,k) => T - TArray[k]).Where((t, k) => j != k).Aggregate(1.0, (prod, next) => prod * next);
-            double Denominator = TArray.Select((t,k) => TArray[j] - TArray[k]).Where((t, k) => j != k).Aggregate(1.0, (prod, next) => prod * next);
+        {
+            double Numerator = TArray.Select((t, k) => T - TArray[k]).Where((t, k) => j != k).Aggregate(1.0, (prod, next) => prod * next);
+            double Denominator = TArray.Select((t, k) => TArray[j] - TArray[k]).Where((t, k) => j != k).Aggregate(1.0, (prod, next) => prod * next);
 
             if (Denominator == 0)
                 return 0;
 
-            return Numerator / Denominator; 
-        } 
+            return Numerator / Denominator;
+        }
     }
 }

@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows.Forms;
 using Viking.Common;
-using System.Diagnostics; 
 
 namespace Viking.UI.Forms
 {
@@ -20,7 +14,7 @@ namespace Viking.UI.Forms
         /// Tab that represents this form on the TabsOpenForms control.
         /// </summary>
         public TabPage Tab;
-//        object FormObject = null;
+        //        object FormObject = null;
 
         /// <summary>
         /// This table tracks which objects are already being shown so we can give those forms focus instead of launching a new one
@@ -31,20 +25,20 @@ namespace Viking.UI.Forms
         {
             Trace.WriteLine("Enter CTOR: " + this.GetType().ToString(), "UI");
 
-            this.MdiParent = UI.State.MdiParent; 
+            this.MdiParent = UI.State.MdiParent;
 
             InitializeComponent();
 
-            Trace.WriteLine("Exit CTOR: " + this.GetType().ToString(), "UI"); 
+            Trace.WriteLine("Exit CTOR: " + this.GetType().ToString(), "UI");
         }
 
         public VikingForm(object FormObject)
             : this()
-		{
-		//	this.FormObject = FormObject; 
+        {
+            //	this.FormObject = FormObject; 
 
-			ShownFormsTable.Add(FormObject, this);
-		}
+            ShownFormsTable.Add(FormObject, this);
+        }
 
         protected static VikingForm Show(Dictionary<IUIObject, VikingForm> FormTable, System.Type FormType, IUIObject Object, System.Windows.Forms.Form ParentForm)
         {
@@ -69,8 +63,8 @@ namespace Viking.UI.Forms
         {
             Trace.WriteLine("Enter Load: " + this.GetType().ToString(), "UI");
 
-       //     if (UI.State.MdiParent != null)
-       //         UI.State.MdiParent.AddOwnedForm(this);
+            //     if (UI.State.MdiParent != null)
+            //         UI.State.MdiParent.AddOwnedForm(this);
 
             Trace.WriteLine("Exit Load: " + this.GetType().ToString(), "UI");
 

@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
- 
+﻿using System.Collections.Generic;
+
 namespace AnnotationVizLib
 {
     public static class TLPAttributes
@@ -34,30 +31,30 @@ namespace AnnotationVizLib
 
         public enum EdgeShapes
         {
-            Polyline=0,
-            BezierCurve=4,
-            CatmullRomCurve=8,
-            CubicBSplineCurve=16
+            Polyline = 0,
+            BezierCurve = 4,
+            CatmullRomCurve = 8,
+            CubicBSplineCurve = 16
         }
 
         public enum EdgeExtremityShapes
         {
-            Arrow=50,
-            Circle=14,
-            Cone=3,
-            Cross=8,
-            Cube=0,
-            CubeOutlinedTransparent=9,
-            Cylinder=6,
-            Diamond=5,
-            GlowSphere=16,
-            Hexagon=13,
-            Pentagon=12,
-            Ring=15,
-            Sphere=2,
-            Square=4,
-            Star=19
-          }
+            Arrow = 50,
+            Circle = 14,
+            Cone = 3,
+            Cross = 8,
+            Cube = 0,
+            CubeOutlinedTransparent = 9,
+            Cylinder = 6,
+            Diamond = 5,
+            GlowSphere = 16,
+            Hexagon = 13,
+            Pentagon = 12,
+            Ring = 15,
+            Sphere = 2,
+            Square = 4,
+            Star = 19
+        }
 
         public static SortedDictionary<string, string> ColorMap = new SortedDictionary<string, string>()
         {
@@ -78,7 +75,7 @@ namespace AnnotationVizLib
             { "orchid", "(95,158,160,127)"},
             { "hotpink", "(255,98,211,127)"},
             { "brown1", "(211,140,33,127)"},
-            
+
             { "blue", "(0,0,255,127)"},
             { "gainsboro", "(220,220,220,127)"},
             { "goldenrod2", "(238,173,14,127)"},
@@ -91,7 +88,7 @@ namespace AnnotationVizLib
             { "chartreuse4", "(69,139,0,127)"},
             { "yellow", "(255,255,0,127)"}
         };
-          
+
         public static SortedDictionary<string, string> StandardGraphDefaultAttributeValues = new SortedDictionary<string, string>()
         {
             {"viewColor", " \"(128,128,128,64)\" \"(128,128,128,64)\"" },
@@ -109,7 +106,7 @@ namespace AnnotationVizLib
             {"viewBorderColor", "color"},
             {"viewSelection", "bool"},
             {"viewLabel", "string"},
-            {"viewLayout", "layout"}, 
+            {"viewLayout", "layout"},
             {"viewSize", "size"},
             {"viewShape", "int"},
             {"viewSrcAnchorShape", "int"},
@@ -184,7 +181,7 @@ namespace AnnotationVizLib
             {"viewBorderColor", string.Format("\"{0}\" \"{0}\"", ColorMap["clear"], ColorMap["clear"]) },
             {"viewShape", string.Format(" \"{0}\" \"{1}\"", IntForShape(NodeShapes.Cylinder), IntForEdgeShape(EdgeShapes.Polyline))}
         };
-          
+
         public static string IntForShape(NodeShapes type)
         {
             return ((int)type).ToString();
@@ -199,8 +196,8 @@ namespace AnnotationVizLib
         {
             return ((int)type).ToString();
         }
-                
-        public static SortedList<string, string> UnknownTLPNodeAttributes = new SortedList<string,string> {
+
+        public static SortedList<string, string> UnknownTLPNodeAttributes = new SortedList<string, string> {
             {"viewColor", ColorMap["grey"]}
         };
 
@@ -215,26 +212,26 @@ namespace AnnotationVizLib
         /// has its attributes returned.
         /// </summary>
         public static IList<AttributeMap> StandardLabelToNodeTLPAppearance = new List<AttributeMap>()
-        {   
+        {
             new AttributeMap("AXON", new SortedList<string,string> {
                             {"viewColor", ColorMap["red3"]},
                             {"viewShape", IntForShape(NodeShapes.Hexagon)}
                 }
             ),
             new AttributeMap("DENDRITE", new SortedList<string,string> {
-                            {"viewColor", ColorMap["green3"]} 
+                            {"viewColor", ColorMap["green3"]}
                 }
             ),
             new AttributeMap("CBAB", new SortedList<string,string> {
-                            {"viewColor", ColorMap["green4"]} 
+                            {"viewColor", ColorMap["green4"]}
                 }
             ),
             new AttributeMap("GBC", new SortedList<string,string> {
-                            {"viewColor", ColorMap["cadetblue"]} 
+                            {"viewColor", ColorMap["cadetblue"]}
                 }
             ),
             new AttributeMap("CBB", new SortedList<string,string> {
-                            {"viewColor", ColorMap["cadetblue"]} 
+                            {"viewColor", ColorMap["cadetblue"]}
                 }
             ),
             new AttributeMap("AII", new SortedList<string,string> {
@@ -268,23 +265,23 @@ namespace AnnotationVizLib
                 }
             ),
             new AttributeMap("ROD BC", new SortedList<string,string> {
-                            {"viewColor", ColorMap["purple"]} 
+                            {"viewColor", ColorMap["purple"]}
                 }
             ),
             new AttributeMap("OFF", new SortedList<string,string> {
-                            {"viewColor", ColorMap["blue"]} 
+                            {"viewColor", ColorMap["blue"]}
                 }
             ),
             new AttributeMap("CBA", new SortedList<string,string> {
-                            {"viewColor", ColorMap["blue"]} 
+                            {"viewColor", ColorMap["blue"]}
                 }
             ),
             new AttributeMap("BC", new SortedList<string,string> {
-                            {"viewColor", ColorMap["green"]} 
+                            {"viewColor", ColorMap["green"]}
                 }
             ),
             new AttributeMap("CB", new SortedList<string,string> {
-                            {"viewColor", ColorMap["green"]} 
+                            {"viewColor", ColorMap["green"]}
                 }
             ),
             new AttributeMap("AXC", new SortedList<string,string> {
@@ -324,7 +321,7 @@ namespace AnnotationVizLib
         };
 
         public static IList<AttributeMap> StandardEdgeSourceLabelToTLPAppearance = new List<AttributeMap>()
-        {   
+        {
             new AttributeMap("RIBBON SYNAPSE", new SortedList<string,string> {
                             {"viewTgtAnchorShape", IntForEdgeTerminalShape(EdgeExtremityShapes.Arrow)},
                             {"viewColor", ColorMap["chartreuse4"]}
@@ -383,4 +380,4 @@ namespace AnnotationVizLib
             )
         };
     }
-} 
+}

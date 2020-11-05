@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using WebAnnotation.ViewModel;
+﻿using Annotation.Interfaces;
 using SqlGeometryUtils;
+using System;
+using WebAnnotation.ViewModel;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
@@ -101,7 +98,7 @@ namespace WebAnnotation.View
                     throw new NotImplementedException("View for type " + obj.TypeCode.ToString() + " is not implemented");
             }
         }
-        
+
         /// <summary>
         /// 
         /// </summary>

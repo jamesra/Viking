@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.271
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30503.244
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BifrostWpfControlLibrary", "Bifrost\BifrostWpfControlLibrary\BifrostWpfControlLibrary.csproj", "{1E17C1FD-2DCA-4554-982D-D4750ACB6E99}"
 EndProject
@@ -89,6 +89,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MorphologyMeshTest", "..\MorphologyMeshTest\MorphologyMeshTest.csproj", "{51B26A96-109D-49A7-8219-636D4BAA146B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIConvexHullExtensions", "..\MIConvexHullExtensions\MIConvexHullExtensions.csproj", "{F89734AB-4604-45FA-B17E-B6D040FA51B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationInterfaces", "..\AnnotationInterfaces\AnnotationInterfaces.csproj", "{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLibODataClient", "..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj", "{FF2C1828-20CA-47C0-9B69-85694CCCECD3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -804,6 +808,42 @@ Global
 		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
 		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
 		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Debug|x64.Build.0 = Debug|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Debug|x86.Build.0 = Debug|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Release|x64.ActiveCfg = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Release|x64.Build.0 = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Release|x86.ActiveCfg = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.Release|x86.Build.0 = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|x64.ActiveCfg = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
+		{D66A2153-E19A-4BB1-AA55-A5E8AA51E8EE}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Debug|x64.Build.0 = Debug|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Debug|x86.Build.0 = Debug|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Release|x64.ActiveCfg = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Release|x64.Build.0 = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Release|x86.ActiveCfg = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.Release|x86.Build.0 = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.ReleaseWithSymbols|x64.ActiveCfg = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
+		{FF2C1828-20CA-47C0-9B69-85694CCCECD3}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

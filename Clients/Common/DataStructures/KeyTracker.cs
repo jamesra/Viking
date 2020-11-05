@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Viking.Common
 {
@@ -89,7 +87,7 @@ namespace Viking.Common
                             throw;
                         }
                     }
-                        
+
                 }
                 finally
                 {
@@ -122,11 +120,11 @@ namespace Viking.Common
                     rwKnownLocationsLock.EnterWriteLock();
                     if (TrackedKeys.Contains(ID))
                         return false;
-                    
+
                     if (CanAdd())
                     {
                         TrackedKeys.Add(ID);
-                    } 
+                    }
                 }
                 finally
                 {
@@ -173,8 +171,8 @@ namespace Viking.Common
             }
         }
     }
-    
-    
+
+
     /// <summary>
     /// A thread-safe class that maintains a count of references for a list of IDs
     /// </summary>
@@ -183,7 +181,7 @@ namespace Viking.Common
     {
         private System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new System.Threading.ReaderWriterLockSlim();
 
-        private SortedDictionary<T, int> TrackedKeys = new SortedDictionary<T,int>();
+        private SortedDictionary<T, int> TrackedKeys = new SortedDictionary<T, int>();
         public bool Contains(T ID)
         {
             try
@@ -215,7 +213,7 @@ namespace Viking.Common
             try
             {
                 rwKnownLocationsLock.EnterReadLock();
-                if(!TrackedKeys.ContainsKey(ID))
+                if (!TrackedKeys.ContainsKey(ID))
                 {
                     return 0;
                 }
@@ -265,7 +263,7 @@ namespace Viking.Common
                         throw;
                     }
                 }
-                    
+
 
                 RefCount++;
 
@@ -284,7 +282,7 @@ namespace Viking.Common
         /// <param name="a">Action to take if this removes the last refe</param>
         /// <returns>True if the key was present</returns>
         public bool ReleaseRef(T ID, Action<T> OnLastReferenceReleasedAction = null)
-        { 
+        {
             try
             {
                 rwKnownLocationsLock.EnterWriteLock();

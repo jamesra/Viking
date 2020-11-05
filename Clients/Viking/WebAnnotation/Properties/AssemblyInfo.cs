@@ -1,8 +1,8 @@
 ﻿using System.Reflection;
+using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Viking.Common;
-using System.Resources; 
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
@@ -41,3 +41,5 @@ using System.Resources;
 
 [assembly: System.CLSCompliant(true)]
 [assembly: NeutralResourcesLanguageAttribute("en")]
+
+[assembly: InternalsVisibleTo("WebAnnotationTests")]

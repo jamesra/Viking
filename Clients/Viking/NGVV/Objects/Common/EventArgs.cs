@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Specialized;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Viking.VolumeModel;
-using Viking.ViewModels; 
+using Viking.ViewModels;
 
 namespace Viking.Common
 {
@@ -33,7 +28,7 @@ namespace Viking.Common
         public SectionChangedEventArgs(SectionViewModel newSection, SectionViewModel oldSection)
         {
             this.NewSection = newSection;
-            this.OldSection = oldSection; 
+            this.OldSection = oldSection;
         }
     }
     public delegate void SectionChangedEventHandler(object sender, SectionChangedEventArgs e);
@@ -70,7 +65,7 @@ namespace Viking.Common
     }
     public delegate void TransformChangedEventHandler(object sender, TransformChangedEventArgs e);
 
-    
+
     /// <summary>
     /// Used for progress bars
     /// </summary>
@@ -82,12 +77,12 @@ namespace Viking.Common
 
         public LoadProgressEventArgs(string Info, int Progress, int MaxProgress)
         {
-            this.Info = Info; 
-            this.Progress = Progress; 
-            this.MaxProgress = MaxProgress; 
+            this.Info = Info;
+            this.Progress = Progress;
+            this.MaxProgress = MaxProgress;
         }
     }
-    
+
     public delegate void LoadProgressEventHandler(object sender, LoadProgressEventArgs e);
 
     /// <summary>

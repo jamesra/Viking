@@ -1,13 +1,10 @@
-﻿using System;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FsCheck;
+﻿using FsCheck;
 using Geometry;
 using Geometry.Meshing;
 using GeometryTests.Algorithms;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GeometryTests
 {
@@ -25,11 +22,11 @@ namespace GeometryTests
         }
     }
 
-    
+
     public class TriangulatedMeshGenerators
     {
         public delegate void OnProgressDelegate(IReadOnlyMesh2D<IVertex2D> mesh);
-        
+
         /// <summary>
         /// Function to report incremental mesh generation progress to
         /// </summary>
@@ -43,17 +40,17 @@ namespace GeometryTests
                 .Select(verts => GenericDelaunayMeshGenerator2D<IVertex2D>
                 .TriangulateToMesh(verts.Select(v => new TriangulationVertex(v)).ToArray(), OnProgress));            
                 */
-            
+
 
             return GridVector2Generators.GenDistinctPoints(nVerts)
                 .Select(verts => GenericDelaunayMeshGenerator2D<IVertex2D>
                 .TriangulateToMesh(verts.Select(v => new TriangulationVertex(v)).ToArray(), OnProgress));
             //return GridVector2Generators.GenPoints().Select(verts => GenericDelaunayMeshGenerator2D<Vertex2D>.TriangulateToMesh(verts.Select(v => new Vertex2D(v)).ToArray()));
-        } 
+        }
 
         public static Gen<TriangulationMesh<IVertex2D>> RandomMesh()
         {
-            return Gen.Sized(size => GenMesh(size)); 
+            return Gen.Sized(size => GenMesh(size));
         }
 
         public static Arbitrary<TriangulationMesh<IVertex2D>> ArbRandomMesh()
@@ -71,7 +68,7 @@ namespace GeometryTests
         {
             IVertex2D[] verts = mesh.Verticies.ToArray();
 
-            for(int i = mesh.Verticies.Count-1; i >= 0; i--)
+            for (int i = mesh.Verticies.Count - 1; i >= 0; i--)
             {
                 /*
                 Vertex2D[] fewer_verts = new Vertex2D[mesh.Verticies.Count - 1];
@@ -96,7 +93,7 @@ namespace GeometryTests
         public static TriangulationMesh<IVertex2D> RemoveMeshVert(TriangulationMesh<IVertex2D> mesh, int i)
         {
             IVertex2D[] verts = mesh.Verticies.ToArray();
-             
+
             Vertex2D[] fewer_verts = new Vertex2D[mesh.Verticies.Count - 1];
             Array.Copy(verts, fewer_verts, i);
             Array.Copy(verts, i + 1, fewer_verts, i, fewer_verts.Length - i);
@@ -150,7 +147,7 @@ namespace GeometryTests
             for (int i = model.mesh.Verticies.Count - 1; i >= 0; i--)
             {
                 yield return RemoveModelMeshVert(model, i);
-            } 
+            }
         }
 
         private static ConstrainedDelaunayModel RemoveModelMeshVert(ConstrainedDelaunayModel model, int iVert)
@@ -162,11 +159,11 @@ namespace GeometryTests
             //if they remain in the new mesh.
 
             List<EdgeKey> new_edges = new List<EdgeKey>(model.ConstraintEdges.Count);
-            for(int i = 0; i < model.ConstraintEdges.Count; i++)
+            for (int i = 0; i < model.ConstraintEdges.Count; i++)
             {
                 EdgeKey key = model.ConstraintEdges[i];
-                
-                if(key.A == iVert || key.B == iVert)
+
+                if (key.A == iVert || key.B == iVert)
                 {
                     //Edge vert was removed from mesh, do not include the edge
                     continue;
@@ -191,7 +188,7 @@ namespace GeometryTests
             List<EdgeKey> edge_clones = model.ConstraintEdges.ToList();
             edge_clones.RemoveAt(iEdge);
             ConstrainedDelaunayModel shrunk_model = new ConstrainedDelaunayModel(newMesh, edge_clones);
-            
+
             return shrunk_model;
         }
 

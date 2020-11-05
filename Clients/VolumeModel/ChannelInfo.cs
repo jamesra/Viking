@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Xml.Linq;
 using System.Diagnostics;
+using System.Xml.Linq;
 using Utils;
 
 namespace Viking.VolumeModel
@@ -32,7 +32,7 @@ namespace Viking.VolumeModel
 
         public override string ToString()
         {
-            return "R: " + this.Color.R.ToString() + " G: " + this.Color.G.ToString() + " B: " + this.Color.B.ToString(); 
+            return "R: " + this.Color.R.ToString() + " G: " + this.Color.G.ToString() + " B: " + this.Color.B.ToString();
         }
 
         /// <summary>
@@ -69,7 +69,7 @@ namespace Viking.VolumeModel
 
             set
             {
-                Color = new Geometry.Graphics.Color(value.R, 
+                Color = new Geometry.Graphics.Color(value.R,
                                                                         value.G,
                                                                         value.B,
                                                                         value.A);
@@ -114,8 +114,8 @@ namespace Viking.VolumeModel
                     case "Channel":
                         bool CreateChannel = true;
                         string Section = "Selected";
-                        if (Utils.IO.GetAttributeCaseInsensitive(elem,"Section") != null)
-                            Section = IO.GetAttributeCaseInsensitive(elem,"Section").Value;
+                        if (Utils.IO.GetAttributeCaseInsensitive(elem, "Section") != null)
+                            Section = IO.GetAttributeCaseInsensitive(elem, "Section").Value;
 
                         int? SectionNumber = new int?();
                         ChannelInfo.SectionInfo refSectionInfo = SectionInfo.FIXED;
@@ -136,7 +136,7 @@ namespace Viking.VolumeModel
                                     SectionNumber = new int?(System.Convert.ToInt32(Section));
                                     refSectionInfo = SectionInfo.FIXED;
                                 }
-                                catch (FormatException )
+                                catch (FormatException)
                                 {
                                     Trace.WriteLine("Cannot format Section attribute of ChannelInfo: " + elem.ToString(), "VolumeModel");
                                     CreateChannel = false;
@@ -160,11 +160,11 @@ namespace Viking.VolumeModel
 
                         //Convert the color to a valid value
                         Geometry.Graphics.Color ChannelColor;
-                        if(!TryParseColor(Color, out ChannelColor))
+                        if (!TryParseColor(Color, out ChannelColor))
                         {
                             CreateChannel = false;
                         }
-                        
+
                         if (CreateChannel)
                         {
                             ChannelInfo newChannel = new ChannelInfo();
@@ -182,7 +182,7 @@ namespace Viking.VolumeModel
         }
 
         public static bool TryParseColor(string Color, out Geometry.Graphics.Color Output)
-        { 
+        {
             System.Drawing.Color FromNameColor = System.Drawing.Color.FromName(Color);
             //If the color name is unknown we have all zeros in the color
             if (FromNameColor.A == 0 &&
@@ -198,7 +198,7 @@ namespace Viking.VolumeModel
                 {
                     Trace.WriteLine("Cannot format Color attribute of ChannelInfo: " + Color, "VolumeModel");
                     Output = new Geometry.Graphics.Color();
-                    return false; 
+                    return false;
                 }
             }
             else

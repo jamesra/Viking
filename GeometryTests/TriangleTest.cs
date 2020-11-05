@@ -1,10 +1,8 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Diagnostics;
-using Geometry; 
+using System.Linq;
 
 namespace GeometryTests
 {
@@ -64,17 +62,17 @@ namespace GeometryTests
         [TestMethod]
         public void TestTriangleContains()
         {
-            GridVector2 v1 = new GridVector2(50,50); 
-            GridVector2 v2 = new GridVector2(15,50);
-            GridVector2 v3 = new GridVector2(15,100);
+            GridVector2 v1 = new GridVector2(50, 50);
+            GridVector2 v2 = new GridVector2(15, 50);
+            GridVector2 v3 = new GridVector2(15, 100);
             GridTriangle tri = new GridTriangle(v1, v2, v3);
-            
+
             GridVector2 outsidetest = new GridVector2(5, 75);
             Debug.Assert(tri.Contains(outsidetest) == false);
 
             GridVector2 insidetest = new GridVector2(25, 75);
             Debug.Assert(tri.Contains(insidetest) == true);
-            
+
             //Bug Fix #1
             v1 = new GridVector2(6313.066666666, 13608);
             v2 = new GridVector2(4509.33, 12700.8);
@@ -99,7 +97,7 @@ namespace GeometryTests
             Assert.AreEqual(angleDegrees[1], expected[1]);
             Assert.AreEqual(angleDegrees[2], expected[2]);
 
-            Assert.AreEqual(angleDegrees.Sum(), 180); 
+            Assert.AreEqual(angleDegrees.Sum(), 180);
         }
 
         [TestMethod]
@@ -123,29 +121,29 @@ namespace GeometryTests
 
             v1 = new GridVector2(0, 0);
             v2 = new GridVector2(Math.Sqrt(3), 0);
-            v3 = new GridVector2(0, 1); 
+            v3 = new GridVector2(0, 1);
             tri = new GridTriangle(v1, v2, v3);
             VerifyInternalAngles(tri, new double[] { 30, 60, 90 });
 
             v2 = new GridVector2(1, 0);
 
-            for(int i = 1; i < 360; i++)
+            for (int i = 1; i < 360; i++)
             {
                 if (i == 180)
-                    continue; 
+                    continue;
 
                 double radians = DegreesToRadians(i);
                 v3 = new GridVector2(Math.Cos(radians), Math.Sin(radians));
 
                 tri = new GridTriangle(v1, v2, v3);
-                
+
                 double adjustedAngle = radians > Math.PI ? 2 * Math.PI - radians : radians;
                 //The remaining two angles should be equal 
                 double expectedEqualAngles = (Math.PI - adjustedAngle) / 2.0;
 
                 adjustedAngle = Math.Round(adjustedAngle, 5);
                 expectedEqualAngles = Math.Round(expectedEqualAngles, 5);
-                double[] angles = tri.Angles.Select(a => Math.Round(a,5)).ToArray();
+                double[] angles = tri.Angles.Select(a => Math.Round(a, 5)).ToArray();
 
                 Assert.IsTrue(angles.Contains(adjustedAngle));
                 Assert.IsTrue(angles.Where(a => a == expectedEqualAngles).Count() >= 2);
@@ -174,13 +172,13 @@ namespace GeometryTests
 
 
             int[] iTriangles = Delaunay2D.Triangulate(points);
-            int[] iExpected = new int[] {0,1,4,0,3,4,1,2,5,1,4,5};
+            int[] iExpected = new int[] { 0, 1, 4, 0, 3, 4, 1, 2, 5, 1, 4, 5 };
 
             Trace.WriteLine(iTriangles.ToString(), "Geometry");
             Debug.Assert(iTriangles.Length / 3 == 4); //We should find four triangles
-            for(int i = 0; i < iExpected.Length; i++)
+            for (int i = 0; i < iExpected.Length; i++)
             {
-                Debug.Assert(iExpected[i] == iTriangles[i]); 
+                Debug.Assert(iExpected[i] == iTriangles[i]);
             }
 
             points = new GridVector2[]{ new GridVector2(50, 50),
@@ -195,7 +193,7 @@ namespace GeometryTests
 
 
             iTriangles = Delaunay2D.Triangulate(points);
-            iExpected = new int[] {3,4,7,3,6,7,4,5,8,4,7,8,0,1,4,0,3,4,1,2,5,1,4,5};
+            iExpected = new int[] { 3, 4, 7, 3, 6, 7, 4, 5, 8, 4, 7, 8, 0, 1, 4, 0, 3, 4, 1, 2, 5, 1, 4, 5 };
 
             Trace.WriteLine(iTriangles.ToString(), "Geometry");
             Debug.Assert(iTriangles.Length / 3 == 8); //We should find four triangles
@@ -204,7 +202,7 @@ namespace GeometryTests
             {
                 Debug.Assert(iExpected[i] == iTriangles[i]);
             }
-                         
+
         }
     }
 }

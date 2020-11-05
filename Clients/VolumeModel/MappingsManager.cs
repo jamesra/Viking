@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Xml; 
-using System.Xml.Linq;
-using Geometry;
+﻿using Geometry;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Viking.Common;
 
 namespace Viking.VolumeModel
@@ -33,15 +28,15 @@ namespace Viking.VolumeModel
         {
             return entry.TransformsForSection;
         }
-         
+
         protected override SectionMappingsCacheEntry CreateEntry(int key, SectionTransformsDictionary entry)
         {
             SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entry);
             return cacheEntry;
-        } 
+        }
     }
 
-    public class SectionMappingsCacheEntry : CacheEntry< int >
+    public class SectionMappingsCacheEntry : CacheEntry<int>
     {
         public SectionTransformsDictionary TransformsForSection = new SectionTransformsDictionary();
 
@@ -53,7 +48,7 @@ namespace Viking.VolumeModel
         }
 
         public override sealed void Dispose()
-        {  
+        {
             if (TransformsForSection != null)
             {
                 foreach (MappingBase mapping in this.TransformsForSection.Values)
@@ -74,7 +69,7 @@ namespace Viking.VolumeModel
     /// </summary>
     public class MappingManager
     {
-        private VolumeModel.Volume volume; 
+        private VolumeModel.Volume volume;
 
         public SectionTransformsCache SectionMappingCache = new SectionTransformsCache();
 
@@ -87,7 +82,7 @@ namespace Viking.VolumeModel
         {
             SectionMappingCache.ReduceCacheFootprint(null);
         }
-         
+
         //static private ConcurrentDictionary<string, MappingBase> mapTable = new ConcurrentDictionary<string, MappingBase>();
 
         protected static string BuildKey(string VolumeTransformName, Section section, string SectionTransformName)
@@ -95,7 +90,7 @@ namespace Viking.VolumeModel
             string key = VolumeTransformName + '-' + section.Number.ToString("D4") + '-' + SectionTransformName;
             return key;
         }
-         
+
 
         /// <summary>
         /// Find the Mapping for the requested transform, section, sectiontransform tuple
@@ -106,13 +101,13 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public MappingBase GetMapping(string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
         {
-            if(!volume.Sections.ContainsKey(SectionNumber))
+            if (!volume.Sections.ContainsKey(SectionNumber))
             {
                 return null;
             }
 
             SectionTransformsDictionary dict = SectionMappingCache.Fetch(SectionNumber);
-            if(dict == null)
+            if (dict == null)
             {
                 dict = SectionMappingCache.GetOrAdd(SectionNumber, new SectionTransformsDictionary());
             }
@@ -124,14 +119,14 @@ namespace Viking.VolumeModel
         private MappingBase GetMappingForSection(SectionTransformsDictionary transformsForSection, string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
         {
             Section section = volume.Sections[SectionNumber];
-             
+
             if (SectionTransformName == null)
                 SectionTransformName = section.DefaultPyramidTransform;
             if (ChannelName == null)
             {
-                ChannelName = ""; 
+                ChannelName = "";
             }
-            
+
             //If the transform is rolled into the tiles then use the channel name to generate the key
             string key;
             string SectionMapKey = "";
@@ -146,11 +141,11 @@ namespace Viking.VolumeModel
 
                 success = transformsForSection.TryGetValue(key, out mapping);
                 if (success)
-                    return mapping; 
-                
+                    return mapping;
+
                 SectionMapKey = ChannelName;
             }
-            else if(section.ImagePyramids.ContainsKey(ChannelName))
+            else if (section.ImagePyramids.ContainsKey(ChannelName))
             {
                 //It is a pyramid + Transform
                 key = BuildKey(VolumeTransformName, section, SectionTransformName);
@@ -158,7 +153,7 @@ namespace Viking.VolumeModel
                 success = transformsForSection.TryGetValue(key, out mapping);
                 if (success)
                 {
-                    FixedTileCountMapping FixedTileMapping = mapping as FixedTileCountMapping; 
+                    FixedTileCountMapping FixedTileMapping = mapping as FixedTileCountMapping;
                     //Set the image pyramid the transform is working against so we know how many levels we have available
                     Pyramid ImagePyramid = section.ImagePyramids[ChannelName];
                     FixedTileMapping.CurrentPyramid = ImagePyramid;
@@ -174,13 +169,13 @@ namespace Viking.VolumeModel
                 if (section.DefaultChannel != ChannelName)
                     return GetMapping(VolumeTransformName, SectionNumber, section.DefaultChannel, section.DefaultPyramidTransform);
                 else
-                    return null; 
+                    return null;
             }
-            
+
             //Return the map if we have it. 
             success = transformsForSection.TryGetValue(key, out mapping);
             if (success)
-                return mapping; 
+                return mapping;
 
             //We don't need a fancy mapping.  Add a reference from the section to the mapTable
             if (false == section.WarpedTo.ContainsKey(SectionMapKey))
@@ -188,7 +183,7 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            MappingBase map = null; 
+            MappingBase map = null;
             if (VolumeTransformName == null)
             {
                 map = section.WarpedTo[SectionMapKey];
@@ -206,7 +201,7 @@ namespace Viking.VolumeModel
             else
             {
                 //We have to create a volume transform for the requested map 
-                if(false == volume.Transforms.ContainsKey(VolumeTransformName))
+                if (false == volume.Transforms.ContainsKey(VolumeTransformName))
                     return null;
 
                 SortedList<int, ITransform> stosTransforms = volume.Transforms[VolumeTransformName];
@@ -214,18 +209,18 @@ namespace Viking.VolumeModel
                 {
                     //Maybe we are the reference section, check if there is a mapping for no transform.  This at least prevents displaying
                     //a blank screen
-                    return GetMapping(null, SectionNumber, ChannelName, SectionTransformName); 
+                    return GetMapping(null, SectionNumber, ChannelName, SectionTransformName);
                 }
 
                 if (stosTransforms[section.Number] == null)
                 {
                     //A transform was unable to be generated placing the section in the transform.  Use a mosaic instead
-                    return GetMapping(null, SectionNumber, ChannelName, SectionTransformName); 
+                    return GetMapping(null, SectionNumber, ChannelName, SectionTransformName);
                 }
 
                 map = section.CreateSectionToVolumeMapping(stosTransforms[section.Number], SectionMapKey, key);
                 FixedTileCountMapping fixedMapping = map as FixedTileCountMapping;
-                if(fixedMapping != null)
+                if (fixedMapping != null)
                 {
                     Pyramid ImagePyramid = section.ImagePyramids[ChannelName];
                     fixedMapping.CurrentPyramid = ImagePyramid;

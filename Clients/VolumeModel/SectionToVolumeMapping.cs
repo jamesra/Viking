@@ -1,13 +1,8 @@
-﻿using System;
+﻿using Geometry;
+using Geometry.Transforms;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using Geometry;
-using Geometry.Transforms; 
 using System.Diagnostics;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Viking.VolumeModel
 {
@@ -17,8 +12,8 @@ namespace Viking.VolumeModel
     /// 
     public class SectionToVolumeMapping : FixedTileCountMapping
     {
-        private object LockObj = new object(); 
-        
+        private object LockObj = new object();
+
         /// <summary>
         /// If this section is in a volume ReferencedTo indicates which section
         /// was used as a control during slice-to-slice registration.
@@ -62,12 +57,12 @@ namespace Viking.VolumeModel
             get { return System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, VolumeTransform.ToString() + "_stos.cache"); }
         }
 
-        public SectionToVolumeMapping(Section section, string name,  FixedTileCountMapping sourceMapping, ITransform volumeTransform) 
-            : base(section, name, sourceMapping.TilePrefix, sourceMapping.TilePostfix )
+        public SectionToVolumeMapping(Section section, string name, FixedTileCountMapping sourceMapping, ITransform volumeTransform)
+            : base(section, name, sourceMapping.TilePrefix, sourceMapping.TilePostfix)
         {
             HasBeenWarped = false;
             SourceMapping = sourceMapping;
-            VolumeTransform = volumeTransform;            
+            VolumeTransform = volumeTransform;
         }
 
         public override void FreeMemory()
@@ -106,7 +101,7 @@ namespace Viking.VolumeModel
 
                 TransformInfo VolumeTransformInfo = ((ITransformInfo)VolumeTransform).Info;
 
-                bool LoadedFromCache = false; 
+                bool LoadedFromCache = false;
                 if (System.IO.File.Exists(this.CachedTransformsFileName))
                 {
                     /*Check to make sure cache file is older than both .stos modified time and mapping modified time*/
@@ -117,9 +112,9 @@ namespace Viking.VolumeModel
                     {
                         try
                         {
-                            this._TileTransforms = LoadFromCache(); 
+                            this._TileTransforms = LoadFromCache();
                         }
-                        catch (Exception )
+                        catch (Exception)
                         {
                             //On any error, use the traditional path
                             this._TileTransforms = null;
@@ -131,7 +126,7 @@ namespace Viking.VolumeModel
                             }
                             catch (System.IO.IOException except)
                             {
-                                Trace.WriteLine("Could not delete invalid cache file: " + this.CachedTransformsFileName);    
+                                Trace.WriteLine("Could not delete invalid cache file: " + this.CachedTransformsFileName);
                             }
                         }
 
@@ -155,7 +150,7 @@ namespace Viking.VolumeModel
                 if (LoadedFromCache)
                 {
                     this.HasBeenWarped = true;
-                    return; 
+                    return;
                 }
 
                 // Get the transform tiles from the source mapping, which loads the .mosaic if it hasn't alredy been loaded
@@ -173,12 +168,12 @@ namespace Viking.VolumeModel
 
                     if (VolumeTransform != null && T != null)
                     {
-                        
+
                         TileTransformInfo originalInfo = ((ITransformInfo)T).Info as TileTransformInfo;
                         TileTransformInfo info = new TileTransformInfo(originalInfo.TileFileName,
                                                                        originalInfo.TileNumber,
                                                                        originalInfo.LastModified < VolumeTransformInfo.LastModified ? originalInfo.LastModified : VolumeTransformInfo.LastModified,
-                                                                       originalInfo.ImageWidth, 
+                                                                       originalInfo.ImageWidth,
                                                                        originalInfo.ImageHeight);
                         //FIXME
                         newTransform = TriangulationTransform.Transform(this.VolumeTransform, T, info);
@@ -210,11 +205,11 @@ namespace Viking.VolumeModel
                 this.HasBeenWarped = true;
 
                 //Try to save the transform to our cache
-                SaveToCache(); 
+                SaveToCache();
             }
         }
 
-        
+
 
 
         /// <summary>
@@ -224,7 +219,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public override bool TryVolumeToSection(GridVector2 P, out GridVector2 transformedP)
         {
-            return this.VolumeTransform.TryInverseTransform(P, out transformedP); 
+            return this.VolumeTransform.TryInverseTransform(P, out transformedP);
         }
 
         /// <summary>
@@ -234,7 +229,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
         {
-            return this.VolumeTransform.TryTransform(P, out transformedP); 
+            return this.VolumeTransform.TryTransform(P, out transformedP);
         }
 
         public override GridVector2[] SectionToVolume(GridVector2[] P)
@@ -287,7 +282,7 @@ namespace Viking.VolumeModel
             }
             else
             {
-                return new TilePyramid(VisibleBounds); 
+                return new TilePyramid(VisibleBounds);
             }
         }
     }

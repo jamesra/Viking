@@ -1,15 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Windows.Forms;
-using System.Linq;
-using System.Text;
-using Viking; 
-using Viking.Common; 
-using Viking.UI.Commands;
-using Viking.UI.Controls;
-
-
-namespace WebAnnotation.UI.Commands
+﻿namespace WebAnnotation.UI.Commands
 {
     /*
     static class StaticExtensionCommands

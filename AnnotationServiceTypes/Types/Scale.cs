@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using ProtoBuf;
 using System.Runtime.Serialization;
-using ProtoBuf;
 
 namespace AnnotationService.Types
 {
@@ -21,7 +17,7 @@ namespace AnnotationService.Types
         public AxisUnits(double value, string units)
         {
             Value = value;
-            Units = units; 
+            Units = units;
         }
 
         public AxisUnits() { }
@@ -45,7 +41,7 @@ namespace AnnotationService.Types
         {
             this.X = X;
             this.Y = Y;
-            this.Z = Z; 
+            this.Z = Z;
         }
 
         public Scale()

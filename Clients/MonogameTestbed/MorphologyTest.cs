@@ -125,7 +125,7 @@ namespace MonogameTestbed
             //meshes = InitSmallSmoothModelFromOData(new long[] { 144302 }, ENDPOINT.TEST);
             //meshes = InitSmallSmoothModelFromOData(476, ENDPOINT.RC1);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 192 }, ENDPOINT.RPC1);
-            meshes = InitSmallSmoothModelFromOData(new long[] { 2713 }, ENDPOINT.RPC1);
+            meshes = InitSmallSmoothModelFromOData(new long[] { 2713 }, Endpoint.RPC1);
             //meshes = InitSmallSmoothModelFromOData(5554, ENDPOINT.RC2);
             //meshes = InitSmallSmoothModelFromOData(new long[] { 1650, 858 }, ENDPOINT.INFERIORMONKEY);
 
@@ -170,7 +170,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallTopologyModelFromOData(ulong CellID, ENDPOINT endpoint)
+        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallTopologyModelFromOData(ulong CellID, Endpoint endpoint)
         {
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { CellID }, true, DataSource.EndpointMap[endpoint]); 
 
@@ -181,7 +181,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromOData(long[] CellIDs, ENDPOINT endpoint)
+        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromOData(long[] CellIDs, Endpoint endpoint)
         { 
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(CellIDs.Select(id => (ulong)id).ToArray(), true, DataSource.EndpointMap[endpoint]);
 
@@ -197,7 +197,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Create a tube of circles offset slighty each section
         /// </summary>
-        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, ENDPOINT endpoint)
+        public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, Endpoint endpoint)
         {
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(LocationIDs.Select(id => (ulong)id).ToArray(), DataSource.EndpointMap[endpoint]);
                          

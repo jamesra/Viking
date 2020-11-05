@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
-using Microsoft.Xna.Framework;
+﻿using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System.Windows.Forms;
-using VikingXNAGraphics;
-using Geometry;
 using VikingXNAWinForms;
 
 
@@ -14,7 +8,7 @@ namespace Viking.UI.Commands
 {
     public class ROIRectCommand : Command
     {
-        GridRectangle rectangle; 
+        GridRectangle rectangle;
 
         public ROIRectCommand(Viking.UI.Controls.SectionViewerControl ctrl) : base(ctrl)
         {
@@ -29,7 +23,7 @@ namespace Viking.UI.Commands
             //Check if we should start a rectangle
             if (e.Button.Left() && !oldMouse.Button.Left())
             {
-                this.rectangle = new GridRectangle(WorldPosition, 0, 0); 
+                this.rectangle = new GridRectangle(WorldPosition, 0, 0);
             }
             else if (e.Button.Left())
             {
@@ -38,15 +32,15 @@ namespace Viking.UI.Commands
             //If the mouse was released we stop drawing rectangle
             else if (!e.Button.Left() && oldMouse.Button.Left())
             {
-                this.CommandActive = false; 
+                this.CommandActive = false;
             }
         }
 
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
-            base.OnDraw(graphicsDevice, scene, basicEffect); 
+            base.OnDraw(graphicsDevice, scene, basicEffect);
         }
 
-    
+
     }
 }

@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using System.Diagnostics; 
 
 namespace Viking.UI.Forms
 {
@@ -44,7 +39,7 @@ namespace Viking.UI.Forms
         private void GoToLocationForm_KeyDown(object sender, KeyEventArgs e)
         {
             if ((e.Control && e.KeyCode == Keys.V) ||
-                (e.Shift && e.KeyCode == Keys.Insert) )
+                (e.Shift && e.KeyCode == Keys.Insert))
             {
                 System.Globalization.NumberFormatInfo numberFormatInfo = System.Globalization.CultureInfo.CurrentCulture.NumberFormat;
                 string decimalSeparator = numberFormatInfo.NumberDecimalSeparator;
@@ -57,56 +52,56 @@ namespace Viking.UI.Forms
                     return;
 
                 if (Data.Length == 0)
-                    return; 
+                    return;
 
                 //March along looking for digits, convert digits we find to values
-                int i = 0; 
+                int i = 0;
                 int iStart = -1;
                 int iValue = 0; //How many values we've extracted. Stop after three
                 do
                 {
                     //Convert the first number
-                    if(char.IsDigit(Data[i]))
+                    if (char.IsDigit(Data[i]))
                     {
-                        if(iStart == -1)
-                            iStart = i; 
+                        if (iStart == -1)
+                            iStart = i;
                     }
-                    else if(negativeSign.Contains(Data[i]) == false &&
+                    else if (negativeSign.Contains(Data[i]) == false &&
                             groupSeparator.Contains(Data[i]) == false &&
                             decimalSeparator.Contains(Data[i]) == false)
                     {
                         //If we are building a number then stop looking and convert, otherwise continue
-                        if(iStart > -1)
+                        if (iStart > -1)
                         {
-                            string numString = Data.Substring(iStart, i-iStart); 
+                            string numString = Data.Substring(iStart, i - iStart);
 
-                            switch(iValue)
+                            switch (iValue)
                             {
-                                case 0: 
+                                case 0:
                                     textX.Text = numString;
                                     break;
                                 case 1:
-                                    textY.Text = numString; 
+                                    textY.Text = numString;
                                     break;
-                                case 2: 
-                                    textZ.Text = numString; 
-                                    break; 
+                                case 2:
+                                    textZ.Text = numString;
+                                    break;
                                 case 3:
                                     textDownsample.Text = numString;
                                     break;
-                                default: 
-                                    Debug.Assert(false, "Parsed more than three numbers during paste"); 
+                                default:
+                                    Debug.Assert(false, "Parsed more than three numbers during paste");
                                     break;
                             }
-                                    
+
                             iValue++;
                             iStart = -1;
                         }
                     }
 
-                    i++; 
+                    i++;
                 }
-                while(i < Data.Length && iValue < 4 );
+                while (i < Data.Length && iValue < 4);
 
                 //If we are building a number then stop looking and convert, otherwise continue
                 if (iStart > -1)
@@ -140,6 +135,6 @@ namespace Viking.UI.Forms
             }
         }
 
-        
+
     }
 }

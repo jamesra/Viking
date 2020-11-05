@@ -1,10 +1,10 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.IO;
-using System.Diagnostics;
 
 namespace AnnotationVizLib
 {
@@ -120,7 +120,7 @@ namespace AnnotationVizLib
     {
         public enum PropertyType
         {
-            node, 
+            node,
             edge
         }
         public static string FileHeader
@@ -151,7 +151,7 @@ namespace AnnotationVizLib
                 return "</graphml>";
             }
         }
-        
+
         public static string DeclareProperty(string attribName, PropertyType type)
         {
             string attribType = "string";
@@ -174,7 +174,7 @@ namespace AnnotationVizLib
 
             return Element;
         }
-        
+
         public static string PropertyFooter
         {
             get
@@ -406,7 +406,7 @@ namespace AnnotationVizLib
         private string NodesDefinitionString()
         {
             StringBuilder nodeElements = new StringBuilder();
-            foreach(GMLViewNode node in this.nodes.Values)
+            foreach (GMLViewNode node in this.nodes.Values)
             {
                 nodeElements.Append(node.ToGMLElement());
             }
@@ -443,12 +443,12 @@ namespace AnnotationVizLib
             return attribNames.ToList();
         }
 
-        
+
         public string DefineAttributes()
         {
             using (StringWriter sw = new StringWriter())
             {
-                foreach(string NodeProperty in NodeAttributeList())
+                foreach (string NodeProperty in NodeAttributeList())
                 {
                     sw.WriteLine(GMLFile.DeclareProperty(NodeProperty, GMLFile.PropertyType.node));
                 }
@@ -484,7 +484,7 @@ namespace AnnotationVizLib
                 return sw.ToString();
             }
         }
-        
+
         public void SaveGML(string FullPath)
         {
             using (StreamWriter write = new StreamWriter(FullPath, false))

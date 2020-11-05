@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Collections.Concurrent;
 
 
@@ -18,7 +14,7 @@ namespace Geometry
         private readonly int _Level;
 
         public delegate double DimensionsForLevelDelegate(int level);
-        
+
         public int Level
         {
             get
@@ -33,7 +29,7 @@ namespace Geometry
         {
             get { return _MinRadius; }
         }
-        
+
         private static T GetCell(ConcurrentDictionary<GridIndex, T> Cells, GridIndex key)
         {
             T Result;
@@ -70,7 +66,7 @@ namespace Geometry
         public BoundlessRegionPyramidLevel(int Level, GridCellDimensions UnscaledCellDim, double pixelDimensionsOfLevel)
         {
             this._Level = Level;
-             
+
             this._MinRadius = pixelDimensionsOfLevel;
 
             this.UnscaledCellDimensions = UnscaledCellDim;
@@ -86,7 +82,7 @@ namespace Geometry
 
         public GridRange<T> SubGridForRegion(GridRectangle? volumeBounds)
         {
-            if(!volumeBounds.HasValue)
+            if (!volumeBounds.HasValue)
             {
                 throw new ArgumentException("Volume Bounds does not have a value.  Continuuous transforms should  ");
             }
@@ -103,7 +99,7 @@ namespace Geometry
             {
                 for (int iX = iGrid.iMinX; iX < iGrid.iMaxX; iX++)
                 {
-                    output[i++] = GetCell(grid ,new GridIndex(iX, iY));
+                    output[i++] = GetCell(grid, new GridIndex(iX, iY));
                 }
             }
 
@@ -167,9 +163,9 @@ namespace Geometry
         protected readonly double PowerScale = 4;
 
         ConcurrentDictionary<int, BoundlessRegionPyramidLevel<T>> Levels = new ConcurrentDictionary<int, BoundlessRegionPyramidLevel<T>>();
-         
+
         public BoundlessRegionPyramid(GridCellDimensions cellDimensions, double powerScale)
-        {  
+        {
             //Level 0 cell dimensions match the boundary dimensions
             CellDimensions = cellDimensions;//new GridCellDimensions(Boundaries.Width, Boundaries.Height); 
             PowerScale = powerScale;
@@ -203,12 +199,12 @@ namespace Geometry
         {
             return Math.Pow(PowerScale, Level);
         }
-         
+
         public IRegionPyramidLevel<T> GetLevel(double SinglePixelRadius)
         {
             int Level = PixelDimensionToLevel(SinglePixelRadius);
 
             return GetOrAddLevel(Level);
-        } 
-    } 
+        }
+    }
 }

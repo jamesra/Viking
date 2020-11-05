@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
 
 namespace GraphLib
@@ -19,10 +16,10 @@ namespace GraphLib
             where NODETYPE : Node<KEY, EDGETYPE>
             where EDGETYPE : Edge<KEY>
         {
-            return Graph<KEY, NODETYPE, EDGETYPE>.IsolatedSubgraphs(graph); 
+            return Graph<KEY, NODETYPE, EDGETYPE>.IsolatedSubgraphs(graph);
         }
     }
-        
+
     public partial class Graph<KEY, NODETYPE, EDGETYPE>
     {
         /// <summary>
@@ -55,6 +52,6 @@ namespace GraphLib
             Debug.Assert(mappedNodes.Count == graph.Nodes.Count, "Not all nodes in the graph were included in the IsolatedSubgraph analysis");
 
             return subgraphs;
-        }        
+        }
     }
 }

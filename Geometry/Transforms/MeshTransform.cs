@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using System.Threading;
 using System.Runtime.Serialization;
+using System.Threading;
 
 namespace Geometry.Transforms
 {
@@ -16,54 +15,54 @@ namespace Geometry.Transforms
     {
         #region Edges
 
-            protected ReaderWriterLockSlim rwLockEdges = new ReaderWriterLockSlim();
-            private PairedLineSearchGrid _LineSegmentGrid;
+        protected ReaderWriterLockSlim rwLockEdges = new ReaderWriterLockSlim();
+        private PairedLineSearchGrid _LineSegmentGrid;
 
-            private List<int>[] _edges; 
-            public override List<int>[] Edges
-            {
-                get
-                {
-                    //Try read lock first since only one thread can be in upgradeable mode
-                    try
-                    {
-                        rwLockEdges.EnterReadLock();
-                        if (_edges != null)
-                            return _edges;
-                    }
-                    finally
-                    {
-                        if (rwLockEdges.IsReadLockHeld)
-                            rwLockEdges.ExitReadLock();
-                    }
-
-                    //Get in line to populate _edges
-                    //CaclulateEdges will take a write lock
-                    return CalculateEdges();
-                }
-                protected set
-                {
-                    try
-                    {
-                        rwLockEdges.EnterWriteLock();
-
-                        _edges = value;
-                    }
-                    finally
-                    {
-                        if (rwLockEdges.IsWriteLockHeld)
-                            rwLockEdges.ExitWriteLock();
-                    }
-
-
-                }
-            }
-        
-        #endregion
-   
-        public MeshTransform(MappingGridVector2[] points, TransformInfo info) : base(points, info) 
+        private List<int>[] _edges;
+        public override List<int>[] Edges
         {
-            
+            get
+            {
+                //Try read lock first since only one thread can be in upgradeable mode
+                try
+                {
+                    rwLockEdges.EnterReadLock();
+                    if (_edges != null)
+                        return _edges;
+                }
+                finally
+                {
+                    if (rwLockEdges.IsReadLockHeld)
+                        rwLockEdges.ExitReadLock();
+                }
+
+                //Get in line to populate _edges
+                //CaclulateEdges will take a write lock
+                return CalculateEdges();
+            }
+            protected set
+            {
+                try
+                {
+                    rwLockEdges.EnterWriteLock();
+
+                    _edges = value;
+                }
+                finally
+                {
+                    if (rwLockEdges.IsWriteLockHeld)
+                        rwLockEdges.ExitWriteLock();
+                }
+
+
+            }
+        }
+
+        #endregion
+
+        public MeshTransform(MappingGridVector2[] points, TransformInfo info) : base(points, info)
+        {
+
         }
 
         protected MeshTransform(SerializationInfo info, StreamingContext context)
@@ -72,7 +71,7 @@ namespace Geometry.Transforms
             if (info == null)
                 throw new ArgumentNullException("info");
 
-            this._edges = info.GetValue("_Edges", typeof(List<int>[])) as List<int>[]; 
+            this._edges = info.GetValue("_Edges", typeof(List<int>[])) as List<int>[];
         }
 
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
@@ -93,110 +92,110 @@ namespace Geometry.Transforms
 
         #region ISerializable Members
 
-        
+
 
         #endregion
 
         #region ICloneable
 
-            public MeshTransform Copy()
+        public MeshTransform Copy()
+        {
+            return ((ICloneable)this).Clone() as MeshTransform;
+        }
+
+        object ICloneable.Clone()
+        {
+            MeshTransform newObj;
+
+            newObj = this.MemberwiseClone() as MeshTransform;
+
+            List<MappingGridVector2> TempList = new List<MappingGridVector2>();
+
+            foreach (MappingGridVector2 pt in MapPoints)
             {
-                return ((ICloneable)this).Clone() as MeshTransform; 
+                TempList.Add((MappingGridVector2)pt.Copy());
             }
 
-            object ICloneable.Clone()
-            {
-                MeshTransform newObj;
+            //Setting the mapPoints will sort and recalculate triangles
+            newObj.MapPoints = TempList.ToArray();
 
-                newObj = this.MemberwiseClone() as MeshTransform;
-
-                List<MappingGridVector2> TempList = new List<MappingGridVector2>();
-            
-                foreach (MappingGridVector2 pt in MapPoints)
-                {
-                    TempList.Add((MappingGridVector2)pt.Copy());
-                }
-
-                //Setting the mapPoints will sort and recalculate triangles
-                newObj.MapPoints = TempList.ToArray(); 
-
-                return newObj;
-            }
+            return newObj;
+        }
 
         #endregion
 
         #region Transforms
 
-            /// <summary>
-            /// Return the mapping triangle which can map the point
-            /// </summary>
-            /// <param name="Point"></param>
-            /// <returns></returns>
-            internal override MappingGridTriangle GetTransform(GridVector2 Point)
-            {
-                //TODO: Optimize the search
+        /// <summary>
+        /// Return the mapping triangle which can map the point
+        /// </summary>
+        /// <param name="Point"></param>
+        /// <returns></returns>
+        internal override MappingGridTriangle GetTransform(GridVector2 Point)
+        {
+            //TODO: Optimize the search
 
-                //Having a smaller epsilon caused false positives.  
-                //We just want to know if we are close enough to check with the more time consuming math
-                double epsilon = 5;
+            //Having a smaller epsilon caused false positives.  
+            //We just want to know if we are close enough to check with the more time consuming math
+            double epsilon = 5;
 
-                if (!MappedBounds.Contains(Point, epsilon))
-                    return null;
-
-                //Fetch a list of triangles from the nearest point
-                //double distance;
-                List<MappingGridTriangle> triangles = mapTrianglesRTree.Intersects(Point.ToRTreeRect(0));//mapTriangles.FindNearest(Point, out distance);
-
-                if (triangles == null)
-                    return null;
-
-
-                foreach (MappingGridTriangle t in triangles)
-                {
-                    if (!t.MappedBoundingBox.Contains(Point))
-                        continue; 
-
-                    if (t.IntersectsMapped(Point))
-                        return t;
-                }
-                
+            if (!MappedBounds.Contains(Point, epsilon))
                 return null;
+
+            //Fetch a list of triangles from the nearest point
+            //double distance;
+            List<MappingGridTriangle> triangles = mapTrianglesRTree.Intersects(Point.ToRTreeRect(0));//mapTriangles.FindNearest(Point, out distance);
+
+            if (triangles == null)
+                return null;
+
+
+            foreach (MappingGridTriangle t in triangles)
+            {
+                if (!t.MappedBoundingBox.Contains(Point))
+                    continue;
+
+                if (t.IntersectsMapped(Point))
+                    return t;
             }
 
-            /// <summary>
-            /// Return the mapping triangle which can map the point
-            /// </summary>
-            /// <param name="Point"></param>
-            /// <returns></returns>
-            internal override MappingGridTriangle GetInverseTransform(GridVector2 Point)
-            {
-                //TODO: Optimize the search
+            return null;
+        }
 
-                //Having a smaller epsilon caused false positives.  
-                //We just want to know if we are close enough to check with the more time consuming math
-                double epsilon = 5;
+        /// <summary>
+        /// Return the mapping triangle which can map the point
+        /// </summary>
+        /// <param name="Point"></param>
+        /// <returns></returns>
+        internal override MappingGridTriangle GetInverseTransform(GridVector2 Point)
+        {
+            //TODO: Optimize the search
 
-                if (!ControlBounds.Contains(Point, epsilon))
-                    return null;
+            //Having a smaller epsilon caused false positives.  
+            //We just want to know if we are close enough to check with the more time consuming math
+            double epsilon = 5;
 
-                //Fetch a list of triangles from the nearest point
-                List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
-
-                if (triangles == null)
-                    return null;
-
-
-                foreach (MappingGridTriangle t in triangles)
-                {
-                    if (!t.ControlBoundingBox.Contains(Point))
-                        continue;
-
-                    if (t.IntersectsControl(Point))
-                            return t;
-                }
-                
+            if (!ControlBounds.Contains(Point, epsilon))
                 return null;
+
+            //Fetch a list of triangles from the nearest point
+            List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
+
+            if (triangles == null)
+                return null;
+
+
+            foreach (MappingGridTriangle t in triangles)
+            {
+                if (!t.ControlBoundingBox.Contains(Point))
+                    continue;
+
+                if (t.IntersectsControl(Point))
+                    return t;
             }
+
+            return null;
+        }
 
         #endregion
 
@@ -215,7 +214,7 @@ namespace Geometry.Transforms
 
                     //In this case someone went through this routine ahead of us exit if the data structure is built
                     if (_edges != null)
-                        return _edges; 
+                        return _edges;
 
                     _edges = new List<int>[MapPoints.Length];
                     for (int i = 0; i < MapPoints.Length; i++)
@@ -292,7 +291,7 @@ namespace Geometry.Transforms
             Debug.Assert(OutsidePoint == L.A || OutsidePoint == L.B);
 
             //FIXME, multiple threads can get stuck here
-            CalculateEdges(); 
+            CalculateEdges();
 
             //For debugging only
             double nearestFailedIntersect = double.MaxValue;
@@ -331,7 +330,7 @@ namespace Geometry.Transforms
                 if (distance < nearestFailedIntersect && !bIntersected)
                 {
                     nearestFailedPoint = result;
-//                    nearestFailedSegment = mapLine;
+                    //                    nearestFailedSegment = mapLine;
                     nearestFailedIntersect = distance;
                 }
             }
@@ -339,30 +338,30 @@ namespace Geometry.Transforms
             return nearestIntersect;
         }
 
-        public override void  MinimizeMemory()
-       {
-           base.MinimizeMemory();
+        public override void MinimizeMemory()
+        {
+            base.MinimizeMemory();
 
-           _LineSegmentGrid = null;
-       }
-        
+            _LineSegmentGrid = null;
+        }
 
-       protected override void Dispose(bool disposing)
-       {
-           if (disposing)
-           {
-               if (rwLockEdges != null)
-               {
-                   rwLockEdges.Dispose();
-                   rwLockEdges = null;
-               }
 
-               
-           }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (rwLockEdges != null)
+                {
+                    rwLockEdges.Dispose();
+                    rwLockEdges = null;
+                }
 
-           base.Dispose(disposing); 
 
-       }
+            }
+
+            base.Dispose(disposing);
+
+        }
 
     }
 }

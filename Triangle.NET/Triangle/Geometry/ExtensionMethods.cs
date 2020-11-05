@@ -1,7 +1,6 @@
 ﻿
 namespace TriangleNet.Geometry
 {
-    using System;
     using TriangleNet.Meshing;
 
     public static class ExtensionMethods

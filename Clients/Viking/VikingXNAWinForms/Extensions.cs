@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace VikingXNAWinForms
+﻿namespace VikingXNAWinForms
 {
     public static class WinFormColorExtensions
     {
@@ -28,7 +22,7 @@ namespace VikingXNAWinForms
                                                     (int)color.B,
                                                     (int)(alpha * 255.0f));
         }
-        
+
 
         public static System.Drawing.Color ToSystemColor(this Microsoft.Xna.Framework.Color color)
         {

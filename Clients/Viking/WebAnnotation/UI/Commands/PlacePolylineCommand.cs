@@ -1,10 +1,8 @@
-﻿using System;
+﻿using Geometry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Geometry;
 using System.Windows.Forms;
-using WebAnnotation.View;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 
@@ -32,7 +30,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         protected Microsoft.Xna.Framework.Color OriginalColor;
 
-        public delegate void OnCommandSuccess(LineGeometryCommandBase sender, GridVector2[] control_points);
+        public delegate void OnCommandSuccess(object sender, GridVector2[] control_points);
         protected OnCommandSuccess success_callback;
 
         public LineGeometryCommandBase(Viking.UI.Controls.SectionViewerControl parent,
@@ -57,7 +55,7 @@ namespace WebAnnotation.UI.Commands
                    success_callback)
         {
         }
-         
+
 
         protected virtual void Execute(GridVector2[] updated_verticies)
         {
@@ -65,7 +63,7 @@ namespace WebAnnotation.UI.Commands
                 this.success_callback(this, updated_verticies);
 
             base.Execute();
-        } 
+        }
     }
 
     /// <summary>
@@ -73,7 +71,7 @@ namespace WebAnnotation.UI.Commands
     /// This is the base class for building geometry using manually placed control points
     /// </summary>
     abstract class ControlPointCommandBase : LineGeometryCommandBase
-    {   
+    {
         public virtual double ControlPointRadius
         {
             get
@@ -87,9 +85,9 @@ namespace WebAnnotation.UI.Commands
             get;
             protected set;
         }
-        
-        public ControlPointCommandBase(Viking.UI.Controls.SectionViewerControl parent, 
-                                     Microsoft.Xna.Framework.Color color, 
+
+        public ControlPointCommandBase(Viking.UI.Controls.SectionViewerControl parent,
+                                     Microsoft.Xna.Framework.Color color,
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
             : base(parent, color, LineWidth, success_callback)
@@ -97,15 +95,15 @@ namespace WebAnnotation.UI.Commands
             this.success_callback = success_callback;
         }
 
-        public ControlPointCommandBase(Viking.UI.Controls.SectionViewerControl parent, 
-                                     System.Drawing.Color color, 
+        public ControlPointCommandBase(Viking.UI.Controls.SectionViewerControl parent,
+                                     System.Drawing.Color color,
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
-            : this(parent, 
+            : this(parent,
                   color.ToXNAColor(),
                    LineWidth,
                    success_callback)
-        { 
+        {
         }
 
         /// <summary>
@@ -145,9 +143,9 @@ namespace WebAnnotation.UI.Commands
             return Verticies.Any(lv => GridVector2.Distance(lv, position) <= ControlPointRadius);
         }
 
-        protected int?IndexOfOverlappedVertex(GridVector2 position)
+        protected int? IndexOfOverlappedVertex(GridVector2 position)
         {
-            for(int i = 0; i < this.Verticies.Count(); i++)
+            for (int i = 0; i < this.Verticies.Count(); i++)
             {
                 bool overlaps = GridVector2.Distance(this.Verticies[i], position) <= ControlPointRadius;
                 if (overlaps)
@@ -177,14 +175,14 @@ namespace WebAnnotation.UI.Commands
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
             : base(parent, color, LineWidth, success_callback)
-        { 
+        {
         }
 
         public PolyLineCommandBase(Viking.UI.Controls.SectionViewerControl parent,
                                      System.Drawing.Color color,
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
-             : base(parent, color, LineWidth, success_callback) 
+             : base(parent, color, LineWidth, success_callback)
         {
         }
 
@@ -215,12 +213,13 @@ namespace WebAnnotation.UI.Commands
         public override GridVector2[] Verticies
         {
             get { return vert_stack.ToArray().Reverse().ToArray(); }
-            protected set {
-                  vert_stack.Clear();
-                  foreach(GridVector2 v in value)
-                  {
-                      vert_stack.Push(v);
-                  }
+            protected set
+            {
+                vert_stack.Clear();
+                foreach (GridVector2 v in value)
+                {
+                    vert_stack.Push(v);
+                }
             }
         }
 
@@ -235,9 +234,9 @@ namespace WebAnnotation.UI.Commands
             vert_stack.Push(origin);
         }
 
-        public PlacePolylineCommand(Viking.UI.Controls.SectionViewerControl parent, 
+        public PlacePolylineCommand(Viking.UI.Controls.SectionViewerControl parent,
                                      System.Drawing.Color color,
-                                     GridVector2 origin,  
+                                     GridVector2 origin,
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
             : this(parent,
@@ -246,9 +245,9 @@ namespace WebAnnotation.UI.Commands
                                                     (int)color.B,
                                                     0.5f),
                    origin,
-                   LineWidth, 
+                   LineWidth,
                    success_callback)
-        { 
+        {
         }
 
         protected override bool CanControlPointBeGrabbed(GridVector2 WorldPos)
@@ -274,13 +273,13 @@ namespace WebAnnotation.UI.Commands
             {
                 Parent.Cursor = CanControlPointBeGrabbed(WorldPos) ? Cursors.Hand : Cursors.Cross;
             }
-           else if (e.Button.Left())
+            else if (e.Button.Left())
             {
                 if (CanControlPointBeGrabbed(WorldPos))
                 {
                     //Drag the vertex under the cursor
                     int? iOverlapped = IndexOfOverlappedVertex(WorldPos);
-                   
+
                     Parent.CommandQueue.InjectCommand(new AdjustPolylineCommand(this.Parent,
                                                                                         this.LineColor,
                                                                                         this.Verticies,
@@ -290,10 +289,10 @@ namespace WebAnnotation.UI.Commands
                                                                                         new OnCommandSuccess((ControlPointCommandBase, line_verticies) =>
                                                                                             {
                                                                                                 this.Verticies = line_verticies;
-                                                                                            //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
-                                                                                            this.oldWorldPosition = line_verticies[iOverlapped.Value];
+                                                                                                //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
+                                                                                                this.oldWorldPosition = line_verticies[iOverlapped.Value];
                                                                                             })));
-                      return;
+                    return;
                 }
             }
 
@@ -330,11 +329,11 @@ namespace WebAnnotation.UI.Commands
                 if (vert_stack.Count > 1)
                 {
                     vert_stack.Pop();
-                    Parent.Invalidate(); 
+                    Parent.Invalidate();
                     return;
                 }
             }
-            else if(e.Button == MouseButtons.Left)
+            else if (e.Button == MouseButtons.Left)
             {
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
                 if (CanControlPointBePlaced(WorldPos))
@@ -342,9 +341,9 @@ namespace WebAnnotation.UI.Commands
                     vert_stack.Push(WorldPos);
                     this.Execute();
                     return;
-                } 
+                }
             }
-             
+
             base.OnMouseDown(sender, e);
         }
 
@@ -356,7 +355,7 @@ namespace WebAnnotation.UI.Commands
 
                 vert_stack.Push(this.oldWorldPosition);
 
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, false, Global.NumOpenCurveInterpolationPoints,  lineWidth: this.LineWidth, controlPointRadius: this.LineWidth / 2.0);
+                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, false, Global.NumOpenCurveInterpolationPoints, lineWidth: this.LineWidth, controlPointRadius: this.LineWidth / 2.0);
 
                 CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
@@ -388,7 +387,7 @@ namespace WebAnnotation.UI.Commands
         {
             get { return vert_list; }
             protected set { vert_list = value; }
-            
+
         }
 
         /// <summary>
@@ -423,12 +422,12 @@ namespace WebAnnotation.UI.Commands
                                      int DraggedVertex,
                                      bool IsClosed,
                                      OnCommandSuccess success_callback)
-            : this(parent, 
+            : this(parent,
                    new Microsoft.Xna.Framework.Color((int)color.R,
                                                     (int)color.G,
                                                     (int)color.B,
                                                     0.5f),
-                   verticies, 
+                   verticies,
                    LineWidth,
                    DraggedVertex,
                    IsClosed,
@@ -472,9 +471,9 @@ namespace WebAnnotation.UI.Commands
 
             if (e.Button.Left())
             {
-                
+
                 this.vert_list[this.DraggedVertexIndex] = WorldPos;
-                Parent.Invalidate(); 
+                Parent.Invalidate();
             }
 
             base.OnMouseMove(sender, e);
@@ -489,14 +488,14 @@ namespace WebAnnotation.UI.Commands
                 {
                     //If we release the left mouse button the command is completed                   
                     Verticies[this.DraggedVertexIndex] = WorldPos;
-                    this.Execute(); 
+                    this.Execute();
                 }
                 return;
             }
 
             base.OnMouseUp(sender, e);
         }
-         
+
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
@@ -516,9 +515,9 @@ namespace WebAnnotation.UI.Commands
             else
             {
                 CircleView circleView = new CircleView(new GridCircle(Verticies[0], this.LineWidth / 2.0), this.LineColor);
-                CircleView.Draw(graphicsDevice, scene, basicEffect, Parent.AnnotationOverlayEffect, new CircleView[] { circleView });
+                CircleView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new CircleView[] { circleView });
             }
-           
+
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }
     }

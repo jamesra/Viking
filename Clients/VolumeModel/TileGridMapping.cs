@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Xml; 
-using System.Xml.Linq;
-using System.Diagnostics;
+﻿using Geometry;
 using System.Linq;
-
+using System.Xml.Linq;
 using Utils;
-
-using Geometry;
 
 namespace Viking.VolumeModel
 {
@@ -17,7 +10,7 @@ namespace Viking.VolumeModel
     /// to the same value at every level of the pyramid, so the area must change
     /// </summary>
     public class TileGridMapping : TileGridMappingBase
-    {    
+    {
         #region TextureFileNames
 
         public override string TileFullPath(int iX, int iY, int DownsampleLevel)
@@ -34,11 +27,11 @@ namespace Viking.VolumeModel
             string tileFileName = TileGridPath +
                                 System.IO.Path.DirectorySeparatorChar + DownsampleLevel.ToString("D3") +
                                 System.IO.Path.DirectorySeparatorChar + filename;
-             
+
             return tileFileName;
         }
 
-       
+
 
         /*PORT:
         protected string TileCacheName(int iX, int iY, int DownsampleLevel)
@@ -64,14 +57,14 @@ namespace Viking.VolumeModel
         public TileGridMapping(Section section,
                                string name,
                                string Prefix, string Postfix,
-                               int TileSizeX, int TileSizeY, 
-                               string GridTilePath, 
+                               int TileSizeX, int TileSizeY,
+                               string GridTilePath,
                                string GridCoordFormat,
                                UnitsAndScale.IAxisUnits XYScale) :
             base(section, name, Prefix, Postfix, TileSizeX, TileSizeY, GridTilePath, GridCoordFormat, XYScale)
-        { 
+        {
         }
-            
+
         public static TileGridMapping CreateFromTilesetElement(XElement TilesetNode, Section section)
         {
             string Name = IO.GetAttributeCaseInsensitive(TilesetNode, "name").Value;
@@ -90,11 +83,11 @@ namespace Viking.VolumeModel
             else
             {
                 //If we do not have a specific scale, assume the scale matches the section's scale
-                XYScale = section.XYScale; 
+                XYScale = section.XYScale;
             }
 
-            XAttribute GridTileFormatAttribute = TilesetNode.Attribute("CoordFormat"); 
-            if(GridTileFormatAttribute != null)
+            XAttribute GridTileFormatAttribute = TilesetNode.Attribute("CoordFormat");
+            if (GridTileFormatAttribute != null)
             {
                 GridTileFormat = TileGridMapping.GridTileFormatStringFromPythonString(GridTileFormatAttribute.Value.ToString());
             }
@@ -106,12 +99,12 @@ namespace Viking.VolumeModel
             TileGridMapping mapping = new TileGridMapping(section, Name, TilePrefix, TilePostfix,
                                                           TileSizeX, TileSizeY, TileGridPath, GridTileFormat, XYScale);
 
-            
+
             foreach (XNode node in TilesetNode.Nodes())
             {
                 XElement elem = node as XElement;
                 if (elem == null)
-                    continue; 
+                    continue;
 
                 //Fetch the name if we know it
                 switch (elem.Name.LocalName)
@@ -121,7 +114,7 @@ namespace Viking.VolumeModel
                                        System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(elem, "GridDimX").Value),
                                        System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(elem, "GridDimY").Value),
                                        IO.GetAttributeCaseInsensitive(elem, "path").Value);
-                        break; 
+                        break;
                 }
             }
 

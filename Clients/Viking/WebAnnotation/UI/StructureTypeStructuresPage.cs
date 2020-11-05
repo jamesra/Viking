@@ -1,15 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
 using System.Diagnostics;
-using WebAnnotation.ViewModel;
 using Viking.Common;
-
+using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 
 namespace WebAnnotation.UI
@@ -19,13 +12,13 @@ namespace WebAnnotation.UI
     {
         StructureType Obj = null;
 
-        bool listLoaded = false; 
+        bool listLoaded = false;
 
         public StructureTypeStructuresPage()
         {
             InitializeComponent();
 
-            this.Title = "Structures"; 
+            this.Title = "Structures";
         }
 
         protected override void OnInitPage()
@@ -38,7 +31,7 @@ namespace WebAnnotation.UI
             this.Obj = Object as StructureType;
             Debug.Assert(this.Obj != null);
         }
-        
+
         /// <summary>
         /// Wait to initialize the list until we are displayed
         /// </summary>
@@ -48,7 +41,7 @@ namespace WebAnnotation.UI
         {
             if (!listLoaded)
             {
-                this.UseWaitCursor = true; 
+                this.UseWaitCursor = true;
 
                 ICollection<StructureObj> structureObjs = Store.Structures.GetStructuresOfType(this.Obj.ID);
 

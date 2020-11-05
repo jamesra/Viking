@@ -1,6 +1,6 @@
-﻿using System;
-using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
+﻿using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
 using Geometry;
+using System;
 
 namespace LocalBookmarks
 {
@@ -16,7 +16,7 @@ namespace LocalBookmarks
             XRoot newRoot = new XRoot(MigrateFolder(oldRoot.Folder));
             newRoot.Folder.Shape = ShapeType.STAR.ToShapeString();
 
-            return newRoot; 
+            return newRoot;
         }
 
         private static Folder MigrateFolder(connectomes.utah.edu.XSD.BookmarkSchema.xsd.Folder oldFolder)
@@ -25,7 +25,7 @@ namespace LocalBookmarks
             newFolder.Name = oldFolder.name;
             newFolder.Shape = ShapeType.INHERIT.ToShapeString();
 
-            foreach(var oldBookmark in oldFolder.Bookmarks)
+            foreach (var oldBookmark in oldFolder.Bookmarks)
             {
                 var newBookmark = MigrateBookmark(oldBookmark);
                 if (newBookmark != null)
@@ -34,10 +34,10 @@ namespace LocalBookmarks
                 }
             }
 
-            foreach(var oldSubFolder in oldFolder.Folders)
+            foreach (var oldSubFolder in oldFolder.Folders)
             {
                 var newSubFolder = MigrateFolder(oldSubFolder);
-                if(newSubFolder != null)
+                if (newSubFolder != null)
                 {
                     newFolder.Folders.Add(newSubFolder);
                 }
@@ -54,12 +54,12 @@ namespace LocalBookmarks
             newBookmark.VolumePosition = new Point2D(oldBookmark.Position.X, oldBookmark.Position.Y);
             newBookmark.View = new View();
             newBookmark.View.Downsample = oldBookmark.View.Downsample;
-            newBookmark.Comment = oldBookmark.Comment; 
+            newBookmark.Comment = oldBookmark.Comment;
 
             Viking.VolumeModel.IVolumeToSectionTransform transform = Viking.UI.State.volume.GetSectionToVolumeTransform((int)newBookmark.Z);
 
-            GridVector2 MosaicPosition; 
-            if(transform.TryVolumeToSection(oldBookmark.Position.ToGridVector2(), out MosaicPosition))
+            GridVector2 MosaicPosition;
+            if (transform.TryVolumeToSection(oldBookmark.Position.ToGridVector2(), out MosaicPosition))
             {
                 newBookmark.MosaicPosition = new connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd.Point2D(MosaicPosition);
             }
@@ -73,10 +73,10 @@ namespace LocalBookmarks
             string filename = System.IO.Path.GetFileName(BookmarkPath);
 
             int BackupNumber = 0;
-            string migratedFilename = "PreMigration" + BackupNumber + "_" +  filename;
+            string migratedFilename = "PreMigration" + BackupNumber + "_" + filename;
             string migratedFullPath = System.IO.Path.Combine(baseDir, migratedFilename);
 
-            while(System.IO.File.Exists(migratedFullPath))
+            while (System.IO.File.Exists(migratedFullPath))
             {
                 BackupNumber++;
                 migratedFilename = "PreMigration" + BackupNumber + "_" + filename;
@@ -92,7 +92,7 @@ namespace LocalBookmarks
                 return false;
             }
 
-            return true; 
+            return true;
         }
     }
 }

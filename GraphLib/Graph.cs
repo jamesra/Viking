@@ -1,23 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.Serialization;
 
 namespace GraphLib
 {
     [Serializable]
-    public partial class Graph<KEY,NODETYPE, EDGETYPE> : ISerializable
+    public partial class Graph<KEY, NODETYPE, EDGETYPE> : ISerializable
         where KEY : IComparable<KEY>, IEquatable<KEY>
         where NODETYPE : Node<KEY, EDGETYPE>
         where EDGETYPE : Edge<KEY>
     {
         // Contains all edges
-        public SortedList<EDGETYPE, EDGETYPE> Edges { get;  }
+        public SortedList<EDGETYPE, EDGETYPE> Edges { get; }
 
-        public Dictionary<KEY,NODETYPE> Nodes { get; }
-        
+        public Dictionary<KEY, NODETYPE> Nodes { get; }
+
         public Graph()
         {
             Edges = new SortedList<EDGETYPE, EDGETYPE>();
@@ -29,7 +28,7 @@ namespace GraphLib
             Edges = (SortedList<EDGETYPE, EDGETYPE>)info.GetValue("Edges", typeof(SortedList<EDGETYPE, EDGETYPE>));
             Nodes = (Dictionary<KEY, NODETYPE>)info.GetValue("Nodes", typeof(Dictionary<KEY, NODETYPE>));
 
-            foreach(EDGETYPE e in Edges.Values)
+            foreach (EDGETYPE e in Edges.Values)
             {
                 NODETYPE source = Nodes[e.SourceNodeKey];
                 NODETYPE target = Nodes[e.TargetNodeKey];
@@ -53,17 +52,17 @@ namespace GraphLib
         /// <returns></returns>
         public SortedSet<EDGETYPE> this[KEY Source, KEY Target]
         {
-            get 
+            get
             {
-                if(this.Nodes.TryGetValue(Source, out NODETYPE node))
+                if (this.Nodes.TryGetValue(Source, out NODETYPE node))
                 {
-                    if(node.Edges.TryGetValue(Target, out var Result))
+                    if (node.Edges.TryGetValue(Target, out var Result))
                     {
                         return Result;
                     }
                 }
 
-                return new SortedSet<EDGETYPE>(); 
+                return new SortedSet<EDGETYPE>();
             }
         }
 
@@ -75,7 +74,7 @@ namespace GraphLib
 
         public virtual void AddNode(NODETYPE node)
         {
-            this.Nodes.Add(node.Key, node); 
+            this.Nodes.Add(node.Key, node);
         }
 
         /// <summary>
@@ -129,10 +128,10 @@ namespace GraphLib
         {
             Debug.Assert(Nodes.ContainsKey(edge.SourceNodeKey));
             Debug.Assert(Nodes.ContainsKey(edge.TargetNodeKey));
-            if(!Edges.ContainsKey(edge))
+            if (!Edges.ContainsKey(edge))
             {
                 throw new ArgumentException(string.Format("Edge does not exist in graph {0}", edge));
-            } 
+            }
 
             this.Nodes[edge.SourceNodeKey].RemoveEdge(edge);
             this.Nodes[edge.TargetNodeKey].RemoveEdge(edge);
@@ -140,6 +139,6 @@ namespace GraphLib
             this.Edges.Remove(edge);
         }
 
-        
+
     }
 }

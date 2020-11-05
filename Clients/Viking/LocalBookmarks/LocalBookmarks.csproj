@@ -229,7 +229,6 @@
       <Project>{aeb1b24b-c968-40f9-b9f5-5c1fce2efd6d}</Project>
       <Name>VikingCore</Name>
       <Private>False</Private>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
     </ProjectReference>
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
       <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
@@ -243,6 +242,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="BookmarkSchema.xsd">
       <SubType>Designer</SubType>
     </None>
@@ -271,12 +271,10 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>mkdir $(SolutionDir)Viking\Viking\Modules\LocalBookmarks 
-mkdir $(SolutionDir)Viking\Viking\Content
-copy $(TargetDir)Content\* $(SolutionDir)Viking\Viking\Content /Y
-copy $(TargetDir)* $(SolutionDir)Viking\Viking\Modules\LocalBookmarks /Y
+    <PostBuildEvent>mkdir $(SolutionDir)Viking\Viking\Modules\LocalBookmarks\$(ProjectName)
+copy $(TargetDir)* $(SolutionDir)Viking\Viking\Modules\$(ProjectName) /Y
 
-mkdir $(SolutionDir)Viking\Content 
-copy $(TargetDir)Content\* $(SolutionDir)Viking\Content  /Y</PostBuildEvent>
+mkdir $(SolutionDir)Viking\Content\$(ProjectName)
+(robocopy $(TargetDir)Content $(SolutionDir)Viking\Content\$(ProjectName) * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PostBuildEvent>
   </PropertyGroup>
 </Project>

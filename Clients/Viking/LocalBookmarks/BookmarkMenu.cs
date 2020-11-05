@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using connectomes.utah.edu.XSD.BookmarkSchema.xsd;
-using Viking.Common;
 
 namespace LocalBookmarks
 {
@@ -26,12 +21,12 @@ namespace LocalBookmarks
             HideBookmarksMenu.Click += OnHideBookmarksClick;
 
             ToolStripMenuItem UndoBookmarkMenu = new ToolStripMenuItem("Undo Bookmark Change");
-            UndoBookmarkMenu.Click += OnUndoBookmarkChange; 
-            
-            Parent.DropDownItems.Add(HideBookmarksMenu);
-            Parent.DropDownItems.Add(UndoBookmarkMenu); 
+            UndoBookmarkMenu.Click += OnUndoBookmarkChange;
 
-            return Parent as ToolStripItem; 
+            Parent.DropDownItems.Add(HideBookmarksMenu);
+            Parent.DropDownItems.Add(UndoBookmarkMenu);
+
+            return Parent as ToolStripItem;
         }
 
         static void OnHideBookmarksClick(object sender, EventArgs e)
@@ -48,9 +43,9 @@ namespace LocalBookmarks
 
         static void OnUndoBookmarkChange(object sender, EventArgs e)
         {
-            Global.Undo(); 
+            Global.Undo();
         }
-        
+
         #endregion
 
     }

@@ -1,5 +1,4 @@
-﻿using System;
-using Geometry;
+﻿using Geometry;
 using Geometry.Meshing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -78,7 +77,7 @@ namespace GeometryTests
                                new Face(0,2,3),
                                new Face(1,3,2) };
         }
-        
+
         [TestMethod]
         public void CreateTetrahedronWithPoints()
         {
@@ -96,12 +95,12 @@ namespace GeometryTests
             {
                 foreach (EdgeKey e in f.Edges)
                 {
-                    if(!mesh.Edges.ContainsKey(e))
+                    if (!mesh.Edges.ContainsKey(e))
                         mesh.AddEdge(e);
                 }
             }
 
-            foreach(Face f in faces)
+            foreach (Face f in faces)
             {
                 mesh.AddFace(f);
             }
@@ -121,14 +120,14 @@ namespace GeometryTests
 
             Face[] faces = CreateTetrahedronFaces();
 
-            foreach(Face f in faces)
+            foreach (Face f in faces)
             {
-                mesh.AddFace(f); 
+                mesh.AddFace(f);
             }
 
-            foreach(Face f in faces)
+            foreach (Face f in faces)
             {
-                foreach(EdgeKey e in f.Edges)
+                foreach (EdgeKey e in f.Edges)
                 {
                     Assert.IsTrue(mesh.Edges.ContainsKey(e));
                 }

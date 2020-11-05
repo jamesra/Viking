@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using AnnotationVizLib.WCFClient.AnnotationClient;
+﻿using Annotation.Interfaces;
 using AnnotationService.Types;
+using AnnotationVizLib.WCFClient.AnnotationClient;
+using System.Collections.Generic;
 using System.Diagnostics;
-using Annotation.Interfaces;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AnnotationVizLib.WCFClient
 {
@@ -22,12 +20,12 @@ namespace AnnotationVizLib.WCFClient
 
         protected WCFNeuronFactory()
         {
-            if(IDToStructureType == null)
+            if (IDToStructureType == null)
                 IDToStructureType = Queries.GetStructureTypes();
 
             graph = new NeuronGraph();
         }
-        
+
         public System.Collections.ObjectModel.ReadOnlyCollection<ulong> IncompleteNodes
         {
             get
@@ -41,7 +39,7 @@ namespace AnnotationVizLib.WCFClient
             ConnectionFactory.SetConnection(Endpoint, userCredentials);
 
             WCFNeuronFactory graphFactory = new WCFNeuronFactory();
-            
+
             List<ulong> MissingParents = StructureIDs.Select(s => (ulong)s).ToList();
 
             using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())

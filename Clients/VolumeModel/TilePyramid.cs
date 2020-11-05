@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Viking.VolumeModel
@@ -14,7 +11,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The boundary of all tiles contained in the pyramid
         /// </summary>
-        public readonly Geometry.GridRectangle Bounds; 
+        public readonly Geometry.GridRectangle Bounds;
 
         /// <summary>
         /// A list of downsample levels, each entry is a sorted list using the tile names as the key and the tile object as data
@@ -71,16 +68,16 @@ namespace Viking.VolumeModel
                 return new SortedDictionary<string, Tile>();
             }
 
-            return TilesAtLevel[downsample]; 
+            return TilesAtLevel[downsample];
         }
 
         public int[] AvailableLevels
         {
-            get 
+            get
             {
                 int[] Levels = new int[TilesAtLevel.Keys.Count];
                 TilesAtLevel.Keys.CopyTo(Levels, 0);
-                return Levels; 
+                return Levels;
             }
         }
     }

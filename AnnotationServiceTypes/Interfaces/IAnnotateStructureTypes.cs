@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.Serialization;
+﻿using AnnotationService.Types;
+using System;
 using System.ServiceModel;
-using AnnotationService.Types;
 
 namespace AnnotationService.Interfaces
 {
@@ -50,7 +46,7 @@ namespace AnnotationService.Interfaces
         //[OperationContract]
         //Structure[] GetStructuresForType(Int64 typeID);
 
-        
+
 
         /// <summary>
         /// Updates or creates a new structure type 
@@ -59,7 +55,7 @@ namespace AnnotationService.Interfaces
         /// <returns></returns>
         [OperationContract]
         Int64[] UpdateStructureTypes(StructureType[] structType);
-         
+
         /// <summary>
         /// A test method used to ensure the service can handle a basic call
         /// </summary>
@@ -73,14 +69,14 @@ namespace AnnotationService.Interfaces
         /// Return all structure types in the database
         /// </summary>
         /// <returns></returns>
-//        [OperationContract]
-//        StructureType[] GetStructureTemplates();
+        //        [OperationContract]
+        //        StructureType[] GetStructureTemplates();
 
         /// <summary>
         /// Return all structure types in the database
         /// </summary>
         /// <returns></returns>
-//        [OperationContract]
-//        StructureType[] UpdateStructureTemplates();
+        //        [OperationContract]
+        //        StructureType[] UpdateStructureTemplates();
     }
 }

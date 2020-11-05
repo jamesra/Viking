@@ -1,25 +1,64 @@
 ﻿using System;
 using System.Windows.Forms;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Viking.UI
 {
+    public interface IPenState
+    {
+        /// <summary>
+        /// Screen X coordinate
+        /// </summary>
+        int X { get; }
 
-    public class PenEventArgs : EventArgs
+        /// <summary>
+        /// Screen Y coordinate
+        /// </summary>
+        int Y { get; }
+
+        /// <summary>
+        /// How hard is the pen pushing on the surface? 0 if not supported.
+        /// </summary>
+        double NormalizedPressure { get; }
+
+        /// <summary>
+        /// Is the pen eraser active/touching
+        /// </summary>
+        bool Erase { get; }
+
+        /// <summary>
+        /// Is the pen upside down?
+        /// </summary>
+        bool Inverted { get; }
+
+        /// <summary>
+        /// Is the button on the pen barrel pressed?
+        /// </summary>
+        bool Barrel { get; }
+
+        /// <summary>
+        /// Is the pen touching the surface
+        /// </summary>
+        bool InContact { get; }
+
+        /// <summary>
+        /// Is the pen within range of the surface (not necessarily touching)
+        /// </summary>
+        bool InRange { get; }
+    }
+
+    public class PenEventArgs : EventArgs, IPenState
     {
         public System.Drawing.Point Location { get; internal set; }
 
-        public int X { get { return Location.X;  } }
+        public int X { get { return Location.X; } }
         public int Y { get { return Location.Y; } }
         /// <summary>
         /// Raw data for our pen state
         /// </summary>
         public PointerPenInfo Pen { get; internal set; }
 
-        public double NormalizedPressure {
+        public double NormalizedPressure
+        {
             get
             {
                 if ((Pen.mask & PenMask.Pressure) == 0)
@@ -121,9 +160,9 @@ namespace Viking.UI
             Touch.GetPointerType(pointerState.PointerID, out PointerType type);
             Touch.IsPenEvent(out uint altID);
             //System.Diagnostics.Debug.Assert(altID == pointerState.PointerID); //WTF if this is wrong
-            if(type != PointerType.Pen)
+            if (type != PointerType.Pen)
             {
-                return; 
+                return;
             }
 
             PointerPenInfo penState = Touch.GetPenInfo(pointerState.PointerID);
@@ -131,7 +170,7 @@ namespace Viking.UI
             bool NewPointer = true; //True if we have a new pointer ID than last time.  From what I can tell each time the pen leaves range of the surface a new ID is assigned when moves back into range
 
             //Reset our previous state if the ID has changed
-            if(previousPointerState.HasValue)
+            if (previousPointerState.HasValue)
             {
                 NewPointer = previousPointerState.Value.PointerID != pointerState.PointerID;
                 if (NewPointer)
@@ -150,8 +189,8 @@ namespace Viking.UI
             {
                 FireOnPenEnterRange(args);
             }
-            
-            if(previousPointerState.HasValue)
+
+            if (previousPointerState.HasValue)
             {
                 PointerMessageData previousPointer = previousPointerState.Value;
                 //Rather than writing a ton of if statements I xor the pointer flags.  Bits set to true in the result have changed
@@ -159,25 +198,25 @@ namespace Viking.UI
                 PointerMessageFlags changed = new PointerMessageFlags(flagDelta);
                 if (changed.InContact)
                 {*/
-                    if (msgType == TouchMessageType.WM_POINTERUP && (previousPointer.Flags.InContact || pointerState.Flags.Up))
-                    {
-                        FireOnPenLeaveContact(args);
-                    }
-                    else if (msgType == TouchMessageType.WM_POINTERDOWN && (!previousPointer.Flags.InContact && pointerState.Flags.InContact))
-                    {
-                        FireOnPenContact(args);
-                    }
+                if (msgType == TouchMessageType.WM_POINTERUP && (previousPointer.Flags.InContact || pointerState.Flags.Up))
+                {
+                    FireOnPenLeaveContact(args);
+                }
+                else if (msgType == TouchMessageType.WM_POINTERDOWN && (!previousPointer.Flags.InContact && pointerState.Flags.InContact))
+                {
+                    FireOnPenContact(args);
+                }
                 //}
                 //else
                 //{
-                    else if (msgType == TouchMessageType.WM_POINTERUPDATE && previousPenState.Value.PositioningChange(penState))
-                    {
-                        FireOnPenMove(args);
-                    }
-                
+                else if (msgType == TouchMessageType.WM_POINTERUPDATE && previousPenState.Value.PositioningChange(penState))
+                {
+                    FireOnPenMove(args);
+                }
+
             }
 
-            if(pointerState.Flags.InRange == false)
+            if (pointerState.Flags.InRange == false)
             {
                 FireOnPenLeaveRange(args);
             }
@@ -188,7 +227,7 @@ namespace Viking.UI
 
         private void FireOnPenEnterRange(PenEventArgs e)
         {
-            if(OnPenEnterRange != null)
+            if (OnPenEnterRange != null)
             {
                 Parent.BeginInvoke(OnPenEnterRange, Parent, e);
             }
@@ -223,6 +262,6 @@ namespace Viking.UI
                 Parent.BeginInvoke(OnPenMove, Parent, e);
             }
         }
-         
+
     }
-} 
+}

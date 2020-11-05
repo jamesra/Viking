@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System;
-using System.Linq;
-using System.Collections.Generic;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using Geometry;
@@ -23,11 +20,11 @@ namespace VikingXNAGraphics
         #endregion
 
         public Texture2D Texture;
-        bool FlipTexture = false;
+        //bool FlipTexture = false;
          
         private GridRectangle _BoundingRect; 
 
-        public GridRectangle BoundingRect
+        public override GridRectangle BoundingRect
         {
             get { return _BoundingRect; }
             set

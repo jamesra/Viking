@@ -1,22 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using System.Windows.Forms;
-using WebAnnotation.View;
-using VikingXNAGraphics;
+﻿using Geometry;
 using SqlGeometryUtils;
-using VikingXNAWinForms;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Viking.VolumeModel;
+using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
     class CutHoleWithPenCommand : PlaceClosedCurveWithPenCommand
     {
-
         GridPolygon OriginalMosaicPolygon;
         GridPolygon OriginalVolumePolygon;
 
@@ -63,7 +57,6 @@ namespace WebAnnotation.UI.Commands
             ExteriorSegments = OriginalVolumePolygon.ExteriorSegments.ToList();
 
             //PenInput.Push(origin);
-
         }
 
         public CutHoleWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
@@ -77,8 +70,6 @@ namespace WebAnnotation.UI.Commands
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
-
-
         }
 
         protected override bool IsProposedClosedLoopValid(IReadOnlyCollection<GridVector2> proposed_curve)
@@ -115,7 +106,7 @@ namespace WebAnnotation.UI.Commands
 
             //We cannot intersect any existing feature of the polygon
             if (this.PenInput.Segments.Any(s => OriginalVolumePolygon.Intersects(s)))
-                return false; 
+                return false;
 
             try
             {

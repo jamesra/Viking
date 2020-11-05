@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
 using Simple.OData.Client;
-using AnnotationVizLib.SimpleOData;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using Annotation.Interfaces;
+using System.Threading.Tasks;
 
 namespace AnnotationVizLib.SimpleOData
 {
@@ -15,7 +12,7 @@ namespace AnnotationVizLib.SimpleOData
         static SortedDictionary<ulong, StructureType> IDToStructureType = null;
         SortedDictionary<ulong, Structure> IDToStructure = new SortedDictionary<ulong, Structure>();
 
-        NeuronGraph graph; 
+        NeuronGraph graph;
 
         private SimpleODataNeuronFactory()
         {
@@ -35,7 +32,7 @@ namespace AnnotationVizLib.SimpleOData
             if (StructureIDs.Count == 0)
                 return graphFactory.graph;
 
-            if(IDToStructureType == null)
+            if (IDToStructureType == null)
             {
                 Task<IEnumerable<StructureType>> t = client.For<StructureType>().FindEntriesAsync();
                 t.Wait();
@@ -60,7 +57,7 @@ namespace AnnotationVizLib.SimpleOData
 
                 parent.Children.Add(child);
             }
-            
+
             graphFactory.PopulateStructureDictionary(NetworkStructures.Values);
 
             //Merge the structureLinks into the structures
@@ -94,7 +91,7 @@ namespace AnnotationVizLib.SimpleOData
             //Add nodes to graph
             graphFactory.AddStructuresAsNodes(NetworkStructures.Values);
             graphFactory.AddStructureLinksAsEdges(listNetworkEdges);
-            
+
             return graphFactory.graph;
         }
 
@@ -107,19 +104,19 @@ namespace AnnotationVizLib.SimpleOData
             Debug.Assert(taskStructuresDicts != null);
             taskStructuresDicts.Wait();
             IEnumerable<IDictionary<string, object>> StructuresDicts = taskStructuresDicts.Result;
-            
+
             foreach (IDictionary<string, object> dict in StructuresDicts)
             {
                 Structure s = Structure.FromDictionary(dict);
                 NetworkStructures.Add(s.ID, s);
             }
 
-            while(annotations.NextPageLink != null)
+            while (annotations.NextPageLink != null)
             {
                 taskStructuresDicts = client.FindEntriesAsync(annotations.NextPageLink.ToString(), annotations);
                 taskStructuresDicts.Wait();
                 StructuresDicts = taskStructuresDicts.Result;
-                
+
                 foreach (IDictionary<string, object> dict in StructuresDicts)
                 {
                     Structure s = Structure.FromDictionary(dict);
@@ -136,13 +133,13 @@ namespace AnnotationVizLib.SimpleOData
         {
             List<Structure> listNetworkChildStructures = new List<SimpleOData.Structure>();
 
-            ODataFeedAnnotations annotations = new ODataFeedAnnotations(); 
+            ODataFeedAnnotations annotations = new ODataFeedAnnotations();
             Task<IEnumerable<IDictionary<string, object>>> taskStructuresDicts = client.FindEntriesAsync(string.Format("NetworkChildStructures(IDs=@IDs,Hops={1})?@IDs={0}", StructureIDs.ToODataArrayParameterString(), numHops), annotations);
             Debug.Assert(taskStructuresDicts != null);
 
             taskStructuresDicts.Wait();
             IEnumerable<IDictionary<string, object>> StructuresDicts = taskStructuresDicts.Result;
-             
+
             foreach (IDictionary<string, object> dict in StructuresDicts)
             {
                 Structure s = Structure.FromDictionary(dict);
@@ -213,14 +210,14 @@ namespace AnnotationVizLib.SimpleOData
 
         private void PopulateStructureDictionary(ICollection<Structure> structs)
         {
-            foreach(Structure s in structs)
+            foreach (Structure s in structs)
             {
                 if (IDToStructure.ContainsKey(s.ID))
                     continue;
 
                 IDToStructure.Add(s.ID, s);
 
-                if(s.Children != null)
+                if (s.Children != null)
                     PopulateStructureDictionary(s.Children);
             }
         }

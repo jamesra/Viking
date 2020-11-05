@@ -19,5 +19,5 @@ namespace Annotation
             this.Name = name;
         }
 
-    } 
+    }
 }

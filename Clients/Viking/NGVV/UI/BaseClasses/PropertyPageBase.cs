@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Viking;
-using Viking.Common;
+﻿using System.ComponentModel;
 using System.Windows.Forms;
-using System.ComponentModel; 
+using Viking.Common;
 
 namespace Viking.UI.BaseClasses
 {
@@ -13,7 +8,7 @@ namespace Viking.UI.BaseClasses
     {
         public PropertyPageBase()
         {
-            InitializeComponent(); 
+            InitializeComponent();
         }
 
         #region Variables
@@ -26,37 +21,37 @@ namespace Viking.UI.BaseClasses
 
         void IPropertyPage.InitPage()
         {
-            this.OnInitPage(); 
+            this.OnInitPage();
         }
 
         void IPropertyPage.ShowObject(object Object)
         {
-            this.OnShowObject(Object); 
+            this.OnShowObject(Object);
         }
 
         void IPropertyPage.Reset()
         {
-            this.OnReset(); 
+            this.OnReset();
         }
 
         void IPropertyPage.Enable(bool Enabled)
         {
-            this.OnEnable(Enabled); 
+            this.OnEnable(Enabled);
         }
 
         System.Windows.Forms.TabPage IPropertyPage.GetPage()
         {
-            return this.GetPage(); 
+            return this.GetPage();
         }
 
         bool IPropertyPage.OnValidateChanges()
         {
-            return this.OnValidateChanges(); 
+            return this.OnValidateChanges();
         }
 
         void IPropertyPage.OnSaveChanges()
         {
-            this.OnSaveChanges(); 
+            this.OnSaveChanges();
         }
 
         void IPropertyPage.OnCancelChanges()

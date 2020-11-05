@@ -5,22 +5,22 @@ using VikingXNAGraphics;
 namespace WebAnnotation.UI.Commands
 {
     class ResizeCircleCommand : Viking.UI.Commands.Command
-    { 
+    {
         public double Radius;
 
         public GridVector2 Origin;
-        System.Drawing.Color CircleColor; 
- 
+        System.Drawing.Color CircleColor;
+
         public delegate void OnCommandSuccess(double radius);
         OnCommandSuccess success_callback;
 
-        public ResizeCircleCommand(Viking.UI.Controls.SectionViewerControl parent, 
-                                     System.Drawing.Color color,  
+        public ResizeCircleCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                     System.Drawing.Color color,
                                      GridVector2 origin,
                                      OnCommandSuccess success_callback)
             : base(parent)
-        { 
-            CircleColor = color; 
+        {
+            CircleColor = color;
             Origin = origin;
             parent.Cursor = Cursors.SizeAll;
             this.success_callback = success_callback;
@@ -37,7 +37,7 @@ namespace WebAnnotation.UI.Commands
         {
             UpdateRadius(e);
 
-            Parent.Invalidate(); 
+            Parent.Invalidate();
 
             base.OnMouseMove(sender, e);
         }
@@ -53,7 +53,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            if(this.success_callback != null)
+            if (this.success_callback != null)
                 this.success_callback(this.Radius);
 
             base.Execute();
@@ -66,7 +66,7 @@ namespace WebAnnotation.UI.Commands
                 //    TimeSpan Elapsed = new TimeSpan(DateTime.Now.Ticks - CreationTime.Ticks);
                 UpdateRadius(e);
 
-                this.Execute(); 
+                this.Execute();
             }
 
             base.OnMouseDown(sender, e);
@@ -74,7 +74,7 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-//            double OldRadius = selected.Radius;
+            //            double OldRadius = selected.Radius;
             GridVector2 Pos = Origin;
 
             Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color(CircleColor.R,
@@ -82,8 +82,8 @@ namespace WebAnnotation.UI.Commands
                 CircleColor.B,
                 128);
 
-            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, this.Radius, color); 
-            
+            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, this.Radius, color);
+
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }
     }

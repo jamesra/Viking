@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Geometry
 {
@@ -17,7 +15,7 @@ namespace Geometry
         private GridVector2 ComparisonPoint;
 
         public readonly bool ClockwiseOrder = false;
-        
+
         public CompareAngle(GridLineSegment line, bool clockwise = false)
         {
             Line = new GridLine(line.A, line.Direction);
@@ -77,7 +75,7 @@ namespace Geometry
         }
 
         public bool Intersects(GridLine seg, out GridVector2 Intersection)
-        { 
+        {
             //Function for each line
             //Ax + By = C
             Intersection = new GridVector2();
@@ -86,13 +84,13 @@ namespace Geometry
             //    throw new ArgumentNullException("seg");
 
             if (this.Direction == seg.Direction)
-                return false; 
+                return false;
 
             GridVector2 A = Origin;
             GridVector2 B = Origin + Direction;
 
             GridVector2 segA = seg.Origin;
-            GridVector2 segB = seg.Origin + seg.Direction; 
+            GridVector2 segB = seg.Origin + seg.Direction;
 
             double A1 = B.Y - A.Y;
             double A2 = segB.Y - segA.Y;
@@ -106,7 +104,7 @@ namespace Geometry
             double det = A1 * B2 - A2 * B1;
             //Check if lines are parallel
             if (det == 0)
-            { 
+            {
                 return false;
             }
             else
@@ -125,7 +123,7 @@ namespace Geometry
         }
 
         public bool Intersects(GridLineSegment seg, out GridVector2 Intersection)
-        { 
+        {
             //Function for each line
             //Ax + By = C
             Intersection = new GridVector2();
@@ -154,7 +152,7 @@ namespace Geometry
             double det = A1 * B2 - A2 * B1;
             //Check if lines are parallel
             if (det == 0)
-            { 
+            {
                 return false;
             }
             else
@@ -201,10 +199,11 @@ namespace Geometry
                 //                if (GridVector2.Distance(p, A) < Global.Epsilon || GridVector2.Distance(p, B) < Global.Epsilon)
                 //                  return 0; 
                 GridTriangle tri;
-                try { 
-                     tri = new GridTriangle(Origin, Origin + Direction, p);
+                try
+                {
+                    tri = new GridTriangle(Origin, Origin + Direction, p);
                 }
-                catch(ArgumentException e)
+                catch (ArgumentException e)
                 {
                     return 0; //This means the points are on a line
                 }

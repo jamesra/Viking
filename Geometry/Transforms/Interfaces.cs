@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace Geometry
 {
@@ -16,7 +12,7 @@ namespace Geometry
 
         GridVector2 InverseTransform(GridVector2 Point);
         GridVector2[] InverseTransform(GridVector2[] Points);
-        
+
         bool CanTransform(GridVector2 Point);
         bool TryTransform(GridVector2 Point, out GridVector2 v);
         bool[] TryTransform(GridVector2[] Points, out GridVector2[] v);
@@ -24,15 +20,15 @@ namespace Geometry
         bool CanInverseTransform(GridVector2 Point);
         bool TryInverseTransform(GridVector2 Point, out GridVector2 v);
         bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] v);
-        
-        void Translate(GridVector2 vector); 
+
+        void Translate(GridVector2 vector);
     }
-    
+
     /// <summary>
     /// Adds helper methods to ITransform interface useful for discrete transforms
     /// </summary>
     public interface IDiscreteTransform : ITransform
-    { 
+    {
         GridRectangle ControlBounds { get; }
 
         GridRectangle MappedBounds { get; }
@@ -52,14 +48,14 @@ namespace Geometry
     }
 
     public interface IContinuousTransform : ITransform
-    { 
+    {
     }
 
     /// <summary>
     /// Interface for transforms that expose control points
     /// </summary>
     public interface ITransformControlPoints
-    { 
+    {
         MappingGridVector2[] MapPoints { get; }
 
         List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect);
@@ -86,9 +82,9 @@ namespace Geometry
     {
         void MinimizeMemory();
     }
-    
+
     public interface ITransformInfo
-    { 
+    {
         Geometry.Transforms.TransformInfo Info { get; set; }
     }
 

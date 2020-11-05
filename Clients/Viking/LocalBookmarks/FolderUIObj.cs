@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Specialized; 
+﻿using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
+using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
-using System.Text;
-using Viking.Common;
-using LocalBookmarks;
-using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
-using Viking.UI.Controls;
 using System.Windows.Forms;
-using Viking.Common.UI;
+using Viking.UI.Controls;
 using VikingXNAGraphics;
 
 
@@ -20,7 +16,7 @@ namespace LocalBookmarks
     {
         RING,
         ARROW,
-        STAR, 
+        STAR,
         INHERIT
     }
 
@@ -38,7 +34,7 @@ namespace LocalBookmarks
         public FolderUIObj(FolderUIObj parent, Folder folder)
         {
             Data = folder;
-            _Parent = parent; 
+            _Parent = parent;
         }
 
         protected static event EventHandler OnCreate;
@@ -68,11 +64,11 @@ namespace LocalBookmarks
                     foreach (Folder folder in Data.Folders)
                     {
                         FolderUIObj child = new FolderUIObj(this, folder);
-                        _Folders.Add(child); 
+                        _Folders.Add(child);
                     }
                 }
 
-                return _Folders.ToArray(); 
+                return _Folders.ToArray();
             }
         }
 
@@ -99,11 +95,11 @@ namespace LocalBookmarks
         public override string Name
         {
             get { return Data.Name; }
-            set 
+            set
             {
                 Data.Name = value;
                 if (Data.Name == null)
-                    Data.Name = ""; 
+                    Data.Name = "";
                 ValueChangedEvent("Name");
             }
         }
@@ -120,14 +116,14 @@ namespace LocalBookmarks
                 MenuItem NewFolderMenu = new MenuItem("New Folder...", new EventHandler(OnNewFolder));
                 menu.MenuItems.Add(1, NewFolderMenu);
 
-         //       MenuItem ImportMenu = new MenuItem("Import...", new EventHandler(OnImportXML));
-         //       menu.MenuItems.Add(2, ImportMenu);
+                //       MenuItem ImportMenu = new MenuItem("Import...", new EventHandler(OnImportXML));
+                //       menu.MenuItems.Add(2, ImportMenu);
 
                 MenuItem ExportMenu = new MenuItem("Export");
                 menu.MenuItems.Add(2, ExportMenu);
 
                 MenuItem ExportHTMLMenu = new MenuItem("HTML...", new EventHandler(OnExportHTML));
-                ExportMenu.MenuItems.Add(ExportHTMLMenu); 
+                ExportMenu.MenuItems.Add(ExportHTMLMenu);
 
                 MenuItem ExportXMLMenu = new MenuItem("XML...", new EventHandler(OnExportXML));
                 ExportMenu.MenuItems.Add(ExportXMLMenu);
@@ -135,7 +131,7 @@ namespace LocalBookmarks
                 MenuItem ImportMenu = new MenuItem("Import", new EventHandler(OnImportXML));
                 menu.MenuItems.Add(3, ImportMenu);
 
-                return menu; 
+                return menu;
             }
         }
 
@@ -160,7 +156,7 @@ namespace LocalBookmarks
             {
                 if (Shape == ShapeType.INHERIT)
                 {
-                    if(Parent == null)
+                    if (Parent == null)
                     {
                         return BookmarkOverlay.DefaultTexture;
                     }
@@ -180,7 +176,7 @@ namespace LocalBookmarks
         {
             get
             {
-                if(_Color.HasValue)
+                if (_Color.HasValue)
                 {
                     return _Color.Value;
                 }
@@ -193,7 +189,7 @@ namespace LocalBookmarks
                     }
                     else
                     {
-                        return Parent.Color; 
+                        return Parent.Color;
                     }
                 }
 
@@ -203,7 +199,7 @@ namespace LocalBookmarks
                     _Color = new Microsoft.Xna.Framework.Color((int)gColor.R, (int)gColor.G, (int)gColor.B, (int)gColor.A);
                     return _Color.Value;
                 }
-                catch(FormatException)
+                catch (FormatException)
                 {
                     System.Diagnostics.Trace.WriteLine("Could not parse color: " + Data.Color);
                     return Global.DefaultColor;
@@ -211,7 +207,7 @@ namespace LocalBookmarks
             }
             set
             {
-                if(value == null)
+                if (value == null)
                 {
                     Data.Color = null;
                     _Color = new Microsoft.Xna.Framework.Color();
@@ -226,12 +222,12 @@ namespace LocalBookmarks
 
         private void UpdateChildViews()
         {
-            foreach(BookmarkUIObj bookmark in this.Bookmarks)
+            foreach (BookmarkUIObj bookmark in this.Bookmarks)
             {
                 bookmark.UpdateView();
             }
-            
-            foreach(FolderUIObj folder in this.Folders)
+
+            foreach (FolderUIObj folder in this.Folders)
             {
                 folder.UpdateChildViews();
             }
@@ -244,20 +240,20 @@ namespace LocalBookmarks
         /// <param name="child"></param>
         internal void AddChild(object child)
         {
-            FolderUIObj childFolder = child as FolderUIObj; 
-            if(childFolder != null)
+            FolderUIObj childFolder = child as FolderUIObj;
+            if (childFolder != null)
             {
-                if(false == Folders.Contains(childFolder))
-                    _Folders.Add(childFolder); 
-                if(false == Data.Folders.Contains(childFolder.Data) )
-                    Data.Folders.Add(childFolder.Data); 
+                if (false == Folders.Contains(childFolder))
+                    _Folders.Add(childFolder);
+                if (false == Data.Folders.Contains(childFolder.Data))
+                    Data.Folders.Add(childFolder.Data);
             }
 
             BookmarkUIObj childBookmark = child as BookmarkUIObj;
-            if(childBookmark != null)
+            if (childBookmark != null)
             {
                 if (false == Bookmarks.Contains(childBookmark))
-                    _Bookmarks.Add(childBookmark); 
+                    _Bookmarks.Add(childBookmark);
                 if (false == Data.Bookmarks.Contains(childBookmark.Data))
                     Data.Bookmarks.Add(childBookmark.Data);
             }
@@ -272,18 +268,18 @@ namespace LocalBookmarks
         /// <param name="child"></param>
         internal void RemoveChild(object child)
         {
-            FolderUIObj childFolder = child as FolderUIObj; 
-            if(childFolder != null)
+            FolderUIObj childFolder = child as FolderUIObj;
+            if (childFolder != null)
             {
                 Data.Folders.Remove(childFolder.Data);
                 _Folders.Remove(childFolder);
             }
 
             BookmarkUIObj childBookmark = child as BookmarkUIObj;
-            if(childBookmark != null)
+            if (childBookmark != null)
             {
                 Data.Bookmarks.Remove(childBookmark.Data);
-                _Bookmarks.Remove(childBookmark); 
+                _Bookmarks.Remove(childBookmark);
             }
 
             CallOnChildChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, child));
@@ -291,13 +287,13 @@ namespace LocalBookmarks
 
         #region IUIObject Members
 
-       
+
 
         public override Viking.UI.Controls.GenericTreeNode CreateNode()
         {
             GenericTreeNode node = new GenericTreeNode(this);
             node.Name = this.Name;
-            return node; 
+            return node;
         }
 
         public override int TreeImageIndex
@@ -308,7 +304,7 @@ namespace LocalBookmarks
             }
         }
 
-        public override int  TreeSelectedImageIndex
+        public override int TreeSelectedImageIndex
         {
             get
             {
@@ -329,10 +325,10 @@ namespace LocalBookmarks
         public override void Delete()
         {
             CallBeforeDelete();
-            Parent.RemoveChild(this); 
-         //   Parent.Data.Folders.Remove(this.Data);
+            Parent.RemoveChild(this);
+            //   Parent.Data.Folders.Remove(this.Data);
             CallAfterDelete();
-            Global.Save(); 
+            Global.Save();
         }
 
         #endregion
@@ -344,7 +340,7 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         protected void OnPlaceBookmark(object sender, EventArgs e)
         {
-            Viking.UI.State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), new object[]{ Viking.UI.State.ViewerControl, 
+            Viking.UI.State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), new object[]{ Viking.UI.State.ViewerControl,
                                                                                                     this});
         }
 
@@ -372,7 +368,7 @@ namespace LocalBookmarks
             fileDialog.AutoUpgradeEnabled = true;
             fileDialog.CheckFileExists = true;
             fileDialog.Multiselect = false;
-            fileDialog.Title = "Import Bookmark XML File"; 
+            fileDialog.Title = "Import Bookmark XML File";
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
@@ -397,7 +393,7 @@ namespace LocalBookmarks
         public void ExportHTML(string Filename)
         {
             HTMLExporter exporter = new HTMLExporter(this);
-            exporter.WriteHTML(Filename); 
+            exporter.WriteHTML(Filename);
         }
 
         protected void OnExportHTML(object sender, EventArgs e)
@@ -407,11 +403,11 @@ namespace LocalBookmarks
             fileDialog.DefaultExt = ".html";
             fileDialog.FileName = this.Name;
             fileDialog.OverwritePrompt = true;
-            fileDialog.Title = "Export Bookmark HTML File"; 
+            fileDialog.Title = "Export Bookmark HTML File";
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
-                ExportHTML(fileDialog.FileName); 
+                ExportHTML(fileDialog.FileName);
             }
         }
 
@@ -422,12 +418,12 @@ namespace LocalBookmarks
             fileDialog.DefaultExt = ".xml";
             fileDialog.FileName = this.Name;
             fileDialog.OverwritePrompt = true;
-            fileDialog.Title = "Export Bookmark XML File"; 
+            fileDialog.Title = "Export Bookmark XML File";
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
                 //ExportXML(fileDialog.FileName);
-                this.Data.Save(fileDialog.FileName); 
+                this.Data.Save(fileDialog.FileName);
             }
         }
 
@@ -441,7 +437,7 @@ namespace LocalBookmarks
             {
                 BookmarkXMLDoc = XRoot.Load(XMLFile);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 MessageBox.Show("Could not parse provided XML File: " + e.ToString());
                 return;

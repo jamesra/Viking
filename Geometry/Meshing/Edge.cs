@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
@@ -14,7 +12,7 @@ namespace Geometry.Meshing
         {
             get { return new int[] { A, B }; }
         }
-                
+
         public int A
         {
             get;
@@ -28,7 +26,7 @@ namespace Geometry.Meshing
         }
 
         public EdgeKey(int a, int b)
-        { 
+        {
             int[] ordered = a < b ? new int[] { a, b } : new int[] { b, a };
             this.A = ordered[0];
             this.B = ordered[1];
@@ -36,7 +34,7 @@ namespace Geometry.Meshing
 
         public EdgeKey(long a, long b) : this((int)a, (int)b)
         {
-        
+
         }
 
         public static bool operator ==(EdgeKey A, EdgeKey B)
@@ -138,7 +136,7 @@ namespace Geometry.Meshing
         {
             if (value == this.A)
                 return B;
-            else if(value == this.B)
+            else if (value == this.B)
                 return A;
             else
             {

@@ -1,13 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using Viking.Common;
-using Viking.VolumeModel; 
+using Viking.VolumeModel;
 
 namespace Viking.UI.Controls
 {
@@ -18,10 +12,11 @@ namespace Viking.UI.Controls
         /// </summary>
         public ChannelInfo[] Channels
         {
-            get {
-                if(radioGreyscale.Checked)
+            get
+            {
+                if (radioGreyscale.Checked)
                 {
-                    return new ChannelInfo[0]; 
+                    return new ChannelInfo[0];
                 }
                 else
                 {
@@ -32,14 +27,14 @@ namespace Viking.UI.Controls
                         listChannelInfo.Add(channelControl.Info);
                     }
 
-                    return listChannelInfo.ToArray(); 
+                    return listChannelInfo.ToArray();
                 }
             }
         }
 
         private List<ChannelPickerControl> ChannelPickerList = new List<ChannelPickerControl>();
 
-        private string[] _ChannelNames; 
+        private string[] _ChannelNames;
 
         public ChannelSetupControl()
         {
@@ -48,19 +43,19 @@ namespace Viking.UI.Controls
 
         public void SetChannelData(ChannelInfo[] ChannelsToAdd, string[] channelNames)
         {
-            _ChannelNames = channelNames; 
+            _ChannelNames = channelNames;
 
             if (ChannelsToAdd == null)
             {
                 radioGreyscale.Checked = true;
-                groupChannels.Enabled = false; 
+                groupChannels.Enabled = false;
                 return;
             }
 
             if (ChannelsToAdd.Length == 0)
             {
                 radioGreyscale.Checked = true;
-                groupChannels.Enabled = false; 
+                groupChannels.Enabled = false;
                 return;
             }
 
@@ -83,10 +78,10 @@ namespace Viking.UI.Controls
         {
             ChannelPickerControl Picker = new ChannelPickerControl(info);
 
-            this.panelChannels.Controls.Add(Picker); 
-            Picker.Channels = this._ChannelNames; 
+            this.panelChannels.Controls.Add(Picker);
+            Picker.Channels = this._ChannelNames;
             Picker.Dock = DockStyle.Top;
-            Picker.TabIndex = ChannelPickerList.Count; 
+            Picker.TabIndex = ChannelPickerList.Count;
             Picker.OnDeleteClicked += new EventHandler(this.OnChannelDelete);
             ChannelPickerList.Add(Picker);
 
@@ -120,7 +115,7 @@ namespace Viking.UI.Controls
 
                 Picker.ShowLabels = i == panelChannels.Controls.Count - 1; //Only show label for first control
                 Picker.ShowDelete = panelChannels.Controls.Count > 1;
-                
+
             }
         }
 
@@ -142,12 +137,12 @@ namespace Viking.UI.Controls
 
         private void buttonAddChannel_Click(object sender, EventArgs e)
         {
-            AddPickerControl(new ChannelInfo()); 
+            AddPickerControl(new ChannelInfo());
         }
 
         private void radioGreyscale_CheckedChanged(object sender, EventArgs e)
         {
-            
+
         }
     }
 }

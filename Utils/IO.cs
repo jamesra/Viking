@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Net;
 using System.Xml.Linq;
-using System.Net; 
-using System.IO; 
 
 namespace Utils
 {
@@ -42,7 +40,7 @@ namespace Utils
             else
                 XDoc = XDocument.Load(path.LocalPath);
 
-            return XDoc; 
+            return XDoc;
         }
 
         private static XDocument LoadHTTP(Uri path)

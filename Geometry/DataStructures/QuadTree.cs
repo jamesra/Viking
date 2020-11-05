@@ -1,20 +1,16 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
-using System.Threading;
-using System.Linq;
-using System.Text;
-using Geometry;
 using System.Runtime.Serialization;
+using System.Threading;
 
 namespace Geometry
 {
-   
+
 
     /// <summary>
     /// Stores a quadtree.  Should be safe for concurrent access
     /// </summary>
-    public class QuadTree<T>  : IDisposable
+    public class QuadTree<T> : IDisposable
     {
         /// <summary>
         /// Used by QuadTree when a duplicate point is added
@@ -57,9 +53,9 @@ namespace Geometry
         {
             get { return Root.Border; }
         }
-        
 
-        ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim(); 
+
+        ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
 
         /// <summary>
         /// Maps the values to the node containing the values. Populated by the QuadTreeNode class.
@@ -86,19 +82,19 @@ namespace Geometry
 
         public QuadTree(GridVector2[] keys, T[] values, GridRectangle border)
         {
-            CreateTree(keys, values,  border); 
+            CreateTree(keys, values, border);
         }
 
         public T[] Values
         {
-            get 
+            get
             {
                 T[] values = new T[0];
                 try
                 {
                     rwLock.EnterReadLock();
                     values = new T[ValueToNodeTable.Count];
-                    ValueToNodeTable.Keys.CopyTo(values, 0); 
+                    ValueToNodeTable.Keys.CopyTo(values, 0);
                     return values;
                 }
                 finally
@@ -108,7 +104,7 @@ namespace Geometry
             }
         }
 
-        public GridVector2 this [T value] 
+        public GridVector2 this[T value]
         {
             get
             {
@@ -116,13 +112,13 @@ namespace Geometry
                 {
                     rwLock.EnterReadLock();
                     QuadTreeNode<T> node = ValueToNodeTable[value];
-                    return node.Point; 
+                    return node.Point;
                 }
                 finally
                 {
                     rwLock.ExitReadLock();
                 }
-            } 
+            }
         }
 
         public int Count
@@ -140,7 +136,7 @@ namespace Geometry
                 }
             }
         }
-        
+
         /// <summary>
         /// Insert a new point within the borders into the tree
         /// </summary>
@@ -153,26 +149,26 @@ namespace Geometry
             {
                 rwLock.EnterUpgradeableReadLock();
                 */
-                /*
-                if (Root.Border.Contains(point) == false)
+            /*
+            if (Root.Border.Contains(point) == false)
+            {
+                throw new ArgumentOutOfRangeException("point", "The passed point for insertion was out of range of the QuadTree");
+            }
+            */
+            try
+            {
+                rwLock.EnterWriteLock();
+                if (this.Root.ExpandBorder(point, out var new_root))
                 {
-                    throw new ArgumentOutOfRangeException("point", "The passed point for insertion was out of range of the QuadTree");
+                    this.Root = new_root;
                 }
-                */
-                try
-                {
-                    rwLock.EnterWriteLock();
-                    if (this.Root.ExpandBorder(point, out var new_root))
-                    {
-                        this.Root = new_root;
-                    }
-                     
-                    this.Root.Insert(point, value);
-                }
-                finally
-                {
-                    rwLock.ExitWriteLock();
-                }
+
+                this.Root.Insert(point, value);
+            }
+            finally
+            {
+                rwLock.ExitWriteLock();
+            }
             /*}
             finally
             {
@@ -188,7 +184,7 @@ namespace Geometry
         /// <param name="value"></param>
         public bool TryAdd(GridVector2 point, T value)
         {
-            
+
             try
             {
                 rwLock.EnterUpgradeableReadLock();
@@ -200,7 +196,7 @@ namespace Geometry
                 */
                 //Do not add the value if we already have it in our data structure
                 if (ValueToNodeTable.ContainsKey(value))
-                    return false; 
+                    return false;
 
                 try
                 {
@@ -216,7 +212,7 @@ namespace Geometry
                 }
                 catch (DuplicateItemException)
                 {
-                    return false; 
+                    return false;
                 }
                 finally
                 {
@@ -240,7 +236,7 @@ namespace Geometry
             }
             finally
             {
-                rwLock.ExitReadLock(); 
+                rwLock.ExitReadLock();
             }
         }
 
@@ -289,7 +285,7 @@ namespace Geometry
                                 this.Root = new_root;
                             }
 
-                            this.Root.Insert(point, value); 
+                            this.Root.Insert(point, value);
                             return true;
                         }
                         finally
@@ -334,7 +330,7 @@ namespace Geometry
         {
             QuadTreeNode<T> node = ValueToNodeTable[value];
 
-            T retVal = node.Value; 
+            T retVal = node.Value;
 
             if (node.IsRoot == false)
                 node.Parent.Remove(node);
@@ -347,14 +343,14 @@ namespace Geometry
 
             node.Parent = null;
             node.Value = default(T);
-            node.Tree = null; 
+            node.Tree = null;
 
             return retVal;
         }
 
         public bool TryRemove(T value, out T RemovedValue)
         {
-            RemovedValue = default(T); 
+            RemovedValue = default(T);
             try
             {
                 rwLock.EnterUpgradeableReadLock();
@@ -370,7 +366,7 @@ namespace Geometry
 
                     RemovedValue = Remove(value);
                 }
-                catch (Exception )
+                catch (Exception)
                 {
                     throw;
                     //return false;
@@ -382,21 +378,21 @@ namespace Geometry
             }
             finally
             {
-                rwLock.ExitUpgradeableReadLock(); 
+                rwLock.ExitUpgradeableReadLock();
             }
 
-            return true; 
+            return true;
         }
 
         private void CreateTree(GridVector2[] keys, T[] values, GridRectangle border)
         {
             try
             {
-                rwLock.EnterWriteLock(); 
+                rwLock.EnterWriteLock();
 
                 //Create a node centered in the border
                 //this.Root = new QuadTreeNode<T>(this, new GridRectangle(double.MinValue, double.MaxValue, double.MinValue, double.MaxValue));
-                this.Root = new QuadTreeNode<T>(this, border); 
+                this.Root = new QuadTreeNode<T>(this, border);
 
                 for (int iPoint = 0; iPoint < keys.Length; iPoint++)
                 {
@@ -405,7 +401,7 @@ namespace Geometry
             }
             finally
             {
-                rwLock.ExitWriteLock(); 
+                rwLock.ExitWriteLock();
             }
         }
 
@@ -415,28 +411,28 @@ namespace Geometry
         }
 
         public T FindNearest(GridVector2 point, out GridVector2 found_point, out double distance)
-        { 
+        {
             try
             {
                 found_point = GridVector2.Zero;
                 distance = double.MaxValue;
 
                 rwLock.EnterReadLock();
-                
+
                 if (Root == null)
-                {   
-                    return default(T); 
+                {
+                    return default(T);
                 }
                 else if (Root.IsLeaf == true && Root.HasValue == false)
                 {
-                    return default(T); 
+                    return default(T);
                 }
 
                 return Root.FindNearest(point, out found_point, ref distance);
             }
             finally
             {
-                rwLock.ExitReadLock(); 
+                rwLock.ExitReadLock();
             }
         }
 
@@ -462,14 +458,14 @@ namespace Geometry
                 Root.FindNearestPoints(point, nPoints, ref pointList);
 
                 listResults = new List<DistanceToPoint<T>>();
-                foreach(double distance in pointList.Data.Keys)
+                foreach (double distance in pointList.Data.Keys)
                 {
                     listResults.AddRange(pointList[distance]);
                     if (listResults.Count >= nPoints)
                         break; //Stop adding after we pass nPoints because the implementation of FindNearestPoints is unreliable after it reaches the requested number.
                 }
 
-                
+
             }
             finally
             {
@@ -487,19 +483,19 @@ namespace Geometry
 
                 if (ValueToNodeTable.ContainsKey(value) == false)
                 {
-                    position = new GridVector2(); 
-                    return false; 
+                    position = new GridVector2();
+                    return false;
                     //throw new ArgumentException("Quadtree does not contains requested value");
                 }
 
                 QuadTreeNode<T> node = ValueToNodeTable[value];
 
                 position = node.Point;
-                return true; 
+                return true;
             }
             finally
             {
-                rwLock.ExitReadLock(); 
+                rwLock.ExitReadLock();
             }
         }
 
@@ -521,7 +517,7 @@ namespace Geometry
             }
             finally
             {
-                rwLock.ExitReadLock(); 
+                rwLock.ExitReadLock();
             }
         }
 

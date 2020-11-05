@@ -8,9 +8,10 @@ using VikingXNA;
 
 namespace VikingXNAGraphics
 {
-    public abstract class BillboardViewBase : IColorView, IViewPosition2D, IRenderable
+    public abstract class BillboardViewBase : IColorView, IViewPosition2D, IRenderable, IViewBoundingRect
     {
         public abstract IShape2D Shape { get; }
+
 
         /// <summary>
         /// Positions the billboard in the world
@@ -19,8 +20,8 @@ namespace VikingXNAGraphics
 
         protected virtual void UpdateModelMatrix()
         {
-            this.ModelMatrix = Matrix.CreateScale((float)Shape.BoundingBox.Width,
-                                                  (float)Shape.BoundingBox.Height,
+            this.ModelMatrix = Matrix.CreateScale((float)Shape.BoundingBox.Width/2,
+                                                  (float)Shape.BoundingBox.Height/2,
                                                   1f) * Matrix.CreateTranslation(Shape.BoundingBox.Center.ToXNAVector3(0));
         }
 
@@ -67,6 +68,7 @@ namespace VikingXNAGraphics
 
 
         public abstract GridVector2 Position { get; set; }
+        public abstract GridRectangle BoundingRect { get; set; }
 
         /// <summary>
         /// Called when the position or color of the view change

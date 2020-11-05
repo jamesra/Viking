@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms; 
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Geometry;
-using VikingXNAGraphics;
 using SIMeasurement;
+using System.Collections.Generic;
+using System.Windows.Forms;
+using VikingXNAGraphics;
 
 namespace MeasurementExtension
 {
@@ -25,8 +22,8 @@ namespace MeasurementExtension
         {
             get
             {
-                List<string> s = new List<string>(MeasureCommand.DefaultHelpStrings); 
-                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings); 
+                List<string> s = new List<string>(MeasureCommand.DefaultHelpStrings);
+                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 return s.ToArray();
             }
         }
@@ -48,7 +45,7 @@ namespace MeasurementExtension
 
         protected override void OnMouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-//            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            //            GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             //Figure out if we are starting a rectangle
             if (e.Button == MouseButtons.Left)
@@ -67,9 +64,9 @@ namespace MeasurementExtension
         {
             base.OnMouseMove(sender, e);
 
-            Parent.Invalidate(); 
+            Parent.Invalidate();
         }
-         
+
 
         private string DistanceToString(double distance)
         {
@@ -84,7 +81,7 @@ namespace MeasurementExtension
             GridVector2 mosaic_target;
             bool transformed_origin = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(Origin, out mosaic_origin);
             bool transformed_current = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(this.oldWorldPosition, out mosaic_target);
-                     
+
             if (transformed_origin && transformed_current)
             {
                 return new double?(GridVector2.Distance(mosaic_origin, mosaic_target) * MeasurementExtension.Global.UnitsPerPixel);
@@ -96,11 +93,11 @@ namespace MeasurementExtension
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
             if (CommandActive == false)
-                return; 
+                return;
 
             //Retrieve the mouse position from the last update, the base class records this for us
             Vector3 target = new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f);
-            if((Control.ModifierKeys == Keys.Shift))
+            if ((Control.ModifierKeys == Keys.Shift))
             {
                 target.Y = (float)Origin.Y;
             }
@@ -109,7 +106,7 @@ namespace MeasurementExtension
 
             double VolumeDistance = GridVector2.Distance(Origin, this.oldWorldPosition) * MeasurementExtension.Global.UnitsPerPixel;
 
-            string mosaic_space_string =  "No mosaic transform";
+            string mosaic_space_string = "No mosaic transform";
 
             if (Viking.UI.State.volume.UsingVolumeTransform)
             {
@@ -121,7 +118,7 @@ namespace MeasurementExtension
             }
             else
             {
-                mosaic_space_string = null; 
+                mosaic_space_string = null;
             }
 
             string volume_space_string = DistanceToString(VolumeDistance);
@@ -144,7 +141,7 @@ namespace MeasurementExtension
             GridVector2 DrawPosition = Parent.WorldToScreen(target.X, target.Y);
 
             string output_string = null;
-            if(mosaic_space_string != null)
+            if (mosaic_space_string != null)
             {
                 output_string = mosaic_space_string + " Mosaic\n" + volume_space_string + " Volume";
             }
@@ -153,15 +150,15 @@ namespace MeasurementExtension
                 output_string = volume_space_string;
             }
 
-            Parent.spriteBatch.DrawString(Parent.fontArial,
+            Parent.spriteBatch.DrawString(VikingXNAGraphics.Global.DefaultFont,
                 output_string,
                 new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
                 lineColor,
                 0,
-                new Vector2(0,0),
+                new Vector2(0, 0),
                 0.25f,
                 SpriteEffects.None,
-                0);          
+                0);
 
             Parent.spriteBatch.End();
 

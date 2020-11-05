@@ -1,12 +1,11 @@
-﻿using System;
+﻿using AnnotationService.Types;
+using AnnotationVizLib.WCFClient.AnnotationClient;
 using System.Collections.Generic;
 using System.Linq;
-using AnnotationService.Types;
-using AnnotationVizLib.WCFClient.AnnotationClient;
 
 namespace AnnotationVizLib.WCFClient
 {
-        
+
     public static class WCFMorphologyFactory
     {
 
@@ -17,7 +16,7 @@ namespace AnnotationVizLib.WCFClient
             UnitsAndScale.IScale scale = Queries.GetScale().ToGeometryScale();
 
             MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
-            
+
             MorphologyForStructures(rootGraph, StructureIDs, include_children, scale);
 
             return rootGraph;
@@ -32,14 +31,14 @@ namespace AnnotationVizLib.WCFClient
         {
             if (StructureIDs == null)
                 return;
-            
+
             Structure[] structures = Queries.GetStructuresByIDs(StructureIDs.ToArray(), include_children);
 
             Queries.PopulateStructureTypes();
 
             System.Threading.Tasks.ParallelOptions o = new System.Threading.Tasks.ParallelOptions();
             o.MaxDegreeOfParallelism = 8;
-            
+
             // Get the nodes and build graph for numHops            
             System.Threading.Tasks.Parallel.ForEach<Structure>(structures, o, s =>
             //foreach(Structure s in structures)
@@ -78,7 +77,7 @@ namespace AnnotationVizLib.WCFClient
         private static MorphologyGraph BuildGraphFromLocations(Structure s, Location[] locations, UnitsAndScale.IScale scale)
         {
             if (locations == null)
-                return null; 
+                return null;
 
             if (locations.Length <= 0)
             {

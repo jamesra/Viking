@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace AnnotationVizLib
 {
@@ -19,7 +16,7 @@ namespace AnnotationVizLib
             {"minlen", "1"},
             {"sep", "1"},
             {"ranksep", "0.1"},
-            {"nodesep", "0.5"}, 
+            {"nodesep", "0.5"},
             {"mode", "major"},
             {"model", "subset"},
             {"maxiter", "10000"}
@@ -40,26 +37,26 @@ namespace AnnotationVizLib
         /// has its attributes returned.
         /// </summary>
         public static IList<AttributeMap> StandardLabelToNodeDOTAppearance = new List<AttributeMap>()
-        {   
+        {
             new AttributeMap("AXON", new SortedList<string,string> {
                             {"fillcolor", "Red3"},
                             {"shape", "hexagon"}
                 }
             ),
             new AttributeMap("DENDRITE", new SortedList<string,string> {
-                            {"fillcolor", "green3"} 
+                            {"fillcolor", "green3"}
                 }
             ),
             new AttributeMap("CBAB", new SortedList<string,string> {
-                            {"fillcolor", "green4"} 
+                            {"fillcolor", "green4"}
                 }
             ),
             new AttributeMap("GBC", new SortedList<string,string> {
-                            {"fillcolor", "cadetblue"} 
+                            {"fillcolor", "cadetblue"}
                 }
             ),
             new AttributeMap("CBB", new SortedList<string,string> {
-                            {"fillcolor", "cadetblue"} 
+                            {"fillcolor", "cadetblue"}
                 }
             ),
             new AttributeMap("AII", new SortedList<string,string> {
@@ -93,19 +90,19 @@ namespace AnnotationVizLib
                 }
             ),
             new AttributeMap("ROD BC", new SortedList<string,string> {
-                            {"fillcolor", "purple"} 
+                            {"fillcolor", "purple"}
                 }
             ),
             new AttributeMap("OFF", new SortedList<string,string> {
-                            {"fillcolor", "blue"} 
+                            {"fillcolor", "blue"}
                 }
             ),
             new AttributeMap("CBA", new SortedList<string,string> {
-                            {"fillcolor", "blue"} 
+                            {"fillcolor", "blue"}
                 }
             ),
             new AttributeMap("BC", new SortedList<string,string> {
-                            {"fillcolor", "grey"} 
+                            {"fillcolor", "grey"}
                 }
             ),
             new AttributeMap("AXC", new SortedList<string,string> {
@@ -145,7 +142,7 @@ namespace AnnotationVizLib
         };
 
         public static IList<AttributeMap> StandardEdgeSourceLabelToDOTAppearance = new List<AttributeMap>()
-        {   
+        {
             new AttributeMap("RIBBON SYNAPSE", new SortedList<string,string> {
                             {"dir", "forward"},
                             {"arrowhead", "normal"},

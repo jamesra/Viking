@@ -1,10 +1,7 @@
-﻿using System;
+﻿using Annotation.Interfaces;
+using AnnotationService.Types;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using AnnotationService.Types;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib.WCFClient
 {
@@ -67,7 +64,7 @@ namespace AnnotationVizLib.WCFClient
         {
             get
             {
-                return new WCFStructureTypeAdapter(Queries.IDToStructureType[this.structure.TypeID] );
+                return new WCFStructureTypeAdapter(Queries.IDToStructureType[this.structure.TypeID]);
             }
         }
 

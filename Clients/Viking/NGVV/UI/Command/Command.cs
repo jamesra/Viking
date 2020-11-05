@@ -64,7 +64,6 @@ namespace Viking.UI.Commands
         public void EnqueueCommand(System.Type CommandType)
         {
             EnqueueCommand(CommandType, new Object[] { Viking.UI.State.ViewerControl });
-            OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, _CommandQueue.Peek(), 0));
         }
 
         /// <summary>
@@ -559,7 +558,7 @@ namespace Viking.UI.Commands
             GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
             this.Parent.StatusPosition = NewPosition;
 
-            if (e.Erase && e.InContact)
+            if (oldPen != null && e.Erase && e.InContact)
             {
                 GridVector2 OldPosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
                 System.Diagnostics.Debug.Assert(double.IsNaN(NewPosition.X) == false);
@@ -687,7 +686,7 @@ namespace Viking.UI.Commands
                     GridVector2 Left = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
                     GridVector2 Right = Parent.ScreenToWorld(Parent.ClientRectangle.Right, Parent.ClientRectangle.Top);
                     GridVector2 Diff = Right - Left;
-                    Diff.Scale(0.25);
+                    Diff *= 0.25;
 
                     Parent.Camera.LookAt -= new Vector2((float)Diff.X, (float)Diff.Y);
                     this.Parent.Invalidate();
@@ -696,7 +695,7 @@ namespace Viking.UI.Commands
                     Left = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
                     Right = Parent.ScreenToWorld(Parent.ClientRectangle.Right, Parent.ClientRectangle.Top);
                     Diff = Right - Left;
-                    Diff.Scale(0.25);
+                    Diff *= 0.25;
 
                     Parent.Camera.LookAt += new Vector2((float)Diff.X, (float)Diff.Y);
                     this.Parent.Invalidate();
@@ -705,7 +704,7 @@ namespace Viking.UI.Commands
                     GridVector2 Bottom = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Bottom);
                     GridVector2 Top = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
                     Diff = Top - Bottom;
-                    Diff.Scale(0.25);
+                    Diff *= 0.25;
 
                     Parent.Camera.LookAt += new Vector2((float)Diff.X, (float)Diff.Y);
                     this.Parent.Invalidate();
@@ -714,7 +713,7 @@ namespace Viking.UI.Commands
                     Bottom = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Bottom);
                     Top = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
                     Diff = Top - Bottom;
-                    Diff.Scale(0.25);
+                    Diff *= 0.25;
 
                     Parent.Camera.LookAt -= new Vector2((float)Diff.X, (float)Diff.Y);
                     this.Parent.Invalidate();

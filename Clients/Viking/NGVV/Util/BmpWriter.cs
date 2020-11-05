@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
-using Microsoft.Xna.Framework.Graphics;
 
 namespace Viking.Common
 {
-   //This was added as a workaround for the SaveAsPng memory leak in XNA.Texture2D
+    //This was added as a workaround for the SaveAsPng memory leak in XNA.Texture2D
     public class BmpWriter
     {
         byte[] textureData;
@@ -87,7 +84,7 @@ namespace Viking.Common
                 safePtr = lockedBmpData.Scan0;
 
                 //The easy case...
-                if (lockedBmpData.Stride == lockedBmpData.Width * 4) 
+                if (lockedBmpData.Stride == lockedBmpData.Width * 4)
                     System.Runtime.InteropServices.Marshal.Copy(textureData, 0, safePtr, textureData.Length);
                 else
                 {
@@ -102,5 +99,5 @@ namespace Viking.Common
                 bmp.Save(filename, ImageFormat.Png);
             }
         }
-    } 
+    }
 }

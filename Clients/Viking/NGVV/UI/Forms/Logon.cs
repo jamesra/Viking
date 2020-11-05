@@ -1,25 +1,19 @@
-﻿using System;
+﻿using IdentityModel.Client;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.Net;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
-using System.Security.AccessControl;
-using Viking.UI;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
-using Viking.Properties;
-using System.Xml.Linq;
-using System.Windows.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Windows.Threading;
+using System.Xml.Linq;
 using Utils;
-using IdentityModel.Client;
+using Viking.Properties;
 
 namespace Viking.UI.Forms
 {
@@ -71,9 +65,9 @@ namespace Viking.UI.Forms
 
                 _VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(value);
 
-                if(_LoadVolumeTask != null)
+                if (_LoadVolumeTask != null)
                 {
-                    if(_LoadVolumeTask.Status != TaskStatus.RanToCompletion)
+                    if (_LoadVolumeTask.Status != TaskStatus.RanToCompletion)
                     {
                         source.Cancel();
                     }
@@ -87,10 +81,10 @@ namespace Viking.UI.Forms
                 }
 
                 source = new CancellationTokenSource();
-                
-                if(_VolumeURL != null)
+
+                if (_VolumeURL != null)
                 {
-                    _LoadVolumeTask = Task.Run(() => 
+                    _LoadVolumeTask = Task.Run(() =>
                     {
                         XDocument document = null;
                         try
@@ -101,7 +95,7 @@ namespace Viking.UI.Forms
                                 this.BeginInvoke(new System.Action(() => comboVolumeURL.Text = _VolumeURL));
                             }
                         }
-                        catch(WebException except)
+                        catch (WebException except)
                         {
                             document = null;
                             SetUpdateText("No volume found at URL");
@@ -111,14 +105,14 @@ namespace Viking.UI.Forms
                                 DialogResult result = MessageBox.Show(this, "Error loading volume URL, remove from history?\n\n Details:\n " + except.Message, "Invalid Volume URL", MessageBoxButtons.YesNo);
                                 if (result == DialogResult.Yes)
                                     Settings.Default.VolumeURLs.Remove(_VolumeURL);
-                            } 
+                            }
                         }
 
                         if (this.IsHandleCreated)
                         {
                             this.Invoke(new System.Action(() => VolumeDocument = document));
                         }
-                    }, source.Token);  
+                    }, source.Token);
                 }
                 else
                 {
@@ -145,20 +139,20 @@ namespace Viking.UI.Forms
         }
 
         private string userName = UI.State.AnonymousCredentials.UserName;
-        private string password = UI.State.AnonymousCredentials.Password; 
-        public string keyFile; 
+        private string password = UI.State.AnonymousCredentials.Password;
+        public string keyFile;
         private string readUserName;
         private int counter = 0;
 
-        public NetworkCredential Credentials = UI.State.AnonymousCredentials; 
+        public NetworkCredential Credentials = UI.State.AnonymousCredentials;
 
         public DialogResult Result = DialogResult.Cancel;
 
-        public TokenResponse BearerToken; 
+        public TokenResponse BearerToken;
 
         protected string KeyFileFolderPath
         {
-            get { return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Viking");}
+            get { return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Viking"); }
         }
 
         protected string KeyFileFullPath
@@ -173,13 +167,13 @@ namespace Viking.UI.Forms
 
         public Logon(string AuthenticationURL, string VolumePath = null)
         {
-            if(VolumePath != null)
-                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => VolumeURL = VolumePath));         
+            if (VolumePath != null)
+                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => VolumeURL = VolumePath));
 
             keyFile = "usrcrd.vkg";
-             
+
             //State.UserCredentials = new NetworkCredential(userName, password);
-            
+
             State.userAccessLevel = "Exit";
 
             InitializeComponent();
@@ -227,7 +221,7 @@ namespace Viking.UI.Forms
                 Settings.Default.VolumeURLs = new System.Collections.Specialized.StringCollection();
             }
 
-            for(int i = Settings.Default.VolumeURLs.Count - 1; i >= 0; i--)
+            for (int i = Settings.Default.VolumeURLs.Count - 1; i >= 0; i--)
             {
                 if (Settings.Default.VolumeURLs[0] == null)
                     Settings.Default.VolumeURLs.RemoveAt(i);
@@ -235,7 +229,7 @@ namespace Viking.UI.Forms
 
             foreach (string url in Settings.Default.VolumeURLs)
             {
-                if(url != null)
+                if (url != null)
                     comboVolumeURL.Items.Add(url);
             }
 
@@ -255,7 +249,7 @@ namespace Viking.UI.Forms
                 comboVolumeURL.Text = "http://connectomes.utah.edu/Rabbit/Volume.VikingXML";
             }
 
-            if(VolumeURL == null)
+            if (VolumeURL == null)
             {
                 VolumeURL = comboVolumeURL.Text;
             }
@@ -266,59 +260,62 @@ namespace Viking.UI.Forms
         void linkLabel1_Click(object sender, System.EventArgs e)
         {
             System.Diagnostics.Process.Start("https://connectomes.utah.edu/Viz/Account/Register");
-        }      
+        }
 
-        private TokenResponse RetrieveBearerToken(string username, string password)
+        private async Task<TokenResponse> RetrieveBearerToken(string username, string password)
         {
             //The url must match and is case-sensitive
             //var discoTask = DiscoveryClient.GetAsync("http://localhost:5000");
-            var discoTask = DiscoveryClient.GetAsync("https://webdev.connectomes.utah.edu/identityserver");
-            discoTask.Wait();
-
-            var disco = discoTask.Result;
-
-            if (disco.IsError)
+            using (HttpClient client = new HttpClient())
             {
-                SetUpdateText(disco.Error);
-                return null;
+                var disco = await client.GetDiscoveryDocumentAsync("https://webdev.connectomes.utah.edu/identityserver");
+                if (disco.IsError)
+                {
+                    SetUpdateText(disco.Error);
+                    return null;
+                }
+
+                // request token
+                PasswordTokenRequest request = new PasswordTokenRequest()
+                {
+                    Address = disco.TokenEndpoint,
+                    ClientId = "ro.viking",
+                    ClientSecret = "secret",
+                    Scope = "Viking.Annotation openid"
+                };
+
+                var tokenResponse = await client.RequestPasswordTokenAsync(request);
+
+                if (tokenResponse.IsError)
+                {
+                    Console.WriteLine(tokenResponse.Error);
+                    SetUpdateText(tokenResponse.Error);
+                    return null;
+                }
+
+                Console.WriteLine("Bearer Token: " + tokenResponse.Json);
+
+                return tokenResponse;
             }
-
-            // request token
-            var tokenClient = new TokenClient(disco.TokenEndpoint, "ro.viking", "secret");
-            var tokenResponseTask = tokenClient.RequestResourceOwnerPasswordAsync(username, password, "Viking.Annotation openid");
-            tokenResponseTask.Wait();
-
-            TokenResponse tokenResponse = tokenResponseTask.Result;
-
-            if (tokenResponse.IsError)
-            {
-                Console.WriteLine(tokenResponse.Error);
-                SetUpdateText(tokenResponse.Error);
-                return null;
-            }
-
-            Console.WriteLine("Bearer Token: " + tokenResponse.Json);
-
-            return tokenResponse;
         }
 
-        void login_handle(object sender, System.EventArgs e)
+        async void login_handle(object sender, System.EventArgs e)
         {
             SetUpdateText("Authenticating...");
 
             userName = this.textUsername.Text;
 
             password = this.textPassword.Text;
-             
+
             if (String.IsNullOrEmpty(userName))
                 SetUpdateText("Enter Username");
 
             if (String.IsNullOrEmpty(password))
                 SetUpdateText("Enter Password");
 
-            this.BearerToken = RetrieveBearerToken(userName, password);
+            this.BearerToken = await RetrieveBearerToken(userName, password);
 
-            if(BearerToken == null)
+            if (BearerToken == null)
             {
                 return;
             }
@@ -327,7 +324,7 @@ namespace Viking.UI.Forms
             //this.Credentials = new NetworkCredential("jamesan", "4%w%o06");
 
             State.userAccessLevel = "Admin";
-            
+
             if (this.textUsername.Text != readUserName)
                 System.IO.File.Delete(this.KeyFileFullPath);
 
@@ -341,7 +338,7 @@ namespace Viking.UI.Forms
                     WriteCredentialsInEncryptedFile(new NetworkCredential(userName, password));
 #endif
                 }
-                catch(IOException except)
+                catch (IOException except)
                 {
                     MessageBox.Show("An exception occured saving your credentials. Viking will continue but your credentials will not be saved for the next login.\nException message:\n" + except.Message);
                     if (System.IO.File.Exists(this.KeyFileFullPath))
@@ -360,11 +357,11 @@ namespace Viking.UI.Forms
             }
 
             SetUpdateText("Login Successful! -- Access Level: ");
-            
+
             this.Result = DialogResult.OK;
 
             this.Close();
-            
+
 
         }
 
@@ -415,16 +412,16 @@ namespace Viking.UI.Forms
 
                         sw.Write(EncryptString(content, this.passkey));
 
-                        sw.Flush(); 
+                        sw.Flush();
                     }
                 }
 
                 File.Encrypt(this.KeyFileFullPath);
 
                 return true;
-            } 
+            }
 
-            return false; 
+            return false;
         }
 
         private NetworkCredential ReadCredentialsFromFile()
@@ -463,7 +460,7 @@ namespace Viking.UI.Forms
         private NetworkCredential ReadCredentialsFromEncryptedFile()
         {
             string keyFileFullPath = this.KeyFileFullPath;
-            NetworkCredential credentials = null; 
+            NetworkCredential credentials = null;
             if (System.IO.File.Exists(KeyFileFullPath))
             {
 
@@ -477,7 +474,7 @@ namespace Viking.UI.Forms
                         {
 
                             string[] data = DecryptString(sr.ReadToEnd(), passkey).Split(',');
-                              
+
                             credentials = new NetworkCredential(data[0], data[1]);
 
                             return credentials;
@@ -487,10 +484,10 @@ namespace Viking.UI.Forms
                 catch (System.Exception e)
                 {
                     System.IO.File.Delete(KeyFileFullPath);
-                } 
+                }
             }
 
-            return null; 
+            return null;
         }
 
         private string encryptString(string content, string passkey)
@@ -533,11 +530,11 @@ namespace Viking.UI.Forms
                 this.Close();
             }
         }
-       
+
         string createConnection()
-        { 
+        {
             string postdata = string.Format("userName={0}&password={1}", userName, password);
-            if(userName == "anonymous")
+            if (userName == "anonymous")
                 return "Exit";
 
             Uri AuthenticationURI;
@@ -552,9 +549,9 @@ namespace Viking.UI.Forms
 
             if (AuthenticationURI.Scheme.ToLower() != "https")
             {
-                throw new ArgumentException("Logon UI, createConnection(): Expected to authenticate to an https URI scheme"); 
+                throw new ArgumentException("Logon UI, createConnection(): Expected to authenticate to an https URI scheme");
             }
-            
+
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(AuthenticationURI);
             request.Method = "POST";
 
@@ -583,9 +580,9 @@ namespace Viking.UI.Forms
                     }
                 }
             }
-            catch(WebException e)
+            catch (WebException e)
             {
-                
+
                 SetUpdateText("Failure communicating with authentication server.\n" + e.Message);
                 return "Exit";
             }
@@ -628,7 +625,7 @@ namespace Viking.UI.Forms
         {
             System.Diagnostics.Process.Start("http://marclab.org/");
         }
-         
+
         private void vikingLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             System.Diagnostics.Process.Start("http://connectomes.utah.edu");
@@ -672,15 +669,15 @@ namespace Viking.UI.Forms
 
             //TripleDESCryptoServiceProvider TDESAlgorithm = null;
             byte[] TDESKey = null;
-            byte[] DataToEncrypt = null; 
+            byte[] DataToEncrypt = null;
             //ICryptoTransform Encryptor = null; 
 
-            using(MD5CryptoServiceProvider HashProvider  = new MD5CryptoServiceProvider())
+            using (MD5CryptoServiceProvider HashProvider = new MD5CryptoServiceProvider())
             {
                 TDESKey = HashProvider.ComputeHash(UTF8.GetBytes(Passphrase));
 
-                 // Step 2. Create a new TripleDESCryptoServiceProvider object
-                using(TripleDESCryptoServiceProvider TDESAlgorithm = new TripleDESCryptoServiceProvider())
+                // Step 2. Create a new TripleDESCryptoServiceProvider object
+                using (TripleDESCryptoServiceProvider TDESAlgorithm = new TripleDESCryptoServiceProvider())
                 {
 
                     // Step 3. Setup the encoder
@@ -689,16 +686,16 @@ namespace Viking.UI.Forms
                     TDESAlgorithm.Padding = PaddingMode.PKCS7;
 
                     // Step 4. Convert the input string to a byte[]
-                        DataToEncrypt = UTF8.GetBytes(Message);
+                    DataToEncrypt = UTF8.GetBytes(Message);
 
                     // Step 5. Attempt to encrypt the string
-                    using(ICryptoTransform Encryptor = TDESAlgorithm.CreateEncryptor())
+                    using (ICryptoTransform Encryptor = TDESAlgorithm.CreateEncryptor())
                     {
                         Results = Encryptor.TransformFinalBlock(DataToEncrypt, 0, DataToEncrypt.Length);
                         TDESAlgorithm.Clear();
                     }
                 }
-            } 
+            }
 
             // Step 6. Return the encrypted string as a base64 encoded string
             return Convert.ToBase64String(Results);
@@ -706,21 +703,21 @@ namespace Viking.UI.Forms
 
         public string DecryptString(string Message, string Passphrase)
         {
-            byte[] Results = new byte[0]; 
+            byte[] Results = new byte[0];
             System.Text.UTF8Encoding UTF8 = new System.Text.UTF8Encoding();
 
             // Step 1. We hash the passphrase using MD5
             // We use the MD5 hash generator as the result is a 128 bit byte array
             // which is a valid length for the TripleDES encoder we use below
-             
-            byte[] DataToDecrypt = null; 
-            using(MD5CryptoServiceProvider HashProvider  = new MD5CryptoServiceProvider())
+
+            byte[] DataToDecrypt = null;
+            using (MD5CryptoServiceProvider HashProvider = new MD5CryptoServiceProvider())
             {
                 byte[] TDESKey = HashProvider.ComputeHash(UTF8.GetBytes(Passphrase));
 
                 // Step 2. Create a new TripleDESCryptoServiceProvider object
-                using(TripleDESCryptoServiceProvider TDESAlgorithm = new TripleDESCryptoServiceProvider())
-                { 
+                using (TripleDESCryptoServiceProvider TDESAlgorithm = new TripleDESCryptoServiceProvider())
+                {
 
                     // Step 3. Setup the decoder
                     TDESAlgorithm.Key = TDESKey;
@@ -731,7 +728,7 @@ namespace Viking.UI.Forms
                     DataToDecrypt = Convert.FromBase64String(Message);
 
                     // Step 5. Attempt to decrypt the string
-                    using(ICryptoTransform Decryptor = TDESAlgorithm.CreateDecryptor())
+                    using (ICryptoTransform Decryptor = TDESAlgorithm.CreateDecryptor())
                     {
                         Results = Decryptor.TransformFinalBlock(DataToDecrypt, 0, DataToDecrypt.Length);
                     }
@@ -741,17 +738,17 @@ namespace Viking.UI.Forms
 
                 HashProvider.Clear();
             }
-             
+
 
             // Step 6. Return the decrypted string in UTF8 format
-            return UTF8.GetString( Results );
+            return UTF8.GetString(Results);
         }
 
         private void OnVolumeURLChanged(string URL)
         {
             if (this.VolumeURL != null)
             {
-                comboVolumeURL.Text = this.VolumeURL; 
+                comboVolumeURL.Text = this.VolumeURL;
             }
         }
 
@@ -815,7 +812,7 @@ namespace Viking.UI.Forms
 
             XElement elem = matches.First();
             XAttribute attrib = elem.GetAttributeCaseInsensitive("authentication");
-            if(attrib != null)
+            if (attrib != null)
             {
                 return attrib.Value;
             }
@@ -861,9 +858,9 @@ namespace Viking.UI.Forms
 
             Settings.Default.VolumeURLs.Insert(0, NewURL);
         }
-         
+
         private void comboVolumeURL_Validating(object sender, CancelEventArgs e)
-        { 
+        {
             string NewURL = comboVolumeURL.Text;
 
             if (!(NewURL.ToLower().StartsWith("http:") ||
@@ -877,7 +874,7 @@ namespace Viking.UI.Forms
                 this.VolumeURL = NewURL;
                 this.comboVolumeURL.Text = NewURL;
             }
-            catch(UriFormatException)
+            catch (UriFormatException)
             {
                 e.Cancel = true;
                 SetUpdateText("Invalid valid URL format");
@@ -888,12 +885,12 @@ namespace Viking.UI.Forms
         {
             Settings.Default.Save();
         }
-        
+
         private void btnFindOCPVolume_Click(object sender, EventArgs e)
-        {             
+        {
             FindVolumeForm findVolumeForm = new FindVolumeForm();
 
-            if(findVolumeForm.ShowDialog() == DialogResult.OK)
+            if (findVolumeForm.ShowDialog() == DialogResult.OK)
             {
                 string ServerURL = findVolumeForm.ServerURL + "/" + findVolumeForm.VolumeURL;
                 ServerURL = TryAddVikingXMLExtension(ServerURL);

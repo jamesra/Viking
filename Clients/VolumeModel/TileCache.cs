@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
 using Viking.Common;
 
 namespace Viking.VolumeModel
@@ -41,8 +38,8 @@ namespace Viking.VolumeModel
 
         protected override Tile Fetch(TileCacheEntry key)
         {
-            key.WasUsedSinceLastCheckpoint = true; 
-            return key.Tile; 
+            key.WasUsedSinceLastCheckpoint = true;
+            return key.Tile;
         }
 
         public Tile ConstructTile(string TileUniqueKey,
@@ -50,7 +47,7 @@ namespace Viking.VolumeModel
                                 int[] TriangleIndicies,
                                 string textureFullPath,
                                 string cacheFilePath,
-                            /*PORT: ViewModel should handle cache names*/ //   string cachedTextureFileName,
+                                /*PORT: ViewModel should handle cache names*/ //   string cachedTextureFileName,
                                 string TransformName,
                                 int downsample,
                                 int MipMapLevels //Should be one, unless it is the minimum downsample level
@@ -77,7 +74,7 @@ namespace Viking.VolumeModel
                     //PORT: MipMapLevels
                     );
             }
-            
+
             //We can add a null tile to the cache to indicate it has been calculated and we do not have valid data for it.
             Add(key, tile);
 
@@ -100,7 +97,7 @@ namespace Viking.VolumeModel
             return true;                    
         }
         */
-        
+
         /// <summary>
         /// Aborts all requests for tiles not on the provided list.
         /// Only one of these methods should be running at a time or much of the cache could be deleted
@@ -108,11 +105,11 @@ namespace Viking.VolumeModel
         /// <param name="SafeTiles"></param>
         protected override void OnCheckpointFailed(TileCacheEntry entry)
         {
-           // Trace.WriteLine("OnCheckpointFailed for transform: " + entry.Key);
-            base.OnCheckpointFailed(entry);   
+            // Trace.WriteLine("OnCheckpointFailed for transform: " + entry.Key);
+            base.OnCheckpointFailed(entry);
             //
             //RemoveEntry(entry);
-        } 
-         
+        }
+
     }
 }

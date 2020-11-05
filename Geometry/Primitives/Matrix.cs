@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Diagnostics; 
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks; 
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 
 namespace Geometry
-{    
+{
     /// <summary>
     /// Depricated class.  There are better libraries available now in C#.
     /// </summary>
@@ -21,15 +18,15 @@ namespace Geometry
             int[] dims = Size;
             for (int iRow = 0; iRow < dims[0]; iRow++)
             {
-                for(int iCol = 0; iCol < dims[1]; iCol++)
+                for (int iCol = 0; iCol < dims[1]; iCol++)
                 {
                     Output = Output + M[iRow, iCol].ToString("g4") + " ";
                 }
 
-                Output = Output + "; " + Environment.NewLine; 
+                Output = Output + "; " + Environment.NewLine;
             }
 
-            return Output; 
+            return Output;
         }
 
         public GridMatrix()
@@ -39,7 +36,7 @@ namespace Geometry
 
         public GridMatrix(double[,] matrix)
         {
-            this.M = matrix; 
+            this.M = matrix;
         }
 
         /// <summary>
@@ -55,53 +52,53 @@ namespace Geometry
             System.DateTime StartTime = System.DateTime.UtcNow;
 
             if (A == null || B == null)
-                throw new System.ArgumentException("Null parameter passed to LinSolve"); 
+                throw new System.ArgumentException("Null parameter passed to LinSolve");
 
             int[] dimsA = matrixA.Size;
-            int dimB = B.Length; 
+            int dimB = B.Length;
 
             int nRows = dimsA[0];
-            int nCols = dimsA[1]; 
+            int nCols = dimsA[1];
 
             double Epsilon = double.Epsilon * 128;
-            
 
-            if(dimsA[0] != dimsA[1])
+
+            if (dimsA[0] != dimsA[1])
             {
-                throw new System.ArgumentException("Linear solution implementation requires a square 2D matrix"); 
+                throw new System.ArgumentException("Linear solution implementation requires a square 2D matrix");
             }
 
-            if(dimsA[0] != dimB)
+            if (dimsA[0] != dimB)
             {
-                throw new System.ArgumentException( "Solution to matrix does not match dimensions of matrix"); 
+                throw new System.ArgumentException("Solution to matrix does not match dimensions of matrix");
             }
 
             int[] rowOrder = new int[B.Length];
-            for(int i = 0; i < B.Length; i++)
+            for (int i = 0; i < B.Length; i++)
             {
-                rowOrder[i] = i; 
+                rowOrder[i] = i;
             }
 
-            double[,] TempRow = new double[1,nCols];
+            double[,] TempRow = new double[1, nCols];
             double[,] TriangleForm = new double[nRows, nCols];
 
             double[] ScaledResults = new double[nCols];
 
-            Array.Copy(B, ScaledResults, B.Length); 
-            Array.Copy(A, TriangleForm, A.Length); 
+            Array.Copy(B, ScaledResults, B.Length);
+            Array.Copy(A, TriangleForm, A.Length);
 
-            for(int iRow = 0; iRow < B.Length; iRow++)
+            for (int iRow = 0; iRow < B.Length; iRow++)
             {
 
                 //Check if we need to swap rows to get a non-zero value in the column, require a number of a reasonable size
                 if (Math.Abs(TriangleForm[iRow, iRow]) <= Epsilon)
                 {
-                    int iSwapRow; 
-                    for(iSwapRow = iRow+1; iSwapRow < B.Length; iSwapRow++)
+                    int iSwapRow;
+                    for (iSwapRow = iRow + 1; iSwapRow < B.Length; iSwapRow++)
                     {
                         if (Math.Abs(TriangleForm[iSwapRow, iRow]) <= Epsilon)
                         {
-                            continue; 
+                            continue;
                         }
 
                         Array.Copy(TriangleForm, iRow * nCols, TempRow, 0, nCols);
@@ -110,22 +107,22 @@ namespace Geometry
 
                         double tempB = ScaledResults[iRow];
                         ScaledResults[iRow] = ScaledResults[iSwapRow];
-                        ScaledResults[iSwapRow] = tempB; 
+                        ScaledResults[iSwapRow] = tempB;
 
                         rowOrder[iRow] = iSwapRow;
                         rowOrder[iSwapRow] = iRow;
 
-                        break; 
+                        break;
                     }
 
                     Debug.Assert(iSwapRow != B.Length, "Multiple linear solutions to matrix");
-                    if(iSwapRow >= B.Length)
-                        throw new System.ArgumentException("Multiple linear solutions to matrix"); 
+                    if (iSwapRow >= B.Length)
+                        throw new System.ArgumentException("Multiple linear solutions to matrix");
                 }
 
                 //Reduce our row to have a one on the diagonal
-                double scalar = 1 / TriangleForm[iRow,iRow];
-                TriangleForm[iRow,iRow] = 1;
+                double scalar = 1 / TriangleForm[iRow, iRow];
+                TriangleForm[iRow, iRow] = 1;
                 ScaledResults[iRow] = ScaledResults[iRow] * scalar;
 
                 Parallel.For<int>(iRow + 1, nCols, () => 0,
@@ -163,7 +160,7 @@ namespace Geometry
                         return iRow;
                     },
                         (x) => { }
-                ); 
+                );
 
                 /*
                 for(int iReduceRow = iRow+1; iReduceRow < nRows; iReduceRow++)
@@ -194,21 +191,21 @@ namespace Geometry
             //OK, now solve the system
             for (int iRow = nRows - 1; iRow >= 0; iRow--)
             {
-                double Sum = 0; 
+                double Sum = 0;
 
                 for (int iCol = nCols - 1; iCol > iRow; iCol--)
                 {
-                    Sum += ReducedForm[iRow, iCol] * Weights[iCol]; 
+                    Sum += ReducedForm[iRow, iCol] * Weights[iCol];
                 }
 
-                Weights[iRow] = Weights[iRow] - Sum; 
+                Weights[iRow] = Weights[iRow] - Sum;
             }
 
             //Reorder the weights correctly
             Double[] FinalWeights = new Double[nRows];
             for (int iRow = 0; iRow < nRows; iRow++)
             {
-                FinalWeights[iRow] = Weights[rowOrder[iRow]]; 
+                FinalWeights[iRow] = Weights[rowOrder[iRow]];
             }
 
             System.DateTime EndTime = System.DateTime.UtcNow;
@@ -217,22 +214,22 @@ namespace Geometry
 
             Trace.WriteLine("Matrix solution completed, elapsed: " + Elapsed.TotalSeconds.ToString("G4"));
 
-            return FinalWeights; 
+            return FinalWeights;
         }
 
         public int[] Size
         {
             get
             {
-                
+
                 int rank = M.Rank;
                 int[] dims = new int[rank];
                 for (int iDim = 0; iDim < rank; iDim++)
                 {
-                    dims[iDim] = M.GetUpperBound(iDim)+1; 
+                    dims[iDim] = M.GetUpperBound(iDim) + 1;
                 }
 
-                return dims; 
+                return dims;
             }
         }
 

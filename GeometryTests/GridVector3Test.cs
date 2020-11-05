@@ -1,10 +1,9 @@
-﻿using System;
-using System.Text;
+﻿using Geometry;
+using MathNet.Numerics.LinearAlgebra;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Geometry;
-using MathNet.Numerics.LinearAlgebra;
 
 namespace UtilitiesTests
 {
@@ -65,7 +64,7 @@ namespace UtilitiesTests
         public void TestAngle()
         {
             GridVector3 A = new GridVector3(5, 0, 0);
-            GridVector3 B = new GridVector3(2.5, 2.5,0);
+            GridVector3 B = new GridVector3(2.5, 2.5, 0);
 
             double PI4 = Math.PI / 4;
 
@@ -73,8 +72,8 @@ namespace UtilitiesTests
             Assert.IsTrue(angle - Global.Epsilon < (1.0 * PI4) &&
                          angle + Global.Epsilon > (1.0 * PI4));
 
-            A = new GridVector3(5, 0,0);
-            B = new GridVector3(2.5, -2.5,0);
+            A = new GridVector3(5, 0, 0);
+            B = new GridVector3(2.5, -2.5, 0);
 
             angle = GridVector3.Angle(A, B);
             Assert.IsTrue(angle - Global.Epsilon < (1.0 * PI4) &&
@@ -91,10 +90,10 @@ namespace UtilitiesTests
             double Pi4 = Math.PI / 4.0;
             double Pi2 = Math.PI / 2.0;
 
-            GridVector3 Origin = new GridVector3(0, 0,0);
-            GridVector3 A = new GridVector3(1, 0,0);
-            GridVector3 B = new GridVector3(0, 1,0);
-            GridVector3 C = new GridVector3(-1, 0,0);
+            GridVector3 Origin = new GridVector3(0, 0, 0);
+            GridVector3 A = new GridVector3(1, 0, 0);
+            GridVector3 B = new GridVector3(0, 1, 0);
+            GridVector3 C = new GridVector3(-1, 0, 0);
 
             double Degree90 = GridVector3.ArcAngle(Origin, A, B);
             Assert.AreEqual(Degree90, Pi2);
@@ -118,11 +117,11 @@ namespace UtilitiesTests
             double Pi4 = Math.PI / 4.0;
             double Pi2 = Math.PI / 2.0;
 
-            GridVector3 Origin = new GridVector3(0, 0,0);
-            GridVector3 A = new GridVector3(1, 0,0);
-            GridVector3 B = new GridVector3(0, 1,0);
-            GridVector3 C = new GridVector3(-1, 0,0);
-            GridVector3 D = new GridVector3(Math.Cos(Pi4), Math.Sin(Pi4),0);
+            GridVector3 Origin = new GridVector3(0, 0, 0);
+            GridVector3 A = new GridVector3(1, 0, 0);
+            GridVector3 B = new GridVector3(0, 1, 0);
+            GridVector3 C = new GridVector3(-1, 0, 0);
+            GridVector3 D = new GridVector3(Math.Cos(Pi4), Math.Sin(Pi4), 0);
 
             double degree45 = GridVector3.ArcAngle(Origin, A, D);
             double result = GridVector3.Angle(Origin, D);
@@ -158,11 +157,11 @@ namespace UtilitiesTests
         [TestMethod]
         public void TestTranslate()
         {
-            GridVector3 A = new GridVector3(0, 0,0);
+            GridVector3 A = new GridVector3(0, 0, 0);
 
             Vector<double> v = Vector<double>.Build.Dense(new double[] { A.X, A.Y, 0, 1 });
 
-            GridVector3 Offset = new GridVector3(1, 2,0);
+            GridVector3 Offset = new GridVector3(1, 2, 0);
 
             Matrix<double> translationMatrix = GeometryMathNetNumerics.CreateTranslationMatrix(Offset);
             Vector<double> translated = translationMatrix * v;
@@ -176,14 +175,14 @@ namespace UtilitiesTests
             ICollection<GridVector3> translatedPoints = translatedMatrix.ToGridVector3();
             Assert.AreEqual(translatedPoints.First(), A + Offset);
         }
-        
+
         [TestMethod]
         public void ToFromMatrix()
         {
-            GridVector3 A = new GridVector3(1, 2,0);
-            GridVector3 B = new GridVector3(1, 0,0);
-            GridVector3 C = new GridVector3(2, 1,0);
-            GridVector3 D = new GridVector3(0, 1,0);
+            GridVector3 A = new GridVector3(1, 2, 0);
+            GridVector3 B = new GridVector3(1, 0, 0);
+            GridVector3 C = new GridVector3(2, 1, 0);
+            GridVector3 D = new GridVector3(0, 1, 0);
 
             GridVector3[] points = new GridVector3[] { A, B, C, D };
 

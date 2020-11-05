@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using WebAnnotationModel.Service;
-using System.Diagnostics;
-using AnnotationService.Types;
+﻿using AnnotationService.Types;
+using System;
 
 namespace WebAnnotationModel.Objects
 {
@@ -14,7 +9,7 @@ namespace WebAnnotationModel.Objects
     {
         public abstract KEY ID { get; }
 
-                
+
         public override string ToString()
         {
             if (Data != null)
@@ -43,7 +38,7 @@ namespace WebAnnotationModel.Objects
 
             if ((object)A != null)
                 return A.Equals(B);
-                  
+
             return false;
         }
 
@@ -62,8 +57,8 @@ namespace WebAnnotationModel.Objects
 
         protected abstract int GenerateHashCode();
         int? _HashCode;
-        
-        
+
+
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.
         /// In this case make sure we always return the same hash code.
@@ -75,7 +70,7 @@ namespace WebAnnotationModel.Objects
                 return _HashCode.Value;
             else
             {
-                _HashCode = new int?(GenerateHashCode()); 
+                _HashCode = new int?(GenerateHashCode());
                 return _HashCode.Value;
             }
         }

@@ -8,10 +8,9 @@ using System.Collections.ObjectModel;
 using Annotation.Interfaces;
 using WebAnnotationModel;
 using Annotation.ViewModels.Commands;
-using WebAnnotationModel;
 
 namespace Annotation.ViewModels
-{ 
+{
     public class FavoriteStructureIDsViewModel : INotifyPropertyChanged
     {
         ObservableCollection<ulong> _FavoriteStructureTypeIDs = null;
@@ -66,6 +65,15 @@ namespace Annotation.ViewModels
 
         public bool CanDeleteFavorite(object item)
         {
+            if (item is IStructureType TypeObj)
+            {
+                return FavoriteStructureTypeIDs.Contains(TypeObj.ID) ;
+            }
+            else
+            {
+                return FavoriteStructureTypeIDs.Contains(System.Convert.ToUInt64(item));
+            }
+
             return FavoriteStructureTypeIDs.Contains(System.Convert.ToUInt64(item));
         }
 
@@ -80,7 +88,14 @@ namespace Annotation.ViewModels
 
         public bool CanAddFavorite(object item)
         {
-            return FavoriteStructureTypeIDs.Contains(System.Convert.ToUInt64(item)) == false;
+            if(item is IStructureType TypeObj)
+            {
+                return FavoriteStructureTypeIDs.Contains(TypeObj.ID) == false;
+            }
+            else
+            { 
+                return FavoriteStructureTypeIDs.Contains(System.Convert.ToUInt64(item)) == false;
+            }
         }
 
         public void AddFavorite(object item)
@@ -96,7 +111,7 @@ namespace Annotation.ViewModels
         public FavoriteStructureIDsViewModel(ObservableCollection<ulong> Favorites = null, ObservableCollection<ulong> root_types = null) : this()
         {
             if (root_types == null)
-                _RootStructureTypes = new ObservableCollection<IStructureType>(Store.StructureTypes.rootObjects.Values);
+                _RootStructureTypes = new ObservableCollection<IStructureType>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true));
 
             FavoriteStructureTypeIDs = Favorites;
         }

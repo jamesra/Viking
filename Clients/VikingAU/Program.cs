@@ -1,20 +1,18 @@
-﻿using System;
-using System.Text.RegularExpressions;
-
-using System.ComponentModel;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
 using CommandLine;
 using CommandLine.Text;
-using Viking.VolumeModel; 
-using System.Diagnostics;
-using WebAnnotationModel; 
 using Geometry;
-using SqlGeometryUtils;
 using Microsoft.SqlServer.Types;
-using Annotation.Interfaces;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using Viking.VolumeModel;
+using WebAnnotationModel;
 
 namespace Viking.AU
 {
@@ -57,7 +55,7 @@ namespace Viking.AU
         {
             return CommandLine.Text.HelpText.AutoBuild(this,
                 (HelpText current) => HelpText.DefaultParsingErrorsHandler(this, current));
-        } 
+        }
 
         private static bool IsNumberRange(string input)
         {
@@ -82,7 +80,7 @@ namespace Viking.AU
                 listNumbers.Add(SectionNumber);
                 return listNumbers;
             }
-            catch(FormatException e)
+            catch (FormatException e)
             {
                 Regex regex = new Regex(@"(\d+)\-(\d+)");
                 Match m = regex.Match(input);
@@ -105,7 +103,7 @@ namespace Viking.AU
         {
             List<long> listNumbers = new List<long>();
 
-            foreach(string chunk in input.Split(','))
+            foreach (string chunk in input.Split(','))
             {
                 string trimmed_chunk = chunk.Trim();
 
@@ -135,7 +133,7 @@ namespace Viking.AU
 
         public void ReportProgress(double ProgressPercentage, string message)
         {
-                        
+
             StringBuilder output = new StringBuilder();
             string Details = string.Format("{0}% {1}", ProgressPercentage, message);
             int LineLength = Details.Length;
@@ -161,7 +159,7 @@ namespace Viking.AU
         static CommandLineOptions options = new CommandLineOptions();
 
         static void Main(string[] args)
-        { 
+        {
             if (!CommandLine.Parser.Default.ParseArguments(args, Program.options))
             {
                 System.Console.WriteLine("Unable to parse command line arguments, aborting");
@@ -169,8 +167,8 @@ namespace Viking.AU
             }
 
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-            
+            //SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+
             ConsoleProgressReporter progressReporter = new AU.ConsoleProgressReporter();
 
             State.Volume = new Volume(Program.options.VolumeURL, State.CachePath, progressReporter);
@@ -194,7 +192,7 @@ namespace Viking.AU
             else
             {
                 SectionsToProcess = options.Sections.Where(sectionNumber => State.Volume.Sections.ContainsKey((int)sectionNumber)).ToList();
-                
+
             }
 
             //OK.  Figure out which command we are executing.
@@ -226,14 +224,14 @@ namespace Viking.AU
                 //    UpdateVolumePositions(sectionNumber);
 
                 var task = taskFactory.StartNew(() => UpdateVolumePositions(sectionNumber));
-            
+
                 //var task = System.Threading.Tasks.Task.Run();
                 tasks.Add(sectionNumber, task);
 
-                while(tasks.Keys.Count > 2)
+                while (tasks.Keys.Count > 2)
                 {
                     RemoveCompletedTasks(tasks);
-                } 
+                }
             }
 
             foreach (long sectionNumber in tasks.Keys.ToArray())
@@ -242,7 +240,7 @@ namespace Viking.AU
                 task.Wait();
                 Console.WriteLine(task.Result);
                 tasks.Remove(sectionNumber);
-                    
+
                 State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
             }
         }
@@ -266,7 +264,7 @@ namespace Viking.AU
                 }
             }
 
-            if(!AnyCompleted)
+            if (!AnyCompleted)
             {
                 System.Threading.Thread.Sleep(500);
             }
@@ -288,12 +286,12 @@ namespace Viking.AU
 
             int NumUpdated = 0;
             foreach (LocationObj loc in LocDict.Values)
-            {  
+            {
                 bool result = UpdateVolumeShape(loc, mapper);
                 if (result)
                     NumUpdated++;
             }
-            
+
 
             if (NumUpdated > 0)
             {
@@ -301,7 +299,7 @@ namespace Viking.AU
                 {
                     threadLocationStore.Save();
                 }
-                catch(System.ServiceModel.FaultException e)
+                catch (System.ServiceModel.FaultException e)
                 {
                     Trace.WriteLine(string.Format("Exception saving volume locations:\n{0}", e));
                     //Console.Write("...Locations updated");
@@ -324,7 +322,7 @@ namespace Viking.AU
         static bool UpdateVolumeShape(LocationObj loc, MappingBase mapper)
         {
             bool TypeUpdated = false;
-            if(!IsLocationTypeValid(loc))
+            if (!IsLocationTypeValid(loc))
             {
                 if (TryRepairLocationType(loc))
                 {
@@ -336,20 +334,20 @@ namespace Viking.AU
             }
 
             SqlGeometry updatedVolumeShape = VolumeShapeForLocation(loc, mapper);
-            if(updatedVolumeShape == null)
+            if (updatedVolumeShape == null)
             {
                 Console.WriteLine("Could not map location ID : " + loc.ID.ToString());
-                return false; 
+                return false;
             }
-            if(!updatedVolumeShape.STIsValid())
+            if (!updatedVolumeShape.STIsValid())
             {
                 Console.WriteLine(string.Format("Location {0} invalid : {1} ", loc.ID, updatedVolumeShape.IsValidDetailed()));
-                return false; 
+                return false;
             }
-             
+
             GridVector2[] OriginalVolumeControlPoints = loc.VolumeShape.ToPoints();
             GridVector2[] UpdatedVolumeControlPoints = updatedVolumeShape.ToPoints();
-             
+
             if (AnyPointsAreDifferent(OriginalVolumeControlPoints, UpdatedVolumeControlPoints) ||
                 updatedVolumeShape.GeometryType() != loc.VolumeShape.GeometryType())
             {
@@ -359,7 +357,7 @@ namespace Viking.AU
 
             return TypeUpdated;
         }
-        
+
         static GridVector2[] MosaicPointsForLocation(LocationObj loc)
         {
             GridVector2[] mosaicPoints;
@@ -388,10 +386,10 @@ namespace Viking.AU
         {
             SqlGeometry UnsmoothedVolumeShape = mapper.TryMapShapeSectionToVolume(loc.MosaicShape);
             if (UnsmoothedVolumeShape == null)
-                return null; 
+                return null;
 
             //Check a rare case where points are stored as circles
-            
+
 
             SqlGeometry SmoothedVolumeShape = loc.TypeCode.GetSmoothedShape(UnsmoothedVolumeShape);
             return SmoothedVolumeShape;
@@ -406,11 +404,11 @@ namespace Viking.AU
             switch (loc.MosaicShape.GeometryType())
             {
                 case SupportedGeometryType.POINT:
-                    if (loc.TypeCode != LocationType.POINT) 
+                    if (loc.TypeCode != LocationType.POINT)
                         return false;
-                    break; 
+                    break;
                 case SupportedGeometryType.CURVEPOLYGON:
-                    if (loc.TypeCode != LocationType.CIRCLE) 
+                    if (loc.TypeCode != LocationType.CIRCLE)
                         return false;
                     break;
                 case SupportedGeometryType.POLYLINE:
@@ -428,7 +426,7 @@ namespace Viking.AU
                     return false;
             }
 
-            return true; 
+            return true;
         }
 
         /// <summary>
@@ -441,28 +439,28 @@ namespace Viking.AU
             switch (loc.MosaicShape.GeometryType())
             {
                 case SupportedGeometryType.POINT:
-                    if(loc.TypeCode !=  LocationType.POINT)
+                    if (loc.TypeCode != LocationType.POINT)
                     {
                         loc.TypeCode = LocationType.POINT;
-                        return true; 
+                        return true;
                     }
                     break;
                 case SupportedGeometryType.CURVEPOLYGON:
-                    if(loc.TypeCode != LocationType.CIRCLE)
+                    if (loc.TypeCode != LocationType.CIRCLE)
                     {
                         loc.TypeCode = LocationType.CIRCLE;
                         return true;
                     }
                     break;
                 case SupportedGeometryType.POLYLINE:
-                    if(loc.TypeCode == LocationType.CIRCLE)
+                    if (loc.TypeCode == LocationType.CIRCLE)
                     {
                         loc.TypeCode = LocationType.POLYLINE;
                         loc.Width = 8.0;
-                        return true; 
+                        return true;
                     }
                     //Convert a polyline to a polygon to match the location typecode
-                    if(loc.TypeCode == LocationType.POLYGON || loc.TypeCode == LocationType.CURVEPOLYGON)
+                    if (loc.TypeCode == LocationType.POLYGON || loc.TypeCode == LocationType.CURVEPOLYGON)
                     {
                         SqlGeometry newShape = loc.MosaicShape.ToPoints().ToPolygon();
                         if (newShape.STIsValid().IsTrue)
@@ -472,12 +470,12 @@ namespace Viking.AU
                             return true;
                         }
 
-                        return false; 
-                        
+                        return false;
+
                     }
                     break;
                 case SupportedGeometryType.POLYGON:
-                    if(loc.TypeCode == LocationType.CLOSEDCURVE || loc.TypeCode == LocationType.POLYLINE)
+                    if (loc.TypeCode == LocationType.CLOSEDCURVE || loc.TypeCode == LocationType.POLYLINE)
                     {
                         SqlGeometry newShape = loc.MosaicShape.ToPoints().ToSqlGeometry();
                         if (newShape.STIsValid().IsTrue)
@@ -487,17 +485,17 @@ namespace Viking.AU
                             return true;
                         }
 
-                        return false; 
+                        return false;
                     }
                     break;
                 default:
-                    return false;  
+                    return false;
             }
 
-            return false; 
+            return false;
         }
-         
-         
+
+
 
         static bool AnyPointsAreDifferent(GridVector2[] Original, GridVector2[] New, double epsilonSquared = 0.25)
         {

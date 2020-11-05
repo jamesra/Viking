@@ -1,25 +1,21 @@
 ﻿using System;
-using System.Diagnostics; 
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Geometry;
 
 namespace Geometry
 {
     /// <summary>
     /// Stores a quadtree 
     /// </summary>
-     public class QuadTreeTemplatePoint<TPoint, TValue>
+    public class QuadTreeTemplatePoint<TPoint, TValue>
          where TPoint : struct, IPoint
     {
         //GridVector2[] _points;
-         QuadTreeNodeTemplatePoint<TPoint, TValue> Root;
+        QuadTreeNodeTemplatePoint<TPoint, TValue> Root;
 
         /// <summary>
         /// Maps the values to the node containing the values. Populated by the QuadTreeNode class.
         /// </summary>
-         internal Dictionary<TValue, QuadTreeNodeTemplatePoint<TPoint, TValue>> ValueToNodeTable = new Dictionary<TValue, QuadTreeNodeTemplatePoint<TPoint, TValue>>(); 
+        internal Dictionary<TValue, QuadTreeNodeTemplatePoint<TPoint, TValue>> ValueToNodeTable = new Dictionary<TValue, QuadTreeNodeTemplatePoint<TPoint, TValue>>();
 
         public QuadTreeTemplatePoint(GridRectangle border)
         {
@@ -29,9 +25,9 @@ namespace Geometry
 
         public QuadTreeTemplatePoint(TPoint[] keys, TValue[] values, GridRectangle border)
         {
-            CreateTree(keys, values,  border); 
+            CreateTree(keys, values, border);
         }
-        
+
         /// <summary>
         /// Insert a new point within the borders into the tree
         /// </summary>
@@ -75,7 +71,7 @@ namespace Geometry
         {
             //Create a node centered in the border
             //this.Root = new QuadTreeNode<T>(this, new GridRectangle(double.MinValue, double.MaxValue, double.MinValue, double.MaxValue));
-            this.Root = new QuadTreeNodeTemplatePoint<TPoint, TValue>(this, border); 
+            this.Root = new QuadTreeNodeTemplatePoint<TPoint, TValue>(this, border);
 
             for (int iPoint = 0; iPoint < keys.Length; iPoint++)
             {
@@ -89,11 +85,11 @@ namespace Geometry
             distance = double.MaxValue;
             if (Root == null)
             {
-                return default(TValue); 
+                return default(TValue);
             }
             else if (Root.IsLeaf == true && Root.HasValue == false)
             {
-                return default(TValue); 
+                return default(TValue);
             }
 
             return Root.FindNearest(point, out nodePoint, ref distance);
@@ -108,7 +104,7 @@ namespace Geometry
 
             QuadTreeNodeTemplatePoint<TPoint, TValue> node = ValueToNodeTable[value];
 
-            return node.Point; 
+            return node.Point;
         }
 
         /// <summary>
@@ -119,7 +115,7 @@ namespace Geometry
         public void Intersect(GridRectangle gridRect, out List<TPoint> outPoints, out List<TValue> outValues)
         {
             this.Root.Intersect(gridRect, true, out outPoints, out outValues);
-            return; 
+            return;
         }
     }
 }

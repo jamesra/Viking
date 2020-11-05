@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Text;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Serialization;
 
@@ -15,11 +13,11 @@ namespace Geometry.Transforms
     static class GridTransformHelper
     {
         static ConcurrentDictionary<GridVector2, int[]> TriangleIndexDictionary = new ConcurrentDictionary<GridVector2, int[]>();
-//        static ConcurrentDictionary<GridVector2, MappingGridTriangle[]> TriangleListDictionary = new ConcurrentDictionary<GridVector2, MappingGridTriangle[]>();
+        //        static ConcurrentDictionary<GridVector2, MappingGridTriangle[]> TriangleListDictionary = new ConcurrentDictionary<GridVector2, MappingGridTriangle[]>();
 
         static ConcurrentDictionary<GridVector2, List<int>[]> EdgesDictionary = new ConcurrentDictionary<GridVector2, List<int>[]>();
 
-        static public int IndexForCoord(int x, int y, int GridSizeX, int GridSizeY)        
+        static public int IndexForCoord(int x, int y, int GridSizeX, int GridSizeY)
         {
             return y + (x * GridSizeY);
         }
@@ -42,7 +40,7 @@ namespace Geometry.Transforms
                 Indicies = new int[(GridSizeX - 1) * (GridSizeY - 1) * 6];
                 int iNextIndex = 0;
 
-                
+
                 for (int x = 0; x < GridSizeX - 1; x++)
                 {
                     for (int y = 0; y < GridSizeY - 1; y++)
@@ -81,14 +79,14 @@ namespace Geometry.Transforms
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 5;
 
-            if(!Bounds.Contains(Point, epsilon))
+            if (!Bounds.Contains(Point, epsilon))
                 return null;
-            
+
             double OffsetX = Point.X - Bounds.Left;
             double OffsetY = Point.Y - Bounds.Bottom;
 
-            double X = (OffsetX / Bounds.Width) * (GridSizeX-1);
-            double Y = (OffsetY / Bounds.Height) * (GridSizeY-1);
+            double X = (OffsetX / Bounds.Width) * (GridSizeX - 1);
+            double Y = (OffsetY / Bounds.Height) * (GridSizeY - 1);
 
             int iX = (int)X;
             int iY = (int)Y;
@@ -97,30 +95,30 @@ namespace Geometry.Transforms
             bool IsUpper = (X - iX) + (Y - iY) > 1;
 
             //Check edge case where point is exactly on the right edge of the boundary
-            if (OffsetX + double.Epsilon >= Bounds.Width )
+            if (OffsetX + double.Epsilon >= Bounds.Width)
             {
-                IsUpper = true; 
+                IsUpper = true;
                 iX--;
             }
             else if (OffsetY + double.Epsilon >= Bounds.Height)
             {
                 IsUpper = true;
-                iY--; 
+                iY--;
             }
             else
             {
                 IsUpper = (X - iX) + (Y - iY) > 1;
             }
-            
-            int iTri = (iY * 2) + ((GridSizeY-1) * 2 * iX);
+
+            int iTri = (iY * 2) + ((GridSizeY - 1) * 2 * iX);
             //int iTri = (iX * 2) + ((GridSizeX-1) * 2 * iY);
-            iTri += IsUpper ? 1:0;
+            iTri += IsUpper ? 1 : 0;
             iTri *= 3;//Multiply by three to get the triangle offset
 
             MappingGridTriangle mapTri = new MappingGridTriangle(points, TriIndicies[iTri], TriIndicies[iTri + 1], TriIndicies[iTri + 2]);
 
             Debug.Assert(mapTri.IntersectsMapped(Point), "Calculated GridTransform does not intersect requested point");
-            return mapTri; 
+            return mapTri;
         }
 
         /// <summary>
@@ -133,7 +131,7 @@ namespace Geometry.Transforms
         {
             GridVector2 key = new GridVector2(GridSizeX, GridSizeY);
 
-            List<int>[] edges = null; 
+            List<int>[] edges = null;
 
             bool success = EdgesDictionary.TryGetValue(key, out edges);
             if (!success)
@@ -141,35 +139,35 @@ namespace Geometry.Transforms
                 edges = new List<int>[GridSizeX * GridSizeY];
 
                 //Prepopulate edges so we don't have to constantly test for existence in the loop
-                for(int i = 0; i < edges.Length; i++)
+                for (int i = 0; i < edges.Length; i++)
                 {
                     edges[i] = new List<int>(6); //The max number of edges for a grid point
                 }
-                
+
                 for (int x = 0; x < GridSizeX; x++)
                 {
                     for (int y = 0; y < GridSizeY; y++)
                     {
                         int iPoint = y + (x * GridSizeY); //The edges we are populating
 
-                        if(y + 1 < GridSizeY)
+                        if (y + 1 < GridSizeY)
                         {
                             int iAbove = (y + 1) + (x * GridSizeY);
-                            edges[iPoint].Add(iAbove); 
+                            edges[iPoint].Add(iAbove);
                             edges[iAbove].Add(iPoint);
 
-                            if(x - 1 > 0)
+                            if (x - 1 > 0)
                             {
-                                int iAboveLeft = (y + 1) + ((x-1) * GridSizeY);
-                                edges[iPoint].Add(iAboveLeft); 
+                                int iAboveLeft = (y + 1) + ((x - 1) * GridSizeY);
+                                edges[iPoint].Add(iAboveLeft);
                                 edges[iAboveLeft].Add(iPoint);
                             }
                         }
 
-                        if(x + 1 < GridSizeX)
+                        if (x + 1 < GridSizeX)
                         {
                             int iRight = y + ((x + 1) * GridSizeY);
-                            edges[iPoint].Add(iRight); 
+                            edges[iPoint].Add(iRight);
                             edges[iRight].Add(iPoint);
                         }
                     }
@@ -198,8 +196,8 @@ namespace Geometry.Transforms
         /// Size of y dimension of grid 
         /// </summary>
         public int GridSizeY { get; protected set; }
-        
-        public override int[] TriangleIndicies 
+
+        public override int[] TriangleIndicies
         {
             get
             {
@@ -208,7 +206,7 @@ namespace Geometry.Transforms
                     _TriangleIndicies = GridTransformHelper.TrianglesForGrid(GridSizeX, GridSizeY);
                 }
 
-                return _TriangleIndicies; 
+                return _TriangleIndicies;
             }
         }
 
@@ -220,14 +218,14 @@ namespace Geometry.Transforms
                 if (_Edges == null)
                     _Edges = GridTransformHelper.EdgesForGrid(GridSizeX, GridSizeY);
 
-                return _Edges; 
+                return _Edges;
             }
             protected set
             {
                 _Edges = value;
             }
         }
-        
+
         public GridTransform(MappingGridVector2[] points, GridRectangle mappedBounds, int gridSizeX, int gridSizeY, TransformInfo info)
             : base(points, mappedBounds, info)
         {
@@ -249,20 +247,20 @@ namespace Geometry.Transforms
             : base(info, context)
         {
             GridSizeX = (int)info.GetValue("GridSizeX", typeof(int));
-            GridSizeY = (int)info.GetValue("GridSizeY", typeof(int)); 
+            GridSizeY = (int)info.GetValue("GridSizeY", typeof(int));
         }
 
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            if(info == null)
+            if (info == null)
                 throw new ArgumentNullException("info");
-            
+
             info.AddValue("GridSizeX", GridSizeX);
             info.AddValue("GridSizeY", GridSizeY);
 
             base.GetObjectData(info, context);
         }
-        
+
         /// <summary>
         /// Returns the coordinate on the section to be mapped given a grid coordinate from reading the transform
         /// </summary>
@@ -320,7 +318,7 @@ namespace Geometry.Transforms
             {
                 if (!t.ControlBoundingBox.Contains(Point))
                     continue;
-                
+
                 if (t.IntersectsControl(Point))
                     return t;
             }
@@ -345,7 +343,7 @@ namespace Geometry.Transforms
 
         public override double ConvexHullIntersection(GridLineSegment L, GridVector2 OutsidePoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersection)
         {
-            double distance = double.MaxValue; 
+            double distance = double.MaxValue;
             foundCtrlLine = new GridLineSegment();
             foundMapLine = new GridLineSegment();
             intersection = new GridVector2();
@@ -354,30 +352,30 @@ namespace Geometry.Transforms
 
             //Check the edges first
             if (MappedBounds.Intersects(L.BoundingBox) == false)
-                return distance; 
+                return distance;
 
             GridLineSegment[] Borders = new GridLineSegment[] { MappedBounds.LeftEdge,
-                                                                MappedBounds.RightEdge, 
-                                                                MappedBounds.TopEdge, 
+                                                                MappedBounds.RightEdge,
+                                                                MappedBounds.TopEdge,
                                                                 MappedBounds.BottomEdge};
 
-            Direction[] BorderDir = new Direction[] { Direction.LEFT, 
-                                                      Direction.RIGHT, 
-                                                      Direction.TOP, 
+            Direction[] BorderDir = new Direction[] { Direction.LEFT,
+                                                      Direction.RIGHT,
+                                                      Direction.TOP,
                                                       Direction.BOTTOM};
-            
+
             GridVector2 BestIntersection = new GridVector2();
-            Direction IntersectDir = Direction.NONE; 
-            for(int iBorder = 0; iBorder < Borders.Length; iBorder++)
+            Direction IntersectDir = Direction.NONE;
+            for (int iBorder = 0; iBorder < Borders.Length; iBorder++)
             {
                 GridVector2 BorderIntersect;
                 bool success = L.Intersects(Borders[iBorder], out BorderIntersect);
-                if(success)
+                if (success)
                 {
                     double IntersectDistance = GridVector2.Distance(OutsidePoint, BorderIntersect);
-                    if(IntersectDistance < distance)
+                    if (IntersectDistance < distance)
                     {
-                        distance = IntersectDistance; 
+                        distance = IntersectDistance;
                         BestIntersection = BorderIntersect;
                         IntersectDir = BorderDir[iBorder];
                         intersection = BestIntersection;
@@ -385,10 +383,10 @@ namespace Geometry.Transforms
                 }
             }
 
-            if(IntersectDir == Direction.NONE)
+            if (IntersectDir == Direction.NONE)
             {
                 //Nothing found, stop
-                return distance; 
+                return distance;
             }
 
             //Figure out the coordinates for L.A
@@ -402,17 +400,17 @@ namespace Geometry.Transforms
             GridLineSegmentPair pair = LinesForCoord(iX, iY, IntersectDir);
 
             GridVector2 testIntersection;
-            
+
 
             double RoundErrorTestValue = 0;
-            
+
             if (IntersectDir == Direction.RIGHT || IntersectDir == Direction.LEFT)
             {
-                RoundErrorTestValue = X - Math.Floor(X);   
+                RoundErrorTestValue = X - Math.Floor(X);
             }
             else
             {
-               RoundErrorTestValue = Y - Math.Floor(Y);   
+                RoundErrorTestValue = Y - Math.Floor(Y);
             }
 
             if (RoundErrorTestValue > 0.99)
@@ -435,11 +433,11 @@ namespace Geometry.Transforms
                 }
 
 
-                    
+
             }
 
             Debug.Assert(L.Intersects(pair.mapLine, out testIntersection));
-            
+
             foundCtrlLine = pair.ctrlLine;
             foundMapLine = pair.mapLine;
 
@@ -461,19 +459,19 @@ namespace Geometry.Transforms
             GridLineSegmentPair pair;
 
             //Bottom edge intersection
-            if((IntersectDir & (Direction.LEFT | Direction.RIGHT)) > 0)
+            if ((IntersectDir & (Direction.LEFT | Direction.RIGHT)) > 0)
             {
                 if (iY + 1 <= GridSizeY - 1)
-                    iEnd = GridTransformHelper.IndexForCoord(iX, iY+1, GridSizeX, GridSizeY);   
+                    iEnd = GridTransformHelper.IndexForCoord(iX, iY + 1, GridSizeX, GridSizeY);
                 else
-                    iEnd = GridTransformHelper.IndexForCoord(iX, iY-1, GridSizeX, GridSizeY);    //Special case for perfect intersection with top left corner
+                    iEnd = GridTransformHelper.IndexForCoord(iX, iY - 1, GridSizeX, GridSizeY);    //Special case for perfect intersection with top left corner
             }
             else if ((IntersectDir & (Direction.TOP | Direction.BOTTOM)) > 0)
             {
-                if(iX+1 <= GridSizeX-1)
-                    iEnd = GridTransformHelper.IndexForCoord(iX+1, iY, GridSizeX, GridSizeY);
+                if (iX + 1 <= GridSizeX - 1)
+                    iEnd = GridTransformHelper.IndexForCoord(iX + 1, iY, GridSizeX, GridSizeY);
                 else
-                    iEnd = GridTransformHelper.IndexForCoord(iX-1, iY, GridSizeX, GridSizeY);    //Special case for perfect intersection with bottom right corner
+                    iEnd = GridTransformHelper.IndexForCoord(iX - 1, iY, GridSizeX, GridSizeY);    //Special case for perfect intersection with bottom right corner
             }/*
             else if (iX >= GridSizeX && iY >= GridSizeY)
             {
@@ -488,11 +486,11 @@ namespace Geometry.Transforms
 
             Debug.Assert(iStart != iEnd);
 
-            
+
             pair.ctrlLine = new GridLineSegment(MapPoints[iStart].ControlPoint, MapPoints[iEnd].ControlPoint);
             pair.mapLine = new GridLineSegment(MapPoints[iStart].MappedPoint, MapPoints[iEnd].MappedPoint);
 
-            return pair; 
+            return pair;
         }
 
 

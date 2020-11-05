@@ -1,19 +1,15 @@
-﻿using System;
+﻿using Geometry;
+using Microsoft.Xna.Framework;
+using SqlGeometryUtils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Viking.Common;
 using System.Windows.Forms;
-using WebAnnotationModel;
-using System.Diagnostics;
-using WebAnnotation.View;
-using Geometry;
+using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Viking.VolumeModel;
-using SqlGeometryUtils;
+using WebAnnotation.View;
+using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
@@ -37,7 +33,7 @@ namespace WebAnnotation.ViewModel
         {
             if (System.Object.ReferenceEquals(this, obj))
                 return true;
-            
+
             LocationLinkView obj_link = obj as LocationLinkView;
             if ((object)obj_link != null)
                 return this.Key.Equals(obj_link.Key);
@@ -45,7 +41,7 @@ namespace WebAnnotation.ViewModel
             if (typeof(LocationLinkKey).IsInstanceOfType(obj))
             {
                 LocationLinkKey obj_key = (LocationLinkKey)obj;
-                    return this.Key.Equals(obj_key);
+                return this.Key.Equals(obj_key);
             }
 
             return false;
@@ -81,11 +77,11 @@ namespace WebAnnotation.ViewModel
         {
             return Key.ToString() + " Sections: " + MinSection.ToString() + "-" + MaxSection.ToString();
         }
-        
+
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
         /// </summary>
-        public GridCircle A; 
+        public GridCircle A;
 
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
@@ -111,7 +107,7 @@ namespace WebAnnotation.ViewModel
             set
             {
                 _Color = value;
-                if(lineView != null)
+                if (lineView != null)
                     lineView.Color = value;
             }
         }
@@ -166,8 +162,7 @@ namespace WebAnnotation.ViewModel
             ContextMenuGenerator = LocationLink_CanvasContextMenuView.ContextMenuGenerator;
 
             this.lineView = CreateView();
-
-        } 
+        }
 
         public LocationLinkView(LocationObj LocOne, LocationObj LocTwo, int Z, IVolumeTransformProvider mapProvider) : this(new LocationLinkKey(LocOne.ID, LocTwo.ID), Z, mapProvider)
         {
@@ -175,15 +170,15 @@ namespace WebAnnotation.ViewModel
                 throw new ArgumentNullException("LocOne");
 
             if (LocTwo == null)
-                throw new ArgumentNullException("LocTwo"); 
-            
+                throw new ArgumentNullException("LocTwo");
+
             UpdatePropertiesFromLocations(mapProvider);
-            
+
             this.lineView = CreateView();
         }
 
         private bool _LocationsOverlapped;
-        
+
         private void UpdatePropertiesFromLocations(IVolumeTransformProvider mapProvider)
         {
             LocationObj A = Store.Locations[this.Key.A];
@@ -201,7 +196,7 @@ namespace WebAnnotation.ViewModel
 
             this.Color = GetLocationLinkColor(A.Parent.Type.Color.ToXNAColor(), this.MaxSection - this.MinSection, this.MinSection < Z ? -1 : 1, false);
         }
-        
+
         public void GetCanvasViews(LocationLinkKey key, IVolumeTransformProvider mapProvider, out LocationCanvasView AView, out LocationCanvasView BView)
         {
             LocationObj A = Store.Locations[this.Key.A];
@@ -224,11 +219,11 @@ namespace WebAnnotation.ViewModel
         public double LineWidth
         {
             get
-            { 
+            {
                 return LineRadius * 2.0;
             }
         }
-         
+
         public double LineRadius
         {
             get { return Math.Min(A.Radius, B.Radius); }
@@ -254,7 +249,7 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         private Microsoft.Xna.Framework.Color GetLocationLinkColor(Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
         {
-            if(section_span_distance == 0)
+            if (section_span_distance == 0)
             {
                 //This is an error state, we shouldn't have a link between annotations on the same section
                 return Color.White;
@@ -272,14 +267,14 @@ namespace WebAnnotation.ViewModel
             green = 255 - (green / section_span_distance);
             green = green < 0 ? 0 : green;
 
-            int alpha = 64;  
+            int alpha = 64;
 
             //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
             return new Microsoft.Xna.Framework.Color((byte)(red),
                 (byte)(green),
                 (byte)(blue),
                 (byte)(alpha));
-        } 
+        }
 
         /// <summary>
         /// Return true if the locations overlap when viewed from the passed section
@@ -317,12 +312,12 @@ namespace WebAnnotation.ViewModel
         }
 
         #region IUIObjectBasic Members
-        
+
         public override System.Windows.Forms.ContextMenu ContextMenu
         {
             get
             {
-                if(this.ContextMenuGenerator != null)
+                if (this.ContextMenuGenerator != null)
                 {
                     return ContextMenuGenerator(this);
                 }
@@ -350,10 +345,10 @@ namespace WebAnnotation.ViewModel
         }
 
         #endregion
-        
+
         public override void Delete()
         {
-            CallBeforeDelete(); 
+            CallBeforeDelete();
 
             Store.LocationLinks.DeleteLink(Key.A, Key.B);
 
@@ -375,7 +370,7 @@ namespace WebAnnotation.ViewModel
             if (OriginObj.LinksCopy.Contains(target.ID))
                 return false;
 
-            return true; 
+            return true;
         }
 
         public bool IsVisible(Scene scene)
@@ -416,7 +411,7 @@ namespace WebAnnotation.ViewModel
                           VikingXNA.Scene scene,
                           RoundLineCode.LumaOverlayRoundLineManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlayShaderEffect overlayEffect,
                           IEnumerable<LocationLinkView> listToDraw)
         {
             LineView[] linesToDraw = listToDraw.Select(l => l.lineView).ToArray();

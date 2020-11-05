@@ -1,11 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.UI.Forms;
 
@@ -18,7 +12,7 @@ namespace Viking.UI.Controls
             get
             {
                 if (listVolumes.SelectedItems.Count == 0)
-                    return null; 
+                    return null;
 
                 return listVolumes.SelectedItems[0].Text;
             }
@@ -49,8 +43,8 @@ namespace Viking.UI.Controls
         }
 
         public VolumeListControl()
-        {            
-            InitializeComponent(); 
+        {
+            InitializeComponent();
         }
 
         public void SetServers(string[] serverUrls)
@@ -84,7 +78,7 @@ namespace Viking.UI.Controls
 
         private void btnRemove_Click(object sender, EventArgs e)
         {
-            if(this.listServers.SelectedItem != null)
+            if (this.listServers.SelectedItem != null)
             {
                 this.listServers.Items.Remove(this.listServers.SelectedItem);
             }
@@ -103,7 +97,7 @@ namespace Viking.UI.Controls
 
             return true;
         }
-          
+
         private void listServers_SelectedIndexChanged(object sender, EventArgs e)
         {
             listVolumes.Clear();
@@ -119,17 +113,17 @@ namespace Viking.UI.Controls
             string[] volumes = Viking.Common.OCPVolumes.ReadServer(new Uri(OCPServerURL + "public_tokens"));
             this.Cursor = Cursors.Default;
 
-            foreach(string v in volumes)
+            foreach (string v in volumes)
             {
-                listVolumes.Items.Add( new ListViewItem(v));
+                listVolumes.Items.Add(new ListViewItem(v));
             }
 
-            if(volumes.Length > 0)
+            if (volumes.Length > 0)
             {
                 listVolumes.SelectedIndices.Clear();
                 listVolumes.SelectedIndices.Add(0);
             }
-            
+
             listVolumes.Refresh();
         }
     }

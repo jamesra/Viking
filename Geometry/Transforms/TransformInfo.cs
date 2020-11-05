@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.Serialization;
 
 namespace Geometry.Transforms
 {
@@ -74,7 +70,7 @@ namespace Geometry.Transforms
     {
         public readonly int TileNumber;
         public string TileFileName;
-        
+
         //We record these values because as tiles are transformed the dimensions of the mapped space can change and no longer match the image size
         public double ImageWidth;
         public double ImageHeight;
@@ -84,7 +80,7 @@ namespace Geometry.Transforms
             : base(lastModified)
         {
 
-            this.TileFileName = TileFileName; 
+            this.TileFileName = TileFileName;
             this.TileNumber = tileNumber;
             this.ImageWidth = Width;
             this.ImageHeight = Height;
@@ -113,7 +109,7 @@ namespace Geometry.Transforms
             _Extension = System.IO.Path.GetExtension(Filename);
             cacheDirectory = CacheDirectory;
         }
-         
+
         public string CacheDirectory
         {
             get
@@ -149,7 +145,7 @@ namespace Geometry.Transforms
             {
                 _Extension = value;
             }
-        }        
+        }
     }
 
 }

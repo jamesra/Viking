@@ -304,7 +304,7 @@ namespace Geometry
         ///           0 for on the line
         ///           -1 for right
         /// </returns>
-        public int IsLeft(GridVector2 p)
+        public int IsLeft(in GridVector2 p)
         {
             double result = (B.X - A.X) * (p.Y - A.Y) - (B.Y - A.Y) * (p.X - A.X);
             if (result == 0)
@@ -362,7 +362,7 @@ namespace Geometry
         }
 
 
-        public bool Contains(GridVector2 p)
+        public bool Contains(in GridVector2 p)
         {
             return Math.Abs(this.DistanceToPoint(p)) < Global.Epsilon;
         }
@@ -372,7 +372,7 @@ namespace Geometry
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        public double Dot(GridVector2 p)
+        public double Dot(in GridVector2 p)
         {
             return GridVector2.Dot(p - A, B - A);
         }
@@ -392,7 +392,7 @@ namespace Geometry
             }
         }
 
-        public double DistanceToPoint(GridVector2 point)
+        public double DistanceToPoint(in GridVector2 point)
         {
             GridVector2 temp;
             return DistanceToPoint(point, out temp);

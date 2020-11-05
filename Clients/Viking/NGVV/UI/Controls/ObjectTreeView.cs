@@ -1,20 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
 using System.Diagnostics;
-
-using Viking.Common; 
+using System.Drawing;
+using System.Windows.Forms;
+using Viking.Common;
 
 namespace Viking.UI.Controls
 {
     public partial class ObjectTreeView : System.Windows.Forms.TreeView
     {
-        private Dictionary<IUIObject, List<GenericTreeNode>> ObjectNodesTable = new Dictionary<IUIObject, List<GenericTreeNode>>(); 
+        private Dictionary<IUIObject, List<GenericTreeNode>> ObjectNodesTable = new Dictionary<IUIObject, List<GenericTreeNode>>();
 
         public ObjectTreeView()
         {
@@ -22,7 +17,7 @@ namespace Viking.UI.Controls
 
             // TODO: Add any initialization after the InitForm call
             this.Sorted = true;
-//            this.ImageList = PlantMap.UI.SharedResources.SmallIconImageList;
+            //            this.ImageList = PlantMap.UI.SharedResources.SmallIconImageList;
             this.AllowDrop = true;
         }
 
@@ -66,7 +61,7 @@ namespace Viking.UI.Controls
 
         public bool Contains(IUIObject obj)
         {
-            return ObjectNodesTable.ContainsKey(obj); 
+            return ObjectNodesTable.ContainsKey(obj);
         }
 
         public GenericTreeNode[] GetNodesForObject(IUIObject Obj)
@@ -85,7 +80,7 @@ namespace Viking.UI.Controls
 
         public void RemoveNode(GenericTreeNode Node)
         {
-//            IUIObject Obj = Node.Tag as IUIObject;
+            //            IUIObject Obj = Node.Tag as IUIObject;
             UnmapNode(Node);
             Node.Remove();
         }
@@ -166,7 +161,7 @@ namespace Viking.UI.Controls
         {
             get
             {
-                return _ValidDragDropTypes; 
+                return _ValidDragDropTypes;
             }
             set
             {
@@ -217,7 +212,7 @@ namespace Viking.UI.Controls
                     if (DragObjectType == validType)
                     {
                         e.Effect = DragDropEffects.Move;
-                        return; 
+                        return;
                     }
                 }
 
@@ -243,7 +238,7 @@ namespace Viking.UI.Controls
                 }
             }
 
-           
+
         }
 
         protected override void OnDragDrop(System.Windows.Forms.DragEventArgs e)
@@ -308,17 +303,17 @@ namespace Viking.UI.Controls
             {
                 if (MouseNode != null)
                 {
-                    UI.State.SelectedObject = MouseNode.Tag as IUIObject; 
+                    UI.State.SelectedObject = MouseNode.Tag as IUIObject;
                 }
             }
 
-            base.OnMouseDown(e); 
+            base.OnMouseDown(e);
         }
 
         public void AddObjects(IEnumerable<IUIObject> Objects)
         {
             this.BeginUpdate();
-           
+
             foreach (IUIObject Obj in Objects)
             {
                 this.AddObject(Obj, null);
@@ -331,12 +326,12 @@ namespace Viking.UI.Controls
         {
             this.BeginUpdate();
 
-            while(this.Nodes.Count > 0)
+            while (this.Nodes.Count > 0)
             {
-                RemoveNode(this.Nodes[0] as GenericTreeNode); 
+                RemoveNode(this.Nodes[0] as GenericTreeNode);
             }
-            
-            this.EndUpdate(); 
+
+            this.EndUpdate();
         }
 
         protected override void OnDoubleClick(System.EventArgs e)

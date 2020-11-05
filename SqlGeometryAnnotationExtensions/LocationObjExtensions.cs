@@ -1,17 +1,13 @@
-﻿using System;
+﻿using Geometry;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using SqlGeometryUtils;
 
 namespace Viking.VolumeModel
 {
 
     public static class LocationObjExtensions
     {
-        
+
         /// <summary>
         /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
         /// </summary>

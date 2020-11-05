@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net;
-using Newtonsoft.Json.Serialization;
-using System.Linq;
 
 
 namespace Viking.Common
@@ -21,10 +15,10 @@ namespace Viking.Common
                 string[] array = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(responseString);
                 return array;
             }
-            catch(WebException e)
+            catch (WebException e)
             {
                 return new string[] { e.Message };
-            } 
+            }
             catch (Newtonsoft.Json.JsonReaderException e)
             {
                 return new string[] { e.Message };

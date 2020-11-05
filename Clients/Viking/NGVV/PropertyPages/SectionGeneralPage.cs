@@ -1,22 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
-using System.Windows.Forms;
 using System.Diagnostics;
+using System.Globalization;
 using Viking.Common;
 using Viking.ViewModels;
-using System.IO;
-using System.Globalization;
 
 namespace Viking.PropertyPages
 {
     [PropertyPage(typeof(SectionViewModel), 1)]
     public partial class SectionGeneralPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        SectionViewModel Obj; 
+        SectionViewModel Obj;
 
         public SectionGeneralPage()
         {
@@ -38,15 +32,15 @@ namespace Viking.PropertyPages
             }
 
             return HexAsBytes;
-        } 
+        }
 
         public void SetRTFText(string text)
         {
 
-            
+
             try
             {
-                
+
                 //byte[] data = ConvertHexStringToByteArray(text);
                 //string rtfText = System.Text.ASCIIEncoding.Default.GetString(data);
                 richNotes.Rtf = text;
@@ -54,8 +48,8 @@ namespace Viking.PropertyPages
                 //this.richNotes.LoadFile(stream, RichTextBoxStreamType.RichText);
             }
             catch
-            {   
-                this.richNotes.Text = text; 
+            {
+                this.richNotes.Text = text;
             }
         }
 
@@ -68,25 +62,25 @@ namespace Viking.PropertyPages
 
             try
             {
-                
+
                 SetRTFText(Obj.Notes);
             }
             catch
             {
-                 
+
             }
 
-            List<int> SectionNumbers = new List<int>(UI.State.volume.SectionViewModels.Keys); 
+            List<int> SectionNumbers = new List<int>(UI.State.volume.SectionViewModels.Keys);
             SectionNumbers.Sort();
 
-            int ReferenceAbove = int.MaxValue; 
-            int ReferenceBelow = int.MinValue; 
+            int ReferenceAbove = int.MaxValue;
+            int ReferenceBelow = int.MinValue;
 
-            if(Obj.ReferenceSectionAbove != null)
+            if (Obj.ReferenceSectionAbove != null)
                 ReferenceAbove = Obj.ReferenceSectionAbove.Number;
 
             if (Obj.ReferenceSectionBelow != null)
-                ReferenceBelow = Obj.ReferenceSectionBelow.Number; 
+                ReferenceBelow = Obj.ReferenceSectionBelow.Number;
 
             for (int iSection = 0; iSection < SectionNumbers.Count; iSection++)
             {
@@ -95,30 +89,30 @@ namespace Viking.PropertyPages
                 {
                     listBelow.Items.Add(SectionNumber);
                     if (SectionNumber == ReferenceBelow)
-                        listBelow.SelectedItem = SectionNumber; 
+                        listBelow.SelectedItem = SectionNumber;
 
                 }
                 else if (SectionNumber > Obj.Number)
                 {
                     listAbove.Items.Add(SectionNumber);
                     if (SectionNumber == ReferenceAbove)
-                        listAbove.SelectedItem = SectionNumber; 
+                        listAbove.SelectedItem = SectionNumber;
                 }
             }
         }
 
         protected override void OnSaveChanges()
         {
-            if(listAbove.SelectedItem != null)
+            if (listAbove.SelectedItem != null)
             {
                 Obj.ReferenceSectionAbove = Obj.VolumeViewModel.SectionViewModels[(int)listAbove.SelectedItem].section;
             }
 
-            if(listBelow.SelectedItem != null)
+            if (listBelow.SelectedItem != null)
             {
                 Obj.ReferenceSectionBelow = Obj.VolumeViewModel.SectionViewModels[(int)listBelow.SelectedItem].section;
             }
-            
+
         }
 
         private void richNotes_TextChanged(object sender, EventArgs e)

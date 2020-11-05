@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry
 {
@@ -53,7 +50,7 @@ namespace Geometry
         {
             get
             {
-                return Shapes.Select(s => s.BoundingBox).Aggregate((bb1, bb2) => GridRectangle.Union(bb1,bb2));
+                return Shapes.Select(s => s.BoundingBox).Aggregate((bb1, bb2) => GridRectangle.Union(bb1, bb2));
             }
         }
 
@@ -86,7 +83,7 @@ namespace Geometry
         public IShape2D Translate(IPoint2D offset)
         {
             Shape2DCollection translatedShapes = new Shape2DCollection(Shapes.Count);
-            foreach(IShape2D shape in Shapes)
+            foreach (IShape2D shape in Shapes)
             {
                 translatedShapes.Add(shape.Translate(offset));
             }

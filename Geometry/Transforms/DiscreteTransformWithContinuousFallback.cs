@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.Serialization;
-using System.IO;
 
 namespace Geometry.Transforms
 {
@@ -55,7 +52,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                if(DiscreteTransform as IControlPointTriangulation != null)
+                if (DiscreteTransform as IControlPointTriangulation != null)
                 {
                     return ((IControlPointTriangulation)DiscreteTransform).TriangleIndicies;
                 }
@@ -84,7 +81,7 @@ namespace Geometry.Transforms
             this.Info = info;
         }
 
-        protected DiscreteTransformWithContinuousFallback(SerializationInfo info, StreamingContext context) 
+        protected DiscreteTransformWithContinuousFallback(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
                 throw new ArgumentNullException();
@@ -99,8 +96,8 @@ namespace Geometry.Transforms
                 throw new ArgumentNullException();
 
             info.AddValue("DiscreetTransform", DiscreteTransform);
-            info.AddValue("ContinuousTransform", ContinuousTransform); 
-        }  
+            info.AddValue("ContinuousTransform", ContinuousTransform);
+        }
 
         public bool CanTransform(GridVector2 p)
         {
@@ -115,7 +112,7 @@ namespace Geometry.Transforms
         public GridVector2 Transform(GridVector2 Point)
         {
             GridVector2 output;
-            if(!DiscreteTransform.TryTransform(Point, out output))
+            if (!DiscreteTransform.TryTransform(Point, out output))
             {
                 output = ContinuousTransform.Transform(Point);
             }
@@ -139,7 +136,7 @@ namespace Geometry.Transforms
             v = Transform(Points);
             return v.Select(p => true).ToArray();
         }
-        
+
         public GridVector2 InverseTransform(GridVector2 Point)
         {
             GridVector2 output;

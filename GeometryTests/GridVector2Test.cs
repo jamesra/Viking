@@ -4,7 +4,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using FsCheck;
 
 namespace UtilitiesTests
 {
@@ -230,8 +229,8 @@ namespace UtilitiesTests
 
             Assert.AreEqual(result, degree45);
             Assert.AreEqual(degree45, Pi4);
-            Assert.AreEqual(result,  Pi4);
-            
+            Assert.AreEqual(result, Pi4);
+
         }
 
         [TestMethod]
@@ -247,7 +246,7 @@ namespace UtilitiesTests
             double PI4 = Math.PI / 4;
             Assert.IsTrue(angle - Global.Epsilon < PI4 &&
                           angle + Global.Epsilon > PI4);
-            
+
             double angle2 = GridVector2.AbsArcAngle(line, B, true);
             Assert.IsTrue(angle2 - Global.Epsilon < (7.0 * PI4) &&
                          angle2 + Global.Epsilon > (7.0 * PI4));
@@ -255,7 +254,7 @@ namespace UtilitiesTests
             GridLine lineY = new GridLine(A, GridVector2.UnitY);
 
             double angle3 = GridVector2.AbsArcAngle(lineY, B, true);
-             
+
             Assert.IsTrue(angle3 - Global.Epsilon < PI4 &&
                           angle3 + Global.Epsilon > PI4);
 
@@ -273,7 +272,7 @@ namespace UtilitiesTests
 
             GridVector2 Offset = new GridVector2(1, 2);
 
-             Matrix<double> translationMatrix = GeometryMathNetNumerics.CreateTranslationMatrix(Offset);
+            Matrix<double> translationMatrix = GeometryMathNetNumerics.CreateTranslationMatrix(Offset);
             Vector<double> translated = translationMatrix * v;
 
             GridVector2 translatedPoint = translated.ToGridVector2();
@@ -300,7 +299,7 @@ namespace UtilitiesTests
 
             GridVector2 calculatedCentroid = points.Average();
 
-            Assert.AreEqual(Centroid ,  calculatedCentroid);
+            Assert.AreEqual(Centroid, calculatedCentroid);
 
             GridVector2[] pointsToRotate = new GridVector2[] { N, W, S, E };
             GridVector2[] rotatedPoints = pointsToRotate.Rotate(Math.PI / 2, Centroid).ToArray();
@@ -318,7 +317,7 @@ namespace UtilitiesTests
             GridVector2 B = new GridVector2(1, 0);
             GridVector2 C = new GridVector2(2, 1);
             GridVector2 D = new GridVector2(0, 1);
-              
+
             GridVector2[] points = new GridVector2[] { A, B, C, D };
 
             Matrix<double> m = points.ToMatrix();
@@ -326,7 +325,7 @@ namespace UtilitiesTests
 
             Assert.AreEqual(points.Length, convertedPoints.Length);
 
-            for(int i = 0; i < points.Length; i++)
+            for (int i = 0; i < points.Length; i++)
             {
                 Assert.AreEqual(points[i], convertedPoints[i]);
             }
@@ -340,13 +339,13 @@ namespace UtilitiesTests
             GridVector2 E = new GridVector2(1, 0);
             GridVector2 S = new GridVector2(0, -1);
 
-            GridVector2[] WNE_Points = new GridVector2[] { W, N, E};
+            GridVector2[] WNE_Points = new GridVector2[] { W, N, E };
             GridVector2[] ENW_Points = new GridVector2[] { E, N, W };
 
             Assert.IsTrue(WNE_Points.AreClockwise());
             Assert.IsFalse(ENW_Points.AreClockwise());
             Assert.AreNotEqual(WNE_Points.AreClockwise(), ENW_Points.AreClockwise());
-            
+
 
             GridVector2[] NES_Points = new GridVector2[] { N, E, S };
             GridVector2[] SEN_Points = new GridVector2[] { S, E, N };
@@ -354,14 +353,14 @@ namespace UtilitiesTests
             Assert.IsTrue(NES_Points.AreClockwise());
             Assert.IsFalse(SEN_Points.AreClockwise());
             Assert.AreNotEqual(NES_Points.AreClockwise(), SEN_Points.AreClockwise());
-            
+
 
             GridVector2[] NES_Points_Translated = NES_Points.Translate(new GridVector2(10, 10));
             GridVector2[] SEN_Points_Translated = SEN_Points.Translate(new GridVector2(10, 10));
 
             Assert.IsTrue(NES_Points_Translated.AreClockwise());
             Assert.IsFalse(SEN_Points_Translated.AreClockwise());
-            Assert.AreNotEqual(NES_Points_Translated.AreClockwise(), SEN_Points_Translated.AreClockwise()); 
+            Assert.AreNotEqual(NES_Points_Translated.AreClockwise(), SEN_Points_Translated.AreClockwise());
         }
 
         [TestMethod]
@@ -403,7 +402,7 @@ namespace UtilitiesTests
             GridVector2 p = new GridVector2(0, 10);
             GridVector2 q = new GridVector2(5, 0);
             GridVector2 r = new GridVector2(10, 10);
-            
+
             GridVector2 left = new GridVector2(5, 5);
             GridVector2 right = new GridVector2(5, -5);
 

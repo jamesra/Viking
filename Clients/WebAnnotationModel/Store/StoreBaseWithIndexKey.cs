@@ -1,14 +1,9 @@
-﻿using System;
+﻿using AnnotationService.Types;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.ServiceModel;
-using WebAnnotationModel.Service;
-using WebAnnotationModel.Objects;
 using System.Diagnostics;
-using System.Collections.Concurrent;
-using System.Collections.Specialized;
-using AnnotationService.Types;
+using System.ServiceModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
@@ -30,9 +25,9 @@ namespace WebAnnotationModel
         static KEYGEN keyGenerator = new KEYGEN();
         public KEY GetTempKey()
         {
-            return keyGenerator.NextKey(); 
+            return keyGenerator.NextKey();
         }
-                      
+
 
         /// <summary>
         /// Save all changes to locations, returns true if the method completed without errors, otherwise false
@@ -48,19 +43,19 @@ namespace WebAnnotationModel
 
             ChangeInventory<OBJECT> inventory;
             List<OBJECT> output = new List<OBJECT>(input.Count);
-            List<WCFOBJECT> changedDBObj = null; 
+            List<WCFOBJECT> changedDBObj = null;
             try
             {
                 changedDBObj = new List<WCFOBJECT>(input.Count);
 
-                
+
                 foreach (OBJECT dbObj in input)
                 {
-                    changedDBObj.Add(dbObj.GetData()); 
+                    changedDBObj.Add(dbObj.GetData());
                 }
-                                
-                PROXY proxy =null;
-                    
+
+                PROXY proxy = null;
+
                 KEY[] newIDs = new KEY[0];
                 try
                 {
@@ -88,7 +83,7 @@ namespace WebAnnotationModel
 
                 inventory = ProcessUpdateResults(newIDs, input, changedDBObj);
             }
-            catch (FaultException )
+            catch (FaultException)
             {
                 //  System.Windows.Forms.MessageBox.Show("An exception occurred while saving structure types.  Viking is pretending none of the changes happened.  Exception Data: " + e.Message, "Error");
 
@@ -140,7 +135,7 @@ namespace WebAnnotationModel
                 return false;
             }
 
-            if(inventory != null)
+            if (inventory != null)
             {
                 CallOnCollectionChanged(inventory);
             }
@@ -159,7 +154,7 @@ namespace WebAnnotationModel
 
 
             List<KEY> replacedKeysList = new List<KEY>(newIDs.Length);
-            List<OBJECT> replacedObjList = new List<OBJECT>(newIDs.Length); 
+            List<OBJECT> replacedObjList = new List<OBJECT>(newIDs.Length);
 
 
             //Update ID's of new objects
@@ -219,9 +214,9 @@ namespace WebAnnotationModel
                 // }
             }
 
-            
+
             ChangeInventory<OBJECT> output = InternalAdd(newObjList.ToArray());
-            output.UpdatedObjects.AddRange(InternalUpdate(updateObjList.ToArray()) );
+            output.UpdatedObjects.AddRange(InternalUpdate(updateObjList.ToArray()));
             output.DeletedObjects = InternalDelete(delObjList.ToArray());
 
             /*
@@ -236,7 +231,7 @@ namespace WebAnnotationModel
             //Fetch the inserted version of our objects from the server
             //replacementObjList = this.GetObjectsByIDs(replacedKeysList, true);
             //InternalReplace(replacedKeysList.ToArray(), replacementObjList.ToArray());
-              
+
             return output;
         }
 
@@ -252,7 +247,7 @@ namespace WebAnnotationModel
             //InternalUpdate(keyObj); 
             //Remove from our old spot in the database 
             OBJECT ExistingObj = TryRemoveObject(key);
-            
+
             ObjectAdded = TryAddObject(newObj);
 
             return ExistingObj;

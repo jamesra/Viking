@@ -25,7 +25,9 @@ namespace VikingXNAGraphics
         {
         }
         
-        public void Draw(GraphicsDevice device, IScene scene, CullMode cullmode = CullMode.CullCounterClockwiseFace)
+        public void Draw(GraphicsDevice device,
+            IScene scene, 
+            CullMode cullmode = CullMode.CullCounterClockwiseFace)
         {
             if (models == null)
                 return;
@@ -101,7 +103,12 @@ namespace VikingXNAGraphics
         }
 
 
-        public static void Draw(GraphicsDevice device, IScene scene, BasicEffect effect = null, CullMode cullmode = CullMode.CullCounterClockwiseFace, FillMode fillMode = FillMode.Solid, ICollection < MeshView<VERTEXTYPE>> meshViews = null)
+        public static void Draw(GraphicsDevice device,
+            IScene scene,
+            BasicEffect effect = null,
+            CullMode cullmode = CullMode.CullCounterClockwiseFace,
+            FillMode fillMode = FillMode.Solid,
+            IEnumerable < MeshView<VERTEXTYPE>> meshViews = null)
         {
             if (meshViews == null)
                 return;
@@ -111,14 +118,22 @@ namespace VikingXNAGraphics
             Draw(device, scene, effect, cullmode, fillMode,  all_models);
         }
 
-        public void Draw(GraphicsDevice device, IScene scene, PolygonOverlayEffect effect = null, CullMode cullmode = CullMode.CullCounterClockwiseFace)
+        public void Draw(GraphicsDevice device,
+            IScene scene,
+            PolygonOverlayEffect effect = null,
+            CullMode cullmode = CullMode.CullCounterClockwiseFace)
         {  
             FillMode fillMode = this.WireFrame ? FillMode.WireFrame : FillMode.Solid;
              
             Draw(device, scene, effect, cullmode, fillMode, models);
         }
 
-        public static void Draw(GraphicsDevice device, IScene scene, PolygonOverlayEffect effect = null, CullMode cullmode = CullMode.CullCounterClockwiseFace, FillMode fillMode = FillMode.Solid, IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
+        public static void Draw(GraphicsDevice device,
+            IScene scene,
+            PolygonOverlayEffect effect = null,
+            CullMode cullmode = CullMode.CullCounterClockwiseFace,
+            FillMode fillMode = FillMode.Solid,
+            IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
         {
             if (effect == null)
             {
@@ -142,6 +157,10 @@ namespace VikingXNAGraphics
 
             foreach (MeshModel<VERTEXTYPE> model in meshmodels)
             {
+                //This can occur if LazyInitialization has not occurred.
+                if (model == null)
+                    continue; 
+
                 effect.WorldViewProjMatrix = (model.ModelMatrix * scene.World) * scene.ViewProj ;
 
                 if (model.Verticies.Length == 0 || model.Edges.Length == 0)
@@ -163,7 +182,12 @@ namespace VikingXNAGraphics
                 device.RasterizerState = originalRasterizerState;
         }
 
-        public static void Draw(GraphicsDevice device, IScene scene, BasicEffect effect=null, CullMode cullmode = CullMode.CullCounterClockwiseFace, FillMode fillMode = FillMode.Solid, IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
+        public static void Draw(GraphicsDevice device,
+            IScene scene,
+            BasicEffect effect=null,
+            CullMode cullmode = CullMode.CullCounterClockwiseFace,
+            FillMode fillMode = FillMode.Solid,
+            IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
         {
             if (meshmodels == null)
                 return;

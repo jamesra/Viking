@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-using System.IO;
 
 namespace AnnotationVizLib
 {
@@ -87,7 +87,7 @@ namespace AnnotationVizLib
         public static List<ObjAttribute> Parse(string serverXml)
         {
             if (serverXml == null)
-                return new List<ObjAttribute>(); 
+                return new List<ObjAttribute>();
 
             if (serverXml.StartsWith("<"))
             {
@@ -101,14 +101,14 @@ namespace AnnotationVizLib
         }
 
         private static List<ObjAttribute> FromXml(string XMLString)
-        { 
+        {
             System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Load(new StringReader(XMLString));
-            
+
             XElement structureElem = doc.Element("Structure");
             if (structureElem == null)
                 return new List<ObjAttribute>();
 
-            return ObjAttribute.ElementToAttribs(structureElem);    
+            return ObjAttribute.ElementToAttribs(structureElem);
         }
 
         /// <summary>
@@ -155,7 +155,7 @@ namespace AnnotationVizLib
 
             listAttrib.Sort();
 
-            return listAttrib; 
+            return listAttrib;
         }
 
         public static List<ObjAttribute> TagStringsToList(IEnumerable<string> tags)
@@ -215,7 +215,7 @@ namespace AnnotationVizLib
             if (ANull || BNull)
                 return false;
 
-            return String.Compare(A.Name, B.Name) == 0; 
+            return String.Compare(A.Name, B.Name) == 0;
         }
 
         public static bool operator !=(ObjAttribute A, ObjAttribute B)
@@ -227,7 +227,7 @@ namespace AnnotationVizLib
             if (ANull || BNull)
                 return true;
 
-            return String.Compare(A.Name, B.Name) != 0; 
+            return String.Compare(A.Name, B.Name) != 0;
         }
 
         public override bool Equals(object obj)

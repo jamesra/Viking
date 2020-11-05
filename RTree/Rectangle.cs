@@ -73,9 +73,9 @@ namespace RTree
             min = new double[DIMENSIONS];
             max = new double[DIMENSIONS];
 
-            for(int i = 0; i < DIMENSIONS; i++)
+            for (int i = 0; i < DIMENSIONS; i++)
             {
-                if(A.coordinates[i] < B.coordinates[i])
+                if (A.coordinates[i] < B.coordinates[i])
                 {
                     min[i] = A.coordinates[i];
                     max[i] = B.coordinates[i];
@@ -395,9 +395,9 @@ namespace RTree
         public override bool Equals(object obj)
         {
             bool equals = false;
-            if(object.ReferenceEquals(this,obj))
+            if (object.ReferenceEquals(this, obj))
             {
-                return true; 
+                return true;
             }
 
             if (obj.GetType() == typeof(Rectangle))

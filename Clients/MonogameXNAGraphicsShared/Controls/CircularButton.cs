@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Geometry;
+using Microsoft.Xna.Framework;
 using VikingXNA;
 
 namespace VikingXNAGraphics.Controls
@@ -16,16 +17,20 @@ namespace VikingXNAGraphics.Controls
         RIGHT,
         X1,
         X2
-    }; 
+    };
+
+
+    
 
     /// <summary>
-    /// A circular button control that can be clicked by the user and fires an event
+    /// Pairs the view of a circular button control with support for clicking the button
     /// </summary>
-    public class CircularButton : ICanvasView, IClickable
+    public class CircularButton : IClickable, IColorView
     {
         public CircleView circleView = null;
-         
-        public event Action<IClickable, object> OnClick; 
+
+        public InputDeviceEventConsumerDelegate OnClick { get; set; } = null;
+
 
         public GridCircle Circle
         {
@@ -38,25 +43,48 @@ namespace VikingXNAGraphics.Controls
                 circleView.Circle = value;
             }
         }
-        
-        public CircularButton(CircleView view, Action<IClickable, object> OnClick =null)
+
+        /// <summary>
+        /// Create a circle button with a default OnClick implementation that calls a simple action when clicked
+        /// </summary>
+        /// <param name="circle"></param>
+        /// <param name="color"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static CircularButton CreateSimple(GridCircle circle, Microsoft.Xna.Framework.Color color, Action action)
+        {
+            CircularButton obj = new CircularButton(circle, color);
+            obj.OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; });
+            return obj;
+        }
+
+        /// <summary>
+        /// Create a circle button with a default OnClick implementation that calls a simple action when clicked
+        /// </summary>
+        /// <param name="circle"></param>
+        /// <param name="color"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static CircularButton CreateSimple(CircleView view, Action action)
+        {
+            CircularButton obj = new CircularButton(view);
+            obj.OnClick = new InputDeviceEventConsumerDelegate((sender, position, input_source, input_data) => { action(); return true; });
+            return obj;
+        }
+
+        public CircularButton(CircleView view, InputDeviceEventConsumerDelegate OnClick =null)
         {
             this.circleView = view;
 
             if(OnClick != null)
-                this.OnClick += OnClick;
+                this.OnClick = OnClick;
         }
 
-        public CircularButton(GridCircle circle, Microsoft.Xna.Framework.Color color, Action<IClickable, object> OnClick =null)
+        public CircularButton(GridCircle circle, Microsoft.Xna.Framework.Color color, InputDeviceEventConsumerDelegate OnClick =null)
         {
             this.circleView = new CircleView(circle, color);
             if(OnClick != null)
                 this.OnClick += OnClick;
-        } 
-
-        public int VisualHeight
-        {
-            get; set;
         }
 
         public GridRectangle BoundingBox
@@ -66,76 +94,14 @@ namespace VikingXNAGraphics.Controls
                 return circleView.Circle.BoundingBox;
             }
         }
-        
-        /// <summary>
-        /// Called by the owner window or control.  Will fire the Button's OnClick Event if 
-        /// the point is within the button
-        /// </summary>
-        /// <param name="point"></param>
-        /// <param name="button"></param>
-        /// <returns>True if the button contained the point and an event was fired</returns>
-        public bool TryMouseClick(GridVector2 point, MouseButton buttons)
-        {
-            if(this.Contains(point))
-            {
-                if(OnClick != null)
-                    OnClick(this, buttons);  
 
-                return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Called by the owner window or control.  Will fire the Button's OnClick Event if 
-        /// the point is within the button
-        /// </summary>
-        /// <param name="point"></param>
-        /// <param name="button"></param>
-        /// <returns>True if the button contained the point and an event was fired</returns>
-        public bool TryPenClick(GridVector2 point, object pen_info=null)
-        {
-            //TODO: Move PenEventArgs to an assembly visible by VikingXNAGraphics
-            if (this.Contains(point))
-            {
-                if (OnClick != null)
-                    OnClick(this, null);
-
-                return true;
-            }
-
-            return false;
-        }
-
-        public double Distance(GridVector2 Position)
-        {
-            return circleView.Circle.Distance(Position);
-        }
-
-        public double DistanceFromCenterNormalized(GridVector2 Position)
-        {
-            return GridVector2.Distance(Position, this.Circle.Center) / this.Circle.Radius;
-        }
-
-        public double DistanceToCenter(GridVector2 Position)
-        {
-            return GridVector2.Distance(Position, this.Circle.Center);
-        }
+        public Color Color { get { return circleView.Color; } set { circleView.Color = value; } }
+        public float Alpha { get { return circleView.Alpha; } set { circleView.Alpha = value; } }
 
         public bool Contains(GridVector2 Position)
         {
             return Circle.Intersects(Position);
         }
-
-        public bool Intersects(GridLineSegment line)
-        {
-            return Circle.Intersects(line);
-        }
-
-        public bool IsVisible(Scene scene)
-        {
-            return circleView.IsVisible(scene);
-        }
+        
     }
 }

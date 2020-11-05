@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Annotation.Interfaces;
+using AnnotationService.Types;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
-using Geometry;
-using AnnotationVizLib.WCFClient.AnnotationClient;
-using AnnotationService.Types;
-using Annotation.Interfaces;
+using System;
+using System.Collections.Generic;
 using UnitsAndScale;
 
 namespace AnnotationVizLib.WCFClient

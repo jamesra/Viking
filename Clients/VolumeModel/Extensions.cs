@@ -1,15 +1,13 @@
-﻿using System;
+﻿using Geometry;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Viking.VolumeModel
 {
     public static class RectangleMappingExtensions
-    { 
+    {
         public static GridRectangle? ApproximateVisibleMosaicBounds(this GridRectangle VisibleWorldBounds, IVolumeToSectionTransform mapper)
         {
             GridVector2[] VolumeRectCorners = new GridVector2[] { VisibleWorldBounds.LowerLeft, VisibleWorldBounds.LowerRight, VisibleWorldBounds.UpperLeft, VisibleWorldBounds.UpperRight };
@@ -32,16 +30,16 @@ namespace Viking.VolumeModel
             {
                 //We mapped one or two points but not opposite corners.  Guesstimate the region by using the width/height in volume space since we know the mappings have minimal distortion.
                 return EstimateMosaicRectangle(mapped, MosaicRectCorners, VisibleWorldBounds);
-            } 
+            }
             else
             {
-                if(VisibleWorldBounds.Contains(mapper.VolumeBounds.Value))
+                if (VisibleWorldBounds.Contains(mapper.VolumeBounds.Value))
                 {
                     return mapper.SectionBounds;
                 }
                 //All four points are outside the control points.  Return the bounding box of the mapped space.
                 //This check is a hack.  When we are zoomed out and can only see a sliver of the volume we need a way to load the visible tiles.
-                else if (VisibleWorldBounds.Intersects(mapper.VolumeBounds.Value) && ((VisibleWorldBounds.Width  > mapper.VolumeBounds.Value.Width / 2.0) || (VisibleWorldBounds.Height > mapper.VolumeBounds.Value.Height / 2.0)))
+                else if (VisibleWorldBounds.Intersects(mapper.VolumeBounds.Value) && ((VisibleWorldBounds.Width > mapper.VolumeBounds.Value.Width / 2.0) || (VisibleWorldBounds.Height > mapper.VolumeBounds.Value.Height / 2.0)))
                 {
                     return mapper.SectionBounds;
                 }
@@ -61,7 +59,7 @@ namespace Viking.VolumeModel
         /// <param name="mappedCorners"></param>
         /// <returns></returns>
         private static GridRectangle? EstimateMosaicRectangle(bool[] IsMapped, GridVector2[] points, GridRectangle VisibleWorldBounds)
-        {  
+        {
             //If we map at least three corners we know we can construct a reasonable approximation of the correct rectangle in mosaic space
             GridVector2[] ValidPoints = points.Where((p, i) => IsMapped[i]).ToArray();
             double MinX = ValidPoints.Min(p => p.X);
@@ -72,12 +70,12 @@ namespace Viking.VolumeModel
             //We don't know the rotation of the rectangle.  We assume the worst case of a 45 degree angle so we multiply width or height by 1.44
             //So we create a grid circle at the point with the radius of Max(Width,Height).  Then we return the bounding box of the GridCircle
 
-            if(IsMapped.Count(b => b) == 3)
+            if (IsMapped.Count(b => b) == 3)
             {
                 return GridCircle.CircleFromThreePoints(ValidPoints).BoundingBox;
             }
 
-            if(OppositeCornersMapped(IsMapped))
+            if (OppositeCornersMapped(IsMapped))
             {
                 //Find the center of the opposite corners and the distance.  Create a circle and return the bounding box.
                 if (IsMapped[0] && IsMapped[2])
@@ -111,7 +109,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         private static GridCircle CircleFromTwoPoints(GridVector2 A, GridVector2 B)
         {
-            double Distance = GridVector2.Distance(A,B);
+            double Distance = GridVector2.Distance(A, B);
             double X = (A.X + B.X) / 2.0;
             double Y = (A.Y + B.Y) / 2.0;
 
@@ -153,7 +151,7 @@ namespace Viking.VolumeModel
 
         public static GridPolygon TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolygon shape)
         {
-            GridVector2[] VolumePositions; 
+            GridVector2[] VolumePositions;
 
             bool[] mappedPosition = mapper.TrySectionToVolume(shape.ExteriorRing, out VolumePositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
@@ -167,7 +165,7 @@ namespace Viking.VolumeModel
             if (shape.HasInteriorRings)
             {
                 IEnumerable<GridPolygon> transformedPolygons = shape.InteriorPolygons.Select(ip => mapper.TryMapShapeSectionToVolume(ip));
-                foreach(GridPolygon inner_poly in transformedPolygons)
+                foreach (GridPolygon inner_poly in transformedPolygons)
                 {
                     transformed_polygon.AddInteriorRing(inner_poly);
                 }

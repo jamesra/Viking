@@ -1,10 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using WebAnnotationModel;
 
@@ -16,7 +10,7 @@ namespace WebAnnotation.UI
         {
             InitializeComponent();
         }
-        
+
         /// <summary>
         /// Return true if the structures in the Keep and Merge text boxes have the same type
         /// </summary>
@@ -59,10 +53,10 @@ namespace WebAnnotation.UI
                 return false;
             }
 
-            if(keepStruct.TypeID != mergeStruct.TypeID)
+            if (keepStruct.TypeID != mergeStruct.TypeID)
             {
                 Reason = string.Format("Merged structures must have the same type. Merged {1} is not a {0}", keepStruct.Type.Name, mergeStruct.Type.Name);
-                return false; 
+                return false;
             }
 
             return true;
@@ -78,9 +72,9 @@ namespace WebAnnotation.UI
                 KeepID = int.Parse(textKeepID.Text);
                 MergeID = int.Parse(textMergeID.Text);
             }
-            catch(FormatException)
+            catch (FormatException)
             {
-                return; 
+                return;
             }
 
             try
@@ -91,7 +85,7 @@ namespace WebAnnotation.UI
             {
                 if (fe?.Detail?.InnerException != null)
                 {
-                    MessageBox.Show(fe.Detail.InnerException.Message, "Merge error", MessageBoxButtons.OK, MessageBoxIcon.Error );
+                    MessageBox.Show(fe.Detail.InnerException.Message, "Merge error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 else
                 {
@@ -110,9 +104,9 @@ namespace WebAnnotation.UI
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.Close(); 
+            this.Close();
         }
-        
+
         private bool IsIDValid(string Input, out string Reason)
         {
             Reason = null;
@@ -128,13 +122,13 @@ namespace WebAnnotation.UI
                 int ID = int.Parse(Input);
 
                 StructureObj obj = Store.Structures.GetObjectByID(ID, true);
-                if(obj == null)
+                if (obj == null)
                 {
                     Reason = "No structure found";
                     return false;
                 }
 
-                Reason = obj.Label; 
+                Reason = obj.Label;
                 return true;
             }
             catch (FormatException)

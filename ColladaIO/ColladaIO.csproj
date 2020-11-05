@@ -66,6 +66,10 @@
       <Project>{6df25a4d-1930-4c7b-8a6e-4aac68e4a7ba}</Project>
       <Name>MorphologyMesh</Name>
     </ProjectReference>
+    <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj">
+      <Project>{d451457b-2782-4473-a935-efa25c4fad7c}</Project>
+      <Name>UnitsAndScale</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -73,7 +77,7 @@
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
-  <ItemGroup> 
+  <ItemGroup>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

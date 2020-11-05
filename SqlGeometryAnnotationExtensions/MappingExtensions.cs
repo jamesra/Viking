@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
+﻿using Geometry;
 using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Viking.VolumeModel
 {
@@ -93,7 +91,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         private static Microsoft.SqlServer.Types.SqlGeometry TryMapCurvePolygonSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
-            if(shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
+            if (shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
             {
                 throw new ArgumentException("CURVEPOLYGON shape argument required");
             }

@@ -46,7 +46,7 @@ namespace TriangleNet.Geometry
         /// Initializes a new instance of the <see cref="Segment" /> class.
         /// </summary>
         public Segment(Vertex v0, Vertex v1)
-            : this (v0, v1, 0)
+            : this(v0, v1, 0)
         {
         }
 

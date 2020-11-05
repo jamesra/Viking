@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
 using ODataClient.ConnectomeDataModel;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib.OData
 {

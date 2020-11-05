@@ -1,10 +1,6 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Geometry.Transforms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Geometry.Transforms;
+using System;
 
 namespace GeometryTests
 {
@@ -72,9 +68,9 @@ namespace GeometryTests
             TriangulationTransform MappedTriangulation = null;
             using (System.IO.FileStream controlStosTextStream = System.IO.File.OpenRead(ControlStosFile))
             {
-                 ControlTriangulation = TransformFactory.ParseStos(controlStosTextStream,
-                                                                                            new StosTransformInfo(37, 35, DateTime.UtcNow),
-                                                                                             1) as TriangulationTransform;
+                ControlTriangulation = TransformFactory.ParseStos(controlStosTextStream,
+                                                                                           new StosTransformInfo(37, 35, DateTime.UtcNow),
+                                                                                            1) as TriangulationTransform;
             }
 
             using (System.IO.FileStream mappedStosTextStream = System.IO.File.OpenRead(MappedStosFile))

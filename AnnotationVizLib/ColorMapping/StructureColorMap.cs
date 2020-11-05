@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
 using SqlGeometryUtils;
-using Annotation.Interfaces;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 
 
 namespace AnnotationVizLib
@@ -20,18 +17,18 @@ namespace AnnotationVizLib
         STRUCTURETYPE,
         LOCATION
     }
-    
+
     /// <summary>
     /// Color mapping for structures, based on StructureType, StructureID, and then morphology
     /// </summary>
     public class StructureColorMap
-    { 
+    {
         ColorMapWithLong structure_color_map = null;
         ColorMapWithLong structureType_color_map = null;
 
         public StructureColorMap(ColorMapWithLong structureTypeColorMap,
                                            ColorMapWithLong structureColorMap)
-        { 
+        {
             this.structure_color_map = structureColorMap;
             this.structureType_color_map = structureTypeColorMap;
         }
@@ -80,7 +77,7 @@ namespace AnnotationVizLib
 
             source = COLORSOURCE.NONE;
             return System.Drawing.Color.Gray;
-        } 
+        }
     }
 
     public class StructureMorphologyColorMap : StructureColorMap
@@ -102,7 +99,7 @@ namespace AnnotationVizLib
             return LocationColorMap.GetColor(locations);
         }
 
-        private  System.Drawing.Color GetStructureColorFromMorphology(ICollection<Geometry.GridVector3> points)
+        private System.Drawing.Color GetStructureColorFromMorphology(ICollection<Geometry.GridVector3> points)
         {
             if (LocationColorMap == null)
                 return System.Drawing.Color.Empty;
@@ -154,6 +151,6 @@ namespace AnnotationVizLib
 
             source = COLORSOURCE.LOCATION;
             return GetStructureColorFromMorphology(listPoints);
-        } 
+        }
     }
 }

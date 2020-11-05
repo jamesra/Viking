@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry
 {
@@ -72,7 +70,7 @@ namespace Geometry
             if (A.Equals(B))
                 return 0;
 
-            for(long i = 0; i < diff.LongLength; i++)
+            for (long i = 0; i < diff.LongLength; i++)
             {
                 if (diff[i] != 0)
                     return diff[i] > 0 ? 1 : -1;
@@ -91,7 +89,7 @@ namespace Geometry
 
         public int nDims { get { return _coords.Length; } }
 
-        public double[] coords { get => _coords; } 
+        public double[] coords { get => _coords; }
 
         public GridVectorN(double[] input)
         {
@@ -181,13 +179,13 @@ namespace Geometry
             for (int iAxis = 0; iAxis < nDims; iAxis++)
             {
                 _coords[iAxis] = _coords[iAxis] / mag;
-            }            
+            }
         }
 
         static public GridVectorN Normalize(IPointN A)
         {
             double mag = Magnitude(A);
-            
+
             double[] normalized = A.coords.Select(val => val / mag).ToArray();
             return new GridVectorN(normalized);
         }

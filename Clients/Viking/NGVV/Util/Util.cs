@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Reflection;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 
 namespace Viking.Common
 {
     public static class Extensions
     {
-        
+
 
     }
 
@@ -23,7 +21,7 @@ namespace Viking.Common
                              "Y=" + Y.ToString("F1") + "&" +
                              "Z=" + Z.ToString() + "&" +
                              "DS=" + Downsample.ToString("F2");
-            return URI; 
+            return URI;
         }
 
         public static string CoordinatesToCopyPaste(double X, double Y, int Z, double Downsample)

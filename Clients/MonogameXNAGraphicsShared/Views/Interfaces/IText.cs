@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
-{
+{ 
     public interface IText
     {
         string Text { get; set; }

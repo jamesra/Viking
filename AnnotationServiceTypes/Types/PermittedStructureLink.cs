@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.ServiceModel;
+﻿using ProtoBuf;
+using System;
 using System.Runtime.Serialization;
-using ProtoBuf; 
 
 namespace AnnotationService.Types
 {
@@ -52,6 +48,6 @@ namespace AnnotationService.Types
         {
         }
 
-        
+
     }
 }

@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Drawing;
-using System.Data;
 using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using Viking.UI;
 using Viking.UI.Forms;
-using Viking.VolumeModel; 
+using Viking.VolumeModel;
 
 namespace Viking.UI.Controls
 {
@@ -31,13 +27,13 @@ namespace Viking.UI.Controls
         {
             get
             {
-                return _ShowDelete; 
+                return _ShowDelete;
             }
             set
             {
-                _ShowDelete = value; 
+                _ShowDelete = value;
                 buttonDelete.Visible = value;
-                panelDeleteSpacer.Visible = value && ShowLabels; 
+                panelDeleteSpacer.Visible = value && ShowLabels;
             }
         }
 
@@ -46,16 +42,16 @@ namespace Viking.UI.Controls
         {
             get
             {
-                return _ShowLabels; 
+                return _ShowLabels;
             }
             set
             {
-                _ShowLabels = value; 
+                _ShowLabels = value;
                 panelLabels.Visible = value;
                 panelDeleteSpacer.Visible = ShowDelete;
-                
+
                 //Don't leave room for labels if they are hidden
-                this.Size = new Size(this.Size.Width, value ? 34 : 21); 
+                this.Size = new Size(this.Size.Width, value ? 34 : 21);
             }
         }
 
@@ -77,9 +73,9 @@ namespace Viking.UI.Controls
             }
             set
             {
-                if(comboChannel == null)
+                if (comboChannel == null)
                     return;
-                
+
                 comboChannel.Items.Clear();
 
                 if (value == null)
@@ -101,15 +97,15 @@ namespace Viking.UI.Controls
 
                 if (false == Channels.Contains<string>(comboChannel.Text))
                 {
-                    comboChannel.Text = value[0]; 
+                    comboChannel.Text = value[0];
                 }
 
                 comboChannel.SelectedText = "";
-                IsUserUpdate = true; 
+                IsUserUpdate = true;
             }
         }
 
-        internal ChannelInfo _Info = new ChannelInfo(); 
+        internal ChannelInfo _Info = new ChannelInfo();
 
         /// <summary>
         /// Channel info to be displayed.
@@ -125,7 +121,7 @@ namespace Viking.UI.Controls
                 _Info = (ChannelInfo)value.Clone();
 
                 //Setup the section UI
-                IsUserUpdate = false; 
+                IsUserUpdate = false;
                 if (_Info.SectionSource == ChannelInfo.SectionInfo.FIXED)
                 {
                     if (_Info.FixedSectionNumber.HasValue)
@@ -144,7 +140,7 @@ namespace Viking.UI.Controls
                     if ((int)_Info.SectionSource >= 0 && (int)_Info.SectionSource < SectionInfoList.Count)
                         comboSection.Text = SectionInfoList[(int)_Info.SectionSource];
                     else
-                        comboSection.Text = ""; 
+                        comboSection.Text = "";
                 }
 
                 if (String.IsNullOrEmpty(Info.ChannelName))
@@ -173,7 +169,7 @@ namespace Viking.UI.Controls
                 else
                     comboColor.Text = "Custom...";
 
-                IsUserUpdate = true; 
+                IsUserUpdate = true;
             }
         }
 
@@ -198,13 +194,13 @@ namespace Viking.UI.Controls
 
         internal ChannelPickerControl(ChannelInfo info) : this()
         {
-            this.Info = info; 
+            this.Info = info;
         }
 
         private void comboColor_SelectedValueChanged(object sender, EventArgs e)
         {
             if (!IsUserUpdate)
-                return; 
+                return;
 
             switch (comboColor.Text)
             {
@@ -213,7 +209,7 @@ namespace Viking.UI.Controls
                     if (IsUserUpdate)
                     {
                         colorDialog = new ColorDialog();
-                        colorDialog.Color = panelColor.BackColor; 
+                        colorDialog.Color = panelColor.BackColor;
                         if (colorDialog.ShowDialog() == DialogResult.OK)
                         {
                             Info.FormColor = colorDialog.Color;
@@ -245,7 +241,7 @@ namespace Viking.UI.Controls
             if (comboChannel.Text == DefaultChannelName)
                 this.Info.ChannelName = "";
             else
-                this.Info.ChannelName = comboChannel.Text; 
+                this.Info.ChannelName = comboChannel.Text;
         }
 
         private void comboSection_SelectedValueChanged(object sender, EventArgs e)
@@ -262,7 +258,7 @@ namespace Viking.UI.Controls
                     this.Info.FixedSectionNumber = new int?(sectionNumber);
                     return;
                 }
-                catch (FormatException )
+                catch (FormatException)
                 {
                     //Just ignore a format exception and keep going
                 }
@@ -298,8 +294,8 @@ namespace Viking.UI.Controls
             IsUserUpdate = true;
         }
 
-        public event EventHandler OnDeleteClicked; 
- 
+        public event EventHandler OnDeleteClicked;
+
         private void buttonDelete_Click(object sender, EventArgs e)
         {
             if (OnDeleteClicked != null)

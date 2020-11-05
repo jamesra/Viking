@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.ComponentModel;
 
 namespace SIMeasurement
@@ -55,12 +51,12 @@ namespace SIMeasurement
                 throw new ArgumentException("Scale must be between 0 and 64");
 
 
-            string format = "#0."; 
-            while(scale > 0)
+            string format = "#0.";
+            while (scale > 0)
             {
                 format += '0';
             }
-            
+
             return Length.ToString(format) + " " + Units.ToString();
         }
 
@@ -91,16 +87,16 @@ namespace SIMeasurement
             //Handle units that are out of our range
             if (numUnitHops + iStartUnit >= numUnitDefinitions)
             {
-                numUnitHops = (numUnitDefinitions-1) - iStartUnit;
+                numUnitHops = (numUnitDefinitions - 1) - iStartUnit;
             }
-            else if(numUnitHops + iStartUnit < 0)
+            else if (numUnitHops + iStartUnit < 0)
             {
                 numUnitHops = -iStartUnit;
             }
-            
+
             int iUnit = numUnitHops + iStartUnit;
 
-                        
+
             System.Diagnostics.Debug.Assert(iUnit >= 0, "Unexpectedly small unit of measure found");
             System.Diagnostics.Debug.Assert(Enum.IsDefined(typeof(SILengthUnits), iUnit), "Unit not defined");
 
@@ -139,8 +135,8 @@ namespace SIMeasurement
 
             return new LengthMeasurement(newUnit, this.Length * unitScalar);
         }
-         
-        
+
+
         /// <summary>
         /// Convert the other length measurement to our units
         /// </summary>
@@ -150,7 +146,7 @@ namespace SIMeasurement
         {
             return other.ConvertTo(this.Units);
         }
-        
+
         private static SILengthUnits LargestUnitOfMeasure(LengthMeasurement A, LengthMeasurement B)
         {
             if (A.Units >= B.Units)
@@ -163,7 +159,7 @@ namespace SIMeasurement
             }
         }
 
-        public static LengthMeasurement operator +(LengthMeasurement A, LengthMeasurement B) 
+        public static LengthMeasurement operator +(LengthMeasurement A, LengthMeasurement B)
         {
             SILengthUnits DesiredUnits = LargestUnitOfMeasure(A, B);
             A = A.ConvertTo(DesiredUnits);
@@ -188,8 +184,8 @@ namespace SIMeasurement
         /// <param name="B"></param>
         /// <returns></returns>
         public static double operator /(LengthMeasurement A, LengthMeasurement B)
-        { 
-            A = A.ConvertTo(B.Units); 
+        {
+            A = A.ConvertTo(B.Units);
 
             return A.Length / B.Length;
         }

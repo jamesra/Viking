@@ -1,28 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
-using Geometry.Meshing;
 
 namespace Geometry
 {
     public static class Delaunay2D
     {
         public static int[] Triangulate(GridVector2[] points)
-        { 
+        {
             GridVector2[] BoundingPoints = GetBounds(points);
-            return Delaunay2D.Triangulate(points, BoundingPoints); 
+            return Delaunay2D.Triangulate(points, BoundingPoints);
         }
 
         public static int[] Triangulate(GridVector2[] points, GridRectangle bounds)
         {
             double WidthMargin = bounds.Width;
             double HeightMargin = bounds.Height;
-            GridVector2[] BoundingPoints = new GridVector2[] { new GridVector2(bounds.Left - WidthMargin, bounds.Bottom - HeightMargin), 
-                                                               new GridVector2(bounds.Right + WidthMargin, bounds.Bottom - HeightMargin), 
-                                                               new GridVector2(bounds.Left - WidthMargin, bounds.Top +  HeightMargin), 
-                                                               new GridVector2(bounds.Right + WidthMargin, bounds.Top + HeightMargin)}; 
+            GridVector2[] BoundingPoints = new GridVector2[] { new GridVector2(bounds.Left - WidthMargin, bounds.Bottom - HeightMargin),
+                                                               new GridVector2(bounds.Right + WidthMargin, bounds.Bottom - HeightMargin),
+                                                               new GridVector2(bounds.Left - WidthMargin, bounds.Top +  HeightMargin),
+                                                               new GridVector2(bounds.Right + WidthMargin, bounds.Top + HeightMargin)};
             return Delaunay2D.Triangulate(points, BoundingPoints);
         }
 
@@ -30,9 +27,9 @@ namespace Geometry
         {
             double WidthMargin = bounds.Width;
             double HeightMargin = bounds.Height;
-            GridVector2[] BoundingPoints = new GridVector2[] { new GridVector2(bounds.Left - WidthMargin, bounds.Bottom - HeightMargin), 
-                                                               new GridVector2(bounds.Right + WidthMargin, bounds.Bottom - HeightMargin), 
-                                                               new GridVector2(bounds.Left - WidthMargin, bounds.Top +  HeightMargin), 
+            GridVector2[] BoundingPoints = new GridVector2[] { new GridVector2(bounds.Left - WidthMargin, bounds.Bottom - HeightMargin),
+                                                               new GridVector2(bounds.Right + WidthMargin, bounds.Bottom - HeightMargin),
+                                                               new GridVector2(bounds.Left - WidthMargin, bounds.Top +  HeightMargin),
                                                                new GridVector2(bounds.Right + WidthMargin, bounds.Top + HeightMargin)};
             return Delaunay2D.Triangulate(points, BoundingPoints);
         }
@@ -58,17 +55,17 @@ namespace Geometry
             }
 
             if (points.Length < 3)
-                return new int[0]; 
+                return new int[0];
 
 #if DEBUG
-            
+
             //Check to ensure the input is really sorted on the X-Axis
             for (int iDebug = 1; iDebug < points.Length; iDebug++)
             {
                 Debug.Assert(points[iDebug - 1].X <= points[iDebug].X);
                 Debug.Assert(GridVector2.Distance(points[iDebug - 1], points[iDebug]) >= Global.Epsilon);
-            } 
-#endif             
+            }
+#endif
 
             List<GridIndexTriangle> triangles = new List<GridIndexTriangle>(points.Length);
 
@@ -80,25 +77,25 @@ namespace Geometry
             GridVector2[] allpoints = new GridVector2[iNumPoints + 4];
 
             points.CopyTo(allpoints, 0);
-            BoundingPoints.CopyTo(allpoints, iNumPoints); 
+            BoundingPoints.CopyTo(allpoints, iNumPoints);
 
             //Initialize bounding triangles
             triangles.AddRange(new GridIndexTriangle[] { new GridIndexTriangle(iNumPoints, iNumPoints + 1, iNumPoints + 2, ref allpoints),
                                                          new GridIndexTriangle(iNumPoints + 1, iNumPoints + 2, iNumPoints + 3, ref allpoints) });
 
             IndexEdge[] Edges = new IndexEdge[(triangles.Count * 3) * 2];
-            for(int iPoint = 0; iPoint < points.Length; iPoint++)
+            for (int iPoint = 0; iPoint < points.Length; iPoint++)
             {
                 GridVector2 P = points[iPoint];
-                
+
                 //Use preallocated buffer if we can, otherwise expand it
                 int maxEdges = triangles.Count * 3;
                 if (Edges.Length < maxEdges)
-                    Edges = new IndexEdge[maxEdges * 2]; 
+                    Edges = new IndexEdge[maxEdges * 2];
 
                 int iTri = 0;
-                int iEdge = 0; 
-                while(iTri < triangles.Count)
+                int iEdge = 0;
+                while (iTri < triangles.Count)
                 {
                     GridIndexTriangle tri = triangles[iTri];
                     GridCircle circle = tri.Circle;
@@ -106,12 +103,12 @@ namespace Geometry
                     {
                         Edges[iEdge++] = new IndexEdge(tri.i1, tri.i2);
                         Edges[iEdge++] = new IndexEdge(tri.i2, tri.i3);
-                        Edges[iEdge++] = new IndexEdge(tri.i3, tri.i1); 
+                        Edges[iEdge++] = new IndexEdge(tri.i3, tri.i1);
 
-/*                        Edges.AddRange(new IndexEdge[] {new IndexEdge(tri.i1, tri.i2), 
-                                                               new IndexEdge(tri.i2, tri.i3),
-                                                               new IndexEdge(tri.i3, tri.i1)});
-                        */
+                        /*                        Edges.AddRange(new IndexEdge[] {new IndexEdge(tri.i1, tri.i2), 
+                                                                                       new IndexEdge(tri.i2, tri.i3),
+                                                                                       new IndexEdge(tri.i3, tri.i1)});
+                                                */
                         triangles.RemoveAt(iTri);
                     }
                     //Check if the triangle is safe from ever intersecting with a new point again
@@ -119,7 +116,7 @@ namespace Geometry
                     {
                         safeTriangles.Add(tri);
                         triangles.RemoveAt(iTri);
-                    } 
+                    }
                     else
                     {
                         iTri++;
@@ -127,7 +124,7 @@ namespace Geometry
                 }
 
                 //Record how many edges there are
-                int numEdges = iEdge; 
+                int numEdges = iEdge;
 
                 //Remove duplicates from edge buffer
                 //This is easier with a list, but arrays were faster
@@ -139,29 +136,29 @@ namespace Geometry
                     for (int iB = iA + 1; iB < numEdges; iB++)
                     {
                         if (Edges[iB].IsValid == false)
-                            continue; 
+                            continue;
 
                         if (Edges[iA] == Edges[iB])
                         {
                             Edges[iB].IsValid = false;
-                            Edges[iA].IsValid = false; 
+                            Edges[iA].IsValid = false;
                             break;
                         }
                     }
                 }
 
                 //Add triangles with the remaining edges
-                for(iEdge = 0; iEdge < numEdges; iEdge++)
+                for (iEdge = 0; iEdge < numEdges; iEdge++)
                 {
-                    IndexEdge E = Edges[iEdge]; 
+                    IndexEdge E = Edges[iEdge];
 
                     if (!E.IsValid)
                         continue;
 
                     GridIndexTriangle newTri = new GridIndexTriangle(E.iA, E.iB, iPoint, ref allpoints);
-                    triangles.Add(newTri); 
+                    triangles.Add(newTri);
 
-         
+
 #if DEBUG
                     //Check to make sure the new triangle intersects the point.  This is a slow test.
                     Debug.Assert(((GridTriangle)newTri).Contains(P));
@@ -183,7 +180,7 @@ namespace Geometry
                     triangles.RemoveAt(iTri);
                     iTri--;
                 }
-            }            
+            }
 
             //Build a list of triangle indicies to return
             int[] TriangleIndicies = new int[triangles.Count * 3];
@@ -193,7 +190,7 @@ namespace Geometry
                 int iPoint = iTri * 3;
                 TriangleIndicies[iPoint] = tri.i1;
                 TriangleIndicies[iPoint + 1] = tri.i2;
-                TriangleIndicies[iPoint + 2] = tri.i3; 
+                TriangleIndicies[iPoint + 2] = tri.i3;
             }
 
             return TriangleIndicies;
@@ -217,7 +214,7 @@ namespace Geometry
             }
 
             double width = maxX - minX;
-            double height = maxY - minY; 
+            double height = maxY - minY;
 
             //We don't want to add duplicate points by mistake, so move boundaries out a bit
             minX -= width;
@@ -225,12 +222,12 @@ namespace Geometry
             minY -= height;
             maxY += height;
 
-            GridVector2 BotLeft = new GridVector2(minX, minY); 
-            GridVector2 BotRight = new GridVector2(maxX, minY); 
-            GridVector2 TopLeft = new GridVector2(minX, maxY); 
+            GridVector2 BotLeft = new GridVector2(minX, minY);
+            GridVector2 BotRight = new GridVector2(maxX, minY);
+            GridVector2 TopLeft = new GridVector2(minX, maxY);
             GridVector2 TopRight = new GridVector2(maxX, maxY);
 
-            return new GridVector2[] { BotLeft, BotRight, TopLeft, TopRight}; 
+            return new GridVector2[] { BotLeft, BotRight, TopLeft, TopRight };
         }
     }
 }

@@ -39,22 +39,23 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Buffers, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\..\Packages\System.Buffers.4.4.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
     <Reference Include="System.Collections.Immutable, Version=1.2.5.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\Packages\System.Collections.Immutable.1.7.0\lib\netstandard2.0\System.Collections.Immutable.dll</HintPath>
+      <HintPath>..\..\Packages\System.Collections.Immutable.1.7.1\lib\net461\System.Collections.Immutable.dll</HintPath>
     </Reference>
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\..\Packages\System.Memory.4.5.3\lib\netstandard2.0\System.Memory.dll</HintPath>
+      <HintPath>..\..\Packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
     </Reference>
     <Reference Include="System.Numerics" />
-    <Reference Include="System.Numerics.Vectors, Version=4.1.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\Packages\System.Numerics.Vectors.4.4.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
     </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\Packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\Packages\System.Runtime.CompilerServices.Unsafe.4.7.1\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
@@ -90,6 +91,7 @@
     <Compile Include="TileBlendEffect.cs" />
     <Compile Include="TriangleNetExtensions.cs" />
     <Compile Include="VertexPositionNormalColor.cs" />
+    <Compile Include="Views\BillboardViewBase.cs" />
     <Compile Include="Views\CircleView.cs" />
     <Compile Include="Views\CurveLabel.cs" />
     <Compile Include="Views\CurveView.cs" />
@@ -97,13 +99,15 @@
     <Compile Include="Views\DeviceStateManager.cs" />
     <Compile Include="Views\Extensions.cs" />
     <Compile Include="Views\Global.cs" />
-    <Compile Include="Views\Interfaces\ICanvasView.cs" />
+    <Compile Include="Views\Interfaces\IAnchor.cs" />
     <Compile Include="Views\Interfaces\IColorView.cs" />
+    <Compile Include="Views\Interfaces\IHitTesting.cs" />
     <Compile Include="Views\Interfaces\IRenderable.cs" />
     <Compile Include="Views\Interfaces\IScale.cs" />
     <Compile Include="Views\Interfaces\IText.cs" />
     <Compile Include="Views\Interfaces\IViewPosition.cs" />
     <Compile Include="Views\Interfaces\IRenderInfo.cs" />
+    <Compile Include="Views\LabeledRectangleView.cs" />
     <Compile Include="Views\LabelView.cs" />
     <Compile Include="Views\LineView.cs" />
     <Compile Include="Views\LinkedLineView.cs" />
@@ -111,6 +115,7 @@
     <Compile Include="Views\PointSetView.cs" />
     <Compile Include="Views\PointViewBase.cs" />
     <Compile Include="Views\PolyLineView.cs" />
+    <Compile Include="Views\RectangleView.cs" />
     <Compile Include="Views\SharedEffectFunctions.cs" />
     <Compile Include="Views\SolidPolygonView.cs" />
     <Compile Include="Views\TriangulationView.cs" />
@@ -119,6 +124,7 @@
     <MonoGameContentReference Include="MonogameContent\Content.mgcb">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </MonoGameContentReference>
+    <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

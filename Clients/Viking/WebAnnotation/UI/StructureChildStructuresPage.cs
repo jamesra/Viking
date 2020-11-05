@@ -1,13 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using Viking.Common;
 using System.Diagnostics;
+using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 
@@ -17,12 +11,12 @@ namespace WebAnnotation.UI
     public partial class StructureChildStructuresPage : Viking.UI.BaseClasses.PropertyPageBase
     {
         Structure Obj;
-        bool listLoaded = false; 
+        bool listLoaded = false;
 
         public StructureChildStructuresPage()
         {
             this.Title = "Child Structures";
-            
+
             InitializeComponent();
         }
 
@@ -34,7 +28,7 @@ namespace WebAnnotation.UI
         protected override void OnShowObject(object Object)
         {
             this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null);            
+            Debug.Assert(this.Obj != null);
         }
 
         private void StructureChildStructuresPage_VisibleChanged(object sender, EventArgs e)

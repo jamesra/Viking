@@ -17,9 +17,9 @@ namespace VikingXNAGraphics
     [Flags]
     public enum PointLabelType
     {
-        NONE = 0x0,
-        INDEX = 0x01, //The index of the point in the collection
-        POSITION = 0x02 //The position of the point
+        NONE =    0b0000_0000,
+        INDEX =   0b0000_0001, //The index of the point in the collection
+        POSITION =0b0000_0010 //The position of the point
     }
 
     /// <summary>
@@ -137,7 +137,13 @@ namespace VikingXNAGraphics
             {
                 if(KnownPoints.Contains(p))
                 {
-                    DuplicatePointsAddedCount.Add(p,0); //Set the counter to 0 for when we use it later
+                    if (DuplicatePointsAddedCount.ContainsKey(p))
+                        DuplicatePointsAddedCount[p] = DuplicatePointsAddedCount[p] + 1; //Increment the count
+                    else
+                    {
+                        DuplicatePointsAddedCount.Add(p, 0); //Set the counter to 0 for when we use it later
+                    }
+                    
                 }
                 else
                 {

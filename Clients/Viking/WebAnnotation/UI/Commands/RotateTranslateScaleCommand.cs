@@ -1,11 +1,7 @@
-﻿using System;
+﻿using Geometry;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Collections.ObjectModel;
 using System.Windows.Forms;
-using Geometry;
 using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
@@ -18,7 +14,7 @@ namespace WebAnnotation.UI.Commands
         };
 
         public RotateTranslateScaleCommand(Viking.UI.Controls.SectionViewerControl parent, Geometry.GridVector2 VolumePosition) : base(parent, VolumePosition)
-        { 
+        {
         }
 
         /// <summary>
@@ -26,7 +22,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         protected abstract GridVector2 VolumeRotationOrigin
         { get; }
-        
+
         /// <summary>
         /// The angle to the first click point
         /// </summary>
@@ -45,14 +41,14 @@ namespace WebAnnotation.UI.Commands
         }
 
         protected abstract void OnAngleChanged();
-         
+
 
         public virtual string[] HelpStrings
         {
             get
             {
                 List<string> s = new List<string>(RotateTranslateScaleCommand.DefaultMouseHelpStrings);
-                s.AddRange(TranslateScaleCommandBase.DefaultMouseHelpStrings); 
+                s.AddRange(TranslateScaleCommandBase.DefaultMouseHelpStrings);
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 s.Sort();
                 return s.ToArray();
@@ -70,14 +66,14 @@ namespace WebAnnotation.UI.Commands
             else if (e.Button.Right())
             {
                 GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-               // GridVector2 Center = this.TranslatedVolumePosition;
+                // GridVector2 Center = this.TranslatedVolumePosition;
                 this._AngleOffset = GridVector2.Angle(VolumeRotationOrigin, WorldPosition) - Angle;
             }
             else
             {
                 base.OnMouseDown(sender, e);
             }
-        } 
+        }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
@@ -89,7 +85,7 @@ namespace WebAnnotation.UI.Commands
 
                 if (VolumeRotationOrigin == worldPosition)
                     return;
-                
+
                 this.Angle = GridVector2.Angle(VolumeRotationOrigin, worldPosition) - _AngleOffset;
 
                 //Save as old mouse position so location doesn't jump when we release the right mouse button

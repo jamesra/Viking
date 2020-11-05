@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Xml.Linq; 
-using System.IO;
+﻿using System.Xml.Linq;
 
 namespace LocalBookmarks
 {
@@ -14,12 +9,12 @@ namespace LocalBookmarks
         /// </summary>
         public FolderUIObj ExportRoot;
 
-        public XDocument Document; 
+        public XDocument Document;
 
         public HTMLExporter(FolderUIObj root)
         {
             Document = new XDocument();
-            ExportRoot = root; 
+            ExportRoot = root;
         }
 
         public void WriteHTML(string Filename)
@@ -35,7 +30,7 @@ namespace LocalBookmarks
         {
             XDocumentType docType = new XDocumentType("HTML", "-//W3C//DTD HTML 4.0 Transitional//EN", "", "");
             Document.Add(docType);
-            
+
             XElement Title = new XElement("title");
             Title.SetValue(ExportRoot.Name);
             XElement HeadElement = new XElement("head", Title);
@@ -43,7 +38,7 @@ namespace LocalBookmarks
 
             Document.Add(HtmlElement);
 
-            return HtmlElement; 
+            return HtmlElement;
         }
 
         private void WriteBody(XElement HTMLElement)
@@ -65,7 +60,7 @@ namespace LocalBookmarks
             introParagraph.Add(partTwo);
 
             BodyElement.Add(introParagraph);
-            
+
             ExportFolder(BodyElement, ExportRoot);
 
             HTMLElement.Add(BodyElement);
@@ -79,7 +74,7 @@ namespace LocalBookmarks
             element.Add(h4);
 
             XElement ul = new XElement("ul");
-            foreach(BookmarkUIObj bookmark in parent.Bookmarks)
+            foreach (BookmarkUIObj bookmark in parent.Bookmarks)
             {
                 XElement li = new XElement("li");
                 ExportBookmark(li, bookmark);
@@ -102,11 +97,11 @@ namespace LocalBookmarks
             XElement anchor = new XElement("a");
 
             anchor.SetAttributeValue("href", bookmark.URI);
-            anchor.SetAttributeValue("target", "Viking"); 
+            anchor.SetAttributeValue("target", "Viking");
             anchor.SetValue(bookmark.Name);
 
             bold.Add(anchor);
-            element.Add(bold); 
+            element.Add(bold);
 
             //Add the cut & paste coordinates
             XElement paragraph = new XElement("p");
@@ -117,10 +112,10 @@ namespace LocalBookmarks
             {
                 XElement commentParagraph = new XElement("p");
                 commentParagraph.SetValue(bookmark.Comment);
-                paragraph.Add(commentParagraph); 
+                paragraph.Add(commentParagraph);
             }
 
-            element.Add(paragraph); 
+            element.Add(paragraph);
         }
     }
 }

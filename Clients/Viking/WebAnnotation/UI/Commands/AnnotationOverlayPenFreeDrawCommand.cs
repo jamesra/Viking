@@ -1,19 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
+﻿using Geometry;
+using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Linq;
 using Viking.UI.Controls;
-using WebAnnotation;
+using Viking.VolumeModel;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
-using Viking.VolumeModel;
-using SqlGeometryUtils;
-using System.Collections.Specialized;
-using System.Diagnostics;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -76,7 +73,7 @@ namespace WebAnnotation.UI.Commands
                 //2. If we do not enclose a circle, check if we can continue an annotation
                 //3. Create a new structure using the loop.
 
-                if(TryConvertEnclosedCircle(newVolumePoly))
+                if (TryConvertEnclosedCircle(newVolumePoly))
                 {
                     this.Deactivated = true;
                     return;
@@ -123,13 +120,13 @@ namespace WebAnnotation.UI.Commands
 
         private bool TryConvertEnclosedCircle(GridPolygon newVolumePoly)
         {
-            if(!this.PenInput.HasSelfIntersection)
+            if (!this.PenInput.HasSelfIntersection)
             {
                 throw new ArgumentException("Cannot possibly convert a circle if our path is not a loop.");
             }
 
             List<LocationCircleView> intersectedCircles = IntersectedCirclesOnSection(Parent.Section.Number, newVolumePoly);
-            if(!intersectedCircles.Any())
+            if (!intersectedCircles.Any())
             {
                 return false;
             }
@@ -137,10 +134,25 @@ namespace WebAnnotation.UI.Commands
             LocationCircleView intersectedCircle = intersectedCircles.OrderByDescending(c => c.VolumeCircle.Area).First();
 
             LocationObj obj = Store.Locations.GetObjectByID(intersectedCircle.ID, false);
-            obj.TypeCode = LocationType.CURVEPOLYGON;
-            obj.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, newVolumePoly.ToSqlGeometry());
 
-            Store.Locations.Save();
+            SqlGeometry original_mosaic_shape = obj.MosaicShape;
+            SqlGeometry original_volume_shape = obj.MosaicShape;
+            var original_typecode = obj.TypeCode;
+
+            try
+            {
+                obj.TypeCode = Annotation.Interfaces.LocationType.CURVEPOLYGON;
+                obj.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, newVolumePoly.ToSqlGeometry());
+
+                Store.Locations.Save();
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+                obj.TypeCode = original_typecode;
+                obj.MosaicShape = original_mosaic_shape;
+                obj.VolumeShape = original_volume_shape;
+            }
             return true;
         }
 
@@ -154,17 +166,22 @@ namespace WebAnnotation.UI.Commands
             StructureObj newStruct = new StructureObj(type);
             LocationObj newLocation = new LocationObj(newStruct,
                                             Parent.Section.Number,
-                                            LocationType.CURVEPOLYGON);
+                                            Annotation.Interfaces.LocationType.CURVEPOLYGON);
 
             newLocation.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, newVolumePoly.ToSqlGeometry());
 
-            if (StructureNeedsParent)
-            {
-                //Enqueue extra command to select a parent
-                this.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
-            }
+            this.Parent.CommandQueue.EnqueueCommand(typeof(ShapeConfirmationCommand), new object[] { Parent, newVolumePoly, this.LineWidth,
+                new ShapeConfirmationCommand.OnCommandSuccess(() =>  {
+                            if (StructureNeedsParent)
+                            {
+                                //Enqueue extra command to select a parent
+                                this.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
+                            }
 
-            this.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
+                            this.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
+                        })
+                }
+             );
         }
 
         protected override void OnPenPathComplete(object sender, GridVector2[] Path)
@@ -185,7 +202,7 @@ namespace WebAnnotation.UI.Commands
                 return;
 
             GridLineSegment move_line = this.PenInput.NewestSegent;
-            ICanvasGeometryView IntersectedObject = AnnotationOverlay.FirstIntersectedObjectOnSection(Parent.Section.Number, move_line, out double distance);
+            ICanvasView IntersectedObject = AnnotationOverlay.FirstIntersectedObjectOnSection(Parent.Section.Number, move_line);
             //            ICanvasGeometryView MouseOverAnnotation = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
             System.Diagnostics.Trace.WriteLine(string.Format("{0}", IntersectedObject == null ? "NULL" : IntersectedObject.ToString()));
 
@@ -220,7 +237,7 @@ namespace WebAnnotation.UI.Commands
                             System.Windows.Forms.MessageBox.Show(Parent, r.Message, "Could not save Polygon", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                         }
 
-                        Store.Locations.Save();
+                        AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                     }
                     );
 
@@ -258,13 +275,13 @@ namespace WebAnnotation.UI.Commands
 
             ICanvasGeometryView bestObj = null;
 
-            var listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == LocationType.CIRCLE);
+            var listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == Annotation.Interfaces.LocationType.CIRCLE);
 
             var listCircles = listObjects.Select(o => o as LocationCircleView).Where(o => o != null);
 
             return listCircles.Where(o => o.VolumeCircle.Intersects(bounds) || bounds.Contains(o.VolumeCircle)).ToList();
         }
 
-        
+
     }
 }

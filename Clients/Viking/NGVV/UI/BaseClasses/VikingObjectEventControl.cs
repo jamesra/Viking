@@ -1,13 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-
-namespace Viking.UI.BaseClasses
+﻿namespace Viking.UI.BaseClasses
 {
     public partial class VikingObjectEventControl : VikingControl
     {
@@ -34,20 +25,20 @@ namespace Viking.UI.BaseClasses
 
         public VikingObjectEventControl() : base()
         {
-   //         InitializeComponent();
+            //         InitializeComponent();
 
             OnNewObjectEventHandler = new System.EventHandler(this.OnNewObject);
             BeforeAnyDeleteEventHandler = new System.EventHandler(this.BeforeAnyDelete);
             OnAnyDeleteEventHandler = new System.EventHandler(this.OnAnyDelete);
             BeforeAnySaveEventHandler = new System.EventHandler(this.BeforeAnySave);
             OnAnySaveEventHandler = new System.EventHandler(this.OnAnySave);
-/*
-            DBObject.OnNewObject += OnNewObjectEventHandler;
-            DBObject.BeforeAnyDelete += BeforeAnyDeleteEventHandler;
-            DBObject.OnAnyDelete += OnAnyDeleteEventHandler;
-            DBObject.BeforeAnySave += BeforeAnySaveEventHandler;
-            DBObject.OnAnySave += OnAnySaveEventHandler;
-*/
+            /*
+                        DBObject.OnNewObject += OnNewObjectEventHandler;
+                        DBObject.BeforeAnyDelete += BeforeAnyDeleteEventHandler;
+                        DBObject.OnAnyDelete += OnAnyDeleteEventHandler;
+                        DBObject.BeforeAnySave += BeforeAnySaveEventHandler;
+                        DBObject.OnAnySave += OnAnySaveEventHandler;
+            */
             OnSaveEventHandler = new System.EventHandler(this.OnObjectSave);
             BeforeDeleteEventHandler = new System.EventHandler(this.BeforeObjectDelete);
             OnDeleteEventHandler = new System.EventHandler(this.OnObjectDelete);

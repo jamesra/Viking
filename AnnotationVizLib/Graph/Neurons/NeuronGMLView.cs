@@ -1,9 +1,8 @@
-﻿using System;
-using System.Diagnostics;
+﻿using Annotation.Interfaces;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib
 {
@@ -19,7 +18,7 @@ namespace AnnotationVizLib
             IDictionary<string, string> NodeAttribs = new Dictionary<string, string>();
 
             NodeAttribs.Add("Label", LabelForNode(node));
-            
+
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
 
             GMLnode.AddStandardizedAttributes(NodeAttribs);
@@ -64,10 +63,10 @@ namespace AnnotationVizLib
             try
             {
                 GMLedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
-                if(!edge.Directional && !edge.IsLoop)
+                if (!edge.Directional && !edge.IsLoop)
                 {
                     GMLReverseEdge = this.addEdge(edge.TargetNodeKey, edge.SourceNodeKey);
-                }                
+                }
             }
             catch (KeyNotFoundException)
             {

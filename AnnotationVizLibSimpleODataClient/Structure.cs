@@ -1,14 +1,12 @@
-﻿using System;
+﻿using Annotation.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib.SimpleOData
 {
     class Structure : IStructure, IEquatable<Structure>
-    {  
+    {
         public static Structure FromDictionary(IDictionary<string, object> dict)
         {
             Structure s = new Structure { ID = System.Convert.ToUInt64(dict["ID"]) };
@@ -41,7 +39,7 @@ namespace AnnotationVizLib.SimpleOData
 
 
         public Structure()
-        { 
+        {
         }
 
         public ulong ID
@@ -130,14 +128,14 @@ namespace AnnotationVizLib.SimpleOData
         }
 
         public bool Equals(IStructure other)
-        { 
+        {
             if (object.ReferenceEquals(other, null))
                 return false;
-            
+
             if (other.ID == this.ID)
                 return true;
-            
-            return false; 
+
+            return false;
         }
 
         public bool Equals(Structure other)

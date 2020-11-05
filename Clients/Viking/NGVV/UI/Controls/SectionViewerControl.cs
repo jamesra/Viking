@@ -1,28 +1,24 @@
-﻿using System;
+﻿using Geometry;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Data;
 using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using System.Windows.Threading;
-using Geometry;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+using Viking.Common;
 using Viking.UI.Commands;
 using Viking.UI.Forms;
-using Viking.Common;
-using System.Diagnostics;
-using Viking.VolumeModel;
 using Viking.ViewModels;
+using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
-using System.Threading;
-using System.Threading.Tasks;
-using Viking.UI;
+using VikingXNAGraphics.Controls;
 
 
 namespace Viking.UI.Controls
@@ -349,7 +345,6 @@ namespace Viking.UI.Controls
 
             CreateWPFControls();
 
-
             StatusBar = new System.Windows.Forms.StatusStrip();
             StatusBar.Parent = this;
             StatusBar.Dock = System.Windows.Forms.DockStyle.Bottom;
@@ -436,8 +431,8 @@ namespace Viking.UI.Controls
                 Touch.GetPointerType((uint)pointerID, out PointerType type);
                 //bool isPen = Touch.IsPenEvent(out uint pointerID);
                 //if(isPen)
-                if(type == PointerType.Pen)
-                { 
+                if (type == PointerType.Pen)
+                {
                     //Trace.WriteLine(string.Format("Pen Input {0}", pointerID));
                     return;
                 }
@@ -453,7 +448,7 @@ namespace Viking.UI.Controls
             {
                 //Trace.WriteLine(string.Format("{0}", msg.Msg));
             }
-            
+
             if (msg.Msg == Touch.WM_LBUTTONDOWN || msg.Msg == Touch.WM_RBUTTONDOWN)
             {
                 bool isPen = Touch.IsPenEvent(out uint pointerID);
@@ -479,12 +474,12 @@ namespace Viking.UI.Controls
                     Trace.WriteLine(string.Format("Mouse move {0}", PointerID));
                 }
             }*/
-            
+
 
             base.WndProc(ref msg);
             return;
-        } 
-         
+        }
+
 
         protected override void Initialize()
         {
@@ -526,7 +521,7 @@ namespace Viking.UI.Controls
         public event ReferenceSectionChangedEventHandler OnReferenceSectionChanged;
 
         #region IPenEvents
-        public event PenEventHandler OnPenEnterRange { add { penEventManager.OnPenEnterRange += value; } remove { penEventManager.OnPenEnterRange -= value; } }       
+        public event PenEventHandler OnPenEnterRange { add { penEventManager.OnPenEnterRange += value; } remove { penEventManager.OnPenEnterRange -= value; } }
         public event PenEventHandler OnPenLeaveRange { add { penEventManager.OnPenLeaveRange += value; } remove { penEventManager.OnPenLeaveRange -= value; } }
         public event PenEventHandler OnPenContact { add { penEventManager.OnPenContact += value; } remove { penEventManager.OnPenContact -= value; } }
         public event PenEventHandler OnPenLeaveContact { add { penEventManager.OnPenLeaveContact += value; } remove { penEventManager.OnPenLeaveContact -= value; } }
@@ -586,13 +581,13 @@ namespace Viking.UI.Controls
         /// <param name="e"></param>
         private void OnCommandQueueChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            if(e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
             {
-                if(this.CurrentCommand == null || this.CurrentCommand is DefaultCommand)
+                if (this.CurrentCommand == null || this.CurrentCommand is DefaultCommand)
                 {
                     this.ActivateNextCommandFromQueue();
                 }
-            } 
+            }
         }
 
         /// <summary>
@@ -605,7 +600,7 @@ namespace Viking.UI.Controls
             Command ActiveCommand = this.CurrentCommand;
             CurrentCommand = e.injectedCommand;
 
-            if(e.SaveCurrentCommand == true && !(ActiveCommand is DefaultCommand) && ActiveCommand != null)
+            if (e.SaveCurrentCommand == true && !(ActiveCommand is DefaultCommand) && ActiveCommand != null)
             {
                 CommandQueue.Push(ActiveCommand);
             }
@@ -614,13 +609,13 @@ namespace Viking.UI.Controls
         private void ActivateNextCommandFromQueue()
         {
             Command nextCommand = this.CommandQueue.Pop();
-            if(nextCommand == null)
+            if (nextCommand == null)
             {
                 nextCommand = new DefaultCommand(this);
             }
 
             this.CurrentCommand = nextCommand;
-            
+
         }
 
         #endregion
@@ -711,7 +706,7 @@ namespace Viking.UI.Controls
         {
             Debug.Assert(MyRect.Left < MyRect.Right);
             Debug.Assert(MyRect.Bottom < MyRect.Top);
-            
+
             this.ShowOverlays = IncludeOverlays;
             this.AsynchTextureLoad = false;
 
@@ -808,7 +803,7 @@ namespace Viking.UI.Controls
                         {
                             System.Threading.Tasks.Task topTask = listTasks.Dequeue();
                             if (topTask.IsCompleted)
-                            { 
+                            {
                                 continue;
                             }
                             else
@@ -894,8 +889,8 @@ namespace Viking.UI.Controls
                 int EventInterval = (int)Math.Pow(TileDim.Width * TileDim.Height, 1 / 3.0);
                 int ExistingTileUpdateInterval = 10000;
                 int LoopCounter = 0;
-                int MaxTilesQueued = 256; 
-                
+                int MaxTilesQueued = 256;
+
                 Queue<System.Threading.Tasks.Task> listTasks = new Queue<System.Threading.Tasks.Task>(MaxTilesQueued);
 
                 for (int iX = 0; iX < TileDim.Width; iX++)
@@ -906,7 +901,7 @@ namespace Viking.UI.Controls
                     {
                         LoopCounter++;
                         double Y = (iY * TileWorldSize.Height) + (TileWorldSize.Height / 2);
-                        
+
                         string Filename = Path + string.Format("X{0}_Y{1}.png", iX.ToString("D3"), iY.ToString("D3"));
 
                         //Assume images already on disk are good
@@ -923,11 +918,11 @@ namespace Viking.UI.Controls
 
                         TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
                         if (!SceneHasTextures(TileScene, S.Number))
-                            continue; 
+                            continue;
 
                         Task T = ExportScene(TileScene, (float)X, (float)Y, S.Number, Filename);
-                        listTasks.Enqueue(T); 
-                        
+                        listTasks.Enqueue(T);
+
                         //Throttle tile creation so we don't exceed our memory limits
                         while (listTasks.Count > 0 && (listTasks.Count > MaxTilesQueued || listTasks.Peek().IsCompleted))
                         {
@@ -941,7 +936,7 @@ namespace Viking.UI.Controls
                                 topTask.Wait();
                             }
                         }
-                        
+
                         if (progressForm.DialogResult == DialogResult.Cancel)
                             break;
 
@@ -951,7 +946,7 @@ namespace Viking.UI.Controls
                             progressForm.ShowProgress("Section " + S.Name + "\nFrame ID: " + Filename, (double)iTile / (double)numTiles);
                             Parent.Invalidate();
                             Application.DoEvents();
-                            
+
                             //System.Windows.Forms.Application.DoEvents();
                             if (progressForm.DialogResult == DialogResult.Cancel)
                                 break;
@@ -978,7 +973,7 @@ namespace Viking.UI.Controls
                     if (progressForm.DialogResult == DialogResult.Cancel)
                         break;
 
-                } 
+                }
 
                 System.IO.StreamWriter stream = null;
                 try
@@ -1003,13 +998,13 @@ namespace Viking.UI.Controls
                     break;
 
             }
-             
+
             progressForm.Close();
 
             this.AsynchTextureLoad = true;
             this.ShowOverlays = OriginalOverlay;
         }
-         
+
         private Task ExportScene(VikingXNA.Scene TileScene, float CenterX, float CenterY, int Z, string Filename)
         {
             Task T = null;
@@ -1027,7 +1022,7 @@ namespace Viking.UI.Controls
 
             this.Scene = TileScene;
             RenderTarget2D renderTargetTile = new RenderTarget2D(graphicsDevice, TileScene.Viewport.Width, TileScene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
-            
+
             Draw(TileScene, renderTargetTile);
 
             //Obtain texture from renderTarget
@@ -1039,7 +1034,7 @@ namespace Viking.UI.Controls
                 renderTargetTile.Dispose();
                 renderTargetTile = null;
             });
-            
+
             this.ShowOverlays = OriginalOverlays;
             this.AsynchTextureLoad = AsynchTextureLoad;
             this.Scene = originalScene;
@@ -1186,19 +1181,19 @@ namespace Viking.UI.Controls
             if (upSectionButton == null)
             {
                 TextureCircleView plusView = TextureCircleView.CreatePlusCircle(new GridCircle(GridVector2.Zero, 1.0),
-                                                Microsoft.Xna.Framework.Color.White);
+                                                Microsoft.Xna.Framework.Color.Goldenrod);
 
-                upSectionButton = new VikingXNAGraphics.Controls.CircularButton(plusView);
-                upSectionButton.OnClick += this.OnUpSectionButtonClicked;
+                upSectionButton = new VikingXNAGraphics.Controls.CircularButton(plusView, this.OnUpSectionButtonClicked);
+                upSectionButton.OnClick = this.OnUpSectionButtonClicked;
             }
 
             if (downSectionButton == null)
             {
                 TextureCircleView minusView = TextureCircleView.CreateMinusCircle(new GridCircle(GridVector2.Zero, 1.0),
-                                                Microsoft.Xna.Framework.Color.White);
+                                                Microsoft.Xna.Framework.Color.Goldenrod);
 
                 downSectionButton = new VikingXNAGraphics.Controls.CircularButton(minusView);
-                downSectionButton.OnClick += this.OnDownSectionButtonClicked;
+                downSectionButton.OnClick = this.OnDownSectionButtonClicked;
                 //                downSectionButton.OnClick += th
             }
         }
@@ -1229,12 +1224,14 @@ namespace Viking.UI.Controls
             upSectionButton.Circle = new GridCircle(BottomLeft + Tenth, radius);
             downSectionButton.Circle = new GridCircle((BottomLeft + Tenth) + new GridVector2(0, Tenth.Y * 2.5), radius);
 
-            VikingXNAGraphics.TextureCircleView.Draw(Device, scene, basicEffect, this.AnnotationOverlayEffect,
+            OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(Device);
+            overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureAlphaOverlayEffect;
+            VikingXNAGraphics.TextureCircleView.Draw(Device, scene, overlayEffect,
                 new VikingXNAGraphics.CircleView[] { upSectionButton.circleView, downSectionButton.circleView });
         }
 
         protected override void Draw(Scene scene)
-        {  
+        {
             //graphicsDevice.Clear(Microsoft.Xna.Framework.Color.Black);
             if (Section == null)
                 return;
@@ -1352,7 +1349,7 @@ namespace Viking.UI.Controls
                     {
                         if (CurrentCommand != null)
                         {
-                            
+
                             ++NextStencilValue;
                             graphicsDevice.DepthStencilState = CreateDepthStateForOverlay(++NextStencilValue, true);
                             graphicsDevice.ReferenceStencil = NextStencilValue;
@@ -1407,7 +1404,7 @@ namespace Viking.UI.Controls
             this.PolygonOverlayEffect.LumaTexture = BackgroundLuma;
             this.PolygonOverlayEffect.RenderTargetSize = Device.Viewport;
 
-            this.AnnotationOverlayEffect.LumaTexture = BackgroundLuma; 
+            this.AnnotationOverlayEffect.LumaTexture = BackgroundLuma;
             this.AnnotationOverlayEffect.RenderTargetSize = Device.Viewport;
         }
 
@@ -1430,7 +1427,7 @@ namespace Viking.UI.Controls
         protected bool SceneHasTextures(Scene scene, int Z)
         {
             if (false == Volume.SectionViewModels.ContainsKey(Z))
-                return false; 
+                return false;
 
             SectionViewModel visibleSection = Volume.SectionViewModels[Z];
             ChannelInfo[] channels = visibleSection.ChannelInfoArray;
@@ -1442,9 +1439,9 @@ namespace Viking.UI.Controls
                 Section section = visibleSection.GetSectionToDrawForChannel(channel);
                 MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
                 int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
-                 
+
                 DownsamplesToRender = new int[] { DownsamplesToRender.Last() };
-                  
+
                 //Get all of the visible tiles
                 TilePyramid visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
                 for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
@@ -1474,11 +1471,11 @@ namespace Viking.UI.Controls
 
             foreach (ChannelInfo channel in channels)
             {
-                Section section =visibleSection.GetSectionToDrawForChannel(channel);
+                Section section = visibleSection.GetSectionToDrawForChannel(channel);
                 MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
 
                 if (Mapping == null)
-                    continue; 
+                    continue;
 
                 int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
@@ -1488,7 +1485,7 @@ namespace Viking.UI.Controls
 
                 //Get all of the visible tiles
                 TilePyramid visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
-                 
+
                 for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
                 {
                     int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
@@ -1519,14 +1516,14 @@ namespace Viking.UI.Controls
                         if (tileViewModel.HasTexture == false && tileViewModel.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
                             continue;
 
-                        if(tileViewModel.TextureNeedsLoading)
-                            listGetTextureTasks.Add(Task<Texture2D>.Run(() => { return tileViewModel.GetTexture(this.graphicsDeviceService.GraphicsDevice); } ));
+                        if (tileViewModel.TextureNeedsLoading)
+                            listGetTextureTasks.Add(Task<Texture2D>.Run(() => { return tileViewModel.GetTexture(this.graphicsDeviceService.GraphicsDevice); }));
 
                         listTileViewModels.Add(tileViewModel);
                     }
                 }
             }
-            
+
 
             if (!AsyncTextureLoad)
             {
@@ -1534,7 +1531,7 @@ namespace Viking.UI.Controls
                     Application.DoEvents();
             }
 
-           
+
         }
 
         private bool AllTileViewsHaveTexture(IList<TileViewModel> listTiles)
@@ -1543,7 +1540,7 @@ namespace Viking.UI.Controls
                 return true;
 
             listTiles.Where(t => t.TextureNeedsLoading).Select(t => t.GetTexture(this.graphicsDeviceService.GraphicsDevice)).ToList();
-            return false; 
+            return false;
         }
 
 
@@ -1579,7 +1576,7 @@ namespace Viking.UI.Controls
             //Clear the stencil buffer before we begin
             graphicsDevice.Clear(ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
-             
+
             for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
             {
                 int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
@@ -1624,24 +1621,30 @@ namespace Viking.UI.Controls
                     //Request a texture if we need one
                     if (tileViewModel.TextureNeedsLoading)
                         listGetTextureTasks.Add(Task<Texture2D>.Run(() => tileViewModel.GetTexture(graphicsDevice)));
-                    else if(tileViewModel.TextureReadComplete)
+                    else if (tileViewModel.TextureReadComplete)
                         tileViewsToDraw.Add(tileViewModel);
                 }
 
-                foreach(TileViewModel tileViewModel in tileViewsToDraw)
-                { 
+                foreach (TileViewModel tileViewModel in tileViewsToDraw)
+                {
                     tileViewModel.Draw(graphicsDevice, tileLayoutEffect, AsynchTextureLoad, ColorizeTiles);
 
                     if (iLevel == DownsamplesToRender.Length - 1 && Viking.UI.State.ShowTileMesh)
                     {
                         tileViewModel.DrawMesh(graphicsDevice, basicEffect);
 
-                        //tileViewModel.DrawLabels(this);
+                        //tileViewModel.DrawLabel(this);
                     }
 
                     iColor++;
                 }
 
+                //If this is the highest level resolution then draw levels
+                if (Viking.UI.State.ShowTileMesh && iLevel == DownsamplesToRender.Length - 1)
+                {
+                    var labels = tileViewsToDraw.Select(t => t.TileLabel).ToArray();
+                    LabelView.Draw(this.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene, labels);
+                }
                 //     if (AllTilesDrawn)
                 //         break; 
             }
@@ -1675,7 +1678,7 @@ namespace Viking.UI.Controls
                         stosMeshViewModel.DrawMesh(graphicsDevice, basicEffect);
                         stosMeshViewModel.DrawLabels(this);
                     }
-                } 
+                }
             }
 
             tileLayoutEffect.TileColor = new Microsoft.Xna.Framework.Color(1, 1, 1);
@@ -1731,11 +1734,11 @@ namespace Viking.UI.Controls
             return null;
 
         }
-         
+
 
         protected int[] CalculateDownsamplesToRender(MappingBase Mapping, double downsample)
         {
-            if(Mapping == null)
+            if (Mapping == null)
             {
                 Trace.WriteLine("CalculateDownsamplesToRender Mapping parameter is null");
                 return new int[0];
@@ -2019,7 +2022,7 @@ namespace Viking.UI.Controls
                 saveFile = System.IO.File.OpenWrite(filename);
                 texture.SaveAsPng(saveFile, texture.Width, texture.Height);
             }
-            catch (Exception)
+            catch (System.IO.IOException)
             {
             }
             finally
@@ -2127,25 +2130,52 @@ namespace Viking.UI.Controls
             {
                 GridVector2 worldPosition = this.ScreenToWorld(e.X, e.Y);
 
-                upSectionButton.TestClick(worldPosition, VikingXNAGraphics.Controls.MouseButton.LEFT);
-                downSectionButton.TestClick(worldPosition, VikingXNAGraphics.Controls.MouseButton.LEFT);
+                if (upSectionButton.Contains(worldPosition))
+                    upSectionButton.OnClick(upSectionButton, worldPosition, VikingXNAGraphics.Controls.InputDevice.Mouse, VikingXNAGraphics.Controls.MouseButton.LEFT);
+
+                if (downSectionButton.Contains(worldPosition))
+                    downSectionButton.OnClick(downSectionButton, worldPosition, VikingXNAGraphics.Controls.InputDevice.Mouse, VikingXNAGraphics.Controls.MouseButton.LEFT);
             }
         }
 
-        private void OnDownSectionButtonClicked(object sender, VikingXNAGraphics.Controls.MouseButton button)
+        private bool OnDownSectionButtonClicked(IClickable sender, GridVector2 position, VikingXNAGraphics.Controls.InputDevice source, object input_state)
         {
-            if (button == VikingXNAGraphics.Controls.MouseButton.LEFT)
+            if (source == VikingXNAGraphics.Controls.InputDevice.Mouse)
+            {
+                VikingXNAGraphics.Controls.MouseButton button = (VikingXNAGraphics.Controls.MouseButton)input_state;
+                if (button == MouseButton.LEFT)
+                {
+                    this.StepDownNSections(1);
+                    return true;
+                }
+            }
+            else if (source == VikingXNAGraphics.Controls.InputDevice.Pen)
             {
                 this.StepDownNSections(1);
+                return true;
             }
+
+            return false;
         }
 
-        private void OnUpSectionButtonClicked(object sender, VikingXNAGraphics.Controls.MouseButton button)
+        private bool OnUpSectionButtonClicked(IClickable sender, GridVector2 position, VikingXNAGraphics.Controls.InputDevice source, object input_state)
         {
-            if (button == VikingXNAGraphics.Controls.MouseButton.LEFT)
+            if (source == VikingXNAGraphics.Controls.InputDevice.Mouse)
+            {
+                VikingXNAGraphics.Controls.MouseButton button = (VikingXNAGraphics.Controls.MouseButton)input_state;
+                if (button == MouseButton.LEFT)
+                {
+                    this.StepUpNSections(1);
+                    return true;
+                }
+            }
+            else if (source == VikingXNAGraphics.Controls.InputDevice.Pen)
             {
                 this.StepUpNSections(1);
+                return true;
             }
+
+            return false;
         }
 
         private void timerTileCacheCheckpoint_Tick(object sender, EventArgs e)
@@ -2516,7 +2546,7 @@ namespace Viking.UI.Controls
                 {
                     return;
                 }
-               
+
                 int FirstExportSection;
                 int LastExportSection;
 

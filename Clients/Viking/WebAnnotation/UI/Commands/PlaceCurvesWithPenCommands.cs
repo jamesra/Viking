@@ -1,22 +1,18 @@
-﻿using System;
+﻿using Geometry;
+using SqlGeometryUtils;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using System.Windows.Forms;
-using WebAnnotation.View;
-using VikingXNAGraphics;
-using SqlGeometryUtils;
-using VikingXNAWinForms;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Windows.Forms;
 using Viking.UI;
+using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    
+
     class PlaceClosedCurveWithPenCommand : PlaceGeometryWithPenCommandBase
     {
         public override LineStyle Style
@@ -72,16 +68,16 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPathLoop(object sender, bool HasLoop)
         {
-            if(HasLoop)
+            if (HasLoop)
             {
-                if(IsProposedClosedLoopValid(PenInput.SimplifiedFirstLoop))
+                if (IsProposedClosedLoopValid(PenInput.SimplifiedFirstLoop))
                 {
                     this.Execute(PenInput.SimplifiedFirstLoop);
                 }
             }
         }
 
-        
+
 
         protected virtual bool IsProposedClosedLoopValid(IReadOnlyCollection<GridVector2> proposed_curve)
         {
@@ -91,12 +87,12 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
         {
-            
+
         }
 
 
         protected override void OnPenPathComplete(object sender, GridVector2[] Path)
-        { 
+        {
 
         }
 
@@ -168,17 +164,17 @@ namespace WebAnnotation.UI.Commands
             this.PathView.Color = HasLoop ? Microsoft.Xna.Framework.Color.Magenta : this.OriginalColor;
             return;
         }
-        
+
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
             PenInput.Points.Clear();
             PenInput.Push(Parent.ScreenToWorld(e.X, e.Y));
             base.OnMouseDown(sender, e);
         }
-        
+
         protected override void OnMouseUp(object sender, MouseEventArgs e)
         {
-            if(PenInput.Points.Count < 2)
+            if (PenInput.Points.Count < 2)
             {
                 return;
             }
@@ -190,7 +186,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
         {
-            
+
         }
 
         protected override void OnPenPathComplete(object sender, GridVector2[] Path)
@@ -207,7 +203,7 @@ namespace WebAnnotation.UI.Commands
             //We cannot create an open curve if the path has a self-intersection
             return PenInput.HasSelfIntersection == false;
         }
-        
+
 
         protected override bool ShapeIsValid()
         {
@@ -242,7 +238,7 @@ namespace WebAnnotation.UI.Commands
             {
                 // return this.PathView == null ? Global.DefaultClosedLineWidth : this.PenInput.Points.MinDistanceBetweenSequentialPoints(out int FirstIndex);
                 return this.PathView.LineWidth;
-            } 
+            }
         }
 
         /// <summary>
@@ -278,7 +274,7 @@ namespace WebAnnotation.UI.Commands
             }
 
         }
-         
+
         public new static string[] DefaultMouseHelpStrings = new String[] {
             "Double Left Click: Place final control point, save and exit command",
             "Double Right Click: Pop last control point",
@@ -299,6 +295,8 @@ namespace WebAnnotation.UI.Commands
 
         protected PolyLineView PathView;
 
+        public Path Path => PenInput.path;
+
         public PlaceGeometryWithPenCommandBase(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
                                         double LineWidth,
@@ -311,7 +309,7 @@ namespace WebAnnotation.UI.Commands
 #else
             PathView.ShowControlPoints = false;
 #endif
-            
+
             parent.Cursor = Cursors.Cross;
             PenInput = new Viking.UI.PenInputHelper(parent);
             //Ensure any pen subscriptions are released in the OnDeactivate call
@@ -331,12 +329,12 @@ namespace WebAnnotation.UI.Commands
         /// <param name="path"></param>
         public virtual void InitPath(IReadOnlyCollection<GridVector2> path)
         {
-            if(PenInput.path.Points.Count > 0)
+            if (PenInput.path.Points.Count > 0)
             {
                 throw new ArgumentException("Path initialized with an existing path in place.");
             }
 
-            foreach (GridVector2 p in path.Reverse())
+            foreach (GridVector2 p in path)
             {
                 PenInput.Push(p);
                 PathView.Add(p);
@@ -369,9 +367,9 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            this.Execute(null);
+            this.Execute(this.PenInput.SimplifiedPath);
         }
-        
+
         protected override void OnDeactivate()
         {
             System.Diagnostics.Trace.WriteLine(string.Format("PlaceCurveWithPenCommand {0} Unubscribed to events", this.ID));
@@ -412,7 +410,7 @@ namespace WebAnnotation.UI.Commands
                     this.PathView.ControlPoints = this.PenInput.Points;
                     break;
             }
-             
+
             this.Parent.Invalidate();
         }
 
@@ -425,7 +423,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnCameraChanged(object sender, PropertyChangedEventArgs e)
         {
-            if(e.PropertyName == "Downsample")
+            if (e.PropertyName == "Downsample")
             {
                 SetPathViewForDownsample(Parent.Camera.Downsample);
             }
@@ -460,7 +458,7 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            PolyLineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, Parent.AnnotationOverlayEffect, new PolyLineView[] { this.PathView });
+            PolyLineView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new PolyLineView[] { this.PathView });
 
 #if DEBUG
             if (PenInput.ProposedNextSegment.HasValue)

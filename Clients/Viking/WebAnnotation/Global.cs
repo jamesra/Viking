@@ -12,10 +12,11 @@ using Viking;
 using System.Diagnostics;
 using Viking.VolumeModel;
 using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
+using System.Collections.Specialized;
 //using WebAnnotation.AuthenticationService;
 
 namespace WebAnnotation
-{
+{ 
     public class Global : IInitExtensions
     {
         internal static double DefaultLocationJumpDownsample = 4; //Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
@@ -101,6 +102,82 @@ namespace WebAnnotation
                 WebAnnotation.Properties.Settings.Default.PenMode = value;
                 WebAnnotation.Properties.Settings.Default.Save();
             }
+        }
+
+        private static System.Collections.ObjectModel.ObservableCollection<ulong> _UserFavoriteStructureTypes;
+
+        public static System.Collections.ObjectModel.ObservableCollection<ulong> UserFavoriteStructureTypes
+        {
+            get
+            { 
+                if (_UserFavoriteStructureTypes == null)
+                {
+                    _UserFavoriteStructureTypes = new System.Collections.ObjectModel.ObservableCollection<ulong>();
+                    foreach (string ID_str in Properties.Settings.Default.FavoriteStructureIDs)
+                    {
+                        try
+                        {
+                            ulong ID = System.Convert.ToUInt64(ID_str);
+                            if(_UserFavoriteStructureTypes.Contains(ID) == false) //Do not add accidental duplicates
+                                _UserFavoriteStructureTypes.Add(ID);
+                        }
+                        catch (ArgumentException)
+                        {
+                            Trace.WriteLine(string.Format("Unable to convert Favorite StructureID to long {0}", ID_str));
+                        }
+                    }
+
+                    _UserFavoriteStructureTypes.CollectionChanged += OnFavoriteStructureTypesChanged;
+                } 
+
+                return _UserFavoriteStructureTypes; 
+            }
+        }
+
+        private static void OnFavoriteStructureTypesChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            switch(e.Action)
+            {
+                case NotifyCollectionChangedAction.Add:
+                    foreach(object item in e.NewItems)
+                    {
+                        Properties.Settings.Default.FavoriteStructureIDs.Add(string.Format("{0}", item));
+                    }
+                    break;
+                case NotifyCollectionChangedAction.Remove:
+                    foreach (object item in e.OldItems)
+                    {
+                        Properties.Settings.Default.FavoriteStructureIDs.Remove(string.Format("{0}", item));
+                    }
+                    break;
+                case NotifyCollectionChangedAction.Reset:
+                    Properties.Settings.Default.FavoriteStructureIDs.Clear();
+                    break;
+                case NotifyCollectionChangedAction.Move:
+                    break;
+                case NotifyCollectionChangedAction.Replace:
+                    foreach (object item in e.OldItems)
+                    {
+                        Properties.Settings.Default.FavoriteStructureIDs.Remove(string.Format("{0}", item));
+                    }
+                    foreach (object item in e.NewItems)
+                    {
+                        Properties.Settings.Default.FavoriteStructureIDs.Add(string.Format("{0}", item));
+                    }
+                    break;
+            }
+
+            /* The brute force approach */
+            /*
+            StringCollection newList = new System.Collections.Specialized.StringCollection();
+            foreach(long ID in _UserFavoriteStructureTypes)
+            {
+                newList.Add(string.Format("{0}", ID));
+            }
+
+            Properties.Settings.Default.FavoriteStructureIDs = newList;
+            */
+            Properties.Settings.Default.Save(); //Persist the updated list
         }
 
         static Uri UserSettingsUri

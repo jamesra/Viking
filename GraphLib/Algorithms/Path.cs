@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
 
 namespace GraphLib
 {
@@ -84,7 +81,7 @@ namespace GraphLib
             where NODETYPE : Node<KEY, EDGETYPE>
             where EDGETYPE : Edge<KEY>
         {
-            return Graph<KEY, NODETYPE, EDGETYPE>.FindCycle(graph, Origin); 
+            return Graph<KEY, NODETYPE, EDGETYPE>.FindCycle(graph, Origin);
         }
     }
 
@@ -114,7 +111,7 @@ namespace GraphLib
 
         public static IList<KEY> FindCycle(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin)
         {
-            
+
             List<KEY> path = new List<KEY>();
 
             NODETYPE origin_node = graph.Nodes[Origin];
@@ -123,7 +120,7 @@ namespace GraphLib
             if (Candidates.Count <= 1)
                 return null;
 
-            foreach(var connected_node_edges in Candidates)
+            foreach (var connected_node_edges in Candidates)
             {
                 SortedSet<KEY> testedNodes = new SortedSet<KEY>();
                 Edge<KEY> forbiddenDirectionalEdge = new Edge<KEY>(connected_node_edges.Key, Origin, true); //Do not allow us to travel back the way we came.  The only way to return to the origin is a cycle
@@ -133,7 +130,7 @@ namespace GraphLib
                    (node) => { return node.Key.Equals(Origin); },
                    (source, edge) => { return CanTravelPath(source, edge) && edge != forbiddenDirectionalEdge && edge != forbiddenBidirectionalEdge; });
 
-                if(result != null)
+                if (result != null)
                 {
                     result.Add(connected_node_edges.Key);
                     return result;
@@ -176,7 +173,7 @@ namespace GraphLib
         /// <param name="Origin"></param>
         /// <param name="predicate"></param>
         /// <returns></returns>
-        internal static IList<KEY> RecursePath(ref SortedSet<KEY> testedNodes, Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch, Func<KEY, EDGETYPE, bool> CanTravelEdge=null)
+        internal static IList<KEY> RecursePath(ref SortedSet<KEY> testedNodes, Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch, Func<KEY, EDGETYPE, bool> CanTravelEdge = null)
         {
             if (CanTravelEdge == null)
                 CanTravelEdge = CanTravelPath;
@@ -208,7 +205,7 @@ namespace GraphLib
                     return null;
 
                 //Optimization, avoids copying the testedNodes set if there is only one path
-                IList<KEY> result =  RecursePath(ref testedNodes, graph, linked_Keys.First(), IsMatch);
+                IList<KEY> result = RecursePath(ref testedNodes, graph, linked_Keys.First(), IsMatch);
                 if (result == null)
                     return null;
 
@@ -241,7 +238,7 @@ namespace GraphLib
                 IList<KEY> shortestPath = listPotentialPaths.Where(L => L.Count == MinDistance).First();
                 path.AddRange(shortestPath);
                 return path;
-            } 
+            }
         }
 
         /// <summary>
@@ -253,7 +250,7 @@ namespace GraphLib
         /// <param name="edge"></param>
         protected static bool CanTravelPath(KEY Source, EDGETYPE edge)
         {
-            if(edge.Directional)
+            if (edge.Directional)
             {
                 return edge.SourceNodeKey.Equals(Source);
             }
@@ -306,7 +303,7 @@ namespace GraphLib
         internal static void RecurseReachableNodes(ref SortedSet<KEY> testedNodes, ref SortedSet<KEY> matchingNodes, Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
         {
             testedNodes.Add(Origin);
-            
+
             if (IsMatch(graph.Nodes[Origin]))
             {
                 matchingNodes.Add(Origin);

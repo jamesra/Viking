@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics;
-using System.Text;
-using System.Threading.Tasks;
+using System.Linq;
 
 namespace Geometry
 {
@@ -66,7 +64,7 @@ namespace Geometry
 
             return CurvePoints;
         }
-        
+
         /*
         /// <summary>
         /// Return an array with the curvature of each point in the array
@@ -121,7 +119,7 @@ namespace Geometry
                 else if (GridVector2.DistanceSquared(ControlPoints[i], ControlPoints[i - 1]) < Global.EpsilonSquared)
                 {
                     Angles[i] = 0;
-                    continue; 
+                    continue;
                 }
 
                 //Extrapolate a line past the control point, and measure how much we deviate from it
@@ -164,14 +162,14 @@ namespace Geometry
         /// </summary>
         /// <param name="TPoints">The positions where we evaluate the curve, from 0 to 1</param>
         /// <returns>False if no points were added</returns>
-        public static bool TryAddTPointsAboveThreshold(GridVector2[] output, ref SortedSet<double> TPoints, double angleThresholdInDegrees=10.0)
+        public static bool TryAddTPointsAboveThreshold(GridVector2[] output, ref SortedSet<double> TPoints, double angleThresholdInDegrees = 10.0)
         {
             double[] TPointsArray = TPoints.ToArray();
 
             for (int i = 1; i < output.Length - 1; i++)
             {
-                if(GridVector2.DistanceSquared(output[i-1], output[i]) < Global.EpsilonSquared ||
-                   GridVector2.DistanceSquared(output[i], output[i+1]) < Global.EpsilonSquared)
+                if (GridVector2.DistanceSquared(output[i - 1], output[i]) < Global.EpsilonSquared ||
+                   GridVector2.DistanceSquared(output[i], output[i + 1]) < Global.EpsilonSquared)
                 {
                     output = output.RemoveAt(i);
                     TPoints.Remove(TPointsArray[i]);
@@ -181,10 +179,10 @@ namespace Geometry
                 }
             }
 
-            
+
             double[] degrees;
-              
-            degrees = output.MeasureCurvature(); 
+
+            degrees = output.MeasureCurvature();
             degrees = degrees.Select(d => Math.Abs(d)).ToArray();
 
             const double onedegree = (Math.PI * 2.0 / 360);
@@ -234,15 +232,15 @@ namespace Geometry
 
             double[] output = new double[values.Length];
 
-            for(int iCenter = iStart; iCenter < iStop; iCenter++)
+            for (int iCenter = iStart; iCenter < iStop; iCenter++)
             {
                 Array.Copy(values, iCenter - HalfKernelLength, window, 0, kernel.Length);
 
-                double updated_value = window.Select((v,i) => v * kernel[i]).Sum();
+                double updated_value = window.Select((v, i) => v * kernel[i]).Sum();
                 output[iCenter] = updated_value;
             }
 
-            for(int i=0; i < iStart; i++)
+            for (int i = 0; i < iStart; i++)
             {
                 output[i] = values[i];
             }
@@ -321,7 +319,7 @@ namespace Geometry
                     inflection_points.Add(iPoint);
                 }
 
-                    //}
+                //}
                 //total_change = 0;
 
                 last_sign = this_sign;
@@ -363,7 +361,7 @@ namespace Geometry
             pointIndexsToKeep.Add(firstPoint);
             pointIndexsToKeep.Add(lastPoint);
             if (PointsToPreserveIndicies != null)
-            { 
+            {
                 pointIndexsToKeep.UnionWith(PointsToPreserveIndicies);
             }
 
@@ -397,12 +395,12 @@ namespace Geometry
         {
             Double maxDistance = 0;
             Int32 indexFarthest = 0;
-              
+
             //Reference line 
             GridLineSegment reference_line = new GridLineSegment(points[firstPoint], points[lastPoint]);
-            
-            for (Int32 index = firstPoint+1; index < lastPoint; index++)
-            { 
+
+            for (Int32 index = firstPoint + 1; index < lastPoint; index++)
+            {
                 Double distance = reference_line.DistanceToPoint(points[index]);
                 if (distance > maxDistance)
                 {

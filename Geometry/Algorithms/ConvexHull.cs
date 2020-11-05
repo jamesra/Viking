@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Geometry
 {
@@ -40,13 +39,13 @@ namespace Geometry
         {
             int[] ordered_idx = points.Select((p, i) => i).ToArray();
 
-            if(points.Count == 0)
+            if (points.Count == 0)
             {
                 original_indicies = new int[0];
                 return new GridVector2[0];
             }
 
-            if(points.Count == 1)
+            if (points.Count == 1)
             {
                 original_indicies = ordered_idx;
                 return points.ToArray();
@@ -66,7 +65,7 @@ namespace Geometry
                 points = newArray;
                 ordered_idx = points.Select((p, i) => i).ToArray();
             }
-            else if(points.Count <= 3)
+            else if (points.Count <= 3)
             {
                 GridVector2[] ring_points = points.ToArray().EnsureClosedRing();
                 List<int> list_original_indicies = new List<int>(ordered_idx);
@@ -75,10 +74,10 @@ namespace Geometry
                 return ring_points;
             }
 
-            
+
 
             //I've seen bugs with this code for very large numbers.  So I center the points on the centroid
-            
+
 
             //Sort and return the index of original points
             Array.Sort<int>(ordered_idx, (a, b) => points[a].CompareTo(points[b]));

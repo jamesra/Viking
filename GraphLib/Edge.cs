@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.Serialization;
 
 namespace GraphLib
@@ -18,7 +17,7 @@ namespace GraphLib
 
         public virtual double Weight { get; set; } = 1.0;
 
-        public bool IsLoop {  get { return SourceNodeKey.Equals(TargetNodeKey); } }
+        public bool IsLoop { get { return SourceNodeKey.Equals(TargetNodeKey); } }
 
 
         /// <summary>
@@ -64,7 +63,7 @@ namespace GraphLib
             NODEKEY lowestKey = this.SourceNodeKey.CompareTo(this.TargetNodeKey) < 0 ? this.SourceNodeKey : this.TargetNodeKey;
             NODEKEY highestKey = this.SourceNodeKey.CompareTo(this.TargetNodeKey) < 0 ? this.TargetNodeKey : this.SourceNodeKey;
             return new NODEKEY[] { lowestKey, highestKey };
-        } 
+        }
         protected int CompareToDirectional(Edge<NODEKEY> other)
         {
             int SourceComparison = this.SourceNodeKey.CompareTo(other.SourceNodeKey);
@@ -77,7 +76,7 @@ namespace GraphLib
                 return SourceComparison;
 
             return TargetComparison;
-        } 
+        }
         protected int CompareToBidirectional(Edge<NODEKEY> other)
         {
             NODEKEY[] thisKeys = this.OrderedNodeKeys();
@@ -117,9 +116,9 @@ namespace GraphLib
                 return false;
 
             if (this.Directional != other.Directional)
-                return false; 
+                return false;
 
-            if(Directional)
+            if (Directional)
                 return this.SourceNodeKey.Equals(other.SourceNodeKey) && this.TargetNodeKey.Equals(other.TargetNodeKey);
             else
             {
@@ -144,7 +143,7 @@ namespace GraphLib
 
             return base.Equals(obj);
         }
-        
+
         public static bool operator ==(Edge<NODEKEY> A, Edge<NODEKEY> B)
         {
             if (System.Object.ReferenceEquals(A, B))
@@ -173,7 +172,7 @@ namespace GraphLib
 
         public override string ToString()
         {
-            if(this.Directional)
+            if (this.Directional)
                 return string.Format("{0}  -> {1}", this.SourceNodeKey, this.TargetNodeKey);
             else
                 return string.Format("{0} <-> {1}", this.SourceNodeKey, this.TargetNodeKey);

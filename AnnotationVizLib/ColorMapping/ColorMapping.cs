@@ -1,12 +1,11 @@
-﻿using System;
-using System.Drawing;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Annotation.Interfaces;
 using Geometry;
 using SqlGeometryUtils;
-using Annotation.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Linq;
 using UnitsAndScale;
 
 
@@ -24,7 +23,7 @@ namespace AnnotationVizLib
             this.alpha = a;
             this.red = r;
             this.green = g;
-            this.blue = b; 
+            this.blue = b;
         }
     }
 
@@ -39,21 +38,21 @@ namespace AnnotationVizLib
         public ColorImageOffset(double x, double y)
         {
             this.X = x;
-            this.Y = y; 
+            this.Y = y;
         }
     }
 
     public class ColorMapImageData
     {
-        public readonly int SectionNumber; 
-        Bitmap image;  
+        public readonly int SectionNumber;
+        Bitmap image;
         IScale scale;
         ColorScalars color_scalar = new ColorScalars(1, 1, 1, 1);
-        ColorImageOffset offset = new ColorImageOffset(0,0);
+        ColorImageOffset offset = new ColorImageOffset(0, 0);
 
         public ColorMapImageData(System.IO.Stream ImageStream, int section_number, IScale scale_data)
         {
-            this.SectionNumber = section_number; 
+            this.SectionNumber = section_number;
             this.image = new Bitmap(ImageStream);
             this.scale = scale_data;
         }
@@ -62,7 +61,7 @@ namespace AnnotationVizLib
             : this(ImageStream, section_number, scale_data)
         {
             this.color_scalar = color_scalars;
-            this.offset = offset; 
+            this.offset = offset;
         }
 
         public Color GetColor(double X, double Y)
@@ -79,12 +78,12 @@ namespace AnnotationVizLib
 
             if (bmp_Y < 0 || bmp_Y >= image.Size.Height)
                 return Color.Empty;
-  
+
             try
             {
                 color = image.GetPixel(bmp_X, bmp_Y);
             }
-            catch(ArgumentException)
+            catch (ArgumentException)
             {
                 return Color.Empty;
             }
@@ -101,7 +100,7 @@ namespace AnnotationVizLib
             int scaled_color = (int)Math.Floor((double)color * scalar);
             scaled_color = scaled_color > 255 ? 255 : scaled_color;
             scaled_color = scaled_color < 0 ? 0 : scaled_color;
-            return scaled_color; 
+            return scaled_color;
         }
     }
 
@@ -115,7 +114,7 @@ namespace AnnotationVizLib
         public static bool StartsWithNumber(string str)
         {
             if (str.Length == 0)
-                return false; 
+                return false;
 
             return char.IsDigit(str.Trim()[0]);
         }
@@ -145,7 +144,7 @@ namespace AnnotationVizLib
         public static int NormalizedStringToByte(string str)
         {
             double val = System.Convert.ToDouble(str);
-            if(val < 0.0 || val > 1.0)
+            if (val < 0.0 || val > 1.0)
             {
                 throw new ArgumentException("String value must fall between 0 and 1.");
             }
@@ -160,9 +159,9 @@ namespace AnnotationVizLib
     /// Averages color values when multiple images overlap the target coordinates
     /// </summary>
     public class ColorMapWithImages
-    {  
-        SortedList<int, List<ColorMapImageData>> ColorMapTable = new SortedList<int,List<ColorMapImageData>>();
- 
+    {
+        SortedList<int, List<ColorMapImageData>> ColorMapTable = new SortedList<int, List<ColorMapImageData>>();
+
         protected ColorMapWithImages()
         {
 
@@ -205,13 +204,13 @@ namespace AnnotationVizLib
 
         public Color GetColor(double X, double Y, int Z)
         {
-            if(!ColorMapTable.ContainsKey(Z))
+            if (!ColorMapTable.ContainsKey(Z))
                 return Color.Empty;
 
             List<ColorMapImageData> colormapimages = ColorMapTable[Z];
             List<Color> colors = new List<Color>(colormapimages.Count);
-             
-            for (int i = 0; i < colormapimages.Count; i++ )
+
+            for (int i = 0; i < colormapimages.Count; i++)
             {
                 Color color = colormapimages[i].GetColor(X, Y);
                 if (color != Color.Empty)
@@ -222,7 +221,7 @@ namespace AnnotationVizLib
 
             if (colors.Count == 0)
                 return Color.Empty;
-            
+
             //Average the colors together
             return AverageColors(colors);
         }
@@ -263,12 +262,12 @@ namespace AnnotationVizLib
             if (colors.Count == 1)
                 return colors.First();
 
-            int R = 0; 
+            int R = 0;
             int G = 0;
             int B = 0;
             int A = 0;
-            
-            foreach(Color c in colors)
+
+            foreach (Color c in colors)
             {
                 A += System.Convert.ToInt32(c.A);
                 R += System.Convert.ToInt32(c.R);
@@ -276,9 +275,9 @@ namespace AnnotationVizLib
                 B += System.Convert.ToInt32(c.B);
             }
 
-            R /= colors.Count; 
-            G /= colors.Count; 
-            B /= colors.Count; 
+            R /= colors.Count;
+            G /= colors.Count;
+            B /= colors.Count;
             A /= colors.Count;
 
             return Color.FromArgb(A, R, G, B);
@@ -299,29 +298,29 @@ namespace AnnotationVizLib
         /// <param name="config"></param>
         public static ColorMapWithImages Create(string config_data, string ImageDir)
         {
-            ColorMapWithImages mapping = new ColorMapWithImages(); 
+            ColorMapWithImages mapping = new ColorMapWithImages();
 
             SortedList<int, List<ColorMapImageData>> ColorMapList = new SortedList<int, List<ColorMapImageData>>();
             string[] lines = config_data.Split(new char[] { '\n' });
-            foreach(string line in lines)
+            foreach (string line in lines)
             {
                 try
                 {
                     ColorMapImageData colormapimagedata = ParseConfigLine(line, ImageDir);
                     mapping.AddColorMapImage(colormapimagedata.SectionNumber, colormapimagedata);
                 }
-                catch(System.FormatException)
+                catch (System.FormatException)
                 {
                     System.Diagnostics.Trace.WriteLine("Unable to parse Color Map Config line: " + line);
-                } 
-                catch(System.ArgumentException e)
+                }
+                catch (System.ArgumentException e)
                 {
                     Trace.WriteLine(e.Message);
-                    continue; 
+                    continue;
                 }
             }
 
-            return mapping; 
+            return mapping;
         }
 
         /// <summary>
@@ -343,16 +342,16 @@ namespace AnnotationVizLib
                 throw new ArgumentException("Skipping comment");
 
             string[] parts = line.Split();
-            if(parts.Length < 10)
+            if (parts.Length < 10)
                 throw new ArgumentException("Not enough arguments in line:\n" + line);
-            
+
             if (!ConfigStringHelper.StartsWithNumber(parts[0]))
                 throw new FormatException("Attempting to parse header row");
 
             int SectionNumber = System.Convert.ToInt32(parts[0]);
 
             ColorImageOffset offset = new ColorImageOffset(System.Convert.ToInt32(parts[1]), System.Convert.ToInt32(parts[2]));
-            
+
             AxisUnits X_Scale = new AxisUnits(System.Convert.ToDouble(parts[3]), "");
             AxisUnits Y_Scale = new AxisUnits(System.Convert.ToDouble(parts[4]), "");
             AxisUnits Z_Scale = new AxisUnits(0, "");
@@ -364,13 +363,13 @@ namespace AnnotationVizLib
                                                     ConfigStringHelper.NormalizedStringToByte(parts[7]),
                                                     ConfigStringHelper.NormalizedStringToByte(parts[8]));
 
-            string Filename = parts[9];  
-            if(ImageDir != null)
+            string Filename = parts[9];
+            if (ImageDir != null)
             {
                 Filename = System.IO.Path.Combine(ImageDir, Filename);
             }
 
-            if(!System.IO.File.Exists(Filename))
+            if (!System.IO.File.Exists(Filename))
             {
                 throw new ArgumentException("File specified in ColorMap config file does not exist: " + Filename);
             }
@@ -385,7 +384,7 @@ namespace AnnotationVizLib
             }
 
             throw new ArgumentException("Could not open file: " + Filename);
-        }  
+        }
     }
 
     /// <summary>
@@ -394,7 +393,7 @@ namespace AnnotationVizLib
     public class ColorMapWithLong
     {
         SortedList<long, Color> ColorMapTable = new SortedList<long, Color>();
- 
+
         private static long ConvertKey(string str)
         {
             return System.Convert.ToInt64(str);
@@ -430,22 +429,22 @@ namespace AnnotationVizLib
         public static ColorMapWithLong Create(string config_data)
         {
             ColorMapWithLong mapping = new ColorMapWithLong();
-             
+
             string[] lines = config_data.Split(new char[] { '\n' });
             foreach (string line in lines)
             {
                 string trim_line = line.Trim();
                 if (trim_line.Count() == 0)
-                    continue; 
+                    continue;
 
                 try
                 {
                     long Key;
                     Color color = ColorMapWithLong.TryParseConfigLine(trim_line, out Key);
 
-                    if(color != Color.Empty)
+                    if (color != Color.Empty)
                         mapping.Add(Key, color);
-                    
+
                 }
                 catch (System.FormatException)
                 {
@@ -458,7 +457,7 @@ namespace AnnotationVizLib
                 }
             }
 
-            return mapping; 
+            return mapping;
         }
 
         private static Color TryParseConfigLine(string line, out long Key)
@@ -472,7 +471,7 @@ namespace AnnotationVizLib
             line = line.Trim();
             string[] parts = line.Split();
 
-            if(parts.Length < 4)
+            if (parts.Length < 4)
                 throw new ArgumentException("Not enough parameters in line:\n" + line);
 
             Key = ConvertKey(parts[0]);
@@ -486,11 +485,11 @@ namespace AnnotationVizLib
 
                 return color;
             }
-            catch(FormatException e)
+            catch (FormatException e)
             {
                 throw new FormatException("Unable to parse line:\n" + line, e);
-            } 
+            }
         }
     }
-     
+
 }

@@ -1,10 +1,8 @@
-﻿using System;
+﻿using Annotation.Interfaces;
+using GraphLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using GraphLib;
-using System.Diagnostics;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib
 {
@@ -160,39 +158,39 @@ namespace AnnotationVizLib
 
             return Label;
         }
-    } 
-    
+    }
+
 
     public class MotifGraph : Graph<string, MotifNode, MotifEdge>
-    {  
+    {
         public MotifGraph()
         {
-            
+
         }
 
         public override string ToString()
         {
             List<string> AlreadyAdded = new List<string>();
-            
+
             foreach (MotifEdge e in this.Edges.Values)
             {
                 string EdgeLabel = e.ToString();
                 if (!AlreadyAdded.Contains(EdgeLabel))
                 {
-                    
+
                     AlreadyAdded.Add(EdgeLabel);
                 }
             }
 
-            AlreadyAdded.Sort(); 
+            AlreadyAdded.Sort();
 
             string Label = "";
             foreach (string l in AlreadyAdded)
             {
-                Label = Label + l + '\n'; 
+                Label = Label + l + '\n';
             }
 
-            return Label; 
+            return Label;
         }
 
 

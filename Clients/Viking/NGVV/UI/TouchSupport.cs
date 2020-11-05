@@ -11,16 +11,16 @@ namespace Viking.UI
     public enum TouchHitTesting
     {
         Default = 0, //WM_TOUCHHITTESTING messages are not sent to the target window but are sent to child windows.
-        Client = 1, //messages are sent to the target window.
-        None = 2 //messages are not sent to the target window or child windows.
+        Client =  1, //messages are sent to the target window.
+        None   =  2 //messages are not sent to the target window or child windows.
     };
 
     [Flags]
     public enum TouchRegisterOptions
     {
-        None = 0,
-        FineTouch = 1,
-        WantPalm = 2
+        None =      0,
+        FineTouch = 0b0001,
+        WantPalm  = 0b0010
     }
 
     
@@ -43,15 +43,15 @@ namespace Viking.UI
         /// <summary>
         /// The barrel button is pressed
         /// </summary>
-        Barrel = 0x01,
+        Barrel   = 0b0001,
         /// <summary>
         /// The pen is inverted
         /// </summary>
-        Inverted = 0x02,
+        Inverted = 0b0010,
         /// <summary>
         /// The eraser button is pressed
         /// </summary>
-        Eraser = 0x04
+        Eraser   = 0b0100
     }
 
 
@@ -124,11 +124,11 @@ namespace Viking.UI
     [Flags]
     public enum PenMask : System.UInt32
     {
-        None = 0x0,
-        Pressure = 0x01,
-        Rotation = 0x02,
-        TiltX = 0x04,
-        TiltY = 0x08
+        None =     0x0,
+        Pressure = 0b0001,
+        Rotation = 0b0010,
+        TiltX =    0b0100,
+        TiltY =    0b1000
     }
 
     public enum PointerButtonChangeType : System.UInt32

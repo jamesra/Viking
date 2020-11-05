@@ -1,20 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Linq;
 using Viking.UI.Controls;
-using WebAnnotation;
+using Viking.VolumeModel;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
-using Viking.VolumeModel;
-using SqlGeometryUtils;
-using System.Collections.Specialized;
-using System.Diagnostics;
-using WebAnnotation.UI.Commands;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -77,8 +72,8 @@ namespace WebAnnotation.UI.Commands
 
                 //We created a loop, here are our steps:
                 //1. If our loop is entirely contained within a polygon, cut a hole.
-                
-                if(TryCutHole(newVolumePoly))
+
+                if (TryCutHole(newVolumePoly))
                 {
                     this.Deactivated = true;
                     return;
@@ -106,7 +101,7 @@ namespace WebAnnotation.UI.Commands
             LocationPolygonView intersectedPoly = intersectedPolys.OrderByDescending(c => c.VolumeShapeAsRendered.STArea()).First();
             */
 
-            if(!Annotation.TypeCode.AllowsInteriorHoles())
+            if (!Annotation.TypeCode.AllowsInteriorHoles())
             {
                 return false;
             }
@@ -124,10 +119,21 @@ namespace WebAnnotation.UI.Commands
             obj.MosaicShape = mosaic_shape.ToSqlGeometry();
             obj.VolumeShape = volume_shape.ToSqlGeometry();
 
-            Store.Locations.Save();
+            try
+            {
+                Store.Locations.Save();
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+                mosaic_shape.RemoveInteriorRing(mosaic_shape.InteriorPolygons.Count);
+                volume_shape.RemoveInteriorRing(volume_shape.InteriorPolygons.Count);
+                obj.MosaicShape = mosaic_shape.ToSqlGeometry();
+                obj.VolumeShape = volume_shape.ToSqlGeometry();
+            }
             return true;
         }
-        
+
         protected override void OnPenPathComplete(object sender, GridVector2[] Path)
         {
             //If we draw from one annotation to another we either create a location link (different sections) or a structure link (same sections).
@@ -136,7 +142,7 @@ namespace WebAnnotation.UI.Commands
             GridVector2 Start = Path.Last();
             GridVector2 Finish = Path.First();
 
-            List<HitTestResult> listFinishHitTestResults = AnnotationOverlay.GetAnnotationsAtPosition(Parent.Section.Number, Finish);
+            List<HitTestResult> listFinishHitTestResults = AnnotationOverlay.GetAnnotations(Parent.Section.Number, Finish);
 
             LocationObj loc = Store.Locations.GetObjectByID(Annotation.ID, false);
             IViewLocation locationLinkCandidate = LinkAnnotationsCommand.FindBestLinkCandidate(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc);
@@ -241,10 +247,11 @@ namespace WebAnnotation.UI.Commands
 
             var listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
 
-            return listPolygons.Where(o => {
+            return listPolygons.Where(o =>
+            {
                 GridPolygon poly = o.VolumeShapeAsRendered.ToPolygon();
                 return poly.Intersects(bounds) || poly.Contains(bounds);
-                }).ToList();
+            }).ToList();
         }
     }
 }

@@ -1,25 +1,24 @@
-﻿using System;
+﻿using Annotation.Interfaces;
+using Geometry;
+using GraphLib;
+using Microsoft.SqlServer.Types;
+using SqlGeometryUtils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using GraphLib;
-using SqlGeometryUtils;
-using Microsoft.SqlServer.Types;
-using Geometry;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib
 {
     [Serializable]
     public class MorphologyNode : Node<ulong, MorphologyEdge>, IGeometry
-    { 
+    {
         public ILocation Location = null;
 
         public ulong ID { get { return this.Location.ID; } }
 
         //Structure this node represents 
         public MorphologyGraph Graph;
-        
+
 
         public MorphologyNode(ulong key, ILocation Location, MorphologyGraph parent)
             : base(key)
@@ -29,7 +28,8 @@ namespace AnnotationVizLib
         }
 
         private SqlGeometry _geometry = null;
-        public SqlGeometry Geometry {
+        public SqlGeometry Geometry
+        {
             get
             {
                 if (_geometry == null)
@@ -44,8 +44,8 @@ namespace AnnotationVizLib
             }
 
         }
-        
-        public double Z { get { return Location.Z; }}
+
+        public double Z { get { return Location.Z; } }
 
         public double UnscaledZ { get { return Location.UnscaledZ; } }
 
@@ -57,7 +57,7 @@ namespace AnnotationVizLib
         public GridBox BoundingBox
         {
             get
-            { 
+            {
                 GridRectangle rect = Geometry.BoundingBox();
                 GridVector3 botleft = new GridVector3(rect.Left, rect.Bottom, Z - Graph.SectionThickness / 2.0);
                 GridVector3 topright = new GridVector3(rect.Right, rect.Top, Z + Graph.SectionThickness / 2.0);

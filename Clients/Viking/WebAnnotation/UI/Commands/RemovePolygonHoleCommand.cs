@@ -1,16 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using Geometry;
-using WebAnnotation.View;
-using SqlGeometryUtils;
-using VikingXNAGraphics;
-using Viking.VolumeModel;
-using System.Windows.Forms;
+﻿using Geometry;
+using System;
 using System.Diagnostics;
+using Viking.VolumeModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -49,7 +40,7 @@ namespace WebAnnotation.UI.Commands
             this.success_callback = success_callback;
 
             //Launch the remove action
-            parent.BeginInvoke( new Action(() => RemoveInteriorHole(UpdatedMosaicPolygon, hole_mosaic_position)));
+            parent.BeginInvoke(new Action(() => RemoveInteriorHole(UpdatedMosaicPolygon, hole_mosaic_position)));
         }
 
         /// <summary>
@@ -60,7 +51,7 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         public void RemoveInteriorHole(GridPolygon polygon, GridVector2 holePosition)
         {
-            if(polygon.TryRemoveInteriorRing(holePosition))
+            if (polygon.TryRemoveInteriorRing(holePosition))
             {
                 this.Execute();
             }

@@ -1,16 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using WebAnnotation;
-using Viking.Common;
 using System.Diagnostics;
+using Viking.Common;
+using WebAnnotation.ViewModel;
 using WebAnnotationModel;
-using WebAnnotation.ViewModel; 
 
 namespace WebAnnotation.UI.Controls
 {
@@ -20,22 +13,22 @@ namespace WebAnnotation.UI.Controls
         Location_PropertyPageViewModel[] _locations;
 
         EventHandler LocationCreateEventHandler;
-        
-        
+
+
         public ListLocations()
         {
             this.ListItems.ShowPropertiesOnDoubleClick = false;
             InitializeComponent();
 
             LocationCreateEventHandler = new EventHandler(OnLocationCreate);
-            LocationObj.Create += LocationCreateEventHandler; 
+            LocationObj.Create += LocationCreateEventHandler;
         }
 
         public void SetLocations(Location_PropertyPageViewModel[] locations)
         {
             this._locations = locations;
 
-            this.ListItems.DisplayObjects(_locations); 
+            this.ListItems.DisplayObjects(_locations);
         }
 
         protected override void OnObjectDoubleClick(IUIObject obj)
@@ -43,7 +36,7 @@ namespace WebAnnotation.UI.Controls
             Location_PropertyPageViewModel loc = obj as Location_PropertyPageViewModel;
             Debug.Assert(loc != null);
 
-            AnnotationOverlay.GoToLocation(loc.modelObj); 
+            AnnotationOverlay.GoToLocation(loc.modelObj);
         }
 
         public void OnLocationCreate(object sender, EventArgs e)

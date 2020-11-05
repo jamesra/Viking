@@ -1,13 +1,13 @@
 ﻿using System.Reflection;
+using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Resources;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Geometry")]
-[assembly: AssemblyDescription("A basic library for geometric manipulation and transformation of ir-tools transforms")]
+[assembly: AssemblyDescription("A library for geometric manipulation and transformation")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Geometry")]

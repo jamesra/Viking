@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using connectomes.utah.edu.XSD.BookmarkSchema.xsd;
+using System.Windows.Forms;
 using Viking.Common;
-using Viking.Common.UI;
-using System.Windows.Forms; 
 
 namespace LocalBookmarks
 {
@@ -24,7 +19,7 @@ namespace LocalBookmarks
         {
             get
             {
-                return _Parent; 
+                return _Parent;
             }
             set
             {
@@ -61,7 +56,7 @@ namespace LocalBookmarks
 
         public override string ToString()
         {
-            return Name; 
+            return Name;
         }
         /*
         public override bool Equals(object obj)
@@ -97,7 +92,7 @@ namespace LocalBookmarks
                 menuDelete.Click += OnDeleteClick;
                 menu.MenuItems.Add(menuDelete);
 
-                return menu; 
+                return menu;
             }
         }
 
@@ -105,7 +100,7 @@ namespace LocalBookmarks
         {
             CallBeforeSave();
             Global.Save();
-            CallAfterSave(); 
+            CallAfterSave();
         }
 
         protected virtual void OnPropertiesClick(object sender, EventArgs e)
@@ -115,7 +110,7 @@ namespace LocalBookmarks
 
         protected virtual void OnDeleteClick(object sender, EventArgs e)
         {
-            this.Delete(); 
+            this.Delete();
         }
 
         public override Type[] AssignableParentTypes

@@ -1,15 +1,14 @@
-﻿using System;
+﻿using Geometry;
+using Microsoft.SqlServer.Types;
+using Microsoft.Xna.Framework.Graphics;
+using SqlGeometryUtils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Geometry;
-using Microsoft.Xna.Framework.Graphics;
-using WebAnnotation;
-using WebAnnotationModel;
 using System.Windows.Forms;
-using WebAnnotation.ViewModel;
-using Microsoft.SqlServer.Types;
 using VikingXNAGraphics;
-using SqlGeometryUtils;
+using WebAnnotation.UI;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
@@ -38,7 +37,7 @@ namespace WebAnnotation.View
         public double Radius
         {
             get { return Circle.Radius; }
-            set { circleView.Circle = new GridCircle(Circle.Center, value);}
+            set { circleView.Circle = new GridCircle(Circle.Center, value); }
         }
 
         public GridVector2 Position
@@ -66,9 +65,9 @@ namespace WebAnnotation.View
             label = new LabelView(LocationLabel(obj), gridCircle.Center);
             label._Color = Microsoft.Xna.Framework.Color.Red;
             Microsoft.Xna.Framework.Color color = obj.Parent.Type.Color.ToXNAColor(0.75f);
-            circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color); 
+            circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color);
         }
-        
+
         private static string LocationLabel(LocationObj obj)
         {
             return obj.Z.ToString();
@@ -98,7 +97,7 @@ namespace WebAnnotation.View
         {
             throw new NotImplementedException();
         }
-        
+
         public override double Distance(GridVector2 Position)
         {
             double Distance = GridVector2.Distance(Position, this.Circle.Center) - Radius;
@@ -114,16 +113,16 @@ namespace WebAnnotation.View
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlayShaderEffect overlayEffect,
                           OverlappedLocationView[] listToDraw)
-        {  
-            TextureCircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray(); 
-            TextureCircleView.Draw(device, scene, basicEffect, overlayEffect, backgroundCircles.ToArray()); 
+        {
+            TextureCircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray();
+            TextureCircleView.Draw(device, scene, OverlayStyle.Luma, backgroundCircles.ToArray());
         }
 
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene)
         {
-            double DesiredRowsOfText = 4.0; 
+            double DesiredRowsOfText = 4.0;
             double DefaultFontSize = (this.Radius * 2) / DesiredRowsOfText;
             label.FontSize = DefaultFontSize;
             label.MaxLineWidth = this.Radius * 2;
@@ -139,6 +138,19 @@ namespace WebAnnotation.View
                 return LocationAction.NONE;
 
             return LocationAction.CREATELINKEDLOCATION;
+        }
+
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            LocationID = this.ID;
+
+            return LocationAction.NONE;
+        }
+
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
+        {
+            throw new NotImplementedException();
+            //return LocationAction.CREATELINKEDLOCATION;
         }
 
         public override string[] HelpStrings

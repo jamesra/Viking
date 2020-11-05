@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
+using System.ServiceModel;
 using WebAnnotationModel;
-using WebAnnotation.ViewModel; 
 
 namespace WebAnnotation.UI.Commands
 {
@@ -13,7 +9,7 @@ namespace WebAnnotation.UI.Commands
         StructureObj target;
         string tag;
         bool SetValueToUsername = false;
-        public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent, 
+        public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent,
                                          StructureObj structure,
                                          string Tag, bool setValueToUsername)
             : base(parent)
@@ -25,21 +21,22 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)delegate() { this.Execute(); });
+            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
         }
 
         protected override void Execute()
         {
-            if (this.SetValueToUsername)
+            target.ToggleAttribute(this.tag, this.SetValueToUsername ? WebAnnotationModel.State.UserCredentials.UserName : null);
+
+            try
             {
-                target.ToggleAttribute(this.tag, WebAnnotationModel.State.UserCredentials.UserName);
+                Store.Structures.Save();
             }
-            else
+            catch (FaultException)
             {
-                target.ToggleAttribute(this.tag);
+                target.ToggleAttribute(this.tag, this.SetValueToUsername ? WebAnnotationModel.State.UserCredentials.UserName : null);
             }
 
-            Store.Structures.Save();
             base.Execute();
         }
     }
@@ -66,7 +63,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            if(this.SetValueToUsername)
+            if (this.SetValueToUsername)
             {
                 target.ToggleAttribute(this.tag, WebAnnotationModel.State.UserCredentials.UserName);
             }
@@ -74,8 +71,17 @@ namespace WebAnnotation.UI.Commands
             {
                 target.ToggleAttribute(this.tag);
             }
-            
-            Store.Locations.Save();
+
+            try
+            {
+                Store.Locations.Save();
+            }
+            catch (System.ServiceModel.FaultException ex)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
+                target.ToggleAttribute(this.tag, SetValueToUsername ? WebAnnotationModel.State.UserCredentials.UserName : null);
+            }
+
             base.Execute();
         }
     }

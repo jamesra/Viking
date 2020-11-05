@@ -1,6 +1,4 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Viking.VolumeModel;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 
 namespace VikingTests.VikingCore
@@ -11,7 +9,7 @@ namespace VikingTests.VikingCore
         [TestMethod]
         public void TestVolumeModel()
         {
-            
+
         }
     }
 }

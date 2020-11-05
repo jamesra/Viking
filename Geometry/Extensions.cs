@@ -1,10 +1,9 @@
-﻿using System;
+﻿using MathNet.Numerics.LinearAlgebra;
+using RTree;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using RTree;
-using MathNet.Numerics.LinearAlgebra;
 
 namespace Geometry
 {
@@ -38,13 +37,13 @@ namespace Geometry
                 for (i = 0; i < c; i++)
                     keys[i] = i;
 
-                if(comparer == null)
+                if (comparer == null)
                 {
                     System.Array.Sort(rg, keys /*, ... */);
                 }
                 else
                 {
-                    System.Array.Sort<T,int>(rg, keys, comparer);
+                    System.Array.Sort<T, int>(rg, keys, comparer);
                 }
             }
             return keys;
@@ -68,9 +67,9 @@ namespace Geometry
         /// <returns></returns>
         public static int IndexOf<T>(this IEnumerable<T> rg, T value) where T : IEquatable<T>
         {
-            int i = 0; 
-            foreach(T item in rg)
-            { 
+            int i = 0;
+            foreach (T item in rg)
+            {
                 if (item.Equals(value))
                     return i;
                 i += 1;
@@ -84,7 +83,7 @@ namespace Geometry
     {
         public static string ToCSV(this double[] array, string delimiter = ", ", string format = "F2")
         {
-            return string.Join(delimiter, array.Select(v => v.ToString(format)) );
+            return string.Join(delimiter, array.Select(v => v.ToString(format)));
             /*
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < array.Count(); i++)
@@ -111,7 +110,7 @@ namespace Geometry
 
     public static class GeometryRTreeExtensions
     {
-        public static RTree.Point ToRTreePoint(this GridVector2 p, double Z=0)
+        public static RTree.Point ToRTreePoint(this GridVector2 p, double Z = 0)
         {
             return new RTree.Point(p.X, p.Y, Z);
         }
@@ -126,7 +125,7 @@ namespace Geometry
             return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, MinZ, MaxZ);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, double Z=0)
+        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, double Z = 0)
         {
             return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, Z, Z);
         }
@@ -138,7 +137,7 @@ namespace Geometry
         /// <returns></returns>
         public static RTree.Rectangle ToRTreeRectEpsilonPadded(this GridRectangle rect, double Z = 0)
         {
-            return new RTree.Rectangle(rect.Left - Global.Epsilon,  rect.Bottom - Global.Epsilon, rect.Right + Global.Epsilon, rect.Top + Global.Epsilon, (double)Z, (double)Z);
+            return new RTree.Rectangle(rect.Left - Global.Epsilon, rect.Bottom - Global.Epsilon, rect.Right + Global.Epsilon, rect.Top + Global.Epsilon, (double)Z, (double)Z);
         }
 
         public static RTree.Rectangle ToRTreeRect(this GridVector2 p, double Z)
@@ -165,7 +164,7 @@ namespace Geometry
         public static RTree.RTree<GridLineSegment> ToRTree(this IEnumerable<GridLineSegment> lines)
         {
             RTree.RTree<GridLineSegment> rTree = new RTree<Geometry.GridLineSegment>();
-            foreach(GridLineSegment l in lines)
+            foreach (GridLineSegment l in lines)
             {
                 rTree.Add(l.BoundingBox.ToRTreeRect(0), l);
             }
@@ -476,9 +475,9 @@ namespace Geometry
                 mX += p.X;
                 mY += p.Y;
             }
-            
+
             //In case we are passed a closed loop of points we should remove the duplicate
-            if(points.First() == points.Last())
+            if (points.First() == points.Last())
             {
                 mX -= points.First().X;
                 mY -= points.First().Y;
@@ -508,7 +507,7 @@ namespace Geometry
             throw new ArgumentException("Could not find point on convex hull!");
         }
 
-    
+
 
         /// <summary>
         /// Return true if the first and last point in the set are the same
@@ -586,7 +585,7 @@ namespace Geometry
                 throw new ArgumentException("Must have two points to create line segments");
 
             GridLineSegment[] segments = new GridLineSegment[points.Count - 1];
-            for(int iPoint = 0; iPoint < points.Count-1; iPoint++)
+            for (int iPoint = 0; iPoint < points.Count - 1; iPoint++)
             {
                 segments[iPoint] = new GridLineSegment(points.ElementAt(iPoint), points.ElementAt(iPoint + 1));
             }
@@ -599,7 +598,7 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static GridPolyline ToPolyline(this ICollection<GridVector2> points, bool AllowSelfIntersection=false)
+        public static GridPolyline ToPolyline(this ICollection<GridVector2> points, bool AllowSelfIntersection = false)
         {
             if (points == null)
                 return null;
@@ -748,7 +747,7 @@ namespace Geometry
             double maxX = double.MinValue;
             double maxY = double.MinValue;
 
-            foreach(GridVector2 p in points)
+            foreach (GridVector2 p in points)
             {
                 minX = Math.Min(minX, p.X);
                 maxX = Math.Max(maxX, p.X);
@@ -788,7 +787,7 @@ namespace Geometry
         {
             FirstIndex = points.Count;
             double minVal = double.MaxValue;
-            for (int i = 0; i < points.Count-1; i++)
+            for (int i = 0; i < points.Count - 1; i++)
             {
                 if (points[i] != points[i + 1])
                 {
@@ -832,8 +831,8 @@ namespace Geometry
         static public double PerimeterLength(this GridVector2[] points)
         {
             points = points.EnsureClosedRing();
-            double length = 0; 
-            for(int i = 0; i < points.Length-1; i++)
+            double length = 0;
+            for (int i = 0; i < points.Length - 1; i++)
             {
                 length += GridVector2.Distance(points[i], points[i + 1]);
             }
@@ -885,7 +884,7 @@ namespace Geometry
                 maxZ = Math.Max(maxZ, points[i].Z);
             }
 
-            return new GridBox( new double[] { minX, minY, minZ }, 
+            return new GridBox(new double[] { minX, minY, minZ },
                                 new double[] { maxX, maxY, maxZ });
         }
 
@@ -970,7 +969,7 @@ namespace Geometry
         static public GridVector2[] Verticies(this ICollection<GridLineSegment> segments)
         {
             GridVector2[] verticies = new GridVector2[segments.Count + 1];
-            for(int i = 0; i < segments.Count; i++)
+            for (int i = 0; i < segments.Count; i++)
             {
                 verticies[i] = segments.ElementAt(i).A;
             }
@@ -992,7 +991,7 @@ namespace Geometry
         {
             //Find the line segment the NewControlPoint intersects
             int iNearestSegment = segments.TakeWhile(s => s.A != p).Count();
-            if(iNearestSegment < segments.Count || segments.Count == 0)
+            if (iNearestSegment < segments.Count || segments.Count == 0)
             {
                 MinDistance = 0;
                 return iNearestSegment;
@@ -1021,8 +1020,8 @@ namespace Geometry
         {
             GridVector2[] newControlPoints = new GridVector2[lineSegs.Count + 2];
 
-            List<GridVector2> verts = lineSegs.Verticies().ToList(); 
-            verts.Insert(segmentIndex+1, newPointPosition); 
+            List<GridVector2> verts = lineSegs.Verticies().ToList();
+            verts.Insert(segmentIndex + 1, newPointPosition);
             return verts.ToLineSegments();
         }
 
@@ -1057,7 +1056,7 @@ namespace Geometry
 
             return newControlPoints.ToLineSegments();
         }
-        
+
         /// <summary>
         /// Shorten the last segment in a collection to be 99% of the original length.  This is used to prevent false positives in self-intersection tests, often for closed rings
         /// </summary>
@@ -1067,7 +1066,7 @@ namespace Geometry
         {
             GridLineSegment[] dest = new GridLineSegment[src.Count];
 
-            for(int i = 0; i < src.Count; i++)
+            for (int i = 0; i < src.Count; i++)
             {
                 dest[i] = src[i];
             }
@@ -1092,8 +1091,8 @@ namespace Geometry
         }
 
         public static void AddPointsAtAllIntersections(this GridPolygon[] polygons, double[] polyZ)
-        { 
-            if(polygons.Length != polyZ.Length)
+        {
+            if (polygons.Length != polyZ.Length)
             {
                 throw new ArgumentException("polyZ must have same length as polygons");
             }
@@ -1181,44 +1180,44 @@ namespace Geometry
             return false;
         }
 
-        
-        
 
-           /*
-        /// <summary>
-        /// Returns the Polygon segment which intersects the point, if any.  May return interior polygons
-        /// </summary>
-        /// <param name="polygon"></param>
-        /// <param name="WorldPosition"></param>
-        /// <param name="intersectingPoly"></param>
-        /// <returns></returns>
-        public static double NearestPolygonSegment(this GridPolygon polygon, GridVector2 WorldPosition, out GridPolygon nearestPoly)
-        {
-            nearestPoly = null;
-            double nearestPolyDistance = double.MaxValue;
 
-            foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
-            {
-                GridPolygon foundPolygon;
-                double distance = innerPoly.NearestPolygonSegment(WorldPosition, out foundPolygon);
-                if (distance < nearestPolyDistance)
-                {
-                    nearestPoly = innerPoly;
-                    nearestPolyDistance = distance;
-                }
-            }
 
-            double MinDistance;
-            polygon.ExteriorSegments.NearestSegment(WorldPosition, out MinDistance);
-            if (MinDistance < nearestPolyDistance)
-            {
-                nearestPoly = polygon;
-                nearestPolyDistance = MinDistance;
-            }
+        /*
+     /// <summary>
+     /// Returns the Polygon segment which intersects the point, if any.  May return interior polygons
+     /// </summary>
+     /// <param name="polygon"></param>
+     /// <param name="WorldPosition"></param>
+     /// <param name="intersectingPoly"></param>
+     /// <returns></returns>
+     public static double NearestPolygonSegment(this GridPolygon polygon, GridVector2 WorldPosition, out GridPolygon nearestPoly)
+     {
+         nearestPoly = null;
+         double nearestPolyDistance = double.MaxValue;
 
-            return nearestPolyDistance;
-        }
-        */
+         foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
+         {
+             GridPolygon foundPolygon;
+             double distance = innerPoly.NearestPolygonSegment(WorldPosition, out foundPolygon);
+             if (distance < nearestPolyDistance)
+             {
+                 nearestPoly = innerPoly;
+                 nearestPolyDistance = distance;
+             }
+         }
+
+         double MinDistance;
+         polygon.ExteriorSegments.NearestSegment(WorldPosition, out MinDistance);
+         if (MinDistance < nearestPolyDistance)
+         {
+             nearestPoly = polygon;
+             nearestPolyDistance = MinDistance;
+         }
+
+         return nearestPolyDistance;
+     }
+     */
         private static void AddIntersection(SortedDictionary<double, PointIndex> dict, double key, PointIndex index)
         {
             dict.Add(key, index);
@@ -1269,7 +1268,7 @@ namespace Geometry
 
                 GridLineSegment segment = index.Segment(polygon);
                 if (segment.Intersects(line, false, out IShape2D intersection))
-                {  
+                {
                     double distance;
                     IPoint2D p = intersection as IPoint2D;
                     if (p == null) //It is not a point, it is a line.  Therefore distance is zero
@@ -1277,7 +1276,7 @@ namespace Geometry
                         distance = 0;
                         if (output.ContainsKey(distance)) //There is an error if we add an endpoint twice, so don't
                             continue;
-                         
+
                         ILineSegment2D seg = intersection as ILineSegment2D;
                         AddIntersection(output, 0, index);
                         AddedVerticies.Add(index);
@@ -1443,10 +1442,10 @@ namespace Geometry
             }
 
             GridRectangle bbox = polygons[0].BoundingBox;
-            for(int i = 1; i < polygons.Count; i++)
-            { 
+            for (int i = 1; i < polygons.Count; i++)
+            {
                 bbox.Union(polygons[i].BoundingBox);
-                
+
             }
 
             return bbox;
@@ -1472,7 +1471,7 @@ namespace Geometry
                 {
                     bbox.Union(poly.BoundingBox);
                 }
-            } 
+            }
             return bbox;
         }
 
@@ -1545,5 +1544,5 @@ namespace Geometry
 
             return ((MaxVal - MinVal) * Fraction) + MinVal;
         }
-    } 
+    }
 }

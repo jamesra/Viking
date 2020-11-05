@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Runtime.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Diagnostics;
 
 namespace Geometry.Transforms
 {
@@ -113,7 +108,7 @@ namespace Geometry.Transforms
         protected TransformBase(TransformInfo info)
         {
             Info = info;
-        } 
+        }
 
         #region ISerializable Members
 
@@ -140,7 +135,7 @@ namespace Geometry.Transforms
 
 
         #endregion
-    } 
+    }
 
     public static class TransformExtensions
     {
@@ -160,7 +155,7 @@ namespace Geometry.Transforms
             StosTransformInfo BtoCInfo = ((ITransformInfo)BtoC)?.Info as StosTransformInfo;
             StosTransformInfo AtoBInfo = ((ITransformInfo)AtoB)?.Info as StosTransformInfo;
             MappingGridVector2[] newControlPoints = BtoC.TransformControlPoints(AtoB.MapPoints);
-            IContinuousTransform rbfTransform = new RBFTransform(newControlPoints, 
+            IContinuousTransform rbfTransform = new RBFTransform(newControlPoints,
                 StosTransformInfo.Merge(AtoBInfo, BtoCInfo));
             return rbfTransform;
         }
@@ -174,7 +169,7 @@ namespace Geometry.Transforms
 
             MappingGridVector2[] newControlPoints = BtoC.TransformControlPoints(AtoB.MapPoints);
 
-            if(transformType == typeof(RBFTransform))
+            if (transformType == typeof(RBFTransform))
             {
                 return new RBFTransform(newControlPoints, AtoCInfo);
             }
@@ -190,8 +185,8 @@ namespace Geometry.Transforms
             else
             {
                 return new MeshTransform(newControlPoints, AtoCInfo);
-            } 
-            
+            }
+
         }
     }
 }

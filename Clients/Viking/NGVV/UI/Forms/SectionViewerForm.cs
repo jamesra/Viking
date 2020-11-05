@@ -1,7 +1,6 @@
-﻿using System.Windows.Forms;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
+using System.Windows.Forms;
 using Viking.Common;
-using Viking.VolumeModel;
 using Viking.ViewModels;
 
 namespace Viking.UI.Forms
@@ -11,9 +10,9 @@ namespace Viking.UI.Forms
         /// <summary>
         /// Currently displayed section
         /// </summary>
-        public SectionViewModel Section 
+        public SectionViewModel Section
         {
-            get{ return SectionControl.Section;}
+            get { return SectionControl.Section; }
             set { SectionControl.Section = value; }
         }
 
@@ -22,10 +21,10 @@ namespace Viking.UI.Forms
             InitializeComponent();
 
             this.SectionControl.Section = section;
-            this.SectionControl.OnSectionChanged += new SectionChangedEventHandler(OnSectionChanged); 
+            this.SectionControl.OnSectionChanged += new SectionChangedEventHandler(OnSectionChanged);
 
-            if(section != null)
-                this.Text = this.BuildTitleString(section.ToString()); 
+            if (section != null)
+                this.Text = this.BuildTitleString(section.ToString());
         }
 
         private string BuildTitleString(string text)
@@ -33,7 +32,7 @@ namespace Viking.UI.Forms
             string title = text;
             string[] overlayTitles = this.SectionControl.ExtensionOverlayTitles();
 
-            foreach(string ot in overlayTitles)
+            foreach (string ot in overlayTitles)
             {
                 title += " " + ot;
             }
@@ -46,10 +45,10 @@ namespace Viking.UI.Forms
         {
             if (e.NewSection != null)
             {
-                this.Text = this.BuildTitleString(e.NewSection.ToString()); 
+                this.Text = this.BuildTitleString(e.NewSection.ToString());
             }
 
-            this.Invalidate(); 
+            this.Invalidate();
         }
 
 
@@ -76,18 +75,18 @@ namespace Viking.UI.Forms
         /// <returns></returns>
         public static SectionViewerForm Show(SectionViewModel section)
         {
-          //  SectionViewerForm form = new SectionViewerForm(section);
-          //  form.Show();
+            //  SectionViewerForm form = new SectionViewerForm(section);
+            //  form.Show();
             SectionViewerForm form = State.ViewerForm;
             if (form == null)
             {
                 form = new SectionViewerForm(section);
-                State.ViewerForm = form; 
+                State.ViewerForm = form;
             }
             else if (form.IsDisposed)
             {
                 form = new SectionViewerForm(section);
-                State.ViewerForm = form; 
+                State.ViewerForm = form;
             }
             else
             {
@@ -96,9 +95,9 @@ namespace Viking.UI.Forms
 
             form.WindowState = FormWindowState.Maximized;
             form.Show();
-            
 
-            return form; 
+
+            return form;
         }
 
 

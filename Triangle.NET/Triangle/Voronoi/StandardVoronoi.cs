@@ -6,10 +6,8 @@
 
 namespace TriangleNet.Voronoi
 {
-    using System.Collections.Generic;
     using TriangleNet.Geometry;
     using TriangleNet.Tools;
-    using TriangleNet.Topology.DCEL;
 
     public class StandardVoronoi : VoronoiBase
     {

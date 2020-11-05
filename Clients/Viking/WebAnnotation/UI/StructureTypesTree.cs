@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized; 
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
+using System.Collections.Specialized;
 using System.Windows.Forms;
 using Viking.Common;
 using Viking.UI.Controls;
-using WebAnnotation;
 using WebAnnotation.ViewModel;
-using WebAnnotationModel; 
+using WebAnnotationModel;
 
 namespace WebAnnotation.UI
 {
@@ -28,7 +23,7 @@ namespace WebAnnotation.UI
 
         protected override void InitializeTree()
         {
-            ICollection<StructureTypeObj> listTypes = Store.StructureTypes.rootObjects.Values;
+            ICollection<StructureTypeObj> listTypes = Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true);
             List<StructureType> listRootTypes = new List<StructureType>(listTypes.Count);
             foreach (StructureTypeObj type in listTypes)
             {
@@ -55,25 +50,25 @@ namespace WebAnnotation.UI
             Dictionary<long, StructureType> listParents = new Dictionary<long, StructureType>(added.Count);
 
             foreach (StructureTypeObj newTypeObj in added)
-            {  
+            {
                 StructureType newType = new StructureType(newTypeObj);
-                if(!newTypeObj.ParentID.HasValue)
+                if (!newTypeObj.ParentID.HasValue)
                 {
                     if (!Tree.Contains(newType))
                         listRoots.Add(newType);
-                    else if(!listParents.ContainsKey(newType.ID))
+                    else if (!listParents.ContainsKey(newType.ID))
                         listParents.Add(newType.ID, newType);
                 }
                 else
                 {
-                    if(!listParents.ContainsKey(newTypeObj.ParentID.Value))
+                    if (!listParents.ContainsKey(newTypeObj.ParentID.Value))
                         listParents.Add(newTypeObj.ParentID.Value, newType.Parent);
-                } 
+                }
             }
 
             Tree.Invoke(new Action(() => Tree.AddObjects(listRoots)));
 
-            foreach(StructureType parent in listParents.Values)
+            foreach (StructureType parent in listParents.Values)
             {
                 Tree.Invoke(new Action(() => UpdateNodeChildren(parent)));
             }
@@ -81,25 +76,25 @@ namespace WebAnnotation.UI
 
         protected void OnStructureTypeCollectionChanged(object sender, NotifyCollectionChangedEventArgs args)
         {
-            if(InvokeRequired)
+            if (InvokeRequired)
             {
                 //Ensure UI controls are updated in main thread
-                this.Invoke( new Action(() => this.OnStructureTypeCollectionChanged(sender, args)));
-                return; 
+                this.Invoke(new Action(() => this.OnStructureTypeCollectionChanged(sender, args)));
+                return;
             }
             else
-            { 
+            {
                 switch (args.Action)
                 {
                     case NotifyCollectionChangedAction.Add:
 
                         List<StructureTypeObj> newItems = new List<StructureTypeObj>(args.NewItems.Count);
                         //I'd rather case, but can't figure it out with IList interface...
-                        foreach(object obj in args.NewItems)
+                        foreach (object obj in args.NewItems)
                         {
                             newItems.Add((StructureTypeObj)obj);
                         }
-                        
+
                         AddNewObjects(newItems);
                         /*
                         foreach (object o in args.NewItems)
@@ -148,7 +143,7 @@ namespace WebAnnotation.UI
                                 }
                             }
                         }
-                        break; 
+                        break;
 
                     case NotifyCollectionChangedAction.Reset:
                         foreach (object o in args.OldItems)
@@ -171,14 +166,14 @@ namespace WebAnnotation.UI
 
         private void Tree_MouseDown(object sender, MouseEventArgs e)
         {
-            
+
             if (e.Button == MouseButtons.Right)
             {
                 TreeNode node = this.Tree.GetNodeAt(e.Location);
 
                 if (node == null)
                 {
-                    Viking.UI.State.SelectedObject = null; 
+                    Viking.UI.State.SelectedObject = null;
                     ContextMenu menu = new ContextMenu();
 
                     MenuItem menuItem = new MenuItem("New", OnNewStructureType);
@@ -199,10 +194,17 @@ namespace WebAnnotation.UI
 
             if (newType.ShowPropertiesDialog(this.ParentForm) == DialogResult.OK)
             {
-                newTypeObj = Store.StructureTypes.Create(newTypeObj);
-                Store.StructureTypes.Save();
+                try
+                {
+                    newTypeObj = Store.StructureTypes.Create(newTypeObj);
+                    Store.StructureTypes.Save();
+                }
+                catch (System.ServiceModel.FaultException ex)
+                {
+                    AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
+                }
 
-                Viking.UI.State.SelectedObject = new StructureType(newTypeObj); 
+                Viking.UI.State.SelectedObject = new StructureType(newTypeObj);
             }
         }
     }

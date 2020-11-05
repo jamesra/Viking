@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Data;
-using System.Configuration;
-using System.Collections.Generic; 
-using System.Linq; 
-using System.Xml.Linq;
-using System.IO;
-using System.Text;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
+using System.Text;
 
 namespace AnnotationVizLib
 {
@@ -59,7 +53,7 @@ namespace AnnotationVizLib
         where KEY : IComparable<KEY>
     {
         public KEY Key;
-        
+
         public GraphViewNode(KEY key, string lbl)
         {
             this.Key = key;
@@ -70,7 +64,7 @@ namespace AnnotationVizLib
         {
             this.Key = key;
             this.label = key.ToString();
-        } 
+        }
     }
 
     public class GraphViewEdge<KEY> : GraphViewEntity<KEY>
@@ -78,7 +72,7 @@ namespace AnnotationVizLib
     {
         public KEY from;
         public KEY to;
-          
+
     }
 
     /// <summary>
@@ -87,11 +81,11 @@ namespace AnnotationVizLib
     /// <typeparam name="KEY"></typeparam>
     public class GraphViewEngine<KEY> : GraphViewEntity<KEY>
         where KEY : IComparable<KEY>
-    { 
+    {
         public SortedDictionary<KEY, GraphViewNode<KEY>> nodes = new SortedDictionary<KEY, GraphViewNode<KEY>>();
-        public SortedDictionary<string, List<KEY>> subgraphs = new SortedDictionary<string, List<KEY>>(); 
+        public SortedDictionary<string, List<KEY>> subgraphs = new SortedDictionary<string, List<KEY>>();
         public List<GraphViewEdge<KEY>> edges = new List<GraphViewEdge<KEY>>();
-        
+
         public void AssignNodeToSubgraph(string subgraphName, KEY NodeID)
         {
             //Determine if we have an entry in our subgraph or if we need to add it.
@@ -111,7 +105,7 @@ namespace AnnotationVizLib
         public virtual GraphViewNode<KEY> createNode(KEY ID)
         {
             GraphViewNode<KEY> tempNode = new GraphViewNode<KEY>(ID);
-            nodes.Add(ID,tempNode);
+            nodes.Add(ID, tempNode);
             return tempNode;
         }
 
@@ -123,15 +117,15 @@ namespace AnnotationVizLib
 
         public virtual void addEdge(GraphViewEdge<KEY> edge)
         {
-            edges.Add(edge); 
+            edges.Add(edge);
         }
 
         public virtual void removeEdge(GraphViewEdge<KEY> edge)
         {
-            if(edges.Contains(edge))
+            if (edges.Contains(edge))
                 edges.Remove(edge);
         }
 
-       
+
     }
 }

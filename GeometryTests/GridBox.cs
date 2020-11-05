@@ -1,10 +1,6 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Geometry;
-using System.Diagnostics;
+using System.Linq;
 
 namespace GeometryTests
 {
@@ -174,7 +170,7 @@ namespace GeometryTests
 
             GridVector3[] points = { BotLeftA, TopRightA, GridVector3.Zero };
             GridBox pointsBox = points.BoundingBox();
-            
+
             Assert.AreEqual(boxA, pointsBox);
         }
 

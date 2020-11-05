@@ -1,20 +1,12 @@
-﻿using System;
+﻿using AnnotationService.Types;
+using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-
 using System.Diagnostics;
-using System.ServiceModel;
-
 using WebAnnotationModel.Service;
-using WebAnnotationModel.Objects;
-using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {
-    
+
     public class StructureLinkStore : StoreBaseWithKey<AnnotateStructuresClient, IAnnotateStructures, StructureLinkKey, StructureLinkObj, StructureLink>
     {
         public StructureLinkStore()
@@ -24,7 +16,7 @@ namespace WebAnnotationModel
 
         public override void Init()
         {
-            return; 
+            return;
         }
 
         protected override AnnotateStructuresClient CreateProxy()
@@ -40,7 +32,7 @@ namespace WebAnnotationModel
             proxy.UpdateStructureLinks(linkObjs);
             return new StructureLinkKey[0];
         }
-        
+
         protected override StructureLink ProxyGetByID(AnnotateStructuresClient proxy, StructureLinkKey ID)
         {
             throw new NotImplementedException();
@@ -64,7 +56,7 @@ namespace WebAnnotationModel
         protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateStructuresClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             throw new NotImplementedException();
-        } 
+        }
 
         protected override StructureLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<AnnotateStructuresClient, StructureLinkObj> state, IAsyncResult result)
         {
@@ -102,7 +94,7 @@ namespace WebAnnotationModel
                 StructureLink dblink = proxy.CreateStructureLink(link.GetData());
                 StructureLinkObj created_link = new StructureLinkObj(dblink);
                 Add(created_link);
-                return created_link; 
+                return created_link;
             }
             finally
             {
@@ -121,7 +113,7 @@ namespace WebAnnotationModel
             {
                 Debug.Assert(link.SourceID != link.TargetID, "Trying to link structure to itself");
                 if (link.SourceID == link.TargetID)
-                    continue; 
+                    continue;
 
                 StructureObj SourceObj = Store.Structures.GetObjectByID(link.SourceID, false);
                 StructureObj TargetObj = Store.Structures.GetObjectByID(link.TargetID, false);
@@ -132,7 +124,7 @@ namespace WebAnnotationModel
                 if (TargetObj != null)
                     TargetObj.AddLink(link);
 
-                ValidObjs.Add(link); 
+                ValidObjs.Add(link);
             }
 
             return base.InternalAdd(ValidObjs.ToArray());

@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 
@@ -50,7 +47,7 @@ namespace WebAnnotation
         public bool RemoveEntry(int key)
         {
             SectionAnnotationsViewCacheEntry entry;
-            return this.Remove(key); 
+            return this.Remove(key);
         }
 
         /// <summary>
@@ -58,7 +55,7 @@ namespace WebAnnotation
         /// </summary>
         public void Clear()
         {
-            foreach(var s in this.dictEntries.Keys)
+            foreach (var s in this.dictEntries.Keys)
             {
                 this.Remove(s);
             }

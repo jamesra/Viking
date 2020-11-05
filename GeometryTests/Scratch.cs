@@ -1,8 +1,4 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
 
 namespace GeometryTests
@@ -21,7 +17,7 @@ namespace GeometryTests
             return val;
         }
     }
-    
+
     /// <summary>
     /// Summary description for Scractch
     /// </summary>
@@ -75,7 +71,7 @@ namespace GeometryTests
         //
         #endregion
 
-        
+
 
 
         [TestMethod]
@@ -86,7 +82,7 @@ namespace GeometryTests
 
             Foo fooReturns = myInterface as Foo;
 
-            Debug.Assert(fooReturns != null); 
+            Debug.Assert(fooReturns != null);
 
             //
             // TODO: Add test logic	here

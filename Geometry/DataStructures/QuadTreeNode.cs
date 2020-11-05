@@ -1,5 +1,4 @@
-﻿using Geometry;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -111,7 +110,8 @@ namespace Geometry
         internal GridRectangle Border
         {
             get { return _Border.Value; }
-            set {
+            set
+            {
                 if (_Border.HasValue)
                 {
                     throw new ArgumentException("Should not set the Border property more than once.");
@@ -254,7 +254,7 @@ namespace Geometry
             return quad;
         }
 
-        
+
 
         /// <summary>
         /// Inserts a point into the tree.  Returns the new QuadTreeNode the caller should point to as the root of the tree
@@ -322,19 +322,19 @@ namespace Geometry
                 }
             }
         }
-        
-        
+
+
         private static double RoundUpToNearestPowerOfTen(double val)
         {
             Debug.Assert(val > 0);
-            return Math.Pow(10,Math.Ceiling(Math.Log10(val)));
+            return Math.Pow(10, Math.Ceiling(Math.Log10(val)));
         }
         /// <summary>
         /// Insert nodes at the root to expand our borders large enough to include the point
         /// </summary>
         /// <param name="point"></param>
         /// <returns>The new root node if the border expanded or was defined</returns>
-        
+
         internal bool ExpandBorder(GridVector2 point, out QuadTreeNode<T> new_root)
         {
             new_root = null;
@@ -371,7 +371,7 @@ namespace Geometry
                     }
 
                     new_root = this;
-                    
+
                     //Trace.WriteLine(string.Format("Calculated border of {0}", Bounds));
                     return true;
                 }
@@ -380,7 +380,7 @@ namespace Geometry
             }
 
             GridRectangle parent_bounds;
-              
+
             double ParentWidth = this.Border.Width * 2;
             double ParentHeight = this.Border.Height * 2;
 
@@ -535,7 +535,7 @@ namespace Geometry
                             double newDistance = double.MaxValue;
                             GridVector2 foundNode;
                             T foundValue = _quadrants[iQuad].FindNearest(point, out foundNode, ref newDistance);
-                            
+
                             if (newDistance < distance)
                             {
                                 nodePoint = foundNode;
@@ -550,7 +550,7 @@ namespace Geometry
                                 rect = new GridRectangle(point, distance);
                             }
 
-                            
+
                         }
                     }
                 }
@@ -734,12 +734,12 @@ namespace Geometry
                 sb.Append("Leaf: ");
             else
                 sb.Append("Branch:");
-            
-            if(this.HasValue)
+
+            if (this.HasValue)
             {
                 sb.Append(this.Point);
             }
-            else if(this.HasBorder)
+            else if (this.HasBorder)
             {
                 sb.Append(this.Border);
             }

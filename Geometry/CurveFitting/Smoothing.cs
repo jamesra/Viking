@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Geometry
 {
@@ -29,7 +26,7 @@ namespace Geometry
             {
                 output[i] = points[i];
             }
-             
+
             for (int i = points.Length - kernelRadius; i < points.Length; i++)
             {
                 output[i] = points[i];
@@ -65,7 +62,7 @@ namespace Geometry
         private static GridVector2[] GetKernelInput(this GridVector2[] points, int kernelRadius, int iCenter)
         {
             int KernelSize = (kernelRadius * 2) + 1;
-            GridVector2[] output = new GridVector2[KernelSize]; 
+            GridVector2[] output = new GridVector2[KernelSize];
 
             Array.Copy(points, iCenter - kernelRadius, output, 0, KernelSize);
             return output;

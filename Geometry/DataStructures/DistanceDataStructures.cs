@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Linq;
 
 
 namespace Geometry
@@ -137,7 +135,7 @@ namespace Geometry
         {
             MaxCapacity = capacity;
         }
-        
+
         /// <summary>
         /// Adds an item to the list only if it is under the capacity limit OR if it is a closer distance than an existing item in the list
         /// </summary>
@@ -145,12 +143,12 @@ namespace Geometry
         /// <returns></returns>
         public bool TryAdd(DistanceToPoint<T> item)
         {
-            if(this.Count < this.MaxCapacity)
+            if (this.Count < this.MaxCapacity)
             {
                 base.Add(item);
                 return true;
             }
-            
+
             //Check if we should replace an existing item
             if (item.Distance < this.MaxDistance)
             {
@@ -162,8 +160,8 @@ namespace Geometry
             }
 
             //Every item in the full list was closer than the new item, so it is not added and we return false; 
-            return false; 
-            
+            return false;
+
         }
 
         /// <summary>

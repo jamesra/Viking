@@ -12,6 +12,7 @@ using System.Collections.Specialized;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using AnnotationService.Types;
+using Annotation.Interfaces;
 using Microsoft.SqlServer.Types;
 
 
@@ -47,7 +48,7 @@ namespace WebAnnotationModelTest
         {
             Store.StructureTypes.LoadStructureTypes();
 
-            foreach (StructureTypeObj type in Store.StructureTypes.rootObjects.Values)
+            foreach (StructureTypeObj type in Store.StructureTypes.RootObjects.Select(id => Store.StructureTypes[id]))
             {
                 Debug.WriteLine(type.ToString()); 
             }
@@ -367,8 +368,6 @@ namespace WebAnnotationModelTest
 
             //OK, check that the location objects and structure objects have no references and are GC'ed.
             System.GC.Collect();
-
-            int i = 0;  
         }
 
         #endregion 

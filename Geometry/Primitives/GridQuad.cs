@@ -127,8 +127,8 @@ namespace Geometry
             GridVector2 directionA = this.TopRight - center;
             GridVector2 directionB = this.TopLeft - center; 
 
-            directionA.Scale(scalar);
-            directionB.Scale(scalar);
+            directionA *= scalar;
+            directionB *= scalar;
 
             this.BottomLeft = center - directionA;
             this.TopRight = center + directionA;

@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 
 namespace Geometry
@@ -313,8 +312,8 @@ namespace Geometry
 
                     if (LCircle.Value.Contains(RightCandidate.Position))
                     {
-                        
-                        if(RCircle.HasValue == false)
+
+                        if (RCircle.HasValue == false)
                             RCircle = GridCircle.CircleFromThreePoints(ROrigin.Position, LOrigin.Position, RightCandidate.Position);
 
                         if (RCircle.Value.Contains(LeftCandidate.Position) == false)
@@ -330,7 +329,7 @@ namespace Geometry
                         if (triLeft.Angles.Min() > triRight.Angles.Min())
                             goto UseLeft;
                         else
-                            goto UseRight; 
+                            goto UseRight;
                     }
                     else
                     {
@@ -400,7 +399,7 @@ namespace Geometry
 #endif
                     //A quick sanity check to ensure we do not add a colinear triangle
                     if (mesh.ToTriangle(newFace).Area > 0)
-                    { 
+                    {
                         mesh.AddFace(newFace);
                         //CheckEdgeFlip(mesh, newFace);
                         AddedFaces.Add(newFace);
@@ -661,7 +660,7 @@ namespace Geometry
             GridLineSegment LR_baseline_candidate;
             GridLineSegment RL_baseline_candidate;
 
-            
+
 
             //L = mesh[FirstHalfSet.SortedOppositeCutAxisVertSet.First()];
             //R = mesh[SecondHalfSet.SortedOppositeCutAxisVertSet.First()];
@@ -718,7 +717,7 @@ namespace Geometry
                 //In the case above 2-1 is the edge using the smallest Y value from each set (2,3) & (0,1).  However this leaves 3 below the origin line. 
                 //To handle this we check that 2 and 1 do not have verticies clockwise or ccw from the origin line respectively.
 
-                
+
 
                 LR_baseline_candidate = mesh.ToGridLineSegment(L.Index, R.Index);
                 RL_baseline_candidate = mesh.ToGridLineSegment(R.Index, L.Index);
@@ -819,9 +818,9 @@ namespace Geometry
 
                     if (LR_baseline_candidate.Contains(mesh[L_Candidate].Position))
                     {
-                        #if TRACEDELAUNAY
+#if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("Reject Left Baseline: {0}-{1} for {2}", L.Index, R.Index, L_Candidate));
-                        #endif
+#endif
 
                         RejectedBaselinePairs.AddToSet(R.Index, L.Index); //Record that this baseline pairing does not work so we don't test it again
                         RejectedBaselinePairs.AddToSet(L.Index, R.Index); //Record that this baseline pairing does not work so we don't test it again
@@ -866,8 +865,8 @@ namespace Geometry
                         //Double check that the proposed new line does not intersect an existing mesh line
                         //if (mesh.FindIntersectingEdges(new EdgeKey(L_Candidate, R.Index), out List<IEdgeKey> intersections))
                         //{
-                            //RejectedBaselinePairs.AddToSet(R.Index, L_Candidate); //Record that the candidate baseline pairing intersects an existing edge so we don't test it again
-                            //continue;
+                        //RejectedBaselinePairs.AddToSet(R.Index, L_Candidate); //Record that the candidate baseline pairing intersects an existing edge so we don't test it again
+                        //continue;
                         //}
 
 
@@ -887,12 +886,12 @@ namespace Geometry
                 if (NewCandidateFound)
                     continue;
 
-                
+
                 R_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(L.Index) ? RejectedBaselinePairs[L.Index] : new SortedSet<int>();
 
                 //Reverse the IsLeft result for the Upper->Lower line
                 R_C = EdgesByAngle(mesh, R, L.Index, true);
-                    
+
                 R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).Where(id => R_Rejected_Candidates.Contains(id) == false).ToArray();
                 //int[] R_Origin_Candidates = mesh[R.Index].Edges.Select(e => e.OppositeEnd(R.Index)).ToArray();
                 R_Origin_Candidates_IsLeft = R_Origin_Candidates.Select(iVert => LR_baseline_candidate.IsLeft(mesh[iVert].Position)).ToArray();
@@ -909,11 +908,11 @@ namespace Geometry
                         {
                             RejectedBaselinePairs.AddToSet(L.Index, R_Candidate); //Record that this baseline pairing does not work so we don't test it again
                             RejectedBaselinePairs.AddToSet(R_Candidate, L.Index); //Record that this baseline pairing does not work so we don't test it again
-                            continue; 
+                            continue;
                         }
                     }
 
-                    
+
                     //For the case of a point on the line we use the closer point to the R origin 
                     if (RL_baseline_candidate.Contains(mesh[R_Candidate].Position))
                     {
@@ -968,7 +967,7 @@ namespace Geometry
                         //RejectedBaselinePairs.AddToSet(L.Index, R_Candidate); //Record that the candidate baseline pairing intersects an existing edge so we don't test it again
                         //continue;
                         //}
-                        
+
 
 
 
@@ -987,7 +986,7 @@ namespace Geometry
 
                 if (NewCandidateFound)
                 {
-                    
+
                     continue;
                 }
 
@@ -1124,7 +1123,7 @@ namespace Geometry
                         //TODO: Can I simplify this to only check the baseline.Origin vertex?  Pretty sure the answer is yes
                         EdgeKey key = new EdgeKey(baseline.Target, candidate.Target);
                         GridLineSegment seg = mesh.ToGridLineSegment(key);
-                        if(seg.Intersects(baseline.OriginVert.Position))
+                        if (seg.Intersects(baseline.OriginVert.Position))
                         {
                             circle = new GridCircle?();
                             return null;
@@ -1132,7 +1131,7 @@ namespace Geometry
 
                         mesh.FindIntersectingFaceEdges(key);
                     }
-                    catch(EdgeIntersectsVertexException e)
+                    catch (EdgeIntersectsVertexException e)
                     {
                         //This edge intersects a vertex, reject it because it is close enough to 180 degrees that it may as well be the same
                         circle = new GridCircle?();
@@ -1183,7 +1182,7 @@ namespace Geometry
             return null;
         }
 
-        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null, SortedSet<IFace> AlreadyChecked=null)
+        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null, SortedSet<IFace> AlreadyChecked = null)
         {
             if (AlreadyChecked == null)
                 AlreadyChecked = new SortedSet<IFace>();
@@ -1229,7 +1228,7 @@ namespace Geometry
                 if (GridCircle.Contains(circlePoints, mesh[other_opposite_vert].Position) == OverlapType.CONTAINED)
                 {
                     //OK, need to flip the edge
-                    
+
                     Edge proposedEdge = new Edge(face_opposite_vert, other_opposite_vert);
 
                     int[] AVerts = new int[] { face_opposite_vert, other_opposite_vert, edge.A };
@@ -1240,14 +1239,17 @@ namespace Geometry
 
                     //Sanity check: Ensure the edge endpoints will not be in the flipped triangles and we won't infinitely recurse
                     {
-                        if (GridCircle.Contains(mesh[A.iVerts].Select(v => v.Position).ToArray(), mesh[edge.B].Position) == OverlapType.CONTAINED)
+                        OverlapType BInA = GridCircle.Contains(mesh[A.iVerts].Select(v => v.Position).ToArray(), mesh[edge.B].Position);
+                        OverlapType AInB = GridCircle.Contains(mesh[B.iVerts].Select(v => v.Position).ToArray(), mesh[edge.A].Position);
+
+                        if (BInA == OverlapType.CONTAINED || BInA == OverlapType.TOUCHING)
                             continue;
-                        if (GridCircle.Contains(mesh[B.iVerts].Select(v => v.Position).ToArray(), mesh[edge.A].Position) == OverlapType.CONTAINED)
+                        if (AInB == OverlapType.CONTAINED || AInB == OverlapType.TOUCHING)
                             continue;
                     }
 
-                    
-#if TRACEDELAUNAY 
+
+#if TRACEDELAUNAY
                     Trace.WriteLine(string.Format("Flip {0} with {1}", f, oppositeFace));
                     Debug.WriteLine(string.Format("Remove Edge: {0}", edge));
                     Debug.WriteLine(string.Format("Add Edge: {0}-{1}", face_opposite_vert, other_opposite_vert));
@@ -1271,9 +1273,9 @@ namespace Geometry
                     TriangleFace B = new TriangleFace(BVerts);
                     */
 
-                    
 
-                    
+
+
 
 #if TRACEDELAUNAY
                     Trace.WriteLine(string.Format("Edge Flip Face {0} Clockwise = {1}", A, mesh.IsClockwise(AVerts)));
@@ -1302,10 +1304,19 @@ namespace Geometry
                         ReportProgress(mesh);
                     }
 
-                    CheckEdgeFlip(mesh, A, ReportProgress, AlreadyChecked);
+                    //Rarely we get into an infinite recursion here.  Finding a way to detect these cycles needs to be found
+                    try
+                    {
+                        CheckEdgeFlip(mesh, A, ReportProgress, AlreadyChecked);
 
-                    if (mesh.Contains(B)) //Check that the face wasn't removed when checking A for flips
-                        CheckEdgeFlip(mesh, B, ReportProgress, AlreadyChecked);
+                        if (mesh.Contains(B)) //Check that the face wasn't removed when checking A for flips
+                            CheckEdgeFlip(mesh, B, ReportProgress, AlreadyChecked);
+                    }
+                    catch (StackOverflowException)
+                    {
+                        Trace.WriteLine($"Stack overflow checking edge flips {A} {B}");
+                        return;
+                    }
 
                     return;
                 }

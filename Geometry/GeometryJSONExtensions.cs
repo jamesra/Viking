@@ -1,12 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using Geometry;
-using System.Dynamic;
-using Geometry.Meshing;
 
 namespace Geometry.JSON
 {
@@ -39,7 +33,7 @@ namespace Geometry.JSON
 
         public static string ToJSON(this IEnumerable<GridVector2> input)
         {
-            JArray obj = input.ToJArray(); 
+            JArray obj = input.ToJArray();
             return obj.ToString();
         }
 
@@ -64,11 +58,11 @@ namespace Geometry.JSON
         }
 
         public static JObject ToJObject(this GridVector2 p)
-        { 
+        {
             dynamic jObj = new JObject();
             jObj.X = p.X;
             jObj.Y = p.Y;
-            return jObj; 
+            return jObj;
         }
 
         public static JArray ToJArray(this IEnumerable<GridVector2> points)
@@ -95,7 +89,7 @@ namespace Geometry.JSON
                 return null;
 
             JArray obj = JArray.Parse(json);
-            return PointsFromJSON(obj); 
+            return PointsFromJSON(obj);
         }
 
 
@@ -128,7 +122,7 @@ namespace Geometry.JSON
         {
             if (obj == null)
                 return null;
-             
+
             var ExteriorRing = obj["ExteriorRing"];
 
             GridVector2[] ERing = ExteriorRing.PointsFromJSON();
@@ -150,7 +144,7 @@ namespace Geometry.JSON
 
             List<GridPolygon> polygonList = new List<GridPolygon>();
 
-            foreach(var token in array)
+            foreach (var token in array)
             {
                 GridPolygon p = PolygonFromJSON(token as JObject);
                 polygonList.Add(p);

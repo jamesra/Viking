@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry
 {
@@ -66,7 +63,7 @@ namespace Geometry
                     return true;
             }
 
-            return false; 
+            return false;
         }
 
         public static bool IsClosed(this ShapeType2D type)
@@ -87,7 +84,7 @@ namespace Geometry
         {
             switch (type)
             {
-                case ShapeType2D.POINT: 
+                case ShapeType2D.POINT:
                     return true;
             }
 
@@ -119,7 +116,7 @@ namespace Geometry
     public interface IShape2D
     {
         GridRectangle BoundingBox { get; }
-        double Area { get; } 
+        double Area { get; }
         bool Contains(IPoint2D p);
 
         bool Intersects(IShape2D shape);
@@ -152,10 +149,10 @@ namespace Geometry
     public interface ICircle2D : IShape2D
     {
         IPoint2D Center { get; }
-        
+
         double Radius { get; }
     }
-    
+
     public interface IShapeCollection2D : IShape2D
     {
         ICollection<IShape2D> Geometries { get; }
@@ -174,7 +171,7 @@ namespace Geometry
 
     public interface ILineSegment2D : IShape2D
     {
-        IPoint2D A { get;}
+        IPoint2D A { get; }
         IPoint2D B { get; }
     }
 

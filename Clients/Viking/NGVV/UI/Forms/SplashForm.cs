@@ -1,19 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using Viking.Common;
 using System.Diagnostics;
-using Viking.ViewModels; 
+using System.Drawing;
+using System.Windows.Forms;
+using Viking.ViewModels;
 
 
 namespace Viking.UI.Forms
 {
-    
+
 
     public partial class SplashForm : Form
     {
@@ -23,7 +18,7 @@ namespace Viking.UI.Forms
         DateTime endVolumeLoadTime;
         DateTime endExtensionLoadTime;
 
-        readonly string VolumePath; 
+        readonly string VolumePath;
 
         /// <summary>
         /// Using the built-in Dialog result always seems to return DialogResult.Cancel
@@ -32,7 +27,7 @@ namespace Viking.UI.Forms
 
         public SplashForm(string path)
         {
-            VolumePath = path; 
+            VolumePath = path;
             InitializeComponent();
         }
 
@@ -52,7 +47,7 @@ namespace Viking.UI.Forms
         }
 
         /*
-        private void OnStoreProgressEvent(object sender, LoadProgressEventArgs e)
+        private void OnStoreProgressEvent(object sender, LoadProgressEventArgs e)Could not load file or assembly 'file:///C:\src\git\Viking\Clients\Viking\Viking
         {
             this.LabelInfo.Text = e.Info as String;
             this.Progress = e.Progress;
@@ -83,8 +78,8 @@ namespace Viking.UI.Forms
         {
             BackgroundThreadProgressReporter progressReporter = new BackgroundThreadProgressReporter(this.LoadVolumeWorker);
             Viking.VolumeModel.Volume _Volume = new Viking.VolumeModel.Volume(this.VolumePath, UI.State.CachePath, progressReporter);
-            State.volume = new VolumeViewModel(_Volume); 
-        }   
+            State.volume = new VolumeViewModel(_Volume);
+        }
 
         private void backgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
@@ -92,29 +87,29 @@ namespace Viking.UI.Forms
             this.Progress = e.ProgressPercentage;
             this.MaxProgress = 100;
 
- //           Trace.WriteLine(e.UserState as String); 
+            //           Trace.WriteLine(e.UserState as String); 
 
             PanelProgress.Invalidate();
         }
 
         private void backgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {  
+        {
             endVolumeLoadTime = DateTime.Now;
 
             TimeSpan elapsedTime = endVolumeLoadTime.Subtract(startTime);
             Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
 
             //OK, basic info about volume is in place.  Time to extensions if they want to load
-            LoadExtensionsWorker.RunWorkerAsync(); 
+            LoadExtensionsWorker.RunWorkerAsync();
         }
 
         private void LoadExtensionsWorker_DoWork(object sender, DoWorkEventArgs e)
         {
-            this.BeginInvoke( (Action) delegate () {LabelInfo.Text = "Loading extensions";} ); 
+            this.BeginInvoke((Action)delegate () { LabelInfo.Text = "Loading extensions"; });
 
             Viking.Common.ExtensionManager.LoadExtensions(this.LoadExtensionsWorker);
         }
-        
+
         private void LoadExtensionsWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             this.Result = DialogResult.OK;
@@ -125,6 +120,6 @@ namespace Viking.UI.Forms
             Trace.WriteLine("Extension Load Time: " + elapsedTime.ToString());
         }
 
-        
+
     }
 }

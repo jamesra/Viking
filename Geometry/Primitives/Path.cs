@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry
 {
@@ -23,7 +21,7 @@ namespace Geometry
 
         private void FireOnLoopChangedEvent(bool HasLoop)
         {
-            Trace.WriteLine(string.Format("FireOnLoopChangedEvent: {0}", HasLoop));
+            //Trace.WriteLine(string.Format("FireOnLoopChangedEvent: {0}", HasLoop));
 
             if (this.OnLoopChanged != null)
             {
@@ -41,7 +39,7 @@ namespace Geometry
             }
             remove
             {
-                this.OnPathChanged -= value; 
+                this.OnPathChanged -= value;
             }
         }
 
@@ -54,7 +52,7 @@ namespace Geometry
         }
 
         public List<GridVector2> Points = new List<GridVector2>();
-         
+
         /// <summary>
         /// Sets how far from the actual path is a simplified path is allowed to stray.
         /// </summary>
@@ -86,7 +84,23 @@ namespace Geometry
             {
                 if (_SimplifiedPath == null)
                 {
-                    _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance, false, 5).ToArray();
+                    try
+                    {
+                        _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance, false, 5).ToArray();
+                    }
+                    catch (ArgumentException)
+                    {
+                        Trace.WriteLine("Could not simplify path, trying tighter tolerance...");
+                        try
+                        {
+                            _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance / 2.0, false, 5).ToArray();
+                        }
+                        catch (ArgumentException)
+                        {
+                            Trace.WriteLine("Could not simplify path, using original path...");
+                            _SimplifiedPath = this.Points.ToArray();
+                        }
+                    }
                 }
 
                 return _SimplifiedPath;
@@ -97,8 +111,8 @@ namespace Geometry
         {
             get
             {
-                int count = Points.Count;  
-                return new GridLineSegment(Points[count-1], Points[count-2]);
+                int count = Points.Count;
+                return new GridLineSegment(Points[count - 1], Points[count - 2]);
             }
         }
 
@@ -178,12 +192,12 @@ namespace Geometry
         {
             get
             {
-                if(_SimplifiedLoop == null)
+                if (_SimplifiedLoop == null)
                 {
                     if (HasSelfIntersection)
                         this._SimplifiedLoop = CatmullRomControlPointSimplification.IdentifyControlPoints(this._Loop, this.SimplifiedPathTolerance, true).EnsureClosedRing().ToArray();
                     else
-                        return null; 
+                        return null;
                 }
 
                 return _SimplifiedLoop;
@@ -203,7 +217,7 @@ namespace Geometry
         {
             get
             {
-                if(_SimplifiedLoopSegments == null)
+                if (_SimplifiedLoopSegments == null)
                 {
                     if (HasSelfIntersection)
                     {
@@ -221,7 +235,7 @@ namespace Geometry
 
         public Path()
         {
-           
+
         }
 
         public void Push(GridVector2 p)
@@ -258,7 +272,7 @@ namespace Geometry
 
             this.Points.Add(p);
             _SimplifiedPath = null;  //TODO: This could be optimized to only calculate the new segment
-              
+
             //Make sure we have the right number of segments for points in the path
             System.Diagnostics.Debug.Assert(_Segments.Count == this.Points.Count - 1);
         }
@@ -300,7 +314,7 @@ namespace Geometry
 
         public GridVector2 Peek()
         {
-            return this.Points[this.Points.Count-1];
+            return this.Points[this.Points.Count - 1];
         }
 
         public void Clear()
@@ -324,7 +338,7 @@ namespace Geometry
         /// <param name="iDeletePoint"></param>
         /// <returns>True if part of the path was erased</returns>
         public bool Erase(int iDeletePoint)
-        { 
+        {
             if (iDeletePoint >= 0)
             {
                 bool HadLoop = this.HasSelfIntersection;
@@ -335,7 +349,7 @@ namespace Geometry
 
                 int NumDeleted = 0;
 
-                while(NumDeleted < NumExpectedToDelete)
+                while (NumDeleted < NumExpectedToDelete)
                 //while (iDeletePoint >= 0)
                 {
                     this.Pop_NoEvent();
@@ -388,7 +402,7 @@ namespace Geometry
 
             bool HasLoopAfterPush = this.HasSelfIntersection;
 
-            FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, p, oldValue, Points.Count-1));
+            FireOnPathChangedEvent(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, p, oldValue, Points.Count - 1));
 
             //Check if we added a loop, or if we removed a loop and then re-added it.
             if (HadLoop != HasLoopAfterPush || HadLoop != HadLoopAfterPop)
@@ -417,7 +431,7 @@ namespace Geometry
             this._Loop = null;
             this._LoopSegments = null;
             this._SimplifiedLoop = null;
-            this._SimplifiedLoopSegments = null; 
+            this._SimplifiedLoopSegments = null;
         }
 
 
@@ -445,7 +459,7 @@ namespace Geometry
             List<GridLineSegment> loopSegments = new List<GridLineSegment>(this._Segments.Count);
 
             List<GridVector2> loopPoints = new List<GridVector2>();
-            
+
             //This function looks odd because the lines are reversed. A is closer to the most recently placed point in the path
 
             int IntersectionCount = 0;
@@ -476,7 +490,7 @@ namespace Geometry
                         else
                         {
                             //The intersection is along the line, add the intersection point and the end of our line
-                            loopPoints.Add(intersection); 
+                            loopPoints.Add(intersection);
                             loopPoints.Add(path_line.A);
                         }
 
@@ -518,7 +532,7 @@ namespace Geometry
                         /*
                         }
                         */
-                        
+
                     }
                 }
                 else if (IntersectionCount == 1)
@@ -561,7 +575,7 @@ namespace Geometry
         /// <returns>True if popping the point will break an existing loop</returns>
         public bool CheckForSelfIntersectionLossBeforePop()
         {
-            if(false == this.HasSegment)
+            if (false == this.HasSegment)
             {
                 return false;
             }
@@ -573,7 +587,7 @@ namespace Geometry
             }
 
             //If we are popping one of the line segments in the pair, then clear the self intersection array
-            if(lostSegment.B == _Loop[_Loop.Length-2])
+            if (lostSegment.B == _Loop[_Loop.Length - 2])
             {
                 ResetLoop();
                 return true;
@@ -584,7 +598,7 @@ namespace Geometry
 
         public double Distance(GridVector2 p)
         {
-            if(this.Points.Count == 0)
+            if (this.Points.Count == 0)
             {
                 throw new ArgumentException("No points in path to calculate distance");
             }

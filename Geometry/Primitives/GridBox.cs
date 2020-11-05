@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
 
 namespace Geometry
 {
@@ -34,11 +33,11 @@ namespace Geometry
             StringBuilder sb = new StringBuilder();
 
             sb.Append(minVals.ToCSV());
-            
+
             sb.Append(" Dims: ");
 
             sb.Append(dimensions.ToCSV());
-            
+
             return sb.ToString();
         }
 
@@ -89,7 +88,7 @@ namespace Geometry
         public GridVector3 MinCorner
         {
             get
-            { 
+            {
                 return new GridVector3(minVals[0], minVals[1], minVals[2]);
             }
         }
@@ -97,7 +96,7 @@ namespace Geometry
         public GridVector3 MaxCorner
         {
             get
-            { 
+            {
                 return new GridVector3(maxVals[0], maxVals[1], maxVals[2]);
             }
         }
@@ -121,7 +120,7 @@ namespace Geometry
 
         private void ThrowOnMinGreaterThanMax()
         {
-            if(this.maxVals.Where((val,i) => val < minVals[i]).Any())
+            if (this.maxVals.Where((val, i) => val < minVals[i]).Any())
             {
                 throw new ArgumentException("GridBox minvals must be greater than maxvals");
             }
@@ -256,7 +255,7 @@ namespace Geometry
         }
 
         public GridBox Translate(GridVector3 vector)
-        { 
+        {
             double[] translation = vector.coords;
             Debug.Assert(translation.Length == this.numDims, "Expecting 3D shape for translation with 3D vector");
 
@@ -445,7 +444,7 @@ namespace Geometry
             if (points == null)
                 throw new ArgumentException("Bounding box cannot be created for null points collection");
 
-            if(points.First() == null)
+            if (points.First() == null)
                 throw new ArgumentException("Bounding box cannot be created for empty points collection");
 
             int numDims = points.First().coords.Length;

@@ -1,16 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using Geometry;
-using WebAnnotation.View;
-using SqlGeometryUtils;
-using VikingXNAGraphics;
-using Viking.VolumeModel;
-using System.Windows.Forms;
+﻿using Geometry;
+using System;
 using System.Diagnostics;
+using System.Windows.Forms;
+using Viking.VolumeModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -41,9 +33,9 @@ namespace WebAnnotation.UI.Commands
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
 
-            this.success_callback = success_callback; 
+            this.success_callback = success_callback;
         }
-          
+
         public static GridPolygon AddControlPoint(GridPolygon polygon, GridVector2 NewControlPointPosition)
         {
             /*
@@ -88,7 +80,7 @@ namespace WebAnnotation.UI.Commands
     class RemovePolygonVertexCommand : AnnotationCommandBase
     {
         GridPolygon OriginalMosaicPolygon;
-        GridPolygon OriginalVolumePolygon; 
+        GridPolygon OriginalVolumePolygon;
         GridPolygon UpdatedVolumePolygon;
 
         public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
@@ -99,7 +91,7 @@ namespace WebAnnotation.UI.Commands
         public RemovePolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridPolygon mosaic_polygon,
                                         OnCommandSuccess success_callback) : base(parent)
-        { 
+        {
             this.success_callback = success_callback;
 
             mapping = parent.Section.ActiveSectionToVolumeTransform;
@@ -133,7 +125,7 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             GridPolygon mosaic_polygon;
-            if(UpdatedVolumePolygon == null)
+            if (UpdatedVolumePolygon == null)
             {
                 base.Execute();
                 return;

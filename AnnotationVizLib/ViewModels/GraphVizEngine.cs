@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.IO;
 
 namespace AnnotationVizLib
 {
@@ -15,13 +15,13 @@ namespace AnnotationVizLib
 
     public class GraphVizEdge<KEY> : GraphViewEdge<KEY>, ICloneable
         where KEY : IComparable<KEY>
-    {  
+    {
 
         public void Reverse()
         {
             KEY temp = this.from;
             this.from = this.to;
-            this.to = temp; 
+            this.to = temp;
         }
 
         #region ICloneable Members
@@ -53,7 +53,7 @@ namespace AnnotationVizLib
             }
         }
 
-        
+
     }
 
     public class GraphVizEngine<KEY> : GraphViewEngine<KEY>

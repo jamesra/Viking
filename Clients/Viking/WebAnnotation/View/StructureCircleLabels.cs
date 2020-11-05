@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using WebAnnotation;
-using WebAnnotationModel;
-using VikingXNA;
-using VikingXNAGraphics;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
+using System;
+using VikingXNAGraphics;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
@@ -115,7 +109,7 @@ namespace WebAnnotation.View
         {
             {
                 double Height = this.VolumeCircle.Radius / 3.0f;
-                StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(this.locationObj.Parent), this.VolumeCircle.Center - new GridVector2(0, Height));
+                StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(this.locationObj.Parent), this.VolumeCircle.Center - new GridVector2(0, Height), fontSize: DefaultFontSize);
                 StructureIDLabelView.MaxLineWidth = GridCircle.WidthAtHeight(Height / this.Radius) * (this.Radius * 2.0);
                 StructureIDLabelView._Color = this.locationObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
             }
@@ -188,7 +182,7 @@ namespace WebAnnotation.View
 
             StructureIDLabelView.FontSize = DefaultFontSize; //We only desire one line of text
 
-            if(OscillateSize)
+            if (OscillateSize)
             {
                 double Scalar = GetOscillationFactor;
                 StructureIDLabelView.FontSize *= Scalar;
@@ -212,7 +206,7 @@ namespace WebAnnotation.View
                     StructureLabelView.Draw(spriteBatch, font, scene);
                 }
 
-                if(StructureAttributeView != null)
+                if (StructureAttributeView != null)
                 {
                     StructureAttributeView.FontSize = DefaultFontSize / 4.0f;
                     StructureAttributeView.Draw(spriteBatch, font, scene);
@@ -231,7 +225,7 @@ namespace WebAnnotation.View
         /// <summary>
         /// Returns a number from .9 to 1.1 on a 1Hz wave
         /// </summary>
-        private static double GetOscillationFactor 
+        private static double GetOscillationFactor
         {
             get
             {
@@ -239,10 +233,10 @@ namespace WebAnnotation.View
                 double Hz = 1.0 / SecondsPerCycle;
                 double ms = (double)DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond;
                 ms %= SecondsPerCycle;
-                ms /= SecondsPerCycle; 
-                ms *= Math.PI * 2; 
-                return (Math.Sin(ms) / 20.0) + 1.0; 
+                ms /= SecondsPerCycle;
+                ms *= Math.PI * 2;
+                return (Math.Sin(ms) / 20.0) + 1.0;
             }
-    }
+        }
     }
 }

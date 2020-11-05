@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading;
 
 namespace Geometry.Transforms
 {
@@ -49,7 +47,7 @@ namespace Geometry.Transforms
                         int[] triangles = Delaunay2D.Triangulate(MappingGridVector2.MappedPoints(this.MapPoints), MappedBounds);
                         _TriangleIndicies = triangles;
                     }
-                    catch (ArgumentException )
+                    catch (ArgumentException)
                     {
                         _TriangleIndicies = null;
                     }
@@ -81,7 +79,7 @@ namespace Geometry.Transforms
         protected TriangulationTransform(MappingGridVector2[] mapPoints, GridRectangle mappedBounds, TransformInfo info)
             : base(mapPoints, mappedBounds, info)
         {
-            Debug.Assert(mapPoints.Length >= 3, "Triangulation transform requires at least 3 points"); 
+            Debug.Assert(mapPoints.Length >= 3, "Triangulation transform requires at least 3 points");
         }
 
         #region ISerializable Members
@@ -90,7 +88,7 @@ namespace Geometry.Transforms
             : base(info, context)
         {
             if (info == null)
-                throw new ArgumentNullException(); 
+                throw new ArgumentNullException();
 
             _TriangleIndicies = info.GetValue("_TriangleIndicies", typeof(int[])) as int[];
         }
@@ -98,9 +96,9 @@ namespace Geometry.Transforms
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException(); 
+                throw new ArgumentNullException();
 
-            info.AddValue("_TriangleIndicies", _TriangleIndicies); 
+            info.AddValue("_TriangleIndicies", _TriangleIndicies);
 
             base.GetObjectData(info, context);
         }
@@ -118,7 +116,7 @@ namespace Geometry.Transforms
         {
             return GetTransform(Point) != null;
         }
-        
+
         /// <summary>
         /// Transform point from mapped space to control space
         /// </summary>
@@ -194,13 +192,13 @@ namespace Geometry.Transforms
                 }
                 else
                     return default(GridVector2);
-                
+
             }
             ).ToArray();
 
             //return IsTransformed; 
             return IsTransformed;
-        } 
+        }
 
         #endregion
 
@@ -215,7 +213,7 @@ namespace Geometry.Transforms
         {
             return GetInverseTransform(Point) != null;
         }
-        
+
         /// <summary>
         /// Transform point from mapped space to control space
         /// </summary>
@@ -297,7 +295,7 @@ namespace Geometry.Transforms
 
             //return IsTransformed; 
             return IsTransformed;
-        } 
+        }
 
 
         #endregion
@@ -305,7 +303,7 @@ namespace Geometry.Transforms
         #region Edges
 
 
-        
+
         /// <summary>
         /// Find the edge which intersects the passed edge L.
         /// Return the distance to the intersection point.  If they exist the out parameters are intersection point and the Control and Mapped Line.
@@ -323,7 +321,7 @@ namespace Geometry.Transforms
         #region Extra data cruft
 
         public List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect, bool IncludeAdjacent)
-        { 
+        {
             List<MappingGridVector2> foundPoints = IntersectingRectangleRTree(gridRect, this.controlTrianglesRTree);
             if (!IncludeAdjacent)
             {
@@ -341,7 +339,7 @@ namespace Geometry.Transforms
         }
 
         public List<MappingGridVector2> IntersectingMappedRectangle(GridRectangle gridRect, bool IncludeAdjacent)
-        { 
+        {
             List<MappingGridVector2> foundPoints = IntersectingRectangleRTree(gridRect, this.mapTrianglesRTree);
             if (!IncludeAdjacent)
             {
@@ -447,7 +445,7 @@ namespace Geometry.Transforms
                 }
             }
         }
-        
+
         private List<MappingGridTriangle>[] _TriangleList;
         List<MappingGridTriangle>[] TriangleList
         {
@@ -530,14 +528,14 @@ namespace Geometry.Transforms
                     rwLockTriangles.ExitWriteLock();
             }
         }
-        
-        private List<MappingGridVector2> IntersectingRectangleRTree(GridRectangle gridRect, 
+
+        private List<MappingGridVector2> IntersectingRectangleRTree(GridRectangle gridRect,
                                                                RTree.RTree<MappingGridTriangle> TriangleRTree)
         {
             List<MappingGridTriangle> intersectingTriangles = TriangleRTree.Intersects(gridRect.ToRTreeRect(0));
             SortedSet<long> sortedIndicies = new SortedSet<long>();
 
-            foreach(MappingGridTriangle t in intersectingTriangles)
+            foreach (MappingGridTriangle t in intersectingTriangles)
             {
                 sortedIndicies.Add(t.N1);
                 sortedIndicies.Add(t.N2);
@@ -561,12 +559,12 @@ namespace Geometry.Transforms
             List<GridVector2> Points;
             List<List<MappingGridTriangle>> ListofListTriangles;
 
-            List<MappingGridVector2> MappingPointList= null;
+            List<MappingGridVector2> MappingPointList = null;
 
             if (gridRect.Contains(PointTree.Border))
             {
                 MappingPointList = new List<MappingGridVector2>(MapPoints);
-                return MappingPointList; 
+                return MappingPointList;
             }
 
             PointTree.Intersect(gridRect, out Points, out ListofListTriangles);
@@ -606,14 +604,14 @@ namespace Geometry.Transforms
             return MappingPointList;
         }
 
-        
+
 
         /// <summary>
         /// This call removes cached data from the transform to reduce memory footprint.  Called when we only expect Transform and Inverse transform calls in the future
         /// </summary>
         public override void MinimizeMemory()
         {
-            
+
             try
             {
                 rwLockTriangles.EnterWriteLock();

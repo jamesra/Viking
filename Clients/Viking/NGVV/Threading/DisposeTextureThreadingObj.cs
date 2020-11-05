@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Diagnostics;
-using Microsoft.Xna; 
-using Microsoft.Xna.Framework; 
-using Microsoft.Xna.Framework.Graphics;
 
 namespace Viking
 {
     class DisposeTextureThreadingObj
     {
-        Texture texture; 
-     
+        Texture texture;
+
         public DisposeTextureThreadingObj(Texture tex)
         {
             this.texture = tex;
@@ -24,18 +19,18 @@ namespace Viking
             {
                 try
                 {
-                    Global.RemoveTexture(this.texture); 
+                    Global.RemoveTexture(this.texture);
                     this.texture.Dispose();
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Trace.WriteLine("Exception caught disposing of texture: " + e.ToString(), "TextureUse");
                     throw;
                 }
-            } 
-            
+            }
+
             this.texture = null;
         }
     }
-    
+
 }

@@ -1,5 +1,4 @@
-﻿using System;
-using Geometry;
+﻿using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace GeometryTests

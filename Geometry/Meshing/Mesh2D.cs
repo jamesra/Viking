@@ -1,12 +1,7 @@
-﻿using System;
+﻿using Geometry.JSON;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry.JSON;
-using Geometry;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Geometry.Meshing
 {
@@ -17,7 +12,7 @@ namespace Geometry.Meshing
 
     public class Mesh2D : Mesh2DBase<IVertex2D>
     {
-        
+
     }
 
     public abstract class Mesh2DBase<VERTEX> : MeshBase<VERTEX>, IMesh2D<VERTEX>
@@ -32,11 +27,11 @@ namespace Geometry.Meshing
         {
             get
             {
-                if(_BoundingBox.HasValue)
+                if (_BoundingBox.HasValue)
                 {
                     return _BoundingBox.Value;
                 }
-                else if(Verticies.Count > 0)
+                else if (Verticies.Count > 0)
                 {
                     UpdateBoundingBox(this.Verticies);
                     return _BoundingBox.Value;
@@ -68,7 +63,7 @@ namespace Geometry.Meshing
                 _BoundingBox.Value.Union(points.BoundingBox());
             }
         }
-         
+
         public GridLineSegment ToGridLineSegment(IEdgeKey key)
         {
             return new GridLineSegment(this[key.A].Position, this[key.B].Position);
@@ -133,7 +128,7 @@ namespace Geometry.Meshing
         }
 
         public RotationDirection Winding(IFace f)
-        { 
+        {
             return this[f].Select(v => v.Position).ToArray().Winding();
         }
 

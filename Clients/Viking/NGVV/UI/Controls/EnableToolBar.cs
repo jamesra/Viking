@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace Viking.UI.Controls
@@ -14,7 +10,7 @@ namespace Viking.UI.Controls
         [Browsable(true)]
         public Size SeperatorSize = new Size(16, 16);
 
-        public List<Button> Buttons = new List<Button>(); 
+        public List<Button> Buttons = new List<Button>();
 
         public EnableToolBar()
         {

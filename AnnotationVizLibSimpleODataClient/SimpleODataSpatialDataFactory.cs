@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using AnnotationVizLib.SimpleOData;
 using Simple.OData.Client;
-using AnnotationVizLib.SimpleOData;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AnnotationVizLib.SimpleODataClient
 {
@@ -34,7 +33,7 @@ namespace AnnotationVizLib.SimpleODataClient
             {
                 queryString = string.Format("NetworkSpatialData(IDs={0},Hops={1})", IDs.ToODataArrayParameterString(), Hops);
             }
-            
+
             Task<IEnumerable<IDictionary<string, object>>> taskStructureDicts = client.FindEntriesAsync(queryString, annotations);
             Debug.Assert(taskStructureDicts != null);
             taskStructureDicts.Wait();
@@ -50,7 +49,7 @@ namespace AnnotationVizLib.SimpleODataClient
                 taskStructureDicts.Wait();
             }
 
-            StructureDicts = taskStructureDicts.Result; 
+            StructureDicts = taskStructureDicts.Result;
             AppendDictionaryToAttributes(graph, StructureDicts);
         }
 
@@ -86,7 +85,7 @@ namespace AnnotationVizLib.SimpleODataClient
 
         private static void AppendDictionaryToAttributes(NeuronNode node, IDictionary<string, object> data)
         {
-            foreach(string key in data.Keys)
+            foreach (string key in data.Keys)
             {
                 if (key == "ID" ||
                     key == "ParentID" ||
@@ -102,9 +101,9 @@ namespace AnnotationVizLib.SimpleODataClient
             Dictionary<ulong, long> ChildToParent = new Dictionary<ulong, long>();
             foreach (NeuronNode node in graph.Nodes.Values)
             {
-                foreach(ulong childID in node.EdgeSourceChildStructureIDs)
+                foreach (ulong childID in node.EdgeSourceChildStructureIDs)
                 {
-                    if(!ChildToParent.ContainsKey(childID))
+                    if (!ChildToParent.ContainsKey(childID))
                         ChildToParent.Add(childID, node.Key);
                 }
 
@@ -118,13 +117,13 @@ namespace AnnotationVizLib.SimpleODataClient
             return ChildToParent;
         }
 
-        
+
         private static Dictionary<ulong, SortedSet<NeuronEdge>> BuildChildToEdgeMap(NeuronGraph graph)
         {
             Dictionary<ulong, SortedSet<NeuronEdge>> IDToEdge = new Dictionary<ulong, SortedSet<NeuronEdge>>();
-            foreach(NeuronEdge e in graph.Edges.Values)
-            { 
-                foreach(ulong SourceID in e.SourceIDs)
+            foreach (NeuronEdge e in graph.Edges.Values)
+            {
+                foreach (ulong SourceID in e.SourceIDs)
                 {
                     AddEdge(IDToEdge, SourceID, e);
                 }
@@ -136,11 +135,11 @@ namespace AnnotationVizLib.SimpleODataClient
             }
 
             return IDToEdge;
-        } 
+        }
 
         private static void AddEdge(Dictionary<ulong, SortedSet<NeuronEdge>> dict, ulong ChildID, NeuronEdge value)
         {
-            if(!dict.ContainsKey(ChildID))
+            if (!dict.ContainsKey(ChildID))
             {
                 dict.Add(ChildID, new SortedSet<NeuronEdge>());
             }
@@ -151,7 +150,7 @@ namespace AnnotationVizLib.SimpleODataClient
         public static void AppendAreaToConnections(NeuronGraph graph, ODataClient client, ICollection<long> IDs, uint Hops)
         {
             var annotations = new ODataFeedAnnotations();
-             
+
             string queryString = null;
             if ((IDs == null || IDs.Count == 0) && graph.Nodes.Count > 0)
             {
@@ -162,7 +161,7 @@ namespace AnnotationVizLib.SimpleODataClient
             {
                 queryString = string.Format("NetworkEdgeSpatialData(IDs={0},Hops={1})", IDs.ToODataArrayParameterString(), Hops);
             }
-             
+
             Task<IEnumerable<IDictionary<string, object>>> taskStructureDicts = client.FindEntriesAsync(queryString, annotations);
             Debug.Assert(taskStructureDicts != null);
 
@@ -181,12 +180,12 @@ namespace AnnotationVizLib.SimpleODataClient
             }
 
             StructureEdgeDicts = taskStructureDicts.Result;
-            AddSpatialDataToEdges(graph, StructureEdgeDicts, IDToEdge); 
+            AddSpatialDataToEdges(graph, StructureEdgeDicts, IDToEdge);
         }
 
         public static void AddSpatialDataToEdges(NeuronGraph graph, IEnumerable<IDictionary<string, object>> EdgeStructureDicts, Dictionary<ulong, SortedSet<NeuronEdge>> IDToEdge)
         {
-            foreach(IDictionary<string, object> childData in EdgeStructureDicts)
+            foreach (IDictionary<string, object> childData in EdgeStructureDicts)
             {
                 AddAreaToEdges(graph, childData, IDToEdge);
                 AddZToEdges(graph, childData, IDToEdge);

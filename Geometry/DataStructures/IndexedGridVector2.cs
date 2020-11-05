@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Geometry
+﻿namespace Geometry
 {
     /*
     struct IndexedGridVector2
@@ -25,6 +20,6 @@ namespace Geometry
 
     }
      */
-    
+
 }
-     
+

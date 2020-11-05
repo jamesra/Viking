@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Geometry;
+﻿using Geometry;
 using Geometry.Transforms;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.Serialization;
+using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Viking.VolumeModel
@@ -15,9 +13,9 @@ namespace Viking.VolumeModel
     /// This is the base class for transforms that use the original tiles where the number of tiles is 
     /// fixed at each resolution and the size varies
     /// </summary>
-    public abstract class FixedTileCountMapping : MappingBase 
+    public abstract class FixedTileCountMapping : MappingBase
     {
-        private GridRectangle? _VolumeBounds; 
+        private GridRectangle? _VolumeBounds;
         public override GridRectangle ControlBounds
         {
             get
@@ -44,7 +42,7 @@ namespace Viking.VolumeModel
                     _SectionBounds = new GridRectangle?(bounds);
                 }
 
-                return _SectionBounds.Value; 
+                return _SectionBounds.Value;
             }
         }
 
@@ -78,20 +76,22 @@ namespace Viking.VolumeModel
         }
 
         //PORT: Only used for mipmaps so we don't need to know anymore
-        private Pyramid _CurrentPyramid = null; 
+        private Pyramid _CurrentPyramid = null;
 
         /// <summary>
         /// We need to know which pyramid we are working against so we know how many levels are available
         /// </summary>
-        public Pyramid CurrentPyramid { 
+        public Pyramid CurrentPyramid
+        {
             get { return _CurrentPyramid; }
-            set {_CurrentPyramid = value;}
+            set { _CurrentPyramid = value; }
         }
 
         public override int[] AvailableLevels
         {
-            get { 
-                if(_CurrentPyramid == null)
+            get
+            {
+                if (_CurrentPyramid == null)
                     throw new InvalidOperationException("No image pyramid set in FixedTileCountMapping, not using mapping manager?");
 
                 return _CurrentPyramid.GetLevels().ToArray();
@@ -127,13 +127,13 @@ namespace Viking.VolumeModel
             if (info == null)
                 return null;
 
-            return info.TileFileName; 
+            return info.TileFileName;
         }
 
         internal string TileFileName(string filename, int DownsampleLevel)
         {
-            
-      //      string filename = this._TileTransforms[number].TileFileName;
+
+            //      string filename = this._TileTransforms[number].TileFileName;
             /*
             string filename = "";
             
@@ -155,24 +155,24 @@ namespace Viking.VolumeModel
             }
             */
 
-           /* PORT: The viewModel should handle current mode and path
-            string tileFileName = this.Section.Path +
-                                System.IO.Path.DirectorySeparatorChar + CurrentPyramid +
-                                System.IO.Path.DirectorySeparatorChar + DownsampleLevel.ToString("D3") +
-                                System.IO.Path.DirectorySeparatorChar + filename;
-             
-            */
+            /* PORT: The viewModel should handle current mode and path
+             string tileFileName = this.Section.Path +
+                                 System.IO.Path.DirectorySeparatorChar + CurrentPyramid +
+                                 System.IO.Path.DirectorySeparatorChar + DownsampleLevel.ToString("D3") +
+                                 System.IO.Path.DirectorySeparatorChar + filename;
+
+             */
             string tileFileName = CurrentPyramid.Path +
                                 System.IO.Path.DirectorySeparatorChar + DownsampleLevel.ToString("D3") +
                                 System.IO.Path.DirectorySeparatorChar + filename;
 
-          /*  string tileFileName = DownsampleLevel.ToString("D3") +
-                                  System.IO.Path.DirectorySeparatorChar + filename;
-            */
+            /*  string tileFileName = DownsampleLevel.ToString("D3") +
+                                    System.IO.Path.DirectorySeparatorChar + filename;
+              */
             return tileFileName;
-             
+
         }
-        
+
         public FixedTileCountMapping(Section section, string name, string Prefix, string Postfix) :
             base(section, name, Prefix, Postfix)
         {
@@ -186,13 +186,13 @@ namespace Viking.VolumeModel
             //memory leak issues documented on MSDN regarding BinaryFormatters
             //return;
 
-            using(FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
+            using (FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
             {
                 BinaryFormatter binFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                
+
                 //new System.Runtime.Serialization.Formatters.Binary.
 
-                if(_TileTransforms != null)
+                if (_TileTransforms != null)
                     binFormatter.Serialize(fstream, _TileTransforms);
             }
         }
@@ -220,7 +220,7 @@ namespace Viking.VolumeModel
                 Trace.WriteLine(string.Format("Unable to load {0} from cache", CachedTransformsFileName));
                 System.IO.File.Delete(CachedTransformsFileName);
             }
-            
+
             return transforms;
         }
 
@@ -230,7 +230,7 @@ namespace Viking.VolumeModel
                                                 GridQuad SectionVisibleBounds,
                                                 double DownSample)
         {
-            TilePyramid VisibleTiles = new TilePyramid(VisibleBounds); 
+            TilePyramid VisibleTiles = new TilePyramid(VisibleBounds);
 
             double scaledDownsampleLevel = AdjustDownsampleForScale(DownSample);
 
@@ -251,14 +251,14 @@ namespace Viking.VolumeModel
 
             if (roundedDownsample == int.MaxValue || roundedScaledDownsample == int.MaxValue)
                 return VisibleTiles;
-           
+
             ITransform[] Tranforms = this.TileTransforms;
             if (TileTransforms == null)
                 return VisibleTiles;
 
             int ExpectedTileCount = Tranforms.Length;
             List<Tile> TilesToDraw = new List<Tile>(ExpectedTileCount);
-//            List<Tile> TilesToLoad = new List<Tile>(ExpectedTileCount);
+            //            List<Tile> TilesToLoad = new List<Tile>(ExpectedTileCount);
 
             foreach (ITransform T in Tranforms)
             {
@@ -272,7 +272,7 @@ namespace Viking.VolumeModel
                 {
                     //   bool LoadOnly = false; 
                     ITransformInfo T_Info = T as ITransformInfo;
-                    TileTransformInfo info = T_Info.Info as TileTransformInfo; 
+                    TileTransformInfo info = T_Info.Info as TileTransformInfo;
                     string name = TileFileName(info.TileFileName, roundedScaledDownsample);
                     /*
                     if (SectionVisibleBounds != null)
@@ -288,7 +288,7 @@ namespace Viking.VolumeModel
                      */
                     string UniqueID = Tile.CreateUniqueKey(Section.Number, Name, CurrentPyramid.Name, roundedScaledDownsample, info.TileFileName);
                     Tile tile = Global.TileCache.Fetch(UniqueID);
-                    if(tile == null && Global.TileCache.ContainsKey(UniqueID) == false)
+                    if (tile == null && Global.TileCache.ContainsKey(UniqueID) == false)
                     {
                         int MipMapLevels = 1; //No mip maps
                         if (roundedScaledDownsample == this.AvailableLevels[AvailableLevels.Length - 1])
@@ -297,7 +297,7 @@ namespace Viking.VolumeModel
                         //First create a new tile
                         PositionNormalTextureVertex[] verticies = Tile.CalculateVerticies(T_ControlPoints, info);
 
-                        if(T_Triangulation != null && T_Triangulation.TriangleIndicies != null)
+                        if (T_Triangulation != null && T_Triangulation.TriangleIndicies != null)
                         {
 
                             tile = Global.TileCache.ConstructTile(UniqueID,
@@ -305,16 +305,16 @@ namespace Viking.VolumeModel
                                                                  T_Triangulation.TriangleIndicies,
                                                                  this.TilePath + '/' + name,
                                                                  name,
-                                //PORT: TileCacheName(T.Number, roundedDownsample),
+                                                                 //PORT: TileCacheName(T.Number, roundedDownsample),
                                                                  this.Name,
                                                                  roundedScaledDownsample,
                                                                  MipMapLevels);//T.ImageHeight * T.ImageWidth / roundedDownsample);
                         }
                     }
-                    
-                    if(tile != null)
+
+                    if (tile != null)
                         VisibleTiles.AddTile(roundedDownsample, tile);
-                     
+
                     TilesToDraw.Add(tile);
                 }
             }

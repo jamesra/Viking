@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
+﻿using Geometry;
 using Microsoft.SqlServer.Types;
-using WebAnnotationModel;
-using SqlGeometryUtils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using VikingXNA;
-using VikingXNAGraphics; 
+using VikingXNAGraphics;
+using WebAnnotation.UI;
+using WebAnnotation.UI.Actions;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
@@ -24,7 +22,9 @@ namespace WebAnnotation.View
         public Color Color
         {
             get { return upPolyLineView.Color; }
-            set { upPolyLineView.Color = value;
+            set
+            {
+                upPolyLineView.Color = value;
                 downPolyLineView.Color = value;
             }
         }
@@ -52,12 +52,17 @@ namespace WebAnnotation.View
                           VikingXNA.Scene scene,
                           RoundLineCode.RoundLineManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlayShaderEffect overlayEffect,
                           AdjacentLocationLineView[] listToDraw,
                           int VisibleSectionNumber)
         {
             PolyLineView[] linesToDraw = listToDraw.Select(l => l.modelObj.Z < VisibleSectionNumber ? l.downPolyLineView : l.upPolyLineView).ToArray();
-            PolyLineView.Draw(device, scene, lineManager, basicEffect, overlayEffect, linesToDraw);
+            PolyLineView.Draw(device, scene, OverlayStyle.Luma, linesToDraw);
+        }
+
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            throw new NotImplementedException();
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
@@ -68,13 +73,22 @@ namespace WebAnnotation.View
 
             return LocationAction.CREATELINKEDLOCATION;
         }
+
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
+        {
+            throw new NotImplementedException();
+            /*
+            LocationID = this.ID;
+            return LocationAction.NONE;
+            */
+        }
     }
 
     class LocationLineView : LocationLineViewBase
     {
         protected PolyLineView polyLineView;
 
-        
+
         public Color Color
         {
             get { return polyLineView.Color; }
@@ -112,10 +126,21 @@ namespace WebAnnotation.View
                           VikingXNA.Scene scene,
                           RoundLineCode.RoundLineManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlayShaderEffect overlayEffect,
                           LocationLineView[] listToDraw)
         {
-            PolyLineView.Draw(device, scene, lineManager, basicEffect, overlayEffect, listToDraw.Select(l => l.polyLineView).ToArray());
+            PolyLineView.Draw(device, scene, OverlayStyle.Luma, listToDraw.Select(l => l.polyLineView).ToArray());
+        }
+
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            LocationID = this.ID;
+            if (ModifierKeys.ShiftPressed())
+                return LocationAction.NONE;
+            else
+            {
+                return LocationAction.CREATELINKEDLOCATION;
+            }
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
@@ -123,7 +148,7 @@ namespace WebAnnotation.View
             LocationID = this.ID;
             if (ModifierKeys.ShiftPressed())
                 return LocationAction.NONE;
-            else if(ModifierKeys.CtrlPressed())
+            else if (ModifierKeys.CtrlPressed())
             {
                 //Allow user to add a control point if the mouse is not over an existing control point
                 if (!polyLineView.ControlPoints.Select(p => new GridCircle(p, LineWidth / 2.0)).Any(c => c.Contains(WorldPosition)))
@@ -134,8 +159,9 @@ namespace WebAnnotation.View
 
             return LocationAction.CREATELINKEDLOCATION;
         }
+
     }
-    
+
     abstract class LocationLineViewBase : MultipleControlPointLocationCanvasViewBase
     {
         public LocationLineViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
@@ -159,7 +185,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if(!_bbox.HasValue)
+                if (!_bbox.HasValue)
                 {
                     _bbox = this.VolumeShapeAsRendered.BoundingBox();
                 }
@@ -181,7 +207,7 @@ namespace WebAnnotation.View
                 _OverlappedLinks = value;
             }
         }
-        
+
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
             if (PointIntersectsAnyControlPoint(Position))
@@ -196,7 +222,7 @@ namespace WebAnnotation.View
                 return (this.LineWidth / 2.0) - MinDistance;
             }
         }
-                
+
         protected bool PointIntersectsAnyControlPoint(GridVector2 WorldPosition)
         {
             GridCircle testCircle = new GridCircle(WorldPosition, ControlPointRadius);
@@ -211,6 +237,46 @@ namespace WebAnnotation.View
             double MinDistance;
             int iNearest = lineSegs.NearestSegment(WorldPosition, out MinDistance);
             return MinDistance < this.LineWidth / 2.0f;
+        }
+
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            LocationID = this.ID;
+
+            if (ModifierKeys.ShiftPressed())
+            {
+                return LocationAction.TRANSLATE;
+            }
+            else
+            {
+                if (VisibleSectionNumber == (int)this.modelObj.Z)
+                {
+                    return LocationAction.NONE;// return LocationAction.CREATELINK;
+                }
+                else
+                {
+                    return LocationAction.NONE;
+                }
+            }
+        }
+
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
+        {
+            List<IAction> actions = new List<IAction>();
+            if (path.HasSelfIntersection)
+            {
+                GridPolygon closedpath = new GridPolygon(path.SimplifiedFirstLoop);
+                ChangeToPolygonAction action = new ChangeToPolygonAction(this.modelObj, closedpath);
+                actions.Add(action);
+            }
+            else
+            {
+                GridPolyline openPath = new GridPolyline(path.SimplifiedPath);
+                ChangeToPolylineAction action = new ChangeToPolylineAction(this.modelObj, openPath);
+                actions.Add(action);
+            }
+
+            return actions;
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
@@ -286,7 +352,7 @@ namespace WebAnnotation.View
             {
                 if (_VolumeShape == null)
                 {
-                    _VolumeShape = this.VolumeControlPoints.ToSqlGeometry().STBuffer(Math.Max(LineWidth, ControlPointRadius));                 
+                    _VolumeShape = this.VolumeControlPoints.ToSqlGeometry().STBuffer(Math.Max(LineWidth, ControlPointRadius));
                 }
 
                 return _VolumeShape;

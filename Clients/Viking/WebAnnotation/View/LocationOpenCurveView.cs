@@ -1,24 +1,24 @@
-﻿using System;
+﻿using Geometry;
+using Microsoft.SqlServer.Types;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using SqlGeometryUtils;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using Microsoft.SqlServer.Types;
-using Microsoft.Xna.Framework;
-using SqlGeometryUtils;
-using WebAnnotationModel;
-using VikingXNAGraphics;
-using Microsoft.Xna.Framework.Graphics;
 using VikingXNA;
+using VikingXNAGraphics;
+using WebAnnotation.UI;
+using WebAnnotation.UI.Actions;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
     class LocationOpenCurveView : LocationCurveView, IColorView, IRenderedLabelView
     {
         public static uint NumInterpolationPoints = Global.NumOpenCurveInterpolationPoints;
-        
+
         public CurveView curveView;
         public CurveLabel curveLabel;
         public CurveLabel curveParentLabel;
@@ -100,7 +100,7 @@ namespace WebAnnotation.View
             curveParentLabel.Max_Curve_Length_To_Use_Normalized = (float)curveParentLabel.Text.Length / TotalLabelLength;
             curveParentLabel.LabelEndDistance = 0.90f;
         }
-        
+
         private GridVector2[] _MosaicCurveControlPoints;
         public override GridVector2[] MosaicCurveControlPoints
         {
@@ -142,12 +142,12 @@ namespace WebAnnotation.View
                 return _RenderedVolumeShape;
             }
         }
-        
+
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,
                           RoundCurve.CurveManager curveManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlayShaderEffect overlayEffect,
                           LocationOpenCurveView[] listToDraw)
         {
             CurveView.Draw(device, scene, curveManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
@@ -172,7 +172,7 @@ namespace WebAnnotation.View
             RoundCurve.CurveManager curveManager = DeviceEffectsStore<RoundCurve.CurveManager>.TryGet(device);
             if (curveManager == null)
                 return;
-            
+
             CurveLabel.Draw(device, scene, spriteBatch, font, curveManager, new CurveLabel[] { curveLabel, curveParentLabel });
         }
 
@@ -192,25 +192,41 @@ namespace WebAnnotation.View
             }
         }
 
-        
+
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
             if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
             {
                 CreateLabelViews(VolumeControlPoints, this.ParentID);
             }
-            
+
             base.OnParentPropertyChanged(o, args);
         }
 
         internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            if(IsLocationPropertyAffectingLabels(args.PropertyName))
+            if (IsLocationPropertyAffectingLabels(args.PropertyName))
             {
                 CreateLabelViews(VolumeControlPoints, this.ParentID);
             }
             base.OnObjPropertyChanged(o, args);
         }
 
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
+        {
+            List<IAction> listActions = new List<IAction>();
+            var mapper = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+
+            if (path.HasSelfIntersection == false)
+            {
+                //If it is an open curve then offer to replace our curve with the new shape.
+                IAction changeContour = new Change1DContourAction(this.modelObj, new GridPolyline(path.SimplifiedPath, false));
+                listActions.Add(changeContour);
+            }
+
+            listActions.AddRange(interaction_log.IdentifyPossibleLinkActions(this.modelObj.ID));
+            return listActions;
+
+        }
     }
 }

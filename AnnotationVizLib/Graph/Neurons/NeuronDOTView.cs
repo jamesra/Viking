@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text; 
 
 namespace AnnotationVizLib
 {
@@ -21,7 +19,7 @@ namespace AnnotationVizLib
 
             DotGraph.Attributes.Add("nslimit", Math.Ceiling(Math.Sqrt(graph.Nodes.Count)).ToString());
             DotGraph.Attributes.Add("mclimit", Math.Ceiling(Math.Sqrt(graph.Nodes.Count)).ToString());
-            
+
             foreach (NeuronEdge edge in graph.Edges.Values)
             {
                 GraphViewEdge<long> DOTEdge = GraphVizEdgeFromNeuronEdge(DotGraph, edge);
@@ -38,17 +36,17 @@ namespace AnnotationVizLib
 
             if (node.Structure.Label == null)
             {
-                nodelabel = node.Key.ToString(); 
+                nodelabel = node.Key.ToString();
             }
 
-            DotNode.label = nodelabel; 
+            DotNode.label = nodelabel;
 
             DotNode.AddStandardizedAttributes(DOTAttributes.StandardNodeDOTAttributes);
 
             IDictionary<string, string> AttribsForLabel = AttributeMapper.AttribsForLabel(nodelabel, DOTAttributes.StandardLabelToNodeDOTAppearance);
 
             string label = node.Key.ToString() + " " + node.Structure.Label;
-              
+
             if (AttribsForLabel == null)
             {
                 if (label.Length > 0)
@@ -74,11 +72,11 @@ namespace AnnotationVizLib
             float additionFactor = 1f;
             float mulFactor = 0.5f;
             //Set the arrow properties 
-            string tooltip = edge.ToString(); 
+            string tooltip = edge.ToString();
             float arrowsize = additionFactor;
             float pensize = additionFactor;
 
-             
+
 
             DotEdge.from = edge.SourceNodeKey;
             DotEdge.to = edge.TargetNodeKey;

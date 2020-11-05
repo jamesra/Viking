@@ -1,11 +1,9 @@
-﻿using System;
+﻿using Annotation;
+using ProtoBuf;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.ServiceModel;
-using System.Runtime.Serialization; 
-using ProtoBuf;
-using Annotation;
+using System.Runtime.Serialization;
 
 namespace AnnotationService.Types
 {
@@ -33,7 +31,7 @@ namespace AnnotationService.Types
             set { _Radius = value; }
         }
 
-        
+
     }
 
 
@@ -74,8 +72,10 @@ namespace AnnotationService.Types
         public Int64 Section
         {
             get { return _Section; }
-            set { _Section = value;
-                  this._Position.Z = (double)value; 
+            set
+            {
+                _Section = value;
+                this._Position.Z = (double)value;
             }
         }
 
@@ -94,7 +94,7 @@ namespace AnnotationService.Types
             get { return _VolumePosition; }
             set { _VolumePosition = value; }
         }
-        
+
         //[ProtoMember(5)]
         //[DataMember]
         public System.Data.Entity.Spatial.DbGeometry MosaicShape
@@ -110,11 +110,12 @@ namespace AnnotationService.Types
             //set { _MosaicShape = value; }
         }
 
-       // [ProtoMember(6)]
+        // [ProtoMember(6)]
         //[DataMember]
         public System.Data.Entity.Spatial.DbGeometry VolumeShape
         {
-            get {
+            get
+            {
                 if (_VolumeShape == null && _VolumeShapeWKB != null)
                 {
                     _VolumeShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(_VolumeShapeWKB);
@@ -122,7 +123,7 @@ namespace AnnotationService.Types
                 return _VolumeShape;
             }
             //set { _VolumeShape = value; }
-            
+
         }
 
         [ProtoMember(7)]
@@ -171,24 +172,25 @@ namespace AnnotationService.Types
         [Column("Links")]
         public Int64[] Links
         {
-            get {
+            get
+            {
                 if (_Links == null)
-                    return null;  
-                if(_Links.Count == 0)
                     return null;
-                else 
+                if (_Links.Count == 0)
+                    return null;
+                else
                     return _Links.ToArray();
             }
             set
             {
-                if(value == null)
+                if (value == null)
                 {
                     _Links = null;
                 }
                 else
                 {
                     _Links = new SortedSet<Int64>(value);
-                } 
+                }
             }
         }
 
@@ -259,7 +261,7 @@ namespace AnnotationService.Types
         {
             if (this._Links == null)
                 _Links = new SortedSet<Int64>();
-            if(linkedID == this.ID)
+            if (linkedID == this.ID)
             {
                 throw new ArgumentException("Cannot link location to itself: ID = " + this.ID.ToString());
             }
@@ -286,7 +288,7 @@ namespace AnnotationService.Types
         }
 
 
-         
+
         public static Int64 MeasureEncodedObjectSize(Location loc)
         {
             DataContractSerializer ds = new DataContractSerializer(loc.GetType());
@@ -305,7 +307,7 @@ namespace AnnotationService.Types
         }
 
         public static Int64 MeasureProtobufEncodedObjectSize(Location loc)
-        {  
+        {
             using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
                 Serializer.Serialize(ms, loc);
@@ -337,9 +339,9 @@ namespace AnnotationService.Types
                 return output;
             }
 
-           
+
         }
-        
+
     }
 
     [ProtoContract]
@@ -359,7 +361,7 @@ namespace AnnotationService.Types
             }
             set
             {
-                _ChangedColumnMask = value; 
+                _ChangedColumnMask = value;
             }
         }
     }

@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace AnnotationVizLib.OData
+{
 
-
-namespace AnnotationVizLib.OData
-{ 
-   
     public static class ODataExtensions
     {
         public static UnitsAndScale.Scale ToGeometryScale(this ODataClient.Geometry.Scale scale)

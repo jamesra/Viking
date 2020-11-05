@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using WebAnnotationModel.Service;
+﻿using AnnotationService.Types;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using AnnotationService.Types;
 
 namespace WebAnnotationModel.Objects
 {
@@ -23,7 +19,7 @@ namespace WebAnnotationModel.Objects
             return Data;
         }
 
-        bool _SynchCalled = false; 
+        bool _SynchCalled = false;
         /// <summary>
         /// Called once when the object is first created
         /// </summary>
@@ -31,8 +27,8 @@ namespace WebAnnotationModel.Objects
         internal virtual void Synch(T newdata)
         {
             Debug.Assert(!_SynchCalled);
-            this.Data = newdata; 
-            _SynchCalled = true; 
+            this.Data = newdata;
+            _SynchCalled = true;
         }
 
         /// <summary>
@@ -56,7 +52,7 @@ namespace WebAnnotationModel.Objects
                 OnPropertyChanged("");
         }
 
-        
+
 
         public DBACTION DBAction
         {
@@ -69,10 +65,10 @@ namespace WebAnnotationModel.Objects
                 if (Data.DBAction == DBACTION.INSERT && value == DBACTION.UPDATE)
                     return;
 
-                OnPropertyChanging("DBAction"); 
+                OnPropertyChanging("DBAction");
 
                 //Just a precaution. I haven't thought whether I could undelete an object
-           //     Debug.Assert(false == (Data.DBAction == DBACTION.DELETE && value != DBACTION.DELETE));
+                //     Debug.Assert(false == (Data.DBAction == DBACTION.DELETE && value != DBACTION.DELETE));
 
                 Data.DBAction = value;
 
@@ -106,18 +102,22 @@ namespace WebAnnotationModel.Objects
         }
 
         private event PropertyChangingEventHandler _PropertyChanging;
-        private int PropertyChangingSubCount = 0; 
+        private int PropertyChangingSubCount = 0;
 
         public event System.ComponentModel.PropertyChangingEventHandler PropertyChanging
         {
-            add { _PropertyChanging += value;
-            PropertyChangingSubCount++;
-  //          Trace.WriteLine("Add OnPropertyChanging: " + PropertyChangingSubCount.ToString() + ", " + value.ToString());
+            add
+            {
+                _PropertyChanging += value;
+                PropertyChangingSubCount++;
+                //          Trace.WriteLine("Add OnPropertyChanging: " + PropertyChangingSubCount.ToString() + ", " + value.ToString());
             }
-            remove { _PropertyChanging -= value;
-            PropertyChangingSubCount--;
-            Debug.Assert(PropertyChangingSubCount >= 0, "If subscription count is negative the wrong object has events cancelled and there is a memory leak");
-  //          Trace.WriteLine("Remove OnPropertyChanging: " + PropertyChangingSubCount.ToString() + ", " + value.ToString()); 
+            remove
+            {
+                _PropertyChanging -= value;
+                PropertyChangingSubCount--;
+                Debug.Assert(PropertyChangingSubCount >= 0, "If subscription count is negative the wrong object has events cancelled and there is a memory leak");
+                //          Trace.WriteLine("Remove OnPropertyChanging: " + PropertyChangingSubCount.ToString() + ", " + value.ToString()); 
             }
         }
 
@@ -140,23 +140,27 @@ namespace WebAnnotationModel.Objects
 
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged
         {
-            add { _PropertyChanged += value;
+            add
+            {
+                _PropertyChanged += value;
                 PropertyChangedSubCount++;
- //               Trace.WriteLine("Add OnPropertyChanged: " + PropertyChangedSubCount.ToString() + ", " + value.ToString());
-                }
-            remove { _PropertyChanged -= value; 
+                //               Trace.WriteLine("Add OnPropertyChanged: " + PropertyChangedSubCount.ToString() + ", " + value.ToString());
+            }
+            remove
+            {
+                _PropertyChanged -= value;
                 PropertyChangedSubCount--;
                 Debug.Assert(PropertyChangedSubCount >= 0, "If subscription count is negative the wrong object has events cancelled and there is a memory leak");
- //               Trace.WriteLine("Remove OnPropertyChanged: " + PropertyChangedSubCount.ToString() + ", " + value.ToString()); 
-                }
+                //               Trace.WriteLine("Remove OnPropertyChanged: " + PropertyChangedSubCount.ToString() + ", " + value.ToString()); 
+            }
         }
 
         #endregion
 
         public object Clone()
         {
-            WCFObjBase<T> objClone = Activator.CreateInstance(this.GetType(), new object[] { this.Data } ) as WCFObjBase<T>;
-            return objClone; 
+            WCFObjBase<T> objClone = Activator.CreateInstance(this.GetType(), new object[] { this.Data }) as WCFObjBase<T>;
+            return objClone;
 
         }
 

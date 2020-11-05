@@ -1,19 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using Geometry;
-using WebAnnotation.View;
-using Viking.VolumeModel;
+﻿using Geometry;
 using SqlGeometryUtils;
-using VikingXNAGraphics;
-using System.Windows.Forms;
-using System.Diagnostics;
-using WebAnnotation;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Windows.Forms;
+using VikingXNAGraphics;
 using VikingXNAWinForms;
+using WebAnnotation.View;
+using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -28,7 +24,7 @@ namespace WebAnnotation.UI.Commands
             }
             set
             {
-                _sizeScale = value; 
+                _sizeScale = value;
             }
         }
 
@@ -48,14 +44,14 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnSizeScaleChanged()
         {
-            curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color); 
+            curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
         }
 
         protected override void OnTranslationChanged()
         {
             curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
         }
-         
+
         protected override double CalculateFinalLineWidth()
         {
             return Global.DefaultClosedLineWidth;
@@ -68,7 +64,7 @@ namespace WebAnnotation.UI.Commands
                                         double LineWidth,
                                         OnCommandSuccess success_callback) : base(parent, VolumePosition, OriginalMosaicControlPoints, color, LineWidth, success_callback)
         { }
-         
+
 
         protected override CurveView CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color)
         {
@@ -82,7 +78,7 @@ namespace WebAnnotation.UI.Commands
             ICollection<GridVector2> scaledPoints = rotatedPoints.Scale(this.SizeScale, this.VolumeRotationOrigin);
             ICollection<GridVector2> translatedPoints = scaledPoints.Translate(this.VolumePositionDeltaSum);
             return translatedPoints.ToArray();
-        } 
+        }
 
         protected override void Execute()
         {
@@ -126,7 +122,7 @@ namespace WebAnnotation.UI.Commands
                 curveView.LineWidth = CalculateFinalLineWidth();
             }
         }
-        
+
         protected override void OnAngleChanged()
         {
             curveView = CreateView(CalculateTranslatedMosaicControlPoints(),
@@ -137,7 +133,7 @@ namespace WebAnnotation.UI.Commands
         {
             curveView = CreateView(CalculateTranslatedMosaicControlPoints(),
                                           curveView.Color);
-        } 
+        }
 
         protected override double CalculateFinalLineWidth()
         {
@@ -170,7 +166,7 @@ namespace WebAnnotation.UI.Commands
 
         private int scroll_wheel_delta = 0;
         protected override void OnMouseWheel(object sender, MouseEventArgs e)
-        { 
+        {
             if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftShift) ||
                 System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.RightShift))
             {
@@ -232,7 +228,7 @@ namespace WebAnnotation.UI.Commands
         protected GridVector2[] OriginalVolumeControlPoints;
         protected double OriginalLineWidth;
 
-       
+
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double LineWidth);
         protected OnCommandSuccess success_callback;
 
@@ -242,7 +238,7 @@ namespace WebAnnotation.UI.Commands
         public virtual string[] HelpStrings
         {
             get
-            { 
+            {
                 List<string> s = new List<string>(TranslateCurveLocationCommand.DefaultMouseHelpStrings);
                 s.AddRange(RotateTranslateScaleCommand.DefaultMouseHelpStrings);
                 s.AddRange(TranslateScaleCommandBase.DefaultMouseHelpStrings);
@@ -268,7 +264,7 @@ namespace WebAnnotation.UI.Commands
             "Mouse Wheel: Change annotation size",
             "SHIFT + Scroll wheel: Scale annotation size slowly"
         };
-         
+
         protected override GridVector2 VolumeRotationOrigin
         {
             get
@@ -278,10 +274,10 @@ namespace WebAnnotation.UI.Commands
         }
 
         public TranslateCurveLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        GridVector2 VolumePosition, 
+                                        GridVector2 VolumePosition,
                                         GridVector2[] OriginalMosaicControlPoints,
                                         Microsoft.Xna.Framework.Color color,
-                                        double LineWidth, 
+                                        double LineWidth,
                                         OnCommandSuccess success_callback) : base(parent, VolumePosition)
         {
             //this.OriginalVolumePosition = mapping.SectionToVolume(MosaicPosition);
@@ -294,16 +290,16 @@ namespace WebAnnotation.UI.Commands
         protected abstract CurveView CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color);
 
         protected override void OnTranslationChanged()
-        { 
+        {
             this.curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
         }
-                 
+
         protected override void OnKeyDown(object sender, KeyEventArgs e)
         {
-            if(e.Control)
+            if (e.Control)
             {
                 GridVector2 WorldPosition = this.oldWorldPosition;
-                List<HitTestResult> listHitResults = Overlay.GetAnnotationsAtPosition(WorldPosition);
+                List<HitTestResult> listHitResults = Overlay.GetAnnotations(WorldPosition);
                 List<HitTestResult> listCurves = listHitResults.Where(h => h.Z == Parent.Section.Number && h.obj as LocationOpenCurveView != null).ToList();
 
                 if (listCurves.Count == 0)
@@ -322,7 +318,7 @@ namespace WebAnnotation.UI.Commands
             {
                 base.OnKeyDown(sender, e);
             }
-        } 
+        }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
                                     VikingXNA.Scene scene,
@@ -345,10 +341,10 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public  string[] HelpStrings
+        public string[] HelpStrings
         {
             get
-            { 
+            {
                 List<string> s = new List<string>(TranslateScaleCommandBase.DefaultMouseHelpStrings);
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 return s.ToArray();
@@ -357,7 +353,7 @@ namespace WebAnnotation.UI.Commands
 
         public delegate void OnCommandSuccess(GridVector2 VolumePosition, GridVector2 MosaicPosition, double NewRadius);
         OnCommandSuccess success_callback;
-        
+
         protected double RadiusScale
         {
             get
@@ -370,7 +366,7 @@ namespace WebAnnotation.UI.Commands
         {
             CreateView(this.TranslatedVolumePosition, OriginalCircle.Radius * this.RadiusScale, circleView.Color);
         }
-         
+
         public TranslateCircleLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridCircle volume_circle,
                                         Microsoft.Xna.Framework.Color color,
@@ -385,7 +381,7 @@ namespace WebAnnotation.UI.Commands
         {
             circleView = new CircleView(new GridCircle(Position, Radius * this.RadiusScale), color);
         }
-        
+
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
             //Reset size scale if the middle mouse button is pushed
@@ -398,14 +394,14 @@ namespace WebAnnotation.UI.Commands
             {
                 base.OnMouseDown(sender, e);
             }
-        } 
+        }
 
         protected override void Execute()
         {
             if (this.success_callback != null)
             {
                 this.success_callback(this.TranslatedVolumePosition, this.TranslatedMosaicPosition, this.circleView.Radius);
-            } 
+            }
 
             base.Execute();
         }
@@ -425,13 +421,13 @@ namespace WebAnnotation.UI.Commands
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
             //TODO: Translate the LocationCanvasView before it is drawn
-            CircleView.Draw(graphicsDevice, scene, basicEffect, Parent.AnnotationOverlayEffect, new CircleView[] { this.circleView });
+            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new CircleView[] { this.circleView });
             //LocationObjRenderer.DrawBackgrounds(items, graphicsDevice, basicEffect, Parent.annotationOverlayEffect, Parent.LumaOverlayLineManager, scene, Parent.Section.Number);            
         }
         public static void DefaultSuccessCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition)
         {
             DefaultSuccessNoSaveCallback(loc, WorldPosition, MosaicPosition);
-            Store.Locations.Save();
+            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         public static void DefaultSuccessNoSaveCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition)

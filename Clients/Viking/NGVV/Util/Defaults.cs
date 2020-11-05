@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Drawing;
-using System.Windows.Forms;
+﻿using System.Drawing;
 
 namespace Viking.Common
 {
@@ -40,7 +35,7 @@ namespace Viking.Common
                 */
 
         //Default Settings
-//        public Settings Settings = new Settings();
+        //        public Settings Settings = new Settings();
 
         //Font Info 
         public Font SchematicNameFont = new Font("Arial Black", 10);

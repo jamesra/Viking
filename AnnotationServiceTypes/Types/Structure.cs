@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.ServiceModel;
-using System.Runtime.Serialization;
+﻿using Annotation;
 using ProtoBuf;
-using Annotation;
+using System;
+using System.Runtime.Serialization;
 
 namespace AnnotationService.Types
 {
-    
+
     [ProtoContract]
     [DataContract]
     public class CreateStructureRetval
@@ -23,7 +19,7 @@ namespace AnnotationService.Types
 
         [ProtoMember(2)]
         [DataMember]
-        public Location location { get { return _location; } set { _location = value; }  }
+        public Location location { get { return _location; } set { _location = value; } }
 
         public CreateStructureRetval(Structure s, Location l)
         {
@@ -49,7 +45,7 @@ namespace AnnotationService.Types
         private string _Label;
         private string _Username;
         private string _Xml;
-        
+
         [DataMember]
         [ProtoMember(1)]
         public Int64 TypeID

@@ -8,6 +8,7 @@ using Geometry;
 using AnnotationVizLib;
 using System.Drawing;
 using Annotation.Interfaces;
+using UnitsAndScale;
 
 namespace MorphologyMesh
 {
@@ -192,7 +193,7 @@ namespace MorphologyMesh
         /// <summary>
         /// Scale should be the same in all three axes in a DAE scene
         /// </summary>
-        AxisUnits Scale { get; }
+        UnitsAndScale.IAxisUnits Scale { get; }
 
         IReadOnlyDictionary<ulong, StructureModel> RootModels { get; }
         IReadOnlyDictionary<ulong, StructureModel> StructureModels { get; }
@@ -218,7 +219,7 @@ namespace MorphologyMesh
         #region IColladaScene
         string IColladaScene.Title => SceneTitle;
 
-        public AxisUnits Scale { get; private set; }
+        public IAxisUnits Scale { get; private set; }
 
         IReadOnlyDictionary<ulong, StructureModel> IColladaScene.RootModels => RootModels;
 
@@ -228,7 +229,7 @@ namespace MorphologyMesh
         #endregion
 
 
-        public BasicColladaView(AxisUnits scale, StructureMorphologyColorMap colormap)
+        public BasicColladaView(IAxisUnits scale, StructureMorphologyColorMap colormap)
         {
             Colormap = colormap;
             if (Colormap == null)
@@ -330,7 +331,7 @@ namespace MorphologyMesh
     /// </summary>
     public class MorphologyColladaView : IColladaScene
     {
-        public readonly Scale Scale;
+        public readonly IScale Scale;
 
         public string SceneTitle = null;
 
@@ -345,7 +346,7 @@ namespace MorphologyMesh
         #region IColladaScene
         string IColladaScene.Title => SceneTitle;
 
-        AxisUnits IColladaScene.Scale => Scale.X;
+        IAxisUnits IColladaScene.Scale => Scale.X;
 
         IReadOnlyDictionary<ulong, StructureModel> IColladaScene.RootModels => RootModels;
 
@@ -355,7 +356,7 @@ namespace MorphologyMesh
         #endregion
 
 
-        public MorphologyColladaView(Geometry.Scale scale, StructureMorphologyColorMap colormap)
+        public MorphologyColladaView(UnitsAndScale.IScale scale, StructureMorphologyColorMap colormap)
         {
             Colormap = colormap;
             if (Colormap == null)

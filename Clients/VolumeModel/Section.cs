@@ -1,12 +1,9 @@
-﻿using System;
+﻿using Geometry;
+using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using System.Xml.Linq;
 using System.Linq;
-using System.Xml;
-using System.IO;
-using Geometry;
+using System.Xml.Linq;
 using Utils;
 using Viking.Common.UI;
 
@@ -74,7 +71,7 @@ namespace Viking.VolumeModel
         /// The volume this section belongs to
         /// </summary>
         public Volume volume;
-        
+
         #region Channel & Transform Inventory & State
 
         /// <summary>
@@ -110,7 +107,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The names of all channels in this section
         /// </summary>
-        public List<string> ChannelNames = new List<string>(); 
+        public List<string> ChannelNames = new List<string>();
 
         #endregion
 
@@ -123,12 +120,12 @@ namespace Viking.VolumeModel
         /// This transform contains the tile transformation for mosaics (usually grid.mosaic) which will be warped into volume space
         /// </summary>
         public List<string> VolumeTransformList = new List<string>();
-         
+
         public UnitsAndScale.IAxisUnits XYScale
         {
             get
-            { 
-                return this.volume.DefaultXYScale; 
+            {
+                return this.volume.DefaultXYScale;
             }
         }
 
@@ -163,7 +160,7 @@ namespace Viking.VolumeModel
                 return;
 
             //Launch a separate thread to begin warping
-            
+
             //System.Threading.ThreadStart threadDelegate = new System.Threading.ThreadStart(map.Warp);
             System.Threading.ThreadPool.QueueUserWorkItem(map.Warp);
             //System.Threading.Thread newThread = new System.Threading.Thread(threadDelegate);
@@ -186,7 +183,7 @@ namespace Viking.VolumeModel
             Debug.Assert(sectionElement != null);
 
             this.Name = sectionElement.HasAttributeCaseInsensitive("name") ? sectionElement.GetAttributeCaseInsensitive("name").Value : null;
-            this.Number = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(sectionElement,"number").Value);
+            this.Number = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(sectionElement, "number").Value);
             if (this.Name == null)
                 this.Name = this.Number.ToString("D4");
 
@@ -269,11 +266,11 @@ namespace Viking.VolumeModel
                         {
                             System.Diagnostics.Trace.WriteLine(string.Format("Unable to parse Tileset element of Section #{0}", this.Number));
                             continue;
-                        } 
+                        }
 
                         this.AddTileset(tilegridmapping);
                         DefaultTileset = tilegridmapping.Name;
-                        
+
                         /*PORT: The viewmodel needs to set this
                         if (UI.State.CurrentMode.Length == 0 || UI.State.CurrentMode == "8-bit")
                             UI.State.CurrentMode = mosaicTransformPath;
@@ -307,7 +304,7 @@ namespace Viking.VolumeModel
                         }
 
                         break;
-                    
+
 
                 }
             }
@@ -339,12 +336,12 @@ namespace Viking.VolumeModel
             catch (FormatException e)
             {
                 throw new ArgumentException("The name of each directory in a volume must start with a number indicating which section the directory contains.\n" +
-                                                     "This directory did not have a section number: " + path, e); 
+                                                     "This directory did not have a section number: " + path, e);
                 /*PORT
                 System.Windows.Forms.MessageBox.Show("The name of each directory in a volume must start with a number indicating which section the directory contains.\n" +
                                                      "This directory did not have a section number: " + path);
                  */
-                
+
 
             }
 
@@ -353,18 +350,18 @@ namespace Viking.VolumeModel
 
 
         protected void AddTileset(TileGridMapping mapping)
-        { 
+        {
             WarpedTo.Add(mapping.Name, mapping);
 
             TilesetNames.Add(mapping.Name);
             VolumeTransformList.Add(mapping.Name);
 
-            ChannelNames.Add(mapping.Name); 
+            ChannelNames.Add(mapping.Name);
         }
 
         public void AddOCPTileserver(TileServerInfo info)
         {
-            foreach(string channelName in info.Channels.Select(c => c.Name))
+            foreach (string channelName in info.Channels.Select(c => c.Name))
             {
                 string Name = "OCP-" + channelName;
                 OCPTileServerMapping mapping = new OCPTileServerMapping(this,
@@ -383,12 +380,12 @@ namespace Viking.VolumeModel
                 ChannelNames.Add(mapping.Name);
                 DefaultTileset = mapping.Name;
             }
-            
+
         }
 
-        
-        
-    
+
+
+
         protected void LoadLocal(string path)
         {
             /*

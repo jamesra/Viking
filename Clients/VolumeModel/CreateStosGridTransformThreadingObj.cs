@@ -1,13 +1,10 @@
-﻿using System;
-using System.Diagnostics; 
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Xml.Linq; 
-using Geometry;
-using System.IO;
+﻿using Geometry;
 using Geometry.Transforms;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
+using System.Xml.Linq;
 
 namespace Viking.VolumeModel
 {
@@ -25,11 +22,11 @@ namespace Viking.VolumeModel
 
         public ITransform stosTransform;
 
-        protected DateTime? lastModified; 
+        protected DateTime? lastModified;
 
         public override string ToString()
         {
-            return element.ToString(); 
+            return element.ToString();
         }
 
         public CreateStosTransformThreadingObj(Stream stream, XElement reader, DateTime LastModified, string LocalCacheDir)
@@ -56,7 +53,7 @@ namespace Viking.VolumeModel
         }
 
         public void ThreadPoolCallback(Object threadContext)
-        {  
+        {
             if (stream != null)
             {
                 //stosTransform = new StosGridTransform(stream, element);
@@ -78,7 +75,7 @@ namespace Viking.VolumeModel
                 {
                     stream.Close();
                     stream.Dispose();
-                    stream = null; 
+                    stream = null;
                 }
             }
             else if (LocalCachePath != null)
@@ -113,7 +110,7 @@ namespace Viking.VolumeModel
             DoneEvent.Set();
         }
 
-       
+
 
         #region IDisposable Members
 
@@ -123,7 +120,7 @@ namespace Viking.VolumeModel
             {
                 DoneEvent.Close();
                 DoneEvent.Dispose();
-                DoneEvent = null; 
+                DoneEvent = null;
             }
 
             if (stream != null)

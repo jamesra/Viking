@@ -1,15 +1,13 @@
-﻿using System;
+﻿using Geometry;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using VikingMeshing = Geometry.Meshing;
+using System.Linq;
 using TriangleNet;
-using TriangleNet.Meshing;
 using TriangleNet.Geometry;
+using TriangleNet.Meshing;
 using TriVertex = TriangleNet.Geometry.Vertex;
+using VikingMeshing = Geometry.Meshing;
 
 namespace TriangleNet
 {
@@ -256,7 +254,7 @@ namespace TriangleNet
         /// <param name="input">Polygon to generate faces for</param>
         /// <param name="internalPoints">Additional points inside the polygon which should be included in the triangulation</param>
         /// <returns></returns>
-        public static IMesh Triangulate(this GridPolygon input, ICollection<IPoint2D> internalPoints = null, bool UseSteiner=true)
+        public static IMesh Triangulate(this GridPolygon input, ICollection<IPoint2D> internalPoints = null, bool UseSteiner = true)
         {
             TriangleNet.Geometry.IPolygon polygon = input.CreatePolygon();
 
@@ -273,7 +271,7 @@ namespace TriangleNet
             constraints.Convex = false;
 
             QualityOptions quality = new QualityOptions();
-            if(UseSteiner)
+            if (UseSteiner)
                 quality.SteinerPoints = (polygon.Points.Count / 2) + 1;
 
             IMesh mesh = polygon.Triangulate(constraints, quality);
@@ -293,13 +291,14 @@ namespace TriangleNet
 
             List<TriVertex> tri_verts = input_mesh.Verticies.Select(v => v.ToTriangleNetVertex()).ToList();
 
-            foreach(TriVertex v in tri_verts)
+            foreach (TriVertex v in tri_verts)
             {
                 fake_poly.Add(v);
             }
 
             List<Segment> tri_segments = input_mesh.Edges.Values.Where(seg => input_mesh.Verticies[seg.A].Position.XY() != input_mesh.Verticies[seg.B].Position.XY()).
-                                                                            Select(seg => {
+                                                                            Select(seg =>
+                                                                            {
                                                                                 TriVertex seg_v1 = input_mesh.Verticies[seg.A].ToTriangleNetVertex();
                                                                                 TriVertex seg_v2 = input_mesh.Verticies[seg.B].ToTriangleNetVertex();
 
@@ -348,7 +347,7 @@ namespace TriangleNet
         {
             GridPolygon[] ExteriorPolygons = Polygons.Select(p => new GridPolygon(p.ExteriorRing)).ToArray();
 
-            return Triangulate(ExteriorPolygons); 
+            return Triangulate(ExteriorPolygons);
         }
 
         /*
@@ -413,7 +412,7 @@ namespace TriangleNet
             List<GridVector2> points = pointToPolyMap.Keys.Distinct().ToList();
 
             TriangleNet.Geometry.Polygon polygon = new TriangleNet.Geometry.Polygon(points.Count);
-            
+
             foreach (GridVector2 p in points)
             {
                 polygon.Add(new TriVertex(p.X, p.Y));
@@ -422,14 +421,14 @@ namespace TriangleNet
 
             //If there are not enough points to triangulate return null
             if (polygon.Points.Count < 3)
-                return null; 
+                return null;
 
             ConstraintOptions constraints = new ConstraintOptions();
             constraints.ConformingDelaunay = false;
             constraints.Convex = true;
 
             TriangleNet.Meshing.IMesh mesh = TriangleNet.Geometry.ExtensionMethods.Triangulate(polygon, constraints);
-            
+
             return mesh;
         }
 

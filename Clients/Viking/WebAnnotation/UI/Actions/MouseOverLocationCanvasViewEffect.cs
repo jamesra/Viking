@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotation.View;
-using VikingXNAGraphics;
+﻿using VikingXNAGraphics;
 
 namespace WebAnnotation.Actions
 {
@@ -20,12 +14,12 @@ namespace WebAnnotation.Actions
             get { return _viewObj; }
             set
             {
-                if(_viewObj != null)
+                if (_viewObj != null)
                 {
                     RemoveEffect(_viewObj);
                 }
 
-                if(value != null)
+                if (value != null)
                 {
                     _viewObj = value;
                     ApplyEffect(_viewObj);
@@ -42,7 +36,7 @@ namespace WebAnnotation.Actions
         protected void ApplyEffect(object view_obj)
         {
             IColorView cView = view_obj as IColorView;
-            if(cView != null)
+            if (cView != null)
             {
                 this.OriginalAlpha = cView.Alpha;
                 cView.Alpha /= 2.0f;

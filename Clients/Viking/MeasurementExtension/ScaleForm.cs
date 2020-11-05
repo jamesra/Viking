@@ -1,10 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace MeasurementExtension
@@ -12,12 +6,12 @@ namespace MeasurementExtension
     public partial class ScaleForm : Form
     {
         public string UnitsOfMeasure;
-        public double UnitsPerPixel; 
+        public double UnitsPerPixel;
 
         public ScaleForm(string unitsOfMeasure, double unitsPerPixel)
         {
             this.UnitsOfMeasure = unitsOfMeasure;
-            this.UnitsPerPixel = unitsPerPixel; 
+            this.UnitsPerPixel = unitsPerPixel;
 
             InitializeComponent();
         }
@@ -33,7 +27,7 @@ namespace MeasurementExtension
         {
             //Can't use greek letters, XNA doesn't like it.  Did not investigate
             this.UnitsOfMeasure = comboUnits.Text;
-            this.UnitsPerPixel = System.Convert.ToDouble(numUnitsPerPixel.Value); 
+            this.UnitsPerPixel = System.Convert.ToDouble(numUnitsPerPixel.Value);
         }
     }
 }

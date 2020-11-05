@@ -8,6 +8,7 @@ using Geometry.Meshing;
 using MorphologyMesh;
 using System.IO;
 using System.Xml.Serialization;
+using UnitsAndScale;
 
 namespace ColladaIO
 {
@@ -89,7 +90,7 @@ namespace ColladaIO
         /// </summary>
         /// <param name="mesh"></param>
         /// <param name="Filename"></param>
-        public static void Serialize(StructureModel model, AxisUnits scale, String MaterialURL, String Filename)
+        public static void Serialize(StructureModel model, IAxisUnits scale, String MaterialURL, String Filename)
         {  
             COLLADA dae = new COLLADA();
 
@@ -195,7 +196,7 @@ namespace ColladaIO
             return AddStandardAssets(scene.Scale);
         }
 
-        private static asset_type AddStandardAssets(AxisUnits scale)
+        private static asset_type AddStandardAssets(IAxisUnits scale)
         {
             asset_type asset = new asset_type();
             asset.contributor = new asset_typeContributor[] { CreateVikingContributorAsset() };
@@ -210,7 +211,7 @@ namespace ColladaIO
             return asset;
         }
 
-        public static asset_typeUnit AsTypeUnit(this AxisUnits axis)
+        public static asset_typeUnit AsTypeUnit(this IAxisUnits axis)
         {
             asset_typeUnit unit = new asset_typeUnit();
             unit.meter = axis.Value;

@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Diagnostics;
 using System.Windows.Forms;
-using System.Diagnostics; 
-using System.Linq;
-using System.Text;
-using WebAnnotationModel; 
-using Geometry;
-using WebAnnotation.View;
-using SqlGeometryUtils;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using WebAnnotation.View;
+using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -37,7 +33,7 @@ namespace WebAnnotation.UI.Commands
 
         public LocationObjCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
-        {            
+        {
             LocationCanvasView select_ViewObj = Viking.UI.State.SelectedObject as LocationCanvasView;
             selected = Store.Locations[select_ViewObj.ID];
             Debug.Assert(selected != null);
@@ -49,7 +45,7 @@ namespace WebAnnotation.UI.Commands
             }
             else
             {
-                parent.Cursor = Cursors.Hand; 
+                parent.Cursor = Cursors.Hand;
             }
         }
 
@@ -67,11 +63,11 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnDeactivate()
         {
-            Viking.UI.State.SelectedObject = null; 
+            Viking.UI.State.SelectedObject = null;
 
             base.OnDeactivate();
         }
-        
+
         protected override void OnMouseUp(object sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Right)
@@ -101,12 +97,12 @@ namespace WebAnnotation.UI.Commands
             //Draw a line from the selected location to the new location if we are holding left button down
             if (this.oldMouse.Button == MouseButtons.Left)
             {
-                GridVector2 selectedPos = selected.VolumePosition; 
+                GridVector2 selectedPos = selected.VolumePosition;
                 /*bool found = sectionAnnotations.TryGetPositionForLocation(selected, out selectedPos);
                 if (found == false)
                     return; 
                 */
-                
+
                 basicEffect.Texture = null;
                 basicEffect.TextureEnabled = false;
                 basicEffect.VertexColorEnabled = true;
@@ -115,7 +111,7 @@ namespace WebAnnotation.UI.Commands
                 if (LocType != null && selected.Section == Parent.Section.Number)
                 {
                     Microsoft.Xna.Framework.Color color = LocType.Color.ToXNAColor(0.5f);
-                    
+
                     GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, this.oldWorldPosition, selected.Radius, color);
                 }
                 else
@@ -126,14 +122,14 @@ namespace WebAnnotation.UI.Commands
                                                         new VertexPositionColor(new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f), Color.Gold)};
 
                     int[] indicies = new int[] { 0, 1 };
-                    
+
                     foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
                     {
                         pass.Apply();
 
                         if (verts != null && verts.Length > 0)
                             graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, verts, 0, verts.Length, indicies, 0, indicies.Length / 2);
-                        
+
                     }
                 }
             }

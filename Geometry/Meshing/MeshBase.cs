@@ -3,10 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Linq;
 
 
 namespace Geometry.Meshing
@@ -15,7 +13,7 @@ namespace Geometry.Meshing
         where VERTEX : IVertex3D
     {
         //new IReadOnlyList<VERTEX> Verticies { get; }
-        
+
     }
 
     public interface IReadOnlyMesh3D<out VERTEX> : IReadOnlyMesh<VERTEX>
@@ -28,7 +26,7 @@ namespace Geometry.Meshing
     public interface IMesh2D<VERTEX> : IReadOnlyMesh2D<VERTEX>, IMesh<VERTEX>
         where VERTEX : IVertex2D
     {
-        
+
     }
 
     public interface IReadOnlyMesh2D<out VERTEX> : IReadOnlyMesh<VERTEX>
@@ -83,7 +81,7 @@ namespace Geometry.Meshing
 
     public interface IMesh<VERTEX> : IReadOnlyMesh<VERTEX>
         where VERTEX : IVertex
-    {  
+    {
         /// <summary>
         /// Add vertex to the mesh
         /// </summary>
@@ -207,8 +205,8 @@ namespace Geometry.Meshing
         protected readonly Dictionary<IEdgeKey, IEdge> _Edges = new Dictionary<IEdgeKey, IEdge>();
         protected readonly SortedSet<IFace> _Faces = new SortedSet<IFace>();
 
-//        public event MeshChangeEvent OnMeshChange;
-//        public delegate void MeshChangeEvent(MeshBase<VERTEX> mesh, MeshChangeEventArgs e);
+        //        public event MeshChangeEvent OnMeshChange;
+        //        public delegate void MeshChangeEvent(MeshBase<VERTEX> mesh, MeshChangeEventArgs e);
 
         public virtual IReadOnlyList<VERTEX> Verticies { get { return _Verticies; } }
         public Dictionary<IEdgeKey, IEdge> Edges { get { return _Edges; } }
@@ -374,7 +372,7 @@ namespace Geometry.Meshing
 
             if (this.Contains(e))
                 return;
-                
+
             if (CreateEdge == null)
                 throw new InvalidOperationException(string.Format("Adding {0}: DuplicateEdge function not specified for DynamicRenderMesh", e));
             /*
@@ -420,7 +418,7 @@ namespace Geometry.Meshing
 #endif
 
             Edges.Add(e.Key, e);
-            
+
             _Verticies[(int)e.A].AddEdge(e.Key);
             _Verticies[(int)e.B].AddEdge(e.Key);
         }
@@ -628,7 +626,7 @@ namespace Geometry.Meshing
                 return path;
             }
         }
-         
+
         /// <summary>
         /// Returns a list of faces adjacent to the passed face
         /// </summary>
@@ -636,7 +634,7 @@ namespace Geometry.Meshing
         /// <param name="mesh"></param>
         /// <returns></returns>
         public IFace[] AdjacentFaces(IFace face)
-        { 
+        {
             return face.Edges.SelectMany(e => this[e].Faces.Where(f => f != face)).ToArray();
         }
 

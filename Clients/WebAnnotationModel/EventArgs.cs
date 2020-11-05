@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace WebAnnotationModel
+﻿namespace WebAnnotationModel
 {
     /// <summary>
     /// Fires when a key is added or removed from a store class
@@ -13,13 +8,13 @@ namespace WebAnnotationModel
     /// </summary>
     public class AddUpdateRemoveKeyEventArgs : System.EventArgs
     {
-        public enum Action {ADD, UPDATE, REMOVE};
-        public readonly Action ChangeAction; 
-        public readonly long ID; 
+        public enum Action { ADD, UPDATE, REMOVE };
+        public readonly Action ChangeAction;
+        public readonly long ID;
 
         public AddUpdateRemoveKeyEventArgs(long ID, Action action)
         {
-            this.ChangeAction = action; 
+            this.ChangeAction = action;
             this.ID = ID;
         }
     }
@@ -34,21 +29,21 @@ namespace WebAnnotationModel
     public class OnAllUpdatesCompletedEventArgs : System.EventArgs
     {
         public long? SectionNumber = new long?();
-        public object[] Objects; 
+        public object[] Objects;
 
         public OnAllUpdatesCompletedEventArgs()
-        { 
+        {
         }
 
         public OnAllUpdatesCompletedEventArgs(long sectionnumber)
         {
-            this.SectionNumber = new long?(sectionnumber); 
+            this.SectionNumber = new long?(sectionnumber);
         }
 
         public OnAllUpdatesCompletedEventArgs(long sectionnumber, object[] objects)
             : this(sectionnumber)
         {
-            this.Objects = objects; 
+            this.Objects = objects;
         }
 
         public OnAllUpdatesCompletedEventArgs(object[] objects)

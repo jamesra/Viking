@@ -1,9 +1,8 @@
-﻿using System;
-using System.Diagnostics;
+﻿using Annotation.Interfaces;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib
 {
@@ -23,7 +22,7 @@ namespace AnnotationVizLib
             TLPViewNode tlpnode = createNode(node.Key);
             IDictionary<string, string> NodeAttribs = AttributeMapper.AttribsForLabel(node.Structure.Label, TLPAttributes.StandardLabelToNodeTLPAppearance);
 
-            if(NodeAttribs.Count == 0)
+            if (NodeAttribs.Count == 0)
             {
                 //Add default node properties 
                 AttributeMapper.CopyAttributes(TLPAttributes.UnknownTLPNodeAttributes, NodeAttribs);
@@ -36,9 +35,9 @@ namespace AnnotationVizLib
             NodeAttribs.Add("ID", string.Format("{0}", node.Key));
             NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Structure.TagsXML));
 
-            foreach(string attrib in node.Attributes.Keys)
+            foreach (string attrib in node.Attributes.Keys)
             {
-                if(!NodeAttribs.ContainsKey(attrib) && !TLPAttributes.AttributesExcludedFromTLP.Contains(attrib))
+                if (!NodeAttribs.ContainsKey(attrib) && !TLPAttributes.AttributesExcludedFromTLP.Contains(attrib))
                 {
                     NodeAttribs.Add(attrib, node.Attributes[attrib].ToString());
                 }
@@ -87,12 +86,12 @@ namespace AnnotationVizLib
             try
             {
                 tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
-                if(!edge.Directional && !edge.IsLoop)
+                if (!edge.Directional && !edge.IsLoop)
                 {
                     tlp_reverse_edge = this.addEdge(edge.TargetNodeKey, edge.SourceNodeKey);
                 }
             }
-            catch(KeyNotFoundException)
+            catch (KeyNotFoundException)
             {
                 Trace.WriteLine(string.Format("Nodes missing for edge {0}", edge.ToString()));
                 return;
@@ -168,6 +167,6 @@ namespace AnnotationVizLib
             }
 
             return view;
-        } 
+        }
     }
 }

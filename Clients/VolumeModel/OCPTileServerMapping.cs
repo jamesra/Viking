@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Xml; 
-using System.Xml.Linq;
-using System.Diagnostics;
-using Utils;
+﻿using Geometry;
+using System;
 using System.Linq;
-
-using Geometry;
 
 namespace Viking.VolumeModel
 {
@@ -18,18 +11,18 @@ namespace Viking.VolumeModel
     {
         protected readonly string Host; //Host for tile paths, Viking will set to volume host if null
         protected readonly string ChannelName; //Host for tile paths, Viking will set to volume host if null
-          
+
         #region TextureFileNames
 
         override public string TileFullPath(int iX, int iY, int DownsampleLevel)
         {
-            string tileFileName = ((int)Math.Log(DownsampleLevel,2)).ToString("D3") +
+            string tileFileName = ((int)Math.Log(DownsampleLevel, 2)).ToString("D3") +
                                 '/' + this.TileTextureFileName(iX, iY);
-             
+
             tileFileName = this.Host + '/' +
                            this.Section.volume.Name + '/' +
                            TileGridPath + '/' +
-                           this.ChannelName + '/' + 
+                           this.ChannelName + '/' +
                            tileFileName;
 
             return tileFileName;
@@ -49,7 +42,7 @@ namespace Viking.VolumeModel
 
         protected OCPTileServerMapping(OCPTileServerMapping ToCopy, Section section, string name) :
             base(ToCopy, section, name)
-        { 
+        {
             this.Host = ToCopy.Host;
             this.ChannelName = ToCopy.ChannelName;
         }
@@ -66,11 +59,11 @@ namespace Viking.VolumeModel
         {
             this.Host = TileServerHost;
             this.ChannelName = channelName;
-        } 
+        }
 
         public void PopulateLevels(int MaxLevel, int GridDimX, int GridDimY)
         {
-            for(int CurrentLevel = 0; CurrentLevel <= MaxLevel; CurrentLevel++)
+            for (int CurrentLevel = 0; CurrentLevel <= MaxLevel; CurrentLevel++)
             {
                 int downsample = (int)Math.Pow(2, CurrentLevel);
                 this.AddLevel(downsample, (int)Math.Ceiling((double)GridDimX / downsample), (int)Math.Ceiling((double)GridDimY / downsample), CurrentLevel.ToString("D3"));

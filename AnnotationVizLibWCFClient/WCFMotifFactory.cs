@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using AnnotationVizLib;
+﻿using AnnotationService.Types;
 using AnnotationVizLib.WCFClient.AnnotationClient;
-using AnnotationService.Types;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace AnnotationVizLib.WCFClient
 {
     public class WCFMotifFactory
-    { 
+    {
         public static MotifGraph BuildGraph(string Endpoint, System.Net.NetworkCredential userCredentials)
         {
             SortedDictionary<long, StructureType> TypeIDToType;
@@ -101,7 +97,7 @@ namespace AnnotationVizLib.WCFClient
                         if (!ChildIDToParent.ContainsKey(link.SourceID))
                             continue;
                         if (!ChildIDToParent.ContainsKey(link.TargetID))
-                            continue; 
+                            continue;
 
                         Structure ParentOfSource = ChildIDToParent[link.SourceID];
                         Structure ParentOfTarget = ChildIDToParent[link.TargetID];

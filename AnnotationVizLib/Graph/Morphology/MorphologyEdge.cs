@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Geometry;
 using GraphLib;
-using Geometry;
-using System.Runtime.Serialization;
+using System;
 
 namespace AnnotationVizLib
 {
@@ -41,7 +36,7 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public ulong OtherNode(ulong key)
         {
-            if(key != SourceNodeKey && key != TargetNodeKey)
+            if (key != SourceNodeKey && key != TargetNodeKey)
             {
                 throw new ArgumentException("Key must match a node ID connected by the edge");
             }
@@ -53,7 +48,7 @@ namespace AnnotationVizLib
         {
             return this.SourceNodeKey.ToString() + "-" + this.TargetNodeKey.ToString();
         }
-         
+
         private double? _DistanceCenterToCenter = new double?(); //Distance between node centers
         /// <summary>
         /// The length between the centers of the two connected nodes.
@@ -62,7 +57,7 @@ namespace AnnotationVizLib
         {
             get
             {
-                if(!_DistanceCenterToCenter.HasValue)
+                if (!_DistanceCenterToCenter.HasValue)
                 {
                     _DistanceCenterToCenter = GridVector3.Distance(Graph.Nodes[this.SourceNodeKey].Center,
                                                                    Graph.Nodes[this.TargetNodeKey].Center);

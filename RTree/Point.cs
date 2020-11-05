@@ -27,9 +27,9 @@ namespace RTree
     /// </summary>
     public class Point
     {
-      
-      
-      
+
+
+
         /// <summary>
         /// Number of dimensions in a point. In theory this
         /// could be exended to three or more dimensions.
@@ -48,7 +48,7 @@ namespace RTree
         /// <param name="x">The x coordinate of the point</param>
         /// <param name="y">The y coordinate of the point</param>
         /// <param name="z">The z coordinate of the point</param>
-        public Point(double x, double y,double z)
+        public Point(double x, double y, double z)
         {
             coordinates = new double[DIMENSIONS];
             coordinates[0] = x;
@@ -58,7 +58,7 @@ namespace RTree
 
         public Point(double[] input)
         {
-            if(input.Length != DIMENSIONS)
+            if (input.Length != DIMENSIONS)
             {
                 throw new System.ArgumentException(string.Format("Dimension mismatch in RTree Point constructor. Excpected {0} got {1}", DIMENSIONS, input.Length));
             }

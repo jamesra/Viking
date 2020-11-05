@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
 using System.Windows;
-using System.ComponentModel; 
 
 
 namespace WebAnnotation.ViewModel
@@ -22,7 +18,7 @@ namespace WebAnnotation.ViewModel
         }
 
         ConcurrentDictionary<object, NotifyCollectionChangedEventHandler> ObjectToHandler = new ConcurrentDictionary<object, NotifyCollectionChangedEventHandler>();
-        
+
         protected override void StartListening(object source)
         {
             //Check if we can subscribe to the source
@@ -56,7 +52,7 @@ namespace WebAnnotation.ViewModel
             bool Removed = ObjectToHandler.TryRemove(source, out eventHandler);
             if (Removed)
             {
-                INotify.CollectionChanged -= eventHandler; 
+                INotify.CollectionChanged -= eventHandler;
             }
         }
 
@@ -67,7 +63,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="listener"></param>
         public static void AddListener(Object source, IWeakEventListener listener)
         {
-            Current.ProtectedAddListener(source, listener); 
+            Current.ProtectedAddListener(source, listener);
         }
 
         /// <summary>
@@ -77,7 +73,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="listener"></param>
         public static void RemoveListener(Object source, IWeakEventListener listener)
         {
-            Current.ProtectedRemoveListener(source, listener); 
+            Current.ProtectedRemoveListener(source, listener);
         }
 
         delegate void DeliverEventsDelegate(object o, NotifyCollectionChangedEventArgs e);

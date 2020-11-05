@@ -1,12 +1,7 @@
 using System;
 using System.Diagnostics;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using Viking.Common;
-using Viking.UI.Controls;
-using Viking.ViewModels;  
+using Viking.ViewModels;
 
 namespace Viking.UI
 {
@@ -22,13 +17,13 @@ namespace Viking.UI
         /// <summary>
         /// Dispatcher for invoking methods on the main thread. 
         /// </summary>
-        static public System.Windows.Threading.Dispatcher MainThreadDispatcher; 
+        static public System.Windows.Threading.Dispatcher MainThreadDispatcher;
 
         static public Viking.UI.Forms.SectionViewerForm ViewerForm;
 
         static public void InvalidateViewerControl()
         {
-            if(ViewerControl != null)
+            if (ViewerControl != null)
                 ViewerControl.Invalidate();
         }
 
@@ -75,7 +70,7 @@ namespace Viking.UI
                     return System.IO.Path.Combine(CachePath, volume.Name);
                 }
 
-                throw new InvalidOperationException("Requesting Volume Cache Path before volume.name is available"); 
+                throw new InvalidOperationException("Requesting Volume Cache Path before volume.name is available");
 
             }
         }
@@ -99,7 +94,7 @@ namespace Viking.UI
 
         static State()
         {
-                                                              
+
         }
 
         #region Events
@@ -164,8 +159,8 @@ namespace Viking.UI
         /// </summary>
         public static event ObjectSelectedEventHandler ItemSelected;
 
-        #endregion 
-       
+        #endregion
+
 
         /// <summary>
         /// If this is true we remember the last transform used for each section and switch to that transform if we display that section
@@ -183,7 +178,7 @@ namespace Viking.UI
         /// </summary>
         public static bool ShowTileMesh = false;
 
-        static private VolumeViewModel _volume = null; 
+        static private VolumeViewModel _volume = null;
 
         /// <summary>
         /// The volume currently being viewed
@@ -193,7 +188,7 @@ namespace Viking.UI
             get { return _volume; }
             set
             {
-                _volume = value; 
+                _volume = value;
             }
         }
 

@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotation.ViewModel;
-using WebAnnotationModel;
 using System.Windows.Forms;
 using Viking.Common;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
@@ -56,12 +51,12 @@ namespace WebAnnotation.View
                 SplitForm.KeepID = this.linkKey.B;
                 SplitForm.FormClosed += OnSplitFormClosed;
                 SplitForm.Show();
-            }            
+            }
         }
 
         static private void OnSplitFormClosed(object sender, FormClosedEventArgs e)
         {
-            SplitForm = null; 
+            SplitForm = null;
         }
 
         protected void ContextMenu_OnDelete(object sender, EventArgs e)

@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using VikingXNA;
-using WebAnnotationModel;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Viking.VolumeModel;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using VikingXNA;
 using VikingXNAGraphics;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
@@ -72,7 +68,7 @@ namespace WebAnnotation.View
             set
             {
                 _Color = value;
-                foreach(IColorView view in linkViews.Cast<IColorView>())
+                foreach (IColorView view in linkViews.Cast<IColorView>())
                 {
                     view.Color = value;
                 }
@@ -131,16 +127,16 @@ namespace WebAnnotation.View
             return linkViews.Any(l => l.IsLabelVisible(scene));
         }
 
-        public ICanvasGeometryView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
         {
-            ICanvasGeometryView annotation = linkViews.Where(l => l.Contains(position) == true).FirstOrDefault() as ICanvasGeometryView;
+            ICanvasView annotation = linkViews.Where(l => l.Contains(position) == true).FirstOrDefault() as ICanvasGeometryView;
             if (annotation == null)
                 return null;
-            
+
             return annotation;
         }
 
-        int VikingXNAGraphics.ICanvasView.VisualHeight
+        public int VisualHeight
         {
             get
             {
@@ -238,7 +234,7 @@ namespace WebAnnotation.View
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlayShaderEffect overlayEffect,
                           OverlappedLinkCircleView[] listToDraw)
         {
             OverlappedLocationLinkView[] linkViewArray = listToDraw.SelectMany(l => l.linkViews).ToArray();
@@ -257,6 +253,6 @@ namespace WebAnnotation.View
 
             return;
         }
-        
+
     }
 }

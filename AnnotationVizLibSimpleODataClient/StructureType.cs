@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Annotation.Interfaces;
+﻿using Annotation.Interfaces;
+using System;
 
 namespace AnnotationVizLib.SimpleOData
 {
@@ -40,14 +36,14 @@ namespace AnnotationVizLib.SimpleOData
         }
 
         public bool Equals(IStructureType other)
-        { 
+        {
             if (object.ReferenceEquals(other, null))
                 return false;
 
             if (other.ID == this.ID)
-                return true; 
+                return true;
 
-            return false; 
+            return false;
         }
 
         public bool Equals(StructureType other)

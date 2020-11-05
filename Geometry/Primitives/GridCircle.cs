@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Diagnostics; 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace Geometry
 {
@@ -179,12 +178,12 @@ namespace Geometry
 
             double det = matrix.Determinant();
 
-            if (det > Global.EpsilonSquared)
+            if (det >= Global.EpsilonSquared)
                 return OverlapType.CONTAINED;
-            else if (det >= 0 && det <= Global.EpsilonSquared)
+            else if (det > -Global.EpsilonSquared && det < Global.EpsilonSquared)
                 return OverlapType.TOUCHING;
             else
-                return OverlapType.NONE; 
+                return OverlapType.NONE;
         }
 
         /// <summary>
@@ -195,7 +194,6 @@ namespace Geometry
         public static OverlapType[] Contains(GridVector2[] cp, IEnumerable<GridVector2> points)
         {
             double[][] cmat = CreateContainsDeterminateMatrixComponents(cp);
-            
 
             if (points == null)
                 return null;
@@ -212,9 +210,9 @@ namespace Geometry
                                 cmat[2],
                                 new double[]{0,0,0,1} });
 
-            int i = 0;  
-            foreach(GridVector2 p in points)
-            { 
+            int i = 0;
+            foreach (GridVector2 p in points)
+            {
                 matrix.SetRow(3, CreateDeterminateMatrixRow(p));
                 double det = matrix.Determinant();
 
@@ -275,15 +273,15 @@ namespace Geometry
                 return this.Radius;
             }
         }
-        
+
         public bool Contains(IPoint2D p)
         {
             //return GridVector2.Distance(p, this.Center) <= this.Radius;
-            
+
             double XDist = p.X - this.Center.X;
             double YDist = p.Y - this.Center.Y;
 
-            return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared; 
+            return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
         }
 
         public bool Contains(GridVector2 p)
@@ -294,12 +292,42 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
         }
 
+        public OverlapType ContainsExt(IPoint2D p)
+        {
+            //return GridVector2.Distance(p, this.Center) <= this.Radius;
+
+            double XDist = p.X - this.Center.X;
+            double YDist = p.Y - this.Center.Y;
+
+            double DistanceSquared = (XDist * XDist) + (YDist * YDist);
+            if (DistanceSquared < this.RadiusSquared)
+                return OverlapType.CONTAINED;
+            if (DistanceSquared == this.RadiusSquared)
+                return OverlapType.TOUCHING;
+
+            return OverlapType.NONE;
+        }
+
+        public OverlapType ContainsExt(GridVector2 p)
+        {
+            double XDist = p.X - this.Center.X;
+            double YDist = p.Y - this.Center.Y;
+
+            double DistanceSquared = (XDist * XDist) + (YDist * YDist);
+            if (DistanceSquared < this.RadiusSquared)
+                return OverlapType.CONTAINED;
+            if (DistanceSquared == this.RadiusSquared)
+                return OverlapType.TOUCHING;
+
+            return OverlapType.NONE;
+        }
+
         public bool Contains(GridPolygon poly)
         {
             //if (this.BoundingBox.ContainsExt(poly.BoundingBox) == OverlapType.CONTAINED)
             //    return true;
 
-            foreach(GridVector2 p in poly.ExteriorRing)
+            foreach (GridVector2 p in poly.ExteriorRing)
             {
                 if (!this.Contains(p))
                     return false;
@@ -309,7 +337,7 @@ namespace Geometry
         }
 
         public bool Contains(GridLineSegment line)
-        {   
+        {
             if (!this.Contains(line.A))
                 return false;
 
@@ -318,6 +346,50 @@ namespace Geometry
 
 
             return false;
+        }
+
+        public OverlapType ContainsExt(GridLineSegment line)
+        {
+            OverlapType oA = this.ContainsExt(line.A);
+            OverlapType oB = this.ContainsExt(line.B);
+
+            if (oA == oB)
+            {
+                switch (oA)
+                {
+                    case OverlapType.NONE:
+                        return OverlapType.NONE;
+                    case OverlapType.CONTAINED:
+                        return OverlapType.CONTAINED;
+                    case OverlapType.TOUCHING:
+                        return OverlapType.CONTAINED; //If both endpoints touch the edge of the circle the line is contained within 
+                    default:
+                        throw new ArgumentException("Unexpected ContainsExt Result for point in circle");
+                }
+            }
+            else
+            {
+                if (oA == OverlapType.NONE || oB == OverlapType.NONE)
+                {
+                    var NotNoneResult = oA == OverlapType.NONE ? oB : oA;
+                    //If it is touching the answer gets complicated.  We need to know if the outside endpoint is on the other side of the circle or not
+                    if (NotNoneResult == OverlapType.CONTAINED)
+                        return OverlapType.INTERSECTING;
+
+                }
+            }
+
+            throw new NotImplementedException();
+            /*
+            if (!this.Contains(line.A))
+                return false;
+
+            if (!this.Contains(line.B))
+                return false;
+
+
+            return false;
+            */
         }
 
         /// <summary>
@@ -342,7 +414,7 @@ namespace Geometry
             double XDist = p.X - this.Center.X;
             double YDist = p.Y - this.Center.Y;
             double CombinedRadiusSquared = this.Radius + radius;
-            CombinedRadiusSquared *= CombinedRadiusSquared; 
+            CombinedRadiusSquared *= CombinedRadiusSquared;
             return (XDist * XDist) + (YDist * YDist) <= CombinedRadiusSquared;
         }
 
@@ -352,7 +424,7 @@ namespace Geometry
         }
 
         public bool Intersects(GridCircle c)
-        { 
+        {
             double XDist = c.Center.X - this.Center.X;
             double YDist = c.Center.Y - this.Center.Y;
             double CombinedRadiusSquared = this.Radius + c.Radius;
@@ -420,21 +492,21 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            return (GridCircle)obj == this; 
+            return (GridCircle)obj == this;
         }
 
-        int? _HashCode; 
+        int? _HashCode;
 
         public override int GetHashCode()
         {
             if (!_HashCode.HasValue)
             {
-                _HashCode = Center.GetHashCode(); 
+                _HashCode = Center.GetHashCode();
             }
 
-            return _HashCode.Value; 
+            return _HashCode.Value;
         }
-         
+
 
         public bool Intersects(IShape2D shape)
         {

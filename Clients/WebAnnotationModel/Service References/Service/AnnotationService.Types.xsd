@@ -240,7 +240,7 @@
     <xs:complexContent mixed="false">
       <xs:extension base="tns:Location">
         <xs:sequence>
-          <xs:element minOccurs="0" name="ChangedColumnMask" type="xs:unsignedLong" />
+          <xs:element minOccurs="0" name="ChangedColumnMask" type="xs:long" />
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>

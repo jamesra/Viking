@@ -1,21 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using Viking.Common;
 using System.Diagnostics;
+using System.Linq;
+using Viking.Common;
 using Viking.UI.Forms;
-using Viking.VolumeModel;
 using Viking.ViewModels;
+using Viking.VolumeModel;
 
 namespace Viking.UI.Controls
 {
     [Viking.Common.SupportedUITypesAttribute(typeof(Section))]
-    [Viking.Common.ExtensionTab("Sections", Viking.Common.TABCATEGORY.ACTION)] 
+    [Viking.Common.ExtensionTab("Sections", Viking.Common.TABCATEGORY.ACTION)]
     public partial class SectionList : Viking.UI.BaseClasses.DockingListControl
     {
         public SectionList()
@@ -23,12 +17,12 @@ namespace Viking.UI.Controls
             InitializeComponent();
 
             this.Title = "Sections";
-            this.ListItems.ShowPropertiesOnDoubleClick = false; 
+            this.ListItems.ShowPropertiesOnDoubleClick = false;
         }
 
         private void SectionList_Load(object sender, EventArgs e)
         {
-            if(UI.State.volume != null)
+            if (UI.State.volume != null)
                 this.ListItems.DisplayObjects(UI.State.volume.SectionViewModels.Values.ToArray() as IUIObject[]);
         }
 
@@ -37,7 +31,7 @@ namespace Viking.UI.Controls
             SectionViewModel section = obj as SectionViewModel;
             Debug.Assert(section != null);
 
-            SectionViewerForm.Show(section); 
+            SectionViewerForm.Show(section);
         }
     }
 }

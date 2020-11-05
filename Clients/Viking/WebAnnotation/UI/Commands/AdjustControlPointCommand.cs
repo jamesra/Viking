@@ -1,26 +1,21 @@
-﻿using System;
+﻿using Geometry;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using Geometry;
-using WebAnnotation.View;
-using SqlGeometryUtils;
-using VikingXNAGraphics;
-using System.Windows.Forms;
 using System.Diagnostics;
+using System.Linq;
+using System.Windows.Forms;
+using VikingXNAGraphics;
 using VikingXNAWinForms;
 
-namespace WebAnnotation.UI.Commands 
+namespace WebAnnotation.UI.Commands
 {
     class AdjustCurveControlPointCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         //LocationObj Loc;
         CurveView curveView;
         GridVector2[] OriginalControlPoints;
-        private int iAdjustedControlPoint = -1; 
+        private int iAdjustedControlPoint = -1;
 
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
@@ -55,14 +50,14 @@ namespace WebAnnotation.UI.Commands
             this.success_callback = success_callback;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
-        
+
         private void CreateView(GridVector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
         {
             curveView = new CurveView(ControlPoints.ToList(), color, IsClosed,
-                                      Global.NumCurveInterpolationPoints(IsClosed), 
-                                      lineWidth: LineWidth); 
+                                      Global.NumCurveInterpolationPoints(IsClosed),
+                                      lineWidth: LineWidth);
         }
-        
+
         protected virtual void UpdatePosition(GridVector2 PositionDelta)
         {
             curveView.SetPoint(this.iAdjustedControlPoint, curveView.ControlPoints[iAdjustedControlPoint] + PositionDelta);
@@ -70,7 +65,7 @@ namespace WebAnnotation.UI.Commands
 
         protected void PopulateControlPointIndexIfNeeded(GridVector2 WorldPosition)
         {
-            if(iAdjustedControlPoint < 0)
+            if (iAdjustedControlPoint < 0)
             {
                 double[] DistanceArray = this.curveView.ControlPoints.Select(p => GridVector2.Distance(p, WorldPosition)).ToArray();
                 iAdjustedControlPoint = Array.IndexOf(DistanceArray, DistanceArray.Min());
@@ -107,7 +102,7 @@ namespace WebAnnotation.UI.Commands
                 this.Execute();
             }
 
-            base.OnMouseUp(sender,e);
+            base.OnMouseUp(sender, e);
         }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene,
@@ -126,7 +121,7 @@ namespace WebAnnotation.UI.Commands
                 if (curveView.TryCloseCurve)
                 {
                     List<GridVector2> LoopedPointsList = new List<GridVector2>(curveView.ControlPoints);
-                    if(curveView.ControlPoints.First() != curveView.ControlPoints.Last())
+                    if (curveView.ControlPoints.First() != curveView.ControlPoints.Last())
                         LoopedPointsList.Add(LoopedPointsList.First());
                     TranslatedOriginalControlPoints = LoopedPointsList.ToArray();
                 }
@@ -144,12 +139,12 @@ namespace WebAnnotation.UI.Commands
                     Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedOriginalControlPoints.ToString(), "Command");
                     return;
                 }
-                
+
                 this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints);
             }
 
             base.Execute();
         }
-        
+
     }
 }

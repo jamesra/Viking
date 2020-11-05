@@ -1,9 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Collections.Generic;
+﻿using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Geometry;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GeometryTests
 {
@@ -93,7 +92,7 @@ namespace GeometryTests
             level = pyramid.GetLevelForScreenBounds(ScreenBounds, OneToOnePixelMappingRadius) as RegionPyramidLevel<string>; //
             Assert.AreEqual(level.Level, LevelForOneToOnePixelMappingRadius);
 
-            Assert.AreEqual(level.GridDimensions.Width, (int)Math.Pow(2,LevelForOneToOnePixelMappingRadius));
+            Assert.AreEqual(level.GridDimensions.Width, (int)Math.Pow(2, LevelForOneToOnePixelMappingRadius));
             Assert.AreEqual(level.GridDimensions.Height, (int)Math.Pow(2, LevelForOneToOnePixelMappingRadius));
             Assert.AreEqual(level.CellDimensions.Width, VolumeBounds.Width / Math.Pow(2, level.Level));
             Assert.AreEqual(level.CellDimensions.Height, VolumeBounds.Height / Math.Pow(2, level.Level));
@@ -162,7 +161,7 @@ namespace GeometryTests
             GridRectangle VolumeBounds = new GridRectangle(0, 1024, 0, 1024);
             GridRectangle ScreenBounds = new GridRectangle(0, 64, 0, 128); //A 64x128 pixel screen
             GridRectangle VisibleVolumeBounds = new GridRectangle(512, 512 + ScreenBounds.Width, 512, 512 + ScreenBounds.Height); //A 64x128 pixel screen
-            
+
 
             double FullVolumeVisibleRadius = VolumeBounds.Width / ScreenBounds.Width;
             double OneToTwoPixelMappingRadius = 2.0;
@@ -173,12 +172,12 @@ namespace GeometryTests
             //View the entire volume, ensure that level 0 is returned
             level = pyramid.GetLevelForScreenBounds(ScreenBounds, FullVolumeVisibleRadius) as RegionPyramidLevel<string>; //; //
             ValidateSubGridForRegion(level, VisibleVolumeBounds);
-             
+
             level = pyramid.GetLevelForVolumeBounds(VisibleVolumeBounds, OneToTwoPixelMappingRadius) as RegionPyramidLevel<string>; //; //
             ValidateSubGridForRegion(level, VisibleVolumeBounds);
-            
+
             //Grab a subregion from the volume
-            
+
         }
 
         [TestMethod]
@@ -318,11 +317,11 @@ namespace GeometryTests
         public void TestBoundlessRegionPyramidLevel()
         {
             GridCellDimensions cellDimensions = new GridCellDimensions(100, 100);
-            Geometry.BoundlessRegionPyramid<string> pyramid = new BoundlessRegionPyramid<string>(cellDimensions,2 );
- 
+            Geometry.BoundlessRegionPyramid<string> pyramid = new BoundlessRegionPyramid<string>(cellDimensions, 2);
+
             GridRectangle ScreenBounds = new GridRectangle(0, 64, 0, 257); //A 64x128 pixel screen
             GridRectangle VisibleVolumeBounds = new GridRectangle(512, 512 + ScreenBounds.Width, 512, 512 + ScreenBounds.Height); //A 64x128 pixel screen
-                        
+
             BoundlessRegionPyramidLevel<string> level0;
             BoundlessRegionPyramidLevel<string> level1;
             level0 = pyramid.GetLevel(PixelRadiusForLevel(0)) as BoundlessRegionPyramidLevel<string>;

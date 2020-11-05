@@ -1,29 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.Concurrent; 
-using System.Linq;
-using System.Text;
+using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Windows;
-using System.ComponentModel; 
 
 
 namespace WebAnnotation.ViewModel
 {
     class NotifyPropertyChangingEventManager : WeakEventManager
     {
-        static int CleanupCountdown = 5000; 
+        static int CleanupCountdown = 5000;
 
         static public NotifyPropertyChangingEventManager Current = new NotifyPropertyChangingEventManager();
 
-        
+
 
         static NotifyPropertyChangingEventManager()
         {
-            WeakEventManager.SetCurrentManager(typeof(INotifyPropertyChanging), Current);            
+            WeakEventManager.SetCurrentManager(typeof(INotifyPropertyChanging), Current);
         }
 
         ConcurrentDictionary<object, PropertyChangingEventHandler> ObjectToHandler = new ConcurrentDictionary<object, PropertyChangingEventHandler>();
-        
+
         protected override void StartListening(object source)
         {
             //Check if we can subscribe to the source
@@ -44,7 +41,7 @@ namespace WebAnnotation.ViewModel
             }
 
             CleanupCountdown--;
-            
+
 
         }
 
@@ -59,7 +56,7 @@ namespace WebAnnotation.ViewModel
             bool Removed = ObjectToHandler.TryRemove(source, out eventHandler);
             if (Removed)
             {
-                INotify.PropertyChanging -= eventHandler; 
+                INotify.PropertyChanging -= eventHandler;
             }
         }
 
@@ -70,7 +67,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="listener"></param>
         public static void AddListener(Object source, IWeakEventListener listener)
         {
-            Current.ProtectedAddListener(source, listener); 
+            Current.ProtectedAddListener(source, listener);
         }
 
         /// <summary>
@@ -80,7 +77,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="listener"></param>
         public static void RemoveListener(Object source, IWeakEventListener listener)
         {
-            Current.ProtectedRemoveListener(source, listener); 
+            Current.ProtectedRemoveListener(source, listener);
         }
 
         delegate void DeliverEventsDelegate(object o, PropertyChangingEventArgs e);

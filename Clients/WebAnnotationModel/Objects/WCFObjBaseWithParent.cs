@@ -1,19 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using AnnotationService.Types;
+using System;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Diagnostics;
-using WebAnnotationModel.Service;
-using AnnotationService.Types;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using System.Linq;
 
 namespace WebAnnotationModel.Objects
 {
     abstract public class WCFObjBaseWithParent<KEY, T, THISTYPE> : WCFObjBaseWithKey<KEY, T>, System.Collections.Specialized.INotifyCollectionChanged
         where KEY : struct, IEquatable<KEY>
         where T : AnnotationService.Types.DataObjectWithParentOfLong, new()
-        where THISTYPE : WCFObjBaseWithParent<KEY, T, THISTYPE>, new() 
+        where THISTYPE : WCFObjBaseWithParent<KEY, T, THISTYPE>, new()
     {
         /// <summary>
         /// This method is called when the Parent property has been requested, the ParentID exists, but the parent object has not been set
@@ -28,10 +25,10 @@ namespace WebAnnotationModel.Objects
         {
             get
             {
-                if(_Parent == null && ParentID.HasValue)
+                if (_Parent == null && ParentID.HasValue)
                     _Parent = OnMissingParent();
 
-                return _Parent; 
+                return _Parent;
             }
             set
             {
@@ -39,7 +36,7 @@ namespace WebAnnotationModel.Objects
                 if (_Parent == value)
                 {
                     if (_Parent == null)
-                        return; 
+                        return;
 
                     //When replacing a new object created in the database we can have deleted ourselves from the parent but need to add ourselves again.
                     if (_Parent.Children.Contains(this) == false)
@@ -59,7 +56,7 @@ namespace WebAnnotationModel.Objects
                         throw new ArgumentException("Cannot set StructureType.Parent to a parent who is not yet in the database.");
                 }
 
-                OnPropertyChanging("Parent"); 
+                OnPropertyChanging("Parent");
 
                 //Remove ourselves from our old parent's list of children
                 if (_Parent != null)
@@ -70,21 +67,21 @@ namespace WebAnnotationModel.Objects
                 _Parent = value;
 
                 //Need to update the underlying type so we persist the change if asked
-                bool SetUpdateFlag = false; 
+                bool SetUpdateFlag = false;
                 if (_Parent != null)
                 {
                     if (ParentID == null)
-                        SetUpdateFlag = true; 
+                        SetUpdateFlag = true;
                     else if (!_Parent.ID.Equals(ParentID.Value))
                         SetUpdateFlag = true;
 
-                    this.ParentID = new KEY?(value.ID); 
+                    this.ParentID = new KEY?(value.ID);
                     _Parent.AddChild(this as THISTYPE);
                 }
                 else
                 {
                     if (Data.ParentID.HasValue)
-                        SetUpdateFlag = true; 
+                        SetUpdateFlag = true;
 
                     Data.ParentID = new long?();
                 }
@@ -105,8 +102,8 @@ namespace WebAnnotationModel.Objects
 
         protected void AddChild(THISTYPE child)
         {
-            Debug.Assert(_Children.Contains(child) == false); 
-            if(_Children.Contains(child) == false)
+            Debug.Assert(_Children.Contains(child) == false);
+            if (_Children.Contains(child) == false)
                 _Children.Add(child);
             else
             {
@@ -119,8 +116,8 @@ namespace WebAnnotationModel.Objects
         //Used by store to remove a child without changing the childs parentID.  This can be important after creating a temporary ID and then updating the ID after writing to the database.
         internal void RemoveChild(THISTYPE child)
         {
-            Debug.Assert(_Children.Contains(child)); 
-            if(_Children.Contains(child))
+            Debug.Assert(_Children.Contains(child));
+            if (_Children.Contains(child))
                 _Children.Remove(child);
             //            SetDBActionForChange(); Don't do this, the database doesn't care if the child changes, tables only carry a parent field
         }

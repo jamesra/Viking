@@ -9,29 +9,22 @@ using VikingXNA;
 
 namespace VikingXNAGraphics
 {
-    public enum HorizontalAlignment
-    {
-        CENTER,
-        LEFT,
-        RIGHT
-    };
 
-    public enum VerticalAlignment
+    public class LabelView : IText, IColorView, IViewPosition2D, IRenderable, IAnchor, IAlignment
     {
-        CENTER,
-        TOP,
-        BOTTOM
-    };
+        public readonly Anchor Anchor; //Readonly because we listen to a delegate
+        public readonly Alignment Alignment; //Readonly because we listen to a delegate
 
-    public class LabelView : IText, IColorView, IViewPosition2D, IRenderable
-    {
-        public HorizontalAlignment HorzAlign = HorizontalAlignment.CENTER;
-        public VerticalAlignment VertAlign = VerticalAlignment.CENTER;
+        HorizontalAlignment IAnchor.Horizontal { get => ((IAnchor)Anchor).Horizontal; set => ((IAnchor)Anchor).Horizontal = value; }
+        VerticalAlignment IAnchor.Vertical { get => ((IAnchor)Anchor).Vertical; set => ((IAnchor)Anchor).Vertical = value; }
+
+        HorizontalAlignment IAlignment.Horizontal { get => ((IAnchor)Alignment).Horizontal; set => ((IAnchor)Alignment).Horizontal = value; }
+        VerticalAlignment IAlignment.Vertical { get => ((IAnchor)Alignment).Vertical; set => ((IAnchor)Alignment).Vertical = value; }
 
         /// <summary>
         /// Label must be this large to render
         /// </summary>
-        static float LabelVisibleCutoff = 7f;
+        //static float LabelVisibleCutoff = 7f;
 
         static byte DefaultAlpha = 192;
 
@@ -112,7 +105,7 @@ namespace VikingXNAGraphics
         /// <summary>
         /// We have to scale the font to match the scale we need to use for the label sprites.
         /// </summary>
-        private double _FontSizeScaledToVolume;
+        //private double _FontSizeScaledToVolume;
 
         private bool _IsMeasured = false;
         private string[] _Rows = null; //The label text divided across rows
@@ -122,29 +115,29 @@ namespace VikingXNAGraphics
         /// True if the label should change size as the user zooms in and out.  Used to keep the label proportional to other objects rendered in a scene.
         /// False if the label is a constant size regarless of the scene.  Used for informational labels that aren't attached to objects in the scene.
         /// </summary>
-        public bool ScaleFontWithScene {get; set;}
+        public bool ScaleFontWithScene { get; set; }
 
-        public LabelView(string Text, GridVector2 VolumePosition, Color color, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
-            : this(Text, VolumePosition, Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, fontSize)
+        public LabelView(string Text, GridVector2 VolumePosition, Color color, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
+            : this(Text, VolumePosition, Global.DefaultFont, alignment, anchor, scaleFontWithScene, fontSize)
         {
             this._Color = color;
         }
 
-        public LabelView(string Text, GridVector2 VolumePosition, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
-            : this(Text, VolumePosition, Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, fontSize)
+        public LabelView(string Text, GridVector2 VolumePosition, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
+            : this(Text, VolumePosition, Global.DefaultFont, alignment, anchor, scaleFontWithScene, fontSize)
         {
         }
 
-        public LabelView(string Text, GridLineSegment VolumePosition,  HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double lineWidth = 16.0)
-            : this(Text, VolumePosition.PointAlongLine(0.5), Global.DefaultFont, hAlign, vAlign, scaleFontWithScene, lineWidth)
+        public LabelView(string Text, GridLineSegment VolumePosition, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double lineWidth = 16.0)
+            : this(Text, VolumePosition.PointAlongLine(0.5), Global.DefaultFont, alignment, anchor, scaleFontWithScene, lineWidth)
         {
             GridVector2 direction = VolumePosition.Direction;
             this.Rotation = (float)GridVector2.ArcAngle(GridVector2.Zero, GridVector2.UnitX, direction);
             //this.Rotation = (float)Math.Atan2(direction.X, direction.Y);
         }
 
-        public LabelView(string Text, GridLineSegment VolumePosition, Color color, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double lineWidth = 16.0)
-            : this(Text, VolumePosition, hAlign, vAlign, scaleFontWithScene, lineWidth)
+        public LabelView(string Text, GridLineSegment VolumePosition, Color color, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double lineWidth = 16.0)
+            : this(Text, VolumePosition, alignment, anchor, scaleFontWithScene, lineWidth)
         {
             GridVector2 direction = VolumePosition.Direction;
             this.Rotation = (float)GridVector2.ArcAngle(GridVector2.Zero, GridVector2.UnitX, direction);
@@ -152,14 +145,15 @@ namespace VikingXNAGraphics
             //this.Rotation = (float)Math.Atan2(direction.X, direction.Y);
         }
 
-        public LabelView(string Text, GridVector2 VolumePosition, SpriteFont font, HorizontalAlignment hAlign = HorizontalAlignment.CENTER, VerticalAlignment vAlign = VerticalAlignment.CENTER, bool scaleFontWithScene = true, double fontSize = 16.0)
+        public LabelView(string Text, GridVector2 VolumePosition, SpriteFont font, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
         {
             this.font = font;
             this._FontSize = fontSize;
             this.Text = Text;
             this.Position = VolumePosition;
-            this.VertAlign = vAlign;
-            this.HorzAlign = hAlign;
+            //Create copies of anchor and alignment so we can set OnChange action properly
+            this.Anchor = anchor == null ? new Anchor { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER } : new Anchor { Horizontal = anchor.Horizontal, Vertical = anchor.Vertical };
+            this.Alignment = alignment == null ? new Alignment { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER } : new Alignment { Horizontal = alignment.Horizontal, Vertical = alignment.Vertical };
             this.ScaleFontWithScene = scaleFontWithScene;
         }
 
@@ -187,7 +181,7 @@ namespace VikingXNAGraphics
                 _Position = value;
             }
         }
-
+        
         /// <summary>
         /// Returns the measured bounding box of the text in the label.
         /// </summary>
@@ -195,7 +189,7 @@ namespace VikingXNAGraphics
         {
             get
             {
-                if(!_IsMeasured)
+                if (!_IsMeasured)
                 {
                     MeasureLabel();
                 }
@@ -204,13 +198,80 @@ namespace VikingXNAGraphics
 
                 double Width = _RowMeasurements.Max(m => m.X);
                 double Height = _RowMeasurements.Sum(m => m.Y);
-                return new GridRectangle(this.Position, Width * FontScaleForVolume, Height * FontScaleForVolume);
+
+                GridVector2 label_size = new GridVector2(Width * FontScaleForVolume, Height * FontScaleForVolume);
+                GridVector2 half_label_size = label_size / 2.0;
+
+                GridVector2 origin = Position;
+                GridVector2 offset = new GridVector2(
+                    Anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : Anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
+                    Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
+                    );
+
+                return new GridRectangle(this.Position + offset, Width * FontScaleForVolume, Height * FontScaleForVolume);
             }
         }
-        
-        private static bool IsLabelTooSmallToSee(double fontSizeInScreenPixels)
+
+        /// <summary>
+        /// What does the font size need to be to fit the provided bounds?
+        /// </summary>
+        /// <param name="bbox"></param>
+        /// <param name="Padding_factor">Scalar to indicate how much padding to add around text. 1.05 = 5% additional space around text</param>
+        /// <returns></returns>
+        public double GetFontSizeToFitBounds(GridRectangle bbox, GridVector2? Padding_factor=null)
         {
-            return fontSizeInScreenPixels < 6.0;
+            if(Padding_factor == null)
+            {
+                Padding_factor = new GridVector2 { X = 1, Y = 1 };
+            }
+            //Determine how to fix the text within the width of the rectangle
+            
+            double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
+            string[] Rows = this.Text.Split('\n');
+            //int MinRows = Rows.Length;
+            Vector2[] RowMeasurements = font.MeasureStrings(Rows);
+
+            //List<string> row_list = Rows.ToList();
+
+            double bbox_aspect = bbox.Width / bbox.Height;
+
+            double text_width = RowMeasurements.Max(m => m.X);
+            double text_height = RowMeasurements.Sum(m => m.Y);
+            double row_height = RowMeasurements.Average(m => m.Y);
+
+            double padded_width = text_width * Padding_factor.Value.X;
+            double padded_height = text_height * Padding_factor.Value.Y;
+
+            //            double text_aspect = text_width / text_height;
+            //            double padded_text_aspect = padded_width / padded_height;
+
+            double horz_font_scale = bbox.Width / padded_width;
+            double vert_font_scale = bbox.Height / padded_height;
+
+            return Math.Min(horz_font_scale, vert_font_scale) * font.LineSpacing;
+
+            //If our text is wider than our bbox aspect, add rows until our aspect is smaller
+            //TODO: I'm not going to deal with wrapping text yet.  It could be flag that is added later
+            /*
+            while(text_aspect > bbox_aspect)
+            {
+                //Try wrapping the longest row of text to reduce the width of the text
+                int widest_row = 0;
+                for (int iRow = row_list.Count-1; iRow >= 0; iRow--)
+                {
+                    if(RowMeasurements[iRow].X == text_width)
+                    {
+                        
+                    }
+                }
+                
+            }
+            */ 
+        }
+
+        private static bool IsLabelTooSmallToSee(double fontSizeInScreenFraction)
+        {
+            return fontSizeInScreenFraction < (1.0 / 200.0); //Don't show if label is < 5% of screen's height
         }
 
         public bool IsVisible(VikingXNA.Scene scene)
@@ -221,14 +282,14 @@ namespace VikingXNAGraphics
             double fontSizeInScreenPixels = ScaleFontSizeForMagnification(this.FontSize, scene);
 
             //Don't draw labels if no human could read them
-            return !IsLabelTooSmallToSee(fontSizeInScreenPixels);
+            return !IsLabelTooSmallToSee(fontSizeInScreenPixels / scene.Viewport.Height);
         }
 
         /// <summary>
         /// Fonts are always the same size, they aren't rendered on a texture or anything.  So we have to scale the font according to the magnification requested by the viewer.
         /// </summary>
         /// <param name="MagnificationFactor"></param>
-        /// <returns></returns>
+        /// <returns>Fraction (0 to 1) of the screen's Y-axis the font will display upon. </returns>
         private double ScaleFontSizeForMagnification(double FontSize, VikingXNA.IScene scene)
         {
             Vector3 center  = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
@@ -264,8 +325,10 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Divide the label into multiple lines of no more than LineWidth size
         /// </summary>
-        /// <param name="label"></param>
-        /// <returns></returns>
+        /// <param name="label">Text to display</param>
+        /// <param name="LineWidth">Maximum length of a line of text</param>
+        /// <param name="OutputRowMeasurements">Output parameter of the bounding box for each row of text</param>
+        /// <returns>An array of each row's text</returns>
         private static string[] WrapText(string label, SpriteFont font, double fontScale, double LineWidth, out Vector2[] OutputRowMeasurements)
         {
             //Split the string at the first space before the midpoint
@@ -389,24 +452,24 @@ namespace VikingXNAGraphics
             
         }
 
-        private Vector2 AdjustPositionForHorzAlignment(Vector2 v, Vector2 row_measurement)
+        /*
+        private Vector2 PositionAdjustmentForAnchro(Vector2 v, Anchor anchor)
         {
-            switch (this.HorzAlign)
+            Vector2 v; 
+
+            switch (Anchor.Horizontal)
             {
                 case HorizontalAlignment.CENTER:
-                    return v;
+                    break;
                 case HorizontalAlignment.LEFT:
-                    return new Vector2(v.X - (row_measurement.X / 2.0f), v.Y);
+                    v.X = -(row_measurement.X / 2.0f);
                 case HorizontalAlignment.RIGHT:
                     return new Vector2(v.X + (row_measurement.X / 2.0f), v.Y);
                 default:
-                    throw new InvalidOperationException(string.Format("Unexpected horizontal alignment {0}", this.HorzAlign)); 
+                    throw new InvalidOperationException(string.Format("Unexpected horizontal alignment {0}", Anchor.Horizontal)); 
             } 
-        }
-
-        private Vector2 AdjustPositionForVertAlignment(Vector2 v, Vector2 row_measurement)
-        {
-            switch (this.VertAlign)
+        
+            switch (Anchor.Vertical)
             {
                 case VerticalAlignment.CENTER:
                     return v;
@@ -415,47 +478,50 @@ namespace VikingXNAGraphics
                 case VerticalAlignment.BOTTOM:
                     return new Vector2(v.X, v.Y + (row_measurement.Y / 2.0f));
                 default:
-                    throw new InvalidOperationException(string.Format("Unexpected vertical alignment {0}", this.VertAlign));
+                    throw new InvalidOperationException(string.Format("Unexpected vertical alignment {0}", Anchor.Vertical));
 
-            } 
+            }
+            return v;
+
         }
+        */
+         
 
-        private static Vector2 OriginForRow(Vector2 row_measurement, Vector2 max_row_size, HorizontalAlignment hAlign, VerticalAlignment vAlign)
+        private static Vector2 AlignmentAdjustmentForRow(Vector2 row_measurement, GridRectangle bounds, Vector2 max_row_size, Alignment alignment)
         {
             Vector2 origin = new Vector2();
 
-            switch (hAlign)
+            switch (alignment.Horizontal)
             {
                 case HorizontalAlignment.CENTER:
-                    origin.X = row_measurement.X / 2.0f;
+                    origin.X = (row_measurement.X - max_row_size.X) / 2.0f;
                     break;
                 case HorizontalAlignment.LEFT:
                     origin.X = 0;
                     break;
                 case HorizontalAlignment.RIGHT:
-                    origin.X = -(max_row_size.X - row_measurement.X);
+                    origin.X = row_measurement.X - max_row_size.X;
                     break;
                 default:
-                    throw new InvalidOperationException(string.Format("Unexpected horizontal alignment {0}", hAlign));
+                    throw new InvalidOperationException(string.Format("Unexpected horizontal alignment {0}", alignment.Horizontal));
             }
 
-            switch (vAlign)
+            switch (alignment.Vertical)
             {
                 case VerticalAlignment.CENTER:
-                    origin.Y = row_measurement.Y / 2.0f;
+                    origin.Y = (row_measurement.Y - max_row_size.Y) / 2.0f;
                     break;
                 case VerticalAlignment.TOP:
                     origin.Y = 0;
                     break;
                 case VerticalAlignment.BOTTOM:
-                    origin.Y = -(max_row_size.Y - row_measurement.Y);
+                    origin.Y = row_measurement.Y - max_row_size.Y;
                     break;
                 default:
-                    throw new InvalidOperationException(string.Format("Unexpected vertical alignment {0}", vAlign));
+                    throw new InvalidOperationException(string.Format("Unexpected vertical alignment {0}", alignment.Vertical));
             }
 
-            return origin;
-
+            return origin; 
         }
 
         private void MeasureLabel()
@@ -478,7 +544,7 @@ namespace VikingXNAGraphics
         {
             double fontSizeInScreenPixels = ScaleFontSizeForMagnification(this.FontSize, scene);
 
-            if (this.ScaleFontWithScene && IsLabelTooSmallToSee(fontSizeInScreenPixels))
+            if (this.ScaleFontWithScene && IsLabelTooSmallToSee(fontSizeInScreenPixels / scene.Viewport.Height))
                 return;
 
             if (font == null)
@@ -501,7 +567,9 @@ namespace VikingXNAGraphics
             if (this._Rows == null || this._Rows.Length == 0)
                 return;
 
-            Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
+            //Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
+            GridRectangle bounds = BoundingRect;
+            Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(bounds.UpperLeft.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
             Vector2 LocationCenterScreenPosition = new Vector2(LocationCenterScreenPosition_v3.X, LocationCenterScreenPosition_v3.Y);
 
     //scene.WorldToScreen(this.Position).ToXNAVector2();
@@ -521,8 +589,8 @@ namespace VikingXNAGraphics
                 //DrawPosition = AdjustPositionForHorzAlignment(DrawPosition, _RowMeasurements[iRow]);
                 //DrawPosition = AdjustPositionForVertAlignment(DrawPosition, _RowMeasurements[iRow]);
                 DrawPosition.Y += LineStep * iRow;
-                Vector2 origin = OriginForRow(_RowMeasurements[iRow], max_row_size, HorzAlign, VertAlign);
-                
+                Vector2 origin = AlignmentAdjustmentForRow(_RowMeasurements[iRow], bounds, max_row_size, Alignment);
+                  
                 spriteBatch.DrawString(font,
                                        _Rows[iRow],
                                        DrawPosition,
@@ -534,6 +602,7 @@ namespace VikingXNAGraphics
                                        0);
             }
         }
+         
 
         public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
         {

@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using WebAnnotationModel;
-using SqlGeometryUtils;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
+using System.Linq;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
@@ -18,7 +13,7 @@ namespace WebAnnotation.View
         public abstract float Alpha { get; set; }
 
         public LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
-        { 
+        {
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)

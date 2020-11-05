@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using WebAnnotationModel;
 
@@ -21,7 +15,7 @@ namespace WebAnnotation.UI
                 {
                     return long.Parse(textKeepID.Text);
                 }
-                catch(FormatException)
+                catch (FormatException)
                 {
                     return -1;
                 }
@@ -61,7 +55,7 @@ namespace WebAnnotation.UI
         {
             InitializeComponent();
         }
-          
+
         private bool IsIDValid(string Input, out string Reason)
         {
             Reason = null;
@@ -77,7 +71,7 @@ namespace WebAnnotation.UI
                 int ID = int.Parse(Input);
 
                 LocationObj obj = Store.Locations.GetObjectByID(ID);
-                if(obj == null)
+                if (obj == null)
                 {
                     Reason = "No Location found";
                 }
@@ -95,7 +89,7 @@ namespace WebAnnotation.UI
         {
             Reason = null;
             long KeepID;
-            long SplitID; 
+            long SplitID;
 
             try
             {
@@ -123,7 +117,7 @@ namespace WebAnnotation.UI
         /// <returns></returns>
         private bool VerifyStructureMatch(out string Reason)
         {
-            Reason = null; 
+            Reason = null;
 
             long KeepID;
             long SplitID;
@@ -153,19 +147,19 @@ namespace WebAnnotation.UI
                 return false;
             }
 
-            if(splitLoc == null)
+            if (splitLoc == null)
             {
                 Reason = "Split Location ID must be a valid location";
                 return false;
             }
 
-            if(keepLoc.ParentID != splitLoc.ParentID)
+            if (keepLoc.ParentID != splitLoc.ParentID)
             {
                 Reason = String.Format("Location IDs must be from the same structure. Structure {0} not equal to {1}", keepLoc.ParentID, splitLoc.ParentID);
-                return false; 
+                return false;
             }
 
-            return true; 
+            return true;
         }
 
         private void textKeepID_TextChanged(object sender, EventArgs e)
@@ -236,7 +230,7 @@ namespace WebAnnotation.UI
             }
             catch (Exception except)
             {
-                if(except.Message != null)
+                if (except.Message != null)
                     MessageBox.Show("Split error", except.Message.ToString());
 
                 return;
@@ -272,7 +266,7 @@ namespace WebAnnotation.UI
             e.Cancel = true;
 
             string Reason = null;
-            if(!IsIDValid(textSplitID.Text, out Reason))
+            if (!IsIDValid(textSplitID.Text, out Reason))
             {
                 textSplitLabel.Text = Reason;
                 return;

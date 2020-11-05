@@ -13,6 +13,7 @@ using Utils;
 using Geometry;
 using Geometry.Transforms;
 using Viking.VolumeModel;
+using UnitsAndScale;
 
 namespace Viking.VolumeModel
 {
@@ -221,9 +222,9 @@ namespace Viking.VolumeModel
             get { return Sections.Count; }
         }
 
-        private UnitsAndScale.IAxisUnits _DefaultXYScale;
+        private IAxisUnits _DefaultXYScale;
 
-        public UnitsAndScale.IAxisUnits DefaultXYScale
+        public IAxisUnits DefaultXYScale
         {
             get { return _DefaultXYScale;}
         }

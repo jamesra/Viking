@@ -1,10 +1,9 @@
-﻿using System;
+﻿using Geometry;
+using SqlGeometryUtils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using SqlGeometryUtils;
-using Geometry;
 
 namespace AnnotationVizLib
 {
@@ -55,7 +54,7 @@ namespace AnnotationVizLib
             List<SortedSet<ulong>> sorted_subgraphs = subgraphs.OrderBy(s => s.Count).ToList();
 
             //OK find the nearest point between the subgraphs.
-            while(sorted_subgraphs.Count > 1)
+            while (sorted_subgraphs.Count > 1)
             {
                 //Pop the first subgraph from the list
                 SortedSet<ulong> SubgraphToMerge = sorted_subgraphs[0];
@@ -64,31 +63,31 @@ namespace AnnotationVizLib
                 graph.MergeSubgraph(SubgraphToMerge, sorted_subgraphs);
             }
         }
-        
+
         private void MergeSubgraph(SortedSet<ulong> SubgraphToMerge, IList<SortedSet<ulong>> subgraphs)
         {
             double[] Distances = new double[SubgraphToMerge.Count];
-            
+
             //Create a single graph of the subgraphs we want to merge into
             SortedSet<ulong> subgraphUnion = new SortedSet<ulong>(subgraphs[0]);
-            for(int i = 1; i < subgraphs.Count; i++)
+            for (int i = 1; i < subgraphs.Count; i++)
             {
-                foreach(ulong id in subgraphs[i])
+                foreach (ulong id in subgraphs[i])
                 {
                     subgraphUnion.Add(id);
                 }
             }
-            
+
             RTree.RTree<ulong> UnionRTree = this.CreateRTreeForSubgraph(subgraphUnion);
 
-            
+
 
             SortedList<ulong, double> distances = new SortedList<ulong, double>();
 
             ulong nearest_node_id = 0;
             MorphologyEdge best_edge = null;
             double nearest_node_distance = double.MaxValue;
-            
+
             //Check each node in our subgraph to find the nearest node in the subgraphs we want to merge into
             foreach (ulong key in SubgraphToMerge)
             {
@@ -113,15 +112,15 @@ namespace AnnotationVizLib
 
             //Add the subgraph we merged to the subgraph in the list
             MergeSubgraphs(SubgraphToMerge, nearest_node_id, subgraphs);
-        } 
+        }
 
         private void MergeSubgraphs(SortedSet<ulong> SubgraphToMerge, ulong node_to_merge_onto, IList<SortedSet<ulong>> subgraphs)
         {
             foreach (SortedSet<ulong> subgraph in subgraphs)
             {
-                if(subgraph.Contains(node_to_merge_onto))
+                if (subgraph.Contains(node_to_merge_onto))
                 {
-                    foreach(ulong key in SubgraphToMerge)
+                    foreach (ulong key in SubgraphToMerge)
                     {
                         subgraph.Add(key);
                     }
@@ -157,7 +156,7 @@ namespace AnnotationVizLib
             List<ulong> found_nodes = new List<ulong>();
 
             double scale_factor = 2.0;
-            while(found_nodes.Count < 8 && found_nodes.Count != rtree.Count)
+            while (found_nodes.Count < 8 && found_nodes.Count != rtree.Count)
             {
                 GridBox bbox = shape_to_check.BoundingBox;
                 bbox.Scale(scale_factor);
@@ -169,11 +168,11 @@ namespace AnnotationVizLib
         }
 
         private ulong NearestNode(IGeometry shape_to_check, SortedSet<ulong> nodes_to_compare, out double min_distance)
-        {  
+        {
             min_distance = double.MaxValue;
             ulong Nearest = ulong.MaxValue;
 
-            foreach(ulong compare_id in nodes_to_compare)
+            foreach (ulong compare_id in nodes_to_compare)
             {
                 MorphologyNode compare_node = this.Nodes[compare_id];
                 double z_distance = Math.Abs(shape_to_check.Z - compare_node.Z);
@@ -189,7 +188,7 @@ namespace AnnotationVizLib
                 double pair_distance_3D = (pair_distance * pair_distance) + (z_distance * z_distance);
                 pair_distance_3D = Math.Sqrt(pair_distance_3D);
 
-                if(pair_distance_3D < min_distance)
+                if (pair_distance_3D < min_distance)
                 {
                     min_distance = pair_distance_3D;
                     Nearest = compare_id;
@@ -237,14 +236,14 @@ namespace AnnotationVizLib
             min_distance = double.MaxValue;
             ulong nearest_node = ulong.MaxValue;
             //Get the bounding box for the graph, 
-            foreach(MorphologyNode subgraphnode in other.Nodes.Values)
+            foreach (MorphologyNode subgraphnode in other.Nodes.Values)
             {
                 double node_min_distance;
                 ulong id = NearestNode(subgraphnode, out node_min_distance);
-                if(node_min_distance < min_distance)
+                if (node_min_distance < min_distance)
                 {
                     min_distance = node_min_distance;
-                    nearest_node = id; 
+                    nearest_node = id;
                 }
             }
 
@@ -264,7 +263,7 @@ namespace AnnotationVizLib
 
             double TotalDistance = 0.0;
 
-            for(int iStart = 0; iStart < path.Count() - 1; iStart++)
+            for (int iStart = 0; iStart < path.Count() - 1; iStart++)
             {
                 int iEnd = iStart + 1;
 
@@ -290,7 +289,7 @@ namespace AnnotationVizLib
         public static double GraphDistance(MorphologyGraph A, MorphologyGraph B)
         {
             //Find the smaller graph
-            if(A.Nodes.Count > B.Nodes.Count)
+            if (A.Nodes.Count > B.Nodes.Count)
             {
                 MorphologyGraph C = A;
                 A = B;
@@ -303,7 +302,7 @@ namespace AnnotationVizLib
             {
                 double node_min_distance;
                 A.NearestNode(B, out node_min_distance);
-                if(node_min_distance < minDistance)
+                if (node_min_distance < minDistance)
                 {
                     minDistance = node_min_distance;
                 }
@@ -328,7 +327,7 @@ namespace AnnotationVizLib
                 return new PathData[0];
 
             var nodes_with_sourceType_subgraphs = source_ids.Select(id => new { Node = cell_graph.NearestNodeToSubgraph[id], StructureID = id }).ToList();
-            
+
             SortedDictionary<ulong, PathData> paths_between_types = new SortedDictionary<ulong, PathData>();
 
             //Find the nearest synapse
@@ -362,7 +361,7 @@ namespace AnnotationVizLib
             */
 
             //Precalculate the distance between the substructures using the path
-            foreach(ulong ID in paths_between_types.Keys)
+            foreach (ulong ID in paths_between_types.Keys)
             {
                 PathData p = paths_between_types[ID];
                 p.Distance = DistanceBetweenSubstructures(cell_graph, p.Path, p.SourceStructureID, p.TargetStructureID);
@@ -409,7 +408,7 @@ namespace AnnotationVizLib
             //Iterate over each process
             List<ulong[]> listProcesses = graph.Processes();
 
-            foreach(ulong[] process in listProcesses)
+            foreach (ulong[] process in listProcesses)
             {
                 MorphologyNode[] process_nodes = process.Select(p => graph.Nodes[p]).ToArray();
 
@@ -429,7 +428,7 @@ namespace AnnotationVizLib
                 */
             }
 
-            foreach(MorphologyGraph subgraph in graph.Subgraphs.Values)
+            foreach (MorphologyGraph subgraph in graph.Subgraphs.Values)
             {
                 SmoothProcesses(subgraph);
             }

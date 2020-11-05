@@ -1,10 +1,8 @@
-﻿using System;
+﻿using RTree;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using RTree;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Geometry
 {
@@ -149,7 +147,7 @@ namespace Geometry
                 case ShapeType2D.ELLIPSE:
                 default:
                     throw new NotImplementedException();
-            } 
+            }
         }
 
         private static bool PointIntersects(IPoint2D point, IShape2D other)
@@ -264,6 +262,33 @@ namespace Geometry
                     throw new NotImplementedException();
             }
         }
+        /*
+        internal static OverlapType PolygonContainsExt(IPolygon2D p, IShape2D other)
+        {
+            GridPolygon poly = p.Convert();
+
+            switch (other.ShapeType)
+            {
+                case ShapeType2D.POINT:
+                    return poly.ContainsExt(other as IPoint2D);
+                case ShapeType2D.LINE:
+                    return poly.ContainsExt(other as ILineSegment2D);
+                case ShapeType2D.CIRCLE:
+                    ICircle2D other_circle = other as ICircle2D;
+                    return poly.Intersects(new GridCircle(other_circle.Center, other_circle.Radius));
+                case ShapeType2D.TRIANGLE:
+                    ITriangle2D other_tri = other as ITriangle2D;
+                    return poly.Intersects(other_tri.Convert());
+                case ShapeType2D.POLYGON:
+                    return poly.Intersects(((IPolygon2D)other).Convert());
+                case ShapeType2D.RECTANGLE:
+                    return poly.Intersects(((GridRectangle)other).Convert());
+                case ShapeType2D.ELLIPSE:
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        */
 
         internal static bool PolygonIntersects(IPolygon2D p, IShape2D other)
         {
@@ -349,12 +374,12 @@ namespace Geometry
             if (rect.Contains(circle.Center))
                 return true;
 
-            
+
             if (circle.Contains(rect.LowerLeft) || circle.Contains(rect.LowerRight) ||
                 circle.Contains(rect.UpperLeft) || circle.Contains(rect.UpperRight))
                 return true;
 
-            foreach(GridLineSegment border in rect.Edges)
+            foreach (GridLineSegment border in rect.Edges)
             {
                 //TODO: I'm not sure we need the IsNearestPointWithinLineSegment check because the bounding boxes intersect.
                 if (border.IsNearestPointWithinLineSegment(circle.Center))
@@ -391,8 +416,15 @@ namespace Geometry
             return false;
         }
 
+        /// <summary>
+        /// Returns true if the circle intersects the polygon without containing all of it
+        /// </summary>
+        /// <param name="circle"></param>
+        /// <param name="poly"></param>
+        /// <returns></returns>
         public static bool Intersects(GridCircle circle, GridPolygon poly)
         {
+
             if (false == circle.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
 
@@ -417,8 +449,67 @@ namespace Geometry
                 if (circle.Intersects(line))
                     return true;
             }
-             
+
             return false;
+        }
+
+        /// <summary>
+        /// Returns true if the circle intersects the polygon without containing all of it
+        /// </summary>
+        /// <param name="circle"></param>
+        /// <param name="poly"></param>
+        /// <returns></returns>
+        public static OverlapType ContainsExt(GridCircle circle, GridPolygon poly)
+        {
+            throw new NotImplementedException();
+            /*
+            GridRectangle? overlap = circle.BoundingBox.Intersection(poly.BoundingBox);
+            if (!overlap.HasValue)
+                return OverlapType.NONE;
+
+            bool CanContain = true;
+            //We cannot contain the polygon if the overlapping bounding box is not identical
+            if (overlap.Value != poly.BoundingBox)
+                CanContain = false;
+
+            //Do any triangle verts fall inside our circle?
+            bool AllVertsInside = true;
+            bool AtLeastOneTouching = false; 
+            foreach (GridVector2 p in poly.ExteriorRing)
+            {
+                OverlapType o = circle.ContainsExt(p);
+                if (o == OverlapType.CONTAINED)
+                {
+                    if (CanContain == false)
+                        return OverlapType.INTERSECTING;
+                }
+                else if(o == OverlapType.NONE)
+                {
+                    AllVertsInside = false;
+                }
+                else if(o == OverlapType.TOUCHING)
+                {
+
+                }
+            }
+
+            //Is the center of our circle inside the triangle?
+            //Todo: This contains test is inconsistent with the idea of an intersection.  I need to clarify when circles and all shapes are considered solid or traces. This old code is prevalent and I don't want to break things until I can fix all of these instances
+            if (poly.Contains(circle.Center))
+                return true;
+
+            //Do any line segments intersect our circle?
+            //List<GridLineSegment> Candidates = poly.SegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect()).Select(p => p.Segment(poly)).Where(segment => circle.Intersects(segment)).ToList();
+            foreach (PointIndex p in poly.SegmentRTree.IntersectionGenerator(circle.BoundingBox.ToRTreeRect()))
+            {
+                GridLineSegment line = p.Segment(poly);
+
+                if (circle.Intersects(line))
+                    return true;
+            }
+
+            return false;
+            */
         }
     }
 
@@ -481,16 +572,16 @@ namespace Geometry
             }
 
             return poly.SegmentRTree.Intersects(rect.ToRTreeRect(0)).Any(p => rect.Intersects(p.Segment(poly)));
-                /*
-            List<GridLineSegment> Candidates = poly.ExteriorSegmentRTree.Intersects(rect.ToRTreeRect(0));
-            foreach (GridLineSegment line in Candidates)
-            {
-                if (rect.Intersects(line))
-                    return true;
-            }
+            /*
+        List<GridLineSegment> Candidates = poly.ExteriorSegmentRTree.Intersects(rect.ToRTreeRect(0));
+        foreach (GridLineSegment line in Candidates)
+        {
+            if (rect.Intersects(line))
+                return true;
+        }
 
-            return false;
-            */
+        return false;
+        */
         }
     }
 
@@ -514,40 +605,40 @@ namespace Geometry
             if (tri.Contains(line.A) || tri.Contains(line.B))
                 return true;
 
-            foreach(GridLineSegment tri_line in tri.Segments)
+            foreach (GridLineSegment tri_line in tri.Segments)
             {
                 if (line.Intersects(tri_line))
                     return true;
             }
 
             return false;
-        } 
+        }
 
         public static bool Intersects(GridTriangle tri, GridPolygon poly)
         {
             if (false == tri.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
 
-            foreach(GridVector2 p in poly.ExteriorRing)
+            foreach (GridVector2 p in poly.ExteriorRing)
             {
                 if (tri.Contains(p))
                     return true;
             }
 
-            foreach(GridVector2 p in tri.Points)
+            foreach (GridVector2 p in tri.Points)
             {
                 if (poly.Contains(p))
                     return true;
             }
 
             ///Check in case a triangle vertex falls inside an interior polygon
-            foreach(GridLineSegment line in tri.Segments)
+            foreach (GridLineSegment line in tri.Segments)
             {
                 if (poly.Intersects(line))
                     return true;
             }
 
-            return false; 
+            return false;
         }
     }
 
@@ -578,9 +669,9 @@ namespace Geometry
         public static bool Intersects(this GridLineSegment line, GridPolygon poly, out GridVector2 intersection)
         {
             intersection = GridVector2.Zero;
-            List<GridVector2> intersections; 
+            List<GridVector2> intersections;
             bool intersected = Intersects(line, poly, false, out intersections);
-            if(intersected)
+            if (intersected)
             {
                 intersection = intersections.First();
             }
@@ -588,7 +679,7 @@ namespace Geometry
             return intersected;
         }
 
-        public static bool Intersects(this GridLineSegment line, GridPolygon poly, bool EndpointsOnRingDoNotIntersect=false)
+        public static bool Intersects(this GridLineSegment line, GridPolygon poly, bool EndpointsOnRingDoNotIntersect = false)
         {
             List<GridVector2> intersections;
             return Intersects(line, poly, EndpointsOnRingDoNotIntersect, out intersections);
@@ -640,13 +731,13 @@ namespace Geometry
             }
             */
             intersections = intersections.Distinct().ToList(); //Remove duplicates if our line happens to pass directly through a vertex
-            if(EndpointsOnRingDoNotIntersect)
+            if (EndpointsOnRingDoNotIntersect)
             {
                 intersections = intersections.Where(i => !line.IsEndpoint(i)).ToList();
             }
 
             return intersections.Count > 0;
-            
+
         }
 
         /// <summary>
@@ -658,10 +749,10 @@ namespace Geometry
         /// <returns></returns>
         public static bool Crosses(this GridLineSegment line, GridPolygon poly)
         {
-            List<GridVector2> Intersections; 
+            List<GridVector2> Intersections;
             return line.Crosses(poly, out Intersections);
         }
-         
+
         /// <summary>
         /// Returns true if any portion of the line is inside the polygon
         /// </summary>
@@ -670,14 +761,14 @@ namespace Geometry
         /// <param name="Intersections"></param>
         /// <returns></returns>
         public static bool Crosses(this GridLineSegment line, GridPolygon poly, out List<GridVector2> Intersections)
-        { 
-             Intersections = new List<GridVector2>();
+        {
+            Intersections = new List<GridVector2>();
 
             if (false == line.BoundingBox.Intersects(poly.BoundingBox))
                 return false;
 
             bool Intersects = line.Intersects(poly, true, out Intersections);
-            if(Intersects)
+            if (Intersects)
             {
                 return true;
             }
@@ -699,18 +790,18 @@ namespace Geometry
             {
                 if (line.Intersects(testLine, EndpointsOnRingDoNotIntersect))
                 {
-                    return true; 
+                    return true;
                 }
             }
 
             return false;
         }
-        
+
         public static List<GridLineSegment> Intersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints)
         {
             return Intersections(line, lines, true, out IntersectionPoints);
         }
-        
+
 
         /// <summary>
         /// Return a list of lines the passed line intersects and the intersection points
@@ -734,17 +825,17 @@ namespace Geometry
                     //Check that NewPoints does not contain the point.  This can occur when the test line intersects exactly over the endpoint of two lines.
                     if (EndpointsOnLineDoNotIntersect && line.IsEndpoint(intersection))
                     {
-                        continue; 
+                        continue;
                     }
 
-                    if(!NewPoints.Contains(intersection))
+                    if (!NewPoints.Contains(intersection))
                     {
                         NewPoints.Add(intersection);
                         IntersectingLines.Add(testLine);
                     }
                 }
             }
-            
+
             double[] dotValues = NewPoints.Select(p => line.Dot(p)).ToArray();
             int[] sortedIndicies = dotValues.SortAndIndex();
 
@@ -763,9 +854,9 @@ namespace Geometry
         /// <returns>The lines that intersect the line parameter</returns>
         public static List<Tuple<GridLineSegment, GridLineSegment>> Intersections(this IEnumerable<GridLineSegment> ALines, IReadOnlyList<GridLineSegment> BLines, bool EndpointsOnLineDoNotIntersect, out GridVector2[] IntersectionPoints)
         {
-            List< Tuple<GridLineSegment,GridLineSegment> > listLinePairIntersections = new List<Tuple<GridLineSegment, GridLineSegment>>();
+            List<Tuple<GridLineSegment, GridLineSegment>> listLinePairIntersections = new List<Tuple<GridLineSegment, GridLineSegment>>();
             List<GridVector2> listIntersections = new List<GridVector2>();
-            foreach(GridLineSegment line in ALines)
+            foreach (GridLineSegment line in ALines)
             {
                 List<GridLineSegment> intersectedLines = line.Intersections(BLines, EndpointsOnLineDoNotIntersect, out GridVector2[] intersections);
                 listLinePairIntersections.AddRange(intersectedLines.Select(other => new Tuple<GridLineSegment, GridLineSegment>(line, other)));
@@ -796,14 +887,14 @@ namespace Geometry
                 {
                     GridLineSegment B = BLines[iB];
 
-                    if(A.Intersects(B, EndpointsOnLineDoNotIntersect, out IShape2D Intersection))
+                    if (A.Intersects(B, EndpointsOnLineDoNotIntersect, out IShape2D Intersection))
                     {
                         var Result = new ArrayIntersection<GridLineSegment>(A, B, iA, iB, Intersection);
                         listLinePairIntersections.Add(Result);
                     }
                 }
             }
-                     
+
             return listLinePairIntersections;
         }
 
@@ -848,13 +939,13 @@ namespace Geometry
                         continue;
                 }
 
-                bool EndpointsOnRingDoNotIntersect = order.IsEndpointIntersectionExpected(iLine, lines.Count, lines.Count+1);
+                bool EndpointsOnRingDoNotIntersect = order.IsEndpointIntersectionExpected(iLine, lines.Count, lines.Count + 1);
 
                 if (line.Intersects(addition, EndpointsOnRingDoNotIntersect: EndpointsOnRingDoNotIntersect))
                 {
                     intersected = line;
                     return true;
-                }   
+                }
             }
 
             return false;
@@ -881,16 +972,16 @@ namespace Geometry
         /// <param name="IsClosedRing">True if the polyline forms a closed ring, in which case the first and last points are allowed to overlap</param>
         /// <returns></returns>
         public static bool SelfIntersects(this IReadOnlyList<GridLineSegment> lines, LineSetOrdering order)
-        {   
+        {
             for (int iLine = 0; iLine < lines.Count; iLine++)
             {
-                for(int jLine = iLine + 1; jLine < lines.Count; jLine++)
+                for (int jLine = iLine + 1; jLine < lines.Count; jLine++)
                 {
                     //For polyline and closed loops for adjacent lines we only need to check that the endpoints aren't equal to know that the lines do not overlap
                     if (iLine + 1 == jLine && (order == LineSetOrdering.POLYLINE || order == LineSetOrdering.CLOSED))
                     {
                         if (lines[iLine].A != lines[jLine].B)
-                            continue; 
+                            continue;
                     }
 
                     bool EndpointsOnRingDoNotIntersect = order.IsEndpointIntersectionExpected(iLine, jLine, lines.Count);
@@ -904,18 +995,18 @@ namespace Geometry
         }
 
         public static List<GridLineSegment> SubdivideAtIntersections(this GridLineSegment line, IReadOnlyList<GridLineSegment> lines, out GridVector2[] IntersectionPoints)
-        { 
+        {
             List<GridLineSegment> Unused = line.Intersections(lines, out IntersectionPoints);
 
             List<GridLineSegment> DividedLines = new List<Geometry.GridLineSegment>(IntersectionPoints.Length + 2);
-            if(IntersectionPoints.Length == 0)
+            if (IntersectionPoints.Length == 0)
             {
                 DividedLines.Add(line);
                 return DividedLines;
             }
 
             DividedLines.Add(new GridLineSegment(line.A, IntersectionPoints[0]));
-            for(int i=0; i < IntersectionPoints.Length - 1; i++)
+            for (int i = 0; i < IntersectionPoints.Length - 1; i++)
             {
                 DividedLines.Add(new GridLineSegment(IntersectionPoints[i], IntersectionPoints[i + 1]));
             }
@@ -930,11 +1021,11 @@ namespace Geometry
         /// <param name="lines"></param>
         /// <returns></returns>
         public static SortedSet<GridLineSegment> SplitLinesAtIntersections(this IEnumerable<GridLineSegment> lines, out SortedSet<GridVector2> AddedPoints)
-        { 
+        {
             RTree.RTree<GridLineSegment> rTree = lines.ToRTree();
 
             IList<GridLineSegment> sortedLines;
-            if(lines as IList<GridLineSegment> != null)
+            if (lines as IList<GridLineSegment> != null)
             {
                 sortedLines = (IList<GridLineSegment>)lines;
             }
@@ -954,24 +1045,24 @@ namespace Geometry
                 GridLineSegment A = linesToTest.Pop();
 
                 ///Find lines that intersect A, but not on an endpoint of A
-                IEnumerable<GridLineSegment> intersections = rTree.Intersects(A.BoundingBox.ToRTreeRect(0)).Where(B => 
-                    { 
+                IEnumerable<GridLineSegment> intersections = rTree.Intersects(A.BoundingBox.ToRTreeRect(0)).Where(B =>
+                    {
                         if (B == A)
                             return false;
 
                         if (B.SharedEndPoint(A))
                             return false;
-                           
+
                         GridVector2 intersection;
                         if (B.Intersects(A, out intersection))
                         {
-                            
+
 
                             return !(A.A == intersection || A.B == intersection);
                         }
                         else
                         {
-                            return false; 
+                            return false;
                         }
                     });
 
@@ -994,7 +1085,7 @@ namespace Geometry
                 }
             }
 
-            return output; 
+            return output;
         }
     }
 

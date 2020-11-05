@@ -1,10 +1,5 @@
-﻿using System;
-using System.Text;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Text.RegularExpressions;
-using System.Collections.Generic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Geometry;
-using Geometry.Transforms;
 
 namespace GeometryTests
 {
@@ -71,7 +66,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestTransformParameters()
         {
-            
+
             string transform_name = "GridTransform_double_2_2 ";
             string transform_regex = @"\s*(?<transform_name>\S+)\s+";
             TestRegex(transform_regex, transform_name);
@@ -84,7 +79,7 @@ namespace GeometryTests
             string transform_vp_param_regex = @"\s*(?<transform_name>\S+)\s+vp\s*(?<num_vp_params>\d+)\s+(?<vp_params>(\d+(\.\d+(e\+\d+)?)?\s+)+)fp\s+(?<num_fp_params>\d+)\s+";
             TestRegex(transform_vp_param_regex, transform_vp_param);
 
-            string transform =          "GridTransform_double_2_2 vp 8 0.000000000000e+000 0.000000000000e+000 5.120000000000e+002 0.000000000000e+000 0.000000000000e+000 2.560000000000e+002 5.120000000000e+002 2.560000000000e+002 fp 7 0.000000000000e+000 1.000000000000e+000 1.000000000000e+000 0.000000000000e+000 0.000000000000e+000 5.120000000000e+002 2.560000000000e+002";
+            string transform = "GridTransform_double_2_2 vp 8 0.000000000000e+000 0.000000000000e+000 5.120000000000e+002 0.000000000000e+000 0.000000000000e+000 2.560000000000e+002 5.120000000000e+002 2.560000000000e+002 fp 7 0.000000000000e+000 1.000000000000e+000 1.000000000000e+000 0.000000000000e+000 0.000000000000e+000 5.120000000000e+002 2.560000000000e+002";
             string full_transform_regex = @"\s*(?<transform_name>\S+)\s+vp\s*(?<num_vp_params>\d+)\s+(?<vp_params>(\d+(\.\d+(e\+\d+)?)?\s+)+)fp\s+(?<num_fp_params>\d+)\s+(?<fp_params>(\d+(\.\d+(e\+\d+)?)?\s+)+)";
 
             TestRegex(full_transform_regex, transform);

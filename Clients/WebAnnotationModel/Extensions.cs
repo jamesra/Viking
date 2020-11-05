@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
 using Geometry;
-using WebAnnotationModel.Service;
-using System.Data.SqlTypes;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
-using Annotation.Interfaces;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace WebAnnotationModel
@@ -40,7 +35,7 @@ namespace WebAnnotationModel
 
             throw new ArgumentException(string.Format("Unknown location type {0}", type));
         }
-         
+
         /// <summary>
         /// A helper function to raise events on the UI thread if needed. 
         /// From: https://stackoverflow.com/questions/1698889/raise-events-in-net-on-the-main-ui-thread
@@ -50,7 +45,7 @@ namespace WebAnnotationModel
         public static void RaiseEventOnUIThread(this Delegate theEvent, object[] args)
         {
             if (theEvent == null)
-                return; 
+                return;
 
             foreach (Delegate d in theEvent.GetInvocationList())
             {
@@ -83,7 +78,7 @@ namespace WebAnnotationModel
         /// <param name="value"></param>
         /// <returns>True if the tag exists in the attributes after the function has completed.</returns>
         public static bool ToggleAttribute(this List<WebAnnotationModel.ObjAttribute> listAttributes, string tag, string value = null)
-        {  
+        {
             if (listAttributes.Contains(tag))
             {
                 listAttributes.RemoveAll(tag);

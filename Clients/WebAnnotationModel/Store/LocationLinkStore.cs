@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using AnnotationService.Types;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-
 using System.Diagnostics;
-using System.ServiceModel;
-
+using System.Linq;
 using WebAnnotationModel.Service;
-using WebAnnotationModel.Objects;
-using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {
@@ -20,12 +15,12 @@ namespace WebAnnotationModel
 
         public LocationLinkStore()
         {
-            
+
         }
 
         public override void Init()
         {
-            Store.Locations.OnCollectionChanged += new NotifyCollectionChangedEventHandler(OnLocationsStoreChanged); 
+            Store.Locations.OnCollectionChanged += new NotifyCollectionChangedEventHandler(OnLocationsStoreChanged);
         }
 
         protected override LocationLink ProxyGetByID(AnnotateLocationsClient proxy, LocationLinkKey ID)
@@ -44,15 +39,15 @@ namespace WebAnnotationModel
                 State.EndpointAddress);
             proxy.ClientCredentials.UserName.UserName = State.UserCredentials.UserName;
             proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password;
-            return proxy; 
+            return proxy;
         }
 
         protected override LocationLinkKey[] ProxyUpdate(AnnotateLocationsClient proxy, LocationLink[] objects)
         {
             throw new NotImplementedException();
         }
-        
-        public void CreateLink(long A,long B)
+
+        public void CreateLink(long A, long B)
         {
             //lock (LockObject)
             {
@@ -75,9 +70,9 @@ namespace WebAnnotationModel
                             proxy.Close();
                     }
                 }
-                
+
                 ChangeInventory<LocationLinkObj> inventory = InternalAdd(new LocationLinkObj(A, B));
-                CallOnCollectionChanged(inventory); 
+                CallOnCollectionChanged(inventory);
             }
         }
 
@@ -85,18 +80,18 @@ namespace WebAnnotationModel
         {
             //lock (LockObject)
             {
-                AnnotateLocationsClient proxy = null; 
+                AnnotateLocationsClient proxy = null;
                 LocationLinkObj deletedLink = null;
 
-//                LocationObj AObj = Store.Locations.GetObjectByID(A);
-//                LocationObj BObj = Store.Locations.GetObjectByID(B);
+                //                LocationObj AObj = Store.Locations.GetObjectByID(A);
+                //                LocationObj BObj = Store.Locations.GetObjectByID(B);
 
                 try
                 {
-                    proxy  = CreateProxy();
+                    proxy = CreateProxy();
                     proxy.Open();
                     proxy.DeleteLocationLink(A, B);
-                    
+
                     deletedLink = InternalDelete(new LocationLinkKey(A, B));
                 }
                 catch (Exception e)
@@ -110,7 +105,7 @@ namespace WebAnnotationModel
                         proxy.Close();
                 }
 
-                if(deletedLink != null)
+                if (deletedLink != null)
                 {
                     CallOnCollectionChangedForDelete(new LocationLinkObj[] { deletedLink });
                 }
@@ -121,12 +116,12 @@ namespace WebAnnotationModel
         {
             ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>();
             SectionLocationLinks = SectionToLocationLinks.GetOrAdd(SectionNumber, SectionLocationLinks);
-            
+
             //Request updates after fetching the list so we don't update the list mid-query
             GetObjectsForSectionAsynch(SectionNumber, null);
 
             return SectionLocationLinks;
-        } 
+        }
 
 
         #region GetLocationLinksForSection
@@ -137,27 +132,27 @@ namespace WebAnnotationModel
             bool Success = SectionToLocationLinks.TryGetValue(SectionNumber, out SectionLocationLinks);
             if (Success)
             {
-                return SectionLocationLinks; 
+                return SectionLocationLinks;
             }
 
-            return new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>(); 
+            return new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>();
         }
 
         protected override LocationLink[] ProxyGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
-            LocationLink[] deleted_links = null; 
+            LocationLink[] deleted_links = null;
             LocationLink[] links = proxy.GetLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
 
-            if( deleted_links == null)
+            if (deleted_links == null)
             {
                 DeletedLinkKeys = new LocationLinkKey[0];
             }
-            else 
+            else
             {
                 DeletedLinkKeys = deleted_links.Select(link => new LocationLinkKey(link.SourceID, link.TargetID)).ToArray();
             }
 
-            return links; 
+            return links;
         }
 
         protected override LocationLink[] ProxyGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
@@ -183,18 +178,18 @@ namespace WebAnnotationModel
         }
 
         protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
-        {   
+        {
             return proxy.BeginGetLocationChanges(SectionNumber,
                                                  LastQuery.Ticks,
                                                  GetObjectsBySectionCallback,
                                                  asynchState);
         }
-        
+
         protected override LocationLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                     out LocationLinkKey[] DeletedLinkKeys,
                                                                     GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationLinkObj> state,
                                                                     IAsyncResult result)
-        { 
+        {
             LocationLink[] deleted_links;
             LocationLink[] links = state.Proxy.EndGetLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, result);
 
@@ -209,21 +204,21 @@ namespace WebAnnotationModel
         /// <param name="locations"></param>
         /// <param name="state"></param>
         /// <param name="DeletedLocations"></param>
-        public override ChangeInventory<LocationLinkObj> ParseQuery(LocationLink[] newLinks,                                            
+        public override ChangeInventory<LocationLinkObj> ParseQuery(LocationLink[] newLinks,
                                            LocationLinkKey[] DeletedLocations,
                                            GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationLinkObj> state)
         {
-            ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>(); 
+            ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>();
             SectionLocationLinks = SectionToLocationLinks.GetOrAdd(state.SectionNumber, SectionLocationLinks);
             ChangeInventory<LocationLinkObj> change_inventory = new ChangeInventory<LocationLinkObj>();
-            List<LocationLinkObj> deleted_objects = null; 
+            List<LocationLinkObj> deleted_objects = null;
             if (SectionLocationLinks != null)
             {
                 if (DeletedLocations != null)
                 {
                     foreach (LocationLinkKey key in DeletedLocations)
                     {
-                        LocationLinkObj value; 
+                        LocationLinkObj value;
                         SectionLocationLinks.TryRemove(key, out value);
                     }
 
@@ -243,7 +238,7 @@ namespace WebAnnotationModel
             if (deleted_objects != null)
                 change_inventory.DeletedObjects = deleted_objects;
 
-            return change_inventory; 
+            return change_inventory;
         }
 
         #endregion
@@ -265,7 +260,7 @@ namespace WebAnnotationModel
                 {
                     AObj.AddLink(link.B);
                 }
-                      
+
                 LocationObj BObj = Store.Locations.GetObjectByID(link.B, false);
                 if (BObj != null)
                 {
@@ -287,7 +282,7 @@ namespace WebAnnotationModel
             foreach (LocationObj obj in newObjs)
             {
                 if (obj.NumLinks == 0)
-                    continue; 
+                    continue;
 
                 foreach (long linkID in obj.Links)
                 {
@@ -301,7 +296,7 @@ namespace WebAnnotationModel
 
         protected override List<LocationLinkObj> InternalDelete(LocationLinkKey[] keys)
         {
-            
+
             List<LocationLinkObj> deletedLinks = base.InternalDelete(keys);
 
             foreach (LocationLinkObj link in deletedLinks)
@@ -319,7 +314,7 @@ namespace WebAnnotationModel
                 }
             }
 
-            return deletedLinks; 
+            return deletedLinks;
         }
 
         /// <summary>
@@ -333,7 +328,7 @@ namespace WebAnnotationModel
             foreach (LocationObj obj in delObjs)
             {
                 if (obj == null)
-                    continue; 
+                    continue;
 
                 foreach (long linkID in obj.LinksCopy)
                 {
@@ -346,7 +341,7 @@ namespace WebAnnotationModel
 
         #endregion
 
-        
+
         /// <summary>
         /// Events from the location store are listened to because locations can arrive with Link information. 
         /// When that occurs we add those links to our own store.
@@ -375,7 +370,7 @@ namespace WebAnnotationModel
 
                 case NotifyCollectionChangedAction.Remove:
                     List<LocationLinkObj> listDeleted = InternalDelete(e.OldItems.Cast<LocationObj>());
-                    CallOnCollectionChangedForDelete(listDeleted); 
+                    CallOnCollectionChangedForDelete(listDeleted);
                     break;
 
                 default:

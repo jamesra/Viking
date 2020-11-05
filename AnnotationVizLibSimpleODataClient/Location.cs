@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Annotation.Interfaces;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
-using Geometry;
-using Annotation.Interfaces;
+using System;
+using System.Collections.Generic;
 using UnitsAndScale;
 
 namespace AnnotationVizLib.SimpleOData
@@ -129,7 +127,7 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
-        LocationType _TypeCode; 
+        LocationType _TypeCode;
         public LocationType TypeCode
         {
             get
@@ -154,7 +152,7 @@ namespace AnnotationVizLib.SimpleOData
                 if (_BoundingBox == null)
                 {
                     GridRectangle bound_rect = VolumeShape.BoundingBox();
-                    _BoundingBox = new GridBox(bound_rect, Z - (scale.Z.Value / 2.0), Z + (scale.Z.Value/2.0));
+                    _BoundingBox = new GridBox(bound_rect, Z - (scale.Z.Value / 2.0), Z + (scale.Z.Value / 2.0));
                 }
 
                 return _BoundingBox;

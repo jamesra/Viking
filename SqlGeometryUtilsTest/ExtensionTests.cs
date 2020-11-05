@@ -11,7 +11,7 @@ namespace SqlGeometryUtilsTest
     {
         static SqlGeometryUtilsTest()
         {
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            //SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
         }
 
         private void AssertPosition(GridVector2 A, GridVector2 B)

@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
 using System.Windows.Forms;
-using System.Diagnostics; 
 
 namespace Viking.UI.BaseClasses
 {
@@ -26,12 +21,12 @@ namespace Viking.UI.BaseClasses
 #if !DEBUG
                 try
                 {
-#endif 
-                    object Obj = Activator.CreateInstance(ModuleTabType);
-                    Viking.Common.ITabExtension ITab = Obj as Viking.Common.ITabExtension;
-                    
-                    TabPage Page = ITab.GetPage();
-                    this.TabsModules.TabPages.Add(Page);
+#endif
+                object Obj = Activator.CreateInstance(ModuleTabType);
+                Viking.Common.ITabExtension ITab = Obj as Viking.Common.ITabExtension;
+
+                TabPage Page = ITab.GetPage();
+                this.TabsModules.TabPages.Add(Page);
 #if !DEBUG
                 }
                 catch (Exception Except)

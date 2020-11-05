@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Viking.Common;
 using System.Diagnostics;
 using System.Windows.Forms;
+using Viking.Common;
 using WebAnnotation.UI;
 
 namespace WebAnnotation
@@ -22,6 +19,10 @@ namespace WebAnnotation
             //Create a menu containing each of our bookmarks
             ToolStripMenuItem menuRoot = new ToolStripMenuItem("Annotation");
 
+            var menuFavoriteTypes = new ToolStripMenuItem("Choose Favorited Structure Types");
+            menuFavoriteTypes.Click += OnChooseFavoriteStructureTypes;
+            menuRoot.DropDownItems.Add(menuFavoriteTypes);
+
             if (Global.Export != null)
             {
                 //Create the option to hide bookmarks on the display
@@ -33,18 +34,23 @@ namespace WebAnnotation
                 ToolStripMenuItem menuExportMotifTLP = new ToolStripMenuItem("To Tulip Format");
                 menuExportMotifTLP.Click += OnExportMotifsTLP;
 
-                menuPenMode = new ToolStripMenuItem("Pen Mode");
-                menuPenMode.Checked = WebAnnotation.Global.PenMode;
-                menuPenMode.Click += OnPenMode;
-
 
                 menuExportMotifs.DropDownItems.Add(menuExportMotifTLP);
                 menuExport.DropDownItems.Add(menuExportMotifs);
+
                 menuRoot.DropDownItems.Add(menuExport);
-                menuRoot.DropDownItems.Add(menuPenMode);
             }
 
-            return menuRoot as ToolStripItem; 
+            menuPenMode = new ToolStripMenuItem("Pen Mode");
+            menuPenMode.Checked = WebAnnotation.Global.PenMode;
+            menuPenMode.Click += OnPenMode;
+
+
+
+            menuRoot.DropDownItems.Add(menuPenMode);
+
+
+            return menuRoot as ToolStripItem;
         }
 
         static public void OnExportMotifsTLP(object sender, EventArgs e)
@@ -54,12 +60,21 @@ namespace WebAnnotation
             Global.Export.OpenMotif();
         }
 
+        static public void OnChooseFavoriteStructureTypes(object sender, EventArgs e)
+        {
+            Debug.Print("OnChooseFavoriteStructureTypes");
+            var StructureIDChoiceForm = new WebAnnotation.UI.Forms.SelectStructureTypeForm();
+            Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new Annotation.ViewModels.FavoriteStructureIDsViewModel(Global.UserFavoriteStructureTypes);
+            StructureIDChoiceForm.DataContext = favorite_view_model;
+            StructureIDChoiceForm.Show();
+        }
+
         [MenuItem("Show Pen Input Window")]
         static public void OnShowPenInputWindow(object sender, EventArgs e)
         {
             Debug.Print("OnShowPenInputWindow");
 
-            if(Global.PenAnnotationForm == null || Global.PenAnnotationForm.IsDisposed)
+            if (Global.PenAnnotationForm == null || Global.PenAnnotationForm.IsDisposed)
             {
                 Global.PenAnnotationForm = new UI.Forms.PenAnnotationViewForm(Viking.UI.State.ViewerForm.Section);
                 Global.PenAnnotationForm.Show();
@@ -75,7 +90,7 @@ namespace WebAnnotation
         {
             AnnotationOverlay.GotoLastModifiedLocation();
         }
-          
+
         static public void OnPenMode(object sender, EventArgs e)
         {
             Global.PenMode = !Global.PenMode;
@@ -97,7 +112,7 @@ namespace WebAnnotation
             }
 
             _FindStructureNumberForm.Show();
-            _FindStructureNumberForm.Focus(); 
+            _FindStructureNumberForm.Focus();
         }
 
         [MenuItem("Goto Structure")]
@@ -139,9 +154,9 @@ namespace WebAnnotation
         {
             Debug.Print("Export");
 
-            
+
         }
 
-       
+
     }
 }

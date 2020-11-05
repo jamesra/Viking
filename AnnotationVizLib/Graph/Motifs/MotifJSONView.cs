@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections;
-using System.Linq;
-using System.Text;
-
-using System.IO;
-using System.Web;
+﻿
 using Newtonsoft.Json.Linq;
-using System.Web.Script.Serialization;
+using System.IO;
 
-namespace AnnotationVizLib 
+namespace AnnotationVizLib
 {
     public class MotifJSONView
     {
@@ -46,7 +39,7 @@ namespace AnnotationVizLib
             foreach (MotifEdge edge in graph.Edges.Values)
             {
                 if (edge.SourceNodeKey == null || edge.TargetNodeKey == null)
-                    continue; 
+                    continue;
 
                 MotifNode SourceNode = graph.Nodes[edge.SourceNodeKey];
                 MotifNode TargetNode = graph.Nodes[edge.TargetNodeKey];
@@ -59,16 +52,16 @@ namespace AnnotationVizLib
                 obj.Directional = edge.Directional;
                 obj.IsLoop = edge.IsLoop;
                 obj.Type = edge.SynapseType;
-                 
+
                 obj.Sources = JObject.FromObject(edge.SourceStructIDs);
                 obj.Targets = JObject.FromObject(edge.TargetStructIDs);
-                
+
                 NewtonsoftJSONExtensions.AddAttributes(obj, edge.Attributes);
 
-                JSONView.edgesJSON.Add(obj); 
-                edgeCount++; 
+                JSONView.edgesJSON.Add(obj);
+                edgeCount++;
             }
-             
+
 
             return JSONView;
         }
@@ -85,7 +78,7 @@ namespace AnnotationVizLib
         public void SaveJSON(string JSONFileFullPath)
         {
             using (FileStream fl = new FileStream(JSONFileFullPath, FileMode.Create, FileAccess.Write))
-            { 
+            {
                 using (StreamWriter write = new StreamWriter(fl))
                 {
                     write.Write(this.ToString());

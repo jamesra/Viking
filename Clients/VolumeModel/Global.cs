@@ -1,8 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Viking.VolumeModel
 {
@@ -27,7 +24,7 @@ namespace Viking.VolumeModel
             }
             while (BytesRead < BytesToRead && elapsed.TotalSeconds < 60);
 
-            return streamBuffer; 
+            return streamBuffer;
         }
     }
 }

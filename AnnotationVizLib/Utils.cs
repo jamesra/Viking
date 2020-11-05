@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace AnnotationVizLib
 {
-    
+
     public static class Utils<T>
     {
         private static int NumberOfChunks(int totalsize, int Chunksize)
@@ -35,5 +32,5 @@ namespace AnnotationVizLib
 
             return arrayOfLists;
         }
-    } 
+    }
 }

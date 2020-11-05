@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace Viking.UI.Controls
@@ -61,12 +58,12 @@ namespace Viking.UI.Controls
                 {
                     val = int.Parse(this.Text);
                 }
-                catch (FormatException )
+                catch (FormatException)
                 {
                     val = 0;
                 }
 
-                return val; 
+                return val;
             }
         }
 
@@ -79,12 +76,12 @@ namespace Viking.UI.Controls
                 {
                     val = Double.Parse(this.Text);
                 }
-                catch (FormatException )
+                catch (FormatException)
                 {
-                    val = 0; 
+                    val = 0;
                 }
 
-                return val; 
+                return val;
 
             }
         }

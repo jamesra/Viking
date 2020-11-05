@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Text;
 
 namespace GraphLib
 {
@@ -11,13 +9,13 @@ namespace GraphLib
         where KEY : IComparable<KEY>, IEquatable<KEY>
         where EDGETYPE : Edge<KEY>
     {
-        public readonly KEY Key; 
+        public readonly KEY Key;
 
         /// <summary>
         /// Keys are the ID of the other node in the edge, or our iD if it is a circular reference
         /// </summary>
         public SortedDictionary<KEY, SortedSet<EDGETYPE>> Edges = new SortedDictionary<KEY, SortedSet<EDGETYPE>>();
-         
+
         /// <summary>
         /// A collection of additional attributes that have been added to the node
         /// </summary>
@@ -34,7 +32,7 @@ namespace GraphLib
         }
 
         internal void AddEdge(EDGETYPE Link)
-        { 
+        {
             KEY PartnerKey = Link.SourceNodeKey;
             if (Link.IsLoop)
             {
@@ -45,18 +43,18 @@ namespace GraphLib
                 PartnerKey = Link.TargetNodeKey;
             }
 
-            SortedSet<EDGETYPE> edgeList = null; 
-            if( Edges.ContainsKey(PartnerKey))
+            SortedSet<EDGETYPE> edgeList = null;
+            if (Edges.ContainsKey(PartnerKey))
             {
-                edgeList = Edges[PartnerKey]; 
+                edgeList = Edges[PartnerKey];
             }
             else
             {
                 edgeList = new SortedSet<EDGETYPE>();
-                Edges[PartnerKey] = edgeList; 
+                Edges[PartnerKey] = edgeList;
             }
-                
-            edgeList.Add(Link);  
+
+            edgeList.Add(Link);
         }
 
         internal void RemoveEdge(KEY other)
@@ -92,7 +90,7 @@ namespace GraphLib
 
         public int Compare(Node<KEY, EDGETYPE> x, Node<KEY, EDGETYPE> y)
         {
-            return this.CompareTo(y); 
+            return this.CompareTo(y);
         }
 
         public int CompareTo(Node<KEY, EDGETYPE> other)
@@ -102,7 +100,7 @@ namespace GraphLib
 
         public override bool Equals(object other)
         {
-            if(other as Node<KEY, EDGETYPE> != null)
+            if (other as Node<KEY, EDGETYPE> != null)
             {
                 return this.Key.Equals(((Node<KEY, EDGETYPE>)other).Key);
             }

@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
-using System.Windows.Forms;
-using System.Linq;
-using Viking.Common;
 using System.Diagnostics;
+using System.Windows.Forms;
+using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 
 namespace WebAnnotation.UI
 {
-   
+
 
     [PropertyPage(typeof(Structure), 1)]
     public partial class StructureGeneralPage : Viking.UI.BaseClasses.PropertyPageBase
@@ -30,39 +26,39 @@ namespace WebAnnotation.UI
         protected override void OnInitPage()
         {
             base.OnInitPage();
-        } 
+        }
 
         protected override void OnShowObject(object Object)
         {
             this.Obj = Object as Structure;
             Debug.Assert(this.Obj != null);
 
-            this.textID.Text= this.Obj.ID.ToString();
+            this.textID.Text = this.Obj.ID.ToString();
             this.textLabel.Text = this.Obj.InfoLabel;
             this.linkType.Text = this.Obj.Type.Name;
 
             this.ListTags = new BindingList<WebAnnotationModel.ObjAttribute>(new List<ObjAttribute>(this.Obj.Attributes));
-            
+
             this.dataGridTags.DataSource = this.ListTags;
         }
 
-        
+
 
         protected override void OnSaveChanges()
         {
             this.Obj.InfoLabel = this.textLabel.Text;
 
-            RemoveBlankAttributesFromList(this.ListTags); 
+            RemoveBlankAttributesFromList(this.ListTags);
 
             this.Obj.Attributes = this.ListTags;
         }
 
         private static void RemoveBlankAttributesFromList(BindingList<WebAnnotationModel.ObjAttribute> list)
         {
-            for(int i = list.Count -1; i >= 0; i--)
+            for (int i = list.Count - 1; i >= 0; i--)
             {
-                WebAnnotationModel.ObjAttribute item = list[i]; 
-                if(item.Name == null)
+                WebAnnotationModel.ObjAttribute item = list[i];
+                if (item.Name == null)
                 {
                     list.RemoveAt(i);
                     continue;
@@ -77,7 +73,7 @@ namespace WebAnnotation.UI
 
             return;
         }
-        
+
 
         private void StructureGeneralPage_Load(object sender, EventArgs e)
         {
@@ -118,9 +114,9 @@ namespace WebAnnotation.UI
             }
             else
             {
-                e.Handled = false; 
+                e.Handled = false;
             }
-            
+
         }
 
         private void dataGridTags_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
@@ -136,14 +132,14 @@ namespace WebAnnotation.UI
 
             //It is OK to leave a blank, and have multiple blanks. 
             //Blanks/Nulls are removed when the page is saved
-            if(dataval == "")
+            if (dataval == "")
             {
-                return; 
+                return;
             }
 
             for (int i = 0; i < dataGridTags.Rows.Count; i++)
             {
-                if(i == e.RowIndex)
+                if (i == e.RowIndex)
                     continue;
 
                 string compareValue = dataGridTags.Rows[i].Cells[0].Value as string;
@@ -154,18 +150,18 @@ namespace WebAnnotation.UI
 
                 if (compareValue == dataval)
                 {
-                   e.Cancel = true;
-                   this.dataGridTags.Rows[e.RowIndex].Cells[0].ErrorText = "Duplicate tag names are not allowed";
-                   return;
+                    e.Cancel = true;
+                    this.dataGridTags.Rows[e.RowIndex].Cells[0].ErrorText = "Duplicate tag names are not allowed";
+                    return;
                 }
             }
 
-            this.dataGridTags.Rows[e.RowIndex].Cells[0].ErrorText = null; 
+            this.dataGridTags.Rows[e.RowIndex].Cells[0].ErrorText = null;
             e.Cancel = false;
         }
 
         private void dataGridTags_CellErrorTextChanged(object sender, DataGridViewCellEventArgs e)
-        { 
+        {
             this.labelDataGridError.Text = this.dataGridTags.Rows[e.RowIndex].Cells[e.ColumnIndex].ErrorText;
         }
 

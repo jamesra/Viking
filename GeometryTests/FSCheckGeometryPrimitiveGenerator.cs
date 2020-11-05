@@ -1,14 +1,12 @@
 ﻿//#define TRACEMESH
 
-using System;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using FsCheck;
 using Geometry;
 using Geometry.Meshing;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace GeometryTests
 {
@@ -20,7 +18,7 @@ namespace GeometryTests
             Arb.Register<GridLineSegmentGenerators>();
             Arb.Register<GridPolygonGenerators>();
 
-             Global.ResetRollingSeed();
+            Global.ResetRollingSeed();
         }
 
         public static Arbitrary<GridVector2> PointGenerator()
@@ -56,7 +54,7 @@ namespace GeometryTests
             return Arb.From(Fresh());
         }
 
-        
+
 
         public static Gen<GridLineSegment> GenLine()
         {
@@ -111,7 +109,7 @@ namespace GeometryTests
         {
             return Gen.Sized(size => GenOpenPolylineSmart(size));
         }
-        
+
         /*
 
         private static Gen<GridPolyline> GenOpenPolylineFast(int nLines)
@@ -161,7 +159,7 @@ namespace GeometryTests
         {
             ///Generate a large set of points, then find a path of the correct length using those points
             return (from points in GridVector2Generators.GenDistinctPoints((nLines + 1) * 3)
-                    from polyline in GenOpenPolylineSmart(points, nLines > 50 ? (int)Math.Round(Math.Sqrt(nLines-50) + 50) : nLines)
+                    from polyline in GenOpenPolylineSmart(points, nLines > 50 ? (int)Math.Round(Math.Sqrt(nLines - 50) + 50) : nLines)
                     select polyline);
         }
 
@@ -189,8 +187,8 @@ namespace GeometryTests
 
                 //Use verticies on the convex hull as starting points for our search
                 //var startingPoints = mesh.Edges.Values.Where(e => e.Faces.Count == 1).SelectMany(e => new int[] { e.A, e.B }).Distinct();
-                
-                foreach(var startingVert in mesh.Verticies)
+
+                foreach (var startingVert in mesh.Verticies)
                 {
                     Stack<int> VertStack = new Stack<int>();
                     VertStack.Push(startingVert.Index);
@@ -239,7 +237,7 @@ namespace GeometryTests
                 {
                     path.Push(candidateVert);
                     bool foundPath = FindNonSelfIntersectingPath(mesh, path, nLines);
-                    if(foundPath)
+                    if (foundPath)
                     {
                         //We have found a path to all verticies that does not self intersect
                         return true;
@@ -263,8 +261,8 @@ namespace GeometryTests
         /// <param name="path"></param>
         /// <param name="PathLength"></param>
         /// <returns>True if Path meets the completion criteria</returns>
-        private static bool FindNonSelfIntersectingPath(TriangulationMesh<IVertex2D> mesh, 
-                                                        ref Stack<int> path, 
+        private static bool FindNonSelfIntersectingPath(TriangulationMesh<IVertex2D> mesh,
+                                                        ref Stack<int> path,
                                                         Func<TriangulationMesh<IVertex2D>, Stack<int>, int, bool> meets_path_inclusion_criteria,
                                                         Func<TriangulationMesh<IVertex2D>, Stack<int>, bool> meets_path_completion_criteria)
         {
@@ -283,7 +281,7 @@ namespace GeometryTests
             {
                 int candidateVert = edgeKey.OppositeEnd(currentVert);
 
-                if(false == meets_path_inclusion_criteria(mesh, path, candidateVert))
+                if (false == meets_path_inclusion_criteria(mesh, path, candidateVert))
                     continue;
                 else
                 {
@@ -333,7 +331,7 @@ namespace GeometryTests
             IVertex2D first = mesh[path.First()];
 
             if (last.Edges.Contains(new EdgeKey(last.Index, first.Index)))
-                return true;            
+                return true;
 
             return false;
         }
@@ -349,9 +347,9 @@ namespace GeometryTests
         private static Gen<GridPolyline> GenOpenPolyline(int nLines)
         {
             return (from points in GridVector2Generators.GenDistinctPoints(nLines + 1)
-            from shuffled_points in Gen.Shuffle(points)
-            where GridLineSegment.SegmentsFromPoints(shuffled_points).SelfIntersects(LineSetOrdering.POLYLINE) == false
-            select new GridPolyline(shuffled_points));
+                    from shuffled_points in Gen.Shuffle(points)
+                    where GridLineSegment.SegmentsFromPoints(shuffled_points).SelfIntersects(LineSetOrdering.POLYLINE) == false
+                    select new GridPolyline(shuffled_points));
         }
 
         /*
@@ -399,59 +397,59 @@ namespace GeometryTests
 }
 */
 
-            /*
-        /// <summary>
-        /// Using the provided points, return a single polyline with nLines that is not closed and whose lines do not self-intersect
-        /// </summary>
-        /// <param name="nLines"></param>
-        /// <returns></returns>
-        internal static Gen<GridPolygon> GenClosedPolylineSmart(GridVector2[] points, int nLines)
+        /*
+    /// <summary>
+    /// Using the provided points, return a single polyline with nLines that is not closed and whose lines do not self-intersect
+    /// </summary>
+    /// <param name="nLines"></param>
+    /// <returns></returns>
+    internal static Gen<GridPolygon> GenClosedPolylineSmart(GridVector2[] points, int nLines)
+    {
+        if (points.Length < 3)
         {
-            if (points.Length < 3)
-            {
-                throw new ArgumentException("Insufficient lines to form a closed shape.");
-            }
-            else if (points.Length == 3)
-            {
-                //Any 3 distinct points will not intersect
-                return Gen.Constant<GridPolygon>(new GridPolygon(points.EnsureClosedRing()));
-            }
-            else
-            {
-                var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray());
+            throw new ArgumentException("Insufficient lines to form a closed shape.");
+        }
+        else if (points.Length == 3)
+        {
+            //Any 3 distinct points will not intersect
+            return Gen.Constant<GridPolygon>(new GridPolygon(points.EnsureClosedRing()));
+        }
+        else
+        {
+            var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray());
 
-                foreach (var startingVert in mesh.Verticies)
+            foreach (var startingVert in mesh.Verticies)
+            {
+                Stack<int> VertStack = new Stack<int>();
+                VertStack.Push(startingVert.Index);
+                bool FoundPath = FindNonSelfIntersectingPath(mesh,
+                                                             ref VertStack, 
+                                                             meets_path_inclusion_criteria: (mesh_,path_,vert_) => path_.Contains(vert_) == false,
+                                                             meets_path_completion_criteria: (mesh_, path_) => PathLengthCriteria(mesh_, path_, nLines));
+
+                if (FoundPath)
                 {
-                    Stack<int> VertStack = new Stack<int>();
-                    VertStack.Push(startingVert.Index);
-                    bool FoundPath = FindNonSelfIntersectingPath(mesh,
-                                                                 ref VertStack, 
-                                                                 meets_path_inclusion_criteria: (mesh_,path_,vert_) => path_.Contains(vert_) == false,
-                                                                 meets_path_completion_criteria: (mesh_, path_) => PathLengthCriteria(mesh_, path_, nLines));
-
-                    if (FoundPath)
+                    //Check if we can close the shape
+                    bool FoundClosure = FindNonSelfIntersectingPath(mesh,
+                                                             ref VertStack,
+                                                             meets_path_inclusion_criteria: (mesh_, path_, vert_) => path_.Contains(vert_) == false,
+                                                             meets_path_completion_criteria: (mesh_, path_) => PathClosedCriteria(mesh_, path_));
+                    if (FoundClosure)
                     {
-                        //Check if we can close the shape
-                        bool FoundClosure = FindNonSelfIntersectingPath(mesh,
-                                                                 ref VertStack,
-                                                                 meets_path_inclusion_criteria: (mesh_, path_, vert_) => path_.Contains(vert_) == false,
-                                                                 meets_path_completion_criteria: (mesh_, path_) => PathClosedCriteria(mesh_, path_));
-                        if (FoundClosure)
-                        {
-                            return Gen.Constant(new GridPolygon(VertStack.Select(v => mesh[v].Position).ToArray().EnsureClosedRing() ));
-                        }
-                        else
-                        {
-                            VertStack.Pop();
-                        }
+                        return Gen.Constant(new GridPolygon(VertStack.Select(v => mesh[v].Position).ToArray().EnsureClosedRing() ));
+                    }
+                    else
+                    {
+                        VertStack.Pop();
                     }
                 }
-
-                throw new Exception("Unexpectedly unable to generate path from a set of points");
-                //return Gen.Constant<GridPolygon>(new GridPolygon());
             }
+
+            throw new Exception("Unexpectedly unable to generate path from a set of points");
+            //return Gen.Constant<GridPolygon>(new GridPolygon());
         }
-        */
+    }
+    */
 
         /*
         /// <summary>
@@ -565,7 +563,7 @@ namespace GeometryTests
             {
                 //Any 3 distinct points will not intersect
                 var output = new GridPolygon(points.EnsureClosedRing());
-                if(output.Area < Geometry.Global.Epsilon)
+                if (output.Area < Geometry.Global.Epsilon)
                 {
                     return null;
                 }
@@ -594,7 +592,7 @@ namespace GeometryTests
                     {
                         output.AddInteriorRing(inner);
                     }
-                    catch(ArgumentException e)
+                    catch (ArgumentException e)
                     {
                         Trace.WriteLine("Exception adding interior ring to generated polygon");
                     }
@@ -638,8 +636,8 @@ namespace GeometryTests
         /// <param name="nLines"></param>
         /// <param name="output_mesh"></param>
         /// <returns></returns>
-        internal static GridPolygon GenConcavePolygonFromMesh(TriangulationMesh<IVertex2D>  mesh, int nLines, bool GenerateInnerPolygon, out TriangulationMesh<IVertex2D> output_mesh_final)
-        { 
+        internal static GridPolygon GenConcavePolygonFromMesh(TriangulationMesh<IVertex2D> mesh, int nLines, bool GenerateInnerPolygon, out TriangulationMesh<IVertex2D> output_mesh_final)
+        {
             if (mesh.Verticies.Count < 3 || mesh.Faces.Count == 0)
             {
                 throw new ArgumentException("Mesh does not contain a polygon");
@@ -685,7 +683,7 @@ namespace GeometryTests
                 GridPolygon output = new GridPolygon(concave_path.Select(v => mesh[v].Position).ToArray());
                 if (output.IsValid() == false)
                     throw new ArgumentException("Invalid concave polygon generated");
-                 
+
                 output_mesh_final = GenerateInnerPolygon ?
                         CalculateRemainderMeshAfterInnerGeneration(mesh, concave_path, output) :
                         CalculateRemainderMeshAfterOuterGeneration(mesh, concave_path, output);
@@ -798,14 +796,14 @@ namespace GeometryTests
                 }
             }
 
-            foreach(IEdge keptEdge in edgesKept)
+            foreach (IEdge keptEdge in edgesKept)
             {
-                foreach(IFace f in keptEdge.Faces)
+                foreach (IFace f in keptEdge.Faces)
                 {
                     TriangleFace triFace = f as TriangleFace;
 
                     int[] new_face = triFace.iVerts.Select(iVert => input_to_output[iVert]).ToArray();
-                    
+
                     //Skip faces with verts that are not in the output mesh
                     if (new_face.Any(iVert => iVert < 0))
                         continue;
@@ -866,7 +864,7 @@ namespace GeometryTests
                 int iA = ring.IndexOf(edge.A);
                 int iB = ring.IndexOf(edge.B);
 
-                if(Math.Abs(iA-iB) > 1) //Check for wrapping around
+                if (Math.Abs(iA - iB) > 1) //Check for wrapping around
                 {
                     if (iA == 0)
                         iA = ring.Count - 1;
@@ -908,7 +906,7 @@ namespace GeometryTests
             while (nRemoved < nMaxRemovals);
 
 
-            return new Stack<int>(ring);  
+            return new Stack<int>(ring);
         }
 
         private static bool CanEdgeBeRemovedFromPoly(TriangulationMesh<IVertex2D> mesh, List<int> ExteriorPolyRing, IEdgeKey key)
@@ -931,7 +929,7 @@ namespace GeometryTests
         }
     }
 
-    
+
 
     public class GridPolygonGenerators
     {
@@ -1003,17 +1001,17 @@ namespace GeometryTests
             GridPolygon copy = null;
 
             for (int iInner = poly.InteriorRings.Count - 1; iInner >= 0; iInner--)
-            {  
+            {
                 GridPolygon inner_copy = (GridPolygon)poly.InteriorPolygons[iInner].Clone();
-                foreach(GridPolygon shrunk_inner in PolygonShrinker(inner_copy))
+                foreach (GridPolygon shrunk_inner in PolygonShrinker(inner_copy))
                 {
                     copy = (GridPolygon)poly.Clone();
                     try
                     {
                         copy.ReplaceInteriorRing(iInner, shrunk_inner);
-                        
+
                     }
-                    catch(ArgumentException)
+                    catch (ArgumentException)
                     {
                         //Must have made an invalid polygon, continue
                         continue;
@@ -1030,27 +1028,27 @@ namespace GeometryTests
 
             //We cannot shrink a polygon with 3 verticies
             if (poly.TotalUniqueVerticies <= 3)
-                yield break; 
+                yield break;
 
             var iVertList = poly.ExteriorRing.Select((v, i) => i).ToList();
             iVertList.RemoveAt(iVertList.Count - 1);
 
             int[] iShuffledVerts = Gen.Shuffle<int>(iVertList).Eval(1, Global.StdGenSeed);
-             
+
             GridVector2[] exterior_ring = poly.ExteriorRing;
             //Shrink a polygon by randomly removing verticies
-            for(int i = 0; i < poly.ExteriorRing.Length-1; i++)
+            for (int i = 0; i < poly.ExteriorRing.Length - 1; i++)
             {
                 copy = (GridPolygon)poly.Clone();
                 //Trace.WriteLine(string.Format("Try remove {0} from {1}", i, copy));
 
                 try
-                {   
+                {
                     copy.RemoveVertex(iShuffledVerts[i]);
-                    
+
 
                 }
-                catch(ArgumentException e)
+                catch (ArgumentException e)
                 {
                     //Trace.WriteLine(string.Format("Could not remove {0} from {1}", i, copy));
                     continue;
@@ -1063,7 +1061,7 @@ namespace GeometryTests
 
 
     public class GridVector2Generators
-    {  
+    {
         public static int maxDimValue = 100;
         static Gen<GridVector2> GridPoints = ChooseFrom(PointsOnGrid1D((maxDimValue * 2) + 1,
                                                                        (maxDimValue * 2) + 1,
@@ -1136,7 +1134,7 @@ namespace GeometryTests
         {
             //List<GridVector2> points = new List<GridVector2>(nPoints);
             return Gen.Fresh<GridVector2[]>(() => DistinctPointsGenerator(nPoints));
-            
+
             //return Gen.GrowingElements< GridVector2[]>(DistinctPointsGeneratorFunc(nPoints));
 
             //return Fresh().ArrayOf(nPoints).Where(points => points.Distinct().Count() == nPoints);

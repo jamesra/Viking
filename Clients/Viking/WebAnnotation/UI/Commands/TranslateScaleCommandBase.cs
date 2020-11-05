@@ -1,18 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using Geometry;
-using WebAnnotation.View;
-using Viking.VolumeModel;
-using SqlGeometryUtils;
-using VikingXNAGraphics;
-using System.Windows.Forms;
+﻿using Geometry;
+using System;
 using System.Diagnostics;
-using WebAnnotation;
-using System.Collections.ObjectModel;
+using System.Windows.Forms;
 using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
@@ -25,7 +14,7 @@ namespace WebAnnotation.UI.Commands
            "Scroll wheel: Change size",
            "SHIFT + Scroll wheel: Change size slowly"
         };
-         
+
         protected Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         private double _SizeScale = 1.0;
@@ -46,7 +35,7 @@ namespace WebAnnotation.UI.Commands
 
         protected GridVector2 OriginalVolumePosition;
         protected GridVector2 VolumePositionDeltaSum = new GridVector2(0, 0);
-         
+
         /// <summary>
         /// Position of volume origin after applying this translation command
         /// </summary>
@@ -113,7 +102,7 @@ namespace WebAnnotation.UI.Commands
         {
             mapping = Parent.Section.ActiveSectionToVolumeTransform;
         }
-        
+
         protected override void OnDeactivate()
         {
             Parent.OnSectionChanged -= this.OnSectionChanged;
@@ -171,7 +160,7 @@ namespace WebAnnotation.UI.Commands
                     //Need to use last saved mouse position, because if a rotation or other non-translate command
                     //we don't want the mouse to jump
                     GridVector2 LastVolumePosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
-                    GridVector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y); 
+                    GridVector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
 
                     VolumePositionDeltaSum += NewVolumePosition - LastVolumePosition;
 

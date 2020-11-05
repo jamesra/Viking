@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Threading;
-using System.IO;
 
 namespace Geometry.Transforms
 {
     [Serializable]
-    public abstract class ReferencePointBasedTransform  : IITKSerialization, ITransformInfo, ITransformControlPoints, ISerializable, IMemoryMinimization
+    public abstract class ReferencePointBasedTransform : IITKSerialization, ITransformInfo, ITransformControlPoints, ISerializable, IMemoryMinimization
     {
         public TransformInfo Info { get; set; }
 
@@ -32,7 +31,7 @@ namespace Geometry.Transforms
                     _ControlBounds = this.MapPoints.ControlBounds();
                 }
 
-                return _ControlBounds; 
+                return _ControlBounds;
             }
             protected set
             {
@@ -71,14 +70,14 @@ namespace Geometry.Transforms
             {
                 //SortedSet<MappingGridVector2> listPoints = new SortedSet<MappingGridVector2>(value);
                 Array.Sort(value);
-                _mapPoints = value; 
+                _mapPoints = value;
 #if DEBUG
-                DebugVerifyPointsAreUnique(_mapPoints); 
+                DebugVerifyPointsAreUnique(_mapPoints);
 #endif
-                 
+
                 //Reset the bounds
                 MappedBounds = new GridRectangle();
-                ControlBounds = new GridRectangle(); 
+                ControlBounds = new GridRectangle();
             }
         }
 
@@ -89,10 +88,10 @@ namespace Geometry.Transforms
             {
                 Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
                 Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
-            } 
+            }
         }
 
-        protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformInfo info) 
+        protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformInfo info)
         {
             //List<MappingGridVector2> listPoints = new List<MappingGridVector2>(points);
             //MappingGridVector2.RemoveDuplicates(listPoints);
@@ -104,7 +103,7 @@ namespace Geometry.Transforms
 
         protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, TransformInfo info)
             : this(points, info)
-        { 
+        {
             this.MappedBounds = mappedBounds;
         }
 
@@ -119,7 +118,7 @@ namespace Geometry.Transforms
         protected ReferencePointBasedTransform(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException(); 
+                throw new ArgumentNullException();
 
             _mapPoints = info.GetValue("_mapPoints", typeof(MappingGridVector2[])) as MappingGridVector2[];
             this.Info = info.GetValue("Info", typeof(TransformInfo)) as TransformInfo;
@@ -130,12 +129,12 @@ namespace Geometry.Transforms
         public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException(); 
+                throw new ArgumentNullException();
 
             info.AddValue("_mapPoints", _mapPoints);
             info.AddValue("MappedBounds", MappedBounds);
             info.AddValue("ControlBounds", ControlBounds);
-            info.AddValue("Info", this.Info);  
+            info.AddValue("Info", this.Info);
         }
 
         /// <summary>
@@ -180,7 +179,7 @@ namespace Geometry.Transforms
                     minY = R.Bottom;
                 if (R.Top > maxY)
                     maxY = R.Top;
-            }            
+            }
 
             return new GridRectangle(minX, maxX, minY, maxY);
         }

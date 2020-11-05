@@ -1,9 +1,8 @@
-﻿using System;
+﻿using AnnotationService.Types;
+using AnnotationVizLib.WCFClient.AnnotationClient;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
-using AnnotationVizLib.WCFClient.AnnotationClient;
-using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {
@@ -16,7 +15,7 @@ namespace AnnotationVizLib.WCFClient
                 if (_IDToStructureType == null)
                     _IDToStructureType = Queries.GetStructureTypes();
 
-                return _IDToStructureType; 
+                return _IDToStructureType;
             }
         }
 
@@ -32,19 +31,19 @@ namespace AnnotationVizLib.WCFClient
         private static SortedDictionary<long, StructureType> _IDToStructureType = null;
 
         public static SortedList<string, List<Structure>> LabelToStructuresMap()
-        {              
+        {
             using (AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
             {
                 return LabelToStructuresMap(client);
             }
         }
 
-        public  static SortedList<string, List<Structure>> LabelToStructuresMap(AnnotateStructuresClient client)
+        public static SortedList<string, List<Structure>> LabelToStructuresMap(AnnotateStructuresClient client)
         {
-            long typeID =1;
+            long typeID = 1;
             Structure[] structures = client.GetStructuresOfType(typeID);
 
-            return LabelToStructuresMap(structures); 
+            return LabelToStructuresMap(structures);
         }
 
         public static SortedList<string, List<Structure>> LabelToStructuresMap(Structure[] structures)
@@ -71,7 +70,7 @@ namespace AnnotationVizLib.WCFClient
                 }
             }
 
-            return dictLabels; 
+            return dictLabels;
         }
 
         /// <summary>
@@ -80,9 +79,9 @@ namespace AnnotationVizLib.WCFClient
         /// <param name="proxy"></param>
         /// <param name="IDs"></param>
         /// <returns></returns>
-        public static Structure[] GetStructuresByIDs(long[] IDs, bool include_children=false)
+        public static Structure[] GetStructuresByIDs(long[] IDs, bool include_children = false)
         {
-            using(AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
+            using (AnnotateStructuresClient proxy = ConnectionFactory.CreateStructuresClient())
             {
                 return GetStructuresByIDs(proxy, IDs, include_children);
             }
@@ -94,7 +93,7 @@ namespace AnnotationVizLib.WCFClient
         /// <param name="proxy"></param>
         /// <param name="IDs"></param>
         /// <returns></returns>
-        public static Structure[] GetStructuresByIDs(AnnotateStructuresClient proxy, long[] IDs, bool include_children=false)
+        public static Structure[] GetStructuresByIDs(AnnotateStructuresClient proxy, long[] IDs, bool include_children = false)
         {
             int i = 0;
             int ChunkSize = 1024 * 8;
@@ -163,10 +162,10 @@ namespace AnnotationVizLib.WCFClient
             using (VolumeMetaClient proxy = ConnectionFactory.CreateVolumeMetaClient())
             {
                 Scale scale = proxy.GetScale();
-                return scale; 
+                return scale;
             }
         }
-        
+
 
         /***************************************
         * Create structure types dictionary
@@ -174,9 +173,9 @@ namespace AnnotationVizLib.WCFClient
         public static SortedDictionary<long, StructureType> GetStructureTypes()
         {
             using (AnnotateStructureTypesClient proxy = ConnectionFactory.CreateStructureTypesClient())
-            { 
+            {
                 proxy.Open();
-                _IDToStructureType = GetStructureTypes(proxy); 
+                _IDToStructureType = GetStructureTypes(proxy);
                 return _IDToStructureType;
             }
         }
@@ -185,7 +184,7 @@ namespace AnnotationVizLib.WCFClient
         {
             SortedDictionary<long, StructureType> dictTypes = new SortedDictionary<long, StructureType>();
 
-            StructureType[] StructureTypes = proxy.GetStructureTypes(); 
+            StructureType[] StructureTypes = proxy.GetStructureTypes();
 
             foreach (StructureType type in StructureTypes)
             {
@@ -208,10 +207,10 @@ namespace AnnotationVizLib.WCFClient
         {
             using (AnnotateStructuresClient client = ConnectionFactory.CreateStructuresClient())
             {
-                return GetLinkedStructureParentIDs(client); 
+                return GetLinkedStructureParentIDs(client);
             }
         }
-         
+
         /// <summary>
         /// Return parents of all structures which have a link
         /// </summary>
@@ -241,11 +240,11 @@ namespace AnnotationVizLib.WCFClient
         public static SortedDictionary<long, List<StructureLink>> GetLinkedStructures(AnnotateStructuresClient proxy)
         {
             StructureLink[] LinkedStructures = proxy.GetLinkedStructures();
-            return GetLinkedStructures(LinkedStructures); 
+            return GetLinkedStructures(LinkedStructures);
         }
 
         public static SortedDictionary<long, List<StructureLink>> GetLinkedStructures(StructureLink[] LinkedStructures)
-        { 
+        {
             SortedDictionary<long, List<StructureLink>> StructIDToLinks = new SortedDictionary<long, List<StructureLink>>();
             foreach (StructureLink link in LinkedStructures)
             {
@@ -270,7 +269,7 @@ namespace AnnotationVizLib.WCFClient
 
             return StructIDToLinks;
         }
-        
+
 
         /// <summary>
         /// Removes []'ed text and whitespace from a label
@@ -292,7 +291,7 @@ namespace AnnotationVizLib.WCFClient
 
             if (Label.Length == 0)
             {
-                Label = "Unlabeled"; 
+                Label = "Unlabeled";
             }
 
             return Label;

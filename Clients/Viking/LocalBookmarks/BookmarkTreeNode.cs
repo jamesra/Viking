@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace LocalBookmarks
+﻿namespace LocalBookmarks
 {
     class BookmarkTreeNode : Viking.UI.Controls.GenericTreeNode
     {
         public BookmarkUIObj bookmark
         {
-            get {
+            get
+            {
                 return this.Tag as BookmarkUIObj;
             }
         }
@@ -24,7 +20,7 @@ namespace LocalBookmarks
         {
             Viking.UI.State.ViewerControl.GoToLocation(new Microsoft.Xna.Framework.Vector2(
                                                                       (float)bookmark.X, (float)bookmark.Y)
-                                                                      , bookmark.Z, bookmark.Downsample); 
+                                                                      , bookmark.Z, bookmark.Downsample);
         }
     }
 }

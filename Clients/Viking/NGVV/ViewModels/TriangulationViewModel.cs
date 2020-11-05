@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
-using System.IO;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Threading;
-using Viking.UI;
-using Viking.ViewModels;
-using Geometry;
-using Viking.VolumeModel; 
-using Geometry.Transforms; 
+using System;
+using System.Collections.Generic;
+using VikingXNAGraphics;
 
 namespace Viking.ViewModels
 {
@@ -39,7 +32,7 @@ namespace Viking.ViewModels
         }
 
         private void CreateMesh(GraphicsDevice graphicsDevice)
-        {            
+        {
             VertexPositionColor[] MappedMeshVerticies = new VertexPositionColor[this.MapPoints.Length];
             VertexPositionColor[] ControlMeshVerticies = new VertexPositionColor[this.MapPoints.Length];
 
@@ -56,12 +49,12 @@ namespace Viking.ViewModels
 
             List<int> TrianglesAsLines = new List<int>();
 
-            for (int i = 0; i < TriangleIndicies.Length; i+=3)
+            for (int i = 0; i < TriangleIndicies.Length; i += 3)
             {
                 TrianglesAsLines.Add(TriangleIndicies[i]);
-                TrianglesAsLines.Add(TriangleIndicies[i+1]);
-                TrianglesAsLines.Add(TriangleIndicies[i+1]);
-                TrianglesAsLines.Add(TriangleIndicies[i+2]);
+                TrianglesAsLines.Add(TriangleIndicies[i + 1]);
+                TrianglesAsLines.Add(TriangleIndicies[i + 1]);
+                TrianglesAsLines.Add(TriangleIndicies[i + 2]);
                 TrianglesAsLines.Add(TriangleIndicies[i + 2]);
                 TrianglesAsLines.Add(TriangleIndicies[i]);
             }
@@ -72,11 +65,11 @@ namespace Viking.ViewModels
             vbControlMesh = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), ControlMeshVerticies.Length, BufferUsage.None);
             vbControlMesh.SetData<VertexPositionColor>(ControlMeshVerticies);
             ibMesh = new IndexBuffer(graphicsDevice, typeof(int), TrianglesAsLines.Count, BufferUsage.None);
-            ibMesh.SetData<int>(TrianglesAsLines.ToArray()); 
+            ibMesh.SetData<int>(TrianglesAsLines.ToArray());
         }
 
         public void DrawMesh(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
-        { 
+        {
 
             if (vbMappedMesh == null)
             {
@@ -100,9 +93,9 @@ namespace Viking.ViewModels
             newDepthState.DepthBufferEnable = false;
             newDepthState.StencilEnable = false;
             graphicsDevice.DepthStencilState = newDepthState;
-            
+
             graphicsDevice.SetVertexBuffer(vbMappedMesh);
-            graphicsDevice.Indices = ibMesh; 
+            graphicsDevice.Indices = ibMesh;
             //PORT XNA 4
             //basicEffect.CommitChanges();
 
@@ -137,68 +130,46 @@ namespace Viking.ViewModels
         static SpriteFont _font;
         static SpriteBatch _spriteBatch;
 
+        LabelView[] _Labels = null;
 
-
-        public void DrawLabels(Viking.UI.Controls.SectionViewerControl _Parent)
-        {  
-            float Scale = (float)(1.0f / _Parent.StatusMagnification) * 10;
-
-            _Parent.spriteBatch.Begin();
-              
-            for (int i = 0; i < MapPoints.Length; i++ )
+        LabelView[] Labels
+        {
+            get
             {
-                GridVector2 ControlPositionScreen = _Parent.WorldToScreen(this.MapPoints[i].ControlPoint.X, this.MapPoints[i].ControlPoint.Y);
-                GridVector2 MappedPositionScreen = _Parent.WorldToScreen(this.MapPoints[i].MappedPoint.X, this.MapPoints[i].MappedPoint.Y);
+                if (_Labels == null)
+                {
+                    _Labels = CreateLabels(this.MapPoints);
+                }
 
-                Vector2 Offset = _Parent.GetLabelSize(_Parent.fontArial, i.ToString());
-                Offset.X /= 2f;
-                Offset.Y /= 2f;
+                return _Labels;
+            }
+        }
 
-                _Parent.spriteBatch.DrawString(_Parent.fontArial,
-                                        i.ToString(),
-                                        new Vector2((float)ControlPositionScreen.X, (float)ControlPositionScreen.Y),
-                                        ControlColor,
-                                        0,
-                                        Offset,
-                                        Scale,
-                                        SpriteEffects.None,
-                                        0);
+        public static LabelView[] CreateLabels(MappingGridVector2[] map_points)
+        {
+            LabelView[] labels = new LabelView[(map_points.Length + 1) * 2];
 
-                _Parent.spriteBatch.DrawString(_Parent.fontArial,
-                                       i.ToString(),
-                                       new Vector2((float)MappedPositionScreen.X, (float)MappedPositionScreen.Y),
-                                       MappedColor,
-                                       0,
-                                       Offset,
-                                       Scale,
-                                       SpriteEffects.None,
-                                       0);
+            for (int i = 0; i < map_points.Length; i++)
+            {
+                LabelView control_label = new LabelView(i.ToString(), map_points[i].ControlPoint, anchor: Anchor.TopCenter, scaleFontWithScene: true);
+                LabelView mapped_label = new LabelView(i.ToString(), map_points[i].MappedPoint, anchor: Anchor.BottomCenter, scaleFontWithScene: true);
+
+                labels[i * 2] = control_label;
+                labels[(i * 2) + 1] = mapped_label;
             }
 
-            _Parent.spriteBatch.DrawString(_Parent.fontArial,
-                                        "Control Points",
-                                        new Vector2((float)15, (float)15),
-                                        ControlColor,
-                                        0,
-                                        new Vector2(),
-                                        .2f,
-                                        SpriteEffects.None,
-                                        0);
+            Vector2 string_size = _font.MeasureString("ControlPoints");
 
-            Vector2 LegendSize = _Parent.GetLabelSize(_Parent.fontArial,  "Control Points");
+            labels[map_points.Length] = new LabelView("Control Points", new GridVector2(15, 15), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
+            labels[map_points.Length + 1] = new LabelView("Mapped Points", new GridVector2(15, 15 + (string_size.Y * 2.15)), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
 
-            _Parent.spriteBatch.DrawString(_Parent.fontArial,
-                                   "Mapped Points",
-                                   new Vector2((float)15, (float) 3 + 15 + LegendSize.Y),
-                                   MappedColor,
-                                   0,
-                                   new Vector2(),
-                                   .2f,
-                                   SpriteEffects.None,
-                                   0);
+            return labels;
+        }
 
-            _Parent.spriteBatch.End();
-             
+        public void DrawLabels(Viking.UI.Controls.SectionViewerControl _Parent)
+        {
+
+            LabelView.Draw(_Parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, _Parent.Scene, this.Labels);
         }
 
 
@@ -208,7 +179,7 @@ namespace Viking.ViewModels
         public void Dispose()
         {
             lock (this)
-            { 
+            {
 
                 if (vbMappedMesh != null)
                 {
@@ -227,7 +198,7 @@ namespace Viking.ViewModels
                     ibMesh.Dispose();
                     ibMesh = null;
                 }
-                 
+
             }
         }
 

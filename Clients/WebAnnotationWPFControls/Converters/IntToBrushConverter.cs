@@ -42,14 +42,42 @@ namespace WebAnnotation.WPF.Converters
             byte r = (byte)((val & 0x00FF0000) >> 16);
             byte g = (byte)((val & 0x0000FF00) >> 8);
             byte b = (byte)((val & 0x000000FF) );
-            SolidColorBrush brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
 
-            return brush;
+            if (targetType.IsAssignableFrom(typeof(System.Windows.Media.Brush)))
+            {
+                var brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
+                return brush;
+            }
+            else if(targetType.IsAssignableFrom(typeof(System.Windows.Media.Color)))
+            {
+                return System.Windows.Media.Color.FromArgb(a, r, g, b);
+            }
+
+            throw new NotImplementedException($"IntToBrushConverter cannot conver {value} to {targetType}");
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException();
+            if(value is System.Windows.Media.Color mediaColor)
+            {
+                uint a = ((uint)mediaColor.A) << 24;
+                uint r = ((uint)mediaColor.R) << 16;
+                uint g = ((uint)mediaColor.G) << 8;
+                uint b = ((uint)mediaColor.B);
+
+                uint output = a + r + g + b;
+
+                if(targetType.IsAssignableFrom(typeof(System.Int32)))
+                {
+                    return (int)output;
+                }
+                else if(targetType.IsAssignableFrom(typeof(System.UInt32)))
+                {
+                    return output;
+                }
+            }
+
+            throw new NotImplementedException($"IntToBrush not implemented for ConvertBack {value} to {targetType}");
         }
     }
 }

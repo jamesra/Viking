@@ -1,20 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using Microsoft.Xna.Framework;
+﻿using Geometry;
 using Microsoft.Xna.Framework.Graphics;
-using Geometry;
-using System.Drawing;
-using System.Diagnostics;
 using RoundLineCode;
-using WebAnnotation.ViewModel;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows.Forms;
+using Viking.UI;
+using VikingXNAGraphics;
+using VikingXNAWinForms;
 using WebAnnotation.View;
 using WebAnnotationModel;
-using VikingXNAGraphics;
-using System.Collections.ObjectModel;
-using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -27,7 +22,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// New Locations position in world space
         /// </summary>
-        GridVector2 transformedPos; 
+        GridVector2 transformedPos;
 
         StructureObj putativeStruct;
         LocationObj putativeLoc;
@@ -84,12 +79,12 @@ namespace WebAnnotation.UI.Commands
             double textHeight = location.Radius * 2;
 
             locView = AnnotationViewFactory.Create(putativeLoc, parent.Section.ActiveSectionToVolumeTransform);
-            
+
         }
 
         protected LocationCanvasView NearestLocationToMouse(GridVector2 WorldPos)
         {
-            List<HitTestResult> listHitTestResults = Overlay.GetAnnotationsAtPosition(WorldPos);
+            List<HitTestResult> listHitTestResults = Overlay.GetAnnotations(WorldPos);
 
             //Find locations that are not equal to our origin location
             listHitTestResults = listHitTestResults.Where(hr =>
@@ -113,8 +108,50 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
-            GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
-    
+            HandleInputMovement(e.X, e.Y);
+
+            base.OnMouseMove(sender, e);
+
+            Parent.Invalidate();
+        }
+
+        protected override void OnMouseDown(object sender, MouseEventArgs e)
+        {
+            //Figure out if we've clicked another structure and create the structure
+            if (e.Button.Left())
+            {
+                if (HandleInputSelection(e.X, e.Y) == false)
+                    return;
+            }
+
+            base.OnMouseDown(sender, e);
+        }
+
+        protected override void OnPenMove(object sender, PenEventArgs e)
+        {
+            HandleInputMovement(e.X, e.Y);
+
+            base.OnPenMove(sender, e);
+
+            Parent.Invalidate();
+        }
+
+        protected override void OnPenContact(object sender, PenEventArgs e)
+        {
+            //Figure out if we've clicked another structure and create the structure
+            if (e.Erase == false)
+            {
+                if (HandleInputSelection(e.X, e.Y) == false)
+                    return;
+            }
+
+            base.OnPenContact(sender, e);
+        }
+
+        protected void HandleInputMovement(int X, int Y)
+        {
+            GridVector2 WorldPos = Parent.ScreenToWorld(X, Y);
+
             //Find if we are close enough to a location to "snap" the line to the target
             double distance;
             LocationCanvasView nearest = NearestLocationToMouse(WorldPos);
@@ -124,33 +161,23 @@ namespace WebAnnotation.UI.Commands
             }
             else
             {
-                nearestParent = null; 
+                nearestParent = null;
             }
-           
-            base.OnMouseMove(sender, e);
-
-            Parent.Invalidate(); 
         }
 
-        protected override void OnMouseDown(object sender, MouseEventArgs e)
+        protected bool HandleInputSelection(int X, int Y)
         {
-            //Figure out if we've clicked another structure and create the structure
-            if (e.Button.Left())
-            {
-                GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
+            GridVector2 WorldPos = Parent.ScreenToWorld(X, Y);
 
-                /*Check to see if we clicked a location*/
-                double distance; 
-                LocationCanvasView loc = NearestLocationToMouse(WorldPos);
-                if (loc == null)
-                    return;
+            /*Check to see if we clicked a location*/
+            LocationCanvasView loc = NearestLocationToMouse(WorldPos);
+            if (loc == null)
+                return false;
 
-                this.putativeStruct.Parent = loc.Parent.modelObj; 
+            this.putativeStruct.Parent = loc.Parent.modelObj;
 
-                this.Deactivated = true; 
-            }
-
-            base.OnMouseDown(sender, e);
+            this.Deactivated = true;
+            return true;
         }
 
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
@@ -174,14 +201,14 @@ namespace WebAnnotation.UI.Commands
                 //Otherwise use the old mouse position
                 target = this.oldWorldPosition;
             }
-            
+
             LineView line = new LineView(transformedPos, target, 16.0, Microsoft.Xna.Framework.Color.White, LineStyle.Tubular);
-            
+
             RoundLineManager lineManager = VikingXNAGraphics.DeviceEffectsStore<LumaOverlayRoundLineManager>.TryGet(graphicsDevice);
             if (lineManager == null)
                 return;
 
-            if(labelView == null)
+            if (labelView == null)
             {
                 labelView = new CurveLabel("Select Parent Structure", new GridVector2[] { transformedPos, target }, Microsoft.Xna.Framework.Color.Black, false, lineWidth: line.LineWidth, numInterpolations: 0);
             }
@@ -191,11 +218,10 @@ namespace WebAnnotation.UI.Commands
             }
 
             labelView.Draw(graphicsDevice, scene.ViewProj, Parent.spriteBatch, Parent.fontArial, Parent.CurveManager);
-            
+
             LineView.Draw(graphicsDevice, scene, lineManager, new LineView[] { line });
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }
-        
     }
 }

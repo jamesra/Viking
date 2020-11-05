@@ -1,12 +1,7 @@
-﻿using System;
+﻿using Geometry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Geometry;
-using System.Diagnostics;
-using System.IO; 
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Viking.VolumeModel
 {
@@ -120,10 +115,10 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public override string ToString()
         {
-            if(Section != null)
-                return Section.ToString() + " " + Name; 
+            if (Section != null)
+                return Section.ToString() + " " + Name;
 
-            return Name; 
+            return Name;
         }
 
         /// <summary>
@@ -195,11 +190,11 @@ namespace Viking.VolumeModel
         {
             if (AvailableLevels.Length == 0)
                 return int.MaxValue;
-            
+
             if (double.IsInfinity(requestedLevel))
             {
                 //Return the largest downsample value we have
-                return AvailableLevels[AvailableLevels.Length - 1]; 
+                return AvailableLevels[AvailableLevels.Length - 1];
             }
             else
             {
@@ -228,8 +223,8 @@ namespace Viking.VolumeModel
                 return availableLevels[iNextLowestValue];
             }
         }
-        
-        
+
+
         /// <summary>
         /// Called when there is a need to free the memory used by the object, but keep the object alive
         /// </summary>
@@ -241,16 +236,16 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The section to which the mapping applies
         /// </summary>
-        protected Section Section; 
+        protected Section Section;
 
         public MappingBase(Section section, string name, string Prefix, string Postfix)
         {
-            this.Name = name; 
+            this.Name = name;
             this.Section = section;
             this.TilePrefix = Prefix;
-            this.TilePostfix = Postfix; 
+            this.TilePostfix = Postfix;
         }
-        
+
         /// <summary>
         /// Maps the provided visible bounds in volume space back to section space with the provided transform.
         /// </summary>
@@ -265,8 +260,8 @@ namespace Viking.VolumeModel
                                                                     VisibleBounds.UpperRight };
             GridVector2[] MosaicRectCorners;
             bool[] mapped = TryVolumeToSection(VolumeRectCorners, out MosaicRectCorners);
-            
-            List<MappingGridVector2> MappedMosaicCorners = MosaicRectCorners.Select((p, i) => new MappingGridVector2(VolumeRectCorners[i], MosaicRectCorners[i])).Where((p,i) => mapped[i]).ToList();
+
+            List<MappingGridVector2> MappedMosaicCorners = MosaicRectCorners.Select((p, i) => new MappingGridVector2(VolumeRectCorners[i], MosaicRectCorners[i])).Where((p, i) => mapped[i]).ToList();
             return MappedMosaicCorners;
         }
 
@@ -292,7 +287,7 @@ namespace Viking.VolumeModel
             if (!Success)
                 throw new ArgumentException("Could not map section point to volume");
 
-            return transformedP; 
+            return transformedP;
         }
 
         /// <summary>

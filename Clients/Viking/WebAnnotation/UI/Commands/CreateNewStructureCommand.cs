@@ -1,12 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using System.Diagnostics;
 
 using WebAnnotationModel;
-using WebAnnotation.ViewModel; 
 
 namespace WebAnnotation.UI.Commands
 {
@@ -18,26 +12,26 @@ namespace WebAnnotation.UI.Commands
         StructureObj newStruct;
         LocationObj newLoc;
 
-        public CreateNewStructureCommand(Viking.UI.Controls.SectionViewerControl parent, 
-                                               StructureObj structure, 
+        public CreateNewStructureCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                               StructureObj structure,
                                                LocationObj location)
             : base(parent)
         {
             this.newStruct = structure;
-            this.newLoc = location;  
+            this.newLoc = location;
         }
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)delegate() { this.Execute(); });
+            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
         }
 
         protected override void Execute()
-        { 
-           //Create the new structure
+        {
+            //Create the new structure
             LocationObj unused;
             Store.Structures.Create(newStruct, newLoc, out unused);
-            if(unused != null)
+            if (unused != null)
                 Global.LastEditedAnnotationID = unused.ID;
             base.Execute();
         }

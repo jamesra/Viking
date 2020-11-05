@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Diagnostics;
-using System.Collections.ObjectModel;
-using WebAnnotationModel.Objects;
-using Annotation.Interfaces;
+﻿using Annotation.Interfaces;
 using AnnotationService.Types;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
@@ -15,7 +14,7 @@ namespace WebAnnotationModel
     {
         public override long ID
         {
-            get { return Data.ID; } 
+            get { return Data.ID; }
         }
 
         public override long? ParentID
@@ -110,7 +109,7 @@ namespace WebAnnotationModel
                 return _AttributesCache;
             }
             set
-            { 
+            {
                 if (Data.AttributesXml == null && value == null)
                     return;
 
@@ -135,7 +134,7 @@ namespace WebAnnotationModel
         /// Add the specified name to the attributes if it does not exists, removes it 
         /// </summary>
         /// <param name="tag"></param>
-        public bool ToggleAttribute(string tag, string value=null)
+        public bool ToggleAttribute(string tag, string value = null)
         {
             ObjAttribute attrib = new ObjAttribute(tag, value);
             List<ObjAttribute> listAttributes = this.Attributes.ToList();
@@ -172,9 +171,9 @@ namespace WebAnnotationModel
             get
             {
                 lock (LinksLock)
-                { 
+                {
                     if (_Links == null)
-                    { 
+                    {
                         if (Data.Links != null)
                         {
                             StructureLinkKey[] keys = Data.Links.Select(l => new StructureLinkKey(l)).ToArray();
@@ -187,19 +186,19 @@ namespace WebAnnotationModel
                                 bool added;
                                 //Add it if it doesn't exist, otherwise get the official version
                                 StructureLinkObj linkObj = Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
-                                                                                         new Func<StructureLinkKey, StructureLinkObj>( key => { return new StructureLinkObj(link); }),
+                                                                                         new Func<StructureLinkKey, StructureLinkObj>(key => { return new StructureLinkObj(link); }),
                                                                                          out added); //This call will fire events that add the link to this.Links if it is new to the local store
                                 Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
                                 linkArray.Add(linkObj);
                             }
 
-                            _Links = new ObservableCollection<StructureLinkObj>(linkArray); 
+                            _Links = new ObservableCollection<StructureLinkObj>(linkArray);
                         }
                         else
                         {
-                            _Links = new ObservableCollection<StructureLinkObj>(); 
+                            _Links = new ObservableCollection<StructureLinkObj>();
                         }
-                         
+
                         _Links.CollectionChanged += this.OnLinksChanged;
                     }
 
@@ -228,17 +227,17 @@ namespace WebAnnotationModel
             {
                 lock (LinksLock)
                 {
-                    if(NumLinks == 0)
+                    if (NumLinks == 0)
                         return new StructureLinkObj[0];
 
                     StructureLinkObj[] copy = new StructureLinkObj[Links.Count];
-                    
+
                     Links.CopyTo(copy, 0);
-                    return copy; 
+                    return copy;
                 }
             }
         }
-        
+
         private void OnLinksChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             lock (LinksLock)
@@ -261,7 +260,7 @@ namespace WebAnnotationModel
             {
                 if (Links.Contains(ID))
                     return;
-                
+
                 Links.Add(ID);
             }
         }
@@ -273,7 +272,7 @@ namespace WebAnnotationModel
         /// <param name="ID"></param>
         internal void RemoveLink(StructureLinkObj link)
         {
-            RemoveLink(link.ID); 
+            RemoveLink(link.ID);
         }
 
         /// <summary>
@@ -288,7 +287,7 @@ namespace WebAnnotationModel
                 StructureLinkObj LinkToRemove = Links.FirstOrDefault(link => link.SourceID == key.SourceID && link.TargetID == key.TargetID);
                 if (LinkToRemove == null)
                     return;
-                
+
                 Links.Remove(LinkToRemove);
             }
         }
@@ -343,7 +342,6 @@ namespace WebAnnotationModel
         public StructureObj(Structure data)
         {
             this.Data = data;
-            bool added;
 
             if (data.Links != null)
             {
@@ -351,24 +349,24 @@ namespace WebAnnotationModel
                 {
                     Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
                                                   new Func<StructureLinkKey, StructureLinkObj>(l => { return new StructureLinkObj(link); }),
-                                                  out added);
+                                                  out bool added);
                 }
             }
         }
 
-        
+
 
         protected void InitNewData(StructureTypeObj type)
         {
             this.Data.DBAction = DBACTION.INSERT;
-            
+
             this.Data.ID = Store.Structures.GetTempKey();
             this.Data.TypeID = type.ID;
             Debug.Assert(type.ID >= 0);
-            this.Data.Notes = ""; 
+            this.Data.Notes = "";
             this.Data.Confidence = 0.5;
             this.Data.ParentID = new long?();
-            this.Data.Links = null; 
+            this.Data.Links = null;
         }
 
         private StructureTypeObj _Type = null;
@@ -380,13 +378,13 @@ namespace WebAnnotationModel
                 {
                     _Type = Store.StructureTypes.GetObjectByID(Data.TypeID);
                 }
-                return _Type; 
+                return _Type;
             }
             set
             {
                 Debug.Assert(value != null);
                 if (value.ID == Data.TypeID)
-                    return; 
+                    return;
 
                 if (value != null)
                 {
@@ -417,7 +415,7 @@ namespace WebAnnotationModel
         {
             return Store.Structures.GetObjectByID(ParentID.Value, true);
         }
-        
+
         protected static event EventHandler OnCreate;
         protected void CallOnCreate()
         {
@@ -425,13 +423,16 @@ namespace WebAnnotationModel
             {
                 //TODO, create notification
                 //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
-                OnCreate(this, null); 
+                OnCreate(this, null);
             }
         }
 
         public bool Equals(IStructure other)
         {
-            throw new NotImplementedException();
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            return (long)other.ID == this.ID;
         }
 
         public static event EventHandler Create
@@ -440,6 +441,6 @@ namespace WebAnnotationModel
             remove { OnCreate -= value; }
         }
 
-        
+
     }
 }

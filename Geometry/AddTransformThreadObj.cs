@@ -92,7 +92,7 @@ namespace Geometry.Transforms
                             double ctrlLineDistance = foundCtrlLine.Length * mapLineFraction;
 
                             newCtrlPoint = foundCtrlLine.Direction; //Get unit vector describing direction and scale it
-                            newCtrlPoint.Scale(ctrlLineDistance);
+                            newCtrlPoint *= ctrlLineDistance;
                             newCtrlPoint = newCtrlPoint + foundCtrlLine.A;
                         }
 
@@ -113,7 +113,7 @@ namespace Geometry.Transforms
                             double mappedDistance = mapLine.Length * fraction;
 
                             newMapPoint = mapLine.Direction;
-                            newMapPoint.Scale(mappedDistance);
+                            newMapPoint *= mappedDistance;
                             newMapPoint = newMapPoint + mapLine.A;
                         }
 

@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace WebAnnotation
 {
@@ -15,7 +12,7 @@ namespace WebAnnotation
         /// </summary>
         public Export(Uri URL)
         {
-            ExportURL = URL; 
+            ExportURL = URL;
         }
 
 

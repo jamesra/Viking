@@ -1,13 +1,9 @@
-﻿using System;
+﻿using Geometry;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
 
 namespace WebAnnotation
 {
-    class SortByDistance :  IComparer<GridVector3>
+    class SortByDistance : IComparer<GridVector3>
     {
         public readonly GridVector3 Origin;
         public SortByDistance(GridVector3 Origin)
@@ -24,7 +20,7 @@ namespace WebAnnotation
 
             if (delta == 0)
                 return 0;
-            return delta < 0 ? -1 : 1; 
+            return delta < 0 ? -1 : 1;
         }
     }
 }

@@ -241,7 +241,7 @@ namespace Viking.Common
                 }
                 catch(System.BadImageFormatException e)
                 {
-                    Trace.WriteLine("Could not load assembly " + FileName + ". This can be OK if it is a support assembly and not an extension module.");
+                    Trace.WriteLine("Bad image format loading assembly " + FileName + ". This can be OK if it is a support assembly and not an extension module.  Otherwise it usually indicates loading a 64-bit DLL from a 32-bit process.");
                     continue;
                 }
                 
@@ -286,7 +286,24 @@ namespace Viking.Common
                     continue;
                 }
 
-                FindAssemblyExtensions(A);
+                try
+                { 
+                    FindAssemblyExtensions(A);
+                }
+                catch(System.Reflection.ReflectionTypeLoadException e)
+                {
+                    Trace.WriteLine($"Unable to load {A.ToString()}.");
+                    workerThread.ReportProgress(100, $"Unable to load {A.ToString()}.");
+                    foreach (var loaderException in e.LoaderExceptions)
+                    {
+                        Trace.WriteLine($"{loaderException.ToString()}");
+                    }
+
+                    //Remove assembly if it cannot initialize
+                    ExtensionToAssemblyTable.Remove(Extension);
+
+                    continue; 
+                }
             }
 
             workerThread.ReportProgress(100, "Extensions loading complete");
@@ -301,6 +318,20 @@ namespace Viking.Common
                 types = A.GetExportedTypes();
             }
             catch (ReflectionTypeLoadException except)
+            {
+                VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
+                DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
+
+                if (result == DialogResult.OK)
+                {
+                    return false;
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            catch (System.TypeLoadException except)
             {
                 VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
                 DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);

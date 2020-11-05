@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotation.ViewModel;
-using WebAnnotationModel;
 using System.Windows.Forms;
+using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.View
 {
@@ -15,7 +10,18 @@ namespace WebAnnotation.View
 
         public static ContextMenu ContextMenuGenerator(IViewLocation loc)
         {
-            Location_CanvasContextMenuView contextMenuView = new Location_CanvasContextMenuView(loc.ID);
+            Location_CanvasContextMenuView contextMenuView = null;
+            try
+            {
+                contextMenuView = new Location_CanvasContextMenuView(loc.ID);
+            }
+            catch (ArgumentException e)
+            {
+                ContextMenu menu = new ContextMenu();
+                menu.MenuItems.Add(string.Format("Unable to load location {0}", loc.ID));
+                return menu;
+            }
+
             return contextMenuView.ContextMenu;
         }
 
@@ -35,6 +41,6 @@ namespace WebAnnotation.View
 
                 return menu;
             }
-        } 
+        }
     }
 }

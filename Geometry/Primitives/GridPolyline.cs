@@ -1,9 +1,7 @@
-﻿using System;
-using Geometry.JSON;
+﻿using Geometry.JSON;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry
 {
@@ -37,13 +35,13 @@ namespace Geometry
         public int PointCount { get { return _Points.Count; } }
         public int LineCount { get { return LineSegments.Count; } }
 
-        public GridPolyline(bool AllowSelfIntersection= false)
+        public GridPolyline(bool AllowSelfIntersection = false)
         {
             this.AllowsSelfIntersection = AllowSelfIntersection;
             _Points = new List<Geometry.IPoint2D>();
         }
 
-        public GridPolyline(int capacity, bool AllowSelfIntersection= false) : this(AllowSelfIntersection)
+        public GridPolyline(int capacity, bool AllowSelfIntersection = false) : this(AllowSelfIntersection)
         {
             _Points = new List<Geometry.IPoint2D>(capacity);
         }
@@ -51,13 +49,13 @@ namespace Geometry
         public GridPolyline(IEnumerable<IPoint2D> points, bool AllowSelfIntersection = false)
         {
             this.AllowsSelfIntersection = AllowSelfIntersection;
-             
+
             _Points = new List<IPoint2D>(points.Count());
 
             foreach (var p in points)
             {
                 this.Add(p);
-            } 
+            }
         }
 
         public GridPolyline(IEnumerable<GridVector2> points, bool AllowSelfIntersection = false)
@@ -125,7 +123,7 @@ namespace Geometry
                 _Points.Add(next);
                 rTree.Add(line.BoundingBox, line);
             }
-            else if(AllowsSelfIntersection == false)
+            else if (AllowsSelfIntersection == false)
             {
                 List<GridLineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox);
 
@@ -146,7 +144,7 @@ namespace Geometry
                 rTree.Add(line.BoundingBox, line);
                 this._LineSegments = Existing;
             }
-            
+
         }
 
         public double Area
@@ -205,7 +203,7 @@ namespace Geometry
                 return _LineSegments.Cast<ILineSegment2D>().ToList();
             }
         }
-        
+
 
         public IReadOnlyList<IPoint2D> Points
         {
@@ -213,7 +211,7 @@ namespace Geometry
             {
                 return this._Points;
             }
-        } 
+        }
 
         public bool Contains(IPoint2D p)
         {
@@ -260,7 +258,7 @@ namespace Geometry
             if (this.PointCount != other.PointCount)
                 return false;
 
-            for(int i = 0; i < this.PointCount; i++)
+            for (int i = 0; i < this.PointCount; i++)
             {
                 if (this._Points[i] != other._Points[i])
                     return false;

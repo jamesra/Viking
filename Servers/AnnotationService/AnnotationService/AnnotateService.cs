@@ -199,7 +199,7 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
         public AnnotationService.Types.StructureType[] GetStructureTypes()
         {
-            using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
+            using (ConnectomeEntities db = GetOrCreateReadOnlyContextWithLazyLoading())
             {
                 IQueryable<ConnectomeDataModel.StructureType> queryResults = from t in db.StructureTypes select t;
                 return queryResults.ToArray().Select(st => st.Create()).ToArray();
@@ -242,7 +242,7 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
         public AnnotationService.Types.StructureType GetStructureTypeByID(long ID)
         {
-            using (var db = GetOrCreateReadOnlyContext())
+            using (var db = GetOrCreateReadOnlyContextWithLazyLoading())
             {
                 try
                 {

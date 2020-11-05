@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.ServiceModel;
+﻿using ProtoBuf;
+using System;
 using System.Runtime.Serialization;
-using ProtoBuf;
 
 namespace AnnotationService.Types
 {
@@ -16,7 +12,7 @@ namespace AnnotationService.Types
         private string _Notes;
         private string _MarkupType;
         private string[] _Tags = new String[0];
-        private string[] _StructureTags = new String[0]; 
+        private string[] _StructureTags = new String[0];
         private bool _Abstract;
         private int _Color;
         private string _Code;
@@ -101,11 +97,11 @@ namespace AnnotationService.Types
         {
             get { return _Links; }
             set { _Links = value; }
-        } 
+        }
 
         public StructureType()
         {
-     //       DBAction = DBACTION.INSERT; 
-        } 
+            //       DBAction = DBACTION.INSERT; 
+        }
     }
 }

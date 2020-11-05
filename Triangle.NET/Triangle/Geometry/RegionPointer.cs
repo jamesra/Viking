@@ -7,7 +7,6 @@
 namespace TriangleNet.Geometry
 {
     using System;
-    using System.Collections.Generic;
 
     /// <summary>
     /// Pointer to a region in the mesh geometry. A region is a well-defined

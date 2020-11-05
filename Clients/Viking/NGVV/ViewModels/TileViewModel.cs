@@ -1,14 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
-using System.IO;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Viking.UI;
-using Viking.ViewModels; 
-using Geometry;
 using Viking.VolumeModel;
 
 namespace Viking.ViewModels
@@ -57,7 +54,8 @@ namespace Viking.ViewModels
 
         Microsoft.Xna.Framework.Graphics.Texture2D texture
         {
-            get {
+            get
+            {
                 if (_texture != null)
                 {
                     if (_texture.IsDisposed)
@@ -100,7 +98,8 @@ namespace Viking.ViewModels
         private TextureReader TexReader
         {
             get { return _TexReader; }
-            set {
+            set
+            {
                 lock (thisLock)
                 {
                     if (_TexReader != null && _TexReader != value)
@@ -352,36 +351,36 @@ namespace Viking.ViewModels
                 return null;
             }
         }
-             
+
 
 #if DEBUG
-        private static bool NullGridWarningPrinted = false; 
+        private static bool NullGridWarningPrinted = false;
 #endif
 
         public void Draw(GraphicsDevice graphicsDevice, VikingXNA.TileLayoutEffect effect, bool AsynchTextureLoad, bool UseColor)
         {
             if (TriangleIndicies == null)
             {
-                #if DEBUG
-                if(!NullGridWarningPrinted)
+#if DEBUG
+                if (!NullGridWarningPrinted)
                 {
                     NullGridWarningPrinted = true;
                     Trace.WriteLine("Null Grid Indicies for " + this.TextureFileName, "Tile");
                 }
-                #endif
+#endif
 
                 return;
             }
 
             if (TriangleIndicies.Length == 0)
             {
-                #if DEBUG
+#if DEBUG
                 if (!NullGridWarningPrinted)
                 {
                     NullGridWarningPrinted = true;
                     Trace.WriteLine("No Grid Indicies for " + this.TextureFileName, "Tile");
                 }
-                #endif
+#endif
                 return;
             }
 
@@ -400,7 +399,7 @@ namespace Viking.ViewModels
                     return;
 
                 if (currentTexture.IsDisposed)
-                    return; 
+                    return;
 
                 //Create the verticies if they don't exist
                 if (this.VertBuffer == null)
@@ -423,7 +422,7 @@ namespace Viking.ViewModels
                 graphicsDevice.SetVertexBuffer(this.VertBuffer);
                 graphicsDevice.Indices = this.IndBuffer;
 
-                
+
                 effect.Texture = currentTexture;
 
                 if (UseColor)
@@ -461,7 +460,7 @@ namespace Viking.ViewModels
         //PORT XNA 4
         //static VertexDeclaration VertexPositionColorDeclaration = null;
         VertexBuffer vbMesh = null;
-        IndexBuffer ibMesh = null; 
+        IndexBuffer ibMesh = null;
         //PORT XNA 4
         VertexPositionColor[] MeshVerticies = null;
 
@@ -493,24 +492,24 @@ namespace Viking.ViewModels
             randColorBytes[1] = randColorBytes[1] < 128 ? (byte)(randColorBytes[1] + 128) : randColorBytes[1];
             randColorBytes[2] = randColorBytes[2] < 128 ? (byte)(randColorBytes[2] + 128) : randColorBytes[2];
             Color color = new Color(randColorBytes[0], randColorBytes[1], randColorBytes[2]);
-            VertexPositionColor[] meshVerticies = TileViewModel.CreateMeshVerticies(this.Tile, color); 
+            VertexPositionColor[] meshVerticies = TileViewModel.CreateMeshVerticies(this.Tile, color);
 
             vbMesh = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), meshVerticies.Length, BufferUsage.None);
-            vbMesh.SetData<VertexPositionColor>(meshVerticies);  
+            vbMesh.SetData<VertexPositionColor>(meshVerticies);
 
             List<int> TrianglesAsLines = new List<int>();
 
-            for (int i = 0; i < TriangleIndicies.Length; i+=3)
+            for (int i = 0; i < TriangleIndicies.Length; i += 3)
             {
                 TrianglesAsLines.Add(TriangleIndicies[i]);
-                TrianglesAsLines.Add(TriangleIndicies[i+1]);
-                TrianglesAsLines.Add(TriangleIndicies[i+1]);
-                TrianglesAsLines.Add(TriangleIndicies[i+2]);
+                TrianglesAsLines.Add(TriangleIndicies[i + 1]);
+                TrianglesAsLines.Add(TriangleIndicies[i + 1]);
+                TrianglesAsLines.Add(TriangleIndicies[i + 2]);
                 TrianglesAsLines.Add(TriangleIndicies[i + 2]);
                 TrianglesAsLines.Add(TriangleIndicies[i]);
             }
 
-            ibMesh = new IndexBuffer(graphicsDevice, typeof(int),  TrianglesAsLines.Count, BufferUsage.None);
+            ibMesh = new IndexBuffer(graphicsDevice, typeof(int), TrianglesAsLines.Count, BufferUsage.None);
             ibMesh.SetData<int>(TrianglesAsLines.ToArray());
         }
 
@@ -524,7 +523,7 @@ namespace Viking.ViewModels
                     return;
             }
 
-            
+
 
             if (vbMesh.VertexCount == 0)
                 return;
@@ -562,13 +561,30 @@ namespace Viking.ViewModels
 
             }
 
-            if(originalDepthState != null)
+            if (originalDepthState != null)
                 graphicsDevice.DepthStencilState = originalDepthState;
 
         }
 
-        public void DrawLabels(Viking.UI.Controls.SectionViewerControl _Parent)
+        private VikingXNAGraphics.LabelView _TileLabel = null;
+        internal VikingXNAGraphics.LabelView TileLabel
         {
+            get
+            {
+                if (_TileLabel == null)
+                {
+                    _TileLabel = new VikingXNAGraphics.LabelView(this.Tile.TextureFullPath, this.Tile.Bounds.Center, Color.Yellow, scaleFontWithScene: true, fontSize: Math.Max(Tile.Bounds.Width, Tile.Bounds.Height) / 25.0);
+                }
+
+                return _TileLabel;
+            }
+        }
+
+        public void DrawLabel(Viking.UI.Controls.SectionViewerControl _Parent)
+        {
+
+
+            /*
             float Scale = (float)(1.0f / _Parent.StatusMagnification);
             Vector2 Offset;
 
@@ -615,6 +631,7 @@ namespace Viking.ViewModels
 
 
             _Parent.spriteBatch.End();
+            */
         }
 
         #region IDisposable Members
@@ -622,12 +639,12 @@ namespace Viking.ViewModels
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this); 
+            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if(disposing)
+            if (disposing)
             {
                 lock (thisLock)
                 {
@@ -638,7 +655,7 @@ namespace Viking.ViewModels
                         if (!this._texture.IsDisposed)
                         {
                             this._texture.Dispose();
-                            this._texture = null; 
+                            this._texture = null;
                         }
                     }
 
@@ -646,13 +663,13 @@ namespace Viking.ViewModels
                     {
                         _TexReader.AbortRequest();
                         _TexReader.Dispose();
-                        _TexReader = null; 
+                        _TexReader = null;
                     }
 
                     if (vbMesh != null)
                     {
                         vbMesh.Dispose();
-                        vbMesh = null; 
+                        vbMesh = null;
                     }
 
                     if (ibMesh != null)
@@ -660,7 +677,7 @@ namespace Viking.ViewModels
                         ibMesh.Dispose();
                         ibMesh = null;
                     }
-           
+
                     if (VertBuffer != null)
                     {
                         this.VertBuffer.Dispose();
@@ -671,8 +688,8 @@ namespace Viking.ViewModels
                     {
                         this.IndBuffer.Dispose();
                         this.IndBuffer = null;
-                    } 
-                }   
+                    }
+                }
             }
         }
 

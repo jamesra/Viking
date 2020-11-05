@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 
 namespace AnnotationVizLib
 {
@@ -10,14 +6,14 @@ namespace AnnotationVizLib
     {
         public static void AddEdgeStatistics(this MotifGraph graph)
         {
-            foreach(MotifEdge edge in graph.Edges.Values)
+            foreach (MotifEdge edge in graph.Edges.Values)
             {
                 graph.AddEdgeStatistics(edge);
             }
         }
 
         private static void AddEdgeStatistics(this MotifGraph graph, MotifEdge edge)
-        { 
+        {
             MotifNode sourceNode = graph.Nodes[edge.SourceNodeKey];
             MotifNode targetNode = graph.Nodes[edge.TargetNodeKey];
 

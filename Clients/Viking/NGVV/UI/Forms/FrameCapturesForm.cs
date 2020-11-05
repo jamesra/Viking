@@ -1,41 +1,35 @@
-﻿using System;
+﻿using Geometry;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using System.Diagnostics; 
-using Geometry; 
 
 namespace Viking.UI.Forms
 {
     public struct FrameCapture
     {
         public string Filename;
-        public double Z; 
+        public double Z;
         public GridRectangle Rect;
         public double downsample;
-        public bool IncludeOverlay; 
+        public bool IncludeOverlay;
     }
 
     public partial class FrameCapturesForm : Form
     {
         public FrameCapture[] Frames = new FrameCapture[0];
 
-        public string Prefix = ""; 
+        public string Prefix = "";
         public string Path;
 
-        static string LastPath = System.Environment.CurrentDirectory; 
-        static string LastPrefix = "VikingFrame_"; 
+        static string LastPath = System.Environment.CurrentDirectory;
+        static string LastPrefix = "VikingFrame_";
 
         private const int iX = 0;
         private const int iY = 1;
         private const int iZ = 2;
         private const int iWidth = 3;
         private const int iHeight = 4;
-        private const int iDownsample = 5; 
+        private const int iDownsample = 5;
 
         public FrameCapturesForm()
         {
@@ -49,14 +43,14 @@ namespace Viking.UI.Forms
                 this.textPrefix.Text = FrameCapturesForm.LastPrefix;
             }
             else
-                this.textPrefix.Text = Prefix; 
+                this.textPrefix.Text = Prefix;
 
             if (String.IsNullOrEmpty(this.Path))
             {
-                this.textPath.Text = FrameCapturesForm.LastPath; 
+                this.textPath.Text = FrameCapturesForm.LastPath;
             }
             else
-                this.textPath.Text = Path; 
+                this.textPath.Text = Path;
         }
 
         private void FrameCapturesForm_KeyDown(object sender, KeyEventArgs e)
@@ -69,29 +63,29 @@ namespace Viking.UI.Forms
 
                 DataGridViewSelectedRowCollection rows = this.dataGridView.SelectedRows;
                 int iStartRow = int.MaxValue;
-                for(int i=0; i < rows.Count; i++)
+                for (int i = 0; i < rows.Count; i++)
                 {
                     //Delete count rows from the selected row
                     if (rows[i].Index < iStartRow)
-                        iStartRow = rows[i].Index; 
+                        iStartRow = rows[i].Index;
                 }
 
                 if (iStartRow == int.MaxValue)
-                    iStartRow = 0; 
+                    iStartRow = 0;
 
-                int iRow = 0; 
-                for(iRow = iStartRow; iRow < iStartRow + lines.Length; iRow++)
+                int iRow = 0;
+                for (iRow = iStartRow; iRow < iStartRow + lines.Length; iRow++)
                 {
-                    string[] parts = lines[iRow-iStartRow].Split(new char[] { '\t' });
-                    int iWriteRow = iRow; 
+                    string[] parts = lines[iRow - iStartRow].Split(new char[] { '\t' });
+                    int iWriteRow = iRow;
                     if (this.dataGridView.Rows.Count <= iRow)
                     {
                         iWriteRow = this.dataGridView.Rows.Add();
                     }
 
-                    for(int iCol = 0; iCol < parts.Length; iCol++)
+                    for (int iCol = 0; iCol < parts.Length; iCol++)
                     {
-                        if(iCol < this.dataGridView.ColumnCount)
+                        if (iCol < this.dataGridView.ColumnCount)
                             this.dataGridView.Rows[iWriteRow].Cells[iCol].Value = parts[iCol];
                     }
                 }
@@ -104,7 +98,7 @@ namespace Viking.UI.Forms
             this.Prefix = this.textPrefix.Text;
             FrameCapturesForm.LastPrefix = this.Prefix;
             this.Path = this.textPath.Text;
-            int FirstFrameNum = System.Convert.ToInt32(this.numStartFrame.Value); 
+            int FirstFrameNum = System.Convert.ToInt32(this.numStartFrame.Value);
 
             //Walk each cell and create a screenshot object
             List<FrameCapture> listFrames = new List<FrameCapture>();
@@ -116,45 +110,45 @@ namespace Viking.UI.Forms
 
                     double X = System.Convert.ToDouble(row.Cells[iX].Value);
                     double Y = System.Convert.ToDouble(row.Cells[iY].Value);
-                    double Width = 512; 
+                    double Width = 512;
                     double Height = 512;
-                    if(row.Cells[iWidth].Value != null)
+                    if (row.Cells[iWidth].Value != null)
                         Width = System.Convert.ToDouble(row.Cells[iWidth].Value);
 
-                    if(row.Cells[iHeight].Value != null)
+                    if (row.Cells[iHeight].Value != null)
                         Height = System.Convert.ToDouble(row.Cells[iHeight].Value);
 
                     frame.downsample = 1;
                     if (row.Cells[iDownsample].Value != null)
                         frame.downsample = System.Convert.ToDouble(row.Cells[iDownsample].Value);
 
-                    frame.IncludeOverlay = checkIncludeOverlays.Checked; 
+                    frame.IncludeOverlay = checkIncludeOverlays.Checked;
 
                     //Width and Height are the target image width and height.  Figure out what the ROI Width and Height should be
-                    double ROIWidth = Width * frame.downsample; 
+                    double ROIWidth = Width * frame.downsample;
                     double ROIHeight = Height * frame.downsample;
 
                     //Adjust frame so it is centered on X/Y coordinates
                     X -= ROIWidth / 2;
-                    Y -= ROIHeight / 2; 
-                    
-                    frame.Rect = new GridRectangle( new GridVector2(X,Y),
+                    Y -= ROIHeight / 2;
+
+                    frame.Rect = new GridRectangle(new GridVector2(X, Y),
                                                    ROIWidth,
                                                    ROIHeight);
 
                     string Filename = Prefix + (FirstFrameNum + row.Index).ToString() + ".png";
                     string FullpathFilename = System.IO.Path.Combine(Path, Filename);
-                    frame.Z = System.Convert.ToDouble(row.Cells[iZ].Value); 
+                    frame.Z = System.Convert.ToDouble(row.Cells[iZ].Value);
                     frame.Filename = FullpathFilename;
 
-                    listFrames.Add(frame); 
+                    listFrames.Add(frame);
                 }
-                catch(Exception )
+                catch (Exception)
                 {
-                    DialogResult result = MessageBox.Show("Could not parse row #" + row.Index.ToString() + " skipping", "Error", MessageBoxButtons.OKCancel); 
+                    DialogResult result = MessageBox.Show("Could not parse row #" + row.Index.ToString() + " skipping", "Error", MessageBoxButtons.OKCancel);
                     //If they cancel then return without doing anything. 
-                    if(result == DialogResult.Cancel)
-                        return; 
+                    if (result == DialogResult.Cancel)
+                        return;
                 }
             }
 
@@ -178,7 +172,7 @@ namespace Viking.UI.Forms
                 }
             }
 
-            
+
         }
     }
 }

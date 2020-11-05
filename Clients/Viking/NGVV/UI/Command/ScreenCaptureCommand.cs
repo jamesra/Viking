@@ -1,14 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using VikingXNA;
-using Viking.UI.Forms; 
-using System.Windows.Forms;
-using Microsoft.Xna;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Geometry; 
+﻿using System.Windows.Forms;
+using Viking.UI.Forms;
 
 namespace Viking.UI.Commands
 {
@@ -17,7 +8,7 @@ namespace Viking.UI.Commands
         public ScreenCaptureCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {
-            parent.Cursor = Cursors.Cross; 
+            parent.Cursor = Cursors.Cross;
         }
 
         /// <summary>
@@ -38,7 +29,7 @@ namespace Viking.UI.Commands
                 }
             }
 
-            base.Execute(); 
+            base.Execute();
         }
     }
 }

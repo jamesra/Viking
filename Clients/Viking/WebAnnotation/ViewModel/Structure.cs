@@ -1,12 +1,9 @@
 ﻿using System;
-using System.ComponentModel; 
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using Viking.Common.UI;
-using Viking.Common;
 using System.Windows.Forms;
-using System.Drawing;
+using Viking.Common.UI;
 using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
@@ -44,7 +41,7 @@ namespace WebAnnotation.ViewModel
 
         public Structure(StructureObj data)
         {
-            this.modelObj = data; 
+            this.modelObj = data;
         }
 
         public Structure Parent
@@ -67,8 +64,8 @@ namespace WebAnnotation.ViewModel
                 modelObj.Label = value;
             }
         }
-        
-//        [Column("ID")] This is covered by the ToString method in UI's
+
+        //        [Column("ID")] This is covered by the ToString method in UI's
         public long ID
         {
             get { return modelObj.ID; }
@@ -133,17 +130,17 @@ namespace WebAnnotation.ViewModel
                 modelObj.Notes = value;
             }
         }
-        
+
         [Column("Type")]
         public StructureType Type
         {
             get
             {
-                return new StructureType(modelObj.Type); 
+                return new StructureType(modelObj.Type);
             }
         }
-        
-        
+
+
 
         public static void ToggleAttribute(StructureObj structObj, string tag)
         {
@@ -166,53 +163,53 @@ namespace WebAnnotation.ViewModel
             get
             {
                 LocationObj[] locations = Store.Locations.GetLocationsForStructure(ID).ToArray<LocationObj>();
-                
+
                 if (locations != null && locations.Length > 0)
                 {
                     double sumX = 0;
                     double sumY = 0;
                     double sumZ = 0;
-                    double sumRadiusSquared = 0; 
+                    double sumRadiusSquared = 0;
                     foreach (LocationObj loc in locations)
                     {
                         double RadiusSquared = loc.Radius * loc.Radius;
                         sumX += loc.VolumePosition.X * RadiusSquared;
                         sumY += loc.VolumePosition.Y * RadiusSquared;
                         sumZ += loc.Z * RadiusSquared;
-                        sumRadiusSquared += RadiusSquared; 
+                        sumRadiusSquared += RadiusSquared;
                     }
 
                     sumX /= sumRadiusSquared;
                     sumY /= sumRadiusSquared;
-                    sumZ /= sumRadiusSquared; 
+                    sumZ /= sumRadiusSquared;
 
-                    double meanX = (sumX ) * Global.Scale.X;
+                    double meanX = (sumX) * Global.Scale.X;
                     double meanY = (sumY) * Global.Scale.Y;
-                    double meanZ = (sumZ ) * Global.Scale.Z;
+                    double meanZ = (sumZ) * Global.Scale.Z;
 
-                    Geometry.GridVector3 MeanPosition = new Geometry.GridVector3(meanX, meanY, meanZ); 
+                    Geometry.GridVector3 MeanPosition = new Geometry.GridVector3(meanX, meanY, meanZ);
 
                     //Find the location closest to the mean position
                     double minDistance = double.MaxValue;
-                    int iClosest = 0; 
-                    for(int iLoc = 0; iLoc < locations.Length; iLoc++)
+                    int iClosest = 0;
+                    for (int iLoc = 0; iLoc < locations.Length; iLoc++)
                     {
-                        Geometry.GridVector3 locPosition = new Geometry.GridVector3(locations[iLoc].VolumePosition.X  * Global.Scale.X,
-                                                                                    locations[iLoc].VolumePosition.Y  * Global.Scale.Y,
+                        Geometry.GridVector3 locPosition = new Geometry.GridVector3(locations[iLoc].VolumePosition.X * Global.Scale.X,
+                                                                                    locations[iLoc].VolumePosition.Y * Global.Scale.Y,
                                                                                     locations[iLoc].Z * Global.Scale.Z);
 
                         double distance = Geometry.GridVector3.Distance(MeanPosition, locPosition);
                         if (distance < minDistance)
                         {
                             iClosest = iLoc;
-                            minDistance = distance; 
+                            minDistance = distance;
                         }
                     }
 
                     return locations[iClosest];
                 }
 
-                return null; 
+                return null;
             }
         }
 
@@ -229,9 +226,9 @@ namespace WebAnnotation.ViewModel
             get
             {
                 ContextMenu menu = new ContextMenu();
-                if(Global.Export != null)
+                if (Global.Export != null)
                 {
-                    menu.MenuItems.Add("Export Morphology To Tulip", ContextMenu_OnMorphology); 
+                    menu.MenuItems.Add("Export Morphology To Tulip", ContextMenu_OnMorphology);
                 }
 
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
@@ -241,10 +238,18 @@ namespace WebAnnotation.ViewModel
                 return menu;
             }
         }
-        
+
         public override void Save()
         {
-            Store.Structures.Save();
+            try
+            {
+                Store.Structures.Save();
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+            }
+
         }
 
         public override Viking.UI.Controls.GenericTreeNode CreateNode()
@@ -281,7 +286,7 @@ namespace WebAnnotation.ViewModel
         }
 
         public ContextMenu ContextMenu_AddUnverifiedBranchTerminals(ContextMenu menu)
-        { 
+        {
             MenuItem menuUnverifiedBranchTerminals = new MenuItem("Unmarked process terminals");
             menuUnverifiedBranchTerminals.MenuItems.Add(new MenuItem());
             menuUnverifiedBranchTerminals.Select += this.OnSelectUnverifiedBranchTerminals;
@@ -308,8 +313,8 @@ namespace WebAnnotation.ViewModel
         /// <returns>True if the menu was populated, otherwise false.</returns>
         protected bool _PopulateUnverifiedBranchTerminalsContextMenu(MenuItem rootMenuItem)
         {
-//            long[] Loc_Ids = Store.Structures.GetUnfinishedBranches(this.ID);
-//            List<LocationObj> listLocations = Store.Locations.GetObjectsByIDs(Loc_Ids, true);
+            //            long[] Loc_Ids = Store.Structures.GetUnfinishedBranches(this.ID);
+            //            List<LocationObj> listLocations = Store.Locations.GetObjectsByIDs(Loc_Ids, true);
 
             AnnotationService.Types.LocationPositionOnly[] LocationArray = Store.Structures.GetUnfinishedBranchesWithPosition(this.ID);
 
@@ -362,7 +367,7 @@ namespace WebAnnotation.ViewModel
             Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = new Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>>();
             foreach (AnnotationService.Types.LocationPositionOnly loc in locations)
             {
-                if(!dictSectionToLocations.ContainsKey(loc.Position.Z))
+                if (!dictSectionToLocations.ContainsKey(loc.Position.Z))
                 {
                     dictSectionToLocations[loc.Position.Z] = new List<AnnotationService.Types.LocationPositionOnly>();
                 }
@@ -380,7 +385,7 @@ namespace WebAnnotation.ViewModel
 
             LocationObj loc = Store.Locations.GetObjectByID(locationID);
 
-            AnnotationOverlay.GoToLocation(loc); 
+            AnnotationOverlay.GoToLocation(loc);
         }
 
         public override void Delete()
@@ -407,17 +412,17 @@ namespace WebAnnotation.ViewModel
 
         bool IEquatable<Structure>.Equals(Structure other)
         {
-            return this.modelObj.ID == other.modelObj.ID; 
+            return this.modelObj.ID == other.modelObj.ID;
         }
 
         public bool Equals(Structure x, Structure y)
         {
-            return x.modelObj.ID == y.modelObj.ID; 
+            return x.modelObj.ID == y.modelObj.ID;
         }
 
         public int GetHashCode(Structure obj)
         {
-            return obj.modelObj.GetHashCode(); 
+            return obj.modelObj.GetHashCode();
         }
     }
 }

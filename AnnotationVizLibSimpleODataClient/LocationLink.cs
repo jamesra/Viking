@@ -1,9 +1,6 @@
-﻿using System;
+﻿using Annotation.Interfaces;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib.SimpleOData
 {
@@ -15,7 +12,7 @@ namespace AnnotationVizLib.SimpleOData
             return ll;
         }
 
-        
+
 
         public ulong A { get; private set; }
         public ulong B { get; private set; }

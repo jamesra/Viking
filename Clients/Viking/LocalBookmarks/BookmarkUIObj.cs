@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Viking.Common;
-using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
-using LocalBookmarks;
+﻿using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
 using Geometry;
-using Viking.UI.Controls;
+using System;
 using Viking.Common.UI;
 using VikingXNAGraphics;
 
@@ -24,7 +18,7 @@ namespace LocalBookmarks
         {
             Data = new Bookmark();
             Parent = parent;
-                        
+
             this.CallOnCreate();
         }
 
@@ -48,7 +42,7 @@ namespace LocalBookmarks
         {
             get
             {
-                if(_shapeView == null)
+                if (_shapeView == null)
                 {
                     UpdateView();
                 }
@@ -60,14 +54,14 @@ namespace LocalBookmarks
         {
             get
             {
-                if(_labelView == null)
+                if (_labelView == null)
                 {
                     UpdateView();
                 }
 
-                return _labelView; 
+                return _labelView;
             }
-            
+
         }
 
         public GridRectangle BoundingRect
@@ -101,23 +95,25 @@ namespace LocalBookmarks
             {
                 Data.Name = value;
                 if (Data.Name == null)
-                    Data.Name = ""; 
+                    Data.Name = "";
 
                 _LabelSizeMeasured = false;
-                LabelView.Text = value; 
-                ValueChangedEvent("Name"); 
+                LabelView.Text = value;
+                ValueChangedEvent("Name");
             }
         }
 
         public Point2D Position
         {
-            get { if(Data.VolumePosition == null)
+            get
+            {
+                if (Data.VolumePosition == null)
                     Data.VolumePosition = new Point2D();
-                  return Data.VolumePosition;
+                return Data.VolumePosition;
             }
             set
             {
-                Data.VolumePosition = value; 
+                Data.VolumePosition = value;
             }
         }
 
@@ -158,7 +154,7 @@ namespace LocalBookmarks
             set
             {
                 Position.X = (float)value;
-                  ValueChangedEvent("X");
+                ValueChangedEvent("X");
             }
         }
 
@@ -218,9 +214,9 @@ namespace LocalBookmarks
             {
                 string html = "<b><A HREF=\"" + URI + "\" " +
                               ">" + Name + "<//A><//b><br/>" +
-                              Viking.Common.Util.CoordinatesToCopyPaste(X,Y,Z,Downsample) + 
+                              Viking.Common.Util.CoordinatesToCopyPaste(X, Y, Z, Downsample) +
                               " <br/>" +
-                              "<p>" + Comment + "</p>";  
+                              "<p>" + Comment + "</p>";
                 return html;
             }
         }
@@ -229,7 +225,7 @@ namespace LocalBookmarks
         {
             get
             {
-                return Viking.Common.Util.CoordinatesToCopyPaste(X,Y,Z,Downsample);
+                return Viking.Common.Util.CoordinatesToCopyPaste(X, Y, Z, Downsample);
             }
         }
 
@@ -248,23 +244,23 @@ namespace LocalBookmarks
         {
             get
             {
-                return 2; 
+                return 2;
             }
         }
 
-        public override int  TreeSelectedImageIndex
+        public override int TreeSelectedImageIndex
         {
-	        get 
-    	    {
-                return 2; 
-        	}
+            get
+            {
+                return 2;
+            }
         }
 
         public override void Delete()
         {
-            CallBeforeDelete(); 
-            Parent.RemoveChild(this); 
-          //  Parent.Data.Bookmarks.Remove(this.Data);
+            CallBeforeDelete();
+            Parent.RemoveChild(this);
+            //  Parent.Data.Bookmarks.Remove(this.Data);
             CallAfterDelete();
             Global.Save();
         }
@@ -273,13 +269,13 @@ namespace LocalBookmarks
         {
             get
             {
-                return this.Comment;  
+                return this.Comment;
             }
         }
 
         #endregion
 
-        bool _LabelSizeMeasured = false; 
+        bool _LabelSizeMeasured = false;
         Microsoft.Xna.Framework.Vector2 _LabelSize;
         public Microsoft.Xna.Framework.Vector2 GetLabelSize(Microsoft.Xna.Framework.Graphics.SpriteFont font)
         {

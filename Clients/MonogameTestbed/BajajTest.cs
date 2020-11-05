@@ -58,7 +58,9 @@ namespace MonogameTestbed
         //private LineSetView unfiltered_lineViews = new LineSetView();
         //List<LineView> polyRingViews = null;
         public PointSetView MeshVertsView = null;
-          
+
+        TriangulationView triView = null;
+
         PolygonSetView PolyViews;
         List<LineView> OTVTableView = null;
          
@@ -70,6 +72,7 @@ namespace MonogameTestbed
 
         public int? iShownMesh = null;
         public List<MeshView<VertexPositionColor>> MeshViews = new List<MeshView<VertexPositionColor>>();
+
         
         public bool ShowMesh
         {
@@ -142,10 +145,9 @@ namespace MonogameTestbed
         System.Threading.Tasks.Task BajajMeshGenerationTask = null;
 
         public BajajOTVAssignmentView(AnnotationVizLib.MorphologyGraph graph)
-        {
-
+        { 
             Trace.WriteLine("Begin Simplification of Polygons");
-            SliceGraph sliceGraph = SliceGraph.Create(graph, 2.0);
+            SliceGraph sliceGraph = SliceGraph.Create(graph, 2.0).Result;
             Trace.WriteLine("End Simplification of Polygons");
 
             Debug.Assert(sliceGraph.Nodes.Count == 1, "Test was written expecting a single slice");
@@ -154,21 +156,31 @@ namespace MonogameTestbed
 
             SliceTopology topology = sliceGraph.GetTopology(slice);
 
-            /*
-            List<GridPolygon> _polygons;
-            List<bool> IsUpper;
-            List<double> _polyZ;
-            */
+            Polygons = topology.Polygons;
+            PolyZ = topology.PolyZ;
 
-            //var SimplerPolygon = BajajMeshGenerator.CreateSimplerPolygonLookup(graph, 2.0);
+            //BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
 
+            BajajMeshGenerationTask = System.Threading.Tasks.Task.Run(() =>
+            {
+                //Create our mesh with only the verticies
+                FirstPassTriangulation = new BajajGeneratorMesh(topology, slice);//Polygons, PolyZ, IsUpper, slice);
+                GenerateMesh(FirstPassTriangulation);
+            });
+        }
 
-            //MeshingGroup.GeneratePolygonParameters(slice, SimplerPolygon, out _polygons, out IsUpper, out _polyZ);
-
-            //MeshingGroup.GeneratePolygonParameters(group, out _polygons, out IsUpper, out _polyZ);
+        public BajajOTVAssignmentView(SliceGraph sliceGraph, Slice slice)
+        {
+            SliceTopology topology = sliceGraph.GetTopology(slice);
 
             Polygons = topology.Polygons;
             PolyZ = topology.PolyZ;
+
+
+            //Create our mesh with only the verticies
+
+            PolyViews = new PolygonSetView(Polygons);
+            PolyViews.PointLabelType = IndexLabelType.MESH;
 
             //BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
 
@@ -189,7 +201,6 @@ namespace MonogameTestbed
             PolyZ = Z.Select(z => z - MinZ).ToArray();
             //Bajaj Step 3
             //Polygons.AddPointsAtAllIntersections(Z);
-
             //Create our mesh with only the verticies
 
             BajajMeshGenerationTask = System.Threading.Tasks.Task.Run(() =>
@@ -197,13 +208,70 @@ namespace MonogameTestbed
                 //Create our mesh with only the verticies
                 FirstPassTriangulation = new BajajGeneratorMesh(Polygons, PolyZ, PolyZ.Select(z_ => z_ != MinZ).ToArray());
                 GenerateMesh(FirstPassTriangulation);
-            });
-             
+            }); 
         }
 
-        internal void GenerateMesh(BajajGeneratorMesh FirstPassTriangulation)
-        {
 
+        private GridVector2 VertexPositionAverage = GridVector2.Zero;
+
+        /// <summary>
+        /// Display progress as we triangulate the polygons. 
+        /// The polygons were translated, so we need to restore them to the original positions
+        /// </summary>
+        /// <param name="mesh"></param>
+        private void OnTriangulationProgress(TriangulationMesh<Vertex2D<List<int>>> mesh)
+        {
+            triView.OnTriangulationProgress(mesh);
+            System.Threading.Thread.Sleep(0);
+        }
+
+        private void OnTriangulateRegionProgress(TriangulationMesh<IVertex2D<int>> mesh)
+        {
+            triView.OnTriangulationProgress(mesh);
+            System.Threading.Thread.Sleep(0);
+        }
+
+        private void OnSecondPassRegionProgress(TriangulationMesh<IVertex2D<PointIndex>> mesh)
+        {
+            triView.OnTriangulationProgress(mesh);
+            System.Threading.Thread.Sleep(0);
+        }
+
+        /*
+        double lineWidth = 1;
+        //Ensure we have a view of the current triangulation
+        if(listLineViews.Count == 0)
+        {
+            listLineViews.Add(LineSetView.Create(mesh, Color.Black.SetAlpha(0.5f), linewidth: lineWidth));
+            iShownLineView = 0;
+
+            //Verticies never change, so set them on creation and leave them.
+            foreach (LabelView label in listLineViews[0].LineLabels)
+            {
+                label.Position += VertexPositionAverage;
+                label.Color = Color.LightBlue;
+            }
+        }
+        else
+        {
+            //Verticies never change, so only recreate the lines
+
+            //listLineViews[0] = LineSetView.Create(mesh, Color.Black, linewidth: 3);
+            listLineViews[0].LineViews = LineSetView.CreateLineList(mesh, Color.Black.SetAlpha(0.5f), linewidth: lineWidth * 2);
+        }
+
+        foreach(LineView line in listLineViews[0].LineViews)
+        {
+            line.Position += VertexPositionAverage;
+        }
+        */
+
+        //listLineViews[0].Name = "Current Triangulation";
+
+        //} 
+
+        internal void GenerateMesh(BajajGeneratorMesh FirstPassTriangulation)
+        { 
             string JSONPolyString = Polygons.ToJArray().ToString();
             Trace.WriteLine(JSONPolyString);
 
@@ -213,19 +281,29 @@ namespace MonogameTestbed
                 this.listLineViews.Clear();
                 this.MeshViews.Clear();
 
+                triView = new TriangulationView();
+                
+
+                //Reset the average vertex position in case input changed from the last mesh
+                VertexPositionAverage = FirstPassTriangulation.CalculateAverageVertexPositionXY();
+                triView.TranslationVector = VertexPositionAverage;
+
                 //Create our mesh with only the verticies
-                PolyViews = new PolygonSetView(Polygons);
+                PolyViews = new PolygonSetView(Polygons, 2); 
                 PolyViews.PointLabelType = IndexLabelType.MESH;
+                if(this.VertexLabelType == IndexLabelType.NONE)
+                    this.VertexLabelType = IndexLabelType.MESH;
 
                 this.MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
             }
-              
+
             //UpdatePolyViews();
 
             string temp = FirstPassTriangulation.Verticies.Select(v => v.Position.XY()).Distinct().ToJSON();
             Trace.WriteLine(temp);
-            BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation);
-
+            //BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation, OnTriangulationProgress); /*Use this line to see triangulation construction */
+            BajajMeshGenerator.AddDelaunayEdges(FirstPassTriangulation, OnProgress: null);
+            
             //MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassDelaunay"));
 
             lock (ViewsLock)
@@ -252,12 +330,11 @@ namespace MonogameTestbed
                 RegionViews.Add(CreateRegionPolygonViews(FirstPassTriangulation));
             }
             
-
             //RegionViews = new PolygonSetView(RegionPairingGraph.Nodes.Select(n => n.Value.Polygon));
             //RegionViews.LabelPolygonIndex = true;
              
             SliceChordRTree rTree = FirstPassTriangulation.CreateChordTree(PolyZ);
-            List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
+            List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree, OnTriangulateRegionProgress);
 
             lock (ViewsLock)
             {
@@ -299,18 +376,33 @@ namespace MonogameTestbed
                 MeshViews.Add(CreateMeshView(FirstPassTriangulation, "FirstPassFaceGeneration"));
             }
 
-            MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(FirstPassTriangulation, FirstPassIncompleteVerticies);
+            MorphMeshRegionGraph SecondPassRegions = MorphRenderMesh.SecondPassRegionDetection(FirstPassTriangulation, FirstPassIncompleteVerticies, OnSecondPassRegionProgress);
             lock (ViewsLock)
             {
                 RegionViews.Add(CreateRegionPolygonViews(FirstPassTriangulation, SecondPassRegions.Nodes.Keys));
             }
             
-            SecondPassRegions.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree);
+            SecondPassRegions.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree, OnTriangulateRegionProgress);
 
             lock (ViewsLock)
             {
                 MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
                 listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Second MergeAndCloseRegionsPass"));
+            }
+            
+            FirstPassTriangulation.CapMeshEnd(true, OnTriangulateRegionProgress);
+            lock (ViewsLock)
+            {
+                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Cap upper polygons"));
+                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Cap upper polygons"));
+            }
+
+
+            FirstPassTriangulation.CapMeshEnd(false, OnTriangulateRegionProgress);
+            lock (ViewsLock)
+            {
+                MeshViews.Add(CreateMeshView(FirstPassTriangulation, "Cap lower polygons"));
+                listLineViews.Add(PolyBranchAssignmentView.UpdateMeshLines(FirstPassTriangulation, "Cap lower polygons"));
             }
 
             FirstPassTriangulation.EnsureFacesHaveExternalNormals();
@@ -392,7 +484,7 @@ namespace MonogameTestbed
             double maxZ = mesh.PolyZ.Max();
             double minZ = mesh.PolyZ.Min();
             double ZRange = maxZ - minZ;
-
+            
             meshViewModel.ModelMatrix = Matrix.CreateTranslation(new Vector3(0, 0, -(float)mesh.BoundingBox.CenterPoint.Z)) * Matrix.CreateScale(1, 1, 1f/(float)ZRange);//).ToXNAVector3());
 
 /*
@@ -489,27 +581,27 @@ namespace MonogameTestbed
         }
         */
 
-        private static Color GetVertColor(MorphRenderMesh mesh, MorphMeshVertex v)
+        private static Color GetVertColor(MorphRenderMesh mesh, MorphMeshVertex v, float alpha=1f)
         {
             if (v.MedialAxisIndex.HasValue)
-                return Color.Yellow.SetAlpha(0.5f);
+                return Color.MediumPurple.SetAlpha(alpha);
 
             if (v.Corresponding.HasValue)
-                return Color.DarkSlateBlue.SetAlpha(0.5f);
+                return Color.DarkSlateBlue.SetAlpha(alpha);
 
             if (v.PolyIndex.HasValue == false)
-                return Color.Aqua.SetAlpha(0.5f); //This should never happen at the time I'm writing this code.
+                return Color.Aqua.SetAlpha(alpha); //This should never happen at the time I'm writing this code.
 
             if (v.IsFaceSurfaceComplete(mesh))
                 if(mesh.IsUpperPolygon[v.PolyIndex.Value.iPoly])// Position.Z == mesh.BoundingBox.minVals[2])
-                    return Color.LimeGreen.SetAlpha(0.5f);
+                    return Color.LimeGreen.SetAlpha(alpha);
                 else
-                    return Color.ForestGreen.SetAlpha(0.5f);
+                    return Color.ForestGreen.SetAlpha(alpha);
 
             if (mesh.IsUpperPolygon[v.PolyIndex.Value.iPoly])
-                return Color.Orange.SetAlpha(0.5f);
+                return Color.Orange.SetAlpha(alpha);
             else
-                return Color.Red.SetAlpha(0.5f);
+                return Color.Red.SetAlpha(alpha);
              
         }
 
@@ -621,7 +713,7 @@ namespace MonogameTestbed
 
             return BestLink;
         }
-        */
+        
 
         public static OTVTable IdentifyChordCandidatesForRegionPair(BajajGeneratorMesh mesh, MorphMeshRegion source, MorphMeshRegion target, SliceChordTestType Tests, SliceChordRTree rTree = null)
         {
@@ -638,6 +730,7 @@ namespace MonogameTestbed
              
             return Table;
         }
+        */
 
         private void CreateChordViews(MorphRenderMesh mesh, List<OTVTable> OTVTables)
         {
@@ -660,9 +753,9 @@ namespace MonogameTestbed
         /// <param name="sc"></param>
         /// <param name="ChordRTree"></param>
         /// <returns></returns>
-        private static bool CouldAddSliceChord(BajajGeneratorMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests)
+        private static bool CouldAddSliceChord(BajajGeneratorMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests, out SliceChordTestType failures)
         {
-            return BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc), mesh.GetAdjacentLevelPolygons(sc), sc.Target, ChordRTree, Tests);
+            return BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc), mesh.GetAdjacentLevelPolygons(sc), sc.Target, ChordRTree, Tests, out failures);
         }
 
         
@@ -722,20 +815,46 @@ namespace MonogameTestbed
                 //scene.World = oldWorld;
             }
 
-
-            if(listLineViews != null && ShowLines)
+            if(triView != null && iShownLineView.HasValue == false)
+            {
+                triView.Draw(window, scene, window.lineManager);
+                ViewLabels.AppendLine("B: Trianglulation View");
+            }
+            else if(listLineViews != null && ShowLines)
             {
                 int iShownLine = iShownLineView.Value;
                 LineSetView lineView = listLineViews[iShownLine];
 
+                DeviceStateManager.SaveDeviceState(window.GraphicsDevice);
+
+                DepthStencilState dstate = new DepthStencilState();
+                dstate.DepthBufferEnable = true;
+                dstate.StencilEnable = false;
+                dstate.DepthBufferWriteEnable = true;
+                dstate.DepthBufferFunction = CompareFunction.LessEqual;
+                window.GraphicsDevice.DepthStencilState = dstate;
+
+                RasterizerState rstate = new RasterizerState();
+                rstate.CullMode = CullMode.None;
+                rstate.FillMode = FillMode.Solid;
+                rstate.DepthClipEnable = true;
+                window.GraphicsDevice.RasterizerState = rstate;
+
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, 0);
-                LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, lineView.LineViews.ToArray());
+
                 window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+                LineView.Draw(window.GraphicsDevice, scene, window.lineManager, lineView.LineViews.ToArray());
+                window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil, Color.Black, float.MaxValue, 0);
+
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 10);
+
+
+                DeviceStateManager.RestoreDeviceState(window.GraphicsDevice);
+
                 //CurveLabel.Draw(window.GraphicsDevice, window.Scene, window.spriteBatch, window.fontArial, window.curveManager, lineView.LineLables.ToArray());
-                foreach (var labelsByFont in lineView.LineLables.GroupBy(l => l.font))
+                foreach (var labelsByFont in lineView.LineLabels.GroupBy(l => l.font))
                 {
-                    LabelView.Draw(window.spriteBatch, labelsByFont.Key, window.Scene, labelsByFont.ToArray());
+                    LabelView.Draw(window.spriteBatch, labelsByFont.Key, scene, labelsByFont.ToArray());
                 }
                 ViewLabels.AppendLine("B: " + lineView.Name);
             }
@@ -761,13 +880,13 @@ namespace MonogameTestbed
 
                 if (IncompletedVertexView != null && ShowCompletedVerticies)
             {
-                IncompletedVertexView.Draw(window, scene);
+                IncompletedVertexView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
                 ViewLabels.AppendLine("Incomplete Verticies");
             }
             
-            if (MeshVertsView != null && (this.VertexLabelType & IndexLabelType.MESH) > 0)
+            if (MeshVertsView != null && (this.VertexLabelType & IndexLabelType.MESH) > 0 && iShownLineView.HasValue)
             {
-                MeshVertsView.Draw(window, scene);
+                MeshVertsView.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
                 ViewLabels.AppendLine("Mesh verticies");
             }
             
@@ -783,7 +902,7 @@ namespace MonogameTestbed
 
             if (OTVTableView != null)
             {
-                LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, OTVTableView.ToArray());
+                //LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, OTVTableView.ToArray());
                 DeviceStateManager.SetDepthStencilValue(window.GraphicsDevice, window.GraphicsDevice.DepthStencilState.ReferenceStencil + 1);
                 ViewLabels.AppendLine("OTV Table");
             }
@@ -795,7 +914,7 @@ namespace MonogameTestbed
                 ViewLabels.AppendLine("Poly Views");
             }
 
-            LabelView label = new LabelView(ViewLabels.ToString(), scene.VisibleWorldBounds.UpperLeft, HorizontalAlignment.LEFT, VerticalAlignment.BOTTOM, scaleFontWithScene: false);
+            LabelView label = new LabelView(ViewLabels.ToString(), scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.BottomLeft, scaleFontWithScene: false);
             LabelView.Draw(window.spriteBatch, window.fontArial, scene, new LabelView[] { label }); 
         }
 
@@ -831,11 +950,116 @@ namespace MonogameTestbed
                 scene.World = oldWorld;
             }
 
-            LabelView label = new LabelView(ViewLabels.ToString(), window.Scene.VisibleWorldBounds.UpperLeft, HorizontalAlignment.LEFT, VerticalAlignment.BOTTOM, scaleFontWithScene: false);
+            LabelView label = new LabelView(ViewLabels.ToString(), window.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.BottomLeft, scaleFontWithScene: false);
             LabelView.Draw(window.spriteBatch, window.fontArial, window.Scene, new LabelView[] { label });
         }
     }
     
+
+    /// <summary>
+    /// Represents all of the information to recreate a failure case for a particular slice in the morphology generator
+    /// </summary>
+    class BajajRepro
+    {
+        /// <summary>
+        /// Description of the bug the locations demonstrate
+        /// </summary>
+        public readonly string Description; 
+
+        /// <summary>
+        /// Volume endpoint the locations came from
+        /// </summary>
+        public readonly Uri Endpoint;
+        
+        /// <summary>
+        /// LocationIDs in the slice we are testing
+        /// </summary>
+        public readonly ulong[] SliceLocations;
+
+        /// <summary>
+        /// Number of hops from the slice to load to ensure the corresponding verticies are added from adjacent slices to ensure the reproduction of the error can occur
+        /// </summary>
+        public int Hops = 1;
+
+        /// <summary>
+        /// Degree to which we should simplify the polygon so that all verticies are with x pixels of the predicted curve given by the control points
+        /// </summary>
+        public double Tolerance = 2.0;
+
+        /// <summary>
+        /// Morphology graph containing annotations from the server.
+        /// </summary>
+        public AnnotationVizLib.MorphologyGraph Morphology;
+
+        /// <summary>
+        /// Slice graph generated from the Morphology graph which contains the slice we need to build to demonstrate the bug
+        /// </summary>
+        public SliceGraph Graph;
+
+        private BajajRepro(Uri endpoint, string description, double tolerance = 1)
+        {
+            Endpoint = endpoint;
+            this.Description = description;
+            this.Tolerance = tolerance;
+        }
+        
+        public BajajRepro(ulong[] slice, Uri endpoint, string description=null, double tolerance = 1) : this(endpoint, description)
+        {
+            SliceLocations = slice; 
+        }
+
+        public BajajRepro(ulong A, ulong B, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description)
+        { 
+            SliceLocations = new ulong[] { A, B };
+        }
+
+        public BajajRepro(ulong A, ulong B, ulong C, Uri endpoint, string description = null, double tolerance=1) : this(endpoint, description)
+        { 
+            SliceLocations = new ulong[] { A, B, C };
+        }
+
+        public BajajRepro(ulong A, ulong B, ulong C, ulong D, Uri endpoint, string description = null, double tolerance = 1) : this(endpoint, description)
+        { 
+            SliceLocations = new ulong[] { A, B, C, D };
+        }
+
+        public  void Initialize(double tolerance = 2.0, int hops = 1)
+        {
+            Morphology = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(SliceLocations.Select(id => id).ToList(), Endpoint, hops: hops);
+
+            //Find the linked locations and add those to the graph
+            //////////////
+
+            //BajajMeshGenerator.ConvertToMeshGraph(graph);
+
+            AnnotationVizLib.MorphologyNode[] nodes = Morphology.Nodes.Values.ToArray();
+            //wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray()); 
+
+            Graph = SliceGraph.Create(Morphology, tolerance).Result;            
+        }
+
+        /// <summary>
+        /// Returns the slice this case should test
+        /// </summary>
+        /// <returns></returns>
+        public Slice GetSlice()
+        {
+            Slice slice = Graph.Nodes.FirstOrDefault(n => SliceLocations.All(id => n.Value.AllNodes.Contains(id))).Value;
+            Debug.Assert(slice != null, "We should be able to find the slice we are trying to test");
+            return slice;
+        }
+
+        /// <summary>
+        /// Returns the slice this case should test
+        /// </summary>
+        /// <returns></returns>
+        public static Slice GetSlice(SliceGraph graph, ulong[] SliceLocations)
+        {
+            Slice slice = graph.Nodes.FirstOrDefault(n => SliceLocations.All(id => n.Value.AllNodes.Contains(id))).Value;
+            Debug.Assert(slice != null, "We should be able to find the slice we are trying to test");
+            return slice;
+        }
+    }
 
     /// <summary>
     /// This tests how we create faces that connect two polygons at different Z levels
@@ -851,125 +1075,70 @@ namespace MonogameTestbed
         static string PolyD = "POLYGON ((39146.1054527359 32215.861979170746, 39155.760032425416 32221.28097992999, 39165.539247853769 32227.071088043427, 39175.4628795245 32233.096026487678, 39185.550707941089 32239.219518239352, 39195.822513607054 32245.305286275066, 39206.298077025895 32251.217053571425, 39216.997178701131 32256.818543105052, 39227.93959913624 32261.973477852538, 39239.145118834756 32266.54558079052, 39250.633518300179 32270.398574895607, 39264.276911185814 32273.406635093092, 39279.247663894537 32275.071230368692, 39295.100264772882 32275.759104192595, 39311.389202167426 32275.837000034971, 39327.668964424745 32275.671661365985, 39343.494039891419 32275.629831655824, 39358.418916913994 32276.078254374654, 39371.998083839055 32277.383672992652, 39383.786029013179 32279.912830979989, 39393.337240782937 32284.03247180687, 39398.261345911706 32287.299881576593, 39402.9920628379 32290.99276459937, 39407.426379981167 32295.042860774829, 39411.461285761157 32299.381910002616, 39414.993768597487 32303.941652182362, 39417.920816909842 32308.653827213711, 39420.139419117833 32313.450174996291, 39421.54656364111 32318.262435429755, 39422.039238899335 32323.022348413742, 39421.514433312142 32327.661653847877, 39416.462778197252 32335.810333982961, 39406.034824749433 32343.554039175964, 39391.395139452114 32351.123029560928, 39373.7082887886 32358.747565271846, 39354.138839242267 32366.65790644271, 39333.851357296466 32375.084313207535, 39314.010409434544 32384.257045700324, 39295.780562139858 32394.406364055048, 39280.326381895771 32405.76252840575, 39268.812435185617 32418.555798886417, 39260.417503199205 32433.829669425533, 39254.068503452305 32451.097290974751, 39249.4554054123 32469.921254968314, 39246.268178546561 32489.86415284047, 39244.196792322487 32510.488576025458, 39242.931216207442 32531.357115957515, 39242.161419668832 32552.032364070896, 39241.577372174012 32572.076911799842, 39240.869043190389 32591.05335057859, 39239.726402185326 32608.52427184139, 39238.661912492251 32620.951336266135, 39237.722476752147 32632.90125721386, 39236.927183120963 32644.45661339079, 39236.295119754715 32655.699983503193, 39235.845374809382 32666.713946257256, 39235.59703644093 32677.581080359258, 39235.569192805364 32688.383964515426, 39235.78093205866 32699.205177431984, 39236.251342356794 32710.127297815168, 39236.999511855764 32721.232904371234, 39238.117469471064 32732.543537966478, 39239.625799249094 32743.839523094342, 39241.458828486182 32755.123129713407, 39243.550884478682 32766.396627782247, 39245.836294522938 32777.662287259445, 39248.249385915267 32788.922378103583, 39250.724485952051 32800.179170273259, 39253.1959219296 32811.434933727047, 39255.59802114428 32822.69193842353, 39257.865110892417 32833.95245432129, 39260.045484109476 32845.224266425706, 39262.229038642472 32856.483232818311, 39264.422245875438 32867.73409136368, 39266.631577192406 32878.981579926418, 39268.863503977416 32890.230436371116, 39271.12449761451 32901.485398562334, 39273.421029487705 32912.751204364708, 39275.759570981048 32924.032591642805, 39278.146593478581 32935.334298261216, 39280.588568364336 32946.661062084546, 39283.098857988087 32958.286544921233, 39285.603666752555 32970.014515215487, 39288.123094788119 32981.807286658477, 39290.6772422251 32993.627172941364, 39293.286209193866 33005.436487755294, 39295.970095824778 33017.197544791437, 39298.749002248209 33028.872657740969, 39301.643028594473 33040.424140295021, 39304.672274993944 33051.814306144777, 39307.856841577006 33063.005468981391, 39311.347302599308 33073.575750435237, 39315.516898482529 33084.394679444136, 39320.1154875638 33095.313777161762, 39324.892928180278 33106.184564741743, 39329.599078669089 33116.858563337744, 39333.983797367393 33127.187294103416, 39337.7969426123 33137.022278192388, 39340.788372740972 33146.215036758324, 39342.70794609053 33154.61709095486, 39343.305520998161 33162.079961935669, 39343.161870687 33165.830851291495, 39342.870548229672 33169.477193017316, 39342.400433083327 33172.988002320184, 39341.720404705011 33176.332294407133, 39340.799342551858 33179.479084485225, 39339.606126080951 33182.397387761492, 39338.109634749395 33185.056219442988, 39336.278748014287 33187.424594736745, 39334.082345332725 33189.471528849834, 39331.489306161813 33191.166036989256, 39324.917650595169 33193.169601401467, 39316.230370356934 33193.55366283944, 39305.821649182821 33192.5692091896, 39294.085670808607 33190.467228338384, 39281.416618970004 33187.498708172221, 39268.208677402756 33183.91463657756, 39254.8560298426 33179.966001440807, 39241.752860025263 33175.903790648408, 39229.293351686516 33171.978992086813, 39217.871688562074 33168.44259364243, 39207.764510307774 33165.026524984569, 39197.921213175665 33161.085702593322, 39188.27463494207 33156.768303025456, 39178.757613383226 33152.222502837758, 39169.302986275456 33147.596478587016, 39159.843591394994 33143.038406830005, 39150.312266518136 33138.69646412351, 39140.64184942119 33134.718827024313, 39130.765177880392 33131.253672089209, 39120.615089672028 33128.449175874965, 39109.2992302797 33126.4880975912, 39097.04342307664 33125.477974851216, 39084.196323226191 33125.157452225947, 39071.106585891634 33125.265174286294, 39058.1228662363 33125.539785603221, 39045.593819423484 33125.719930747626, 39033.868100616513 33125.544254290457, 39023.294364978668 33124.751400802626, 39014.221267673274 33123.08001485507, 39006.997463863634 33120.268741018706, 39003.801144219018 33118.296711989788, 39000.735634701115 33116.051755916495, 38997.866752311995 33113.588469519949, 38995.260314053725 33110.961449521346, 38992.9821369284 33108.225292641815, 38991.098037938056 33105.434595602521, 38989.673834084766 33102.643955124615, 38988.775342370594 33099.907967929248, 38988.468379797625 33097.281230737586, 38988.818763367904 33094.818340270787, 38991.613692117855 33090.621392914138, 38997.166963825563 33086.480089929784, 39004.983888209106 33082.42032994028, 39014.569774986565 33078.468011568169, 39025.429933875974 33074.649033435991, 39037.069674595463 33070.989294166291, 39048.994306863038 33067.514692381606, 39060.709140396815 33064.251126704505, 39071.719484914844 33061.224495757509, 39081.530650135188 33058.460698163159, 39089.822027920913 33056.4624586044, 39098.274870214911 33055.084078628206, 39106.804235776865 33054.130864598679, 39115.325183366527 33053.40812287994, 39123.752771743559 33052.721159836081, 39132.0020596677 33051.8752818312, 39139.988105898636 33050.675795229407, 39147.62596919608 33048.92800639481, 39154.830708319751 33046.437221691507, 39161.517382029328 33043.008747483604, 39167.583155595457 33038.677945256677, 39173.288162448844 33033.531265099584, 39178.656083699942 33027.720495354079, 39183.710600459228 33021.397424361916, 39188.475393837209 33014.713840464879, 39192.974144944339 33007.82153200468, 39197.230534891125 33000.872287323109, 39201.268244788036 32994.017894761935, 39205.110955745571 32987.410142662891, 39208.782348874192 32981.200819367754, 39211.685978480928 32976.486330312473, 39214.500319457191 32972.027370610427, 39217.198673803934 32967.7271170233, 39219.754343522116 32963.488746312774, 39222.140630612746 32959.215435240549, 39224.33083707677 32954.810360568292, 39226.29826491516 32950.176699057709, 39228.016216128883 32945.217627470476, 39229.457992718941 32939.836322568292, 39230.596896686278 32933.935961112831, 39231.591788891164 32922.749821111371, 39231.439467641459 32910.087257477258, 39230.343313888254 32896.229760936018, 39228.506708582659 32881.458822213179, 39226.133032675767 32866.055932034258, 39223.425667118674 32850.30258112475, 39220.587992862485 32834.480260210214, 39217.823390858292 32818.870460016129, 39215.335242057205 32803.754671268049, 39213.32692741033 32789.414384691452, 39211.747246575804 32776.684244579483, 39210.149797760627 32764.04624162889, 39208.544118091355 32751.504111306764, 39206.939744694493 32739.061589080186, 39205.3462146966 32726.722410416241, 39203.773065224195 32714.490310782017, 39202.229833403813 32702.369025644592, 39200.726056362022 32690.362290471061, 39199.2712712253 32678.473840728482, 39197.875015120233 32666.707411883988, 39196.688335964383 32656.198732496166, 39195.592634492255 32645.929371078888, 39194.561790488071 32635.836962049296, 39193.569683736037 32625.859139824559, 39192.590194020362 32615.933538821806, 39191.597201125267 32605.997793458209, 39190.564584834952 32595.989538150898, 39189.46622493364 32585.84640731704, 39188.276001205551 32575.506035373775, 39186.967793434873 32564.906056738266, 39185.414524691041 32552.54712867926, 39183.836804650949 32539.744216027826, 39182.214176340371 32526.625718503736, 39180.526182785077 32513.320035826782, 39178.752367010879 32499.955567716748, 39176.872272043511 32486.660713893412, 39174.865440908776 32473.563874076561, 39172.711416632475 32460.79344798599, 39170.389742240353 32448.477835341473, 39167.879960758219 32436.7454358628, 39165.711394369 32427.640538391865, 39163.505443874288 32419.073184242861, 39161.237015037135 32410.896069018254, 39158.881013620536 32402.961888320486, 39156.412345387573 32395.123337752037, 39153.80591610125 32387.233112915335, 39151.036631524614 32379.143909412862, 39148.079397420683 32370.708422847059, 39144.9091195525 32361.779348820379, 39141.500703683123 32352.209382935296, 39134.9148395835 32335.620240907687, 39126.11524482206 32315.901818815, 39115.883005020456 32294.11779499783, 39104.999205800254 32271.331847796777, 39094.244932783084 32248.6076555524, 39084.401271590577 32227.008896605323, 39076.249307844315 32207.599249296094, 39070.570127165935 32191.442391965335, 39068.144815177016 32179.602002953605, 39069.754457499206 32173.141760601502, 39073.268697850457 32172.072503970889, 39078.400025190276 32173.210221513364, 39084.885436828961 32176.172404454624, 39092.461930076861 32180.57654402042, 39100.866502244295 32186.040131436461, 39109.8361506416 32192.180657928471, 39119.107872579072 32198.615614722181, 39128.418665367069 32204.962493043324, 39137.5055263159 32210.838784117597, 39146.1054527359 32215.861979170746))";
 
 
-        /*
-        long[] TroubleIDS = new long[] {
-            82701, //Z: 234
-            82881, //Z: 233
-            82882,
-            82883
-            };*/
-        /*
-    long[] TroubleIDS = new long[] {
-      //  58664,
-        58666,
-        58668
-    };
-    */
-        /*
-        //Polygons with internal polygon
-        long[] TroubleIDS = new long[] {
-          //  58664,
-            82617,
-            82647,
-            82679,
 
-        };
-        */
-
-
-        /*
-        //Polygons with internal polygon merging with external concavity
-        long[] TroubleIDS = new long[] {
-          //  58664,
-            82884, //Z: 767
-            82908, //Z: 768
-
-        };
-        */
-        /*
-        //Polygons with internal polygon
-        long[] TroubleIDS = new long[] {
-          //  58664,
-            82612, //Z: 756
-            82617, //Z: 757 Small Branch
-            82647, //Z: 757
-            //82679, //Z: 758
-            //82620, //Z: 758 Small Branch
-
-        };
-        */
-
-        long[] GlialDebug1 = new long[] {
+        ulong[] GlialDebug1 = new ulong[] {
           133887, //Z = 2
           133882
-        };
+        }; 
 
-        //Polygons with internal polygon merging with external concavity
-        long[] NightmareTroubleIDS = new long[] {
-          1333661, //Z = 2
-          1333662, //Z = 3
-          1333665 //Z =2
-
-        };
-
-        long[] BasicBranchTroubleIDS = new long[] {
+        ulong[] BasicBranchTroubleIDS = new ulong[] {
           240719, //Z = 537
           240720, //Z = 536
           240721, //Z = 536
         };
 
-        long[] BasicBranchInteriorHole = new long[] {
+        ulong[] BasicBranchInteriorHole = new ulong[] {
           236909, //Z = 1
           236910, //Z = 1
           236911 //Z =2
         };
 
-        long[] BasicInteriorHoleOverAdjacentExteriorRing = new long[] {
+        ulong[] BasicInteriorHoleOverAdjacentExteriorRing = new ulong[] {
           256816, //Z = 1
           256818
         };
 
-        long[] HorseshoeInteriorHoleOverAdjacentExteriorRing = new long[] {
+        ulong[] HorseshoeInteriorHoleOverAdjacentExteriorRing = new ulong[] {
           260138, //Z = 1
           260139
         };
 
-        long[] DelaunayTest = new long[] {
+        ulong[] DelaunayTest = new ulong[] {
             133882,
             133887
         };
 
-        long[] DelaunayTest2 = new long[] {
+        ulong[] DelaunayTest2 = new ulong[] {
             133888,
             133883
         };
 
-        long[] DelaunayTest3 = new long[] {
+        ulong[] DelaunayTest3 = new ulong[] {
             133890,
             133884
         };
 
-        long[] DelaunayTest4= new long[] {
+        ulong[] DelaunayTest4= new ulong[] {
             133917,
             133912
         };
 
-        long[] DelaunayTest5 = new long[] {
+        ulong[] DelaunayTest5 = new ulong[] {
             133901,
             133896
         };
 
-        long[] DelaunayTest6 = new long[] {
+        ulong[] DelaunayTest6 = new ulong[] {
             133920,
             133915
         };
 
-        long[] DelaunayTest7 = new long[] {
+        ulong[] DelaunayTest7 = new ulong[] {
             133923,
             133917
         };
 
-        long[] DelaunayTest8 = new long[] {
+        ulong[] DelaunayTest8 = new ulong[] {
             82601,
             82599
         };
@@ -977,7 +1146,7 @@ namespace MonogameTestbed
         /// <summary>
         /// The faces on edge after closing untiled region
         /// </summary>
-        long[] DelaunayTest9 = new long[] {
+        ulong[] DelaunayTest9 = new ulong[] {
             58687,
             58685
         };
@@ -985,7 +1154,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Clockwise triangulation vert
         /// </summary>
-        long[] DelaunayTest10 = new long[] {
+        ulong[] DelaunayTest10 = new ulong[] {
             108603,
             108610,
             108534
@@ -995,7 +1164,7 @@ namespace MonogameTestbed
         /// Created line with duplicate points
         /// FALSE POSITIVE HOLE DETECTION due to overlapping contours of thin process.
         /// </summary>
-        long[] DelaunayTest11 = new long[]
+        ulong[] DelaunayTest11 = new ulong[]
         {
             102640,
             102645,
@@ -1005,7 +1174,7 @@ namespace MonogameTestbed
         /// <summary>
         /// 3 Z-levels.  OTV Tiling table assertion
         /// </summary>
-        long[] DelaunayTest12 = new long[]
+        ulong[] DelaunayTest12 = new ulong[]
         {
             102557,
             102564,
@@ -1017,26 +1186,26 @@ namespace MonogameTestbed
         /// <summary>
         /// Adding correspoinding verticies, adding same point twice
         /// </summary>
-        long[] DelaunayTest13 = new long[]
+        ulong[] DelaunayTest13 = new ulong[]
         {
             58685,
             58682
         };
 
-        long[] DelaunayTest14 = new long[]
+        ulong[] DelaunayTest14 = new ulong[]
         {
             58708,
             58706
         };
 
-        long[] DelaunayTest15 = new long[]
+        ulong[] DelaunayTest15 = new ulong[]
         {
             82356,
             58677
         };
 
         //Possible infinite loop in FindCloseableFaces
-        long[] DelaunayTest16 = new long[] 
+        ulong[] DelaunayTest16 = new ulong[] 
         {
             105877,
             105879,
@@ -1044,11 +1213,90 @@ namespace MonogameTestbed
         };
 
         //Infinite loop adding constrained edges
-        long[] DelaunayTest17 = new long[]
+        ulong[] DelaunayTest17 = new ulong[]
         {
             133018 ,
             133001
         };
+
+        //Verticies that create an additional correspondance point when nudged
+        ulong[] DelaunayTest18 = new ulong[]
+        {
+            145437 ,
+            145435
+        };
+
+        ulong[] DelaunayTest19 = new ulong[]
+        {
+            82607 ,
+            82604
+        };
+
+        ulong[] DelaunayTest20 = new ulong[]
+        {
+            139799 ,
+            139796
+        };
+
+    
+
+
+
+        /// <summary>
+        /// The set of cases we want to be able to run successfully
+        /// </summary>
+        BajajRepro[] ReproSet =
+        {
+            new BajajRepro(1333661, 1333662, 1333665, DataSource.EndpointMap[Endpoint.TEST], "NightmareTroubleIDS"),
+            new BajajRepro(82617, 82647, 82679, DataSource.EndpointMap[Endpoint.TEST], "Polygons with internal polygon"),
+            new BajajRepro(82884, 82908, DataSource.EndpointMap[Endpoint.TEST], "Polygons with internal polygon merging with external concavity"),
+            new BajajRepro(82612, 82617, 82647, DataSource.EndpointMap[Endpoint.TEST], "Polygons with internal polygon"),
+            new BajajRepro(139799, 139796, DataSource.EndpointMap[Endpoint.RPC1], "Delaunay error that only occurs after corresponding points are added for polygons outside the slice"),
+            new BajajRepro(145431, 145428, DataSource.EndpointMap[Endpoint.RPC1], "Region with no perimeter"),
+            new BajajRepro(100542, 100547, DataSource.EndpointMap[Endpoint.RPC1], "Unknown"),
+            new BajajRepro(100804, 100807, DataSource.EndpointMap[Endpoint.RPC1], "Corresponding points in region"),
+            new BajajRepro(100418, 100419, DataSource.EndpointMap[Endpoint.RPC1], "Corresponding points in region P:1 iVert:74 of 235"),
+            new BajajRepro(58699 ,  58696, DataSource.EndpointMap[Endpoint.RPC1], "We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges"),
+            new BajajRepro(140324, 140323, DataSource.EndpointMap[Endpoint.RPC1], "Expected two faces for edge removed for constraint"),
+            new BajajRepro(139807, 139803, DataSource.EndpointMap[Endpoint.RPC1], "Expected two faces for edge removed for constraint?"),
+            new BajajRepro(139667, 139664, DataSource.EndpointMap[Endpoint.RPC1], "Face 76,77,78 must have non-zero area"),
+            new BajajRepro(140323, 140322, DataSource.EndpointMap[Endpoint.RPC1], "Added edge intersects existing edge"),
+            new BajajRepro(140327, 140325, DataSource.EndpointMap[Endpoint.RPC1], "New edge 281-679 intersects existing edges"),
+            new BajajRepro(100516, 100517, DataSource.EndpointMap[Endpoint.RPC1], "New edge 222-224 intersects existing edges {223-460}"),
+            new BajajRepro(82928 , 82916, DataSource.EndpointMap[Endpoint.RPC1], "New edge {2-22} intersects existing edges {3-24}"),
+            new BajajRepro(99027, 99028, DataSource.EndpointMap[Endpoint.RPC1], "New edge 1-10 intersects existing edges"),
+            new BajajRepro(100516, 100517, DataSource.EndpointMap[Endpoint.RPC1], "New edge 222-224 intersects existing edges"),
+            new BajajRepro(145542, 145539, DataSource.EndpointMap[Endpoint.RPC1], "New edge 1-11 intersects existing edges"),
+            new BajajRepro(113933, 113927, DataSource.EndpointMap[Endpoint.RPC1], "New edge 175-177 intersects existing edges: 176-446"),
+            new BajajRepro(new ulong[] { 146097, 146105, 146107, 146108, 274054 }, DataSource.EndpointMap[Endpoint.RPC1], "System.InvalidCastException"),
+            new BajajRepro(146420, 146425 , 146426, DataSource.EndpointMap[Endpoint.RPC1], "We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges"),
+            new BajajRepro(158786, 158787, DataSource.EndpointMap[Endpoint.RPC1], "Infinite recursion in edge flip"),
+            new BajajRepro(211283, 211284, DataSource.EndpointMap[Endpoint.RPC1], "New edge 0-6 intersects existing edges: 2-7"),
+            new BajajRepro(269861, 269862, DataSource.EndpointMap[Endpoint.RPC1], "QuadTree: : 'Index was out of range."),
+            new BajajRepro(108279, 108280, DataSource.EndpointMap[Endpoint.RPC1], "We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges"),
+            new BajajRepro(282225, 282226, DataSource.EndpointMap[Endpoint.RPC1], "Interior points must be inside Face"),
+            new BajajRepro(269802, 269803, DataSource.EndpointMap[Endpoint.RPC1], "Exterior polygon ring must be valid"),
+            new BajajRepro(269709, 269708, DataSource.EndpointMap[Endpoint.RPC1], "Medial Axis approximate vertex must be within polygonal boundary"),
+            new BajajRepro(282070, 282069, DataSource.EndpointMap[Endpoint.RPC1], "New edge 0-18 intersects existing edges: 8-9"),
+            new BajajRepro(145755, 145741, 146044, 146089, DataSource.EndpointMap[Endpoint.RPC1], "Expect two faces for any edge removed for intersecting an edge constraint"),
+            new BajajRepro(158560, 158561, DataSource.EndpointMap[Endpoint.RPC1], "Adjacent corresponding edges?"),
+            new BajajRepro(100418, 100419, DataSource.EndpointMap[Endpoint.RPC1], "System.NotImplementedException: Corresponding points in region P:1 iVert:74 of 235"),
+            new BajajRepro(100011, 100021, DataSource.EndpointMap[Endpoint.RPC1], "New edge 225-511 intersects existing edges: 237-238"),
+            new BajajRepro(82682, 82680, DataSource.EndpointMap[Endpoint.RPC1], "RTree error on vertex insert.",1.0), //Fixed by not adding an existing point in an interior hole to the exterior polygon again
+            new BajajRepro(100119,  100121, DataSource.EndpointMap[Endpoint.RPC1], "New edge 54-57 intersects existing edges: 56-411",1.0),
+            new BajajRepro(108602,  108528, DataSource.EndpointMap[Endpoint.RPC1], "We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges",1.0),
+            new BajajRepro(113919,  113910, DataSource.EndpointMap[Endpoint.RPC1], "Duplicate point found in exterior ring", 1.0),
+            new BajajRepro(269802 , 269803, DataSource.EndpointMap[Endpoint.RPC1], "Index out of range", 3.0),
+            new BajajRepro(85470 , 85449, DataSource.EndpointMap[Endpoint.RPC1], "Scale check", 2.0)
+
+        };
+
+        /// <summary>
+        /// Index of the reprocase we want to display on load
+        /// </summary>
+        int CurrentReproCase = 40;
+
+        BajajRepro CurrentTestCase = null;
 
         Scene scene;
         Scene3D scene3D;
@@ -1072,7 +1320,7 @@ namespace MonogameTestbed
         AnnotationVizLib.MorphologyGraph Graph;
 
 
-        public void Init(MonoTestbed window)
+        public async void Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -1096,10 +1344,12 @@ namespace MonogameTestbed
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicInteriorHoleOverAdjacentExteriorRing, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(HorseshoeInteriorHoleOverAdjacentExteriorRing, DataSource.EndpointMap[ENDPOINT.RPC1]);
 
+            ///////////Old direct loading code///////////////////////////
+            /*
             /////////////
             ///This is the major test of mesh generation that covers as many cases as I could think of
             //this.Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
-            Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest17, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest20, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //////////////
 
             //BajajMeshGenerator.ConvertToMeshGraph(graph);
@@ -1108,16 +1358,28 @@ namespace MonogameTestbed
             //wrapView = new MonogameTestbed.BajajOTVAssignmentView(nodes.Select(n => n.Geometry.ToPolygon()).ToArray(), nodes.Select(n=> n.Z).ToArray());
             wrapView = new MonogameTestbed.BajajOTVAssignmentView(Graph);
 
+            */
+            ////////////////////////////////////////////////////////////////
+            ///
+            CurrentTestCase = ReproSet[CurrentReproCase];
+
+            CurrentTestCase.Initialize(tolerance: 1.0);
+            var Graph = CurrentTestCase.Morphology;
+            Slice slice = CurrentTestCase.GetSlice();
+
+            wrapView = new MonogameTestbed.BajajOTVAssignmentView(CurrentTestCase.Graph, slice);
+            
             if (window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
             {
-                window.Scene.Camera.LookAt = Graph.BoundingBox.CenterPoint.XY().ToXNAVector2();
-                window.Scene.Camera.Downsample = Graph.BoundingBox.Width / window.GraphicsDevice.Viewport.Width;
+                GridRectangle bRect = wrapView.Polygons.BoundingBox();
+                window.Scene.Camera.LookAt = bRect.Center.ToXNAVector2();
+                window.Scene.Camera.Downsample = bRect.Width / window.GraphicsDevice.Viewport.Width;
             }
-            
-            GridBox bbox = new GridBox(wrapView.Polygons.BoundingBox(), nodes.Min(n => n.Z), nodes.Max(n => n.Z));
+
+            GridBox bbox = new GridBox(wrapView.Polygons.BoundingBox(), Graph.Nodes.Values.Min(n => n.Z), Graph.Nodes.Values.Max(n => n.Z));
             scene3D.Camera.Position = (bbox.CenterPoint.XY().ToGridVector3(0) + new GridVector3(0, 0, 10f * (float)bbox.Depth)).ToXNAVector3();
             scene3D.Camera.LookAt = new Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0); // bbox.CenterPoint.ToXNAVector3();
-
+            
             /*
             A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
             B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
@@ -1177,17 +1439,25 @@ namespace MonogameTestbed
                 }
 
             }
-            
+
 
             if(Gamepad.X_Clicked)
             {
-                wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
+                //wrapView.ShowCompletedVerticies = !wrapView.ShowCompletedVerticies;
+                wrapView.iShownRegion = wrapView.iShownRegion.HasValue ? wrapView.iShownRegion.Value - 1 : wrapView.RegionViews.Count-1;
+                if (wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value < 0)
+                {
+                    wrapView.iShownRegion = null;
+                }
             }
              
             if(Gamepad.Start_Clicked)
             {
                 //Recalculate the mesh from scratch
-                wrapView = new BajajOTVAssignmentView(Graph);
+                var Graph = CurrentTestCase.Morphology;
+                Slice slice = CurrentTestCase.GetSlice();
+
+                wrapView = new MonogameTestbed.BajajOTVAssignmentView(CurrentTestCase.Graph, slice);
             }
 
             if (Gamepad.RightShoulder_Clicked)

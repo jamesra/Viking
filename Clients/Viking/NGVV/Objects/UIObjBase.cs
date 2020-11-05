@@ -1,8 +1,5 @@
 ﻿using System;
-using System.ComponentModel; 
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.ComponentModel;
 using Viking.Common;
 
 namespace Viking.Objects
@@ -33,7 +30,7 @@ namespace Viking.Objects
             }
         }
 
-        
+
         protected void CallBeforeSave()
         {
             if (OnBeforeSave != null)
@@ -127,7 +124,7 @@ namespace Viking.Objects
 
         public virtual System.Windows.Forms.ContextMenu ContextMenu
         {
-            get {  throw new NotImplementedException(); }
+            get { throw new NotImplementedException(); }
         }
 
         public virtual System.Drawing.Image SmallThumbnail
@@ -137,7 +134,7 @@ namespace Viking.Objects
 
         public virtual string ToolTip
         {
-            get { return this.ToString();  }
+            get { return this.ToString(); }
         }
 
         public virtual void Save()

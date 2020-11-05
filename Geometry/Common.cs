@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Geometry
 {
@@ -24,13 +22,13 @@ namespace Geometry
                 {
                     Lines = new List<string>(100);
                 }
-                
+
                 while (!MosaicStream.EndOfStream)
                 {
                     Lines.Add(MosaicStream.ReadLine());
                 }
-                 
-                return Lines.ToArray(); 
+
+                return Lines.ToArray();
             }
         }
     }

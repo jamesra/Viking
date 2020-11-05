@@ -55,6 +55,13 @@ namespace Geometry
             this._coords = new double[] { x, y, z };
         }
 
+        public void Deconstruct(out double x, out double y, out double z)
+        {
+            x = X;
+            y = Y;
+            z = Z; 
+        }
+
         int IComparable.CompareTo(object Obj)
         {
             GridVector3 B = (GridVector3)Obj;

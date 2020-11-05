@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry
 {
@@ -52,7 +50,7 @@ namespace Geometry
                 else
                     position--;
 
-                return position >= StartIndex; 
+                return position >= StartIndex;
             }
         }
 
@@ -86,7 +84,7 @@ namespace Geometry
 
                 return position;
             }
-        } 
+        }
     }
 
 
@@ -97,7 +95,7 @@ namespace Geometry
     {
         private long StartIndex;
         private long _Count;
-        private bool _Reversed; 
+        private bool _Reversed;
 
         public int Count
         {
@@ -128,11 +126,11 @@ namespace Geometry
                 if (_Reversed == false)
                     return StartIndex + index;
                 else
-                    return ((_Count-1) + StartIndex) - index; 
+                    return ((_Count - 1) + StartIndex) - index;
             }
         }
 
-        public ContinuousIndexSet(long startIndex, long count, bool reverse=false)
+        public ContinuousIndexSet(long startIndex, long count, bool reverse = false)
         {
             this.StartIndex = startIndex;
             this._Count = count;
@@ -414,7 +412,7 @@ namespace Geometry
     /// This set has not limit to the index value, negative or positive.  The sequence loops until the bit-depth limit of the system.
     /// </summary>
     public class InfiniteIndexSet : InfiniteSequentialIndexSet, IEnumerable
-    { 
+    {
         protected IReadOnlyList<long> set;
 
         public override IIndexSet Reverse()
@@ -442,7 +440,7 @@ namespace Geometry
 
         public InfiniteIndexSet(IReadOnlyList<int> set, long startIndex = 0, bool reverse = false) : this(set.Select(v => (long)v).ToArray(), startIndex, reverse)
         {
-            
+
         }
 
         /// <summary>
@@ -451,7 +449,7 @@ namespace Geometry
         /// <param name="startIndex"></param>
         /// <param name="wrapIndex">The value we never reach, we wrap before</param>
         /// <param name="count">Total number of values in the sequence</param>
-        public InfiniteIndexSet(IReadOnlyList<long> set, long startIndex=0, bool reverse = false)
+        public InfiniteIndexSet(IReadOnlyList<long> set, long startIndex = 0, bool reverse = false)
             : base(0, set.Count, startIndex, reverse)
         {
             this.set = set;
@@ -508,7 +506,7 @@ namespace Geometry
         protected long StartIndex;
         protected long _Count;
 
-        protected bool _Reverse = false; 
+        protected bool _Reverse = false;
 
         public virtual IIndexSet Reverse()
         {
@@ -572,7 +570,7 @@ namespace Geometry
         /// <param name="startIndex"></param>
         /// <param name="wrapIndex">The value we never reach, we wrap before</param>
         /// <param name="count">Total number of values in the sequence</param>
-        public InfiniteSequentialIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse=false)
+        public InfiniteSequentialIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse = false)
         {
             if (maxIndex < minIndex)
                 throw new ArgumentException("Max index must be greater or equal to min index");
@@ -635,7 +633,7 @@ namespace Geometry
         /// <param name="startIndex"></param>
         /// <param name="wrapIndex">The value we never reach, we wrap before</param>
         /// <param name="count">Total number of values in the sequence</param>
-        public FiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse=false) : base(minIndex, maxIndex, startIndex, reverse)
+        public FiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse = false) : base(minIndex, maxIndex, startIndex, reverse)
         {
         }
 

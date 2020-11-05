@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Viking.Common
 {
@@ -18,7 +15,7 @@ namespace Viking.Common
     public sealed class MenuAttribute : System.Attribute
     {
         public string ParentMenuName;
-                
+
         public MenuAttribute(string ParentMenu)
         {
             ParentMenuName = ParentMenu;
@@ -54,7 +51,7 @@ namespace Viking.Common
 
         public PropertyPageAttribute(System.Type ObjType)
         {
-            targetType = ObjType; 
+            targetType = ObjType;
         }
 
         public PropertyPageAttribute(System.Type ObjType, int Priority)
@@ -100,7 +97,7 @@ namespace Viking.Common
             MenuText = menuItemText;
         }
     }
-    
+
     /// <summary>
     /// Indicates which IUIObject supporting types a control displays natively
     /// Used at the moment to build context menus when no item is selected and
@@ -113,14 +110,14 @@ namespace Viking.Common
 
         public SupportedUITypesAttribute(System.Type T)
         {
-            this.Types = new Type[]{T};
+            this.Types = new Type[] { T };
         }
 
         public SupportedUITypesAttribute(System.Type[] types)
         {
             this.Types = types;
             if (this.Types == null)
-                this.Types = new Type[0]; 
+                this.Types = new Type[0];
         }
     }
 
@@ -165,7 +162,7 @@ namespace Viking.Common
 
         public override string ToString()
         {
-            return Name; 
+            return Name;
         }
 
         public override int GetHashCode()
@@ -186,7 +183,7 @@ namespace Viking.Common
             if (obj == null)
                 return -1;
 
-            return Name.CompareTo(attrib.Name); 
+            return Name.CompareTo(attrib.Name);
         }
 
         #endregion

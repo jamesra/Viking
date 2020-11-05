@@ -1,20 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.ComponentModel; 
-using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using WebAnnotation;
-using Viking;
-using Viking.Common;
-using Geometry;
-using WebAnnotation.UI;
-using Viking.ViewModels;
-using WebAnnotationModel; 
-
-namespace WebAnnotation.ViewModel
+﻿namespace WebAnnotation.ViewModel
 {
     /*
     /// <summary>

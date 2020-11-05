@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Annotation.Interfaces;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using ODataClient.ConnectomeDataModel;
 using SqlGeometryUtils;
-using Geometry; 
-using Annotation.Interfaces;
+using System;
+using System.Collections.Generic;
 
 namespace AnnotationVizLib.OData
 {

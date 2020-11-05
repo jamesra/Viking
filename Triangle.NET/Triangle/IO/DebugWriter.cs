@@ -11,8 +11,8 @@ namespace TriangleNet.IO
     using System.IO;
     using System.IO.Compression;
     using System.Text;
-    using TriangleNet.Topology;
     using TriangleNet.Geometry;
+    using TriangleNet.Topology;
 
     /// <summary>
     /// Writes a the current mesh into a text file.

@@ -2,12 +2,12 @@
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace SqlServerTypes
+namespace MonogameTestbed
 {
     /// <summary>
     /// Utility methods related to CLR Types for SQL Server 
     /// </summary>
-    public class Utilities
+    public class SqlServerTypesUtilities
     {
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr LoadLibrary(string libname);

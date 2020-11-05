@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace Viking.Common
@@ -22,7 +20,7 @@ namespace Viking.Common
             typeof(Double),
             typeof(Single),
             typeof(Decimal)
-        }; 
+        };
 
         public static bool IsNumericType(this Type t)
         {
@@ -32,13 +30,13 @@ namespace Viking.Common
             if (GetTypeExtensions.NumericTypes.Contains(t))
                 return true;
 
-            if(Nullable.GetUnderlyingType(t) != null)
+            if (Nullable.GetUnderlyingType(t) != null)
                 return GetTypeExtensions.NumericTypes.Contains(Nullable.GetUnderlyingType(t));
 
             return false;
         }
     }
-    
+
     /// <summary>
     /// Summary description for ListViewColumnSorter.
     /// </summary>
@@ -79,7 +77,7 @@ namespace Viking.Common
             if (SubB == null)
                 return -1;
 
-            if(ColumnType.IsNumericType())
+            if (ColumnType.IsNumericType())
             {
                 IConvertible convA = SubA.Tag as IConvertible;
                 IConvertible convB = SubB.Tag as IConvertible;
@@ -106,7 +104,7 @@ namespace Viking.Common
                 TextA = SubA.Text;
                 TextB = SubB.Text;
             }
-            
+
             if (AscendingSort)
                 return TextA.CompareTo(TextB);
             else

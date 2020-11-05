@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.ServiceModel;
+﻿using ProtoBuf;
+using System;
 using System.Runtime.Serialization;
-using ProtoBuf;
 
 namespace AnnotationService.Types
 {
-    
+
     [ProtoContract]
     [DataContract]
     public class StructureLink : DataObject
@@ -31,8 +27,8 @@ namespace AnnotationService.Types
         [DataMember]
         public Int64 SourceID
         {
-         get{return _SourceID;}
-         set{_SourceID = value;}
+            get { return _SourceID; }
+            set { _SourceID = value; }
         }
 
         [ProtoMember(2)]
@@ -69,6 +65,6 @@ namespace AnnotationService.Types
 
         public StructureLink()
         {
-        } 
+        }
     }
 }

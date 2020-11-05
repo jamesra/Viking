@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace Viking.VolumeModel
 {
@@ -14,17 +11,17 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Nodes in the tree
         /// </summary>
-        public SortedList<int, RegistrationTreeNode> Nodes =new SortedList<int,RegistrationTreeNode>();
+        public SortedList<int, RegistrationTreeNode> Nodes = new SortedList<int, RegistrationTreeNode>();
 
         /// <summary>
         /// Nodes with no known parents
         /// </summary>
-        public SortedList<int, RegistrationTreeNode> RootNodes = new SortedList<int, RegistrationTreeNode>(); 
+        public SortedList<int, RegistrationTreeNode> RootNodes = new SortedList<int, RegistrationTreeNode>();
 
         public void AddPair(int ControlSection, int MappedSection)
         {
             RegistrationTreeNode ControlNode = null;
-            if(Nodes.ContainsKey(ControlSection))
+            if (Nodes.ContainsKey(ControlSection))
             {
                 ControlNode = Nodes[ControlSection];
             }
@@ -32,10 +29,10 @@ namespace Viking.VolumeModel
             {
                 ControlNode = new RegistrationTreeNode(ControlSection);
                 Nodes.Add(ControlNode.SectionNumber, ControlNode);
-                RootNodes.Add(ControlNode.SectionNumber, ControlNode); 
+                RootNodes.Add(ControlNode.SectionNumber, ControlNode);
             }
 
-            ControlNode.Children.Add(MappedSection); 
+            ControlNode.Children.Add(MappedSection);
 
             RegistrationTreeNode MappedNode = null;
             if (Nodes.ContainsKey(MappedSection))
@@ -48,7 +45,7 @@ namespace Viking.VolumeModel
             else
             {
                 MappedNode = new RegistrationTreeNode(MappedSection, ControlSection);
-                Nodes.Add(MappedNode.SectionNumber, MappedNode); 
+                Nodes.Add(MappedNode.SectionNumber, MappedNode);
             }
         }
 
@@ -61,7 +58,7 @@ namespace Viking.VolumeModel
         public static RegistrationTree Build(SortedList<int, Geometry.ITransform> TList, IList<int> ValidSections = null)
         {
             SortedSet<int> ValidSectionsLookup = null;
-            if(ValidSections != null)
+            if (ValidSections != null)
             {
                 ValidSectionsLookup = new SortedSet<int>(ValidSections);
             }
@@ -86,18 +83,18 @@ namespace Viking.VolumeModel
 
     class RegistrationTreeNode
     {
-        public int? Parent = new int?(); 
+        public int? Parent = new int?();
         public readonly int SectionNumber;
         public List<int> Children = new List<int>();
 
         public RegistrationTreeNode(int sectionNumber)
         {
-            SectionNumber = sectionNumber; 
+            SectionNumber = sectionNumber;
         }
 
         public RegistrationTreeNode(int sectionNumber, int parentSection) : this(sectionNumber)
         {
-            Parent = new int?(sectionNumber); 
+            Parent = new int?(sectionNumber);
         }
 
         override public int GetHashCode()
@@ -115,13 +112,13 @@ namespace Viking.VolumeModel
 
         public void SetParent(int? parentSection)
         {
-            Parent = parentSection; 
+            Parent = parentSection;
         }
 
         void AddChild(int childSection)
         {
             Children.Add(childSection);
-            Children.Sort(); 
+            Children.Sort();
         }
     }
 }

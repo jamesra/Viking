@@ -1,12 +1,11 @@
-﻿using System;
+﻿using FsCheck;
+using Geometry;
+using Geometry.JSON;
+using Geometry.Meshing;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Geometry;
-using Geometry.Meshing;
-using Geometry.JSON;
-using FsCheck;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using RTree;
 
 namespace GeometryTests.Algorithms
 {
@@ -38,7 +37,7 @@ namespace GeometryTests.Algorithms
         /// <param name="prop"></param>
         /// <param name="nVerts"></param>
         /// <returns></returns>
-        public static Property ClassifySize(this Property prop, int nVerts, string Label="")
+        public static Property ClassifySize(this Property prop, int nVerts, string Label = "")
         {
 
             return prop.Classify(nVerts == 0, Label + " 0")
@@ -100,7 +99,7 @@ namespace GeometryTests.Algorithms
             
         }
         */
-        
+
         [TestMethod]
         public void DelaunayGeneratorParameterTestFromPoints()
         {
@@ -121,8 +120,8 @@ namespace GeometryTests.Algorithms
             Prop.ForAll<GridVector2[]>((points) => IsDelaunay(GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray()))).Check(configuration);
 
             //    .When(points.Distinct().Count() >= 3)
-              //  .Classify(AllPointsColinear(points), "Colinear"))
-                //.QuickCheckThrowOnFailure();
+            //  .Classify(AllPointsColinear(points), "Colinear"))
+            //.QuickCheckThrowOnFailure();
 
             /*
             Prop.ForAll<GridVector2[]>((points) =>
@@ -202,10 +201,10 @@ namespace GeometryTests.Algorithms
             GeometryMeshingArbitraries.Register();
 
             var configuration = Configuration.QuickThrowOnFailure;
-            configuration.MaxNbOfTest =  100;
+            configuration.MaxNbOfTest = 100;
             configuration.QuietOnSuccess = false;
             configuration.StartSize = 1;
-            
+
 
             //Func<int, int, ConstrainedDelaunaySpec> func = (nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts, nEdges);
             Prop.ForAll<GridVector2[], ushort[]>((points, edges) =>
@@ -214,11 +213,11 @@ namespace GeometryTests.Algorithms
                 var edge_configuration = Configuration.QuickThrowOnFailure;
                 edge_configuration.MaxNbOfTest = 2;
                 edge_configuration.QuietOnSuccess = true;
-                edge_configuration.StartSize = edges.Length-1;
+                edge_configuration.StartSize = edges.Length - 1;
 
                 new ConstrainedDelaunaySpec(points, edges.Select(e => (int)e).Distinct().ToArray()).ToProperty().Check(edge_configuration);
             }).Check(configuration);
-            
+
             //Prop.ForAll<ushort, ushort>((nVerts, nEdges) => new ConstrainedDelaunaySpec(nVerts, nEdges).ToProperty().QuickCheckThrowOnFailure()).QuickCheckThrowOnFailure();
             //Prop.ForAll<ushort>((nVerts) => new ConstrainedDelaunaySpec(nVerts, nVerts / 2).ToProperty().QuickCheck()).Check(configuration);
             //Prop.ForAll<TriangulationMesh<Vertex2D>>((mesh) => new ConstrainedDelaunaySpec(mesh).ToProperty().QuickCheck()).Check(configuration);
@@ -254,15 +253,15 @@ namespace GeometryTests.Algorithms
                 var model_configuration = Configuration.QuickThrowOnFailure;
                 model_configuration.MaxNbOfTest = 1;
                 model_configuration.QuietOnSuccess = true;
-                model_configuration.StartSize = model.ConstraintEdges.Count/2; //Set the number of edges so the correct number of Commands are generated
+                model_configuration.StartSize = model.ConstraintEdges.Count / 2; //Set the number of edges so the correct number of Commands are generated
 
                 var spec = new ConstrainedDelaunaySpec(model);
                 var spec_prop = spec.ToProperty();
                 //spec_prop.Check(model_configuration);
                 return spec_prop;
-                
+
             }).Check(configuration);
-            
+
             /*
             Prop.ForAll<ConstrainedDelaunayModel>((model) =>
             {
@@ -342,7 +341,7 @@ namespace GeometryTests.Algorithms
 
             return false;
         }
-         
+
 
         public Property IsDelaunay(TriangulationMesh<IVertex2D> mesh)
         {
@@ -369,7 +368,7 @@ namespace GeometryTests.Algorithms
                .Label(mesh.ToJSON());
         }
 
-        
+
         /*
         public bool GenAndTriangulateMesh(GridVector2[] points)
         {
@@ -427,7 +426,7 @@ namespace GeometryTests.Algorithms
             configuration.QuietOnSuccess = false;
             configuration.StartSize = 10;
             configuration.Replay = Global.StdGenSeed;
-            
+
             Prop.ForAll<GridPolygon>(p =>
             {
                 try
@@ -444,7 +443,7 @@ namespace GeometryTests.Algorithms
             }).Check(configuration);// QuickCheckThrowOnFailure();    
         }
 
-        
+
         public static TriangulationMesh<IVertex2D<PointIndex>> TriangulatePoly(GridPolygon p, out List<IEdgeKey> expectedConstrainedEdges, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
         {
             expectedConstrainedEdges = new List<IEdgeKey>();
@@ -453,7 +452,7 @@ namespace GeometryTests.Algorithms
             //var mesh = p.Triangulate(p.ExteriorRing.Distinct().Select(p => new Vertex2D(p)).ToArray(),null,OnProgress);
             var mesh = p.Triangulate(0, OnProgress); // Geometry.Meshing.MeshExtensions.Triangulate(p, 0, OnProgress);//p.ExteriorRing.Select(t => new Vertex2D(t)).ToArray(), OnProgress);
             var PosToVert = mesh.Verticies.ToDictionary(v => v.Position);
-            
+
             foreach (GridLineSegment s in p.AllSegments)
             {
                 EdgeKey key = new EdgeKey(PosToVert[s.A].Index, PosToVert[s.B].Index);
@@ -463,7 +462,7 @@ namespace GeometryTests.Algorithms
             return mesh;
         }
 
-        
+
 
         //Todo: Make a generator that pulls polygons from the database and triangulates them
 
@@ -483,43 +482,43 @@ namespace GeometryTests.Algorithms
             configuration.StartSize = 2;
             configuration.Replay = Global.StdGenSeed;
 
-            
+
 
             Prop.ForAll<GridPolygon, GridVector2[]>((p, interior) =>
             {
-            GridVector2 pCentroid = p.Centroid;
-            p = p.Translate(-pCentroid);
+                GridVector2 pCentroid = p.Centroid;
+                p = p.Translate(-pCentroid);
 
-            interior = interior.Select(i => i - pCentroid).ToArray();
+                interior = interior.Select(i => i - pCentroid).ToArray();
 
-            GridVector2[] qualifiedPoints = interior.Where(i => p.ContainsExt(i) == OverlapType.CONTAINED).ToArray();
+                GridVector2[] qualifiedPoints = interior.Where(i => p.ContainsExt(i) == OverlapType.CONTAINED).ToArray();
 
-            //var mesh = p.Triangulate(p.ExteriorRing.Distinct().Select(p => new Vertex2D(p)).ToArray(),null,OnProgress);
-            var mesh = Geometry.Meshing.MeshExtensions.Triangulate(p.ExteriorRing.Distinct().Select((t, i) => new Vertex2D(i, t)).ToArray(), qualifiedPoints.Select(x => new Vertex2D(x)).ToArray(), OnProgress);
+                //var mesh = p.Triangulate(p.ExteriorRing.Distinct().Select(p => new Vertex2D(p)).ToArray(),null,OnProgress);
+                var mesh = Geometry.Meshing.MeshExtensions.Triangulate(p.ExteriorRing.Distinct().Select((t, i) => new Vertex2D(i, t)).ToArray(), qualifiedPoints.Select(x => new Vertex2D(x)).ToArray(), OnProgress);
 
-            if (mesh.Verticies.Count != (p.ExteriorRing.Length - 1) + qualifiedPoints.Length)
-                return false.Label("Mesh did not contain all verticies")
-                        .ClassifyMeshSize((p.ExteriorRing.Length - 1) + qualifiedPoints.Length)
-                        .Label(p.ToJSON());
+                if (mesh.Verticies.Count != (p.ExteriorRing.Length - 1) + qualifiedPoints.Length)
+                    return false.Label("Mesh did not contain all verticies")
+                            .ClassifyMeshSize((p.ExteriorRing.Length - 1) + qualifiedPoints.Length)
+                            .Label(p.ToJSON());
 
-            var PosToVert = mesh.Verticies.ToDictionary(v => v.Position);
-            List<IEdgeKey> expectedConstrainedEdges = new List<IEdgeKey>();
+                var PosToVert = mesh.Verticies.ToDictionary(v => v.Position);
+                List<IEdgeKey> expectedConstrainedEdges = new List<IEdgeKey>();
 
-            //This test has false negative failures because when a corresponding edge perfectly intersects a vertex it is broken
-            //into two halves and the test does not capture that event.
+                //This test has false negative failures because when a corresponding edge perfectly intersects a vertex it is broken
+                //into two halves and the test does not capture that event.
 
-            foreach (GridLineSegment s in p.ExteriorSegments)
-            {
-                if (PosToVert.ContainsKey(s.A) == false)
-                    return false.Label(string.Format("PosToVert does not contain {0}", s.A))
-                        .ClassifyMeshSize(mesh.Verticies.Count);
-                if(PosToVert.ContainsKey(s.B) == false)
-                    return false.Label(string.Format("PosToVert does not contain {0}", s.B))
-                        .ClassifyMeshSize(mesh.Verticies.Count);
+                foreach (GridLineSegment s in p.ExteriorSegments)
+                {
+                    if (PosToVert.ContainsKey(s.A) == false)
+                        return false.Label(string.Format("PosToVert does not contain {0}", s.A))
+                            .ClassifyMeshSize(mesh.Verticies.Count);
+                    if (PosToVert.ContainsKey(s.B) == false)
+                        return false.Label(string.Format("PosToVert does not contain {0}", s.B))
+                            .ClassifyMeshSize(mesh.Verticies.Count);
 
-                EdgeKey key = new EdgeKey(PosToVert[s.A].Index, PosToVert[s.B].Index);
-                expectedConstrainedEdges.Add(key);
-            }
+                    EdgeKey key = new EdgeKey(PosToVert[s.A].Index, PosToVert[s.B].Index);
+                    expectedConstrainedEdges.Add(key);
+                }
 
 
                 return p.ValidatePolygonTriangulation(mesh, expectedConstrainedEdges);
@@ -616,7 +615,7 @@ namespace GeometryTests.Algorithms
             return false;
         }
         */
-        
+
 
     }
 }

@@ -1,8 +1,6 @@
-﻿using System;
+﻿using Annotation.Interfaces;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib
 {
@@ -10,22 +8,22 @@ namespace AnnotationVizLib
     {
         static MotifDOTView()
         {
-            
+
         }
 
         public static MotifDOTView ToDOT(MotifGraph graph, bool IncludeUnlabeled = false)
         {
             MotifDOTView DotGraph = new MotifDOTView();
 
-            DotGraph.AddStandardizedAttributes(DOTAttributes.StandardGraphDOTAttributes); 
-            
-            foreach(MotifNode node in graph.Nodes.Values)
+            DotGraph.AddStandardizedAttributes(DOTAttributes.StandardGraphDOTAttributes);
+
+            foreach (MotifNode node in graph.Nodes.Values)
             {
-                if(node.Key == "Unlabeled" && !IncludeUnlabeled)
-                    continue; 
+                if (node.Key == "Unlabeled" && !IncludeUnlabeled)
+                    continue;
 
                 GraphViewNode<string> DOTNode = DotGraph.createNode(node.Key);
-                DOTNode = GraphVizNodeFromMotifNode(DOTNode, node);  
+                DOTNode = GraphVizNodeFromMotifNode(DOTNode, node);
             }
 
             DotGraph.Attributes.Add("nslimit", Math.Ceiling(Math.Sqrt(graph.Nodes.Count)).ToString());
@@ -33,17 +31,17 @@ namespace AnnotationVizLib
 
             foreach (MotifEdge edge in graph.Edges.Values)
             {
-                if(edge.TargetNodeKey == "Unlabeled" && !IncludeUnlabeled)
+                if (edge.TargetNodeKey == "Unlabeled" && !IncludeUnlabeled)
                     continue;
 
-                if(edge.SourceNodeKey == "Unlabeled" && !IncludeUnlabeled)
-                    continue; 
+                if (edge.SourceNodeKey == "Unlabeled" && !IncludeUnlabeled)
+                    continue;
 
-                GraphViewEdge<string> DOTEdge = GraphVizEdgeFromMotifEdge(DotGraph, graph, edge); 
+                GraphViewEdge<string> DOTEdge = GraphVizEdgeFromMotifEdge(DotGraph, graph, edge);
             }
 
-            DotGraph.createDirectedGraph("Motif"); 
-              
+            DotGraph.createDirectedGraph("Motif");
+
             return DotGraph;
         }
 
@@ -68,31 +66,31 @@ namespace AnnotationVizLib
             }
             else
             {
-                DotNode.AddStandardizedAttributes(AttribsForLabel); 
+                DotNode.AddStandardizedAttributes(AttribsForLabel);
             }
 
             string ToolTipStr = node.Structures.Count.ToString() + " " + node.Key + " instances: ";
 
             bool firstentry = true;
-            foreach(IStructure s in node.Structures)
+            foreach (IStructure s in node.Structures)
             {
                 if (!firstentry)
                     ToolTipStr = ToolTipStr + ", ";
-                
-                firstentry = false; 
-                ToolTipStr = ToolTipStr + s.ID.ToString(); 
-            } 
 
-            DotNode.Attributes.Add("tooltip", ToolTipStr); 
+                firstentry = false;
+                ToolTipStr = ToolTipStr + s.ID.ToString();
+            }
+
+            DotNode.Attributes.Add("tooltip", ToolTipStr);
 
             return DotNode;
         }
 
-        public static  GraphViewEdge<string> GraphVizEdgeFromMotifEdge(GraphViewEngine<string> DotEngine, MotifGraph graph, MotifEdge edge)
+        public static GraphViewEdge<string> GraphVizEdgeFromMotifEdge(GraphViewEngine<string> DotEngine, MotifGraph graph, MotifEdge edge)
         {
             GraphVizEdge<string> DotEdge = new GraphVizEdge<string>();
             float additionFactor = 1f;
-            float mulFactor = 0.5f; 
+            float mulFactor = 0.5f;
             float arrowsize = additionFactor;
             float pensize = additionFactor;
             DotEdge.from = edge.SourceNodeKey;
@@ -107,9 +105,9 @@ namespace AnnotationVizLib
             }
             else
             {
-                DotEdge.AddStandardizedAttributes(EdgeAttribs); 
+                DotEdge.AddStandardizedAttributes(EdgeAttribs);
             }
-            
+
             arrowsize = arrowsize * (float)(Math.Sqrt(edge.Weight) * mulFactor);
             if (arrowsize < 1)
                 arrowsize = 1;
@@ -124,11 +122,11 @@ namespace AnnotationVizLib
             //DotEdge.Attributes.Add("arrowhead", arrowhead);
             //DotEdge.Attributes.Add("arrowtail", arrowtail);
             DotEdge.Attributes.Add("arrowsize", arrowsize.ToString());
-            
+
             //tempEdge.edgeAttributes.Add("weight", edge.Strength.ToString());
             //DotEdge.Attributes.Add("penwidth", pensize.ToString());
-            
-             
+
+
             MotifNode SourceNode = graph.Nodes[edge.SourceNodeKey];
             MotifNode TargetNode = graph.Nodes[edge.SourceNodeKey];
 
@@ -140,13 +138,13 @@ namespace AnnotationVizLib
 
             if (Weight < 1)
             {
-                Weight = 1; 
+                Weight = 1;
             }
 
             //Give small weights a boost in appearance. 
             if (Weight > 1 && Weight < 2)
             {
-                Weight = 2; 
+                Weight = 2;
             }
 
             if (edge.SourceStructIDs.Count == 1 ||
@@ -156,7 +154,7 @@ namespace AnnotationVizLib
             }
 
             SourceCoverage *= 100;
-            TargetCoverage *= 100; 
+            TargetCoverage *= 100;
 
             string toolTipStr = edge.SourceNodeKey + " connects: " + SourceCoverage.ToString("F0") + "%    " + edge.TargetNodeKey + " contacted: " + TargetCoverage.ToString("F0") + "%";
             DotEdge.Attributes.Add("tooltip", toolTipStr);
@@ -169,13 +167,13 @@ namespace AnnotationVizLib
             if (DotEdge.Attributes.ContainsKey("dir") && DotEdge.Attributes["dir"] == "both")
             {
                 GraphVizEdge<string> reverseTempEdge = DotEdge.Clone() as GraphVizEdge<string>;
-                reverseTempEdge.Reverse(); 
+                reverseTempEdge.Reverse();
                 reverseTempEdge.Attributes.Add("style", "invis"); //invisible
-                  
+
                 DotEngine.addEdge(reverseTempEdge);
             }
 
-            DotEngine.addEdge(DotEdge);  
+            DotEngine.addEdge(DotEdge);
             return DotEdge;
         }
     }

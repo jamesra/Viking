@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Viking.Common;
-using Geometry;
+﻿using Geometry;
 using System.Collections.Concurrent;
-using Viking.VolumeModel;
-using WebAnnotationModel;
-using Viking.ViewModels;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using Viking.Common;
 using WebAnnotation.View;
+using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
@@ -151,7 +146,14 @@ namespace WebAnnotation.ViewModel
             {
                 Trace.WriteLine("Something is wrong on the server, struct ID links to itself: " + structLinkObj.SourceID.ToString());
                 Store.StructureLinks.Remove(structLinkObj);
-                Store.StructureLinks.Save();
+                try
+                {
+                    Store.StructureLinks.Save();
+                }
+                catch (System.ServiceModel.FaultException e)
+                {
+                    AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+                }
                 return null;
             }
 

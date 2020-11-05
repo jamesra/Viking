@@ -1,12 +1,10 @@
 ﻿#define USEASPMEMBERSHIP
 
 using System;
-using System.Resources;
-using System.Collections.Generic;
-using System.Windows.Forms;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
+using System.Windows.Forms;
 using Viking.UI.Forms;
 
 
@@ -26,17 +24,17 @@ namespace Viking
         /// <param name="ok"></param>
         /// <returns></returns>
         public static bool XNAFrameworkInstalled(string baseKeyName)
-        { 
+        {
             Microsoft.Win32.RegistryKey FrameworkKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(baseKeyName);
 
-            if(FrameworkKey == null)
+            if (FrameworkKey == null)
             {
-                return false; 
+                return false;
             }
 
-            if(FrameworkKey.GetValueKind("Installed") != Microsoft.Win32.RegistryValueKind.DWord)
+            if (FrameworkKey.GetValueKind("Installed") != Microsoft.Win32.RegistryValueKind.DWord)
             {
-                return false; 
+                return false;
             }
 
             int installedValue = Convert.ToInt32(FrameworkKey.GetValue("Installed"));
@@ -63,13 +61,13 @@ namespace Viking
             //Change to the executing assemblies directory so we can load modules correctly
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            //SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
             try
             {
                 MathNet.Numerics.Control.UseNativeMKL();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Trace.WriteLine("Unable to load Native MKL library.  Exception text:\n" + e.Message);
             }
@@ -84,17 +82,17 @@ namespace Viking
 
             string website = null;
 
-            if(!(XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Game Studio\v4.0") ||
+            if (!(XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Game Studio\v4.0") ||
                  XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Game Studio\v4.0") ||
                  XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Framework\v4.0") ||
                  XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Framework\v4.0")))
             {
                 MessageBox.Show("XNA framework 4.0 does not appear to be installed.  Viking will display a blank gray screen without it.  Please check the documentation or internet for links to the XNA Framework 4.0 Redistributable.", "Missing XNA 4.0 Redistributable", MessageBoxButtons.OK);
             }
-           
+
             if (args.Length > 0)
             {
-                website = args[0]; 
+                website = args[0];
             }
             else
             {
@@ -130,7 +128,7 @@ namespace Viking
 
                             if (QueryTable.HasKeys())
                             {
-                                UI.State.StartupArguments = QueryTable; 
+                                UI.State.StartupArguments = QueryTable;
                                 string VolumeValue = QueryTable["Volume"];
                                 if (VolumeValue != null)
                                 {
@@ -146,8 +144,8 @@ namespace Viking
                         }
                     }
                 }
-                
-                if(ShowUsage)
+
+                if (ShowUsage)
                 {
                     //Launch the viking home page and exit
                     //System.Windows.Forms.MessageBox.Show("No volume definition file was specified.  Loading RC1 by default.  You can pass a website as the first argument to launch a different volume, or select a volume definition from the website: http://connectomes.utah.edu/", "Viking", MessageBoxButtons.OK);
@@ -220,15 +218,15 @@ namespace Viking
                 SynchronizedDebugWriter.Close();
 
             if (DebugLogFile != null)
-                DebugLogFile.Close(); 
+                DebugLogFile.Close();
         }
 
-       
+
 
         [Conditional("DEBUG")]
         private static void CreateDebugListener()
         {
-            return; 
+            return;
             /*
             string LogPath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\Logs";
             if (!Directory.Exists(LogPath))

@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Geometry
 {
@@ -45,7 +42,7 @@ namespace Geometry
         public static bool operator ==(IndexEdge A, IndexEdge B)
         {
             if (A.IsValid != B.IsValid)
-                return false; 
+                return false;
 
             if (A.iA == B.iA &&
                    A.iB == B.iB)
@@ -61,7 +58,7 @@ namespace Geometry
         public static bool operator !=(IndexEdge A, IndexEdge B)
         {
             if (A.IsValid != B.IsValid)
-                return true; 
+                return true;
 
             if (A.iA == B.iA &&
                    A.iB == B.iB)

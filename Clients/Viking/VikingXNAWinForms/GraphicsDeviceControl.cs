@@ -8,11 +8,11 @@
 #endregion
 
 #region Using Statements
+using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.ComponentModel.Design;
 using System.Drawing;
 using System.Windows.Forms;
-using Microsoft.Xna.Framework.Graphics;
-using System.ComponentModel.Design;
 #endregion
 
 namespace VikingXNAWinForms
@@ -80,7 +80,7 @@ namespace VikingXNAWinForms
         /// </summary>
         public GraphicsDevice Device
         {
-            get 
+            get
             {
                 if (graphicsDeviceService == null)
                     return null;
@@ -90,7 +90,7 @@ namespace VikingXNAWinForms
         }
 
 
-        
+
 
 
         #endregion
@@ -116,6 +116,9 @@ namespace VikingXNAWinForms
 
                 // Give derived classes a chance to initialize themselves.
                 Initialize();
+
+                // Ensure we load a default font
+                VikingXNAGraphics.DeviceFontStore.GetOrCreateForDevice(this.Device, this.Content);
             }
 
             base.OnCreateControl();
@@ -136,7 +139,7 @@ namespace VikingXNAWinForms
             if (_Content != null)
             {
                 _Content.Dispose();
-                _Content = null; 
+                _Content = null;
             }
 
             base.Dispose(disposing);
@@ -164,10 +167,10 @@ namespace VikingXNAWinForms
                 try
                 {
 #endif
-                    PaintCallRefCount++;
-                    // Draw the control using the GraphicsDevice.
-                    Draw();
-                    EndDraw();
+                PaintCallRefCount++;
+                // Draw the control using the GraphicsDevice.
+                Draw();
+                EndDraw();
 #if !DEBUG
                 }
                 catch (Exception except)
@@ -177,7 +180,7 @@ namespace VikingXNAWinForms
                 finally
                 {
 #endif
-                    PaintCallRefCount--; 
+                PaintCallRefCount--;
 #if !DEBUG
                 }
 #endif
@@ -242,17 +245,17 @@ namespace VikingXNAWinForms
         /// </summary>
         void EndDraw()
         {
-//            PaintCallRefCount--; 
+            //            PaintCallRefCount--; 
 
 #if !DEBUG
             try
             {
 #endif
-                Rectangle sourceRectangle = new Rectangle(0, 0, ClientSize.Width,
-                                                                ClientSize.Height);
-                
-                if(Device.GraphicsDeviceStatus == GraphicsDeviceStatus.Normal)
-                    Device.Present(sourceRectangle, null, this.Handle);
+            Rectangle sourceRectangle = new Rectangle(0, 0, ClientSize.Width,
+                                                            ClientSize.Height);
+
+            if (Device.GraphicsDeviceStatus == GraphicsDeviceStatus.Normal)
+                Device.Present(sourceRectangle, null, this.Handle);
 #if !DEBUG
             }
             catch
@@ -370,7 +373,7 @@ namespace VikingXNAWinForms
 
 
         #endregion
-        
+
         private void InitializeComponent()
         {
             this.SuspendLayout();

@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Viking.Common;
-using Geometry;
+﻿using Geometry;
 using System.Collections.Concurrent;
-using Viking.VolumeModel;
-using WebAnnotationModel;
-using Viking.ViewModels;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using Viking.Common;
+using Viking.ViewModels;
+using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
@@ -119,7 +115,7 @@ namespace WebAnnotation.ViewModel
                 //This can occur when the point cannot be mapped
                 System.Diagnostics.Trace.WriteLine(string.Format("Exception adding location link {0}\n{1}", key.ToString(), e.ToString()));
             }
-            
+
         }
 
         protected void RemoveLocationLink(LocationLinkKey key, bool unsubscribe)
@@ -151,7 +147,7 @@ namespace WebAnnotation.ViewModel
             IEnumerable<LocationLinkKey> intersecting_IDs = NonOverlappedLinksSearch.Intersects(WorldPosition.ToRTreeRect(this.Section.Number));
             IEnumerable<LocationLinkView> intersecting_objs = intersecting_IDs.Select(id => LocationLinks[id]).Where(l => l.Contains(WorldPosition));
 
-            return new List<HitTestResult>(intersecting_objs.Select(l => new HitTestResult(l, this.Section.Number, l.DistanceFromCenterNormalized(WorldPosition)))).ToList();
+            return new List<HitTestResult>(intersecting_objs.Select(l => new HitTestResult(l, this.Section.Number, ((ICanvasView)l).VisualHeight, l.DistanceFromCenterNormalized(WorldPosition)))).ToList();
         }
 
         private List<LocationLinkView> KeysToViews(ICollection<LocationLinkKey> listKeys)
@@ -180,7 +176,7 @@ namespace WebAnnotation.ViewModel
         public ICollection<LocationLinkView> NonOverlappedLinksInRegion(GridRectangle region)
         {
             List<LocationLinkKey> listKeys = NonOverlappedLinksSearch.Intersects(region.ToRTreeRect(this.Section.Number));
-            return KeysToViews(listKeys); 
+            return KeysToViews(listKeys);
         }
 
         public ICollection<LocationLinkView> GetLocationLinks(GridVector2 point)

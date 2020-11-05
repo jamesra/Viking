@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
+﻿using System.Drawing;
 using System.Windows.Forms;
 
 namespace Viking.UI.Forms
 {
     public partial class GenericProgressForm : Form
     {
-        double Progress = 0.0f; 
+        double Progress = 0.0f;
 
         public GenericProgressForm()
         {

@@ -1,28 +1,27 @@
 ﻿using System;
-using System.Collections.Specialized; 
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
-using System.Text;
-using Viking.UI.BaseClasses;
-using Viking.Common;
 using System.Windows.Forms;
-using Viking.UI.Controls; 
+using Viking.Common;
+using Viking.UI.BaseClasses;
+using Viking.UI.Controls;
 
 namespace LocalBookmarks
 {
     [Viking.Common.ExtensionTab("Bookmarks", Viking.Common.TABCATEGORY.ACTION)]
-    [Viking.Common.SupportedUITypes(new Type[]{typeof(FolderUIObj),typeof(BookmarkUIObj), typeof(string)})]
+    [Viking.Common.SupportedUITypes(new Type[] { typeof(FolderUIObj), typeof(BookmarkUIObj), typeof(string) })]
     class FolderTreeControl : Viking.UI.BaseClasses.DockingTreeControl
     {
         private ImageList imageList;
         private System.ComponentModel.IContainer components;
-    
+
         public FolderTreeControl() : base()
         {
             BookmarkUIObj.Create += OnCreate;
             FolderUIObj.Create += OnCreate;
             this.Title = "Bookmarks";
-            
+
             InitializeComponent();
 
             Global.AfterUndo += this.OnAfterUndo;
@@ -38,15 +37,15 @@ namespace LocalBookmarks
             if (nodes.Length > 0)
             {
                 GenericTreeNode node = nodes[0];
-                Tree.SelectedNode = node; 
-                node.BeginEdit(); 
+                Tree.SelectedNode = node;
+                node.BeginEdit();
             }
         }
 
         protected void OnAfterUndo(object sender, EventArgs e)
         {
             this.Tree.Nodes.Clear();
-            this.InitializeTree(); 
+            this.InitializeTree();
         }
 
         public void OnRootChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -61,7 +60,7 @@ namespace LocalBookmarks
         {
             Tree.ClearObjects();
 
-            if(root != null)
+            if (root != null)
             {
                 List<IUIObject> TreeObjectList = new List<IUIObject>(root.Folders.Length + root.Bookmarks.Length);
                 TreeObjectList.AddRange(root.Folders);
@@ -82,7 +81,7 @@ namespace LocalBookmarks
                     break;
                 case NotifyCollectionChangedAction.Add:
                     this.Tree.AddObjects(e.NewItems.Cast<IUIObject>());
-                    break; 
+                    break;
                 case NotifyCollectionChangedAction.Remove:
                     foreach (object obj in e.OldItems)
                     {
@@ -98,7 +97,7 @@ namespace LocalBookmarks
                         }
                     }
 
-                    break; 
+                    break;
             }
         }
 
@@ -120,7 +119,7 @@ namespace LocalBookmarks
 
                 CMenu.MenuItems.Add(new TagMenuItem("Place Bookmark...", null, new EventHandler(ContextMenuOnNewRootBookmark)));
                 CMenu.MenuItems.Add(new TagMenuItem("New Folder", null, new EventHandler(ContextMenuOnNewRootFolder)));
-               
+
                 MenuItem ExportMenu = new MenuItem("Export");
                 CMenu.MenuItems.Add(ExportMenu);
 
@@ -155,8 +154,8 @@ namespace LocalBookmarks
         /// <param name="e"></param>
         private void ContextMenuOnNewRootBookmark(object sender, EventArgs e)
         {
-            Viking.UI.State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), new object[]{ Viking.UI.State.ViewerControl, 
-                                                                                                    Global.FolderUIObjRoot}); 
+            Viking.UI.State.ViewerControl.CommandQueue.EnqueueCommand(typeof(CreateBookmarkCommand), new object[]{ Viking.UI.State.ViewerControl,
+                                                                                                    Global.FolderUIObjRoot});
         }
 
         /// <summary>
@@ -170,7 +169,7 @@ namespace LocalBookmarks
             fileDialog.DefaultExt = ".html";
             fileDialog.FileName = "Bookmarks";
             fileDialog.OverwritePrompt = true;
-            fileDialog.Title = "Export Bookmark HTML File"; 
+            fileDialog.Title = "Export Bookmark HTML File";
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
@@ -189,7 +188,7 @@ namespace LocalBookmarks
             fileDialog.DefaultExt = ".xml";
             fileDialog.FileName = "Bookmarks";
             fileDialog.OverwritePrompt = true;
-            fileDialog.Title = "Export Bookmark XML File"; 
+            fileDialog.Title = "Export Bookmark XML File";
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
@@ -210,7 +209,7 @@ namespace LocalBookmarks
             fileDialog.CheckFileExists = true;
             fileDialog.AddExtension = true;
             fileDialog.AutoUpgradeEnabled = true;
-            fileDialog.Multiselect = false; 
+            fileDialog.Multiselect = false;
 
             if (DialogResult.OK == fileDialog.ShowDialog())
             {
@@ -267,7 +266,7 @@ namespace LocalBookmarks
             {
                 if (e.Label == null || e.Label.Length == 0)
                 {
-                    return; 
+                    return;
                 }
                 else if (e.Label != bookmark.Name)
                 {
@@ -284,7 +283,7 @@ namespace LocalBookmarks
                 if (e.Label == null || e.Label.Length == 0)
                     folder.Name = "Unnamed";
                 else
-                    folder.Name = e.Label; 
+                    folder.Name = e.Label;
 
                 folder.Save();
                 return;
@@ -308,8 +307,8 @@ namespace LocalBookmarks
 
                 Global.FolderUIObjRoot.ChildChanged -= OnRootChildChanged;
                 Global.Load(filename);
-                
-                InitializeTree(); 
+
+                InitializeTree();
             }
             else
             {
@@ -334,7 +333,7 @@ namespace LocalBookmarks
         }
 
 
-        
+
 
     }
 }

@@ -8,7 +8,6 @@ namespace TriangleNet.Voronoi.Legacy
 {
     using System;
     using System.Collections.Generic;
-    using TriangleNet.Topology;
     using TriangleNet.Geometry;
 
     /// <summary>

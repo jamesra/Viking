@@ -1,14 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using Viking.Common;
 using WebAnnotation.ViewModel;
-using WebAnnotationModel; 
+using WebAnnotationModel;
 
 namespace WebAnnotation.UI
 {
@@ -26,9 +19,9 @@ namespace WebAnnotation.UI
             {
                 StructureNumber = this.numStructure.IntValue;
             }
-            catch(FormatException )
+            catch (FormatException)
             {
-                return; 
+                return;
             }
 
             StructureObj structure = Store.Structures.GetObjectByID((long)StructureNumber);
@@ -38,16 +31,16 @@ namespace WebAnnotation.UI
                 return;
             }
 
-            Structure structView = new Structure(structure); 
+            Structure structView = new Structure(structure);
 
             structView.ShowProperties();
 
-            this.Close(); 
+            this.Close();
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.Close(); 
+            this.Close();
         }
     }
 }

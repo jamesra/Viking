@@ -1,13 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using Viking.Common;
 using System.Diagnostics;
+using Viking.Common;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 
@@ -18,15 +12,15 @@ namespace WebAnnotation.UI
     {
         Structure Obj;
 
-        bool listLoaded = false; 
+        bool listLoaded = false;
 
         public StructureLocationsPage()
         {
-            
+
             InitializeComponent();
             this.Title = "Locations";
             this.listLocations.Title = "Locations";
-            this.listLocations.TitleVisible = false; 
+            this.listLocations.TitleVisible = false;
         }
 
         protected override void OnInitPage()
@@ -37,7 +31,7 @@ namespace WebAnnotation.UI
         protected override void OnShowObject(object Object)
         {
             this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null);            
+            Debug.Assert(this.Obj != null);
         }
 
         private void StructureLocationsPage_VisibleChanged(object sender, EventArgs e)

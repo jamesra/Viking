@@ -19,11 +19,10 @@
  *****************************************************************************/
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Concurrent; 
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Diagnostics; 
 
 namespace Viking.Common
 {
@@ -43,7 +42,7 @@ namespace Viking.Common
         public Int64 MaxCacheSize = 2 << 23; //128 MB
 
         protected Int64 TotalCacheSize = 0;
-        
+
         protected ConcurrentDictionary<KEY, CACHEENTRY> dictEntries = new ConcurrentDictionary<KEY, CACHEENTRY>();
 
         abstract protected FETCHTYPE Fetch(CACHEENTRY key);
@@ -69,9 +68,9 @@ namespace Viking.Common
             CACHEENTRY entry;
 
             bool success = dictEntries.TryGetValue(key, out entry);
-            if(success == false)
-                return default(FETCHTYPE); 
-            
+            if (success == false)
+                return default(FETCHTYPE);
+
             //Record the fact that someone asked for this tile
             entry.WasUsedSinceLastCheckpoint = true;
             entry.LastAccessed = DateTime.UtcNow;
@@ -84,7 +83,7 @@ namespace Viking.Common
                 dictEntries[key] = entry; 
             }
              */
-            
+
             return value;
         }
 
@@ -105,7 +104,7 @@ namespace Viking.Common
         /// <param name="filename"></param>
         /// <param name="textureStream"></param>
         public virtual bool Add(KEY key, ADDTYPE value)
-        { 
+        {
             CACHEENTRY entry = CreateEntry(key, value);
             if (entry == null)
                 return false;
@@ -134,22 +133,22 @@ namespace Viking.Common
         /// <returns></returns>
         public virtual FETCHTYPE GetOrAdd(KEY key, ADDTYPE value)
         {
-            CACHEENTRY dictEntry = null; 
+            CACHEENTRY dictEntry = null;
 
             //Check before we create an entry...
             bool found = dictEntries.TryGetValue(key, out dictEntry);
             if (found)
             {
                 return Fetch(dictEntry);
-            }            
-            
+            }
+
             //OK, try to create an entry and add it
             CACHEENTRY entry = CreateEntry(key, value);
             dictEntry = dictEntries.GetOrAdd(key, entry);
 
             if (object.ReferenceEquals(dictEntry, entry))
             {
-                ChangeCacheSize(entry.Size); 
+                ChangeCacheSize(entry.Size);
             }
 
             return Fetch(dictEntry);
@@ -164,7 +163,7 @@ namespace Viking.Common
         {
             CACHEENTRY value;
             bool removed = dictEntries.TryRemove(key, out value);
-            if(removed)
+            if (removed)
             {
                 long size = value.Size;
                 ChangeCacheSize(-size);
@@ -186,13 +185,13 @@ namespace Viking.Common
 
             if (success)
             {
-                ChangeCacheSize(entry.Size); 
+                ChangeCacheSize(entry.Size);
             }
-            
-            return success; 
+
+            return success;
         }
 
-                
+
 
         private void ChangeCacheSize(Int64 amount)
         {
@@ -206,7 +205,7 @@ namespace Viking.Common
             }
             while (readcacheSize != cacheSize);
 
-            
+
         }
 
         /// <summary>
@@ -219,12 +218,12 @@ namespace Viking.Common
 
             int RemoveCount = 0;
             int LostCount = 0;
-            long FreedCount = 0; 
+            long FreedCount = 0;
             if (dictEntries.IsEmpty)
                 return;
-            
+
             List<CACHEENTRY> listEntries = dictEntries.Values.ToList<CACHEENTRY>();
-            listEntries.Sort(); 
+            listEntries.Sort();
 
             while (TotalCacheSize > MaxCacheSize)
             {
@@ -235,16 +234,16 @@ namespace Viking.Common
                 //Debug.Assert(dictEntries.ContainsKey(entry.Key));
                 if (dictEntries.ContainsKey(entry.Key) == false)
                 {
-                    LostCount++; 
+                    LostCount++;
                 }
                 else
                 {
-                    FreedCount += entry.Size; 
+                    FreedCount += entry.Size;
                     RemoveEntry(entry);
                     RemoveCount++;
                 }
 
-                listEntries.RemoveAt(0); 
+                listEntries.RemoveAt(0);
             }
 
             if (RemoveCount > 0 || LostCount > 0)
@@ -262,11 +261,11 @@ namespace Viking.Common
         public void Checkpoint()
         {
             CACHEENTRY[] EntryListCopy = dictEntries.Values.ToArray<CACHEENTRY>();
-            
-            int FailCount = 0; 
+
+            int FailCount = 0;
 
             //Walk the list and remove all entries who have not been accessed since the last checkpoint
-            
+
             for (int iEntry = 0; iEntry < EntryListCopy.Length; iEntry++)
             {
                 CACHEENTRY entry = EntryListCopy[iEntry];
@@ -280,17 +279,17 @@ namespace Viking.Common
                 {
                     entry.WasUsedSinceLastCheckpoint = false;
                 }
-                else if(false == entry.CheckpointExempt)
+                else if (false == entry.CheckpointExempt)
                 {
                     //Give derived classes a chance to handle this how they see fit
                     OnCheckpointFailed(entry);
                     FailCount++;
                 }
-                    
+
             }
-        
-            if(FailCount > 0)
-                Trace.WriteLine(this.GetType().ToString() + " " + FailCount.ToString() + " entries failed checkpoint", "Cache"); 
+
+            if (FailCount > 0)
+                Trace.WriteLine(this.GetType().ToString() + " " + FailCount.ToString() + " entries failed checkpoint", "Cache");
 
             EntryListCopy = null;
         }
@@ -316,7 +315,7 @@ namespace Viking.Common
                 if (success)
                 {
                     entry.Dispose();
-                    entry = null; 
+                    entry = null;
 
                     ChangeCacheSize(-size);
                     //TotalCacheSize -= size;
@@ -342,7 +341,7 @@ namespace Viking.Common
         /// <param name="entry"></param>
         protected virtual void OnCheckpointFailed(CACHEENTRY entry)
         {
-            RemoveEntry(entry); 
+            RemoveEntry(entry);
         }
     }
 }

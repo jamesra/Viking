@@ -2,9 +2,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry
 {
@@ -244,7 +241,7 @@ namespace Geometry
             {
                 iX = Indicies.iMinX;
                 iY++;
-                if(iY >= Indicies.iMaxY)
+                if (iY >= Indicies.iMaxY)
                 {
                     return false;
                 }
@@ -261,7 +258,7 @@ namespace Geometry
 
         void IEnumerator.Reset()
         {
-            this.Reset();   
+            this.Reset();
         }
     }
 
@@ -315,7 +312,7 @@ namespace Geometry
         {
             get { return _MinRadius; }
         }
-           
+
         public RegionPyramidLevel(int Level, GridDimensions gridDim, GridCellDimensions cellDim, double minRadius)
         {
             this._Level = Level;
@@ -323,7 +320,7 @@ namespace Geometry
             this.GridDimensions = gridDim;
             this.Cells = new T[GridDimensions.Width, GridDimensions.Height];
             this._MinRadius = minRadius;
-        } 
+        }
 
         public T[] ArrayForRegion(GridRectangle volumeBounds)
         {
@@ -335,7 +332,7 @@ namespace Geometry
 
         public GridRange<T> SubGridForRegion(GridRectangle? volumeBounds)
         {
-            if(volumeBounds.HasValue)
+            if (volumeBounds.HasValue)
             {
                 GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds.Value, this.CellDimensions);
                 iGrid.CropToBounds(this.GridDimensions);
@@ -348,7 +345,7 @@ namespace Geometry
                 return RegionPyramidLevel<T>.ToSubGrid(Cells, iGrid);
 
             }
-            
+
         }
 
         protected static T[] ToArray(T[,] grid, GridIndicies iGrid)
@@ -388,7 +385,7 @@ namespace Geometry
 
         public T GetOrAddCell(GridIndex key, Func<GridIndex, T> valueFactory)
         {
-            lock(this.Cells)
+            lock (this.Cells)
             {
                 if (this.Cells[key.X, key.Y] == null)
                     this.Cells[key.X, key.Y] = valueFactory(key);
@@ -399,7 +396,7 @@ namespace Geometry
 
         public T AddOrUpdateCell(GridIndex key, T addValue, Func<GridIndex, T, T> updateFunction)
         {
-            lock(this.Cells)
+            lock (this.Cells)
             {
                 if (this.Cells[key.X, key.Y] == null)
                     this.Cells[key.X, key.Y] = addValue;

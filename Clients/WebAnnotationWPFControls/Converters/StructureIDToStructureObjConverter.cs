@@ -9,13 +9,14 @@ using System.Windows.Data;
 using WebAnnotationModel;
 using System.Collections.Specialized;
 using Annotation.Interfaces;
+using WebAnnotation.WPF.MockData;
 
 namespace WebAnnotation.WPF.Converters
 {
     /// <summary>
     /// Converts a collection of IDs into StructureObj
     /// </summary>
-    public class StructureIDsToStructureObjsConverter : IValueConverter
+    public class StructureTypeIDsToStructureTypeObjsConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
@@ -28,11 +29,30 @@ namespace WebAnnotation.WPF.Converters
             if (value == null)
                 return null;
 
-            List<long> IDs = new List<long>(); 
-            if(value is IStructureType)
-            {
+            if (value.GetType() == targetType)
                 return value; 
+
+            List<long> IDs = new List<long>(); 
+            if(value is IStructureType s)
+            {
+                return s; 
             }
+            else if(value is IEnumerable<IStructureType>)
+            { 
+                return value as IEnumerable<IStructureType>;
+            }
+            else if(value is IEnumerable<MockStructureType>)
+            {
+                return value as IEnumerable<MockStructureType>;
+            }
+            else if (value is MockStructureTypes)
+            {
+                return value as MockStructureTypes;
+            }
+            else if (value is  MockStructureType)
+            {
+                return value as MockStructureType;
+            } 
             else if (value is StringCollection)
             {
                 StringCollection collection = value as StringCollection;
@@ -71,6 +91,27 @@ namespace WebAnnotation.WPF.Converters
             {
                 return value;
             }
+            else if (value is IEnumerable)
+            {
+                return value;
+                /*
+                try
+                {
+                    List<IStructureType> listTypes = new List<IStructureType>();
+                    foreach(object item in (IEnumerable)value)
+                    {
+                        IStructureType obj = item as IStructureType;
+                        if (obj != null)
+                            listTypes.Add(obj);
+                    }
+
+                    return listTypes;
+                }
+                catch
+                { 
+                    throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter Convert got unknown IEnumerable {0}", value.ToString()));
+                }*/
+            }
             else
             {
                 long ID;
@@ -78,9 +119,9 @@ namespace WebAnnotation.WPF.Converters
                 {
                     ID = System.Convert.ToInt64(value);
                 }
-                catch
+                catch(ArgumentException e)
                 {
-                    throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter expects a StructureID, but got {0}", value.ToString()));
+                    throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter Convert expects a StructureID, but got {0}\n{1}", value.ToString(), e)); 
                 }
 
                 try
@@ -97,12 +138,11 @@ namespace WebAnnotation.WPF.Converters
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is IStructureType == false || value is IEnumerable<IStructureType>)
-                throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter convert back expects a StructureObj, but got {0}", value.ToString()));
+                throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter ConvertBack back expects a StructureObj, but got {0}", value.ToString()));
 
-            if (value is IStructureType)
-            {
-                IStructureType obj = (IStructureType)value;
-                return obj.ID;
+            if (value is IStructureType t)
+            { 
+                return t.ID;
             }
             else if(value is IEnumerable<StructureTypeObj>)
             {
@@ -127,7 +167,7 @@ namespace WebAnnotation.WPF.Converters
                 return IDs;
             }
 
-            throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter convert back expects a StructureObj, but got {0}", value.ToString()));
+            throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter ConvertBack expects a StructureObj, but got {0}", value.ToString()));
         }
     }
 }

@@ -213,7 +213,7 @@ namespace MonogameTestbed
               1333665 //Z =2
 
             };
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[Endpoint.TEST]);
 
             GridVector2[] centers = graph.Nodes.Values.Select(n => n.Geometry.Centroid()).ToArray();
 

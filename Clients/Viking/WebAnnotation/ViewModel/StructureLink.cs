@@ -1,18 +1,16 @@
-﻿using System;
+﻿using Geometry;
+using Microsoft.SqlServer.Types;
+using Microsoft.Xna.Framework.Graphics;
+using SqlGeometryUtils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using WebAnnotationModel;
-using WebAnnotation.View;
-using Geometry;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework;
+using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
-using SqlGeometryUtils;
-using Viking.VolumeModel;
-using Microsoft.SqlServer.Types;
+using WebAnnotation.View;
+using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
@@ -31,7 +29,7 @@ namespace WebAnnotation.ViewModel
             this.SourceLocID = Source;
             this.TargetLocID = Target;
         }
-         
+
         public static SectionStructureLinkViewKey CreateForNearestLocations(StructureLinkKey linkKey, ICollection<LocationCanvasView> SourceLocations, ICollection<LocationCanvasView> TargetLocations)
         {
             //Brute force a search for the shortest distance between the two structures.
@@ -39,7 +37,7 @@ namespace WebAnnotation.ViewModel
             LocationCanvasView BestSourceLoc = null;
             LocationCanvasView BestTargetLoc = null;
 
-            if(SourceLocations.Count == 1 && TargetLocations.Count == 1)
+            if (SourceLocations.Count == 1 && TargetLocations.Count == 1)
             {
                 return new SectionStructureLinkViewKey(linkKey, SourceLocations.First().ID, TargetLocations.First().ID);
             }
@@ -58,7 +56,7 @@ namespace WebAnnotation.ViewModel
                 }
             }
 
-            if(BestSourceLoc != null)
+            if (BestSourceLoc != null)
             {
                 return new SectionStructureLinkViewKey(linkKey, BestSourceLoc.ID, BestTargetLoc.ID);
             }
@@ -79,7 +77,7 @@ namespace WebAnnotation.ViewModel
     }
 
     public delegate ContextMenu StructureLinkContextMenuGeneratorDelegate(IViewStructureLink key);
-    
+
     abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasGeometryView, IViewStructureLink
     {
         WebAnnotationModel.StructureLinkObj modelObj;
@@ -162,7 +160,7 @@ namespace WebAnnotation.ViewModel
 
             this.ContextMenuGenerator = StructureLink_CanvasContextMenuView.ContextMenuGenerator;
         }
-        
+
         public override System.Windows.Forms.ContextMenu ContextMenu
         {
             get
@@ -171,19 +169,34 @@ namespace WebAnnotation.ViewModel
                     return ContextMenuGenerator(this);
 
                 return null;
-                
+
             }
         }
-        
+
         public override void Delete()
         {
             Store.StructureLinks.Remove(this.modelObj);
-            Store.StructureLinks.Save(); 
+            try
+            {
+                Store.StructureLinks.Save();
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+            }
+
         }
 
         public override void Save()
         {
-            Store.StructureLinks.Save();
+            try
+            {
+                Store.StructureLinks.Save();
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+            }
         }
 
 
@@ -217,9 +230,9 @@ namespace WebAnnotation.ViewModel
                                                 (link.SourceID == OriginObj.ID && link.TargetID == TargetObj.ID)))
                 return true;
 
-            return false; 
+            return false;
         }
-        
+
         /// <summary>
         /// Return true if two annotations can be joined with a structure link
         /// </summary>
@@ -229,7 +242,7 @@ namespace WebAnnotation.ViewModel
         public static bool IsValidStructureLinkTarget(StructureObj TargetObj, StructureObj OriginObj)
         {
             if (TargetObj == null || OriginObj == null)
-                return false; 
+                return false;
 
             //Cannot link a structure to itself
             if (TargetObj.ID == OriginObj.ID)
@@ -261,7 +274,7 @@ namespace WebAnnotation.ViewModel
         public abstract bool Intersects(GridLineSegment line);
         public abstract double Distance(GridVector2 Position);
         public abstract double DistanceFromCenterNormalized(GridVector2 Position);
-        
+
         public abstract Geometry.GridRectangle BoundingBox
         {
             get;
@@ -290,7 +303,7 @@ namespace WebAnnotation.ViewModel
 
     class StructureLinkCirclesView : StructureLinkViewModelBase
     {
-        public LineView lineView;  
+        public LineView lineView;
         public Geometry.GridLineSegment lineSegment;
 
         public double LineWidth
@@ -312,7 +325,8 @@ namespace WebAnnotation.ViewModel
         public float alpha
         {
             get { return (float)color.A / 255.0f; }
-            set {
+            set
+            {
                 lineView.Color = new Microsoft.Xna.Framework.Color((int)lineView.Color.R,
                                                                    (int)lineView.Color.G,
                                                                    (int)lineView.Color.B,
@@ -342,7 +356,7 @@ namespace WebAnnotation.ViewModel
         {
             return lineSegment.DistanceToPoint(Position) - this.Radius;
         }
-         
+
         public override double Distance(SqlGeometry shape)
         {
             return lineSegment.ToSqlGeometry().STDistance(shape).Value;
@@ -385,7 +399,7 @@ namespace WebAnnotation.ViewModel
 
             GridVector2 sourceVolumePosition = mapper.SectionToVolume(source.Position);
             GridVector2 targetVolumePosition = mapper.SectionToVolume(target.Position);
-        
+
             lineView = new LineView(sourceVolumePosition, targetVolumePosition, Math.Min(source.Radius, target.Radius), DefaultColor,
                                     link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);
             lineSegment = new GridLineSegment(sourceVolumePosition, targetVolumePosition);
@@ -408,10 +422,10 @@ namespace WebAnnotation.ViewModel
     /// </summary>
     class StructureLinkCurvesView : StructureLinkViewModelBase
     {
-        public LinkedPolyLineSimpleView lineView; 
+        public LinkedPolyLineSimpleView lineView;
         public Geometry.GridLineSegment[] lineSegments;
         public static float DefaultLineWidth = 16.0f;
-        
+
         public double LineWidth
         {
             get
@@ -499,7 +513,7 @@ namespace WebAnnotation.ViewModel
             get
             {
                 GridRectangle bbox = lineSegments[0].BoundingBox;
-                foreach(GridLineSegment l in lineSegments)
+                foreach (GridLineSegment l in lineSegments)
                 {
                     bbox.Union(l.BoundingBox);
                 }
@@ -520,7 +534,7 @@ namespace WebAnnotation.ViewModel
             SqlGeometry sourceShape = mapper.TryMapShapeSectionToVolume(source.MosaicShape);
             SqlGeometry targetShape = mapper.TryMapShapeSectionToVolume(target.MosaicShape);
 
-            lineView = new LinkedPolyLineSimpleView(sourceShape.ToPoints(), targetShape.ToPoints(), (float)this.LineWidth, DefaultColor, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);          
+            lineView = new LinkedPolyLineSimpleView(sourceShape.ToPoints(), targetShape.ToPoints(), (float)this.LineWidth, DefaultColor, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);
         }
 
         public static void Draw(GraphicsDevice device,

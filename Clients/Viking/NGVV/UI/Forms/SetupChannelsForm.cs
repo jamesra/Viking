@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using Viking.VolumeModel; 
+﻿using System.Windows.Forms;
+using Viking.VolumeModel;
 
 namespace Viking.UI.Forms
 {
@@ -16,10 +9,10 @@ namespace Viking.UI.Forms
         {
             get
             {
-                if(ChannelControl != null)
+                if (ChannelControl != null)
                     return ChannelControl.Channels;
 
-                return new ChannelInfo[0]; 
+                return new ChannelInfo[0];
             }
         }
         internal SetupChannelsForm(ChannelInfo[] Channels, string[] ChannelNames)

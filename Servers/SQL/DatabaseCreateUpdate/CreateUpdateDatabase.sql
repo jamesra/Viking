@@ -1,9 +1,9 @@
 /**** You need to replace the following templates to use this script ****/
-/**** RPC1 = Name of the database  */
+/**** NeitzNM = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
 */
 DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = 'RPC1'
+SET @DATABASE_NAME = 'NeitzNM'
 DECLARE @DATABASE_DIRECTORY VARCHAR(50)
 SET @DATABASE_DIRECTORY = 'C:\Database\'
 
@@ -29,7 +29,7 @@ BEGIN
 END
 	
 CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
-INSERT INTO #UpdateVars Values (N'RPC1');
+INSERT INTO #UpdateVars Values (N'NeitzNM');
 
 DECLARE @db_id VARCHAR(100);
 SET @db_id = db_id(@DATABASE_NAME)
@@ -42,50 +42,50 @@ BEGIN
 	print N'Database does not exist, creating...' 
 	
 	declare @Path varchar(100)
-	set @Path = N'C:\Database\RPC1\'
+	set @Path = N'C:\Database\NeitzNM\'
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [RPC1]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [RPC1] ON  PRIMARY 
-		( NAME = N'RPC1', FILENAME = N'C:\Database\RPC1\RPC1.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [NeitzNM]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [NeitzNM] ON  PRIMARY 
+		( NAME = N'NeitzNM', FILENAME = N'C:\Database\NeitzNM\NeitzNM.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'RPC1_log', FILENAME = N'C:\Database\RPC1\RPC1_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'NeitzNM_log', FILENAME = N'C:\Database\NeitzNM\NeitzNM_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [RPC1] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [NeitzNM] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [RPC1].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [NeitzNM].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [RPC1] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [RPC1] SET ANSI_NULLS OFF
-	ALTER DATABASE [RPC1] SET ANSI_PADDING ON
-	ALTER DATABASE [RPC1] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [RPC1] SET ARITHABORT OFF
-	ALTER DATABASE [RPC1] SET AUTO_CLOSE OFF
-	ALTER DATABASE [RPC1] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [RPC1] SET AUTO_SHRINK OFF
-	ALTER DATABASE [RPC1] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [RPC1] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [RPC1] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [RPC1] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [RPC1] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [RPC1] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [RPC1] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [RPC1] SET  DISABLE_BROKER
-	ALTER DATABASE [RPC1] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [RPC1] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [RPC1] SET TRUSTWORTHY OFF
-	ALTER DATABASE [RPC1] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [RPC1] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [RPC1] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [RPC1] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [RPC1] SET  READ_WRITE
-	ALTER DATABASE [RPC1] SET RECOVERY SIMPLE
-	ALTER DATABASE [RPC1] SET  MULTI_USER
-	ALTER DATABASE [RPC1] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [RPC1] SET DB_CHAINING OFF
+	ALTER DATABASE [NeitzNM] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [NeitzNM] SET ANSI_NULLS OFF
+	ALTER DATABASE [NeitzNM] SET ANSI_PADDING ON
+	ALTER DATABASE [NeitzNM] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [NeitzNM] SET ARITHABORT OFF
+	ALTER DATABASE [NeitzNM] SET AUTO_CLOSE OFF
+	ALTER DATABASE [NeitzNM] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [NeitzNM] SET AUTO_SHRINK OFF
+	ALTER DATABASE [NeitzNM] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [NeitzNM] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [NeitzNM] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [NeitzNM] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [NeitzNM] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [NeitzNM] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [NeitzNM] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [NeitzNM] SET  DISABLE_BROKER
+	ALTER DATABASE [NeitzNM] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [NeitzNM] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [NeitzNM] SET TRUSTWORTHY OFF
+	ALTER DATABASE [NeitzNM] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [NeitzNM] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [NeitzNM] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [NeitzNM] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [NeitzNM] SET  READ_WRITE
+	ALTER DATABASE [NeitzNM] SET RECOVERY SIMPLE
+	ALTER DATABASE [NeitzNM] SET  MULTI_USER
+	ALTER DATABASE [NeitzNM] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [NeitzNM] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -93,7 +93,7 @@ END
 
 GO
 
-USE [RPC1]
+USE [NeitzNM]
 GO
 
 --Need to specify database owner before enabling change tracking
@@ -1106,15 +1106,15 @@ END
 */  
 GO
 
-Use [RPC1]
+Use [NeitzNM]
 GO
   
 DECLARE @compat_level int
-SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'RPC1')
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'NeitzNM')
 IF(@compat_level < 120)
 BEGIN
 	print N'Setting the database compatability level to SQL 2014'
-	ALTER DATABASE [RPC1] SET COMPATIBILITY_LEVEL = 120  
+	ALTER DATABASE [NeitzNM] SET COMPATIBILITY_LEVEL = 120  
 END
 GO
 
@@ -2323,7 +2323,6 @@ end
 		ALTER TABLE Location ADD MosaicShape geometry
 		ALTER TABLE Location ADD VolumeShape geometry
 
-
 		--any potential errors get reported, and the script is rolled back and terminated
 		 if(@@error <> 0)
 		 begin
@@ -2389,6 +2388,7 @@ end
 
 	 COMMIT TRANSACTION twentyfive
 	end 
+	go 
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 26)))
 	begin
@@ -2514,6 +2514,7 @@ end
 		    N'Create Spatial Indicies' ,getDate(),User_ID())
 	 COMMIT TRANSACTION twentyeight
 	end
+	go
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 29)))
 	begin
@@ -2528,7 +2529,7 @@ end
  					Select * from LocationLink
 						 WHERE (A in 
 						(SELECT L.ID
-						  FROM [RPC1].[dbo].[Location] L
+						  FROM [NeitzNM].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -2537,7 +2538,7 @@ end
 						  OR
 						  (B in 
 						(SELECT L.ID
-						  FROM [RPC1].[dbo].[Location] L
+						  FROM [NeitzNM].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -2556,6 +2557,7 @@ end
 		    N'Create Function for SelectStructureLinks for easy OData use'  ,getDate(),User_ID())
 	 COMMIT TRANSACTION twentynine
 	end
+	go
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 30)))
 	begin
@@ -2573,6 +2575,7 @@ end
 				N'Add additional statistics'  ,getDate(),User_ID())
 		COMMIT TRANSACTION thirty
 	end
+	go
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 31)))
 	begin
@@ -2972,6 +2975,7 @@ end
 		    N'Create Functions for spatial queries'  ,getDate(),User_ID())
 	 COMMIT TRANSACTION thirtyone
 	end
+	go
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 32)))
 	begin
@@ -5646,7 +5650,6 @@ end
 	 COMMIT TRANSACTION fiftysix
 	end
 	 
-
 	if(not(exists(select (1) from DBVersion where DBVersionID = 57)))
 	begin
      print N'Update UDTs for Locations to include width column'
@@ -6871,7 +6874,7 @@ end
 	 BEGIN TRANSACTION seventythree
 		
 		Exec('
-			ALTER FUNCTION LocationHasTag 
+			CREATE FUNCTION LocationHasTag 
 			(
 				-- Add the parameters for the function here
 				@ID bigint,
@@ -6901,7 +6904,7 @@ end
 		 Grant EXECUTE on LocationHasTag to public
 
 		 Exec('
-			ALTER FUNCTION StructureHasTag 
+			CREATE FUNCTION StructureHasTag 
 			(
 				-- Add the parameters for the function here
 				@StructureID bigint,
@@ -7114,7 +7117,6 @@ end
 		      N'Fix potential Azure Migration Issues' ,getDate(),User_ID())
 	 COMMIT TRANSACTION seventysix
 	end
-END
 
 --from here on, continually add steps in the previous manner as needed.
 COMMIT TRANSACTION main

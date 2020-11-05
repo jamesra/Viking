@@ -1,23 +1,22 @@
-﻿using System;
+﻿using Geometry;
+using Microsoft.SqlServer.Types;
+using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Geometry;
-using Microsoft.Xna.Framework.Graphics;
-using WebAnnotation;
-using WebAnnotationModel;
 using System.Windows.Forms;
-using WebAnnotation.ViewModel;
-using Microsoft.SqlServer.Types;
-using VikingXNAGraphics;
-using SqlGeometryUtils;
 using VikingXNA;
+using VikingXNAGraphics;
+using WebAnnotation.UI;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
     /// <summary>
     /// Renders arrows for location links that are overlapped by an annotation on the section
     /// </summary>
-    class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView, Viking.Common.IContextMenu, IMouseActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelpStrings
+    class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView, Viking.Common.IContextMenu,
+                                       IMouseActionSupport, IPenActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelpStrings
     {
         public TextureCircleView circleView;
         public LabelView label;
@@ -160,11 +159,11 @@ namespace WebAnnotation.View
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlayShaderEffect overlayEffect,
                           OverlappedLocationLinkView[] listToDraw)
         {
             TextureCircleView[] backgroundCircles = listToDraw.Select(l => l.circleView).ToArray();
-            TextureCircleView.Draw(device, scene, basicEffect, overlayEffect, backgroundCircles.ToArray());
+            TextureCircleView.Draw(device, scene, OverlayStyle.Luma, backgroundCircles.ToArray());
         }
 
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene)
@@ -182,6 +181,12 @@ namespace WebAnnotation.View
             return label.IsVisible(scene);
         }
 
+        public LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            LocationID = this.OffSectionLocationID;
+            return LocationAction.NONE;
+        }
+
         public LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = this.OffSectionLocationID;
@@ -189,6 +194,11 @@ namespace WebAnnotation.View
                 return LocationAction.NONE;
 
             return LocationAction.CREATELINKEDLOCATION;
+        }
+
+        public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
+        {
+            return new List<IAction>();
         }
 
         public string[] HelpStrings

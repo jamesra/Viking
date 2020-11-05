@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Linq;
+using System.Diagnostics;
 using System.Reflection;
 using System.Windows.Forms;
-using System.Diagnostics;
 
 namespace Viking.UI.Forms
 {
@@ -21,7 +17,7 @@ namespace Viking.UI.Forms
             this.labelCompanyName.Text = AssemblyCompany;
             this.textBoxDescription.Text = AssemblyDescription;
             DateTime buildTime = AssemblyBuildDate;
-            this.labelBuildDate.Text = "Build Date: " + buildTime.ToShortDateString() + " at " + buildTime.ToLongTimeString(); 
+            this.labelBuildDate.Text = "Build Date: " + buildTime.ToShortDateString() + " at " + buildTime.ToLongTimeString();
 
         }
 
@@ -52,7 +48,7 @@ namespace Viking.UI.Forms
             }
         }
 
-        public static  string AssemblyDescription
+        public static string AssemblyDescription
         {
             get
             {
@@ -139,13 +135,13 @@ namespace Viking.UI.Forms
 
                 }
 
-                return buildDate; 
+                return buildDate;
 
             }
 
         }
         #endregion
 
-        
+
     }
 }

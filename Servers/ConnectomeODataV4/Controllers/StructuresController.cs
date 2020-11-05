@@ -218,7 +218,7 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("Scale()")]
         public IHttpActionResult GetScale()
         {
-            Geometry.Scale scale = VikingWebAppSettings.AppSettings.GetScale();
+            UnitsAndScale.Scale scale = VikingWebAppSettings.AppSettings.GetScale();
             return Ok(scale);
         }
 

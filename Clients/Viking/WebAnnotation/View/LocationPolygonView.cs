@@ -1,20 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
+﻿using Geometry;
 using Microsoft.SqlServer.Types;
-using SqlGeometryUtils;
-using WebAnnotationModel;
-using VikingXNAGraphics;
-using System.Windows.Forms;
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
-using VikingXNA;
+using Microsoft.Xna.Framework.Graphics;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
-using WebAnnotation;
+using System.Linq;
 using Viking.VolumeModel;
+using VikingXNA;
+using VikingXNAGraphics;
+using WebAnnotation.UI;
+using WebAnnotation.UI.Actions;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
@@ -22,14 +20,15 @@ namespace WebAnnotation.View
     {
         private StructureCircleLabels curveLabels;
         private OverlappedLinkCircleView OverlappedLinkView;
-         
-        PositionColorMeshModel polygonMesh;
+        private LocationInteriorHoleView[] InteriorHoleViews;
+
+        SolidPolygonView polygonMesh;
 
         GridPolygon VolumePolygon;
         GridPolygon SmoothedVolumePolygon;
 
         CircleView[] ControlPointViews = new CircleView[0];
-        
+
         public override string[] HelpStrings
         {
             get
@@ -50,19 +49,17 @@ namespace WebAnnotation.View
                     listStrings.Add("CTRL + Left click on control point: Remove control point");
                 }
 
-                listStrings.Add("CTRL + Left click on interior hole: Remove interior hole");
-                listStrings.Add("CTRL + Left click inside shape: Cut hole in annotation");
-
                 return listStrings.ToArray();
             }
         }
 
-        private Color _Color; 
+        private Color _Color;
 
         public Microsoft.Xna.Framework.Color Color
         {
             get { return _Color; }
-            set {
+            set
+            {
                 _Color = value;
                 if (polygonMesh != null)
                 {
@@ -74,13 +71,14 @@ namespace WebAnnotation.View
 
         public Microsoft.Xna.Framework.Color HSLColor
         {
-            get { return _Color.ConvertToHSL(); } 
+            get { return _Color.ConvertToHSL(); }
         }
 
         public float Alpha
         {
             get { return polygonMesh.Alpha; }
-            set {
+            set
+            {
                 polygonMesh.Alpha = value;
                 ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
             }
@@ -105,11 +103,21 @@ namespace WebAnnotation.View
             _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
             VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape).ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
-            SmoothedVolumePolygon = VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
-            this.Color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.5f);
-            polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);
+            SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            this.Color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.33f);
+            //polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);
+            //polygonMesh = SmoothedVolumePolygon.CreateMeshForPolygon2D(this.HSLColor);
+            polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, this.HSLColor);
             CreateLabelObjects();
             this.ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
+
+            InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];
+            for (int iInner = 0; iInner < VolumePolygon.InteriorPolygons.Count; iInner++)
+            {
+                InteriorHoleViews[iInner] = new LocationInteriorHoleView(obj.ID, iInner,
+                    VolumePolygon.InteriorPolygons[iInner],
+                    SmoothedVolumePolygon.InteriorPolygons[iInner]);
+            }
         }
 
         public static double GetRadiusFromPolygonArea(GridPolygon poly, double percentage)
@@ -143,14 +151,14 @@ namespace WebAnnotation.View
             List<CircleView> views = new List<CircleView>(polygon.ExteriorRing.Length);
             views.AddRange(polygon.ExteriorRing.Select(p => new CircleView(new GridCircle(p, ControlPointRadius), this.HSLColor.AdjustHSLHue(180))));
 
-            foreach(GridPolygon innerPoly in polygon.InteriorPolygons)
+            foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
             {
                 views.AddRange(CreateControlPointViews(innerPoly));
             }
 
             return views;
         }
-          
+
         private SqlGeometry _RenderedVolumeShape;
         public override SqlGeometry VolumeShapeAsRendered
         {
@@ -181,22 +189,23 @@ namespace WebAnnotation.View
                           VikingXNA.Scene scene,
                           RoundCurve.CurveManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          AnnotationOverBackgroundLumaEffect overlayEffect,
+                          OverlayShaderEffect overlayEffect,
                           LocationPolygonView[] listToDraw)
         {
             OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
 #if DEBUG
-            CircleView.Draw(device, scene, basicEffect, overlayEffect, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
+            CircleView.Draw(device, scene, OverlayStyle.Luma, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
 #else
             if(!Global.PenMode)
             {
-                CircleView.Draw(device, scene, basicEffect, overlayEffect, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
+                CircleView.Draw(device, scene, OverlayStyle.Luma, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
             }
 #endif
             //CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
 
-            MeshView<VertexPositionColor>.Draw(device, scene, listToDraw.Select(l => l.polygonMesh));
+            //MeshView<VertexPositionColor>.Draw(device, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device), meshmodels: listToDraw.Select(l => l.polygonMesh));
+            SolidPolygonView.Draw(device, scene, OverlayStyle.Luma, listToDraw.Select(l => l.polygonMesh));
             //FilledClosedCurvePolygonView.Draw(device, scene, listToDraw.Select(l => l.polyView));
         }
 
@@ -258,20 +267,31 @@ namespace WebAnnotation.View
             curveLabels.DrawLabel(spriteBatch, font, scene);
         }
 
-        public ICanvasGeometryView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
         {
             if (OverlappedLinkView != null)
             {
-                ICanvasGeometryView containedAnnotation = OverlappedLinkView.GetAnnotationAtPosition(position);
+                ICanvasView containedAnnotation = OverlappedLinkView.GetAnnotationAtPosition(position);
                 if (containedAnnotation != null)
                     return containedAnnotation;
+            }
+
+            if (InteriorHoleViews != null)
+            {
+                foreach (var interiorHole in InteriorHoleViews)
+                {
+                    if (interiorHole.Contains(position))
+                    {
+                        return interiorHole;
+                    }
+                }
             }
 
             if (this.Contains(position))
                 return this;
 
             return null;
-        } 
+        }
 
         public override ICollection<long> OverlappedLinks
         {
@@ -317,7 +337,7 @@ namespace WebAnnotation.View
                         }
 
                         return LocationAction.CREATELINK;
-                    }                  
+                    }
                 }
             }
             else if (ModifierKeys.CtrlPressed())
@@ -336,7 +356,7 @@ namespace WebAnnotation.View
             }
             else if (!ModifierKeys.ShiftOrCtrlPressed())
             {
-               return LocationAction.RETRACEANDREPLACE;
+                return LocationAction.CHANGEBOUNDARY;
             }
 
             return LocationAction.NONE;
@@ -347,7 +367,7 @@ namespace WebAnnotation.View
 
             LocationID = this.ID;
             GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
-            
+
             if (ModifierKeys.ShiftPressed())
             {
                 if (this.SmoothedVolumePolygon.Contains(WorldPosition))
@@ -403,7 +423,7 @@ namespace WebAnnotation.View
                     }
                     else if (Global.PenMode && this.SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
                     {
-                        return LocationAction.RETRACEANDREPLACE;
+                        return LocationAction.CHANGEBOUNDARY;
                     }
                     else
                     {
@@ -417,7 +437,7 @@ namespace WebAnnotation.View
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            if(Global.PenMode)
+            if (Global.PenMode)
             {
                 return GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
             }
@@ -425,7 +445,11 @@ namespace WebAnnotation.View
             {
                 return GetMouseClickActionForPositionOnAnnotationWithoutPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
             }
+        }
 
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            return GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
         }
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
@@ -466,6 +490,37 @@ namespace WebAnnotation.View
                 return 0.5;
             else
                 return 1.01; //This is done so we can fill interior polygons without overlapping annotations inside the polygon hole.
+        }
+
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
+        {
+            List<IAction> listActions = new List<IAction>();
+            if (path.HasSelfIntersection)
+            {
+                //This could be a reshape or linking to an adjacent annotation
+                if (this.Z == VisibleSectionNumber)
+                {
+                    listActions.AddRange(Shared2DShapeActionsForPath.IdentifyPossibleInteriorActions(this.ID, this.VolumePolygon, this.SmoothedVolumePolygon, path));
+                    listActions.AddRange(Shared2DShapeActionsForPath.GetPenActionsForShapeAnnotation(this, this.SmoothedVolumePolygon, path, interaction_log, VisibleSectionNumber));
+                }
+            }
+            else
+            {
+                if (this.Z == VisibleSectionNumber)
+                {
+                    //Ask if they want to convert to a polyline
+                    GridPolyline line = new GridPolyline(path.SimplifiedPath);
+                    ChangeToPolylineAction action = new ChangeToPolylineAction(this.modelObj, line);
+                    listActions.Add(action);
+
+                    //Check if they cross the shape at two points and want to adjust the shape
+                    listActions.AddRange(Shared2DShapeActionsForPath.GetPenActionsForShapeAnnotation(this, this.SmoothedVolumePolygon, path, interaction_log, VisibleSectionNumber));
+                }
+            }
+
+            //Check for links to create
+            listActions.AddRange(interaction_log.IdentifyPossibleLinkActions(this.modelObj.ID));
+            return listActions;
         }
     }
 }

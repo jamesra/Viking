@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry
 {
@@ -21,9 +19,9 @@ namespace Geometry
             ///
 
             //Remove any points that are closer than epsilon distanceu04908
-            for(int i = 1; i < cp.Count-1; i++)
+            for (int i = 1; i < cp.Count - 1; i++)
             {
-                if(GridVector2.DistanceSquared(cp[i-1], cp[i]) < Global.EpsilonSquared)
+                if (GridVector2.DistanceSquared(cp[i - 1], cp[i]) < Global.EpsilonSquared)
                 {
                     cp.RemoveAt(i);
                     i = i - 1;
@@ -88,7 +86,7 @@ namespace Geometry
             GridVector2 lastPoint = end.PointAlongLine(1.5);
             return lastPoint;
         }
-         
+
 
         public static GridVector2[] FitCurve(IList<GridVector2> ControlPoints, uint NumInterpolations, bool closed)
         {
@@ -111,7 +109,7 @@ namespace Geometry
 #if DEBUG
             for (int i = 0; i < ControlPoints.Count; i++)
             {
-                Debug.Assert(points.Contains(ControlPoints[i]), string.Format("FitCurve output is missing control point #{0} of {1} {2}", i, ControlPoints.Count, ControlPoints[i] ));
+                Debug.Assert(points.Contains(ControlPoints[i]), string.Format("FitCurve output is missing control point #{0} of {1} {2}", i, ControlPoints.Count, ControlPoints[i]));
             }
 #endif
 
@@ -148,7 +146,7 @@ namespace Geometry
             {
                 tPointsArray = tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0))).ToArray();
             }
-               
+
             tvalues = tPointsArray.Select((t, i) => t1 + tPointsArray[i] * (t2 - t1)).ToArray();
 
             GridVector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
@@ -173,7 +171,7 @@ namespace Geometry
             double t1 = tj(t0, p0, p1, alpha);
             double t2 = tj(t1, p1, p2, alpha);
             //double t3 = tj(t2, p2, p3, alpha); //TODO: Check why this is calculated but not used
-               
+
             double[] tvalues = tPointsArray.Select((t, i) => t1 + tPointsArray[i] * (t2 - t1)).ToArray();
 
             GridVector2[] output = FitCurveSegmentWithTValues(p0, p1, p2, p3, tvalues);
@@ -266,7 +264,7 @@ namespace Geometry
     {
         static private GridVector2[] GetControlPointSubsetForCurve(IList<GridVector2> path, int iStart, bool IsClosed)
         {
-            return IsClosed ? GetControlPointSubsetForClosedCurve(path, iStart) : GetControlPointSubsetForOpenCurve(path, iStart); 
+            return IsClosed ? GetControlPointSubsetForClosedCurve(path, iStart) : GetControlPointSubsetForOpenCurve(path, iStart);
         }
 
         /// <summary>
@@ -343,8 +341,8 @@ namespace Geometry
                     ProposedCurveControlPoints[iV] = path[ProposedControlPointIndicies[iV]];
                 }
             }
-            
-            
+
+
             //IIndexSet path_indicies = new Geometry.InfiniteWrappedIndexSet(0, path.Count-1, 0);
             //return ProposedControlPointIndicies.Select(i => path_indicies[i]).Select(i => path[(int)i]).ToArray();
 
@@ -353,7 +351,7 @@ namespace Geometry
 
         private static List<GridVector2> GenerateStartingSimplifiedLine(this IList<GridVector2> path, bool IsClosed)
         {
-            if(IsClosed)
+            if (IsClosed)
             {
                 return GenerateStartingSimplifiedClosedLine(path);
             }
@@ -389,7 +387,7 @@ namespace Geometry
             iSorted = iSorted.Where(i => i != 0 && i != path.Count - 1).ToArray(); //Remove the first/last vertex because we know we are including it. 
 
             int[] firstTwo = new int[] { iSorted[iSorted.Length - 1], iSorted[iSorted.Length - 2] };
-            if(firstTwo[0] > firstTwo[1])
+            if (firstTwo[0] > firstTwo[1])
             {
                 firstTwo = firstTwo.Reverse().ToArray();
             }
@@ -413,7 +411,7 @@ namespace Geometry
             if (path.Count <= 4 && IsClosed)
                 return path.ToList();
 
-            if(IsClosed && path.First() != path.Last())
+            if (IsClosed && path.First() != path.Last())
             {
                 path.Add(path.First());
             }
@@ -427,13 +425,13 @@ namespace Geometry
                     continue; //Skip the last point which is a duplicate in a closed curve
 
                 if (point_to_ideal_curve_index.ContainsKey(curved_path[i]))
-                    continue; 
+                    continue;
 
                 point_to_ideal_curve_index.Add(curved_path[i], i);
             }
 
 #if DEBUG
-            for(int i = 0; i < path.Count; i++)
+            for (int i = 0; i < path.Count; i++)
             {
                 Debug.Assert(point_to_ideal_curve_index.ContainsKey(path[i]), string.Format("Ideal curve dictionary is missing path point #{0} {1}", i, path[i]));
             }
@@ -492,7 +490,7 @@ namespace Geometry
                 }
                 else
                 {
-                    if(iIdealEnd <= iIdealStart) //We are using the first/last vertex
+                    if (iIdealEnd <= iIdealStart) //We are using the first/last vertex
                     {
                         System.Diagnostics.Debug.Assert(iIdealEnd == 0);
                         iIdealEnd = curved_path.Length - 1;
@@ -512,7 +510,7 @@ namespace Geometry
                 {
                     Debug.Assert(simplified_inflection_points.Contains(ControlPointToAdd) == false);
 #if DEBUG
-                    if(simplified_inflection_points.Contains(ControlPointToAdd))
+                    if (simplified_inflection_points.Contains(ControlPointToAdd))
                     {
                         iProposedVertex = iProposedVertex + 1;
                         continue;
@@ -526,7 +524,7 @@ namespace Geometry
                 }
             }
 
-            if(IsClosed)
+            if (IsClosed)
             {
                 Debug.Assert(simplified_inflection_points.First() == simplified_inflection_points.Last());
 
@@ -545,7 +543,7 @@ namespace Geometry
 
             GridLineSegment[] proposed_segments = proposed_path.ToLineSegments();
 
-            for (int i = 0; i < ideal_path.Length-1; i++)
+            for (int i = 0; i < ideal_path.Length - 1; i++)
             {
                 int iNearestSegment = proposed_segments.NearestSegment(ideal_path[i].B, out double MinDistance);
                 if (MinDistance > MaxDistance)

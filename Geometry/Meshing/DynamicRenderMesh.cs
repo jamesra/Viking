@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
@@ -15,7 +13,7 @@ namespace Geometry.Meshing
     public class Mesh3D<VERTEX> : MeshBase3D<VERTEX>
         where VERTEX : IVertex3D
     {
-        
+
     }
 
     /// <summary>
@@ -29,20 +27,20 @@ namespace Geometry.Meshing
     /// <summary>
     /// This is a fairly generic 3D Mesh class that supports operations around merging and basic spatial manipulation of meshes
     /// </summary>
-    public abstract class MeshBase3D<VERTEX> : MeshBase<VERTEX> , IMesh3D<VERTEX>
+    public abstract class MeshBase3D<VERTEX> : MeshBase<VERTEX>, IMesh3D<VERTEX>
         where VERTEX : IVertex3D
-    { 
+    {
         public GridBox BoundingBox { get; private set; }
 
         public MeshBase3D()
         {
             CreateOffsetEdge = Edge.CreateOffsetCopy;
             CreateOffsetFace = Face.CreateOffsetCopy;
-             
+
             CreateEdge = Edge.Create;
             CreateFace = Face.Create;
         }
-         
+
         protected void ValidateBoundingBox()
         {
             Debug.Assert(BoundingBox.MinCorner.X == this._Verticies.Select(v => v.Position.X).Min());
@@ -65,7 +63,7 @@ namespace Geometry.Meshing
 
         public void Translate(GridVector3 translate)
         {
-            foreach(IVertex3D v in _Verticies)
+            foreach (IVertex3D v in _Verticies)
             {
                 v.Position += translate;
             }
@@ -95,7 +93,7 @@ namespace Geometry.Meshing
                 BoundingBox.Union(points);
             }
         }
-        
+
         /// <summary>
         /// Merge the other mesh into our mesh
         /// </summary>
@@ -112,7 +110,7 @@ namespace Geometry.Meshing
 
             return iVertMergeStart;
         }
-         
+
         public GridLineSegment ToSegment(IEdgeKey e)
         {
             return new GridLineSegment(_Verticies[e.A].Position, _Verticies[e.B].Position);
@@ -123,7 +121,7 @@ namespace Geometry.Meshing
             if (false == f.IsTriangle())
                 throw new InvalidOperationException("Face is not a triangle: " + f.iVerts.ToString());
 
-            return new GridTriangle(this[f.iVerts].Select(v => v.Position.XY()).ToArray()); 
+            return new GridTriangle(this[f.iVerts].Select(v => v.Position.XY()).ToArray());
         }
 
         public GridVector2 GetCentroid(IFace f)
@@ -155,7 +153,7 @@ namespace Geometry.Meshing
                 throw new InvalidOperationException("No duplication method in DynamicRenderMesh specified for faces");
 
             IEnumerable<IFace> quadFaces = this.Faces.Where(f => !f.IsTriangle()).ToList();
-            
+
             foreach (IFace f in quadFaces)
             {
                 this.SplitFace(f);
@@ -175,17 +173,17 @@ namespace Geometry.Meshing
 
             if (face.IsQuad())
             {
-                
+
                 GridVector3[] positions = mesh[face.iVerts].Select(v => v.Position).ToArray();
                 if (GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
-                { 
+                {
                     IFace ABC = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[2] });
                     IFace ACD = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[2], face.iVerts[3] });
 
                     return new IFace[] { ABC, ACD };
                 }
                 else
-                {  
+                {
                     IFace ABD = mesh.CreateFace(new int[] { face.iVerts[0], face.iVerts[1], face.iVerts[3] });
                     IFace BCD = mesh.CreateFace(new int[] { face.iVerts[1], face.iVerts[2], face.iVerts[3] });
 
@@ -207,12 +205,12 @@ namespace Geometry.Meshing
             if (face.IsTriangle())
                 return;
 
-            if(face.IsQuad())
+            if (face.IsQuad())
             {
                 RemoveFace(face);
 
                 GridVector3[] positions = this[face.iVerts].Select(v => v.Position).ToArray();
-                if(GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
+                if (GridVector3.Distance(positions[0], positions[2]) < GridVector3.Distance(positions[1], positions[3]))
                 {
                     //Face ABC = new Face(face.iVerts[0], face.iVerts[1], face.iVerts[2]);
                     //Face ACD = new Face(face.iVerts[0], face.iVerts[2], face.iVerts[3]);
@@ -330,25 +328,25 @@ namespace Geometry.Meshing
             }
             */
 
-            for(int i = 0; i < _Verticies.Count; i++)
+            for (int i = 0; i < _Verticies.Count; i++)
             {
                 SortedSet<IFace> vertFaces = new SortedSet<Meshing.IFace>();
                 IVertex3D v = this[i];
-                  
-                foreach(IEdgeKey ek in v.Edges)
+
+                foreach (IEdgeKey ek in v.Edges)
                 {
                     vertFaces.UnionWith(Edges[ek].Faces);
                 }
 
                 GridVector3 avgNormal = GridVector3.Zero;
-                foreach(IFace f in vertFaces)
+                foreach (IFace f in vertFaces)
                 {
                     avgNormal += face_normals_cache[f];
                 }
 
                 avgNormal.Normalize();
 
-                v.Normal = avgNormal;                
+                v.Normal = avgNormal;
             }
         }
 
@@ -382,14 +380,14 @@ namespace Geometry.Meshing
                 IVertex3D v = this[i];
 
                 IFace[] vertFaces = this[v.Edges].SelectMany(e => e.Faces).Distinct().ToArray();
-                
+
                 GridVector3 avgNormal = GridVector3.Zero;
-                for(int iFace = 0; iFace < vertFaces.Length; iFace++)
+                for (int iFace = 0; iFace < vertFaces.Length; iFace++)
                 {
-                    IFace f = vertFaces[iFace]; 
+                    IFace f = vertFaces[iFace];
 
                     bool face_has_normal = face_normals_cache.TryGetValue(f, out GridVector3 normal);
-                    if(face_has_normal == false)
+                    if (face_has_normal == false)
                     {
                         normal = Normal(f);
                         face_normals_cache.Add(f, normal); //Populate the cache
@@ -422,20 +420,20 @@ namespace Geometry.Meshing
                 return (VERTEX)copy;
             }).ToList());
 
-            foreach(IEdge e in other.Edges.Values)
+            foreach (IEdge e in other.Edges.Values)
             {
                 IEdge newEdge = CreateOffsetEdge(e, e.A + startingAppendIndex, e.B + startingAppendIndex);
                 this.AddEdge(newEdge);
             }
 
-            foreach(IFace f in other.Faces)
+            foreach (IFace f in other.Faces)
             {
                 IFace newFace = CreateOffsetFace(f, f.iVerts.Select(i => i + startingAppendIndex));
                 this.AddFace(newFace);
             }
 
             return startingAppendIndex;
-        } 
+        }
 
 
         /// <summary>
@@ -450,14 +448,14 @@ namespace Geometry.Meshing
         public bool Intersects(IFace face, GridVector3 A, GridVector3 B)
         {
             Debug.Assert(face.iVerts.Length == 3);
-            if(face.iVerts.Length != 3)
+            if (face.iVerts.Length != 3)
             {
                 throw new ArgumentException("Intersects requires a triangular face");
             }
 
             GridVector3 v0 = this[face.iVerts[0]].Position;
             GridVector3 v1 = this[face.iVerts[1]].Position;
-            GridVector3 v2 = this[face.iVerts[2]].Position; 
+            GridVector3 v2 = this[face.iVerts[2]].Position;
 
             GridVector3 direction = B - A;
             GridVector3 origin = A;

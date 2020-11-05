@@ -1,23 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Diagnostics;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using WebAnnotationModel;
-using WebAnnotationModel.Objects;
-using WebAnnotationModel.Service;
-using SqlGeometryUtils;
-using System.Data.Entity.Spatial;
+﻿using Annotation.Interfaces;
 using AnnotationService.Types;
-
 using Geometry;
-using Annotation.Interfaces;
 using Microsoft.SqlServer.Types;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
-{ 
+{
 
     public static class LocationTypeExtensions
     {
@@ -75,7 +69,7 @@ namespace WebAnnotationModel
                 //case "VolumePosition":
                 //    return true;
                 //case "VolumeShape":
-                  //  return true;
+                //  return true;
                 case "MosaicShape":
                     return true;
                 default:
@@ -91,7 +85,7 @@ namespace WebAnnotationModel
             switch (propertyName)
             {
                 //case "VolumeShape":
-                  //  return true;
+                //  return true;
                 case "MosaicShape":
                     return true;
                 case "Radius":
@@ -102,7 +96,7 @@ namespace WebAnnotationModel
                     return false;
             }
         }
-        
+
         public static bool IsTerminalProperty(string propertyName)
         {
             if (string.IsNullOrEmpty(propertyName))
@@ -123,7 +117,7 @@ namespace WebAnnotationModel
 
         public override long ID
         {
-            get { return Data.ID; } 
+            get { return Data.ID; }
         }
 
         /// <summary>
@@ -155,14 +149,14 @@ namespace WebAnnotationModel
             get { return Data.ParentID; }
         }
 
-       // private StructureObj _Parent;
+        // private StructureObj _Parent;
         public StructureObj Parent
         {
             get
             {
-         //       if (_Parent != null)
-//                    return _Parent;
-                
+                //       if (_Parent != null)
+                //                    return _Parent;
+
                 if (ParentID.HasValue == false)
                     return null;
 
@@ -180,7 +174,7 @@ namespace WebAnnotationModel
             }
         }
 
-        
+
         private GridVector2? _MosaicPosition;
 
         public GridVector2 Position
@@ -203,7 +197,7 @@ namespace WebAnnotationModel
 
                 return _MosaicPosition.Value;
 
-               
+
             }
             /*
             set
@@ -249,7 +243,7 @@ namespace WebAnnotationModel
                 */
                 return _VolumePosition.Value;
             }
-            
+
             /*
             set
             {
@@ -268,7 +262,7 @@ namespace WebAnnotationModel
 
                 //                SetDBActionForChange();
             }*/
-            
+
         }
 
         private static GridVector2 CenterOfLocationShape(LocationType type, Microsoft.SqlServer.Types.SqlGeometry shape)
@@ -291,7 +285,7 @@ namespace WebAnnotationModel
         /// </summary>
         public double Z
         {
-            get {return Data.Position.Z; }
+            get { return Data.Position.Z; }
         }
 
         private Microsoft.SqlServer.Types.SqlGeometry _VolumeShape;
@@ -312,7 +306,7 @@ namespace WebAnnotationModel
                 if (value == null)
                     return;
 
-//                DbGeometry newValue = value.ToDbGeometry();
+                //                DbGeometry newValue = value.ToDbGeometry();
                 if (VolumeShape != null && VolumeShape.SpatialEquals(value)) return;
 
                 OnPropertyChanging("VolumeShape");
@@ -328,7 +322,7 @@ namespace WebAnnotationModel
 
                 SetDBActionForChange();
             }
-            
+
         }
 
         private Microsoft.SqlServer.Types.SqlGeometry _MosaicShape;
@@ -369,7 +363,7 @@ namespace WebAnnotationModel
                 SetDBActionForChange();
             }
         }
-        
+
 
         /// <summary>
         /// Record the hashcode of the volume transform used to map the location. 
@@ -391,7 +385,7 @@ namespace WebAnnotationModel
 
         private double CalculateRadius(Microsoft.SqlServer.Types.SqlGeometry shape)
         {
-            if(shape.STDimension() == 0)
+            if (shape.STDimension() == 0)
             {
                 return 8;
             }
@@ -418,11 +412,12 @@ namespace WebAnnotationModel
             else
                 return this.Width.Value / 2.0;
         }
-        
+
         private double? _Radius;
         public double Radius
         {
-            get {
+            get
+            {
                 if (!_Radius.HasValue)
                 {
                     _Radius = CalculateRadius(MosaicShape);
@@ -430,7 +425,7 @@ namespace WebAnnotationModel
                 }
 
                 return _Radius.Value;
-        }
+            }
             /*
             set {
                 if (Data.Radius == value)
@@ -467,6 +462,11 @@ namespace WebAnnotationModel
                 {
                     return g_MinimumWidth;
                 }
+                else if (Data.Width.HasValue == false)
+                {
+                    return g_MinimumWidth;
+                }
+
                 return Data.Width;
             }
             set
@@ -477,7 +477,7 @@ namespace WebAnnotationModel
                 OnPropertyChanging("Width");
                 Data.Width = value;
                 OnPropertyChanged("Width");
-                
+
                 SetDBActionForChange();
             }
         }
@@ -485,14 +485,15 @@ namespace WebAnnotationModel
         public LocationType TypeCode
         {
             get { return (LocationType)Data.TypeCode; }
-            set {
-            if(Data.TypeCode == (short)value)
-                return;
+            set
+            {
+                if (Data.TypeCode == (short)value)
+                    return;
 
-            OnPropertyChanging("TypeCode");
-            Data.TypeCode = (short)value;
-            SetDBActionForChange();
-            OnPropertyChanged("TypeCode");
+                OnPropertyChanging("TypeCode");
+                Data.TypeCode = (short)value;
+                SetDBActionForChange();
+                OnPropertyChanged("TypeCode");
             }
         }
 
@@ -506,8 +507,8 @@ namespace WebAnnotationModel
             get
             {
                 if (NumLinks >= 2)
-                    return false; 
-                return !(Terminal || OffEdge || VericosityCap || Untraceable );
+                    return false;
+                return !(Terminal || OffEdge || VericosityCap || Untraceable);
             }
         }
 
@@ -517,7 +518,7 @@ namespace WebAnnotationModel
         public bool IsVerifiedTerminal
         {
             get
-            { 
+            {
                 return (Terminal || OffEdge || VericosityCap || Untraceable);
             }
         }
@@ -545,7 +546,7 @@ namespace WebAnnotationModel
 
         private ObservableCollection<long> _ObservableLinks = null;
         private ReadOnlyObservableCollection<long> _ReadOnlyObservableLinks = null;
-        
+
         public long[] LinksCopy
         {
             get
@@ -566,10 +567,11 @@ namespace WebAnnotationModel
         /// </summary>
         public ReadOnlyObservableCollection<long> Links
         {
-            get {
+            get
+            {
                 lock (LinkLock)
                 {
-                    if(_ObservableLinks == null)
+                    if (_ObservableLinks == null)
                     {
                         if (Data.Links != null)
                         {
@@ -606,7 +608,7 @@ namespace WebAnnotationModel
                 }
             }
         }
-        
+
 
         public int NumLinks
         {
@@ -620,13 +622,13 @@ namespace WebAnnotationModel
                         return Data.Links.Length;
                 }
                 else
-                { 
+                {
                     //Debug.Assert(Data.Links.Length == Links.Count);
                     return _ObservableLinks.Count;
                 }
             }
         }
-        
+
         /// <summary>
         /// Allows LocationLinkStore to adjust the client after a link is created
         /// </summary>
@@ -666,7 +668,7 @@ namespace WebAnnotationModel
                 if (_ObservableLinks.Count > 0)
                     this.Data.Links = this._ObservableLinks.ToArray();
                 else
-                    this.Data.Links = null; 
+                    this.Data.Links = null;
 
             }
         }
@@ -674,28 +676,30 @@ namespace WebAnnotationModel
         public bool Terminal
         {
             get { return Data.Terminal; }
-            set {
+            set
+            {
                 if (Data.Terminal == value)
                     return;
 
-                OnPropertyChanging("Terminal"); 
+                OnPropertyChanging("Terminal");
                 Data.Terminal = value;
                 SetDBActionForChange();
-                OnPropertyChanged("Terminal"); 
+                OnPropertyChanged("Terminal");
             }
         }
 
         public bool OffEdge
         {
             get { return Data.OffEdge; }
-            set {
+            set
+            {
                 if (Data.OffEdge == value)
                     return;
 
-                OnPropertyChanging("OffEdge"); 
+                OnPropertyChanging("OffEdge");
                 Data.OffEdge = value;
                 SetDBActionForChange();
-                OnPropertyChanged("OffEdge"); 
+                OnPropertyChanged("OffEdge");
             }
         }
 
@@ -718,7 +722,8 @@ namespace WebAnnotationModel
 
         public IEnumerable<ObjAttribute> Attributes
         {
-            get {
+            get
+            {
 
                 if (_Attributes == null)
                 {
@@ -735,7 +740,7 @@ namespace WebAnnotationModel
                 string xmlstring = ObjAttribute.ToXml(value);
 
                 if (xmlstring == "")
-                    xmlstring = null; 
+                    xmlstring = null;
 
                 if (Data.AttributesXml != xmlstring)
                 {
@@ -779,13 +784,13 @@ namespace WebAnnotationModel
         /// Add the specified name to the attributes if it does not exists, removes it 
         /// </summary>
         /// <param name="tag"></param>
-        public bool ToggleAttribute(string tag, string value=null)
+        public bool ToggleAttribute(string tag, string value = null)
         {
             ObjAttribute attrib = new ObjAttribute(tag, value);
             List<ObjAttribute> listAttributes = this.Attributes.ToList();
             bool InList = listAttributes.ToggleAttribute(tag, value);
             this.Attributes = listAttributes;
-            return InList; 
+            return InList;
         }
 
         public LocationObj()
@@ -795,7 +800,7 @@ namespace WebAnnotationModel
 
         public LocationObj(Location obj)
         {
-            Data = obj;    
+            Data = obj;
         }
 
         public LocationObj(StructureObj parent,
@@ -806,7 +811,7 @@ namespace WebAnnotationModel
             this.Data.ID = Store.Locations.GetTempKey();
             this.Data.TypeCode = (short)shapeType;
 
-            if(shapeType == LocationType.CIRCLE)
+            if (shapeType == LocationType.CIRCLE)
                 this.Data.Radius = 16;
 
             if (shapeType == LocationType.POINT)
@@ -816,15 +821,15 @@ namespace WebAnnotationModel
 
             //this.Data.MosaicShape = mosaicShape.ToDbGeometry();
             //this.Data.VolumeShape = volumeShape.ToDbGeometry();
-            
-            this.Data.Section = SectionNumber; 
-            
+
+            this.Data.Section = SectionNumber;
+
             if (parent != null)
             {
                 this.Data.ParentID = parent.ID;
             }
 
-//          CallOnCreate(); 
+            //          CallOnCreate(); 
         }
 
         public LocationObj(StructureObj parent,
@@ -852,7 +857,7 @@ namespace WebAnnotationModel
             this.Data.Position = newdata.Position;
             this.Data.VolumePosition = newdata.VolumePosition;
             this.Data.Radius = newdata.Radius;
-            this.Data.Section = newdata.Section; 
+            this.Data.Section = newdata.Section;
             this.Data.Terminal = newdata.Terminal;
             this.Data.OffEdge = newdata.OffEdge;
             this.Data.ParentID = newdata.ParentID;
@@ -863,7 +868,7 @@ namespace WebAnnotationModel
             this.Data.VolumeShapeWKB = newdata.VolumeShapeWKB;
             this.Data.MosaicShapeWKB = newdata.MosaicShapeWKB;
         }
-        
+
 
         /*
         public override void Delete()
@@ -891,7 +896,7 @@ namespace WebAnnotationModel
             if (OnCreate != null)
             {
                 //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
-                OnCreate(this, null); 
+                OnCreate(this, null);
             }
         }
 

@@ -2,11 +2,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using System.Diagnostics;
 
 namespace Geometry.Meshing
 {
@@ -120,7 +118,7 @@ namespace Geometry.Meshing
 
             return sb.ToString();
         }
-        
+
         /// <summary>
         /// In edge cases we'll have points at the cut axis that within an epsilon distance along the cut axis. 
         /// For example:
@@ -150,7 +148,7 @@ namespace Geometry.Meshing
             //Find the start of points that are near the dividing line
             List<int> PointsToSort = new List<int>();
             long iStart = nLowerHalf - 1;
-            while(iStart >= 0)
+            while (iStart >= 0)
             {
                 GridVector2 p = mesh[(int)NewSortedAlongCutAxisVertSet[iStart]].Position;
                 double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.Y : p.X;
@@ -164,14 +162,14 @@ namespace Geometry.Meshing
             }
 
             if (iStart < 0)
-                iStart = 0; 
+                iStart = 0;
 
             //Find the end of points that are near the dividing line
             long iEnd = nLowerHalf - 1;
             while (iEnd < NewSortedAlongCutAxisVertSet.Length)
             {
                 GridVector2 p = mesh[(int)NewSortedAlongCutAxisVertSet[iEnd]].Position;
-                double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.Y: p.X;
+                double LinePos = cutDirection == CutDirection.HORIZONTAL ? p.Y : p.X;
                 if (Math.Abs(LinePos - OffAxisDividingLine) < Global.Epsilon)
                     iEnd += 1;
                 else
@@ -189,7 +187,7 @@ namespace Geometry.Meshing
             long[] toSort = new long[iEnd - iStart];
             GridVector2[] sortPos = new GridVector2[toSort.Length];
             double[] sortVals = new double[toSort.Length];
-            for(long i = iStart; i < iEnd; i++)
+            for (long i = iStart; i < iEnd; i++)
             {
                 long iArray = i - iStart;
                 toSort[iArray] = NewSortedAlongCutAxisVertSet[i];
@@ -200,7 +198,7 @@ namespace Geometry.Meshing
             int[] iSorted = sortVals.SortAndIndex();
             long[] correctOrder = iSorted.Select(i => toSort[i]).ToArray();
 
-            for(long i = iStart; i < iEnd; i++)
+            for (long i = iStart; i < iEnd; i++)
             {
                 long iArray = i - iStart;
                 NewSortedAlongCutAxisVertSet[i] = correctOrder[iArray];
@@ -208,12 +206,15 @@ namespace Geometry.Meshing
 
         }
 
-        public void SplitIntoHalves(IReadOnlyList<IVertex2D> mesh, out MeshCut LowerSubset, out MeshCut UpperSubset)
+        public void SplitIntoHalves(IReadOnlyList<IVertex2D> mesh, out MeshCut LowerSubset, out MeshCut UpperSubset, CutDirection cutDirection = CutDirection.NONE)
         {
             //Split the verticies into smaller groups and then merge the resulting triangulations
-            CutDirection cutDirection = BoundingBox.Width > BoundingBox.Height ? CutDirection.VERTICAL : CutDirection.HORIZONTAL;
+            if (cutDirection == CutDirection.NONE)
+            {
+                cutDirection = BoundingBox.Width > BoundingBox.Height ? CutDirection.VERTICAL : CutDirection.HORIZONTAL;
+            }
 
-            if(this.Verticies.Count < 2)
+            if (this.Verticies.Count < 2)
             {
                 throw new ArgumentException("Cannot cut zero or one verticies.");
             }
@@ -351,16 +352,33 @@ namespace Geometry.Meshing
             GridRectangle UpperHalfBBox;
             if (cutDirection == CutDirection.HORIZONTAL)
             {
-                LowerHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, BoundingBox.Bottom, nudgedDivisionPoint.Y);
-                UpperHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, nudgedDivisionPoint.Y, BoundingBox.Top);
+                /*
+                if (BoundingBox.Bottom == nudgedDivisionPoint.Y || BoundingBox.Top == nudgedDivisionPoint.Y)
+                {
+                    SplitIntoHalves(mesh,  out LowerSubset, out UpperSubset, CutDirection.VERTICAL);
+                    return;
+                }*/
+                double[] borders = new double[] { BoundingBox.Bottom, nudgedDivisionPoint.Y, BoundingBox.Top };
+                Array.Sort<double>(borders);
+                LowerHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, borders[0], borders[1]);
+                UpperHalfBBox = new GridRectangle(BoundingBox.Left, BoundingBox.Right, borders[1], borders[2]);
 
                 LowerSubset = new MeshCut(LowerHalfAlongAxis, LowerHalfOppAxis, cutDirection, LowerHalfBBox);
                 UpperSubset = new MeshCut(UpperHalfAlongAxis, UpperHalfOppAxis, cutDirection, UpperHalfBBox);
             }
             else
             {
-                LowerHalfBBox = new GridRectangle(BoundingBox.Left, nudgedDivisionPoint.X, BoundingBox.Bottom, BoundingBox.Top);
-                UpperHalfBBox = new GridRectangle(nudgedDivisionPoint.X, BoundingBox.Right, BoundingBox.Bottom, BoundingBox.Top);
+                /*
+                if (BoundingBox.Left == nudgedDivisionPoint.X || BoundingBox.Right == nudgedDivisionPoint.X)
+                {
+                    SplitIntoHalves(mesh, out LowerSubset, out UpperSubset, CutDirection.HORIZONTAL);
+                    return;
+                }
+                */
+                double[] borders = new double[] { BoundingBox.Left, nudgedDivisionPoint.X, BoundingBox.Right };
+                Array.Sort<double>(borders);
+                LowerHalfBBox = new GridRectangle(borders[0], borders[1], BoundingBox.Bottom, BoundingBox.Top);
+                UpperHalfBBox = new GridRectangle(borders[1], borders[2], BoundingBox.Bottom, BoundingBox.Top);
 
                 LowerSubset = new MeshCut(LowerHalfAlongAxis, LowerHalfOppAxis, cutDirection, LowerHalfBBox);
                 UpperSubset = new MeshCut(UpperHalfAlongAxis, UpperHalfOppAxis, cutDirection, UpperHalfBBox);

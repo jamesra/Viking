@@ -10,11 +10,11 @@ using VikingXNA;
 
 namespace VikingXNAGraphics
 {
-    public class RectangleView : BillboardViewBase, IRenderable
+    public class RectangleView : BillboardViewBase, IHitTesting
     {
         private GridRectangle _BoundingRect;
 
-        public GridRectangle BoundingRect
+        public override GridRectangle BoundingRect
         {
             get { return _BoundingRect; }
             set {
@@ -48,7 +48,9 @@ namespace VikingXNAGraphics
                 return BoundingRect;
             }
         }
-        
+
+        public GridRectangle BoundingBox => BoundingRect;
+
         public RectangleView(GridRectangle boundingRect, Color color) : base(color)
         {
             this.BoundingRect = boundingRect;
@@ -99,16 +101,21 @@ namespace VikingXNAGraphics
                 {
                     pass.Apply();
 
-                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 
                         0,
-                        0,
-                        6,
+                        0, 
+                        6, 
                         0,
                         2);
                 }
             }
 
             device.BlendState = originalState; 
+        }
+
+        public bool Contains(GridVector2 Position)
+        {
+            return BoundingRect.Contains(Position);
         }
     }
 }

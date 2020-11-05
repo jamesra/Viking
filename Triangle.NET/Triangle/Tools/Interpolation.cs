@@ -46,7 +46,7 @@ namespace TriangleNet.Tools
             // origin to its apex.
             xi = (yao * dx - xao * dy) * (2.0 * denominator);
             eta = (xdo * dy - ydo * dx) * (2.0 * denominator);
-        
+
             for (int i = 0; i < n; i++)
             {
                 // Interpolate the vertex attributes.

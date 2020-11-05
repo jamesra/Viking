@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
 using System.Collections.Immutable;
 
 namespace Geometry.Meshing
@@ -57,7 +53,7 @@ namespace Geometry.Meshing
         public long Origin;
         public long Target;
         public double Angle;
-        public bool IsClockwise; 
+        public bool IsClockwise;
 
         public EdgeAngle(long origin, long target, double angle, bool clockwise)
         {
@@ -70,9 +66,9 @@ namespace Geometry.Meshing
         public override string ToString()
         {
             return string.Format("{0}->{1} a: {2} cw: {3}", Origin, Target, Angle, IsClockwise);
-        } 
+        }
     }
-    
+
     /// <summary>
     /// An interface  indicating the vertex can sort edges based on angle
     /// </summary>

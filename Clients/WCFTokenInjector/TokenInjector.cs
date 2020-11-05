@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ServiceModel;
+﻿using System.ServiceModel;
 using System.ServiceModel.Channels;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Viking.Tokens
 {
@@ -21,7 +16,7 @@ namespace Viking.Tokens
 
         public object BeforeSendRequest(ref Message request, IClientChannel channel)
         {
-            if(BearerTokenAuthority != null && BearerToken != null)
+            if (BearerTokenAuthority != null && BearerToken != null)
                 request.Headers.Add(MessageHeader.CreateHeader("Bearer", BearerTokenAuthority, BearerToken.AccessToken));
             return null;
         }

@@ -6,26 +6,49 @@ using System.Threading.Tasks;
 
 namespace MonogameTestbed
 {
-    public enum ENDPOINT
+    public enum Endpoint
     {
         TEST,
         RC1,
         RC2,
         TEMPORALMONKEY,
         INFERIORMONKEY,
-        RPC1
+        RPC1,
+        RPC2
+    }
+     
+
+    public static class EnumExtensions
+    { 
+        public static T ToEnum<T>(this string value) 
+            where T : struct, IConvertible
+        {
+            if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
+            Array values = Enum.GetValues(typeof(T));
+            foreach (var program in values)
+            {
+                string str = program.ToString();
+                if (str == value)
+                {
+                    return (T)program;
+                }
+            }
+
+            throw new NotImplementedException($"Unknown enum type: {value} of enum {typeof(T)}");
+        }
     }
 
     static public class DataSource
     {
         
 
-        public static Dictionary<ENDPOINT, Uri> EndpointMap = new Dictionary<ENDPOINT, Uri> { { ENDPOINT.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
-                                                                                               { ENDPOINT.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
-                                                                                               { ENDPOINT.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
-                                                                                               { ENDPOINT.TEMPORALMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzTemporalMonkey/OData") },
-                                                                                               { ENDPOINT.INFERIORMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzInferiorMonkey/OData") },
-                                                                                               { ENDPOINT.RPC1, new Uri("http://websvc1.connectomes.utah.edu/RPC1/OData") }};
+        public static Dictionary<Endpoint, Uri> EndpointMap = new Dictionary<Endpoint, Uri> { { Endpoint.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
+                                                                                               { Endpoint.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
+                                                                                               { Endpoint.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
+                                                                                               { Endpoint.TEMPORALMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzTemporalMonkey/OData") },
+                                                                                               { Endpoint.INFERIORMONKEY, new Uri("http://websvc1.connectomes.utah.edu/NeitzInferiorMonkey/OData") },
+                                                                                               { Endpoint.RPC1, new Uri("http://websvc1.connectomes.utah.edu/RPC1/OData") },
+                                                                                               { Endpoint.RPC2, new Uri("http://websvc1.connectomes.utah.edu/RPC2/OData") }};
 
     }
 }

@@ -1,27 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.Net;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
-using System.Threading;
-using System.Security.AccessControl;
-using Viking.UI;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
-using Viking.Properties;
-using System.Xml.Linq;
-using System.Windows.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Windows.Threading;
+using System.Xml.Linq;
 using Utils;
+using Viking.Properties;
 
 namespace Viking.UI.Forms
-{ 
+{
     public partial class LogonASPMembership : Form
     {
         private string _AuthenticationServiceURL = null;
@@ -93,7 +85,7 @@ namespace Viking.UI.Forms
                             {
                                 this.Invoke(new System.Action(() => VolumeDocument = document));
                             }
-                            catch(System.ObjectDisposedException)
+                            catch (System.ObjectDisposedException)
                             {
                                 System.Diagnostics.Trace.WriteLine("Invoking action on disposed object in LogonASPMembership");
                             }

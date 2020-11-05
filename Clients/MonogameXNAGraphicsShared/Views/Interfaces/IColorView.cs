@@ -15,4 +15,13 @@ namespace VikingXNAGraphics
         Color Color { get; set; }
         float Alpha { get; set; }
     }
+
+    /// <summary>
+    /// An interface for views with a foreground and background color which can be adjusted
+    /// </summary>
+    public interface IDualColorView
+    {
+        IColorView ForegroundColor { get; }
+        IColorView BackgroundColor { get; }
+    }
 }

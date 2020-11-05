@@ -1,25 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using AnnotationVizLib.WCFClient.AnnotationClient;
 using System.Diagnostics;
-using AnnotationVizLib.WCFClient.AnnotationClient;
 
 namespace AnnotationVizLib.WCFClient
 {
     public static class ConnectionFactory
     {
-        public static string Endpoint 
+        public static string Endpoint
         {
-            get {
+            get
+            {
                 System.Diagnostics.Debug.Assert(_Endpoint != null, "AnnotationGraphLib.ConnectionFactory used before SetConnection(endpoint, userCredentials) was called");
-                 
+
                 return _Endpoint;
             }
         }
         private static string _Endpoint = null;
 
-        public static System.Net.NetworkCredential  userCredentials
+        public static System.Net.NetworkCredential userCredentials
         {
             get
             {
@@ -28,12 +25,12 @@ namespace AnnotationVizLib.WCFClient
                 return _userCredentials;
             }
         }
-        private static System.Net.NetworkCredential _userCredentials = null; 
+        private static System.Net.NetworkCredential _userCredentials = null;
 
         public static void SetConnection(string endpoint, System.Net.NetworkCredential userCredentials)
         {
-            ConnectionFactory._Endpoint = endpoint; 
-            ConnectionFactory._userCredentials = userCredentials; 
+            ConnectionFactory._Endpoint = endpoint;
+            ConnectionFactory._userCredentials = userCredentials;
         }
 
         public static AnnotateStructureTypesClient CreateStructureTypesClient()

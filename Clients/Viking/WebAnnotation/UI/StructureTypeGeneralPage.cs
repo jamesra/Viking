@@ -1,15 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
-using System.Windows.Forms;
 using System.Diagnostics;
-using WebAnnotation.ViewModel;
+using System.Windows.Forms;
 using Viking.Common;
-
-using WebAnnotationModel;
+using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.UI
 {
@@ -35,20 +28,20 @@ namespace WebAnnotation.UI
 
             this.textName.Text = this.Obj.Name;
 
-            this.textCode.Text = this.Obj.Code; 
+            this.textCode.Text = this.Obj.Code;
 
             this.textNotes.Text = this.Obj.Notes;
 
-            this.textID.Text = this.Obj.ID.ToString(); 
+            this.textID.Text = this.Obj.ID.ToString();
 
-            this.btnColor.BackColor = this.Obj.Color; 
+            this.btnColor.BackColor = this.Obj.Color;
         }
 
         protected override void OnSaveChanges()
         {
             this.Obj.Name = this.textName.Text;
 
-            this.Obj.Code = this.textCode.Text; 
+            this.Obj.Code = this.textCode.Text;
 
             this.Obj.Notes = this.textNotes.Text;
 
@@ -62,7 +55,7 @@ namespace WebAnnotation.UI
             DialogResult result = colorDialog.ShowDialog();
             if (result == DialogResult.OK)
             {
-                btnColor.BackColor = colorDialog.Color; 
+                btnColor.BackColor = colorDialog.Color;
             }
         }
     }

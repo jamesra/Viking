@@ -1,10 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using System.Collections.Generic;
+﻿using Geometry;
+using System;
 using System.Collections.Concurrent;
-using System.Linq;
-using Geometry;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace WebAnnotationModel
 {
@@ -62,8 +61,8 @@ namespace WebAnnotationModel
         {
             this.AsyncResult = result;
             this.LastQuery = DateTime.UtcNow;
-            
-            
+
+
 #if DEBUG
             System.Threading.Interlocked.Increment(ref RegionRequestData<OBJECT>.NumOutstandingQueries);
             active_requests.TryAdd(debug_message, debug_message);
@@ -132,9 +131,9 @@ namespace WebAnnotationModel
     /// Return a flatter pyramid instead of a new level for every power of 2
     /// </summary>
     /// <typeparam name="OBJECT"></typeparam>
-    public class RegionPyramid<OBJECT>: BoundlessRegionPyramid<RegionRequestData<OBJECT>>
+    public class RegionPyramid<OBJECT> : BoundlessRegionPyramid<RegionRequestData<OBJECT>>
         where OBJECT : class
-    { 
+    {
         public RegionPyramid(GridCellDimensions cellDimensions, double PowerScale) : base(cellDimensions, PowerScale)
         {
 
@@ -154,10 +153,10 @@ namespace WebAnnotationModel
         IRegionQuery<KEY, OBJECT> objectStore;
 
         ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new ConcurrentDictionary<int, RegionPyramid<OBJECT>>();
-        
+
         public RegionLoader(IRegionQuery<KEY, OBJECT> store) : this(store, new GridCellDimensions(2000, 2000), 3)
         {
-            
+
             this.objectStore = store;
         }
 
@@ -193,13 +192,13 @@ namespace WebAnnotationModel
         /// <param name="callback">A thread-safe callback function to hand the loaded objects to</param>
         public void LoadSectionAnnotationsInRegion(GridRectangle? VolumeBounds,
                                                     double ScreenPixelSizeInVolume,
-                                                    int SectionNumber, 
+                                                    int SectionNumber,
                                                     Action<ICollection<OBJECT>> OnServerObjectsLoadedCallback,
                                                     Action<ICollection<OBJECT>> FoundCachedLocalObjectsCallback)
         {
-            if(!VolumeBounds.HasValue)
+            if (!VolumeBounds.HasValue)
             {
-                return; 
+                return;
             }
             /*
 #if REGION_LOADING_TRACE
@@ -214,7 +213,7 @@ namespace WebAnnotationModel
             GridRange<RegionRequestData<OBJECT>> gridRange = level.SubGridForRegion(VolumeBounds);
 
             DateTime currentTime = DateTime.UtcNow;
-            
+
             foreach (GridIndex iCell in gridRange.Indicies)
             {
                 int iX = iCell.X;
@@ -224,8 +223,8 @@ namespace WebAnnotationModel
                 //Something I learned debugging why multiple requests for the same region being launched is that the delegate for GetOrAddCell can
                 //be called multiple times if no value is in the dictionary and multiple threads all attempt to add a value before a thread inserts 
                 //a value.  So make GetOrAdd calls cheap.
-                RegionRequestData <OBJECT> cell = level.GetOrAddCell(iCell, (icell) => new RegionRequestData<OBJECT>());
-                lock(cell)
+                RegionRequestData<OBJECT> cell = level.GetOrAddCell(iCell, (icell) => new RegionRequestData<OBJECT>());
+                lock (cell)
                 {
                     //If we are waiting on results, add our callback to the list of functions to call when the request is complete
                     if (RegionIsDueForRefresh(cell))
@@ -270,7 +269,7 @@ namespace WebAnnotationModel
             RegionRequestData<OBJECT> newCell = new RegionRequestData<OBJECT>();
 
             AttachRequestForRegion(newCell, level, iCell, SectionNumber, OnLoadCompletedCallback);
-             
+
             return newCell;
         }
 
@@ -287,7 +286,7 @@ namespace WebAnnotationModel
                 cell.AddCallback(OnLoadCompletedCallback);
 
             Debug.Assert(!cell.OutstandingQuery, "Starting a query for a region we already have an outstanding request for");
-            
+
             MixedLocalAndRemoteQueryResults<KEY, OBJECT> localObjects = objectStore.GetObjectsInRegionAsync(SectionNumber, cellBounds, level.MinRadius, LastQueryUtc, cell.OnLoadCompleted);
             cell.SetQuery(localObjects.ServerRequestResult);
 

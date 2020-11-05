@@ -2,8 +2,8 @@
 namespace TriangleNet.Meshing
 {
     using System.Collections.Generic;
-    using TriangleNet.Topology;
     using TriangleNet.Geometry;
+    using TriangleNet.Topology;
 
     /// <summary>
     /// Mesh interface.

@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Xml;
-using System.Xml.Linq; 
+using System.Xml.Linq;
 
 namespace Viking.VolumeModel
 {
@@ -15,13 +11,13 @@ namespace Viking.VolumeModel
         readonly Volume volume;
         readonly string SectionPath;
         readonly XElement reader;
-        readonly string DescriptiveString; 
+        readonly string DescriptiveString;
 
         public Section newSection;
 
         public override string ToString()
         {
-            return DescriptiveString; 
+            return DescriptiveString;
         }
 
 
@@ -31,21 +27,21 @@ namespace Viking.VolumeModel
             this.volume = vol;
             this.SectionPath = path;
 
-            this.DescriptiveString = SectionElement.ToString(); 
+            this.DescriptiveString = SectionElement.ToString();
         }
 
         public void ThreadPoolCallback(Object threadContext)
         {
             newSection = new Section(volume, SectionPath, reader);
 
-            DoneEvent.Set(); 
+            DoneEvent.Set();
         }
 
         #region IDisposable Members
 
         public void Dispose()
         {
-            DoneEvent.Close(); 
+            DoneEvent.Close();
         }
 
         #endregion

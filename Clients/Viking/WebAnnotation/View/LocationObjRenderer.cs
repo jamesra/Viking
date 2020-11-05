@@ -1,20 +1,9 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Diagnostics;
-using System.Drawing;
-using System.Windows.Forms;
-
-using Geometry;
 using VikingXNAGraphics;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using WebAnnotation.UI;
-using WebAnnotationModel;
-using WebAnnotation.ViewModel;
 using WebAnnotation.View;
-using SqlGeometryUtils;
 
 namespace WebAnnotation
 {
@@ -34,8 +23,8 @@ namespace WebAnnotation
         /// <param name="graphicsDevice"></param>
         /// <param name="basicEffect"></param>
         /// <param name="SectionNumber"></param>
-        public static void DrawBackgrounds(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect, 
-                                           AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+        public static void DrawBackgrounds(List<LocationCanvasView> listToDraw, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
+                                           OverlayShaderEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
                                            RoundCurve.CurveManager overlayCurveManager,
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
@@ -43,7 +32,7 @@ namespace WebAnnotation
                 return;
 
             int MaxCanvasViewDepth = listToDraw.Max(l => l.ParentDepth);
-             
+
             int StartingDepthStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice);
             const int DepthStencilStepSize = 5;
             int EndingDepthStencilValue = StartingDepthStencilValue + (DepthStencilStepSize * MaxCanvasViewDepth);
@@ -52,7 +41,7 @@ namespace WebAnnotation
             var depthGroups = listToDraw.GroupBy(l => l.ParentDepth).OrderBy(l => l.Key).Reverse();
 
             DeviceStateManager.SaveDeviceState(graphicsDevice);
-            
+
             DeviceStateManager.SetRasterizerStateForShapes(graphicsDevice);
 
             foreach (var depthGroup in depthGroups)
@@ -63,32 +52,32 @@ namespace WebAnnotation
                 DeviceStateManager.SetDepthStencilValue(graphicsDevice, DepthStencilValue);
                 DeviceStateManager.SetDepthBuffer(graphicsDevice, CompareFunction.LessEqual);
                 DeviceStateManager.SetRenderStateForShapes(graphicsDevice, ColorWriteChannels.None);
-                
+
                 // graphicsDevice.BlendState.ColorWriteChannels = ColorWriteChannels.None;
 
                 //Draw backgrounds once to populate the Z-buffer and stencil buffer but do not write colors
                 DrawBackgroundsAtDepth(depthGroup, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, overlayCurveManager, Scene, VisibleSectionNumber);
 
-              //  graphicsDevice.BlendState.ColorWriteChannels = ColorWriteChannels.All;
+                //  graphicsDevice.BlendState.ColorWriteChannels = ColorWriteChannels.All;
                 DeviceStateManager.SetDepthStencilValue(graphicsDevice, DepthStencilValue, stencilFunction: CompareFunction.Equal);
                 DeviceStateManager.SetDepthBuffer(graphicsDevice, CompareFunction.Equal);
                 DeviceStateManager.SetRenderStateForShapes(graphicsDevice, ColorWriteChannels.All);
 
                 //Draw backgrounds again and only update colors where the depth and stencil values match
                 DrawBackgroundsAtDepth(depthGroup, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, overlayCurveManager, Scene, VisibleSectionNumber);
-                
+
                 graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
 
                 DepthStencilValue -= DepthStencilStepSize;
             }
-             
+
             DeviceStateManager.SetDepthBuffer(graphicsDevice, CompareFunction.LessEqual);
             DeviceStateManager.RestoreDeviceState(graphicsDevice);
-            DeviceStateManager.SetDepthStencilValue(graphicsDevice, EndingDepthStencilValue + 1); 
+            DeviceStateManager.SetDepthStencilValue(graphicsDevice, EndingDepthStencilValue + 1);
         }
 
         private static void DrawBackgroundsAtDepth(IGrouping<int, LocationCanvasView> depthGroup, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
-                                           AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+                                           OverlayShaderEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
                                            RoundCurve.CurveManager overlayCurveManager,
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
@@ -128,11 +117,11 @@ namespace WebAnnotation
                 {
                     throw new ArgumentException("Cannot draw background for unknown type" + typeGroup.Key.FullName);
                 }
-            } 
+            }
         }
 
         public static void DrawCanvasView(ICollection<LocationCanvasView> views, GraphicsDevice graphicsDevice, BasicEffect basicEffect,
-                                           AnnotationOverBackgroundLumaEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
+                                           OverlayShaderEffect overlayEffect, RoundLineCode.RoundLineManager overlayLineManager,
                                            RoundCurve.CurveManager overlayCurveManager,
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
@@ -181,7 +170,7 @@ namespace WebAnnotation
         /// <param name="label"></param>
         /// <returns></returns>
         public static string[] SplitLabel(string label)
-        {  
+        {
             //Split the string at the first space before the midpoint
             string topRow = "";
             string bottomRow = "";
@@ -212,6 +201,6 @@ namespace WebAnnotation
             bottomRow = bottomRow.TrimEnd();
 
             return new String[] { topRow, bottomRow };
-        } 
+        }
     }
 }

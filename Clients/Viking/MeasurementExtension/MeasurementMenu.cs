@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using SIMeasurement;
-
+﻿using SIMeasurement;
+using System;
 using System.Diagnostics;
 
 namespace MeasurementExtension
@@ -40,10 +36,10 @@ namespace MeasurementExtension
         static public void OnMenuMeasureLine(object sender, EventArgs e)
         {
             Debug.Print("Measure Line");
-             
+
             Viking.UI.Controls.SectionViewerControl viewer = Viking.UI.State.ViewerControl;
-             
+
             viewer.CommandQueue.EnqueueCommand(typeof(MeasureCommand));
-        } 
+        }
     }
 }

@@ -153,7 +153,7 @@ namespace TriangleNet.Tools
                     // The two segments are connected.
                     if (p0 == q1 && p1 != null)
                     {
-                        if (IsBadAngle(q0, p0, p1,threshold))
+                        if (IsBadAngle(q0, p0, p1, threshold))
                         {
                             horrors++;
                             logger.Warning(String.Format("Bad segment angle found at index {0}.", i),

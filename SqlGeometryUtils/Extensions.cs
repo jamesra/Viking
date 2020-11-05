@@ -1,11 +1,10 @@
-﻿using System;
+﻿using Geometry;
+using Microsoft.SqlServer.Types;
+using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Linq;
 using System.Text;
-using Geometry;
-using System.Threading.Tasks;
-using System.Data.SqlTypes;
-using Microsoft.SqlServer.Types;
 
 namespace SqlGeometryUtils
 {
@@ -64,10 +63,10 @@ namespace SqlGeometryUtils
             return new GridCircle(bbox.Center, bbox.Width / 2.0);
         }
 
-        
+
         public static IShape2D ToShape2D(this SqlGeometry shape)
         {
-            switch(shape.GeometryType())
+            switch (shape.GeometryType())
             {
                 case SupportedGeometryType.POINT:
                     return new GridVector2(shape.STX.Value, shape.STY.Value);
@@ -135,12 +134,12 @@ namespace SqlGeometryUtils
 
         public static void ThrowIfInvalid(this SqlGeometry geom)
         {
-            if(geom.STIsValid().IsFalse)
+            if (geom.STIsValid().IsFalse)
             {
                 throw new ArgumentException(string.Format("Geometry invalid\n{0}\n{1}", geom.ToString(), geom.IsValidDetailed()));
             }
         }
-        
+
 
         public static Microsoft.SqlServer.Types.SqlGeometry ToSqlGeometry(this GridVector2 p)
         {
@@ -259,7 +258,7 @@ namespace SqlGeometryUtils
 
         public static SqlGeometry ToSqlGeometry(this IShape2D shape)
         {
-            if(shape is GridPolygon)
+            if (shape is GridPolygon)
             {
                 return ((GridPolygon)shape).ToSqlGeometry();
             }
@@ -293,7 +292,7 @@ namespace SqlGeometryUtils
         }
 
         public static SqlGeometry ToPolygon(this GridVector2[] points, ICollection<GridVector2[]> InteriorRings = null)
-        {             
+        {
             SqlGeometryBuilder builder = new SqlGeometryBuilder();
             builder.SetSrid(0);
             builder.BeginGeometry(OpenGisGeometryType.Polygon);
@@ -308,7 +307,7 @@ namespace SqlGeometryUtils
                     builder.AddPolygon(innerRing);
                 }
             }
-            
+
             builder.EndGeometry();
 
             SqlGeometry polygon = builder.ConstructedGeometry;
@@ -410,7 +409,7 @@ namespace SqlGeometryUtils
             return sb.ToString();
         }
 
-        
+
 
         private static GridVector2[] CalculateCircleCardinalPoints(int nPoints)
         {
@@ -450,7 +449,7 @@ namespace SqlGeometryUtils
             if (Radius == 0)
                 throw new ArgumentException("Cannot create circle with a radius of zero");
 
-            
+
             GridVector2[] points = ScaleAndTranslateCircleCardinalPoints(X, Y, Radius);
 
             SqlGeometryBuilder builder = new SqlGeometryBuilder();
@@ -458,13 +457,13 @@ namespace SqlGeometryUtils
             builder.BeginGeometry(OpenGisGeometryType.CurvePolygon);
             builder.BeginFigure(points[0].X, points[0].Y, Z, null);
 
-            for(int i = 1; i < points.Length; i += 2)
+            for (int i = 1; i < points.Length; i += 2)
             {
                 //builder.AddLine(points[i].X, points[i].Y, Z, null);
                 builder.AddCircularArc(points[i].X, points[i].Y, Z, null,
                                        points[i + 1].X, points[i + 1].Y, Z, null);
             }
-            
+
             builder.EndFigure();
             builder.EndGeometry();
 
@@ -482,7 +481,7 @@ namespace SqlGeometryUtils
             */
             return output;
             //return SqlGeometry.STGeomFromText(circle_shape_string.ToSqlChars(), 0);
-            
+
         }
 
 
@@ -528,7 +527,7 @@ namespace SqlGeometryUtils
         {
             return geometry.STInteriorRingN(i + 1);
         }
-         
+
         public static int NumInteriorRings(this SqlGeometry geometry)
         {
             SqlInt32 numInteriorRings = geometry.STNumInteriorRing();
@@ -605,7 +604,7 @@ namespace SqlGeometryUtils
                 return geometry.ExteriorRing.ToPoints();
             }
 
-            
+
         }
 
         /// <summary>
@@ -630,7 +629,7 @@ namespace SqlGeometryUtils
 
                     return points;
                 }
-                else if(type == SupportedGeometryType.CURVEPOLYGON)
+                else if (type == SupportedGeometryType.CURVEPOLYGON)
                 {
                     GridVector2[] points = new GridVector2[nCircleCardinalPoints];
                     GridCircle circle = geometry.ToCircle();
@@ -643,7 +642,7 @@ namespace SqlGeometryUtils
             else
             {
                 return geometry.STExteriorRing().ToPoints();
-            } 
+            }
         }
 
         /// <summary>
@@ -659,7 +658,7 @@ namespace SqlGeometryUtils
             }
 
             List<GridVector2[]> innerRings = new List<GridVector2[]>(geometry.NumInteriorRings());
-            for(int iRing = 0; iRing < geometry.NumInteriorRings(); iRing++)
+            for (int iRing = 0; iRing < geometry.NumInteriorRings(); iRing++)
             {
                 SqlGeometry innerRing = geometry.GetInteriorRing(iRing);
                 innerRings.Add(innerRing.ToPoints());
@@ -681,9 +680,9 @@ namespace SqlGeometryUtils
 
             return geometry.STEnvelope().Centroid();
         }
-        
+
         public static string ToGeometryString(SqlString GeometryType, GridVector2[] points)
-        {  
+        {
             string TypeString = GeometryType.Value;
             switch (TypeString.ToUpper())
             {
@@ -715,9 +714,9 @@ namespace SqlGeometryUtils
             return output.ToString();
         }
 
-        public static SqlGeometry ToGeometry(SupportedGeometryType GeometryType, GridVector2[] points, ICollection<GridVector2[]> innerRings=null)
+        public static SqlGeometry ToGeometry(SupportedGeometryType GeometryType, GridVector2[] points, ICollection<GridVector2[]> innerRings = null)
         {
-            switch(GeometryType)
+            switch (GeometryType)
             {
                 case SupportedGeometryType.POINT:
                     System.Diagnostics.Debug.Assert(points.Length == 1, "Only expect one point when converting to geometry point type");
@@ -763,7 +762,7 @@ namespace SqlGeometryUtils
         /// <returns></returns>
         public static SqlGeometry Scale(this SqlGeometry geometry, UnitsAndScale.IScale scale)
         {
-            if(geometry.HasInteriorRings())
+            if (geometry.HasInteriorRings())
             {
                 return ScaleShapeWithInnerRings(geometry, scale);
             }
@@ -773,7 +772,7 @@ namespace SqlGeometryUtils
                 GridVector2[] scaled_p = points.Select(p => new GridVector2(p.X * scale.X.Value, p.Y * scale.Y.Value)).ToArray();
                 return ToGeometry(geometry.GeometryType(), scaled_p);
             }
-            
+
         }
 
         private static SqlGeometry ScaleShapeWithInnerRings(this SqlGeometry geometry, UnitsAndScale.IScale scale)
@@ -805,8 +804,8 @@ namespace SqlGeometryUtils
         public static SqlGeometry Translate(this SqlGeometry geometry, GridVector2 offset)
         {
             //return SqlGeometry.STGeomFromText(TranslateString(geometry, offset).ToSqlChars(), geometry.STSrid.Value);
-              
-            if(geometry.HasInteriorRings())
+
+            if (geometry.HasInteriorRings())
             {
                 return TranslateShapeWithInnerRings(geometry, offset);
             }
@@ -826,7 +825,7 @@ namespace SqlGeometryUtils
 
             GridVector2[] TranslatedExteriorRing = ExteriorRing.Translate(offset).ToArray();
 
-            for(int iRing = 0; iRing < NumInteriorRings; iRing++ )
+            for (int iRing = 0; iRing < NumInteriorRings; iRing++)
             {
                 GridVector2[] InteriorRing = geometry.GetInteriorRing(iRing).ToPoints();
                 GridVector2[] TranslatedInteriorRing = InteriorRing.Translate(offset).ToArray();
@@ -864,6 +863,6 @@ namespace SqlGeometryUtils
             GridVector2[] exteriorRing = shape.ToPoints();
 
             return exteriorRing.ToPolygon(inner_rings.AsReadOnly());
-        } 
+        }
     }
 }

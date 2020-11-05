@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Xml.Linq;
 using Utils;
-using Geometry;
 
 namespace Viking.VolumeModel
 {
@@ -27,26 +24,26 @@ namespace Viking.VolumeModel
         protected Pyramid(string name, string path)
         {
             this.Name = name;
-            this.Path = path; 
+            this.Path = path;
         }
 
         protected Pyramid(XElement PyramidElement)
         {
-            this.Name = IO.GetAttributeCaseInsensitive(PyramidElement,"name").Value;
+            this.Name = IO.GetAttributeCaseInsensitive(PyramidElement, "name").Value;
             this.Path = IO.GetAttributeCaseInsensitive(PyramidElement, "path").Value;
 
             XElement scale_elem = PyramidElement.Elements().Where(elem => elem.Name.LocalName == "Scale").FirstOrDefault();
             if (scale_elem != null)
                 this.XYScale = scale_elem.ParseScale();
-            
+
             //Examine the XML document and determine the scale
             IEnumerable<XElement> LevelElements = PyramidElement.Elements().Where(elem => elem.Name.LocalName == "Level");
             foreach (XElement levelElement in LevelElements)
             {
-                int Downsample = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(levelElement,"Downsample").Value);
+                int Downsample = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(levelElement, "Downsample").Value);
                 string LevelPath = IO.GetAttributeCaseInsensitive(levelElement, "path").Value;
 
-                AddLevel(Downsample, LevelPath); 
+                AddLevel(Downsample, LevelPath);
             }
         }
 
@@ -68,7 +65,7 @@ namespace Viking.VolumeModel
                 pyramid.XYScale = scale_elem.ParseScale();
 
             //Examine the XML document and determine the scale
-            
+
             foreach (XElement levelElement in LevelElements)
             {
                 int Downsample = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(levelElement, "Downsample").Value);
@@ -78,7 +75,7 @@ namespace Viking.VolumeModel
             }
 
             return pyramid;
-             
+
         }
         /*
             string Name = IO.GetAttributeCaseInsensitive(PyramidElement, "name").Value;
@@ -150,7 +147,7 @@ namespace Viking.VolumeModel
         {
             if (LevelsToPaths.ContainsKey(level) == false)
                 return null;
-            
+
             return LevelsToPaths[level];
         }
     }

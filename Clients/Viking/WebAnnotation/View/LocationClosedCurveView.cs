@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
+﻿using Geometry;
 using Microsoft.SqlServer.Types;
-using SqlGeometryUtils;
-using WebAnnotationModel;
-using VikingXNAGraphics;
-using System.Windows.Forms;
-using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
-using VikingXNA;
+using Microsoft.Xna.Framework.Graphics;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using VikingXNA;
+using VikingXNAGraphics;
+using WebAnnotation.UI;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
@@ -55,7 +53,7 @@ namespace WebAnnotation.View
                 return _ControlPointRadius;
             }
         }
-        
+
         public double lineWidth = 32;
 
         public static uint NumInterpolationPoints = Global.NumClosedCurveInterpolationPoints;
@@ -72,7 +70,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if(!_InscribedCircle.HasValue)
+                if (!_InscribedCircle.HasValue)
                 {
                     _InscribedCircle = this.VolumeShapeAsRendered.CalculateInscribedCircle(VolumeControlPoints);
                 }
@@ -81,7 +79,7 @@ namespace WebAnnotation.View
             }
         }
 
-        
+
 
         public void CreateLabelObjects()
         {
@@ -157,7 +155,7 @@ namespace WebAnnotation.View
                           VikingXNA.Scene scene,
                           RoundCurve.CurveManager lineManager,
                           Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect,
-                          VikingXNAGraphics.AnnotationOverBackgroundLumaEffect overlayEffect,
+                          VikingXNAGraphics.OverlayShaderEffect overlayEffect,
                           LocationClosedCurveView[] listToDraw)
         {
             OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
@@ -173,7 +171,7 @@ namespace WebAnnotation.View
 
             if (this.OverlappedLinkView != null && this.OverlappedLinkView.Contains(Position))
                 return true;
-            
+
             return base.Contains(Position);
         }
 
@@ -197,11 +195,11 @@ namespace WebAnnotation.View
             curveLabels.DrawLabel(spriteBatch, font, scene);
         }
 
-        public ICanvasGeometryView GetAnnotationAtPosition(GridVector2 position)
+        public ICanvasView GetAnnotationAtPosition(GridVector2 position)
         {
             if (OverlappedLinkView != null)
             {
-                ICanvasGeometryView containedAnnotation = OverlappedLinkView.GetAnnotationAtPosition(position);
+                ICanvasView containedAnnotation = OverlappedLinkView.GetAnnotationAtPosition(position);
                 if (containedAnnotation != null)
                     return containedAnnotation;
             }
@@ -244,6 +242,11 @@ namespace WebAnnotation.View
             }
         }
 
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
+        {
+            throw new NotImplementedException();
+        }
+
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             GridCircle TranslateTargetCircle = new GridCircle(this.InscribedCircle.Center, this.InscribedCircle.Radius / 2.0);
@@ -275,5 +278,9 @@ namespace WebAnnotation.View
                 CreateLabelObjects();
         }
 
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

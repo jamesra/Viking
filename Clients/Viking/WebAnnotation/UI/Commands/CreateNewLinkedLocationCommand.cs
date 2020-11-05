@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-
-using System.Diagnostics;
-
-using WebAnnotation.ViewModel; 
-using WebAnnotationModel; 
+using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -20,7 +13,7 @@ namespace WebAnnotation.UI.Commands
     {
         LocationObj NewLoc;
         LocationObj ExistingLoc;
-          
+
         public CreateNewLinkedLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
                                                LocationObj existingLoc,
                                                LocationObj newLoc)
@@ -32,7 +25,7 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)delegate() { this.Execute(); }); 
+            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
         }
 
         protected override void Execute()
@@ -40,9 +33,9 @@ namespace WebAnnotation.UI.Commands
             try
             {
                 LocationObj NewLocation = Store.Locations.Create(NewLoc, new long[] { ExistingLoc.ID });
-                Global.LastEditedAnnotationID = NewLocation.ID; 
+                Global.LastEditedAnnotationID = NewLocation.ID;
             }
-            catch (ArgumentOutOfRangeException )
+            catch (ArgumentOutOfRangeException)
             {
                 MessageBox.Show("The chosen point is outside mappable volume space, location not created", "Recoverable Error");
             }

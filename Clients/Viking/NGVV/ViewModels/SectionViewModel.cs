@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Viking.VolumeModel;
-using System.Diagnostics;
-using Viking.Common.UI;
-using Geometry;
 using System.ComponentModel;
+using System.Diagnostics;
 using Viking.Common;
+using Viking.Common.UI;
+using Viking.VolumeModel;
 
 namespace Viking.ViewModels
 {
@@ -24,7 +21,7 @@ namespace Viking.ViewModels
         public event Viking.Common.TransformChangedEventHandler TransformChanged;
 
         public event PropertyChangedEventHandler PropertyChanged;
-         
+
 
         [Column("Name")]
         public string Name { get { return section.Name; } }
@@ -41,9 +38,9 @@ namespace Viking.ViewModels
 
         public override string ToString()
         {
-            return section.ToString(); 
+            return section.ToString();
         }
-        
+
         public string DefaultChannel { get { return section.DefaultChannel; } }
         public IList<string> Channels { get { return section.Channels; } }
 
@@ -51,14 +48,16 @@ namespace Viking.ViewModels
         public string DefaultPyramid { get { return section.DefaultPyramid; } }
         public List<string> TilesetNames { get { return section.TilesetNames; } }
         public List<string> PyramidTransformNames { get { return section.PyramidTransformNames; } }
-        public SortedList<string,Pyramid> ImagePyramids { get { return section.ImagePyramids; } }
+        public SortedList<string, Pyramid> ImagePyramids { get { return section.ImagePyramids; } }
 
         /// <summary>
         /// The currently displayed channels
         /// </summary>
-        public ChannelInfo[] ChannelInfoArray {
-            get {
-                if(section.ChannelInfoArray == null || section.ChannelInfoArray.Length == 0)
+        public ChannelInfo[] ChannelInfoArray
+        {
+            get
+            {
+                if (section.ChannelInfoArray == null || section.ChannelInfoArray.Length == 0)
                 {
                     ChannelInfo channel = new ChannelInfo();
                     channel.ChannelName = this.ActiveChannel;
@@ -156,7 +155,7 @@ namespace Viking.ViewModels
             }
 
             set
-            {   
+            {
                 bool SendEvent = false;
                 Debug.Assert(section != value);
                 if (section == value)
@@ -178,7 +177,7 @@ namespace Viking.ViewModels
 
                 if (SendEvent && OnReferenceSectionChanged != null)
                 {
-                    OnReferenceSectionChanged(this, new ReferenceSectionChangedEventArgs(this, 
+                    OnReferenceSectionChanged(this, new ReferenceSectionChangedEventArgs(this,
                                                                                          _oldReference == null ? new long?() : _oldReference.Number,
                                                                                          value == null ? new long?() : value.Number));
                 }
@@ -193,7 +192,7 @@ namespace Viking.ViewModels
         public SectionViewModel(VolumeViewModel Volume, Section section)
         {
             this._VolumeViewModel = Volume;
-            this.section = section; 
+            this.section = section;
         }
 
         #region IUIObject Members
@@ -205,28 +204,28 @@ namespace Viking.ViewModels
 
         public System.Windows.Forms.ContextMenu ContextMenu
         {
-            get 
+            get
             {
                 System.Windows.Forms.ContextMenu menu = new System.Windows.Forms.ContextMenu();
 
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
 
-                return menu; 
+                return menu;
             }
         }
 
         string IUIObjectBasic.ToolTip
         {
-            get { return this.ToString();  }
+            get { return this.ToString(); }
         }
 
         void IUIObjectBasic.Save()
         {
             //There is no backing store for the section
-            return; 
+            return;
         }
 
-        
+
         private event System.ComponentModel.PropertyChangedEventHandler OnValueChanged;
         internal event EventHandler OnBeforeDelete;
         internal event EventHandler OnAfterDelete;
@@ -263,7 +262,7 @@ namespace Viking.ViewModels
             add { OnAfterSave += value; }
             remove { OnAfterSave -= value; }
         }
-         
+
         event System.Collections.Specialized.NotifyCollectionChangedEventHandler IUIObject.ChildChanged
         {
             add { OnChildChanged += value; }
@@ -313,7 +312,7 @@ namespace Viking.ViewModels
             get { throw new NotImplementedException(); }
         }
 
-       
+
 
         #endregion
 
@@ -325,7 +324,7 @@ namespace Viking.ViewModels
 
         public void PrepareTransform(string transform)
         {
-            this.section.PrepareTransform(transform); 
+            this.section.PrepareTransform(transform);
         }
 
         public IVolumeToSectionTransform ActiveSectionToVolumeTransform
@@ -335,7 +334,7 @@ namespace Viking.ViewModels
                 return this._VolumeViewModel.GetSectionToVolumeTransform(this.section.Number);
             }
         }
-        
+
 
         /// <summary>
         /// Determines which transform should be used when rendering the section

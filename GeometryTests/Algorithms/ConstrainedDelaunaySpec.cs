@@ -1,13 +1,10 @@
-﻿using System;
-using System.Diagnostics;
+﻿using FsCheck;
+using Geometry;
+using Geometry.JSON;
+using Geometry.Meshing;
+using RTree;
 using System.Collections.Generic;
 using System.Linq;
-using Geometry;
-using Geometry.Meshing;
-using Geometry.JSON;
-using FsCheck;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using RTree;
 
 
 namespace GeometryTests.Algorithms
@@ -81,7 +78,7 @@ namespace GeometryTests.Algorithms
         /// </summary>
         /// <returns></returns>
         public IEdgeKey NextConstraint()
-       {
+        {
             if (EdgesAdded >= ConstraintEdges.Count)
                 return null;
 
@@ -137,7 +134,7 @@ namespace GeometryTests.Algorithms
             {
                 OriginalCandidateEdges = new int[mesh.Verticies.Count - 1].Select((v, i) => i).ToArray();
             }
-             
+
             this.ConstraintEdges = constraints;
         }
 
@@ -150,7 +147,7 @@ namespace GeometryTests.Algorithms
         private List<EdgeKey> CreateEdges(int[] edge_seq)
         {
             List<EdgeKey> edges = new List<EdgeKey>(edge_seq.Length);
-            for (int i = 0; i < edge_seq.Length-1; i++)
+            for (int i = 0; i < edge_seq.Length - 1; i++)
             {
                 edges.Add(new EdgeKey(edge_seq[i], edge_seq[i + 1]));
             }
@@ -187,11 +184,11 @@ namespace GeometryTests.Algorithms
 
             //Try to add one final edge to the list to create a closed shape
             int lastVert = AddedConstraints.Last();
-            for (int i = 0; i < AddedConstraints.Count-2; i++)
+            for (int i = 0; i < AddedConstraints.Count - 2; i++)
             {
                 EdgeKey proposedEdge = new EdgeKey(EdgeStart, candidateEdges[i]);
-               
-                if(TryCreateConstraint(proposedEdge, mesh, ConstrainedEdgeTree))
+
+                if (TryCreateConstraint(proposedEdge, mesh, ConstrainedEdgeTree))
                 {
                     AddedConstraints.Add(AddedConstraints[i]);
                     break; //Once we find a single edge we can close the shape to, stop
@@ -269,16 +266,16 @@ namespace GeometryTests.Algorithms
 
         public ConstrainedDelaunaySpec(int nVerts, int nEdgesMax)
         {
-            if(nEdgesMax > nVerts-1)
+            if (nEdgesMax > nVerts - 1)
             {
                 nEdgesMax = nVerts - 1;
 
                 if (nEdgesMax < 0)
-                    nEdgesMax = 0; 
+                    nEdgesMax = 0;
             }
 
             //Generate a set of candidate edges
-            int[] Edges = Arb.Default.UInt32().Generator.Sample(nVerts-1, nEdgesMax).Distinct().Select(u => (int)u).ToArray();
+            int[] Edges = Arb.Default.UInt32().Generator.Sample(nVerts - 1, nEdgesMax).Distinct().Select(u => (int)u).ToArray();
 
             OriginalMesh = TriangulatedMeshGenerators.RandomMesh().Sample(nVerts, 1).First();
             OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges);
@@ -345,15 +342,15 @@ namespace GeometryTests.Algorithms
 
             if (value.PeekConstraint() == null)
                 result = new NoOperation();
-                //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { });
-                //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { new NoOperation() });
+            //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { });
+            //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { new NoOperation() });
             else
                 result = new AddConstraint(value);
 
             //Trace.WriteLine(string.Format("Yield {0} from {1}", result, ID));
 
             return Gen.Constant<Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>>(result);
-                            
+
             //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { new AddConstraint(value) });
 
             /*Gen.Sized(size => Gen.ListOf(size > value.ConstraintEdges.Count < )
@@ -367,8 +364,8 @@ namespace GeometryTests.Algorithms
 
             return Gen.(listCommands);
             */
-            
-            
+
+
             //return Gen.F(value.EdgeVerts.Length - 1, Gen.Fresh<Command<TriangulationMesh<Vertex2D>, ConstrainedDelaunayModel>>(() => new AddConstraint(value)));
         }
         /*

@@ -1,18 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
+﻿using Geometry;
+using System;
 using System.Windows.Forms;
-using Geometry;
 
 namespace Viking.UI.Forms
 {
     public partial class ScreenshotForm : Form
     {
-        static bool UseViewerDownsampleChecked = true; 
+        static bool UseViewerDownsampleChecked = true;
         static double LastDownsampleValue = 1.0f;
         static int NextCaptureNumber = 0;
         static string LastFileNamePrefix = "ScreenShot";
@@ -20,14 +14,14 @@ namespace Viking.UI.Forms
         /// <summary>
         /// Rectangle to be captured by the screenshot
         /// </summary>
-        public GridRectangle Rect; 
+        public GridRectangle Rect;
 
         /// <summary>
         /// Downsample level to use when capturing screenshot
         /// </summary>
         public double Downsample = ScreenshotForm.LastDownsampleValue;
 
-        private double ViewerDownsample; 
+        private double ViewerDownsample;
 
         public string Filename
         {
@@ -43,17 +37,17 @@ namespace Viking.UI.Forms
         /// 
         public bool IncludeOverlays = false;
 
-        private int _Z; 
+        private int _Z;
 
         public ScreenshotForm(GridRectangle myRect, double Downsample, int Z)
         {
-            this._Z = Z; 
+            this._Z = Z;
             this.Rect = myRect;
 
             ViewerDownsample = Downsample;
 
             if (ScreenshotForm.UseViewerDownsampleChecked)
-                this.Downsample = Downsample; 
+                this.Downsample = Downsample;
             else
                 this.Downsample = ScreenshotForm.LastDownsampleValue;
 
@@ -62,16 +56,16 @@ namespace Viking.UI.Forms
 
         private void ScreenshotForm_Load(object sender, EventArgs e)
         {
-            this.checkUseViewerDownsample.Checked = ScreenshotForm.UseViewerDownsampleChecked; 
-            this.numDownsample.Value = (decimal)this.Downsample; 
-            this.numX.Value = (decimal)Math.Round(this.Rect.Left + (this.Rect.Width / 2) );
-            this.numY.Value = (decimal)Math.Round(this.Rect.Bottom + (this.Rect.Height / 2) );
+            this.checkUseViewerDownsample.Checked = ScreenshotForm.UseViewerDownsampleChecked;
+            this.numDownsample.Value = (decimal)this.Downsample;
+            this.numX.Value = (decimal)Math.Round(this.Rect.Left + (this.Rect.Width / 2));
+            this.numY.Value = (decimal)Math.Round(this.Rect.Bottom + (this.Rect.Height / 2));
             this.numWidth.Value = (decimal)Math.Round(this.Rect.Width / this.Downsample);
             this.numHeight.Value = (decimal)Math.Round(this.Rect.Height / this.Downsample);
 
             this.textFilename.Text = ScreenshotForm.LastFileNamePrefix + "_" + ScreenshotForm.NextCaptureNumber.ToString("d03") + ".png";
 
-            UpdateDownsampleControls(); 
+            UpdateDownsampleControls();
             this.Update();
         }
 
@@ -81,21 +75,21 @@ namespace Viking.UI.Forms
 
             decimal width = numWidth.Value * (decimal)this.Downsample;
             decimal height = numHeight.Value * (decimal)this.Downsample;
-            
+
             if (this.checkUseViewerDownsample.Checked)
             {
                 this.Downsample = ViewerDownsample;
             }
             else
             {
-                this.Downsample = (double)this.numDownsample.Value; 
+                this.Downsample = (double)this.numDownsample.Value;
             }
 
             width /= (decimal)this.Downsample;
             height /= (decimal)this.Downsample;
 
             numWidth.Value = width;
-            numHeight.Value = height; 
+            numHeight.Value = height;
         }
 
         private void btnOK_Click(object sender, EventArgs e)
@@ -120,19 +114,19 @@ namespace Viking.UI.Forms
                 ScreenshotForm.LastFileNamePrefix = ScreenshotForm.LastFileNamePrefix.Remove(i);
             }
 
-            ScreenshotForm.LastFileNamePrefix = System.IO.Path.GetDirectoryName(textFilename.Text) + 
+            ScreenshotForm.LastFileNamePrefix = System.IO.Path.GetDirectoryName(textFilename.Text) +
                                                 System.IO.Path.DirectorySeparatorChar +
-                                                ScreenshotForm.LastFileNamePrefix; 
+                                                ScreenshotForm.LastFileNamePrefix;
 
             ScreenshotForm.NextCaptureNumber++;
-            
-            this.DialogResult = DialogResult.OK; 
-            this.Close(); 
+
+            this.DialogResult = DialogResult.OK;
+            this.Close();
 
             //Try to create a descriptive text file matching the image name
             try
             {
-                string dirname = System.IO.Path.GetDirectoryName(this.Filename); 
+                string dirname = System.IO.Path.GetDirectoryName(this.Filename);
                 string basename = System.IO.Path.GetFileNameWithoutExtension(this.Filename);
                 string MetaFilename = System.IO.Path.Combine(dirname, basename + ".txt");
                 using (System.IO.StreamWriter textFile = System.IO.File.CreateText(MetaFilename))
@@ -154,7 +148,7 @@ namespace Viking.UI.Forms
         private void btnCancel_Click(object sender, EventArgs e)
         {
             this.DialogResult = DialogResult.Cancel;
-            this.Close(); 
+            this.Close();
         }
 
         private void btnBrowse_Click(object sender, EventArgs e)
@@ -179,7 +173,7 @@ namespace Viking.UI.Forms
 
         private void numDownsample_ValueChanged(object sender, EventArgs e)
         {
-            UpdateDownsampleControls(); 
+            UpdateDownsampleControls();
         }
 
         private void checkUseViewerDownsample_CheckedChanged(object sender, EventArgs e)

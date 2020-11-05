@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
 using Geometry;
 using SqlGeometryUtils;
-using Annotation.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Viking.VolumeModel
 {

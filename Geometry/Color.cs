@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Geometry.Graphics
 {
@@ -19,8 +16,8 @@ namespace Geometry.Graphics
         /// <param name="input"></param>
         public static Color FromInteger(string Color)
         {
-            int ColorValue; 
-             
+            int ColorValue;
+
             if (Color.StartsWith("#"))
             {
                 Color = Color.Substring(1);
@@ -68,7 +65,7 @@ namespace Geometry.Graphics
 
         }
 
-        public Color(double r, double g, double b, double a) : this(r,g,b)
+        public Color(double r, double g, double b, double a) : this(r, g, b)
         {
             A = (byte)(a / (double)byte.MaxValue);
         }
@@ -94,10 +91,10 @@ namespace Geometry.Graphics
         {
             if (!_HashCode.HasValue)
             {
-                _HashCode = new int?(((int)A << 24 + (int)R << 16 + (int)G << 8 + (int)B)); 
+                _HashCode = new int?(((int)A << 24 + (int)R << 16 + (int)G << 8 + (int)B));
             }
 
-            return _HashCode.Value; 
+            return _HashCode.Value;
         }
 
         public static bool operator ==(Color A, Color B)

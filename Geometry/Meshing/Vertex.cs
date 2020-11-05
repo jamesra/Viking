@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace Geometry.Meshing
 {
@@ -15,7 +12,8 @@ namespace Geometry.Meshing
     {
         public virtual int Index { get; set; }
 
-        public IComparer<IEdgeKey> EdgeComparer {
+        public IComparer<IEdgeKey> EdgeComparer
+        {
             get
             {
                 return _Edges.Comparer;
@@ -25,11 +23,11 @@ namespace Geometry.Meshing
                 if (value != _Edges.Comparer)
                 {
                     _Edges = new SortedSet<IEdgeKey>(_Edges, value);
-                    _ImmutableEdges = null; 
+                    _ImmutableEdges = null;
                 }
             }
         }
-          
+
         protected SortedSet<IEdgeKey> _Edges;
 
         private ImmutableSortedSet<IEdgeKey> _ImmutableEdges;
@@ -51,8 +49,8 @@ namespace Geometry.Meshing
             _ImmutableEdges = null;
         }
 
-        
-        public VertexBase(IComparer<IEdgeKey> edgeComparer=null)
+
+        public VertexBase(IComparer<IEdgeKey> edgeComparer = null)
         {
             _Edges = new SortedSet<IEdgeKey>(edgeComparer);
             _ImmutableEdges = null;
@@ -178,7 +176,7 @@ namespace Geometry.Meshing
             _Position = p;
             _Normal = GridVector3.Zero;
         }
-         
+
 
         public override string ToString()
         {
@@ -191,12 +189,12 @@ namespace Geometry.Meshing
 
             return v;
         }
-          
+
         public int CompareTo(IVertex3D other)
         {
             return this.Index.CompareTo(other.Index);
         }
-         
+
         public bool Equals(IVertex3D other)
         {
             return this.Index == other.Index;
@@ -243,7 +241,7 @@ namespace Geometry.Meshing
     /// </summary>
     public class Vertex2D : VertexBase, IVertex2D
     {
-        private GridVector2 _Position; 
+        private GridVector2 _Position;
 
         public GridVector2 Position
         {
@@ -255,10 +253,10 @@ namespace Geometry.Meshing
             {
                 _Position = value;
             }
-        } 
+        }
 
 
-        public Vertex2D(GridVector2 p, IComparer<IEdgeKey> edgeComparer=null) : base(edgeComparer)
+        public Vertex2D(GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(edgeComparer)
         {
             _Position = p;
         }
@@ -272,7 +270,7 @@ namespace Geometry.Meshing
         {
             return string.Format("I: {0} P: {1}", this.Index, Position);
         }
-        
+
         public int CompareTo(IVertex2D other)
         {
             return this.Index.CompareTo(other.Index);

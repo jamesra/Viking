@@ -1,21 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized; 
-using System.Collections.Concurrent; 
-using System.Linq;
-using System.Text;
-using System.Diagnostics;
-using System.ServiceModel; 
-
+﻿using AnnotationService.Types;
+using System;
+using System.Collections.Concurrent;
 using WebAnnotationModel.Service;
-using WebAnnotationModel.Objects;
-using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {
     public class StructureTypeStore : StoreBaseWithIndexKeyAndParent<AnnotateStructureTypesClient,
                                         IAnnotateStructureTypes,
-                                        long, 
+                                        long,
                                         LongIndexGenerator,
                                         StructureTypeObj,
                                         StructureType>
@@ -33,61 +25,61 @@ namespace WebAnnotationModel
             }
             catch
             {
-                if(proxy != null)
+                if (proxy != null)
                 {
                     proxy.Close();
-                    proxy = null; 
+                    proxy = null;
                 }
                 throw;
 
             }
-            return proxy; 
+            return proxy;
         }
 
-        
-            /*
-        public override StructureTypeObj Create()
+
+        /*
+    public override StructureTypeObj Create()
+    {
+        StructureTypeObj newObj = new StructureTypeObj();
+        InternalAdd(newObj); 
+
+        AnnotateStructureTypesClient proxy = null;
+        try
         {
-            StructureTypeObj newObj = new StructureTypeObj();
-            InternalAdd(newObj); 
+            proxy = CreateProxy();
+            proxy.Open();
 
-            AnnotateStructureTypesClient proxy = null;
-            try
-            {
-                proxy = CreateProxy();
-                proxy.Open();
+            long OriginalID = newObj.ID;
 
-                long OriginalID = newObj.ID;
+            long[] newIDs = proxy.UpdateStructureTypes(new StructureType[] { newObj.GetData() });
 
-                long[] newIDs = proxy.UpdateStructureTypes(new StructureType[] { newObj.GetData() });
 
-                
 
-                Store.Locations.InternalDelete(newObj.ID);
+            Store.Locations.InternalDelete(newObj.ID);
 
-                newObj.GetData().ID = newIDs[1];
-                newObj.GetData().ParentID = newIDs[0];
-                newObj.DBAction = DBACTION.NONE;
+            newObj.GetData().ID = newIDs[1];
+            newObj.GetData().ParentID = newIDs[0];
+            newObj.DBAction = DBACTION.NONE;
 
-                Store.StructureTypes.InternalAdd(newObj);
+            Store.StructureTypes.InternalAdd(newObj);
 
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                InternalDelete(newObj.ID);
-                return null;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
-            }
-             
-            return newObj; 
         }
-    */
-        
+        catch (Exception e)
+        {
+            ShowStandardExceptionMessage(e);
+            InternalDelete(newObj.ID);
+            return null;
+        }
+        finally
+        {
+            if (proxy != null)
+                proxy.Close();
+        }
+
+        return newObj; 
+    }
+*/
+
         protected override long[] ProxyUpdate(AnnotateStructureTypesClient proxy, StructureType[] objects)
         {
             return proxy.UpdateStructureTypes(objects);
@@ -103,9 +95,9 @@ namespace WebAnnotationModel
             return proxy.GetStructureTypesByIDs(IDs);
         }
 
-        
 
-        protected override StructureType[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, 
+
+        protected override StructureType[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                      out long[] DeletedLocations,
                                                                      GetObjectBySectionCallbackState<AnnotateStructureTypesClient, StructureTypeObj> state,
                                                                      IAsyncResult result)
@@ -113,12 +105,12 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
-        protected override StructureType[] ProxyGetBySection(AnnotateStructureTypesClient proxy, long SectionNumber, DateTime LastQuery, 
+        protected override StructureType[] ProxyGetBySection(AnnotateStructureTypesClient proxy, long SectionNumber, DateTime LastQuery,
                                                                 out long TicksAtQueryExecute,
                                                                 out long[] deleted_objects)
         {
             deleted_objects = new long[0];
-            TicksAtQueryExecute = 0; 
+            TicksAtQueryExecute = 0;
             return proxy.GetStructureTypes();
         }
 
@@ -152,9 +144,9 @@ namespace WebAnnotationModel
 
         #endregion
 
-        public override void  Init()
+        public override void Init()
         {
- 	        LoadStructureTypes();
+            LoadStructureTypes();
         }
 
 
@@ -188,7 +180,7 @@ namespace WebAnnotationModel
         /// </summary>
         public void LoadStructureTypes()
         {
-            StructureType[] types  = new StructureType[0]; 
+            StructureType[] types = new StructureType[0];
             AnnotateStructureTypesClient proxy = null;
             try
             {
@@ -202,7 +194,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if(proxy != null)
+                if (proxy != null)
                     proxy.Close();
             }
 
@@ -220,7 +212,7 @@ namespace WebAnnotationModel
             }
 
             ChangeInventory<StructureTypeObj> inventory = InternalAdd(objList, false);
-            CallOnCollectionChanged(inventory); 
+            CallOnCollectionChanged(inventory);
             //Populate Parent/Child relationships
 
             /*

@@ -1,16 +1,13 @@
-﻿using System;
+﻿using SIMeasurement;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using Viking.Common;
-using Viking;
-using System.Net;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Xml.Linq;
+using Viking.Common;
 using Viking.ViewModels;
-using SIMeasurement;
 
 namespace MeasurementExtension
 {
@@ -30,9 +27,9 @@ namespace MeasurementExtension
 
         public static LengthMeasurement PixelWidth
         {
-            get{ return new LengthMeasurement(Global.UnitOfMeasure, Global.UnitsPerPixel); }
+            get { return new LengthMeasurement(Global.UnitOfMeasure, Global.UnitsPerPixel); }
         }
-        
+
         #region IInitExtensions Members
 
         /// <summary>
@@ -47,8 +44,8 @@ namespace MeasurementExtension
 
             if (volume == null)
                 return false;
-            
-            if(GetScaleFromXML(volume.VolumeElement))
+
+            if (GetScaleFromXML(volume.VolumeElement))
                 return true;
 
             //See if we can load the about.xml file, this is for legacy support and can be removed after VikinkXML files have been regenerated with latest
@@ -66,7 +63,7 @@ namespace MeasurementExtension
             {
                 response = request.GetResponse();
             }
-            catch (WebException )
+            catch (WebException)
             {
                 Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "Measurement");
                 if (response != null)
@@ -86,11 +83,11 @@ namespace MeasurementExtension
             response.Close();
 
             //See if we can locate a scale tag
-            GetScaleFromXML(Viking.VolumeModel.Volume.GetVolumeElement(XMLMapping)); 
-            
+            GetScaleFromXML(Viking.VolumeModel.Volume.GetVolumeElement(XMLMapping));
+
             //Even if we couldn't load the default values, the user can set them.  Go ahead and load up.
             //If this module could not function we should return false which would tell Viking to unload it
-            return true; 
+            return true;
 
         }
 
@@ -98,7 +95,7 @@ namespace MeasurementExtension
         {
 
             //Examine the XML document and determine the scale
-            
+
             //Fetch the name if we know it
             switch (elem.Name.LocalName)
             {
@@ -131,28 +128,28 @@ namespace MeasurementExtension
                     }
                     catch (ArgumentException)
                     {
-                        Trace.WriteLine(string.Format("Non SI unit of measure {0}, disabling WebAnnotations.",EndpointAttribute.Value), "Measurement");
+                        Trace.WriteLine(string.Format("Non SI unit of measure {0}, disabling WebAnnotations.", EndpointAttribute.Value), "Measurement");
                         return false;
                     }
                     catch (OverflowException)
                     {
                         Trace.WriteLine(string.Format("{0} is outside the range of the underlying type of SI Length Units", EndpointAttribute.Value), "Measurement");
-                        return false; 
+                        return false;
                     }
 
                     return true;
 
-                    default:
+                default:
                     break;
-                    }
+            }
 
             //Even if we couldn't load the default values, the user can set them.  Go ahead and load up.
             //If this module could not function we should return false which would tell Viking to unload it
             return false;
         }
-        
 
-        #endregion 
+
+        #endregion
     }
 }
 

@@ -8,10 +8,10 @@
 #endregion
 
 #region Using Statements
-using System;
-using System.Threading;
-using System.ComponentModel.Design;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.ComponentModel.Design;
+using System.Threading;
 using VikingXNAGraphics;
 #endregion
 
@@ -65,17 +65,17 @@ namespace VikingXNAWinForms
             parameters.DeviceWindowHandle = windowHandle;
             parameters.RenderTargetUsage = RenderTargetUsage.DiscardContents;
             parameters.IsFullScreen = false;
-                         
+
             /*PORT XNA 4
             parameters.EnableAutoDepthStencil = true;
             parameters.AutoDepthStencilFormat = DepthFormat.Depth24;
             */
 
-            if(GraphicsAdapter.DefaultAdapter.IsProfileSupported(GraphicsProfile.HiDef))
+            if (GraphicsAdapter.DefaultAdapter.IsProfileSupported(GraphicsProfile.HiDef))
                 graphicsDevice = new GraphicsDevice(GraphicsAdapter.DefaultAdapter, GraphicsProfile.HiDef, parameters);
             else if (GraphicsAdapter.DefaultAdapter.IsProfileSupported(GraphicsProfile.Reach))
                 graphicsDevice = new GraphicsDevice(GraphicsAdapter.DefaultAdapter, GraphicsProfile.Reach, parameters);
-           else
+            else
             {
                 System.Windows.Forms.MessageBox.Show("Default graphics adapter does not support XNA");
                 throw new System.InvalidOperationException("Default graphics adapter does not support XNA");
@@ -85,9 +85,11 @@ namespace VikingXNAWinForms
             GlobalPrimitives.CircleTexture = Content.LoadTextureWithAlpha("Circle", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
             GlobalPrimitives.MinusTexture = Content.LoadTextureWithAlpha("CircleMinus", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
             GlobalPrimitives.PlusTexture = Content.LoadTextureWithAlpha("CirclePlus", "CircleMask"); //parent.Content.Load<Texture2D>("Circle");
+            GlobalPrimitives.ChainTexture = Content.LoadTextureWithAlpha("CircleChain", "CircleChain");
             GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
             GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask"); //parent.Content.Load<Texture2D>("Circle");
-
+            GlobalPrimitives.ConnectTexture = Content.LoadTextureWithAlpha("CircleConnect", "CircleConnect");
+            GlobalPrimitives.CircleXTexture = Content.LoadTextureWithAlpha("CircleX", "CircleX");
         }
 
 
@@ -140,7 +142,7 @@ namespace VikingXNAWinForms
         /// </summary>
         public void ResetDevice(int width, int height)
         {
-            System.Diagnostics.Debug.Assert(!graphicsDevice.IsDisposed, "Resetting disposed graphics device, why?"); 
+            System.Diagnostics.Debug.Assert(!graphicsDevice.IsDisposed, "Resetting disposed graphics device, why?");
             if (graphicsDevice.IsDisposed)
             {
                 System.Diagnostics.Trace.WriteLine("Resetting disposed graphics device, why?");
@@ -149,7 +151,7 @@ namespace VikingXNAWinForms
             if (DeviceResetting != null)
                 DeviceResetting(this, EventArgs.Empty);
 
-            parameters.BackBufferWidth = Math.Max(width,1);
+            parameters.BackBufferWidth = Math.Max(width, 1);
             parameters.BackBufferHeight = Math.Max(1, height);
             parameters.DepthStencilFormat = DepthFormat.Depth24Stencil8;
             parameters.IsFullScreen = false;
@@ -160,7 +162,7 @@ namespace VikingXNAWinForms
             if (DeviceReset != null)
                 DeviceReset(this, EventArgs.Empty);
 
-            
+
         }
 
 
@@ -193,7 +195,7 @@ namespace VikingXNAWinForms
                 return _Content;
             }
         }
-        
+
 
 
         // Store the current device settings.

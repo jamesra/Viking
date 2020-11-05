@@ -4,13 +4,15 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:MockData="clr-namespace:WebAnnotation.WPF.MockData"
-             xmlns:ctrl="clr-namespace:WebAnnotation.UI.Controls"
+             xmlns:ctrl="clr-namespace:WebAnnotation.WPF.Controls"
              xmlns:local="clr-namespace:WebAnnotation.WPF.Forms"
              xmlns:conv="clr-namespace:WebAnnotation.WPF.Converters"
              xmlns:properties="clr-namespace:WebAnnotation.WPF.Properties"
              xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
              xmlns:behave="clr-namespace:WebAnnotation.WPF.Behaviors"
-             mc:Ignorable="d" 
+             xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+             xmlns:clr="clr-namespace:System;assembly=mscorlib"
+             mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="500"  
             Width="500" Height="300"
             SizeToContent="WidthAndHeight"
@@ -28,7 +30,8 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="..\SharedResources.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-             
+
+            <clr:String x:Key="StructureTypeDropTargetTooltip">Drop a Structure Type here to change</clr:String>
 
             <CollectionViewSource x:Key="PermittedSourceTypesViewSource" Source="{Binding ElementName=StructureTypeDetailsTabControl, Path=DataContext.PermittedLinks}"/>
             <CollectionViewSource x:Key="PermittedTargetTypesViewSource" Source="{Binding ElementName=StructureTypeDetailsTabControl, Path=DataContext.PermittedLinks}"/>
@@ -38,8 +41,8 @@
             <conv:PermittedSourceStructureLinkTypeToStructureTypeConverters x:Key="PermittedSourceStructureLinkTypeToStructureType"/>
             <conv:PermittedTargetStructureLinkTypeToStructureTypeConverters x:Key="PermittedTargetStructureLinkTypeToStructureType"/>
             <conv:PermittedBidirectionalStructureLinkTypeToStructureTypeConverters x:Key="PermittedBidirectionalStructureLinkTypeToStructureType"/>
-
-            <conv:StructureObjToPermittedStructureLinksViewModelConverters x:Key="StructureObjToPermittedStructureLinksViewModel"/>
+            <conv:StructureTypeObjToStructureObjViewModelConverters x:Key="StructureTypeObjToStructureObjViewModel"/>
+            <conv:StructureTypeObjToPermittedStructureLinksViewModelConverters x:Key="StructureObjToPermittedStructureLinksViewModel"/>
 
             <DataTemplate x:Key="InputItemsPanelStructureType" >
                 <ContentControl Template="{StaticResource StructureTypeLabel}"
@@ -93,6 +96,8 @@
             </HierarchicalDataTemplate>
         </ResourceDictionary>
     </Window.Resources>
+    
+    
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
@@ -104,48 +109,75 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <DockPanel Grid.Column="0" Grid.Row="0" Grid.RowSpan="2"> 
+        <DockPanel Grid.Column="0" Grid.Row="0" Grid.RowSpan="2">
+            <Button DockPanel.Dock="Bottom">Create New Type</Button>
             <TreeView
                       SelectedValuePath="ID"
                       Name="StructureTypesTree"
                       ItemTemplate="{StaticResource StructureTypeTreeItemTemplate}" 
                       d:DataContext="{Binding Converter={StaticResource MockStructureTypeIDConverter}}"
-                      DataContext="{Binding Converter={StaticResource StructureTypeIDsToStructureTypeObjsConverter}}"
+                      DataContext="{Binding Path=RootObjects, Converter={StaticResource StructureTypeIDsToStructureTypeObjsConverter}}"
                       ItemsSource="{Binding Mode=OneWay}"
-                      SelectedItemChanged="StructureTypesTree_SelectedItemChanged"  
-                      > 
+                      SelectedItemChanged="StructureTypesTree_SelectedItemChanged"> 
             </TreeView>
         </DockPanel>
-        <ContentControl Grid.Column="1" Grid.Row="0" Margin="5,2,5,2" Background="Gainsboro" FontWeight="Bold" HorizontalAlignment="Center"
-                        Name="SelectedStructureTypeHeader"
-                        Template="{StaticResource StructureTypeLabel}"
-                        d:DataContext="{d:DesignData /SampleData/MockStructureType.xaml, IsDesignTimeCreatable=True}"
-                        DataContext="{Binding ElementName=StructureTypesTree, Path=SelectedValue, Mode=OneWay, Converter={StaticResource StructureTypeIDsToStructureTypeObjsConverter}}"/>
+        <DockPanel  Grid.Column="1" Grid.Row="0"
+                    d:DataContext="{d:DesignData /SampleData/MockStructureType.xaml, IsDesignTimeCreatable=True}"
+                    DataContext="{Binding ElementName=StructureTypesTree, Path=SelectedValue, Mode=OneWay, Converter={StaticResource StructureTypeIDsToStructureTypeObjsConverter}}">
+            <Border DockPanel.Dock="Right">
+                <StackPanel  Orientation="Horizontal">
+                    <Label DockPanel.Dock="Right"  FontWeight="Normal" FontSize="16" VerticalAlignment="Center">Type ID</Label>
+                    <TextBlock  DockPanel.Dock="Right" Text="{Binding Path=ID, Mode=OneWay}" IsEnabled="False" VerticalAlignment="Center" MinWidth="50" FontSize="20"/>
+
+                </StackPanel>
+            </Border>
+            <ContentControl Template="{StaticResource StructureTypeLabel}"  Margin="5,2,5,2" Background="Gainsboro" FontWeight="Normal" HorizontalAlignment="Left"
+                        Name="SelectedStructureTypeHeader" FontSize="20"/>
+        </DockPanel>
         <TabControl Grid.Column="1" Grid.Row="1" 
-                    DataContext="{Binding ElementName=StructureTypesTree, Path=SelectedValue, Mode=OneWay, Converter={StaticResource StructureObjToPermittedStructureLinksViewModel}}"
+                    DataContext="{Binding ElementName=StructureTypesTree, Path=SelectedValue, Mode=OneWay, Converter={StaticResource StructureTypeObjToStructureObjViewModel}}"
                     
                     d:DataContext="{d:DesignData /SampleData/MockStructureType.xaml, IsDesignTimeCreatable=True}"
                     Name="StructureTypeDetailsTabControl">
             <TabItem Header="General" Name="General" DataContext="{Binding Path=Model}"
                      d:DataContext="{d:DesignData /SampleData/MockStructureType.xaml, IsDesignTimeCreatable=True}">
                 <DockPanel>
-                    <DockPanel DockPanel.Dock="Top" HorizontalAlignment="Stretch" Height="Auto">
-                        <Label DockPanel.Dock="Left">ID:</Label>
-                        <TextBlock DockPanel.Dock="Left" Text="{Binding Path=ID}" IsEnabled="False" VerticalAlignment="Center" MinWidth="50"/>
-                        <Button DockPanel.Dock="Left"  Background="{Binding Path=Color, Converter={StaticResource IntToBrushConverter}}" MinWidth="50" HorizontalAlignment="Right" ToolTip="Choose Color">
-                             
-                        </Button>
-                        <Label DockPanel.Dock="Left">Name:</Label>
+                    <Grid DockPanel.Dock="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"></ColumnDefinition>
+                            <ColumnDefinition Width="auto"></ColumnDefinition>
+                            <ColumnDefinition></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"></RowDefinition>
+                            <RowDefinition></RowDefinition>
+                        </Grid.RowDefinitions>
+                        <Label Grid.Row="0"  Grid.Column="0" DockPanel.Dock="Left" Margin="0,0,8,0" HorizontalAlignment="Left" FontWeight="Bold">Code:</Label>
+                        <TextBox Grid.Row="1"  Grid.Column="0" DockPanel.Dock="Left" Margin="0,0,8,0" Text="{Binding Path=Code}" MinWidth="32" HorizontalAlignment="Left" VerticalAlignment="Center"></TextBox>
                         
-                        <!--<Label DockPanel.Dock="Right" HorizontalAlignment="Right" Width="auto">Color:</Label>-->
-                        <TextBox Text="{Binding Path=Name, Mode=OneWay}" VerticalAlignment="Center" IsEnabled="True"/>
+                        <Label Grid.Row="0"  Grid.Column="1" DockPanel.Dock="Left" FontWeight="Bold">Color</Label>
+                        <xctk:ColorPicker Grid.Row="1" Grid.Column="1" Name="ClrPcker_Background" SelectedColor="{Binding Path=Color, Converter={StaticResource IntToBrushConverter}}"
+                                          DisplayColorAndName="True" MinWidth="64"
+                                          Margin="0,0,10,0"></xctk:ColorPicker>
+                            <!--<Button DockPanel.Dock="Left"  Background="{Binding Path=Color, Converter={StaticResource IntToBrushConverter}}" MinWidth="50" HorizontalAlignment="Right" ToolTip="Choose Color" Click="OnChooseColor">
+                             
+                        </Button>-->
+                        <Label Grid.Row="0"  Grid.Column="2" DockPanel.Dock="Left" FontWeight="Bold">Name</Label>
+                        <TextBox Grid.Row="1"  Grid.Column="2" Text="{Binding Path=Name}" VerticalAlignment="Center" IsEnabled="True"/> 
+                    </Grid>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,5,0,5" ToolTip="{StaticResource StructureTypeDropTargetTooltip}">
+                        
+                        <Label DockPanel.Dock="Left" FontWeight="Bold">Parent Type</Label>
+                        <Border BorderThickness="0.5" BorderBrush="Black" CornerRadius="5" >
+                        <ContentControl Template="{StaticResource StructureTypeLabel}"  Margin="5,2,5,2" Background="Gainsboro" FontWeight="Normal" HorizontalAlignment="Left"
+                                         ToolTip="{StaticResource StructureTypeDropTargetTooltip}"
+                                         Name="ParentStructureType" DataContext="{Binding Path=Parent}">
+                                <Button Command="{Binding ElementName=StructureTypeDetailsTabControl, Path=DataContext.AssignParentCommand, Converter={StaticResource StructureTypeIDsToStructureTypeObjsConverter}}">Clear</Button>
+                        </ContentControl>
+                        </Border>
                     </DockPanel>
-                    <DockPanel DockPanel.Dock="Top">
-                        <Label DockPanel.Dock="Left">Code:</Label>
-                        <TextBox DockPanel.Dock="Left" Text="{Binding Path=Code, Mode=OneWay}" MinWidth="32" HorizontalAlignment="Left" VerticalAlignment="Center"></TextBox>
-                    </DockPanel>
-                    <Label DockPanel.Dock="top">Notes:</Label>
-                    <RichTextBox></RichTextBox>
+                    <Label DockPanel.Dock="top" FontWeight="Bold">Notes:</Label>
+                    <TextBox Text="{Binding Path=Notes}" TextWrapping="Wrap"></TextBox>
                 </DockPanel>
             </TabItem>
             <TabItem Header="Link Rules" Name="PermittedLinks"
@@ -163,37 +195,37 @@
                         <RowDefinition></RowDefinition>
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0" TextWrapping="Wrap">Drag and drop entries from the tree to enable creating links between this and other structure types.</TextBlock>
-                    <Label Grid.Column="0" Grid.Row="1" VerticalAlignment="Bottom" Height="auto">Input</Label>
-                    <Label Grid.Column="1" Grid.Row="1" VerticalAlignment="Bottom" Height="auto">Output</Label>
-                    <Label Grid.Column="2" Grid.Row="1" VerticalAlignment="Bottom" Height="auto">Bidirectional</Label>
-                    <ListBox Grid.Column="0" Grid.Row="2"  
+                    <Label Grid.Column="0" Grid.Row="1" VerticalAlignment="Bottom" Height="auto"  FontWeight="Bold">Input</Label>
+                    <Label Grid.Column="1" Grid.Row="1" VerticalAlignment="Bottom" Height="auto"  FontWeight="Bold">Output</Label>
+                    <Label Grid.Column="2" Grid.Row="1" VerticalAlignment="Bottom" Height="auto"  FontWeight="Bold">Bidirectional</Label>
+                    <ctrl:DropList Grid.Column="0" Grid.Row="2"  
                              d:DataContext="{Binding Path=AllowedInputLinks, Converter={StaticResource MockStructureTypeIDConverter}}"
                              ItemsSource="{Binding Path=PermittedLinkSourceTypes}"
                              ItemTemplate="{StaticResource InputItemsPanelStructureType}"
-                             Name="ListPermittedInputs"
+                             x:Name="ListPermittedInputs"
                              Margin="1,0,1,0"
                              AllowDrop="True"
-                             Drop="InputListDrop"> 
-                    </ListBox>
-                    <ListBox Grid.Column="1" Grid.Row="2"  
+                             DropCommand="{Binding Path=AddPermittedLinkSourceTypeCommand}"> 
+                    </ctrl:DropList>
+                    <ctrl:DropList Grid.Column="1" Grid.Row="2"  
                              d:DataContext="{Binding Path=AllowedOutputLinks, Converter={StaticResource MockStructureTypeIDConverter}}"
                              ItemsSource="{Binding Path=PermittedLinkTargetTypes}"
                              ItemTemplate="{StaticResource OutputItemsPanelStructureType }"
-                             Name="ListPermittedOutputs"
+                             x:Name="ListPermittedOutputs"
                              Margin="1,0,1,0"
                              AllowDrop="True"
-                             Drop="OutputListDrop">
-                    </ListBox>
-                    <ListBox Grid.Column="2" Grid.Row="2" 
+                             DropCommand="{Binding Path=AddPermittedLinkTargetTypeCommand}">
+                    </ctrl:DropList>
+                    <ctrl:DropList Grid.Column="2" Grid.Row="2" 
                              d:DataContext="{Binding Path=AllowedBidirectionalLinks, Converter={StaticResource MockStructureTypeIDConverter}}"
                              ItemsSource="{Binding Path=PermittedLinkBidirectionalTypes}"
                              ItemTemplate="{StaticResource BidirectionalItemsPanelStructureType }"
-                             Name="ListPermittedBidirectional"
+                             x:Name="ListPermittedBidirectional"
                              Margin="1,0,1,0"
                              AllowDrop="True"
-                             Drop="BidirectionalListDrop"
+                             DropCommand="{Binding Path=AddPermittedLinkBidirectionalTypeCommand}"
                              >
-                    </ListBox>
+                    </ctrl:DropList>
                 </Grid>
             </TabItem> 
         </TabControl>

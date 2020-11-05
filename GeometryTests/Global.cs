@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FsCheck;
-
-namespace GeometryTests
+﻿namespace GeometryTests
 {
     public static class Global
     {
@@ -25,13 +18,14 @@ namespace GeometryTests
         private static FsCheck.Random.StdGen _RollingStdGenSeed = StdGenSeed;
         public static FsCheck.Random.StdGen RollingStdGenSeed
         {
-            get {
+            get
+            {
                 var oldSeed = _RollingStdGenSeed;
                 _RollingStdGenSeed = FsCheck.Random.stdNext(_RollingStdGenSeed).Item2;
                 return oldSeed;
             }
         }
 
-        
+
     }
 }

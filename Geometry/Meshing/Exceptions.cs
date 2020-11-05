@@ -1,10 +1,6 @@
 ﻿using System;
-using Geometry;
-using Geometry.Meshing;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.Serialization;
 
 namespace Geometry.Meshing
@@ -55,7 +51,7 @@ namespace Geometry.Meshing
     public class NonconformingTriangulationException : GeometryMeshExceptionBase
     {
         public IFace Face;
-         
+
         public NonconformingTriangulationException(IFace face, string msg) : base(msg)
         {
             Face = face;
@@ -78,7 +74,7 @@ namespace Geometry.Meshing
         public EdgesIntersectTriangulationException(IEdgeKey edge, ICollection<IEdgeKey> intersected, string msg) : base(msg)
         {
             Edge = edge;
-           IntersectedEdges = intersected.ToArray();
+            IntersectedEdges = intersected.ToArray();
         }
 
         public EdgesIntersectTriangulationException(IEdgeKey edge, ICollection<IEdgeKey> intersected, string message, Exception innerException) : base(message, innerException)

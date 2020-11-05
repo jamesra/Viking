@@ -8,9 +8,9 @@
 namespace TriangleNet
 {
     using System;
-    using TriangleNet.Topology;
     using TriangleNet.Geometry;
     using TriangleNet.Tools;
+    using TriangleNet.Topology;
 
     /// <summary>
     /// Find new Steiner point locations.

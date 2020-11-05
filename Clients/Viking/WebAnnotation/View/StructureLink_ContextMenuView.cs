@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotation.ViewModel;
-using WebAnnotationModel;
 using System.Windows.Forms;
 using Viking.Common;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-  
+
     class StructureLink_CanvasContextMenuView : IContextMenu
     {
         public StructureLinkKey linkKey;
@@ -35,7 +30,7 @@ namespace WebAnnotation.View
 
         public bool Bidirectional
         {
-            get { return modelObj.Bidirectional; } 
+            get { return modelObj.Bidirectional; }
         }
 
         public StructureLink_CanvasContextMenuView(StructureLinkObj obj)
@@ -83,24 +78,36 @@ namespace WebAnnotation.View
         protected void ContextMenu_OnFlip(object sender, EventArgs e)
         {
             Store.StructureLinks.Remove(this.modelObj);
-            bool Success = Store.StructureLinks.Save();
-            if (Success)
+            try
             {
+                Store.StructureLinks.Save();
+
                 StructureLinkObj newLink = new StructureLinkObj(this.TargetID, this.SourceID, this.Bidirectional);
                 Store.StructureLinks.Create(newLink);
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
+            }
+            catch (System.ServiceModel.FaultException ex)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
             }
         }
 
         protected void ContextMenu_OnBidirectional(object sender, EventArgs e)
         {
             Store.StructureLinks.Remove(this.modelObj);
-            bool Success = Store.StructureLinks.Save();
-            if (Success)
+            try
             {
-                StructureLinkObj newLink = new StructureLinkObj(this.TargetID, this.SourceID, !this.Bidirectional);
+                Store.StructureLinks.Save();
+
+                StructureLinkObj newLink = new StructureLinkObj(this.SourceID, this.TargetID, !this.Bidirectional);
                 Store.StructureLinks.Create(newLink);
+                //              this.modelObj = newLink;
+                //CreateView(newLink);
+            }
+            catch (System.ServiceModel.FaultException ex)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
             }
         }
 

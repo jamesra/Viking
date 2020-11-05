@@ -1,10 +1,8 @@
-﻿using System;
+﻿using Annotation.Interfaces;
+using ODataClient.ConnectomeDataModel;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ODataClient.ConnectomeDataModel;
-using Annotation.Interfaces;
 
 namespace AnnotationVizLib.OData
 {
@@ -13,7 +11,7 @@ namespace AnnotationVizLib.OData
         static SortedDictionary<long, StructureType> IDToStructureType = null;
         SortedDictionary<ulong, IStructure> IDToStructure = new SortedDictionary<ulong, IStructure>();
 
-        NeuronGraph graph; 
+        NeuronGraph graph;
 
         private ODataNeuronFactory()
         {
@@ -35,9 +33,9 @@ namespace AnnotationVizLib.OData
             if (StructureIDs.Count == 0)
                 return graphFactory.graph;
 
-            if(IDToStructureType == null)
+            if (IDToStructureType == null)
             {
-                  ODataNeuronFactory.PopulateStructureTypeDictionary(container.StructureTypes.ToList());
+                ODataNeuronFactory.PopulateStructureTypeDictionary(container.StructureTypes.ToList());
             }
 
             //List<long> listNetworkStructureID = container.Network(StructureIDs, (int)numHops).ToList();
@@ -47,7 +45,7 @@ namespace AnnotationVizLib.OData
 
             //Add nodes to graph
             graphFactory.AddStructuresAsNodes(listNetworkStructures);
-            
+
             return graphFactory.graph;
         }
 
@@ -63,7 +61,7 @@ namespace AnnotationVizLib.OData
 
         private void PopulateStructureDictionary(ICollection<Structure> structs)
         {
-            foreach(Structure s in structs)
+            foreach (Structure s in structs)
             {
                 ODataStructureAdapter adapter = new AnnotationVizLib.OData.ODataStructureAdapter(s);
                 IDToStructure.Add((ulong)s.ID, adapter);

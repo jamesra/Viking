@@ -20,13 +20,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Diagnostics; 
+using System.Diagnostics;
 
 namespace Viking.Common
 {
-    public abstract class CacheEntry<KEY> : IComparer<CacheEntry<KEY>>, IComparable, IEquatable<CacheEntry<KEY>>, IDisposable 
+    public abstract class CacheEntry<KEY> : IComparer<CacheEntry<KEY>>, IComparable, IEquatable<CacheEntry<KEY>>, IDisposable
     {
         /// <summary>
         /// Name of the file
@@ -49,7 +47,7 @@ namespace Viking.Common
         /// Sometimes we want an entry to stay in the cache even if it is failing checkpoints.  Setting this 
         /// exempts the entry from failing checkpoints
         /// </summary>
-        public bool CheckpointExempt = false; 
+        public bool CheckpointExempt = false;
 
         /// <summary>
         /// Size of the file
@@ -67,10 +65,10 @@ namespace Viking.Common
         {
             this.Key = key;
             LastAccessed = lastAccessed;
-            Size = size; 
+            Size = size;
         }
 
-        int? _FirstHashCode; 
+        int? _FirstHashCode;
         public override int GetHashCode()
         {
             if (_FirstHashCode.HasValue == false)
@@ -80,7 +78,7 @@ namespace Viking.Common
             }
             else
             {
-                Debug.Assert(Key.GetHashCode() == _FirstHashCode.Value); 
+                Debug.Assert(Key.GetHashCode() == _FirstHashCode.Value);
                 return Key.GetHashCode();
             }
         }
@@ -113,7 +111,7 @@ namespace Viking.Common
                 return LastAccessed.CompareTo(entry.LastAccessed);
             }
 
-            return 0; 
+            return 0;
         }
 
         #endregion
@@ -123,7 +121,7 @@ namespace Viking.Common
         bool IEquatable<CacheEntry<KEY>>.Equals(CacheEntry<KEY> other)
         {
             if (other == null)
-                return false; 
+                return false;
 
             return this.Key.Equals(other.Key);
         }

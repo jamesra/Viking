@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FsCheck;
 using Geometry;
-using GeometryTests;
 using Geometry.Meshing;
-using FsCheck;
+using System.Linq;
 
 namespace GeometryTests.Algorithms
 {
@@ -122,6 +117,6 @@ namespace GeometryTests.Algorithms
             return true.ToProperty();
         }
 
-        
+
     }
 }

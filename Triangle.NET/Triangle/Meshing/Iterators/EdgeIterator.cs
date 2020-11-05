@@ -7,8 +7,8 @@
 namespace TriangleNet.Meshing.Iterators
 {
     using System.Collections.Generic;
-    using TriangleNet.Topology;
     using TriangleNet.Geometry;
+    using TriangleNet.Topology;
 
     /// <summary>
     /// Enumerates the edges of a triangulation.

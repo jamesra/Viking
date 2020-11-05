@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 using WebAnnotationModel;
-using WebAnnotation.ViewModel; 
 
 namespace WebAnnotation.UI.Commands
 {
@@ -20,13 +16,13 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)delegate() { this.Execute(); });
+            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
         }
 
         protected override void Execute()
         {
             target.Terminal = !target.Terminal;
-            var t = new System.Threading.Tasks.Task(() => Store.Locations.Save());
+            var t = new System.Threading.Tasks.Task(() => WebAnnotation.AnnotationOverlay.SaveLocationsWithMessageBoxOnError());
             base.Execute();
         }
     }

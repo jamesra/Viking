@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Diagnostics; 
-using System.Text;
+using System.Diagnostics;
 
 namespace Geometry
 {
@@ -20,7 +18,7 @@ namespace Geometry
 
         public override int GetHashCode()
         {
-            return mapLine.GetHashCode(); 
+            return mapLine.GetHashCode();
         }
 
         public int CompareTo(object obj)
@@ -32,7 +30,7 @@ namespace Geometry
             {
                 result = ctrlLine.CompareTo(linePair.ctrlLine);
             }
-            
+
             return result;
         }
 
@@ -70,7 +68,7 @@ namespace Geometry
             private int iGridIndex = -1;
 
             //Only return unique values
- //           SortedSet<GridLineSegmentPair> UniqueLines = new SortedSet<GridLineSegmentPair>();
+            //           SortedSet<GridLineSegmentPair> UniqueLines = new SortedSet<GridLineSegmentPair>();
 
             public PairedLineSearchGridCoordListEnumerator(PairedLineSearchGrid SearchGrid, IEnumerable<Coord> Coords)
             {
@@ -84,8 +82,8 @@ namespace Geometry
                 get
                 {
                     GridLineSegmentPair segment = currentCell[iGridIndex];
- //                   Debug.Assert(UniqueLines.Contains(segment) == false);
- //                   UniqueLines.Add(segment);
+                    //                   Debug.Assert(UniqueLines.Contains(segment) == false);
+                    //                   UniqueLines.Add(segment);
                     return segment;
                 }
             }
@@ -95,8 +93,8 @@ namespace Geometry
                 get
                 {
                     GridLineSegmentPair segment = currentCell[iGridIndex];
-//                    Debug.Assert(UniqueLines.Contains(segment) == false);
-//                    UniqueLines.Add(segment);
+                    //                    Debug.Assert(UniqueLines.Contains(segment) == false);
+                    //                    UniqueLines.Add(segment);
                     return segment;
                 }
             }
@@ -137,7 +135,7 @@ namespace Geometry
 
             public void Reset()
             {
-  //              UniqueLines.Clear();
+                //              UniqueLines.Clear();
                 iGridIndex = -1; //-1 because MoveNext is called before the first value is read
                 coordEnum = coords.GetEnumerator();
             }
@@ -269,23 +267,23 @@ namespace Geometry
         int NumGridsX;
         int NumGridsY;
 
-        int EstimatedLinesPerCell; 
+        int EstimatedLinesPerCell;
 
 
         public PairedLineSearchGrid(MappingGridVector2[] _mapPoints, GridRectangle bounds, List<int>[] edges)
         {
             if (_mapPoints == null || edges == null)
                 throw new ArgumentNullException("PairedLineSearchGrid Constructor");
-            
+
             this.Bounds = bounds;
 
             int numPoints = _mapPoints.Length;
             if (numPoints == 0)
-                numPoints = 1; 
+                numPoints = 1;
 
             //Calculate number of grid cells based on num points and boundaries
             double NumGrids = Math.Ceiling(System.Math.Sqrt(numPoints));
-            
+
             int NumGridsEachDimension = (int)Math.Ceiling(Math.Sqrt(NumGrids));
 
             this.GridWidth = bounds.Width / NumGridsEachDimension;
@@ -299,25 +297,25 @@ namespace Geometry
             if (GridWidth < 1)
                 GridWidth = 1;
             if (GridHeight < 1)
-                GridHeight = 1; 
+                GridHeight = 1;
 
             NumGridsX = (int)Math.Ceiling(bounds.Width / GridWidth);
             NumGridsY = (int)Math.Ceiling(bounds.Height / GridHeight);
 
             this.EstimatedLinesPerCell = (int)(numPoints / NumGrids);
 
-            _LineGrid = new List<GridLineSegmentPair>[NumGridsX+1, NumGridsY+1]; 
+            _LineGrid = new List<GridLineSegmentPair>[NumGridsX + 1, NumGridsY + 1];
             //Initialize the grid
-            for (int iX = 0; iX < NumGridsX+1; iX++)
+            for (int iX = 0; iX < NumGridsX + 1; iX++)
             {
-                for (int iY = 0; iY < NumGridsY+1; iY++)
+                for (int iY = 0; iY < NumGridsY + 1; iY++)
                 {
-                    _LineGrid[iX, iY] = new List<GridLineSegmentPair>(this.EstimatedLinesPerCell); 
+                    _LineGrid[iX, iY] = new List<GridLineSegmentPair>(this.EstimatedLinesPerCell);
                 }
             }
 
             //Populate the grid by adding each intersecting GridLineSegment to the proper cells
-            for(int iPoint = 0; iPoint < edges.Length; iPoint++)
+            for (int iPoint = 0; iPoint < edges.Length; iPoint++)
             {
                 //Get the list of edges
                 List<int> edgeList = edges[iPoint];
@@ -334,7 +332,7 @@ namespace Geometry
                         continue;
                     }
 
-                    if (GridVector2.DistanceSquared(_mapPoints[iPoint].ControlPoint , _mapPoints[iEdgePoint].ControlPoint) <= Global.EpsilonSquared)
+                    if (GridVector2.DistanceSquared(_mapPoints[iPoint].ControlPoint, _mapPoints[iEdgePoint].ControlPoint) <= Global.EpsilonSquared)
                     {
                         Debug.Fail("Control points are equal");
                         continue;
@@ -362,9 +360,9 @@ namespace Geometry
                         continue;
                     }
 
-                    
 
-                    
+
+
 
                 }
             }
@@ -372,7 +370,7 @@ namespace Geometry
 
         private Coord GetCoord(GridVector2 position)
         {
-            return GetCoord(position.X, position.Y); 
+            return GetCoord(position.X, position.Y);
         }
 
         private Coord GetCoord(double x, double y)
@@ -388,7 +386,7 @@ namespace Geometry
             if (iY > NumGridsY)
                 iY = NumGridsY;
 
-            return new Coord(iX, iY); 
+            return new Coord(iX, iY);
         }
 
 
@@ -525,7 +523,7 @@ namespace Geometry
         /// <returns></returns>
         public IEnumerable<GridLineSegmentPair> GetPotentialIntersections(GridLineSegment line)
         {
-       //     List<GridLineSegmentPair> LineList;
+            //     List<GridLineSegmentPair> LineList;
             //Coord start = GetCoord(new GridVector2(line.MinX, line.MinY));
             //Coord end = GetCoord(new GridVector2(line.MaxX, line.MaxY));
 
@@ -535,8 +533,8 @@ namespace Geometry
                 return new GridLineSegmentPair[0];
             }
 
-            return new PairedLineSearchGridCoordListEnumerator(this, GetCoordsForLine(line)); 
-            
+            return new PairedLineSearchGridCoordListEnumerator(this, GetCoordsForLine(line));
+
         }
     }
 }

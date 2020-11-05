@@ -1,11 +1,8 @@
-﻿using System;
+﻿using Geometry;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using Viking.Common;
-using Geometry; 
 
 namespace Viking.UI.Commands
 {
@@ -43,7 +40,7 @@ namespace Viking.UI.Commands
             if (LastNearestObject == null)
             {
                 IHelpStrings parentHelp = Parent as IHelpStrings;
-                if(parentHelp != null)
+                if (parentHelp != null)
                 {
                     s.AddRange(parentHelp.HelpStrings);
                 }
@@ -105,7 +102,7 @@ namespace Viking.UI.Commands
             GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             object NewLastNearestObject = NearestObjectAtPositionAcrossAllExtensions(WorldPosition);
 
-            if(!object.Equals(NewLastNearestObject, LastNearestObject))
+            if (!object.Equals(NewLastNearestObject, LastNearestObject))
             {
                 LastNearestObject = NewLastNearestObject;
 
@@ -114,14 +111,14 @@ namespace Viking.UI.Commands
                 {
                     ObservableHelpStrings.Add(helpStr);
                 }
-            } 
-             
+            }
+
             base.OnMouseMove(sender, e);
         }
 
         protected virtual void OnPenMove(object sender, PenEventArgs e)
         {
-            
+
             base.OnPenMove(sender, e);
             return;
         }
@@ -154,12 +151,12 @@ namespace Viking.UI.Commands
 
                 //Create a context menu and show it where the mouse clicked
                 //Right mouse button calls up context menu
-                ContextMenu menu = null; 
+                ContextMenu menu = null;
                 if (context_obj != null)
                     menu = context_obj.ContextMenu;
                 else
                     menu = new ContextMenu();
-                
+
                 //Talk to everyone who modifies context menus to see if they have a contribution
                 IProvideContextMenus[] ContextMenuProviders = ExtensionManager.CreateContextMenuProviders();
                 foreach (IProvideContextMenus provider in ContextMenuProviders)

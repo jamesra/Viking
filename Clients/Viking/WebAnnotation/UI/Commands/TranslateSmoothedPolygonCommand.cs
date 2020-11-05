@@ -1,20 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using Geometry;
-using WebAnnotation.View;
-using Viking.VolumeModel;
-using SqlGeometryUtils;
-using VikingXNAGraphics;
-using System.Windows.Forms;
-using System.Diagnostics;
-using WebAnnotation;
-using System.Collections.ObjectModel;
-using VikingXNAWinForms;
+﻿using Geometry;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.Generic;
+using Viking.VolumeModel;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -22,7 +10,7 @@ namespace WebAnnotation.UI.Commands
     {
         public delegate void OnCommandSuccess(GridPolygon MosaicPolygon);
         protected OnCommandSuccess success_callback;
-          
+
         public override string[] HelpStrings
         {
             get
@@ -34,9 +22,9 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        protected GridVector2 DeltaSum = new GridVector2(0, 0); 
+        protected GridVector2 DeltaSum = new GridVector2(0, 0);
 
-        private GridPolygon OriginalMosaicPolygon; 
+        private GridPolygon OriginalMosaicPolygon;
         public GridPolygon TransformedMosaicPolygon;
         protected MeshModel<VertexPositionColor> _mesh;
         protected CircleView OriginalVolumePositionView;
@@ -47,7 +35,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// True if the Polygon's boundaries should be smoothed with a curve fitting algorithm
         /// </summary>
-        public bool SmoothPolygon = false; 
+        public bool SmoothPolygon = false;
 
         protected override GridVector2 VolumeRotationOrigin
         {
@@ -74,11 +62,10 @@ namespace WebAnnotation.UI.Commands
                                     VikingXNA.Scene scene,
                                     BasicEffect basicEffect)
         {
-            CircleView.Draw(graphicsDevice, scene, basicEffect,
-                            DeviceEffectsStore<AnnotationOverBackgroundLumaEffect>.GetOrCreateForDevice(graphicsDevice, Parent.Content),
+            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Luma,
                             new CircleView[] { OriginalVolumePositionView, TranslatedVolumePositionView });
 
-            MeshView<VertexPositionColor>.Draw(graphicsDevice, scene, new MeshModel<VertexPositionColor>[] { _mesh });
+            MeshView<VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: new MeshModel<VertexPositionColor>[] { _mesh });
         }
 
         protected override void OnAngleChanged()
@@ -94,7 +81,7 @@ namespace WebAnnotation.UI.Commands
         }
 
         protected override void OnTranslationChanged()
-        { 
+        {
             TransformedMosaicPolygon = CalculateTransformedPolygon();
             CreateUpdateView();
         }
@@ -120,7 +107,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            if( this.success_callback != null)
+            if (this.success_callback != null)
             {
                 /*
                 GridPolygon VolumeShape = null;

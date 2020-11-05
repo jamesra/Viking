@@ -1,21 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
-using System.Windows.Forms;
-using System.Threading;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using VikingXNA;
+using System;
 using System.Diagnostics;
-using Viking.UI.Forms;
-using Viking.UI;
+using System.Threading;
+using System.Windows.Forms;
 using Viking.Common;
-using System.Reflection;
+using Viking.UI;
+using Viking.UI.Forms;
+using Viking.ViewModels;
 using Viking.VolumeModel;
-using Viking.ViewModels; 
 
 namespace Viking
 {
@@ -23,14 +15,14 @@ namespace Viking
     {
 
         public VikingMain()
-        { 
+        {
             InitializeComponent();
-            
+
             TabsModules.TabCategory = TABCATEGORY.ACTION;
 
             State.Appwindow = this;
 
-            State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher; 
+            State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
         }
 
 
@@ -66,7 +58,7 @@ namespace Viking
 
         private void FreeThread(Thread T)
         {
-            
+
         }
 
         private void CacheCleaningTimer_Tick(object sender, EventArgs e)
@@ -77,7 +69,7 @@ namespace Viking
             ThreadPool.QueueUserWorkItem(Global.TileViewModelCache.ReduceCacheFootprint, null);
             ThreadPool.QueueUserWorkItem(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint, null);
 
-            if(Viking.UI.State.volume != null)
+            if (Viking.UI.State.volume != null)
                 ThreadPool.QueueUserWorkItem(Viking.UI.State.volume.ReduceCacheFootprint, null);
 
 
@@ -156,7 +148,7 @@ namespace Viking
 
             this.Text = UI.State.volume.Name;
 
-            Global.TextureCache.PopulateCache(UI.State.VolumeCachePath); 
+            Global.TextureCache.PopulateCache(UI.State.VolumeCachePath);
 
             /* PORT
             if (UI.State.volume.Sections == null)
@@ -170,7 +162,7 @@ namespace Viking
 
             SectionViewerForm SectionViewer = SectionViewerForm.Show(DefaultSection);
 
-            bool UseDefaultPosition = false; 
+            bool UseDefaultPosition = false;
 
             //Check if we have startup arguments to send us to a specific location
             try
@@ -190,7 +182,7 @@ namespace Viking
                     SectionViewer.GoToLocation(new Vector2(X, Y), Z, false);
                 }
             }
-            catch (Exception )
+            catch (Exception)
             {
                 //Oh well, just go to the default
 
@@ -202,13 +194,13 @@ namespace Viking
             try
             {
                 string strDownsample = UI.State.StartupArguments["DS"];
-                if(strDownsample != null)
+                if (strDownsample != null)
                 {
                     float Downsample = System.Convert.ToSingle(strDownsample);
-                    SectionViewer.CameraDownsample = Downsample; 
+                    SectionViewer.CameraDownsample = Downsample;
                 }
             }
-            catch (Exception )
+            catch (Exception)
             {
                 Trace.WriteLine("Unable to restore downsample level from application settings.");
             }
@@ -216,11 +208,12 @@ namespace Viking
             if (UseDefaultPosition)
             {
                 //default to centering the viewer on startup 
-                MappingBase map = Viking.UI.State.volume.GetTileMapping(null, DefaultSection.Number, null, null);
+                MappingBase map = Viking.UI.State.volume.GetTileMapping(Viking.UI.State.volume.DefaultVolumeTransform, DefaultSection.Number, null, null);
                 if (map != null)
                 {
                     Geometry.GridVector2 Center = map.ControlBounds.Center;
                     SectionViewer.GoToLocation(new Vector2((float)Center.X, (float)Center.Y), DefaultSection.Number, true);
+                    SectionViewer.CameraDownsample = Math.Max(map.ControlBounds.Width / SectionViewer.Width, map.ControlBounds.Height / SectionViewer.Height);
                 }
             }
         }
@@ -242,7 +235,7 @@ namespace Viking
                 aboutBox.ShowDialog();
             }
 
-            return; 
+            return;
         }
     }
 }

@@ -20,12 +20,10 @@
 //  Ported to C# By Dror Gluska, April 9th, 2009
 
 
-using log4net.Repository.Hierarchy;
 using log4net;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Collections;
 
 
 namespace RTree
@@ -109,8 +107,8 @@ namespace RTree
 
         //Added dictionaries to support generic objects..
         //possibility to change the code to support objects without dictionaries.
-        private Dictionary<int, T> IdsToItems = new Dictionary<int,T>();
-        private Dictionary<T,int> ItemsToIds = new Dictionary<T,int>();
+        private Dictionary<int, T> IdsToItems = new Dictionary<int, T>();
+        private Dictionary<T, int> ItemsToIds = new Dictionary<T, int>();
         private volatile int idcounter = int.MinValue;
 
         /// <summary>
@@ -122,7 +120,7 @@ namespace RTree
         private delegate void intproc(int x);
 
         [NonSerialized]
-        System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim(); 
+        System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
 
         /// <summary>
         /// Initialize implementation dependent properties of the RTree.
@@ -150,7 +148,7 @@ namespace RTree
         }
 
         private void init()
-        {  
+        {
             //initialize logs
             log = LogManager.GetLogger(typeof(RTree<T>).FullName);
             deleteLog = LogManager.GetLogger(typeof(RTree<T>).FullName + "-delete");
@@ -195,7 +193,7 @@ namespace RTree
             try
             {
                 rwLock.EnterWriteLock();
-            
+
                 idcounter++;
                 int id = idcounter;
 
@@ -225,12 +223,12 @@ namespace RTree
             try
             {
                 rwLock.EnterUpgradeableReadLock();
-                 
+
                 if (this.Contains(item))
-                    return false; 
+                    return false;
 
                 this.Add(r, item);
-                return true; 
+                return true;
             }
             finally
             {
@@ -291,7 +289,7 @@ namespace RTree
                 Node<T> root = new Node<T>(rootNodeId, treeHeight, maxNodeEntries);
                 root.addEntry(newNode.mbr, newNode.nodeId);
                 root.addEntry(oldRoot.mbr, oldRoot.nodeId);
-                nodeMap[rootNodeId] = root; 
+                nodeMap[rootNodeId] = root;
                 //nodeMap.Add(rootNodeId, root);
             }
 
@@ -309,12 +307,12 @@ namespace RTree
         /// <returns></returns>
         public void Update(T oldValue, T newValue)
         {
-            if(ItemsToIds.ContainsKey(newValue))
+            if (ItemsToIds.ContainsKey(newValue))
             {
                 throw new ArgumentException(string.Format("{0} is already in the RTree, cannot be used to replace {1}", newValue, oldValue));
             }
 
-            if(ItemsToIds.TryGetValue(oldValue, out int NodeID) == false)
+            if (ItemsToIds.TryGetValue(oldValue, out int NodeID) == false)
             {
                 throw new KeyNotFoundException(string.Format("{0} is not in the RTree and cannot be replaced", oldValue));
             }
@@ -327,7 +325,7 @@ namespace RTree
             ItemsToRects.Remove(oldValue);
             ItemsToRects.Add(newValue, rect);
 
-            this.IdsToItems[NodeID] = newValue; 
+            this.IdsToItems[NodeID] = newValue;
         }
 
         /// <summary>
@@ -432,7 +430,7 @@ namespace RTree
                 rwLock.ExitUpgradeableReadLock();
             }
         }
-           
+
 
         private bool delete(Rectangle r, int id)
         {
@@ -524,7 +522,7 @@ namespace RTree
                 rwLock.EnterReadLock();
 
                 List<T> retval = new List<T>();
-                nearest(p, delegate(int id)
+                nearest(p, delegate (int id)
                 {
                     retval.Add(IdsToItems[id]);
                 }, furthestDistance);
@@ -559,7 +557,7 @@ namespace RTree
             {
                 rwLock.EnterReadLock();
                 List<T> retval = new List<T>();
-                intersects(r, delegate(int id)
+                intersects(r, delegate (int id)
                 {
                     retval.Add(IdsToItems[id]);
                 });
@@ -652,7 +650,7 @@ namespace RTree
             {
                 rwLock.EnterReadLock();
                 List<T> retval = new List<T>();
-                contains(r, delegate(int id)
+                contains(r, delegate (int id)
                 {
                     retval.Add(IdsToItems[id]);
                 });
@@ -663,7 +661,7 @@ namespace RTree
             {
                 rwLock.ExitReadLock();
             }
-           
+
         }
 
         /// <summary>
@@ -675,13 +673,13 @@ namespace RTree
             try
             {
                 rwLock.EnterReadLock();
-                return ItemsToIds.ContainsKey(obj); 
+                return ItemsToIds.ContainsKey(obj);
             }
             finally
             {
                 rwLock.ExitReadLock();
             }
-            
+
         }
 
         private void contains(Rectangle r, intproc v)
@@ -796,9 +794,9 @@ namespace RTree
             return nextNodeId;
         }
 
-       
-       
-       
+
+
+
 
         /// <summary>
         /// Get a Node&lt;T&gt; object, given the ID of the node.
@@ -834,7 +832,7 @@ namespace RTree
             {
                 rwLock.ExitReadLock();
             }
-            
+
         }
 
         /// <summary>
@@ -1045,7 +1043,7 @@ namespace RTree
 
 
 
-        
+
         /// <summary>
         /// Pick the next entry to be assigned to a group during a Node&lt;T&gt; split.
         /// [Determine cost of putting each entry in each group] For each 
@@ -1137,7 +1135,7 @@ namespace RTree
             return next;
         }
 
-        
+
         /// <summary>
         /// Recursively searches the tree for the nearest entry. Other queries
         /// call execute() on an IntProcedure when a matching entry is found; 
@@ -1181,7 +1179,7 @@ namespace RTree
             return nearestDistance;
         }
 
-    
+
         /// <summary>
         /// Recursively searches the tree for all intersecting entries.
         /// Immediately calls execute() on the passed IntProcedure when 
@@ -1228,7 +1226,7 @@ namespace RTree
                 if (r.intersects(n.entries[i]))
                 {
                     if (n.isLeaf())
-                    { 
+                    {
                         yield return n.ids[i];
                     }
                     else
@@ -1251,7 +1249,7 @@ namespace RTree
          * contain the nodeIds of all parents up to the root.
          */
 
-        private Rectangle oldRectangle = new Rectangle(0, 0, 0, 0,0,0);
+        private Rectangle oldRectangle = new Rectangle(0, 0, 0, 0, 0, 0);
         private void condenseTree(Node<T> l)
         {
             // CT1 [Initialize] Set n=l. Set the list of eliminated
@@ -1276,7 +1274,7 @@ namespace RTree
                 {
                     parent.deleteEntry(parentEntry, minNodeEntries);
                     eliminatedNodeIds.Push(n.nodeId);
-                    
+
                 }
                 else
                 {

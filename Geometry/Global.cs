@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
-using System.Linq.Expressions;
 
 namespace Geometry
 {
@@ -45,7 +43,7 @@ namespace Geometry
 
             return false;
         }
-         
+
         public static bool TryDeleteCacheFile(string FilePath)
         {
             if (System.IO.File.Exists(FilePath))

@@ -1,19 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
+﻿using System.Diagnostics;
 using Viking.Common;
-using System.Diagnostics;
 using WebAnnotation.ViewModel;
-using WebAnnotationModel;
 
 namespace WebAnnotation.UI
 {
-    [PropertyPage(typeof(Structure), 2)] 
+    [PropertyPage(typeof(Structure), 2)]
     public partial class StructureNotesPage : Viking.UI.BaseClasses.PropertyPageBase
     {
         Structure Obj;
@@ -32,9 +23,9 @@ namespace WebAnnotation.UI
         protected override void OnShowObject(object Object)
         {
             this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null); 
+            Debug.Assert(this.Obj != null);
 
-            if(null != this.Obj.Notes)
+            if (null != this.Obj.Notes)
                 this.textNotes.Text = this.Obj.Notes;
         }
 

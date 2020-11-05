@@ -1,17 +1,16 @@
 ﻿using Geometry;
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using VikingXNAWinForms;
 using System.Collections.Specialized;
+using System.Linq;
+using System.Windows.Forms;
 using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 namespace Viking.UI
 {
-    public enum VERTEXACTION
+    public enum PathVertexAction
     {
         REMOVE, //Remove the newest vertex
         REPLACE, //Replace the newest vertex
@@ -28,7 +27,71 @@ namespace Viking.UI
         Tap, //Signal the path is complete when the pen is removed from the surface and contacts the path
     }
 
-    public class PenInputHelper:  System.Collections.Specialized.INotifyCollectionChanged
+
+    public class PenPathChangedEventArgs : NotifyCollectionChangedEventArgs
+    {
+        readonly PenEventArgs PenState;
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action) : base(action)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, object changedItem) : base(action, changedItem)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, IList changedItems) : base(action, changedItems)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, object changedItem, int index) : base(action, changedItem, index)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, IList changedItems, int startingIndex) : base(action, changedItems, startingIndex)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, object newItem, object oldItem) : base(action, newItem, oldItem)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, IList newItems, IList oldItems) : base(action, newItems, oldItems)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, object newItem, object oldItem, int index) : base(action, newItem, oldItem, index)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, IList newItems, IList oldItems, int startingIndex) : base(action, newItems, oldItems, startingIndex)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, object changedItem, int index, int oldIndex) : base(action, changedItem, index, oldIndex)
+        {
+            PenState = penState;
+        }
+
+        public PenPathChangedEventArgs(PenEventArgs penState, NotifyCollectionChangedAction action, IList changedItems, int index, int oldIndex) : base(action, changedItems, index, oldIndex)
+        {
+            PenState = penState;
+        }
+    }
+
+    public delegate void PenPathChangedEventHandler(object sender, PenPathChangedEventArgs e);
+
+
+    public class PenInputHelper : System.Collections.Specialized.INotifyCollectionChanged
     {
         /// <summary>
         /// When the user attempts to place the pen cursor on the shape they have drawn to complete it, how many screen pixels the have to be within to succeed
@@ -38,8 +101,10 @@ namespace Viking.UI
         /// <summary>
         /// When the pen loses contact with the surface, the maximum distance the user can resume appending from the end of the path when the 
         /// pen contacts the surface again.  Prevents the user from accidentally attempting to click something and drawing a crazy shape.
+        /// 
+        /// If set to NULL positive infinity is used so any touch resumes the drawing.
         /// </summary>
-        public static double resumeDistance = 50;
+        public static double? resumeDistance = 50;
 
         /// <summary>
         /// When the pen regains contact with the surface, the distance beyond which input can be safely assumed to not relate to the path being drawn.  This allows the user of the PenInputHelper to perform other tasks
@@ -87,8 +152,8 @@ namespace Viking.UI
         /// </summary>
         private bool MustCheckResumeDistance = false;
 
-        
-        private double _SimplifiedPathToleranceInPixels;
+
+        private double _SimplifiedPathToleranceInPixels = 1.0;
         /// <summary>
         /// How far can the simplified path drift from actual path in pixels?
         /// </summary>
@@ -100,7 +165,7 @@ namespace Viking.UI
             }
             set
             {
-                if(value != _SimplifiedPathToleranceInPixels)
+                if (value != _SimplifiedPathToleranceInPixels)
                 {
                     _SimplifiedPathToleranceInPixels = value;
                     path.SimplifiedPathTolerance = value * Parent.Camera.Downsample;
@@ -161,8 +226,6 @@ namespace Viking.UI
         public delegate void OnProposedNextSegmentChangedHandler(object sender, GridLineSegment? segment);
         public event OnProposedNextSegmentChangedHandler OnProposedNextSegmentChanged;
 
-
-
         public delegate bool CanControlPointBePlacedDelegate(GridVector2 position);
 
         /// <summary>
@@ -202,20 +265,20 @@ namespace Viking.UI
                 return path.SimplifiedPath;
             }
         }
-        
+
         public GridVector2? LastPenPosition;
 
         public uint NumCurveInterpolations
         {
             get;
         }
-        
+
         public GridLineSegment NewestSegent
         {
             get
             {
                 int count = Points.Count;
-                return new GridLineSegment(Points[0], Points[1]);
+                return new GridLineSegment(Points[Points.Count - 1], Points[Points.Count - 2]);
             }
         }
 
@@ -226,9 +289,9 @@ namespace Viking.UI
                 if (Points.Count == 0)
                     return new GridLineSegment?();
 
-                if (LastPenPosition.HasValue && LastPenPosition.Value != Points[0])
+                if (LastPenPosition.HasValue && LastPenPosition.Value != Points.Last())
                 {
-                    return new GridLineSegment(Points[0], LastPenPosition.Value);
+                    return new GridLineSegment(Points.Last(), LastPenPosition.Value);
                 }
 
                 return new GridLineSegment?();
@@ -281,8 +344,8 @@ namespace Viking.UI
                 return path.SimplifiedFirstLoop;
             }
         }
-         
-        
+
+
         /// <summary>
         /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
         /// </summary>
@@ -303,14 +366,20 @@ namespace Viking.UI
             _NextID = _NextID + 1;
         }
 
-
-        public PenInputHelper(Viking.UI.Controls.SectionViewerControl Parent, double simplifiedPathToleranceInPixels = 4.0)
+        /// <summary>
+        /// This constructor is used for test cases
+        /// </summary>
+        /// <param name="simplifiedPathToleranceInPixels"></param>
+        internal PenInputHelper(double simplifiedPathToleranceInPixels = 4.0)
         {
             AssignID();
             PenIsComplete = false;
-            
-            this.Parent = Parent;
             NumCurveInterpolations = Geometry.Global.NumCurveInterpolationPoints(false);
+        }
+
+        public PenInputHelper(Viking.UI.Controls.SectionViewerControl Parent, double simplifiedPathToleranceInPixels = 4.0) : this()
+        {
+            this.Parent = Parent;
 
             Parent.MouseMove += this.OnMouseMove;
             Parent.MouseUp += this.OnMouseUp;
@@ -370,7 +439,7 @@ namespace Viking.UI
                 return path.HasSelfIntersection;
             }
         }
-        
+
         private void FireOnProposedNextSegmentChanged(GridLineSegment? line)
         {
             if (this.OnProposedNextSegmentChanged != null)
@@ -381,9 +450,9 @@ namespace Viking.UI
 
         private void OnCameraPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs args)
         {
-            if(args.PropertyName == "Downsample")
+            if (args.PropertyName == "Downsample")
             {
-                
+
                 this.path.SimplifiedPathTolerance = Parent.Camera.Downsample * SimplifiedPathToleranceInPixels; //Adjust our tolerance to match the camera's downsample level times a multiplier that lets simplified path drift by almost imperceptable amounts
             }
         }
@@ -393,13 +462,13 @@ namespace Viking.UI
             GridVector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
 
             bool EraseButtonDown = e.Button.Middle(); ;
-            
+
             //Don't report miniscule changes in distance
             if (LastPenPosition.HasValue && GridVector2.DistanceSquared(cursor_position, LastPenPosition) < Geometry.Global.EpsilonSquared)
             {
                 return;
             }
-            
+
             if (EraseButtonDown && Points.Count > 1)
             {
                 GridLineSegment testLine = new GridLineSegment(this.LastPenPosition, cursor_position);
@@ -422,7 +491,7 @@ namespace Viking.UI
             }
             else if (e.Button.LeftOnly())
             {
-                VERTEXACTION vertex_action = GetActionForFullResolutionPath(cursor_position);
+                PathVertexAction vertex_action = GetActionForFullResolutionPath(cursor_position);
                 ApplyVertexAction(vertex_action, cursor_position);
             }
 
@@ -436,28 +505,28 @@ namespace Viking.UI
         ///                      REPLACE: Replaces the newest vertex in the path with the input
         ///                      REMOVE: If there is input, finds the nearest path vertex and removes all verticies in the path placed after that vertex.  If there is no input, removes the most recently placed vertex/param>
         /// <param name="input"></param>
-        public void ApplyVertexAction(VERTEXACTION action, GridVector2? input)
+        public void ApplyVertexAction(PathVertexAction action, GridVector2? input)
         {
             switch (action)
             {
-                case VERTEXACTION.NONE:
+                case PathVertexAction.NONE:
                     break;
-                case VERTEXACTION.ADD:
+                case PathVertexAction.ADD:
                     if (this.CanControlPointBePlaced(input.Value))
                     {
                         this.Push(input.Value);
                         this.FireOnProposedNextSegmentChanged(this.ProposedNextSegment);
                     }
                     break;
-                case VERTEXACTION.REPLACE:
+                case PathVertexAction.REPLACE:
                     path.Replace(input.Value);
                     this.FireOnProposedNextSegmentChanged(this.ProposedNextSegment);
                     break;
-                case VERTEXACTION.REMOVE:
+                case PathVertexAction.REMOVE:
                     GridVector2 removed = this.Pop();
                     this.FireOnProposedNextSegmentChanged(this.ProposedNextSegment);
                     break;
-                case VERTEXACTION.CUT_ERASE:
+                case PathVertexAction.CUT_ERASE:
                     bool Erased = path.Erase(input.Value);
                     if (Erased)
                     {
@@ -473,12 +542,12 @@ namespace Viking.UI
 
         private void OnMouseUp(object sender, MouseEventArgs e)
         {
-            if(e.Button.LeftOnly())
+            if (e.Button.LeftOnly())
             {
                 if (Points.Count <= 1)
-                    return; 
+                    return;
 
-                if(Points[0] == Points[Points.Count - 1] && OnPathCompleted != null)
+                if (OnPathCompleted != null)
                 {
                     OnPathCompleted(this, this.Points.ToArray());
                 }
@@ -493,6 +562,9 @@ namespace Viking.UI
         {
             if (IgnoringThisPenContact)
                 return;
+
+            if (OnPathCompleted != null)
+                OnPathCompleted(this, this.Points.ToArray());
         }
 
         /// <summary>
@@ -503,12 +575,12 @@ namespace Viking.UI
         /// <param name="e"></param>
         protected virtual void OnPenContact(object sender, PenEventArgs e)
         {
-            if(Points.Count == 0)
+            if (Points.Count == 0)
             {
                 IgnoringThisPenContact = false;
                 return;
             }
-            
+
             GridVector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
             IgnoringThisPenContact = this.path.Distance(cursor_position) > MaxInteractDistanceInPixels(Parent.Camera.Downsample);
 
@@ -516,7 +588,7 @@ namespace Viking.UI
                 return;
 
             //Now check whether the user clicked on an already drawn shape to cancel the command
-            if(Points.Count <= 1)
+            if (Points.Count <= 1)
             {
                 //Do not complete a path without any segments
                 return;
@@ -525,23 +597,23 @@ namespace Viking.UI
             //Do not complete the path on an erase contact
             if (e.Erase)
                 return;
-            
-            double distanceToEnd = GridVector2.Distance(Points.First(), cursor_position);
-            double distanceToStart = GridVector2.Distance(Points.Last(), cursor_position);
+
+            double distanceToEnd = GridVector2.Distance(Points.Last(), cursor_position);
+            double distanceToStart = GridVector2.Distance(Points.First(), cursor_position);
 
             //Check that we are outside the resume distance, if not, check that we are closer to the start of the path than the end (For short path case)
             double resume_distance = ResumeDistanceInPixels(Parent.Camera.Downsample);
-            
-            if (distanceToEnd < resume_distance && distanceToStart > distanceToEnd ) 
+
+            if (distanceToEnd < resume_distance && distanceToStart > distanceToEnd)
                 return;
 
             double complete_distance = CompletionDistanceInPixels(Parent.Camera.Downsample);
 
             bool pen_contacted_path = path.Segments.Any(seg => seg.DistanceToPoint(cursor_position) <= complete_distance && seg.IsNearestPointWithinLineSegment(cursor_position));
-            if(pen_contacted_path)
+            if (pen_contacted_path)
             {
                 OnPathCompleted(this, this.Points.ToArray());
-            } 
+            }
         }
 
         protected virtual void OnPenLeaveContact(object sender, PenEventArgs e)
@@ -557,7 +629,10 @@ namespace Viking.UI
 
         private static double ResumeDistanceInPixels(double downsample)
         {
-            return downsample * resumeDistance;
+            if (resumeDistance.HasValue)
+                return downsample * resumeDistance.Value;
+
+            return double.PositiveInfinity;
         }
 
         private static double EraseDistanceInPixels(double NormalizedPressure, double downsample)
@@ -579,8 +654,6 @@ namespace Viking.UI
             if (!e.InContact)
                 return;
 
-            
-
             GridVector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
 
             bool EraseActive = e.Erase && e.InContact;
@@ -596,47 +669,10 @@ namespace Viking.UI
             {
                 GridLineSegment testLine = new GridLineSegment(this.LastPenPosition, cursor_position);
                 EraseAlongLine(testLine);
-                /*
-                 * Original control point erase code
-                 */
-                /*
-               double delete_distance = EraseDistanceInPixels(e.NormalizedPressure, Parent.Camera.Downsample);
-
-               var candidates = path.Segments.Where(seg => seg.DistanceToPoint(cursor_position) <= delete_distance).ToList();
-               candidates.Sort();
-
-               var deleted = candidates.Where(seg => seg.IsNearestPointWithinLineSegment(cursor_position));
-
-
-               int iDeleteSegment = path.Segments.ToList().FindLastIndex(seg => seg.DistanceToPoint(cursor_position) <= delete_distance);
-               int iDeletePoint = iDeleteSegment + 1; //We delete the far point of the segment
-               */
-
-                /*               int iDeletePoint = Points.FindIndex(v => GridVector2.Distance(v, cursor_position) < delete_distance);
-
-                                if (iDeletePoint >= 0)
-                                {
-                                    double distance = GridVector2.Distance(Points[iDeletePoint], cursor_position);
-                                    ApplyVertexAction(VERTEXACTION.CUT_ERASE, cursor_position);
-                                    /*if (distance > 0)
-                                    {
-                                        ApplyVertexAction(VERTEXACTION.ADD, cursor_position);
-                                    }
-                                 */
-                /*
-               if(iDeleteSegment >= 0)
-               {
-                   var deletedSegment = path.Segments[iDeleteSegment];
-                   deletedSegment.IsNearestPointWithinLineSegment(delete_distance);
-               }
-               */
-
-                
-                
             }
             else if (DrawActive)
             {
-                VERTEXACTION vertex_action = GetActionForFullResolutionPath(cursor_position);
+                PathVertexAction vertex_action = GetActionForFullResolutionPath(cursor_position);
                 ApplyVertexAction(vertex_action, cursor_position);
             }
 
@@ -660,8 +696,8 @@ namespace Viking.UI
 
                 if (iDeletePoint > 0)
                 {
-                    ApplyVertexAction(VERTEXACTION.CUT_ERASE, deleteSegment.A);
-                    ApplyVertexAction(VERTEXACTION.ADD, firstIntersection);
+                    ApplyVertexAction(PathVertexAction.CUT_ERASE, deleteSegment.A);
+                    ApplyVertexAction(PathVertexAction.ADD, firstIntersection);
                 }
 
                 /*
@@ -674,36 +710,36 @@ namespace Viking.UI
             }
         }
 
-        public VERTEXACTION GetActionForFullResolutionPath(GridVector2 pen_position)
+        public PathVertexAction GetActionForFullResolutionPath(GridVector2 pen_position)
         {
             if (Points.Count == 0)
-                return VERTEXACTION.ADD;
+                return PathVertexAction.ADD;
 
-            double distanceToLast = GridVector2.Distance(pen_position, Points[0]);
+            double distanceToLast = GridVector2.Distance(pen_position, Points.Last());
 
             //Check the resume distance until we succeed, prevents user from drawing geometry across the screen trying to click a button.
             if (MustCheckResumeDistance)
             {
                 if (distanceToLast > ResumeDistanceInPixels(Parent.Camera.Downsample))
-                    return VERTEXACTION.NONE;
+                    return PathVertexAction.NONE;
 
                 MustCheckResumeDistance = false;
             }
-            
+
 
             //if(HasPenTravelledAwayFromLastControlPoint && distanceToLast < ControlPointSelectionRadius)
             //{
             //    return VERTEXACTION.REMOVE;
             //}
 
-            
+
             if (distanceToLast >= this.PointIntervalOnDrag)
             {
-                if(pen_position != Points[0])
-                    return VERTEXACTION.ADD;
+                if (pen_position != Points.Last())
+                    return PathVertexAction.ADD;
             }
 
-            return VERTEXACTION.NONE;
+            return PathVertexAction.NONE;
         }
 
         protected CurveViewControlPoints AppendProposedPointToPathCurve(GridVector2 worldPos)
@@ -729,9 +765,9 @@ namespace Viking.UI
             {
                 CurveViewControlPoints curveVerticies = AppendProposedPointToPathCurve(worldPos);
                 GridVector2[] controlPoints = this.Points.ToArray();
-                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), worldPos));
-                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(worldPos, controlPoints[0]));
-                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints[0], controlPoints.Last()));
+                GridLineSegment[] proposed_back_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.First(), worldPos));
+                GridLineSegment[] proposed_front_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(worldPos, controlPoints.Last()));
+                GridLineSegment[] existing_curve_segments = GridLineSegment.SegmentsFromPoints(curveVerticies.CurvePointsBetweenControlPoints(controlPoints.Last(), controlPoints.First()));
 
                 proposed_front_curve_segments = proposed_front_curve_segments.ShortenLastVertex();
                 existing_curve_segments = existing_curve_segments.ShortenLastVertex();
@@ -760,7 +796,7 @@ namespace Viking.UI
             this.FireOnProposedNextSegmentChanged(this.ProposedNextSegment);
         }
 
-        
+
 
     }
 

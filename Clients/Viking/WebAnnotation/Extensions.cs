@@ -1,16 +1,8 @@
-﻿using System;
-using System.Diagnostics;
+﻿using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
+using Geometry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Data.Entity.Spatial;
-using RTree;
-using Geometry;
-using SqlGeometryUtils;
-using WebAnnotation.ViewModel;
-using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
-using WebAnnotation.UI;
-using Viking.VolumeModel;
 
 namespace WebAnnotation
 {
@@ -51,11 +43,11 @@ namespace WebAnnotation
         {
             return ModifierKeys == System.Windows.Forms.Keys.Control;
         }
-    } 
+    }
 
     public static class HitTestResultExtensions
     {
-        
+
         /// <summary>
         /// Select annotations in this order
         /// 1. Locations on our section or Structure Links, whichever is closer, with a max distance <= 1.  (>1 indicates mouse is not over the annotation, or is in a polygon hole)
@@ -92,7 +84,7 @@ namespace WebAnnotation
                 return listObjectsOnAdjacentSection.First();
             }
 
-            if(listLocations.Count > 0)
+            if (listLocations.Count > 0)
             {
                 listLocations.Sort(new HitTest_Z_Depth_Distance_Sorter());
                 return listLocations.First();
@@ -118,25 +110,29 @@ namespace WebAnnotation
         /// <param name="listHitTestObjects"></param>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        public static List<HitTestResult> ExpandICanvasViewContainers(this ICollection<HitTestResult> listHitTestObjects, GridVector2 WorldPos)
+        public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, GridVector2 WorldPos)
         {
-           List<HitTestResult> nestedContainers = listHitTestObjects.Select(lc =>
-                {
-                    ICanvasViewContainer container = lc.obj as ICanvasViewContainer;
-                    if (container == null)
-                        return lc; 
+            List<HitTestResult> nestedContainers = listHitTestObjects.Select(lc =>
+                 {
+                     ICanvasViewContainer container = lc.obj as ICanvasViewContainer;
+                     if (container == null)
+                         return lc;
 
-                    ICanvasGeometryView nestedObj = container.GetAnnotationAtPosition(WorldPos);
-                    if (nestedObj != lc.obj)
-                    {
-                        return new HitTestResult(nestedObj, lc.Z, nestedObj.DistanceFromCenterNormalized(WorldPos));
-                    }
-                    else
-                    {
-                        return lc;
-                    }
+                     ICanvasView nestedObj = container.GetAnnotationAtPosition(WorldPos);
+                     if (nestedObj == null)
+                     {
+                         return null;
+                     }
+                     else if (nestedObj != lc.obj)
+                     {
+                         return new HitTestResult(nestedObj, lc.Z, lc.VisualHeight, nestedObj.DistanceFromCenterNormalized(WorldPos));
+                     }
+                     else
+                     {
+                         return lc;
+                     }
 
-                }).ToList();
+                 }).ToList();
 
             return nestedContainers.ToList();
         }
@@ -159,39 +155,39 @@ namespace WebAnnotation
 
     public static class AnnotationExtensions
     {
-        private static WebAnnotationModel.LocationType StringToLocationType(string annotationType)
+        private static Annotation.Interfaces.LocationType StringToLocationType(string annotationType)
         {
             switch (annotationType)
             {
                 case "Circle":
-                    return WebAnnotationModel.LocationType.CIRCLE;
+                    return Annotation.Interfaces.LocationType.CIRCLE;
                 case "ClosedCurve":
-                    return WebAnnotationModel.LocationType.CLOSEDCURVE;
+                    return Annotation.Interfaces.LocationType.CLOSEDCURVE;
                 case "OpenCurve":
-                    return WebAnnotationModel.LocationType.OPENCURVE;
+                    return Annotation.Interfaces.LocationType.OPENCURVE;
                 case "Polygon":
-                    return WebAnnotationModel.LocationType.POLYGON;
+                    return Annotation.Interfaces.LocationType.POLYGON;
                 case "Polyline":
-                    return WebAnnotationModel.LocationType.POLYLINE;
+                    return Annotation.Interfaces.LocationType.POLYLINE;
                 case "Point":
-                    return WebAnnotationModel.LocationType.POINT;
+                    return Annotation.Interfaces.LocationType.POINT;
                 case "Ellipse":
-                    return WebAnnotationModel.LocationType.ELLIPSE;
+                    return Annotation.Interfaces.LocationType.ELLIPSE;
                 case "CurvePolygon":
-                    return WebAnnotationModel.LocationType.CURVEPOLYGON;
+                    return Annotation.Interfaces.LocationType.CURVEPOLYGON;
                 default:
-                    return WebAnnotationModel.LocationType.CIRCLE;
+                    return Annotation.Interfaces.LocationType.CIRCLE;
             }
 
             throw new ArgumentException("Unknown annotation type " + annotationType);
         }
 
-        public static WebAnnotationModel.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
+        public static Annotation.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
         {
             return StringToLocationType(command.AnnotationType);
         }
 
-        public static WebAnnotationModel.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
+        public static Annotation.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
         {
             return StringToLocationType(command.AnnotationType);
         }
@@ -237,7 +233,7 @@ namespace WebAnnotation
             return GridVector3.Distance(p, origin);
         }
 
-         
+
 
         /// <summary>
         /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
@@ -255,11 +251,11 @@ namespace WebAnnotation
             catch (ArgumentException e)
             {
                 System.Windows.MessageBox.Show(parent, e.Message, "Could not save Polygon", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            } 
-        }  
+            }
+        }
 
         public static bool IsLastEditedAnnotation(this WebAnnotationModel.LocationObj loc)
-        { 
+        {
             if (!Global.LastEditedAnnotationID.HasValue)
             {
                 return false;
@@ -291,19 +287,19 @@ namespace WebAnnotation
             if (action == null) throw new ArgumentNullException("action");
 
             int i = 0;
-            foreach(T item in source)
-            { 
+            foreach (T item in source)
+            {
                 action(item, i);
                 i++;
             }
         }
 
-        public static void ForEach<T>(this T[] source, Action<T,int> action)
+        public static void ForEach<T>(this T[] source, Action<T, int> action)
         {
             if (source == null) throw new ArgumentNullException("source");
             if (action == null) throw new ArgumentNullException("action");
 
-            for(int i = 0; i < source.Length; i++)
+            for (int i = 0; i < source.Length; i++)
             {
                 action(source[i], i);
             }

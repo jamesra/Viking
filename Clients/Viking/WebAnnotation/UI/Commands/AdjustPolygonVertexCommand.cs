@@ -1,36 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using Geometry;
-using WebAnnotation.View;
-using SqlGeometryUtils;
-using VikingXNAGraphics;
-using System.Windows.Forms;
-using System.Diagnostics;
-using VikingXNAWinForms;
-using Viking.VolumeModel;
-using Microsoft.Xna.Framework.Graphics;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
-using VikingXNA;
-using WebAnnotation;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Windows.Forms;
+using Viking.VolumeModel;
+using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
     class AdjustPolygonVertexCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         GridPolygon OriginalMosaicPolygon;
-        GridPolygon OriginalVolumePolygon; 
+        GridPolygon OriginalVolumePolygon;
 
         PositionColorMeshModel polygonView;
 
         GridPolygon AdjustedPolygon = null; //The polygon we are adjusting.  This can be an interior polygon.
         private int iAdjustedControlPoint = -1; //The index of the vertex in the exterior ring to adjust. 
 
-        Color _color; 
+        Color _color;
 
         /// <summary>
         /// Returns unsmoothed mosaic and volume polygons with the new point
@@ -70,7 +61,7 @@ namespace WebAnnotation.UI.Commands
 
             //this.SmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             this.success_callback = success_callback;
-            
+
         }
 
         private void CreateView(GridPolygon poly, Color color)
@@ -83,26 +74,43 @@ namespace WebAnnotation.UI.Commands
             if (iAdjustedControlPoint < 0)
             {
                 OriginalVolumePolygon.NearestVertex(WorldPosition, out PointIndex adjustedVertex);
+                if (adjustedVertex.IsInner)
+                {
+                    AdjustedPolygon = AdjustedPolygon.InteriorPolygons[adjustedVertex.iInnerPoly.Value];
+                }
+                else
+                {
+                    AdjustedPolygon = (GridPolygon)OriginalVolumePolygon.Clone();
+                }
+
                 this.iAdjustedControlPoint = adjustedVertex.iVertex;
             }
-        } 
+        }
 
         protected virtual void UpdatePosition(GridVector2 PositionDelta)
         {
             GridVector2[] newRing = AdjustedPolygon.ExteriorRing.Clone() as GridVector2[];
             newRing[iAdjustedControlPoint] += PositionDelta;
-            if(iAdjustedControlPoint == 0)
+            if (iAdjustedControlPoint == 0)
             {
                 newRing[AdjustedPolygon.ExteriorRing.Length - 1] = newRing[iAdjustedControlPoint];
             }
-            else if(iAdjustedControlPoint == AdjustedPolygon.ExteriorRing.Length - 1)
+            else if (iAdjustedControlPoint == AdjustedPolygon.ExteriorRing.Length - 1)
             {
                 newRing[0] = newRing[iAdjustedControlPoint];
             }
 
             AdjustedPolygon.ExteriorRing = newRing;
 
+            //if(polygonView == null)
             CreateView(AdjustedPolygon, _color);
+
+            /*else
+            {
+                polygonView.Verticies[iAdjustedControlPoint].Position = newRing[iAdjustedControlPoint].ToXNAVector3();
+                
+
+            }*/
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
@@ -137,7 +145,7 @@ namespace WebAnnotation.UI.Commands
                 }
                 else
                 {
-                    this.CommandActive = false; 
+                    this.CommandActive = false;
                 }
             }
 
@@ -147,8 +155,8 @@ namespace WebAnnotation.UI.Commands
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            if(polygonView != null)
-                MeshView<VertexPositionColor>.Draw(graphicsDevice, scene, new PositionColorMeshModel[] { polygonView });
+            if (polygonView != null)
+                MeshView<VertexPositionColor>.Draw(graphicsDevice, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(graphicsDevice), meshmodels: new PositionColorMeshModel[] { polygonView });
         }
 
         protected override void Execute()

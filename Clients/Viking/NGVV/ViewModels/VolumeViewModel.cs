@@ -20,7 +20,7 @@ namespace Viking.ViewModels
 
         public bool IsLocal { get { return _Volume.IsLocal; } }
 
-        public Geometry.AxisUnits DefaultXYScale
+        public UnitsAndScale.IAxisUnits DefaultXYScale
         {
             get { return _Volume.DefaultXYScale; }
         }

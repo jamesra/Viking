@@ -1,11 +1,9 @@
-﻿using System;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Annotation.Interfaces;
 using Geometry;
 using SqlGeometryUtils;
-using Annotation.Interfaces;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using UnitsAndScale;
 
 namespace AnnotationVizLib
@@ -35,7 +33,7 @@ namespace AnnotationVizLib
         {
             TLPViewNode tempNode = new TLPViewNode(ID);
             addNode(ID, tempNode);
-            return tempNode; 
+            return tempNode;
         }
 
         /// <summary>
@@ -59,7 +57,7 @@ namespace AnnotationVizLib
             }
             */
 
-            tlpnode.Color = color; 
+            tlpnode.Color = color;
             NodeAttribs.Add("viewSize", NodeSize(node, scale));
             NodeAttribs.Add("viewLayout", NodeLayout(node));
             NodeAttribs.Add("LocationID", node.ID.ToString());
@@ -72,20 +70,20 @@ namespace AnnotationVizLib
             NodeAttribs.Add("StructureTags", ObjAttribute.AttributesToString(node.Graph.structure.TagsXML));
             NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Location.TagsXml));
 
-            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));            
+            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));
 
-            if(node.Graph.structureType != null)
-                NodeAttribs.Add("Type", node.Graph.structureType.Name); 
+            if (node.Graph.structureType != null)
+                NodeAttribs.Add("Type", node.Graph.structureType.Name);
 
-            if(NodeShape(node) != null)
+            if (NodeShape(node) != null)
             {
-                NodeAttribs.Add("viewShape", NodeShape(node)); 
+                NodeAttribs.Add("viewShape", NodeShape(node));
             }
 
             if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count() > 0)
             {
                 NodeAttribs.Add("NumLinkedStructures", node.Graph.structure.Links.Count().ToString());
-            } 
+            }
 
             tlpnode.AddStandardizedAttributes(NodeAttribs);
 
@@ -97,9 +95,9 @@ namespace AnnotationVizLib
             if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count() > 0)
                 return TLPAttributes.IntForShape(TLPAttributes.NodeShapes.GlowSphere);
 
-            return null; 
+            return null;
         }
-         
+
 
         public static string NodeVikingLocation(MorphologyNode node)
         {
@@ -175,15 +173,15 @@ namespace AnnotationVizLib
                 tlpedge = this.addEdge(edge.SourceNodeKey, edge.TargetNodeKey);
                 tlpedge.Color = color;
 
-                MorphologyEdgeToTulipID.Add(edge, tlpedge.tulip_id); 
+                MorphologyEdgeToTulipID.Add(edge, tlpedge.tulip_id);
 
             }
-            catch(KeyNotFoundException)
+            catch (KeyNotFoundException)
             {
                 Trace.WriteLine(string.Format("Nodes missing for edge {0}", edge.ToString()));
                 return null;
             }
-            
+
             /*
             IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType, TLPAttributes.StandardEdgeSourceLabelToTLPAppearance);
 
@@ -209,7 +207,7 @@ namespace AnnotationVizLib
             if (colorMap == null)
                 return System.Drawing.Color.Empty;
 
-            return colorMap.GetColor(graph); 
+            return colorMap.GetColor(graph);
         }
 
         public static MorphologyTLPView ToTLP(MorphologyGraph graph, UnitsAndScale.IScale scale, StructureMorphologyColorMap colorMap, string VolumeURL)
@@ -218,14 +216,14 @@ namespace AnnotationVizLib
 
             AddAllSubgraphNodesAndEdges(view, graph, colorMap);
 
-            foreach(ulong subgraph_key in graph.Subgraphs.Keys)
+            foreach (ulong subgraph_key in graph.Subgraphs.Keys)
             {
                 ulong subgraph_tlp_id = view.GenerateNextSubgraphID();
                 MorphologyGraph subgraph = graph.Subgraphs[subgraph_key];
                 TLPViewSubgraph subgraph_view = AssignNodesToSubgraphs(view, subgraph, colorMap);
                 view.AddSubGraph(subgraph_tlp_id, subgraph_view);
             }
-             
+
             return view;
         }
 
@@ -244,15 +242,15 @@ namespace AnnotationVizLib
             }
 
             foreach (ulong subgraph_id in structuregraph.Subgraphs.Keys)
-            { 
+            {
                 MorphologyGraph subgraph = structuregraph.Subgraphs[subgraph_id];
                 //MorphologyTLPView subgraph_view = new MorphologyTLPView(view.scale, GetStructureColor(subgraph, colorMap));
-                
+
                 //CreateSubgraph(subgraph_view,subgraph); 
 
                 AddAllSubgraphNodesAndEdges(view, subgraph, colorMap);
                 //view.AddSubGraph(subgraph_id, subgraph_view);
-            } 
+            }
         }
 
         private static TLPViewSubgraph AssignNodesToSubgraphs(MorphologyTLPView view, MorphologyGraph structuregraph, StructureMorphologyColorMap colorMap)
@@ -274,7 +272,7 @@ namespace AnnotationVizLib
             foreach (ulong subgraph_id in structuregraph.Subgraphs.Keys)
             {
                 MorphologyGraph subgraph = structuregraph.Subgraphs[subgraph_id];
-                   
+
                 subgraph_view.AddSubgraph(view.GenerateNextSubgraphID(),
                                           AssignNodesToSubgraphs(view, subgraph, colorMap));
             }

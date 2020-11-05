@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using Viking.Common; 
-using System.Diagnostics; 
+using Viking.Common;
 
 namespace Viking
 {
@@ -20,9 +18,9 @@ namespace Viking
 
         static public TileViewModelCache TileViewModelCache = new TileViewModelCache();
 
-        static private Dictionary<int,string> AllocatedTextures = new Dictionary<int,string>();
+        static private Dictionary<int, string> AllocatedTextures = new Dictionary<int, string>();
 
-        static public bool TracePenEvents = false; 
+        static public bool TracePenEvents = false;
 
         static public void AddTexture(Microsoft.Xna.Framework.Graphics.Texture tex, string msg)
         {
@@ -65,7 +63,7 @@ namespace Viking
 
             foreach (string str in values)
             {
-                Trace.WriteLine("\t" + str, "TextureUse"); 
+                Trace.WriteLine("\t" + str, "TextureUse");
             }
         }
 
@@ -77,11 +75,11 @@ namespace Viking
 
             lock (Global.AllocatedTextureReaders)
             {
-                if(Global.AllocatedTextureReaders.ContainsKey(tex.GetHashCode()) == false)
+                if (Global.AllocatedTextureReaders.ContainsKey(tex.GetHashCode()) == false)
                     Global.AllocatedTextureReaders.Add(tex.GetHashCode(), msg);
             }
 
-            _TexturesLoading = true; 
+            _TexturesLoading = true;
 
         }
 
@@ -89,7 +87,7 @@ namespace Viking
         {
 
             //            Trace.WriteLine("Removing Texture Reader: " + tex.GetHashCode().ToString(), "TextureUse");
-            
+
             lock (Global.AllocatedTextureReaders)
             {
                 Global.AllocatedTextureReaders.Remove(tex.GetHashCode());
@@ -103,12 +101,13 @@ namespace Viking
 
         static public bool TexturesLoadedNeedRefresh
         {
-            get {
+            get
+            {
                 lock (Global.AllocatedTextureReaders)
                 {
                     if (Global.AllocatedTextureReaders.Keys.Count > 0)
                     {
-                        _TexturesLoading = true; 
+                        _TexturesLoading = true;
                         return true;
                     }
 
@@ -116,10 +115,10 @@ namespace Viking
                     if (_TexturesLoading)
                     {
                         _TexturesLoading = false;
-                        return true; 
+                        return true;
                     }
 
-                    return false; 
+                    return false;
 
                 }
 
@@ -144,7 +143,7 @@ namespace Viking
                 Trace.WriteLine("\t" + str, "TextureUse");
             }
         }
-        
+
 
         /// <summary>
         /// Keep the textures from this many sections +/- the current section in memory

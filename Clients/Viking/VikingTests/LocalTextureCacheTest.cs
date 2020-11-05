@@ -1,10 +1,8 @@
-﻿using System;
-using System.Text;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Viking;
 using System.IO;
+using Viking;
 
 
 namespace VikingTests
@@ -17,7 +15,7 @@ namespace VikingTests
     {
         LocalTextureCache cache = new LocalTextureCache();
 
-        public int NumTests = 100; 
+        public int NumTests = 100;
 
         public LocalTextureCacheTest()
         {
@@ -100,7 +98,7 @@ namespace VikingTests
             foreach (string filepath in System.IO.Directory.EnumerateFiles(path))
             {
                 System.IO.File.Delete(filepath);
-            } 
+            }
         }
 
         private string SetupOutputDir()
@@ -114,12 +112,12 @@ namespace VikingTests
                 this.ClearDirectoryFiles(TestDir);
             }
 
-            return TestDir;  
+            return TestDir;
         }
 
         [TestMethod]
         public void TestLocalTextureCache()
-        {  
+        {
             Random r = new Random(1);
 
             List<String> TempFiles = new List<string>(NumTests);
@@ -144,15 +142,15 @@ namespace VikingTests
 
             //Touch every file so it has a checkpoint flag
             IEnumerable<IAsyncResult> results = ReadEveryFile(TempFiles);
-             
-            
+
+
             //Run a checkpoint, nothing should be deleted since every file was accessed
-            cache.Checkpoint(); 
+            cache.Checkpoint();
 
             //All of the files were used, so they should still be present
-            for(int iTest = 0; iTest < NumTests; iTest++)
+            for (int iTest = 0; iTest < NumTests; iTest++)
             {
-                Assert.IsTrue(System.IO.File.Exists(TempFiles[iTest]), "File was used before last checkpoint so it should exist on disk");    
+                Assert.IsTrue(System.IO.File.Exists(TempFiles[iTest]), "File was used before last checkpoint so it should exist on disk");
             }
 
             //Touch every file again, run two checkpoints so the files are deleted.  Make sure the async operations do not crash
@@ -165,7 +163,7 @@ namespace VikingTests
             //All of the files should be removed by the checkpoint
             //for (int iTest = 0; iTest < NumTests; iTest++)
             //{
-                //Assert.IsTrue(System.IO.File.Exists(TempFiles[iTest]), "File " + TempFiles[iTest] + " was used before last checkpoint so it should exist on disk");
+            //Assert.IsTrue(System.IO.File.Exists(TempFiles[iTest]), "File " + TempFiles[iTest] + " was used before last checkpoint so it should exist on disk");
             //}
 
             //Wait for all reads to complete
@@ -178,6 +176,6 @@ namespace VikingTests
             }
 
             ClearDirectoryFiles(TestDir);
-        } 
+        }
     }
 }

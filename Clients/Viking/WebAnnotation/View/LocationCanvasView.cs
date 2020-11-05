@@ -1,31 +1,26 @@
-﻿using System;
-using System.Diagnostics;
-using System.Windows;
-using System.ComponentModel;
-using System.Collections.Specialized;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Xna.Framework.Graphics;
-using WebAnnotationModel;
-using WebAnnotation.ViewModel;
-using Geometry;
+﻿using Geometry;
 using Microsoft.SqlServer.Types;
-using VikingXNA;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Windows.Forms;
 using Viking.Common;
-using Viking.VolumeModel;
-using SqlGeometryUtils;
+using VikingXNA;
+using WebAnnotation.UI;
+using WebAnnotation.ViewModel;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
     public delegate ContextMenu ContextMenuGeneratorDelegate(IViewLocation locationID);
 
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>,  IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>, IMouseActionSupport, IViewLocation, IHelpStrings
+    abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
+                                               IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings
     {
         protected readonly LocationObj modelObj;
-         
+
         public abstract SqlGeometry VolumeShapeAsRendered { get; }
 
         public LocationCanvasView(LocationObj obj)
@@ -34,12 +29,12 @@ namespace WebAnnotation.View
 
             ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
         }
-         
+
         public ContextMenuGeneratorDelegate ContextMenuGenerator = null;
 
-        int VikingXNAGraphics.ICanvasView.VisualHeight
+        public int VisualHeight
         { get { return this.ParentDepth; } }
-        
+
         /// <summary>
         /// The number of parent structures until we hit a root structure
         /// </summary>
@@ -48,7 +43,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if(!_ParentDepth.HasValue)
+                if (!_ParentDepth.HasValue)
                 {
                     _ParentDepth = CalculateParentDepth(modelObj.Parent);
                 }
@@ -62,12 +57,16 @@ namespace WebAnnotation.View
             if (obj == null)
                 return 0;
 
-            return CalculateParentDepth(obj.Parent) + 1; 
+            return CalculateParentDepth(obj.Parent) + 1;
         }
 
 
         public abstract LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
-        
+
+        public abstract LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID);
+
+        public abstract List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber);
+
         public long ID
         {
             get { return modelObj.ID; }
@@ -78,7 +77,7 @@ namespace WebAnnotation.View
             get { return modelObj.Z; }
         }
 
-        public LocationType TypeCode
+        public Annotation.Interfaces.LocationType TypeCode
         {
             get { return modelObj.TypeCode; }
         }
@@ -98,7 +97,7 @@ namespace WebAnnotation.View
             get { return modelObj.VericosityCap; }
         }
 
-        private Structure _Parent = null; 
+        private Structure _Parent = null;
         private void ResetParentCache() { _Parent = null; }
 
         public Structure Parent
@@ -119,13 +118,13 @@ namespace WebAnnotation.View
         {
             get { return modelObj.Links; }
         }
-        
+
         public abstract ICollection<long> OverlappedLinks
         {
             protected get;
             set;
-        }   
-                   
+        }
+
         public override string ToString()
         {
             return modelObj.ToString();
@@ -245,7 +244,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if(this.ContextMenuGenerator != null)
+                if (this.ContextMenuGenerator != null)
                 {
                     return ContextMenuGenerator(this);
                 }
@@ -258,7 +257,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                return this.modelObj.Label; 
+                return this.modelObj.Label;
             }
         }
 
@@ -384,7 +383,7 @@ namespace WebAnnotation.View
 
         public abstract bool IsVisible(Scene scene);
         public abstract double DistanceFromCenterNormalized(GridVector2 Position);
-        
+
         public bool Equals(LocationCanvasView other)
         {
             if ((object)other == null)
@@ -392,5 +391,7 @@ namespace WebAnnotation.View
 
             return other.ID == this.ID;
         }
+
+
     }
 }

@@ -56,7 +56,7 @@ namespace MeasurementExtension
             FinalBarWidth = FinalBarWidth.ConvertTo(SILengthUnits.nm);
             //Determine how large our scale bar is in screen pixels
             double BarWidthInPixels = FinalBarWidth / Global.PixelWidth;
-            double BarHeightInPixels = (Parent.fontArial.LineSpacing * Parent.Downsample) / 3;
+            double BarHeightInPixels = (VikingXNAGraphics.Global.DefaultFont.LineSpacing * Parent.Downsample) / 3;
 
             GridVector2 CornerOffset = new GridVector2(scene.VisibleWorldBounds.Width * CornerOffsetFractions.X, scene.VisibleWorldBounds.Height * CornerOffsetFractions.Y);
 
@@ -70,14 +70,14 @@ namespace MeasurementExtension
 
             //Draw a black box
             RectangleView scaleBarView = new RectangleView(scaleBarRect, Microsoft.Xna.Framework.Color.Black);
-
-            RectangleView.Draw(graphicsDevice, scene, Parent.basicEffect, Parent.AnnotationOverlayEffect, new RectangleView[] { scaleBarView });
+            
+            RectangleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, new RectangleView[] { scaleBarView });
 
             LabelView label = new LabelView(LengthMeasurement.ConvertToReadableUnits(FinalBarWidth).ToString(), scaleBarRect.Center);
             label.Color = Microsoft.Xna.Framework.Color.White;
             label.FontSize = BarHeightInPixels * 0.9;
             
-            LabelView.Draw(Parent.spriteBatch, Parent.fontArial, scene, new LabelView[] { label });
+            LabelView.Draw(Parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene,  new LabelView[] { label });
         }
 
         public int DrawOrder()

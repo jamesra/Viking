@@ -1,8 +1,6 @@
-﻿using System;
+﻿using Geometry;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-
-using Geometry;
 
 namespace Viking.VolumeModel
 {
@@ -18,14 +16,14 @@ namespace Viking.VolumeModel
             public readonly int GridYDim;
             public readonly int Downsample;
             public readonly string Path;
-           
+
 
             public GridInfo(int XDim, int YDim, int downsample, string path)
             {
                 GridXDim = XDim;
                 GridYDim = YDim;
                 Downsample = downsample;
-                this.Path = path; 
+                this.Path = path;
             }
         }
 
@@ -37,7 +35,7 @@ namespace Viking.VolumeModel
         private int _MaxDownsample = int.MinValue;
         private int _MinDownsample = int.MaxValue;
 
-        
+
 
         public int MaxDownsample
         {
@@ -51,10 +49,10 @@ namespace Viking.VolumeModel
             protected set { _MinDownsample = value; }
         }
 
-        protected readonly string TileGridPath; 
+        protected readonly string TileGridPath;
 
         protected SortedDictionary<int, GridInfo> LevelToGridInfo = new SortedDictionary<int, GridInfo>();
-         
+
         private int[] _AvailableLevels = null;
         public override int[] AvailableLevels
         {
@@ -72,11 +70,11 @@ namespace Viking.VolumeModel
 
         public override GridRectangle ControlBounds
         {
-            get 
+            get
             {
                 GridInfo Level = LevelToGridInfo[MinDownsample];
                 return new GridRectangle(0, Level.GridXDim * Level.Downsample * TileSizeX,
-                                         0, Level.GridYDim * Level.Downsample * TileSizeY); 
+                                         0, Level.GridYDim * Level.Downsample * TileSizeY);
             }
         }
 
@@ -99,7 +97,7 @@ namespace Viking.VolumeModel
                                          0, Level.GridYDim * Level.Downsample * TileSizeY);
             }
         }
-        
+
         /*
         public override bool TrySectionToVolume(GridVector2 P, out GridVector2 transformedP)
         {
@@ -170,9 +168,9 @@ namespace Viking.VolumeModel
         {
             return this.TilePrefix + "X" + iX.ToString("D3") + "_Y" + iY.ToString("D3") + this.TilePostfix;
         }
-        
+
         #endregion
-        
+
         /// <summary>
         /// C# has reverse formatting notation compared to the python scripts which generate VikingXML files.  If the format starts with a number instead of a letter this 
         /// function will correct the issue by swapping them
@@ -183,7 +181,7 @@ namespace Viking.VolumeModel
         {
             string outputFormat = string.Copy(gridFormat);
             if (!char.IsLetter(gridFormat[0]))
-            { 
+            {
                 if (char.IsLetter(gridFormat[gridFormat.Length - 1]))
                 {
                     outputFormat = outputFormat[gridFormat.Length - 1] + outputFormat.Substring(0, gridFormat.Length - 1);
@@ -198,32 +196,32 @@ namespace Viking.VolumeModel
         protected TileGridMappingBase(TileGridMappingBase ToCopy, Section section, string name) :
             base(section, name, ToCopy.TilePrefix, ToCopy.TilePostfix)
         {
-            TileSizeX = ToCopy.TileSizeX; 
+            TileSizeX = ToCopy.TileSizeX;
             TileSizeY = ToCopy.TileSizeY;
-            TotalTileSize = ToCopy.TotalTileSize; 
+            TotalTileSize = ToCopy.TotalTileSize;
             TileGridPath = ToCopy.TileGridPath;
             MinDownsample = ToCopy.MinDownsample;
             MaxDownsample = ToCopy.MaxDownsample;
             this.GridCoordFormat = ToCopy.GridCoordFormat;
             this._XYScale = ToCopy.XYScale;
 
-            foreach(GridInfo info in ToCopy.LevelToGridInfo.Values)
+            foreach (GridInfo info in ToCopy.LevelToGridInfo.Values)
             {
-                GridInfo infoCopy = new GridInfo(info.GridXDim, info.GridYDim, info.Downsample, info.Path); 
-                LevelToGridInfo.Add(infoCopy.Downsample, infoCopy); 
+                GridInfo infoCopy = new GridInfo(info.GridXDim, info.GridYDim, info.Downsample, info.Path);
+                LevelToGridInfo.Add(infoCopy.Downsample, infoCopy);
             }
         }
 
         public TileGridMappingBase(Section section, string name, string Prefix, string Postfix, int TileSizeX, int TileSizeY, string TileGridPath, string GridCoordFormat, UnitsAndScale.IAxisUnits XYScale) :
-            base(section, name, Prefix, Postfix )
+            base(section, name, Prefix, Postfix)
         {
             this.TileSizeX = TileSizeX;
-            this.TileSizeY = TileSizeY; 
+            this.TileSizeY = TileSizeY;
             this.TotalTileSize = TileSizeX * TileSizeY;
             this.TileGridPath = TileGridPath;
             this._XYScale = XYScale;
-            if(GridCoordFormat != null)
-                this.GridCoordFormat = GridCoordFormat; 
+            if (GridCoordFormat != null)
+                this.GridCoordFormat = GridCoordFormat;
         }
 
         /// <summary>
@@ -243,8 +241,8 @@ namespace Viking.VolumeModel
                 this.MinDownsample = Downsample;
 
             GridInfo Level = new GridInfo(GridDimX, GridDimY, Downsample, LevelPath);
-            if(false == LevelToGridInfo.ContainsKey(Downsample))
-            { 
+            if (false == LevelToGridInfo.ContainsKey(Downsample))
+            {
                 LevelToGridInfo.Add(Downsample, Level);
             }
             else
@@ -271,7 +269,7 @@ namespace Viking.VolumeModel
                                                                GridVector3.UnitZ,
                                                            new GridVector2(1, 1));
 
-            return verticies; 
+            return verticies;
         }
 
         protected virtual int[] TriangleEdges
@@ -290,7 +288,7 @@ namespace Viking.VolumeModel
                 return VisibleTiles;
 
             //Starting with low-res tiles, add tiles to the list until we reach desired resolution
-//            List<Tile> TilesToDraw = new List<Tile>(); 
+            //            List<Tile> TilesToDraw = new List<Tile>(); 
 
             //Find the starting level of our rendering
             int iLevel = AvailableLevels.Length - 1;
@@ -300,7 +298,7 @@ namespace Viking.VolumeModel
             {
                 List<Tile> newTiles = RecursiveVisibleTiles(
                     VisibleBounds,
-                    level 
+                    level
                     //PORT: AsynchTextureLoad
                     );
 
@@ -309,23 +307,23 @@ namespace Viking.VolumeModel
                 //TilesToDraw.AddRange(newTiles);
 
                 iLevel--;
-                if(iLevel >= 0)
+                if (iLevel >= 0)
                     level = AvailableLevels[iLevel];
             }
             while (level >= roundedDownsample && iLevel >= 0);
 
             //Trace.WriteLine("Drawing " + TilesToDraw.Count.ToString() + " Tiles", "VolumeModel");
 
-            return VisibleTiles; 
+            return VisibleTiles;
         }
 
 
         private List<Tile> RecursiveVisibleTiles(GridRectangle VisibleBounds, int roundedDownsample)
         {
-            GridInfo gridInfo = LevelToGridInfo[roundedDownsample]; 
+            GridInfo gridInfo = LevelToGridInfo[roundedDownsample];
 
             int ScaledTileSizeX = this.TileSizeX * roundedDownsample;
-            int ScaledTileSizeY = this.TileSizeX * roundedDownsample; 
+            int ScaledTileSizeY = this.TileSizeX * roundedDownsample;
 
             //Figure out which grid locations are visible
             int iMinX = (int)Math.Floor(VisibleBounds.Left / ScaledTileSizeX);
@@ -345,7 +343,7 @@ namespace Viking.VolumeModel
             if (iMinX > iMaxX)
                 iMinX = iMaxX;
             if (iMinY > iMaxY)
-                iMinY = iMaxY; 
+                iMinY = iMaxY;
 
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
             List<Tile> TilesToDraw = new List<Tile>(ExpectedTileCount);
@@ -367,7 +365,7 @@ namespace Viking.VolumeModel
                         if (roundedDownsample == this.AvailableLevels[AvailableLevels.Length - 1])
                             MipMapLevels = 0; //Generate mipmaps for lowest res texture
 
-                       
+
                         tile = Global.TileCache.ConstructTile(UniqueID,
                                                             verticies,
                                                             this.TriangleEdges,
@@ -375,13 +373,13 @@ namespace Viking.VolumeModel
                                                             TileTextureCacheFileName(roundedDownsample, iX, iY),
                                                             //PORT TextureCacheFileName,
                                                             this.Name,
-                                                            roundedDownsample, 
+                                                            roundedDownsample,
                                                             MipMapLevels);
 
                         //Check for tiles at higher resolution
-//                        int iTempX = iX / 2;
-//                        int iTempY = iY / 2;
-//                        int iTempDownsample = roundedDownsample * 2;
+                        //                        int iTempX = iX / 2;
+                        //                        int iTempY = iY / 2;
+                        //                        int iTempDownsample = roundedDownsample * 2;
 
 
 

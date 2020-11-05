@@ -2,13 +2,6 @@
 namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd
 {
     using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Diagnostics;
-    using System.Xml;
-    using System.Xml.Schema;
-    using System.Xml.Linq;
     //using Xml.Schema.Linq;
     using System.Windows.Forms;
 
@@ -17,12 +10,13 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd
     {
         public System.Windows.Forms.Keys KeyCode
         {
-            get {
-                    KeysConverter conv = new KeysConverter();
-                    return (Keys)conv.ConvertFrom(this.KeyName);
+            get
+            {
+                KeysConverter conv = new KeysConverter();
+                return (Keys)conv.ConvertFrom(this.KeyName);
 
             }
-        } 
+        }
     }
 
     public partial class Parameters
@@ -33,7 +27,7 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd
             {
                 return this.Action.Count +
                        this.Value.Count +
-                       this.Variable.Count; 
+                       this.Variable.Count;
             }
         }
     }
@@ -58,19 +52,19 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd
         {
             //Parse the parameters
             parameters = new object[this.Parameters.Count];
-            foreach(Variable variable in this.Parameters.Variable)
+            foreach (Variable variable in this.Parameters.Variable)
             {
                 System.Type targetType = System.Type.GetType(variable.Object);
                 System.Reflection.PropertyInfo propInfo = targetType.GetProperty(variable.Property);
                 //Doesn't work... not sure how to read the property...
             }
 
-            foreach(Action action in this.Parameters.Action)
+            foreach (Action action in this.Parameters.Action)
             {
                 System.Type targetType;
                 object[] actionParams;
                 action.ExecuteAction(out targetType, out actionParams);
-                parameters[action.Index.Value] = Activator.CreateInstance(targetType, actionParams); 
+                parameters[action.Index.Value] = Activator.CreateInstance(targetType, actionParams);
             }
 
             foreach (Value value in this.Parameters.Value)
@@ -78,9 +72,9 @@ namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd
                 Type targetType = System.Type.GetType(value.Type);
                 parameters[value.Index] = System.Convert.ChangeType(value.Value1, targetType);
             }
-            
+
             type = System.Type.GetType(this.Type);
-            return; 
+            return;
         }
     }
 }

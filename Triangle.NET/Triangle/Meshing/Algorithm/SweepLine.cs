@@ -9,9 +9,9 @@ namespace TriangleNet.Meshing.Algorithm
 {
     using System;
     using System.Collections.Generic;
-    using TriangleNet.Topology;
     using TriangleNet.Geometry;
     using TriangleNet.Tools;
+    using TriangleNet.Topology;
 
     /// <summary>
     /// Builds a delaunay triangulation using the sweepline algorithm.

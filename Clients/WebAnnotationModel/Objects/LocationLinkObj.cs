@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using WebAnnotationModel.Service;
-using WebAnnotationModel.Objects;
-using System.Diagnostics;
+﻿using Annotation.Interfaces;
 using AnnotationService.Types;
-using Annotation.Interfaces;
+using System;
+using System.Diagnostics;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
@@ -21,7 +17,7 @@ namespace WebAnnotationModel
 
         public LocationLinkKey(long a, long b)
         {
-            Debug.Assert(a != b); 
+            Debug.Assert(a != b);
             A = a < b ? a : b;
             B = b < a ? a : b;
         }
@@ -53,7 +49,7 @@ namespace WebAnnotationModel
 
         public override int GetHashCode()
         {
-            return (int)(A % int.MaxValue); 
+            return (int)(A % int.MaxValue);
         }
 
         public static bool operator ==(LocationLinkKey A, LocationLinkKey B)
@@ -111,7 +107,7 @@ namespace WebAnnotationModel
     {
         public override LocationLinkKey ID
         {
-            get { return new LocationLinkKey(this); } 
+            get { return new LocationLinkKey(this); }
         }
 
         public override string ToString()
@@ -133,7 +129,7 @@ namespace WebAnnotationModel
 
         protected override int GenerateHashCode()
         {
-            return ID.GetHashCode(); 
+            return ID.GetHashCode();
         }
 
         public override int GetHashCode()
@@ -182,13 +178,13 @@ namespace WebAnnotationModel
 
         public long B
         {
-            get { return Data.SourceID > Data.TargetID ? Data.SourceID : Data.TargetID; } 
+            get { return Data.SourceID > Data.TargetID ? Data.SourceID : Data.TargetID; }
         }
 
         public LocationLinkObj()
         {
             LocationLink link = new LocationLink();
-            this.Data = link; 
+            this.Data = link;
         }
 
         public LocationLinkObj(long IDA,
@@ -198,7 +194,7 @@ namespace WebAnnotationModel
             LocationLink link = new LocationLink();
             link.SourceID = IDA < IDB ? IDA : IDB;
             link.TargetID = IDA < IDB ? IDB : IDA;
-            this.Data = link; 
+            this.Data = link;
         }
 
         public LocationLinkObj(LocationLink link)

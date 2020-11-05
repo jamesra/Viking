@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Diagnostics; 
-using Geometry; 
 
 namespace Geometry
 {
@@ -30,16 +27,17 @@ namespace Geometry
 
         public double Width
         {
-            get{
+            get
+            {
                 //Debug.Assert(Right - Left >= 0); 
                 return Right - Left;
             }
         }
 
-        public double Height 
+        public double Height
         {
-            get 
-            { 
+            get
+            {
                 //Debug.Assert(Top - Bottom >= 0); 
                 return Top - Bottom;
             }
@@ -57,7 +55,7 @@ namespace Geometry
         {
             get
             {
-                return new GridVector2(Left, Bottom); 
+                return new GridVector2(Left, Bottom);
             }
         }
 
@@ -65,7 +63,7 @@ namespace Geometry
         {
             get
             {
-                return new GridVector2(Left, Top); 
+                return new GridVector2(Left, Top);
             }
         }
 
@@ -73,7 +71,7 @@ namespace Geometry
         {
             get
             {
-                return new GridVector2(Right, Bottom); 
+                return new GridVector2(Right, Bottom);
             }
         }
 
@@ -81,7 +79,7 @@ namespace Geometry
         {
             get
             {
-                return new GridVector2(Right, Top); 
+                return new GridVector2(Right, Top);
             }
         }
 
@@ -89,7 +87,7 @@ namespace Geometry
         {
             get
             {
-                return Width * Height; 
+                return Width * Height;
             }
 
         }
@@ -202,7 +200,7 @@ namespace Geometry
                 return _Corners;
             }
         }
-         
+
         private void ResetCache()
         {
             _Corners = null;
@@ -229,7 +227,7 @@ namespace Geometry
         }
 
 
-        public GridRectangle(double left, double right,  double bottom, double top)
+        public GridRectangle(double left, double right, double bottom, double top)
         {
             _Corners = null;
             _Segments = null;
@@ -276,7 +274,7 @@ namespace Geometry
             _HashCode = new int?();
 
             Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error");
-        } 
+        }
 
         public GridRectangle(IPoint position, double width, double height)
         {
@@ -286,8 +284,8 @@ namespace Geometry
                 throw new ArgumentNullException("points");
 
             Left = position.X;
-            Bottom = position.Y; 
-            Top = Bottom + height; 
+            Bottom = position.Y;
+            Top = Bottom + height;
             Right = Left + width;
             _HashCode = new int?();
 
@@ -318,7 +316,7 @@ namespace Geometry
             }
         }
 
-        
+
         public void Scale(double scalar)
         {
             //Have to cache center because it changes as we update points
@@ -326,7 +324,7 @@ namespace Geometry
             GridVector2 directionA = this.UpperRight - center;
 
             directionA = directionA * scalar;
-            
+
             GridVector2 BottomLeft = center - directionA;
             GridVector2 TopRight = center + directionA;
 
@@ -337,7 +335,7 @@ namespace Geometry
 
             ResetCache();
 
-            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error"); 
+            Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectable argument error");
         }
 
         /// <summary>
@@ -370,7 +368,7 @@ namespace Geometry
         public OverlapType IntersectionType(GridRectangle rect)
         {
             //Find out if the rectangles can't possibly intersect
-            if(rect.Right < this.Left ||
+            if (rect.Right < this.Left ||
                rect.Top < this.Bottom ||
                rect.Left > this.Right ||
                rect.Bottom > this.Top)
@@ -384,7 +382,7 @@ namespace Geometry
 
             GridRectangle? intersectionArea = this.Intersection(rect);
 
-            if(intersectionArea.Value.Area > 0)
+            if (intersectionArea.Value.Area > 0)
             {
                 return OverlapType.INTERSECTING;
             }
@@ -548,7 +546,7 @@ namespace Geometry
 
             return new GridRectangle(newLeft, newRight, newBottom, newTop);
         }
-          
+
         /// <summary>
         /// Returns true if the passed rectangle is entirely inside this rectangle
         /// </summary>
@@ -565,7 +563,7 @@ namespace Geometry
 
             return false;
         }
-        
+
         public bool Contains(IPoint2D pos)
         {
             //Find out if the rectangles can't possibly intersect
@@ -612,7 +610,7 @@ namespace Geometry
 
         public bool Contains(IPoint pos)
         {
-            if(pos == null)
+            if (pos == null)
                 throw new ArgumentNullException("pos");
 
             //Find out if the rectangles can't possibly intersect
@@ -640,10 +638,15 @@ namespace Geometry
                rect.Bottom >= this.Bottom)
                 return OverlapType.CONTAINED;
 
-            bool LRIntersect = (this.Left > rect.Left && this.Left < rect.Right) ||
-                               (this.Right > rect.Left && this.Right < rect.Right);
-            bool UDIntersect = (this.Bottom > rect.Bottom && this.Bottom < rect.Top) ||
-                               (this.Top > rect.Bottom && this.Top < rect.Top);
+            bool LRIntersect = (this.Left < rect.Left && this.Right > rect.Left) ||
+                               (this.Right > rect.Left && this.Right < rect.Right) ||
+                               (this.Left > rect.Left && this.Right < rect.Right) ||
+                               (this.Left > rect.Left && this.Left < rect.Right);
+
+            bool UDIntersect = (this.Bottom < rect.Bottom && this.Top > rect.Bottom) ||
+                               (this.Top > rect.Bottom && this.Top < rect.Top) ||
+                               (this.Bottom > rect.Bottom && this.Top < rect.Top) ||
+                               (this.Bottom > rect.Bottom && this.Bottom < rect.Top);
 
             if (LRIntersect && UDIntersect)
                 return OverlapType.INTERSECTING;
@@ -651,7 +654,9 @@ namespace Geometry
             bool LRTouch = this.Left == rect.Right || this.Right == rect.Left;
             bool UDTouch = this.Bottom == rect.Top || this.Top == rect.Bottom;
 
-            if (LRTouch && UDTouch)
+            if ((LRTouch && UDIntersect) ||
+                (UDTouch && LRIntersect) ||
+                (LRTouch && UDTouch))
                 return OverlapType.TOUCHING;
 
             System.Diagnostics.Debug.Assert(false, "Every case should be handled at this point...");
@@ -667,7 +672,7 @@ namespace Geometry
 
             if (!_HashCode.HasValue)
             {
-                _HashCode = this.Center.GetHashCode(); 
+                _HashCode = this.Center.GetHashCode();
             }
 
             return _HashCode.Value;
@@ -675,7 +680,7 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            return (GridRectangle)obj == this; 
+            return (GridRectangle)obj == this;
         }
 
         public static bool operator ==(GridRectangle A, GridRectangle B)
@@ -711,7 +716,7 @@ namespace Geometry
             double top = A.Top > B.Top ? A.Top : B.Top;
             double bottom = A.Bottom < B.Bottom ? A.Bottom : B.Bottom;
 
-            return new GridRectangle(left, right, bottom, top); 
+            return new GridRectangle(left, right, bottom, top);
         }
 
         static public GridRectangle GetBoundingBox(GridVector2[] points)

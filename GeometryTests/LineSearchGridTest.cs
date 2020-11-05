@@ -1,10 +1,5 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Diagnostics;
-using Geometry; 
 
 namespace GeometryTests
 {
@@ -82,7 +77,7 @@ namespace GeometryTests
             LineSearch.Add(lineC, "C");
             LineSearch.Add(lineD, "D");
             LineSearch.Add(lineE, "E");
- 
+
             GridVector2 intersection;
             double distance;
             string value = LineSearch.GetNearest(new GridVector2(-5, 3), out intersection, out distance);
@@ -95,7 +90,7 @@ namespace GeometryTests
             Assert.IsTrue(value == "A");
 
             value = LineSearch.GetNearest(new GridVector2(3.5, 6), out intersection, out distance);
-            Assert.IsTrue(value == "B"); 
+            Assert.IsTrue(value == "B");
         }
     }
 }

@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using VikingXNA;
-using System.Windows.Forms;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Geometry;
-using VikingXNAGraphics;
+using System;
 using System.Collections.ObjectModel;
+using System.Windows.Forms;
 using VikingXNAWinForms;
 
 namespace Viking.UI.Commands
@@ -17,7 +12,7 @@ namespace Viking.UI.Commands
     {
         protected GridVector2 Origin;
         protected Geometry.GridRectangle MyRect;
-        protected Microsoft.Xna.Framework.Color Color; 
+        protected Microsoft.Xna.Framework.Color Color;
 
         public override string[] HelpStrings
         {
@@ -52,9 +47,9 @@ namespace Viking.UI.Commands
             if (e.Button.Left() && false == this.CommandActive)
             {
                 Origin = NewPosition;
- //               MyRect = new Quad(Origin, 0, 0); 
-               
-                this.CommandActive = true; 
+                //               MyRect = new Quad(Origin, 0, 0); 
+
+                this.CommandActive = true;
             }
 
             base.OnMouseDown(sender, e);
@@ -64,12 +59,12 @@ namespace Viking.UI.Commands
         {
             try
             {
-                MyRect = new GridRectangle(NewPosition, Origin); 
+                MyRect = new GridRectangle(NewPosition, Origin);
                 return true;
             }
             catch (ArgumentException)
             {
-               
+
             }
             return false;
         }
@@ -81,11 +76,11 @@ namespace Viking.UI.Commands
             {
                 GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 
-                if(TryUpdateMyRect(NewPosition))
+                if (TryUpdateMyRect(NewPosition))
                 {
                     this.Color = Color.Red;
                     this.Parent.Refresh();
-                } 
+                }
             }
 
             base.OnMouseMove(sender, e);
@@ -98,7 +93,7 @@ namespace Viking.UI.Commands
                 if (oldMouse.Button.Left() && this.CommandActive)
                 {
                     GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
-                    if(TryUpdateMyRect(NewPosition))
+                    if (TryUpdateMyRect(NewPosition))
                     {
                         Execute();
                         this.Parent.Refresh();
@@ -114,37 +109,37 @@ namespace Viking.UI.Commands
             if (CommandActive == false)
                 return;
 
-            basicEffect.VertexColorEnabled = true; 
-            basicEffect.TextureEnabled = false;            
-            VertexPositionColor[] verts = new VertexPositionColor[] { new VertexPositionColor( new Vector3((float)MyRect.Left, (float)MyRect.Bottom, 1), Color.Yellow), 
-                                                                       new VertexPositionColor( new Vector3((float)MyRect.Right, (float)MyRect.Bottom, 1), Color.Yellow), 
-                                                                        new VertexPositionColor( new Vector3((float)MyRect.Right, (float)MyRect.Top, 1), Color.Yellow), 
+            basicEffect.VertexColorEnabled = true;
+            basicEffect.TextureEnabled = false;
+            VertexPositionColor[] verts = new VertexPositionColor[] { new VertexPositionColor( new Vector3((float)MyRect.Left, (float)MyRect.Bottom, 1), Color.Yellow),
+                                                                       new VertexPositionColor( new Vector3((float)MyRect.Right, (float)MyRect.Bottom, 1), Color.Yellow),
+                                                                        new VertexPositionColor( new Vector3((float)MyRect.Right, (float)MyRect.Top, 1), Color.Yellow),
                                                                          new VertexPositionColor( new Vector3((float)MyRect.Left, (float)MyRect.Top, 1), Color.Yellow)};
 
             Color CrossColor = new Color(Color.Yellow.R, Color.Yellow.G, Color.Yellow.B, 0.25f);
             float EightWidth = (float)(MyRect.Width / 16);
             float EightHeight = (float)(MyRect.Height / 16);
 
-            VertexPositionColor[] crossVerts = new VertexPositionColor[] { new VertexPositionColor( new Vector3((float)MyRect.Center.X - EightWidth, (float)MyRect.Center.Y, 1), CrossColor), 
-                                                                       new VertexPositionColor( new Vector3((float)MyRect.Center.X + EightWidth, (float)MyRect.Center.Y, 1), CrossColor), 
-                                                                        new VertexPositionColor( new Vector3((float)MyRect.Center.X, (float)MyRect.Center.Y - EightHeight, 1), CrossColor), 
+            VertexPositionColor[] crossVerts = new VertexPositionColor[] { new VertexPositionColor( new Vector3((float)MyRect.Center.X - EightWidth, (float)MyRect.Center.Y, 1), CrossColor),
+                                                                       new VertexPositionColor( new Vector3((float)MyRect.Center.X + EightWidth, (float)MyRect.Center.Y, 1), CrossColor),
+                                                                        new VertexPositionColor( new Vector3((float)MyRect.Center.X, (float)MyRect.Center.Y - EightHeight, 1), CrossColor),
                                                                          new VertexPositionColor( new Vector3((float)MyRect.Center.X, (float)MyRect.Center.Y + EightHeight, 1), CrossColor)};
 
             int[] indicies = new int[] { 0, 1, 2, 3, 0 };
-            int[] crossIndicies = new int[] { 0, 1, 2, 3 }; 
-            
+            int[] crossIndicies = new int[] { 0, 1, 2, 3 };
+
             foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
             {
-                pass.Apply(); 
+                pass.Apply();
 
                 graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineStrip, verts, 0, verts.Length, indicies, 0, indicies.Length - 1);
-                graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, crossVerts, 0, crossVerts.Length, crossIndicies, 0, crossIndicies.Length / 2); 
+                graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, crossVerts, 0, crossVerts.Length, crossIndicies, 0, crossIndicies.Length / 2);
             }
 
             basicEffect.TextureEnabled = true;
-            basicEffect.VertexColorEnabled = false; 
+            basicEffect.VertexColorEnabled = false;
 
-            base.OnDraw(graphicsDevice,scene, basicEffect);
+            base.OnDraw(graphicsDevice, scene, basicEffect);
         }
     }
 }

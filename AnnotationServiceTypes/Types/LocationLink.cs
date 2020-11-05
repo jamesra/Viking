@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.ServiceModel;
-using System.Runtime.Serialization;  
-using ProtoBuf;
+﻿using ProtoBuf;
+using System;
+using System.Runtime.Serialization;
 
 namespace AnnotationService.Types
 {
-    
+
     [ProtoContract]
     [DataContract]
     public class LocationLink : DataObject
@@ -42,5 +38,5 @@ namespace AnnotationService.Types
         */
 
     }
-     
+
 }

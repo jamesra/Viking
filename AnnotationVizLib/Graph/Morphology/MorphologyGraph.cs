@@ -1,24 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Text;
-using GraphLib;
-using System.Diagnostics;
-using SqlGeometryUtils; 
+﻿using Annotation.Interfaces;
 using Geometry;
+using GraphLib;
 using RTree;
-using Annotation.Interfaces;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using UnitsAndScale;
 
 namespace AnnotationVizLib
 {
-    
+
 
     [Serializable]
     public partial class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
     {
-        
+
         /// <summary>
         /// ID of the structure graph, zero for root or StructureID of structure
         /// </summary>
@@ -45,7 +43,7 @@ namespace AnnotationVizLib
         {
             get
             {
-                if(_RTree == null)
+                if (_RTree == null)
                 {
                     _RTree = CreateRTree(this);
                 }
@@ -108,7 +106,7 @@ namespace AnnotationVizLib
         internal static RTree<ulong> CreateRTree(MorphologyGraph graph)
         {
             RTree<ulong> rtree = new RTree<ulong>();
-            foreach(MorphologyNode node in graph.Nodes.Values)
+            foreach (MorphologyNode node in graph.Nodes.Values)
             {
                 rtree.Add(node.BoundingBox.ToRTreeRect(), node.Key);
             }
@@ -163,7 +161,7 @@ namespace AnnotationVizLib
 
             foreach (MorphologyEdge edge in new_edges)
             {
-                if(this.Edges.ContainsKey(edge) == false)
+                if (this.Edges.ContainsKey(edge) == false)
                     this.AddEdge(edge);
             }
         }
@@ -175,13 +173,13 @@ namespace AnnotationVizLib
             {
                 const int ParallelThreshold = 64;
                 if (_BoundingBox == null)
-                { 
+                {
                     if (this.Nodes.Count > 0)
-                    { 
+                    {
                         //Don't bother using parrallelism for small graphs
                         IEnumerable<GridBox> boxes;
                         if (this.Nodes.Count > ParallelThreshold)
-                        { 
+                        {
                             boxes = this.Nodes.Values.Select(n => n.BoundingBox).AsParallel();
                         }
                         else
@@ -189,7 +187,7 @@ namespace AnnotationVizLib
                             boxes = this.Nodes.Values.Select(n => n.BoundingBox);
                         }
 
-                        _BoundingBox = boxes.Aggregate((a, b) => GridBox.Union(a,b) );
+                        _BoundingBox = boxes.Aggregate((a, b) => GridBox.Union(a, b));
                     }
 
                     if (this.Subgraphs.Count > 0)
@@ -207,7 +205,7 @@ namespace AnnotationVizLib
                             _BoundingBox = GridBox.Union(_BoundingBox, subgraph_bbox);
                         else
                             _BoundingBox = subgraph_bbox;
-                    }  
+                    }
                 }
 
                 Debug.Assert(_BoundingBox != null);
@@ -241,8 +239,8 @@ namespace AnnotationVizLib
             }
 
             return Links;
-        } 
-        
+        }
+
         /// <summary>
         /// Locations with 3 or more edges, branch points in a process
         /// </summary>
@@ -274,7 +272,7 @@ namespace AnnotationVizLib
         {
             SortedSet<ulong> allProcessIDs = new SortedSet<ulong>(this.GetProcessIDs());
 
-            if(allProcessIDs.Count == 0)
+            if (allProcessIDs.Count == 0)
             {
                 return new List<ulong[]>();
             }
@@ -325,7 +323,7 @@ namespace AnnotationVizLib
             if (leftOfSeed.Edges.Count == 2)
             {
                 listOutput.Insert(0, leftOfSeed.ID);
-                TraverseProcessRecursively(ref listOutput, leftOfSeed, 0,true);
+                TraverseProcessRecursively(ref listOutput, leftOfSeed, 0, true);
             }
 
             return listOutput.ToArray();
@@ -339,7 +337,7 @@ namespace AnnotationVizLib
 
             //This function does not tolerate cycles
             MorphologyGraph graph = seed.Graph;
-            foreach(ulong linkedID in seed.Edges.Keys)
+            foreach (ulong linkedID in seed.Edges.Keys)
             {
                 //Don't add the seed node again
                 if (linkedID == LastAddedID)
@@ -361,7 +359,7 @@ namespace AnnotationVizLib
                 if (candidate.Edges.Count == 2)
                 {
                     TraverseProcessRecursively(ref output, candidate, iNewSeedIndex, InsertBefore);
-                } 
+                }
             }
         }
     }

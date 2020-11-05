@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
+using System.Linq;
 
 
 namespace Geometry
 {
     public class MappingGridTriangle : ICloneable, IEquatable<MappingGridTriangle>
     {
-        internal MappingGridVector2[] Nodes; 
+        internal MappingGridVector2[] Nodes;
 
         internal readonly int N1; //Index of first node
         internal readonly int N2; //Index of second node 
@@ -18,7 +16,7 @@ namespace Geometry
         public override bool Equals(object obj)
         {
             MappingGridTriangle TriObj = obj as MappingGridTriangle;
-            if(TriObj == null)
+            if (TriObj == null)
                 return base.Equals(obj);
 
             if (TriObj.N1 == this.N1 &&
@@ -27,7 +25,7 @@ namespace Geometry
                 return true;
             else
                 //We should test all the other index combos too I suppose...
-                return false; 
+                return false;
         }
 
         public override int GetHashCode()
@@ -39,7 +37,7 @@ namespace Geometry
 
         //I use these to quickly determine if a triangle could intersect a point
         private double _MinMapX = double.MaxValue;
-        private double _MaxMapX = double.MinValue; 
+        private double _MaxMapX = double.MinValue;
 
         public double MinMapX
         {
@@ -51,7 +49,7 @@ namespace Geometry
                     _MinMapX = Math.Min(_MinMapX, Nodes[N3].MappedPoint.X);
                 }
 
-                return _MinMapX; 
+                return _MinMapX;
             }
         }
 
@@ -99,7 +97,7 @@ namespace Geometry
 
                 return _MaxMapY;
             }
-        } 
+        }
 
         public GridRectangle MappedBoundingBox
         {
@@ -220,7 +218,7 @@ namespace Geometry
 
         object ICloneable.Clone()
         {
-            return this.MemberwiseClone(); 
+            return this.MemberwiseClone();
         }
 
         public bool IntersectsMapped(GridVector2 Point)
@@ -230,7 +228,7 @@ namespace Geometry
 
         public bool IntersectsControl(GridVector2 Point)
         {
-            return Control.Contains(Point); 
+            return Control.Contains(Point);
         }
 
         public GridVector2 Transform(GridVector2 Point)
@@ -247,7 +245,7 @@ namespace Geometry
         public GridVector2 InverseTransform(GridVector2 Point)
         {
             GridVector2 uv = Control.Barycentric(Point);
-  //          Debug.Assert(uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0));
+            //          Debug.Assert(uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0));
 
             GridVector2 translated = GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, uv.Y, uv.X);
             return translated;

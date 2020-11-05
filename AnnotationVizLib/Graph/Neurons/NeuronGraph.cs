@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Annotation.Interfaces;
 using GraphLib;
-using System.Threading.Tasks; 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using Annotation.Interfaces;
+using System.Linq;
 
 namespace AnnotationVizLib
 {
@@ -32,7 +30,7 @@ namespace AnnotationVizLib
                 int TargetCompare = x.TargetID.CompareTo(y.TargetID);
                 return TargetCompare;
             }
-        }         
+        }
     }
 
     public class NeuronEdge : Edge<long>, IComparer<NeuronEdge>, IComparable<NeuronEdge>, IEquatable<NeuronEdge>
@@ -43,7 +41,7 @@ namespace AnnotationVizLib
         /// List of child structures involved in the link
         /// </summary>
         public SortedSet<IStructureLink> Links = new SortedSet<IStructureLink>(new StructureLinkComparer());
-        
+
         public double TotalSourceArea
         {
             get
@@ -90,7 +88,7 @@ namespace AnnotationVizLib
                 return System.Convert.ToDouble(Attributes["MinZ"]);
             }
             set
-            { 
+            {
                 Attributes["MinZ"] = value;
             }
         }
@@ -107,7 +105,7 @@ namespace AnnotationVizLib
                 return System.Convert.ToDouble(Attributes["MaxZ"]);
             }
             set
-            { 
+            {
                 Attributes["MaxZ"] = value;
             }
         }
@@ -155,7 +153,7 @@ namespace AnnotationVizLib
         {
             string output = "";
             bool first = true;
-            foreach(IStructureLink link in Links)
+            foreach (IStructureLink link in Links)
             {
                 if (!first)
                 {
@@ -166,7 +164,7 @@ namespace AnnotationVizLib
 
                 output += link.SourceID.ToString() + " -> " + link.TargetID.ToString();
             }
-            
+
             return output;
         }
 
@@ -181,7 +179,7 @@ namespace AnnotationVizLib
             if (comparison != 0)
                 return comparison;
 
-            if((object)x != null && (object)y != null)
+            if ((object)x != null && (object)y != null)
             {
                 return string.Compare(x.SynapseType, y.SynapseType);
             }
@@ -195,7 +193,7 @@ namespace AnnotationVizLib
             if (comparison != 0)
                 return comparison;
 
-            if((object)other != null)
+            if ((object)other != null)
             {
                 return this.SynapseType.CompareTo(other.SynapseType);
             }
@@ -206,7 +204,7 @@ namespace AnnotationVizLib
         public bool Equals(NeuronEdge other)
         {
             bool baseEquals = base.Equals(other);
-            if(baseEquals && ((object)other != null))
+            if (baseEquals && ((object)other != null))
             {
                 return this.SynapseType.Equals(other.SynapseType);
             }
@@ -219,7 +217,7 @@ namespace AnnotationVizLib
     {
         //Structure this node represents
         public IStructure Structure;
-        
+
         public IEnumerable<ulong> EdgeSourceChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.SourceIDs)); } }
         public IEnumerable<ulong> EdgeTargetChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.TargetIDs)); } }
 
@@ -227,7 +225,7 @@ namespace AnnotationVizLib
             : base(key)
         {
             this.Structure = value;
-            
+
         }
 
         public override string ToString()
@@ -237,8 +235,8 @@ namespace AnnotationVizLib
     }
 
     public class NeuronGraph : Graph<long, NeuronNode, NeuronEdge>
-    { 
-       
+    {
+
     }
 
 }

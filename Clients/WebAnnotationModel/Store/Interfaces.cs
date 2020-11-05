@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace WebAnnotationModel
 {
-    
-    public interface IRegionQuery<KEY, OBJECT> 
-        where KEY : struct 
+
+    public interface IRegionQuery<KEY, OBJECT>
+        where KEY : struct
         where OBJECT : class
     {
         /// <summary>

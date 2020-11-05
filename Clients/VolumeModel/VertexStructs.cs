@@ -1,22 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Geometry;
+﻿using Geometry;
 
 namespace Viking.VolumeModel
 {
     public struct PositionTextureVertex
     {
         public GridVector3 Position;
-        public GridVector2 Texture; 
+        public GridVector2 Texture;
     }
 
     public struct PositionTextureColorVertex
     {
         public GridVector3 Position;
         public GridVector2 Texture;
-        public GridVector3 Color; 
+        public GridVector3 Color;
     }
 
     public struct PositionNormalTextureVertex
@@ -29,7 +25,7 @@ namespace Viking.VolumeModel
         {
             Position = pos;
             Normal = norm;
-            Texture = tex; 
+            Texture = tex;
         }
     }
 }

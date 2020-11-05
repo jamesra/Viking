@@ -1,11 +1,7 @@
 ﻿//#define TRACEMESH
 
-using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Geometry.Meshing
 {
@@ -34,7 +30,7 @@ namespace Geometry.Meshing
             iClosedRing.Add(iClosedRing[0]);
             return iClosedRing;
         }
-         
+
         /// <summary>
         /// 
         /// </summary>
@@ -78,7 +74,7 @@ namespace Geometry.Meshing
                 return false;
             }
 
-            if(iVerts.Distinct().Count() == iVerts.Count - 1)
+            if (iVerts.Distinct().Count() == iVerts.Count - 1)
             {
                 Reason = null;
                 return true;
@@ -94,7 +90,7 @@ namespace Geometry.Meshing
         {
             IReadOnlyList<int> ring = iVerts.EnsureClosedRing();
             EdgeKey[] keys = new EdgeKey[ring.Count - 1];
-            for(int i = 0; i < ring.Count-1; i++)
+            for (int i = 0; i < ring.Count - 1; i++)
             {
                 keys[i] = new EdgeKey(ring[i], ring[i + 1]);
             }
@@ -207,7 +203,7 @@ namespace Geometry.Meshing
             return face.iVerts.Length == 4;
         }
 
-        public static TriangulationMesh<IVertex2D<PointIndex>> Triangulate(this GridPolygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress=null)
+        public static TriangulationMesh<IVertex2D<PointIndex>> Triangulate(this GridPolygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
         {
             //var polyCopy = (GridPolygon)poly.Clone();
 
@@ -221,7 +217,7 @@ namespace Geometry.Meshing
             Dictionary<PointIndex, Vertex2D<PointIndex>> IndexToVert = meshVerts.ToDictionary(v => v.Data);
 
             TriangulationMesh<IVertex2D<PointIndex>> mesh = GenericDelaunayMeshGenerator2D<IVertex2D<PointIndex>>.TriangulateToMesh(meshVerts, OnProgress);
-            
+
             SortedSet<IEdgeKey> constrainedEdges = new SortedSet<IEdgeKey>();
 
             //Add constrained edges to the mesh
@@ -230,7 +226,7 @@ namespace Geometry.Meshing
             Dictionary<PointIndex, Edge> edgeFacesToCheck = new Dictionary<PointIndex, Edge>();
 
             //while (vertEnumerator.MoveNext() == true)
-            foreach(PointIndex currentVert in pIndicies)
+            foreach (PointIndex currentVert in pIndicies)
             {
                 //PointIndex currentVert = vertEnumerator.Current;
                 int A = IndexToVert[currentVert].Index;
@@ -250,15 +246,15 @@ namespace Geometry.Meshing
 
             //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
             var EdgesToCheck = mesh.Edges.Keys.Where(k => mesh[k.A].Data.AreOnSameRing(mesh[k.B].Data) && constrainedEdges.Contains(k) == false).ToArray();
-            foreach(EdgeKey key in EdgesToCheck)
+            foreach (EdgeKey key in EdgesToCheck)
             {
                 GridLineSegment line = mesh.ToGridLineSegment(key);
 
-                if(OverlapType.NONE == centeredPoly.ContainsExt(line.Bisect()))
+                if (OverlapType.NONE == centeredPoly.ContainsExt(line.Bisect()))
                 {
                     mesh.RemoveEdge(key);
 
-                    if(OnProgress != null)
+                    if (OnProgress != null)
                     {
                         OnProgress(mesh);
                     }
@@ -267,7 +263,7 @@ namespace Geometry.Meshing
 
             //If there are three constrained edges that form an interior polygon that is a triangle the face wont be removed.  This results
             //in a constrained edge with two faces.  For this case remove the interior face
-            foreach(var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.iInnerPoly))
+            foreach (var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.iInnerPoly))
             {
                 GridPolygon innerPolygon = poly.InteriorPolygons[innerPolyGroup.Key.Value];
                 GridVector2 Centroid = innerPolygon.Centroid;
@@ -279,7 +275,7 @@ namespace Geometry.Meshing
                 IFace[] InteriorFaces = allFaces.Where(f => f.iVerts.All(iVert => innerPolyVerts.Contains(iVert))).ToArray();
 
                 //Should only ever be one interior face for a 3 vert interior polygon, unless someone adds interior polygons to interior polygons later <shudder/>
-                foreach(IFace f in InteriorFaces)
+                foreach (IFace f in InteriorFaces)
                 {
                     mesh.RemoveFace(f);
 
@@ -289,7 +285,7 @@ namespace Geometry.Meshing
                     }
                 }
             }
-            
+
 
             //System.Diagnostics.Debug.Assert(mesh.Faces.Count > 0, "Triangulation of polygon should create at least one face");
             //System.Diagnostics.Debug.Assert(constrainedEdges.All(e => mesh[e].Faces.Count == 1), "All constrained edges should have one face");
@@ -303,24 +299,24 @@ namespace Geometry.Meshing
         /// <param name="InteriorPoints">These points must be contained by the polygon defined by face</param>
         /// <param name="OnProgress"></param>
         /// <returns></returns>
-        public static TriangulationMesh<IVertex2D<int>> Triangulate(IVertex2D[] verts, IVertex2D[] InteriorPoints=null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
+        public static TriangulationMesh<IVertex2D<int>> Triangulate(IVertex2D[] verts, IVertex2D[] InteriorPoints = null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
-            if(verts.Last() == verts.First())
+            if (verts.Last() == verts.First())
             {
                 var faceList = verts.ToList();
-                faceList.RemoveAt(faceList.Count-1);
+                faceList.RemoveAt(faceList.Count - 1);
                 verts = faceList.ToArray();
             }
 
             GridVector2 faceCenter = verts.Select(v => v.Position).ToArray().Average();
 
-            if(GridVector2.Magnitude(faceCenter) < 100)
+            if (GridVector2.Magnitude(faceCenter) < 100)
             {
                 faceCenter = GridVector2.Zero; //Don't nudge if we are close to origin, prevents errors in our tests.
             }
 
             //Center the verts on 0,0 to reduce floating point error
-            var faceVerts = verts.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray(); 
+            var faceVerts = verts.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
             var interiorVerts = InteriorPoints == null ? new Vertex2D<int>[0] : InteriorPoints.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
 
             GridPolygon centeredPoly = new GridPolygon(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
@@ -347,7 +343,7 @@ namespace Geometry.Meshing
                 Edge e = new ConstrainedEdge(A, B);
                 if (tri_mesh.Contains(e))
                 {
-                    if(tri_mesh[e] as ConstrainedEdge == null)
+                    if (tri_mesh[e] as ConstrainedEdge == null)
                     {
                         var existing_faces = tri_mesh[e].Faces;
                         tri_mesh.RemoveEdge(e.Key);
@@ -358,7 +354,7 @@ namespace Geometry.Meshing
                             OnProgress(tri_mesh);
                     }
                 }
-                 
+
                 var added_constrained_edges = tri_mesh.AddConstrainedEdge(e, OnProgress);
                 expectedConstrainedEdges.Union(added_constrained_edges.Select(ce => ce.Key));
             }

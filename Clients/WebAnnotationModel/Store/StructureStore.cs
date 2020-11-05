@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
+﻿using AnnotationService.Types;
+using Geometry;
+using System;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Text;
-
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.ServiceModel;
-
 using WebAnnotationModel.Service;
-using WebAnnotationModel.Objects;
-using Geometry;using AnnotationService.Types;
 
 namespace WebAnnotationModel
 {
@@ -39,19 +34,19 @@ namespace WebAnnotationModel
             {
                 proxy = new Service.AnnotateStructuresClient("Annotation.Service.Interfaces.IAnnotateStructures-Binary", State.EndpointAddress);
                 proxy.ClientCredentials.UserName.UserName = State.UserCredentials.UserName;
-                proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password; 
+                proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password;
             }
             catch (Exception e)
             {
-                if(proxy != null)
+                if (proxy != null)
                 {
                     proxy.Close();
-                    proxy = null; 
+                    proxy = null;
                 }
                 throw;
             }
 
-            return proxy; 
+            return proxy;
         }
 
         protected override long[] ProxyUpdate(AnnotateStructuresClient proxy, Structure[] objects)
@@ -70,7 +65,7 @@ namespace WebAnnotationModel
             if (structures != null)
                 return structures.ToArray<Structure>();
 
-            return new Structure[0]; 
+            return new Structure[0];
         }
 
 
@@ -101,7 +96,7 @@ namespace WebAnnotationModel
 
         public override ConcurrentDictionary<long, StructureObj> GetLocalObjectsForSection(long SectionNumber)
         {
-            return new ConcurrentDictionary<long, StructureObj>(); 
+            return new ConcurrentDictionary<long, StructureObj>();
         }
 
         protected override Structure[] ProxyGetBySection(AnnotateStructuresClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] DeletedLocations)
@@ -112,13 +107,13 @@ namespace WebAnnotationModel
         protected override Structure[] ProxyGetBySectionRegion(AnnotateStructuresClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out long[] DeletedLocations)
         {
             return proxy.GetStructuresForSectionInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
-        } 
+        }
 
         protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateStructuresClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             return proxy.BeginGetStructuresForSectionInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
-         
+
         protected override Structure[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedObjects, GetObjectBySectionCallbackState<AnnotateStructuresClient, StructureObj> state, IAsyncResult result)
         {
             return state.Proxy.EndGetStructuresForSectionInMosaicRegion(out TicksAtQueryExecute, out DeletedObjects, result);
@@ -146,7 +141,7 @@ namespace WebAnnotationModel
 
         protected override Structure[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out long[] DeletedIDs, GetObjectBySectionCallbackState<AnnotateStructuresClient, StructureObj> state, IAsyncResult result)
         {
-            return state.Proxy.EndGetStructuresForSection(out TicksAtQueryExecute, out DeletedIDs, result); 
+            return state.Proxy.EndGetStructuresForSection(out TicksAtQueryExecute, out DeletedIDs, result);
         }
 
         public override bool RemoveSection(int SectionNumber)
@@ -156,22 +151,22 @@ namespace WebAnnotationModel
         }
 
         #endregion
-                
+
         public override void Init()
         {
 
 #if DEBUG
-//            GetAllStructures(); 
+            //            GetAllStructures(); 
 #else
 //            GetAllStructures(); 
-#endif 
-            
+#endif
+
         }
 
         public void GetAllStructures()
         {
             Trace.WriteLine("GetAllStructures, Begin", "WebAnnotation");
-            
+
             Structure[] structures = new Structure[0];
 
             AnnotateStructuresClient proxy = null;
@@ -199,14 +194,14 @@ namespace WebAnnotationModel
 
             Trace.WriteLine("GetAllStructures, End", "WebAnnotation");
         }
-        
+
         public void CheckForOrphan(long ID)
         {
-            StructureObj obj = GetObjectByID(ID); 
-            if(obj == null)
+            StructureObj obj = GetObjectByID(ID);
+            if (obj == null)
                 return;
 
-            long numLocs = 0; 
+            long numLocs = 0;
 
             AnnotateStructuresClient proxy = null;
             try
@@ -223,10 +218,10 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if(proxy != null)
+                if (proxy != null)
                     proxy.Close();
             }
-            
+
             if (numLocs == 0)
             {
                 /*
@@ -244,60 +239,60 @@ namespace WebAnnotationModel
                 //Delete on yes
                 if (result == System.Windows.Forms.DialogResult.Yes)
                 {*/
-                    try
-                    {
-                        //TODO
-                        Remove(obj);
-                        Save();
-                        Trace.WriteLine("Removing childless structure: " + obj.ToString(), "WebAnnotation");
+                try
+                {
+                    //TODO
+                    Remove(obj);
+                    Save();
+                    Trace.WriteLine("Removing childless structure: " + obj.ToString(), "WebAnnotation");
 
-                    }
-                    catch (FaultException )
-                    {
+                }
+                catch (FaultException)
+                {
                     //             System.Windows.Forms.MessageBox.Show("Delete failed.  Structure may have had child location added or already been deleted. Exception: " + e.ToString(), "Survivable error"); 
-                        throw;
-                    }
-              //  }
+                    throw;
+                }
+                //  }
             }
         }
 
         public StructureObj Create(StructureObj newStruct, LocationObj newLocation, out LocationObj created_loc)
-        { 
+        {
             AnnotateStructuresClient proxy = null;
 
-            created_loc = null; 
+            created_loc = null;
             try
-            { 
+            {
                 proxy = CreateProxy();
                 proxy.Open();
 
                 CreateStructureRetval retval = proxy.CreateStructure(newStruct.GetData(), newLocation.GetData());
-                 
+
                 //We should not insert created objects into the store before they are created on the server
                 Debug.Assert(this.GetObjectByID(newStruct.ID, false) == null);
 
                 StructureObj created_struct = new StructureObj(retval.structure);
 
                 ChangeInventory<StructureObj> inventory = InternalAdd(created_struct);
-                created_loc = new LocationObj(retval.location); 
+                created_loc = new LocationObj(retval.location);
 
                 CallOnCollectionChangedForAdd(new StructureObj[] { created_struct });
                 Store.Locations.AddFromFriend(new LocationObj[] { created_loc });
 
-                return created_struct; 
+                return created_struct;
             }
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
                 StructureObj deletedObj = InternalDelete(newStruct.ID);
-                if(deletedObj != null)
-                    CallOnCollectionChangedForDelete(new StructureObj[] {deletedObj});
+                if (deletedObj != null)
+                    CallOnCollectionChangedForDelete(new StructureObj[] { deletedObj });
 
-                return null; 
+                return null;
             }
             finally
             {
-                if(proxy != null)
+                if (proxy != null)
                     proxy.Close();
             }
         }
@@ -306,7 +301,7 @@ namespace WebAnnotationModel
         {
             obj.DBAction = DBACTION.DELETE;
 
-            return true; 
+            return true;
         }
 
         public ICollection<StructureObj> GetChildStructuresForStructure(long ID)
@@ -318,14 +313,14 @@ namespace WebAnnotationModel
                 proxy.Open();
 
                 Structure data = proxy.GetStructureByID(ID, true);
-                if(data != null)
+                if (data != null)
                 {
                     if (data.ChildIDs.Length > 0)
                     {
                         ICollection<StructureObj> list_structures = this.GetObjectsByIDs(data.ChildIDs, true);
                         ChangeInventory<StructureObj> inventory = InternalAdd(list_structures.ToArray());
                         CallOnCollectionChanged(inventory);
-                        return inventory.ObjectsInStore; 
+                        return inventory.ObjectsInStore;
                     }
                 }
             }
@@ -339,7 +334,7 @@ namespace WebAnnotationModel
                     proxy.Close();
             }
 
-            return new StructureObj[0]; 
+            return new StructureObj[0];
         }
 
         public long Merge(long KeepID, long MergeID)
@@ -370,7 +365,7 @@ namespace WebAnnotationModel
                     proxy.Close();
             }
 
-            return 0; 
+            return 0;
         }
 
         public long SplitAtLocationLink(long KeepLocID, long SplitLocID)
@@ -389,9 +384,9 @@ namespace WebAnnotationModel
 
                 LocationObj[] SplitLocations = Store.Locations.GetLocalObjectsForStructure(SplitStructureID);
                 Store.Locations.Refresh(SplitLocations.Select(l => l.ID).ToArray());
-                 
+
                 Store.LocationLinks.ForgetLocally(new LocationLinkKey(KeepLocID, SplitLocID));
-                 
+
                 return SplitStructureID;
             }
             catch (Exception e)
@@ -448,18 +443,18 @@ namespace WebAnnotationModel
 
         public ICollection<StructureObj> GetObjectsInRegion(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
-            ICollection<LocationObj> known_locations= Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
+            ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);
 
-            return known_locations.Select(l => l.Parent).Distinct().ToList(); 
+            return known_locations.Select(l => l.Parent).Distinct().ToList();
         }
 
         public MixedLocalAndRemoteQueryResults<long, StructureObj> GetObjectsInRegionAsync(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<StructureObj>> OnLoadedCallback)
         {
             MixedLocalAndRemoteQueryResults<long, StructureObj> results;
 
-            MixedLocalAndRemoteQueryResults<long, LocationObj> locResults = Store.Locations.GetObjectsInRegionAsync(SectionNumber, 
+            MixedLocalAndRemoteQueryResults<long, LocationObj> locResults = Store.Locations.GetObjectsInRegionAsync(SectionNumber,
                                                                                                                     bounds,
-                                                                                                                    MinRadius, 
+                                                                                                                    MinRadius,
                                                                                                                     LastQueryUtc,
                                                                                                                     (locs) => OnLoadedCallback(locs.Select(l => l.Parent).ToList()));
             ICollection<LocationObj> known_locations = Store.Locations.GetObjectsInRegion(SectionNumber, bounds, MinRadius, LastQueryUtc);

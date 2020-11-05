@@ -1,10 +1,5 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Geometry;
-using System.Diagnostics; 
 
 namespace GeometryTests
 {
@@ -95,7 +90,7 @@ namespace GeometryTests
 
             success = rectA.Contains(rectDContained);
             Assert.IsTrue(success);
-            
+
             /*Scale the rectangle and test again*/
             rectA.Scale(2);
 

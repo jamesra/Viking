@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace AnnotationVizLib
@@ -17,7 +14,7 @@ namespace AnnotationVizLib
         public AttributeMap(string key, SortedList<string, string> attributes)
         {
             Key = key;
-            Attributes = attributes; 
+            Attributes = attributes;
         }
 
         public override string ToString()
@@ -33,7 +30,7 @@ namespace AnnotationVizLib
     {
         public static void CopyAttributes(IDictionary<string, string> source, IDictionary<string, string> target)
         {
-            foreach(string key in source.Keys)
+            foreach (string key in source.Keys)
             {
                 target[key] = source[key];
             }
@@ -41,7 +38,7 @@ namespace AnnotationVizLib
 
         public static IDictionary<string, string> AttribsForLabel(string label, IList<AttributeMap> LabelToAttribMap)
         {
-            
+
             SortedDictionary<string, string> entity_attributes = new SortedDictionary<string, string>();
 
             if (label == null)
@@ -50,7 +47,7 @@ namespace AnnotationVizLib
             label = label.ToUpper();
 
             //Check for an exact mapping first
-            foreach(AttributeMap map in LabelToAttribMap)
+            foreach (AttributeMap map in LabelToAttribMap)
             {
                 if (map.Key == label)
                 {
@@ -59,13 +56,13 @@ namespace AnnotationVizLib
                 }
             }
 
-            
+
             //Check for a partial match in the order of the LabelToAttribMap list
             //The need to check in a specific non alphabetic order is why we do
             //not use a hashing or sorted data structure
-            foreach(AttributeMap map in LabelToAttribMap)
+            foreach (AttributeMap map in LabelToAttribMap)
             {
-                if(label.Contains(map.Key))
+                if (label.Contains(map.Key))
                 {
                     CopyAttributes(map.Attributes, entity_attributes);
                     return entity_attributes;

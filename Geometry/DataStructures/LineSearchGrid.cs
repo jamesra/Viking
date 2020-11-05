@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Geometry
 {
@@ -62,13 +61,13 @@ namespace Geometry
             NumGridsX = (int)Math.Ceiling(bounds.Width / GridWidth);
             NumGridsY = (int)Math.Ceiling(bounds.Height / GridHeight);
 
-            if(NumGridsX < 0 || NumGridsY < 0)
+            if (NumGridsX < 0 || NumGridsY < 0)
             {
                 throw new ArgumentException("NumGridsX and Y must be positive");
             }
 
             this.EstimatedLinesPerCell = (int)((double)EstimatedLineCount / NumGrids);
-            _LastIntersectingLineCount = this.EstimatedLinesPerCell; 
+            _LastIntersectingLineCount = this.EstimatedLinesPerCell;
 
             _LineGrid = new List<GridLineSegment>[NumGridsX + 1, NumGridsY + 1];
             //Initialize the grid
@@ -150,7 +149,7 @@ namespace Geometry
             {
                 try
                 {
-                    if(UseLock)
+                    if (UseLock)
                         searchGrid.rwLock.EnterReadLock();
 
                     iGridIndex++;
@@ -188,7 +187,7 @@ namespace Geometry
                 {
                     if (UseLock && searchGrid.rwLock.IsReadLockHeld)
                     {
-                        searchGrid.rwLock.ExitReadLock(); 
+                        searchGrid.rwLock.ExitReadLock();
                     }
                 }
 
@@ -220,7 +219,7 @@ namespace Geometry
             }
         }
 
-    #endregion
+        #endregion
 
         #region LineSearchGridRectangleEnumerator
 
@@ -244,7 +243,7 @@ namespace Geometry
             /// <summary>
             /// Set to true if the enumerator should take a read lock as it walks the collection
             /// </summary>
-            private bool UseLock = false; 
+            private bool UseLock = false;
 
             //Only return unique values
             SortedSet<GridLineSegment> UniqueLines = new SortedSet<GridLineSegment>();
@@ -279,11 +278,11 @@ namespace Geometry
             {
                 get
                 {
-                    
+
                     Debug.Assert(UniqueLines.Contains(CurrentGridLineSegment) == false);
                     UniqueLines.Add(CurrentGridLineSegment);
                     return CurrentGridLineSegment;
-                     
+
                     /*
                     GridLineSegment segment = currentCell[iGridIndex];
                     Debug.Assert(UniqueLines.Contains(segment) == false);
@@ -297,9 +296,9 @@ namespace Geometry
             {
                 try
                 {
-                    if(UseLock)
+                    if (UseLock)
                         searchGrid.rwLock.EnterReadLock();
-                
+
                     iGridIndex++;
                     while (iGridIndex >= currentCell.Count || UniqueLines.Contains(currentCell[iGridIndex]))
                     {
@@ -332,7 +331,7 @@ namespace Geometry
                         }
                     }
 
-                    CurrentGridLineSegment = currentCell[iGridIndex]; 
+                    CurrentGridLineSegment = currentCell[iGridIndex];
                 }
                 finally
                 {
@@ -372,7 +371,7 @@ namespace Geometry
             }
         }
 
-#endregion
+        #endregion
 
         public void Clear()
         {
@@ -479,7 +478,7 @@ namespace Geometry
             }
         }
 
-        
+
 
         public bool TryAdd(GridLineSegment line, T value)
         {
@@ -499,14 +498,14 @@ namespace Geometry
 
                     //This happens when structurelinks or location links are duplicated in the database.f
                     if (tableLineToValue.ContainsKey(line))
-                        return false; 
+                        return false;
 
                     //Add the line to all cells it belongs in 
                     IEnumerable<Coord> coords = GetCoordsForLine(line);
                     foreach (Coord coord in coords)
                     {
                         List<GridLineSegment> lines = _LineGrid[coord.iX, coord.iY];
-                        
+
                         //This happens when structurelinks or location links are duplicated in the database.f
                         bool ContainsLine = lines.Contains(line);
                         Debug.Assert(ContainsLine == false);
@@ -515,7 +514,7 @@ namespace Geometry
                     }
 
                     Debug.Assert(tableLineToValue.ContainsKey(line) == false);
-                    if(!tableLineToValue.ContainsKey(line))
+                    if (!tableLineToValue.ContainsKey(line))
                         tableLineToValue.Add(line, value);
 
                     tableValueToLine.Add(value, line);
@@ -523,7 +522,7 @@ namespace Geometry
                 catch (ArgumentException e)
                 {
                     System.Diagnostics.Trace.WriteLine("Exception in LineSearchGrid.TryAdd", e.ToString());
-                    return false; 
+                    return false;
                 }
                 finally
                 {
@@ -554,7 +553,7 @@ namespace Geometry
                     lines.Remove(line);
                 }
 
-               T value = tableLineToValue[line];
+                T value = tableLineToValue[line];
                 bool LineRemove = tableLineToValue.Remove(line);
                 bool ValueRemove = tableValueToLine.Remove(value);
                 Debug.Assert(LineRemove == ValueRemove);
@@ -617,7 +616,7 @@ namespace Geometry
                     OldLine = new GridLineSegment();
                     return false;
                 }
-                
+
                 try
                 {
                     rwLock.EnterWriteLock();
@@ -724,16 +723,16 @@ namespace Geometry
                     double x = ((iX) * this.GridWidth) + Bounds.Left;
 
                     if (x < line.A.X || x > line.B.X)
-                        continue; 
+                        continue;
 
                     double y = m * x + b;
 
                     if (y < minY || y > maxY)
-                        continue; 
+                        continue;
 
                     Coord intersect = GetCoord(x, y);
 
-                    if(intersect.iX - 1 >= 0)
+                    if (intersect.iX - 1 >= 0)
                         listCoords.Add(new Coord(intersect.iX - 1, intersect.iY));
 
                     listCoords.Add(new Coord(intersect.iX, intersect.iY));
@@ -742,25 +741,25 @@ namespace Geometry
                 m = line.yslope;
                 b = line.yintercept;
 
-               
+
 
                 for (int iY = iStartY; iY <= iEndY; iY++)
                 {
                     double y = (iY * this.GridHeight) + Bounds.Bottom;
                     if (y < minY || y > maxY)
-                        continue; 
+                        continue;
 
                     double x = m * y + b;
 
                     if (x < line.A.X || x > line.B.X)
-                        continue; 
+                        continue;
 
                     Coord intersect = GetCoord(x, y);
 
-                    if(intersect.iY - 1 >= 0)
+                    if (intersect.iY - 1 >= 0)
                         listCoords.Add(new Coord(intersect.iX, intersect.iY - 1));
 
-                    listCoords.Add(new Coord(intersect.iX, intersect.iY)); 
+                    listCoords.Add(new Coord(intersect.iX, intersect.iY));
                 }
 
                 listCoords.Add(end);
@@ -792,14 +791,14 @@ namespace Geometry
             }
 
 #if DEBUG
-  //          listCoords.Sort(); 
+            //          listCoords.Sort(); 
 #endif
 
             return listCoords;
         }
 
 
-        
+
 
         /// <summary>
         /// Returns a list of GridLineSegments that could possible intersect the passed line
@@ -811,8 +810,8 @@ namespace Geometry
         private List<GridLineSegment> GetPotentialIntersections(GridVector2 position, int SearchSize, bool BorderOnly)
         {
             Coord coord = GetCoord(position);
-            
-            
+
+
             int start_iX = coord.iX - SearchSize;
             int start_iY = coord.iY - SearchSize;
             int end_iX = coord.iX + SearchSize;
@@ -828,7 +827,7 @@ namespace Geometry
             if (end_iY > NumGridsY)
                 end_iY = NumGridsY;
 
-//            int numCells = (end_iX - start_iX) * (end_iY - start_iY);
+            //            int numCells = (end_iX - start_iX) * (end_iY - start_iY);
             //TODO
             //SortedSet<GridLineSegment> 
             List<GridLineSegment> LineList = new List<GridLineSegment>(_LastIntersectingLineCount);
@@ -840,7 +839,7 @@ namespace Geometry
             {
                 for (int iX = start.iX; iX <= end.iX; iX++)
                 {
-                    if(coord.iY - SearchSize >= 0)
+                    if (coord.iY - SearchSize >= 0)
                         LineList.AddRange(_LineGrid[iX, start.iY]);
 
                     if (coord.iY + SearchSize < NumGridsY)
@@ -913,7 +912,7 @@ namespace Geometry
         private IEnumerable<GridLineSegment> GetPotentialIntersections(GridLineSegment line, bool TakeSpinLock)
         {
             //If the line doesn't intersect our bounding box then skip the search
-            if (! Bounds.Intersects(line.BoundingBox) )
+            if (!Bounds.Intersects(line.BoundingBox))
                 return new GridLineSegment[0];
 
             try
@@ -921,9 +920,9 @@ namespace Geometry
                 if (TakeSpinLock)
                     rwLock.EnterReadLock();
 
-//                List<GridLineSegment> LineList = new List<GridLineSegment>();
-//                Coord start = GetCoord(new GridVector2(line.MinX, line.MinY));
-//                Coord end = GetCoord(new GridVector2(line.MaxX, line.MaxY));
+                //                List<GridLineSegment> LineList = new List<GridLineSegment>();
+                //                Coord start = GetCoord(new GridVector2(line.MinX, line.MinY));
+                //                Coord end = GetCoord(new GridVector2(line.MaxX, line.MaxY));
 
                 IEnumerable<Coord> coords = GetCoordsForLine(line);
                 return new LineSearchGridCoordListEnumerator(this, coords, true);
@@ -967,7 +966,7 @@ namespace Geometry
                 if (ListDispose != null)
                     ListDispose.Dispose();
 
-                LineList = null; 
+                LineList = null;
 
 
                 // Trace.WriteLine("Enumerator: " + values.Count.ToString()); 
@@ -1056,7 +1055,7 @@ namespace Geometry
                 if (ListDispose != null)
                     ListDispose.Dispose();
 
-                potentialIntersections = null; 
+                potentialIntersections = null;
 
                 if (tableLineToValue.ContainsKey(BestLine))
                     return tableLineToValue[BestLine];

@@ -1,7 +1,6 @@
-﻿using System;
-using Geometry;
-using System.Collections.Specialized;
+﻿using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Specialized;
 
 namespace GeometryTests
 {
@@ -46,7 +45,7 @@ namespace GeometryTests
             Assert.AreEqual(LastCollectionEventAction, expected);
             ResetPathChangeEvent();
         }
-         
+
         private void SubscribeToEvents(Path path)
         {
             path.OnLoopChanged += this.OnLoopChanged;
@@ -60,7 +59,7 @@ namespace GeometryTests
         }
 
         private void CompareWithExpectedLoop(GridVector2[] loop, GridVector2[] expected_loop)
-        { 
+        {
             Assert.AreEqual(expected_loop.Length, loop.Length);
             for (int i = 0; i < expected_loop.Length; i++)
             {
@@ -111,7 +110,7 @@ namespace GeometryTests
             //Ensure there was no loop event fired yet
             CheckLoopEventAndReset();
             path.Push(new GridVector2(0, -10));
-             
+
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
             CheckLoopEventAndReset(true);  //Event should fire for loop addition
@@ -404,7 +403,7 @@ namespace GeometryTests
             CompareWithExpectedLoop(path.Loop, expected_loop);
 
             //Make sure the loop doesn't change with an extra random point
-            path.Push(new GridVector2(0,-10));
+            path.Push(new GridVector2(0, -10));
             Assert.IsTrue(path.HasSelfIntersection);
             CompareWithExpectedLoop(path.Loop, expected_loop);
 

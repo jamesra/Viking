@@ -1,22 +1,12 @@
 ﻿using System;
-using System.ComponentModel; 
 using System.Collections.Generic;
-using System.Collections.Specialized; 
-using System.Linq;
-using System.Text;
-using Geometry;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics; 
-using Viking.Common;
-using WebAnnotation;
-using WebAnnotationModel;
-using System.Windows.Forms;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Windows.Forms;
 using Viking.Common.UI;
-using WebAnnotation.UI.Commands;
-using System.Collections.Concurrent;
-using Microsoft.SqlServer.Types;
+using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
@@ -25,8 +15,12 @@ namespace WebAnnotation.ViewModel
         public readonly LocationObj modelObj;
 
         public Location_ViewModelBase(long LocationID)
-        { 
+        {
             this.modelObj = Store.Locations.GetObjectByID(LocationID);
+            if (modelObj == null)
+            {
+                throw new ArgumentException(string.Format("Could not load location {0} from store", LocationID));
+            }
         }
 
         [Column("ID")]
@@ -182,7 +176,7 @@ namespace WebAnnotation.ViewModel
         public override void Delete()
         {
             Store.Locations.Remove(this.modelObj);
-            Store.Locations.Save();
+            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
 
             if (this.ParentID.HasValue)
                 Store.Structures.CheckForOrphan(this.ParentID.Value);
@@ -196,7 +190,7 @@ namespace WebAnnotation.ViewModel
 
         protected ContextMenu _AddExportMenus(ContextMenu menu)
         {
-            if(Global.Export != null)
+            if (Global.Export != null)
             {
                 MenuItem menuExport = new MenuItem("Export");
 
@@ -205,7 +199,7 @@ namespace WebAnnotation.ViewModel
                 menu.MenuItems.Add(menuExport);
             }
 
-            return menu; 
+            return menu;
         }
 
         private void _AddExportToTulipURL(MenuItem menu)
@@ -214,8 +208,8 @@ namespace WebAnnotation.ViewModel
             MenuItem menuMorphology = new MenuItem("Morphology", ContextMenu_ExportMorphology);
 
             menuTulipURL.MenuItems.Add(menuMorphology);
-            _AddExportToTulipNetwork(menuTulipURL); 
-            menu.MenuItems.Add(menuTulipURL);  
+            _AddExportToTulipNetwork(menuTulipURL);
+            menu.MenuItems.Add(menuTulipURL);
         }
 
         private void _AddExportToTulipNetwork(MenuItem menu)
@@ -230,7 +224,7 @@ namespace WebAnnotation.ViewModel
             MenuItem menuThreeHop = new MenuItem("3 degrees of seperation", ContextMenu_ExportNetwork);
             menuThreeHop.Tag = new long?(3);
             MenuItem menuAllHop = new MenuItem("All connected", ContextMenu_ExportNetwork);
-            menuAllHop.Tag = new long?(); 
+            menuAllHop.Tag = new long?();
 
             menu.MenuItems.Add(menuNetwork);
 
@@ -267,7 +261,7 @@ namespace WebAnnotation.ViewModel
 
         protected ContextMenu _AddCopyLocationIDMenu(ContextMenu menu)
         {
-            MenuItem menuCopyLocationID = new MenuItem(string.Format("Copy Location ID: {0}",this.ID), ContextMenu_CopyLocationID);
+            MenuItem menuCopyLocationID = new MenuItem(string.Format("Copy Location ID: {0}", this.ID), ContextMenu_CopyLocationID);
             menu.MenuItems.Add(menuCopyLocationID);
 
             return menu;
@@ -276,11 +270,11 @@ namespace WebAnnotation.ViewModel
         protected void _AddConvertShapeMenus(ContextMenu menu)
         {
             MenuItem menuShape = new MenuItem("Change Shape");
-            
+
             MenuItem menuOpenCurve = new MenuItem("Curve", ContextMenu_ConvertShape);
-            menuOpenCurve.Tag = LocationType.OPENCURVE;
+            menuOpenCurve.Tag = Annotation.Interfaces.LocationType.OPENCURVE;
             MenuItem menuCircle = new MenuItem("Circle", ContextMenu_ConvertShape);
-            menuCircle.Tag = LocationType.CIRCLE;
+            menuCircle.Tag = Annotation.Interfaces.LocationType.CIRCLE;
 
             menuShape.MenuItems.Add(menuOpenCurve);
             menuShape.MenuItems.Add(menuCircle);
@@ -316,7 +310,7 @@ namespace WebAnnotation.ViewModel
 
         public override void Save()
         {
-            Store.Locations.Save();
+            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         #endregion
@@ -330,12 +324,15 @@ namespace WebAnnotation.ViewModel
         protected void ContextMenu_OnTerminal(object sender, EventArgs e)
         {
             this.modelObj.Terminal = !this.modelObj.Terminal;
-            bool success = Store.Locations.Save();
-            if (!success)
+            try
             {
+                Store.Locations.Save();
+            }
+            catch (System.ServiceModel.FaultException ex)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
                 this.modelObj.Terminal = !this.modelObj.Terminal;
             }
-
         }
 
         protected void ContextMenu_CopyLocationID(object sender, EventArgs e)
@@ -345,12 +342,12 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_ExportMorphology(object sender, EventArgs e)
         {
-            Global.Export.OpenMorphology(this.ParentID.Value); 
+            Global.Export.OpenMorphology(this.ParentID.Value);
         }
 
         protected void ContextMenu_ExportNetwork(object sender, EventArgs e)
         {
-            MenuItem item = sender as MenuItem; 
+            MenuItem item = sender as MenuItem;
             long? hops = item.Tag as long?;
 
             Global.Export.OpenNetwork(this.ParentID.Value, hops);
@@ -359,21 +356,29 @@ namespace WebAnnotation.ViewModel
         protected void ContextMenu_ConvertShape(object sender, EventArgs e)
         {
             MenuItem item = sender as MenuItem;
-            LocationType targetShape = (LocationType)item.Tag;
-            
-            switch(targetShape)
+            Annotation.Interfaces.LocationType targetShape = (Annotation.Interfaces.LocationType)item.Tag;
+
+            switch (targetShape)
             {
-                case LocationType.CIRCLE:
+                case Annotation.Interfaces.LocationType.CIRCLE:
                     break;
-                case LocationType.OPENCURVE:
-                    break; 
+                case Annotation.Interfaces.LocationType.OPENCURVE:
+                    break;
             }
         }
 
         protected void ContextMenu_OnOffEdge(object sender, EventArgs e)
         {
             this.modelObj.OffEdge = !this.modelObj.OffEdge;
-            Store.Locations.Save();
+            try
+            {
+                Store.Locations.Save();
+            }
+            catch (System.ServiceModel.FaultException ex)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
+                this.modelObj.OffEdge = !this.modelObj.OffEdge;
+            }
         }
 
         protected void ContextMenu_OnDelete(object sender, EventArgs e)
@@ -553,12 +558,12 @@ namespace WebAnnotation.ViewModel
         {
             get { return modelObj.Radius; }
         }
-                
-        
+
+
         [Column("TypeCode")]
-        public LocationType TypeCode
+        public Annotation.Interfaces.LocationType TypeCode
         {
-            get { return (LocationType)modelObj.TypeCode; }
+            get { return (Annotation.Interfaces.LocationType)modelObj.TypeCode; }
         }
 
         public bool IsTerminal
@@ -603,7 +608,7 @@ namespace WebAnnotation.ViewModel
         {
             get { return this.modelObj.VolumePositionHasBeenCalculated; }
         }
-        
+
         #endregion
 
     }

@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TriangleNet;
+﻿using Microsoft.SqlServer.Types;
+using System;
 using TriangleNet.Geometry;
-using Microsoft.SqlServer.Types;
 
 namespace SqlGeometryUtils
 {
@@ -52,13 +47,13 @@ namespace SqlGeometryUtils
 
             polygon.Add(outer_contour, false);
 
-            for(int iRing = 0; iRing < geometry.STNumInteriorRing().Value; iRing++)
+            for (int iRing = 0; iRing < geometry.STNumInteriorRing().Value; iRing++)
             {
                 SqlGeometry innerRing = geometry.GetInteriorRing(iRing);
                 Contour innerHole = innerRing.ToTriangleNetContour();
                 polygon.Add(innerHole, true);
             }
-                        
+
             return polygon;
         }
     }

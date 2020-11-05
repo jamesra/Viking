@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Geometry
 {
@@ -25,7 +24,7 @@ namespace Geometry
             if (diff < 0)
                 return -1;
 
-            return 0;  
+            return 0;
         }
 
         #endregion
@@ -42,7 +41,7 @@ namespace Geometry
         public MappingGridVector2(GridVector2 control, GridVector2 mapped)
         {
             MappedPoint = mapped;
-            ControlPoint = control; 
+            ControlPoint = control;
         }
 
         /// <summary>
@@ -55,7 +54,7 @@ namespace Geometry
             for (int i = points.Count - 1; i > 0; i--)
             {
                 MappingGridVector2 a = points[i];
-                MappingGridVector2 b = points[i-1];
+                MappingGridVector2 b = points[i - 1];
 
                 if (GridVector2.DistanceSquared(a.ControlPoint, b.ControlPoint) <= Global.EpsilonSquared)
                 {
@@ -87,7 +86,7 @@ namespace Geometry
 
         public override string ToString()
         {
-            return "Ctrl: " + ControlPoint.ToString() + " Mapped: " + MappedPoint.ToString(); 
+            return "Ctrl: " + ControlPoint.ToString() + " Mapped: " + MappedPoint.ToString();
         }
 
         public static string ToMatlab(MappingGridVector2[] array)
@@ -125,7 +124,7 @@ namespace Geometry
             if (diff < 0)
                 return -1;
 
-            return 0;  
+            return 0;
         }
 
         object ICloneable.Clone()
@@ -151,7 +150,7 @@ namespace Geometry
         /// <returns></returns>
         public static bool RemoveDuplicates(List<MappingGridVector2> points)
         {
-            bool DuplicateFound = false; 
+            bool DuplicateFound = false;
             //Remove duplicates: In the case that a line on the warpingGrid passes through a point on the fixedGrid then both ends of the line will map the point and we will get a duplicate
             points.Sort();
             int iCompareStart = 0;
@@ -165,7 +164,7 @@ namespace Geometry
                     {
                         points.RemoveAt(iTest);
                         iTest--;
-                        DuplicateFound = true; 
+                        DuplicateFound = true;
                         break;
                     }
 

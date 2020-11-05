@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using WebAnnotationModel.Service;
-using System.ComponentModel;
-using System.Diagnostics;
-
-namespace WebAnnotationModel.Objects
+﻿namespace WebAnnotationModel.Objects
 {
     /*
     /// <summary>

@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.ServiceModel;
-using WebAnnotationModel.Service; 
+using System.Collections.Specialized;
+using System.Diagnostics;
 using WebAnnotationModel.Objects;
-using System.Diagnostics; 
-using System.Collections.Concurrent;
-using System.Collections.Specialized; 
 
 namespace WebAnnotationModel
 {
@@ -19,12 +14,12 @@ namespace WebAnnotationModel
     public class MixedLocalAndRemoteQueryResults<KEY, OBJECT>
     {
         public readonly IAsyncResult ServerRequestResult = null;
-        public readonly ICollection<OBJECT> KnownObjects = null; 
+        public readonly ICollection<OBJECT> KnownObjects = null;
 
         public MixedLocalAndRemoteQueryResults(IAsyncResult result, ICollection<OBJECT> known_objects)
         {
             this.ServerRequestResult = result;
-            this.KnownObjects = known_objects; 
+            this.KnownObjects = known_objects;
         }
     }
 
@@ -122,22 +117,22 @@ namespace WebAnnotationModel
     /// This base class implements the basic functionality to talk to a WCF Service
     /// </summary>
     public abstract class StoreBase<PROXY, INTERFACE, OBJECT, WCFOBJECT> : INotifyCollectionChanged
-        where INTERFACE : class        
+        where INTERFACE : class
         where PROXY : System.ServiceModel.ClientBase<INTERFACE>
         where WCFOBJECT : AnnotationService.Types.DataObject, new()
         where OBJECT : WCFObjBase<WCFOBJECT>, new()
     {
-        
+
 
         //Perform any required initialization
         public abstract void Init();
 
         protected abstract PROXY CreateProxy();
 
-                
+
         #region Public Creation/Removal methods
 
-        
+
         /// <summary>
         /// Create a local instance of a new item in the store
         /// This item should already exist on the store
@@ -156,14 +151,14 @@ namespace WebAnnotationModel
         /// <param name="obj"></param>
         /// <returns></returns>
         public abstract ICollection<OBJECT> Add(ICollection<OBJECT> objs);
-         
+
 
         /// <summary>
         /// Remove the passed object from the local store and server.
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public abstract bool Remove(OBJECT obj); 
+        public abstract bool Remove(OBJECT obj);
 
         #endregion
 
@@ -174,13 +169,13 @@ namespace WebAnnotationModel
 #if DEBUG
             System.Diagnostics.Trace.WriteLine(string.Format("{0}.{1} Invoking Event Action", this.GetType().FullName, memberName));
 #endif
-            if(State.UseAsynchEvents)
+            if (State.UseAsynchEvents)
             {
                 System.Threading.Tasks.Task.Run(a);
             }
             else
             {
-                a.Invoke(); 
+                a.Invoke();
             }
         }
 
@@ -188,12 +183,12 @@ namespace WebAnnotationModel
         {
             //Action a = new Action(() =>
             //    {
-                    CallOnCollectionChangedForDelete(inventory.DeletedObjects);
-                    CallOnCollectionChangedForReplace(inventory.OldObjectsReplaced, inventory.NewObjectReplacements);
-                    CallOnCollectionChangedForAdd(inventory.AddedObjects);
+            CallOnCollectionChangedForDelete(inventory.DeletedObjects);
+            CallOnCollectionChangedForReplace(inventory.OldObjectsReplaced, inventory.NewObjectReplacements);
+            CallOnCollectionChangedForAdd(inventory.AddedObjects);
             //    });
             //InvokeEventAction(a); 
-            
+
         }
 
         /// <summary>
@@ -215,7 +210,7 @@ namespace WebAnnotationModel
                     CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, listCopy));
                 });
 
-                InvokeEventAction(a); 
+                InvokeEventAction(a);
             }
         }
 
@@ -232,7 +227,7 @@ namespace WebAnnotationModel
                     CallOnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, listCopy));
                 });
 
-                InvokeEventAction(a); 
+                InvokeEventAction(a);
             }
         }
 
@@ -253,7 +248,7 @@ namespace WebAnnotationModel
                     CallOnCollectionChanged(e);
                 });
 
-                InvokeEventAction(a); 
+                InvokeEventAction(a);
             }
         }
 
@@ -262,7 +257,7 @@ namespace WebAnnotationModel
         {
             if (OnCollectionChanged != null)
             {
-                OnCollectionChanged(this,e);
+                OnCollectionChanged(this, e);
                 //System.Threading.Tasks.Task.Factory.StartNew(() => OnCollectionChanged(this, e));
                 //Action a = new Action(() => OnCollectionChanged(this, e));
                 //a.BeginInvoke(null, null);
@@ -281,8 +276,8 @@ namespace WebAnnotationModel
                 {
                     a.Invoke(); 
                 }
-                */ 
-            } 
+                */
+            }
         }
 
         /*
@@ -295,7 +290,7 @@ namespace WebAnnotationModel
         }*/
 
 
-#endregion
+        #endregion
 
         protected void ShowStandardExceptionMessage(Exception e)
         {
@@ -304,23 +299,23 @@ namespace WebAnnotationModel
             //System.Windows.Forms.MessageBox.Show("An error occurred:\n" + e.Message, "WebAnnotation");
         }
 
-#region Proxy Calls
+        #region Proxy Calls
 
 
-#endregion
+        #endregion
 
-#region INotifyCollectionChanged Members
+        #region INotifyCollectionChanged Members
 
 
         public event NotifyCollectionChangedEventHandler OnCollectionChanged;
         event NotifyCollectionChangedEventHandler INotifyCollectionChanged.CollectionChanged
         {
-            add { OnCollectionChanged += value;  }
-            remove { OnCollectionChanged -= value;  }
+            add { OnCollectionChanged += value; }
+            remove { OnCollectionChanged -= value; }
         }
 
-#endregion
+        #endregion
 
-        
+
     }
 }

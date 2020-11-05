@@ -538,22 +538,6 @@ namespace WebAnnotationModel.Service {
         
         long[] EndUpdateStructureTypes(System.IAsyncResult result);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
-        AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link);
-        
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
-        System.IAsyncResult BeginCreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link, System.AsyncCallback callback, object asyncState);
-        
-        AnnotationService.Types.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result);
-        
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
-        void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks);
-        
-        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
-        System.IAsyncResult BeginUpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState);
-        
-        void EndUpdatePermittedStructureLinks(System.IAsyncResult result);
-        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/TestMethod", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/TestMethodResponse")]
         string TestMethod();
         
@@ -664,25 +648,6 @@ namespace WebAnnotationModel.Service {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
-    public partial class CreatePermittedStructureLinkCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
-        
-        private object[] results;
-        
-        public CreatePermittedStructureLinkCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
-                base(exception, cancelled, userState) {
-            this.results = results;
-        }
-        
-        public AnnotationService.Types.PermittedStructureLink Result {
-            get {
-                base.RaiseExceptionIfNecessary();
-                return ((AnnotationService.Types.PermittedStructureLink)(this.results[0]));
-            }
-        }
-    }
-    
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class TestMethodCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
@@ -734,18 +699,6 @@ namespace WebAnnotationModel.Service {
         
         private System.Threading.SendOrPostCallback onUpdateStructureTypesCompletedDelegate;
         
-        private BeginOperationDelegate onBeginCreatePermittedStructureLinkDelegate;
-        
-        private EndOperationDelegate onEndCreatePermittedStructureLinkDelegate;
-        
-        private System.Threading.SendOrPostCallback onCreatePermittedStructureLinkCompletedDelegate;
-        
-        private BeginOperationDelegate onBeginUpdatePermittedStructureLinksDelegate;
-        
-        private EndOperationDelegate onEndUpdatePermittedStructureLinksDelegate;
-        
-        private System.Threading.SendOrPostCallback onUpdatePermittedStructureLinksCompletedDelegate;
-        
         private BeginOperationDelegate onBeginTestMethodDelegate;
         
         private EndOperationDelegate onEndTestMethodDelegate;
@@ -780,10 +733,6 @@ namespace WebAnnotationModel.Service {
         public event System.EventHandler<GetStructureTypesByIDsCompletedEventArgs> GetStructureTypesByIDsCompleted;
         
         public event System.EventHandler<UpdateStructureTypesCompletedEventArgs> UpdateStructureTypesCompleted;
-        
-        public event System.EventHandler<CreatePermittedStructureLinkCompletedEventArgs> CreatePermittedStructureLinkCompleted;
-        
-        public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> UpdatePermittedStructureLinksCompleted;
         
         public event System.EventHandler<TestMethodCompletedEventArgs> TestMethodCompleted;
         
@@ -1033,105 +982,6 @@ namespace WebAnnotationModel.Service {
             }
             base.InvokeAsync(this.onBeginUpdateStructureTypesDelegate, new object[] {
                         structType}, this.onEndUpdateStructureTypesDelegate, this.onUpdateStructureTypesCompletedDelegate, userState);
-        }
-        
-        public AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link) {
-            return base.Channel.CreatePermittedStructureLink(link);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginCreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginCreatePermittedStructureLink(link, callback, asyncState);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public AnnotationService.Types.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result) {
-            return base.Channel.EndCreatePermittedStructureLink(result);
-        }
-        
-        private System.IAsyncResult OnBeginCreatePermittedStructureLink(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            AnnotationService.Types.PermittedStructureLink link = ((AnnotationService.Types.PermittedStructureLink)(inValues[0]));
-            return this.BeginCreatePermittedStructureLink(link, callback, asyncState);
-        }
-        
-        private object[] OnEndCreatePermittedStructureLink(System.IAsyncResult result) {
-            AnnotationService.Types.PermittedStructureLink retVal = this.EndCreatePermittedStructureLink(result);
-            return new object[] {
-                    retVal};
-        }
-        
-        private void OnCreatePermittedStructureLinkCompleted(object state) {
-            if ((this.CreatePermittedStructureLinkCompleted != null)) {
-                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.CreatePermittedStructureLinkCompleted(this, new CreatePermittedStructureLinkCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
-            }
-        }
-        
-        public void CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link) {
-            this.CreatePermittedStructureLinkAsync(link, null);
-        }
-        
-        public void CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link, object userState) {
-            if ((this.onBeginCreatePermittedStructureLinkDelegate == null)) {
-                this.onBeginCreatePermittedStructureLinkDelegate = new BeginOperationDelegate(this.OnBeginCreatePermittedStructureLink);
-            }
-            if ((this.onEndCreatePermittedStructureLinkDelegate == null)) {
-                this.onEndCreatePermittedStructureLinkDelegate = new EndOperationDelegate(this.OnEndCreatePermittedStructureLink);
-            }
-            if ((this.onCreatePermittedStructureLinkCompletedDelegate == null)) {
-                this.onCreatePermittedStructureLinkCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreatePermittedStructureLinkCompleted);
-            }
-            base.InvokeAsync(this.onBeginCreatePermittedStructureLinkDelegate, new object[] {
-                        link}, this.onEndCreatePermittedStructureLinkDelegate, this.onCreatePermittedStructureLinkCompletedDelegate, userState);
-        }
-        
-        public void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
-            base.Channel.UpdatePermittedStructureLinks(permittedStructureLinks);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public System.IAsyncResult BeginUpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginUpdatePermittedStructureLinks(permittedStructureLinks, callback, asyncState);
-        }
-        
-        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public void EndUpdatePermittedStructureLinks(System.IAsyncResult result) {
-            base.Channel.EndUpdatePermittedStructureLinks(result);
-        }
-        
-        private System.IAsyncResult OnBeginUpdatePermittedStructureLinks(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks = ((AnnotationService.Types.PermittedStructureLink[])(inValues[0]));
-            return this.BeginUpdatePermittedStructureLinks(permittedStructureLinks, callback, asyncState);
-        }
-        
-        private object[] OnEndUpdatePermittedStructureLinks(System.IAsyncResult result) {
-            this.EndUpdatePermittedStructureLinks(result);
-            return null;
-        }
-        
-        private void OnUpdatePermittedStructureLinksCompleted(object state) {
-            if ((this.UpdatePermittedStructureLinksCompleted != null)) {
-                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
-                this.UpdatePermittedStructureLinksCompleted(this, new System.ComponentModel.AsyncCompletedEventArgs(e.Error, e.Cancelled, e.UserState));
-            }
-        }
-        
-        public void UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
-            this.UpdatePermittedStructureLinksAsync(permittedStructureLinks, null);
-        }
-        
-        public void UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks, object userState) {
-            if ((this.onBeginUpdatePermittedStructureLinksDelegate == null)) {
-                this.onBeginUpdatePermittedStructureLinksDelegate = new BeginOperationDelegate(this.OnBeginUpdatePermittedStructureLinks);
-            }
-            if ((this.onEndUpdatePermittedStructureLinksDelegate == null)) {
-                this.onEndUpdatePermittedStructureLinksDelegate = new EndOperationDelegate(this.OnEndUpdatePermittedStructureLinks);
-            }
-            if ((this.onUpdatePermittedStructureLinksCompletedDelegate == null)) {
-                this.onUpdatePermittedStructureLinksCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnUpdatePermittedStructureLinksCompleted);
-            }
-            base.InvokeAsync(this.onBeginUpdatePermittedStructureLinksDelegate, new object[] {
-                        permittedStructureLinks}, this.onEndUpdatePermittedStructureLinksDelegate, this.onUpdatePermittedStructureLinksCompletedDelegate, userState);
         }
         
         public string TestMethod() {
@@ -4728,6 +4578,280 @@ namespace WebAnnotationModel.Service {
                         structure_id,
                         begin_time,
                         end_time}, this.onEndGetLocationChangeLogDelegate, this.onGetLocationChangeLogCompletedDelegate, userState);
+        }
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.ServiceContractAttribute(ConfigurationName="Service.IAnnotatePermittedStructureLinks")]
+    public interface IAnnotatePermittedStructureLinks {
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotatePermittedStructureLinks/GetPermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/GetPermittedStructureLinksRes" +
+            "ponse")]
+        AnnotationService.Types.PermittedStructureLink[] GetPermittedStructureLinks();
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotatePermittedStructureLinks/GetPermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/GetPermittedStructureLinksRes" +
+            "ponse")]
+        System.IAsyncResult BeginGetPermittedStructureLinks(System.AsyncCallback callback, object asyncState);
+        
+        AnnotationService.Types.PermittedStructureLink[] EndGetPermittedStructureLinks(System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotatePermittedStructureLinks/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/CreatePermittedStructureLinkR" +
+            "esponse")]
+        AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotatePermittedStructureLinks/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/CreatePermittedStructureLinkR" +
+            "esponse")]
+        System.IAsyncResult BeginCreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link, System.AsyncCallback callback, object asyncState);
+        
+        AnnotationService.Types.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotatePermittedStructureLinks/UpdatePermittedStructureLinks" +
+            "", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/UpdatePermittedStructureLinks" +
+            "Response")]
+        void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="http://tempuri.org/IAnnotatePermittedStructureLinks/UpdatePermittedStructureLinks" +
+            "", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/UpdatePermittedStructureLinks" +
+            "Response")]
+        System.IAsyncResult BeginUpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState);
+        
+        void EndUpdatePermittedStructureLinks(System.IAsyncResult result);
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public interface IAnnotatePermittedStructureLinksChannel : WebAnnotationModel.Service.IAnnotatePermittedStructureLinks, System.ServiceModel.IClientChannel {
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class GetPermittedStructureLinksCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public GetPermittedStructureLinksCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public AnnotationService.Types.PermittedStructureLink[] Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((AnnotationService.Types.PermittedStructureLink[])(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class CreatePermittedStructureLinkCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public CreatePermittedStructureLinkCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public AnnotationService.Types.PermittedStructureLink Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((AnnotationService.Types.PermittedStructureLink)(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class AnnotatePermittedStructureLinksClient : System.ServiceModel.ClientBase<WebAnnotationModel.Service.IAnnotatePermittedStructureLinks>, WebAnnotationModel.Service.IAnnotatePermittedStructureLinks {
+        
+        private BeginOperationDelegate onBeginGetPermittedStructureLinksDelegate;
+        
+        private EndOperationDelegate onEndGetPermittedStructureLinksDelegate;
+        
+        private System.Threading.SendOrPostCallback onGetPermittedStructureLinksCompletedDelegate;
+        
+        private BeginOperationDelegate onBeginCreatePermittedStructureLinkDelegate;
+        
+        private EndOperationDelegate onEndCreatePermittedStructureLinkDelegate;
+        
+        private System.Threading.SendOrPostCallback onCreatePermittedStructureLinkCompletedDelegate;
+        
+        private BeginOperationDelegate onBeginUpdatePermittedStructureLinksDelegate;
+        
+        private EndOperationDelegate onEndUpdatePermittedStructureLinksDelegate;
+        
+        private System.Threading.SendOrPostCallback onUpdatePermittedStructureLinksCompletedDelegate;
+        
+        public AnnotatePermittedStructureLinksClient() {
+        }
+        
+        public AnnotatePermittedStructureLinksClient(string endpointConfigurationName) : 
+                base(endpointConfigurationName) {
+        }
+        
+        public AnnotatePermittedStructureLinksClient(string endpointConfigurationName, string remoteAddress) : 
+                base(endpointConfigurationName, remoteAddress) {
+        }
+        
+        public AnnotatePermittedStructureLinksClient(string endpointConfigurationName, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(endpointConfigurationName, remoteAddress) {
+        }
+        
+        public AnnotatePermittedStructureLinksClient(System.ServiceModel.Channels.Binding binding, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(binding, remoteAddress) {
+        }
+        
+        public event System.EventHandler<GetPermittedStructureLinksCompletedEventArgs> GetPermittedStructureLinksCompleted;
+        
+        public event System.EventHandler<CreatePermittedStructureLinkCompletedEventArgs> CreatePermittedStructureLinkCompleted;
+        
+        public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> UpdatePermittedStructureLinksCompleted;
+        
+        public AnnotationService.Types.PermittedStructureLink[] GetPermittedStructureLinks() {
+            return base.Channel.GetPermittedStructureLinks();
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginGetPermittedStructureLinks(System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginGetPermittedStructureLinks(callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public AnnotationService.Types.PermittedStructureLink[] EndGetPermittedStructureLinks(System.IAsyncResult result) {
+            return base.Channel.EndGetPermittedStructureLinks(result);
+        }
+        
+        private System.IAsyncResult OnBeginGetPermittedStructureLinks(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            return this.BeginGetPermittedStructureLinks(callback, asyncState);
+        }
+        
+        private object[] OnEndGetPermittedStructureLinks(System.IAsyncResult result) {
+            AnnotationService.Types.PermittedStructureLink[] retVal = this.EndGetPermittedStructureLinks(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnGetPermittedStructureLinksCompleted(object state) {
+            if ((this.GetPermittedStructureLinksCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.GetPermittedStructureLinksCompleted(this, new GetPermittedStructureLinksCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void GetPermittedStructureLinksAsync() {
+            this.GetPermittedStructureLinksAsync(null);
+        }
+        
+        public void GetPermittedStructureLinksAsync(object userState) {
+            if ((this.onBeginGetPermittedStructureLinksDelegate == null)) {
+                this.onBeginGetPermittedStructureLinksDelegate = new BeginOperationDelegate(this.OnBeginGetPermittedStructureLinks);
+            }
+            if ((this.onEndGetPermittedStructureLinksDelegate == null)) {
+                this.onEndGetPermittedStructureLinksDelegate = new EndOperationDelegate(this.OnEndGetPermittedStructureLinks);
+            }
+            if ((this.onGetPermittedStructureLinksCompletedDelegate == null)) {
+                this.onGetPermittedStructureLinksCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetPermittedStructureLinksCompleted);
+            }
+            base.InvokeAsync(this.onBeginGetPermittedStructureLinksDelegate, null, this.onEndGetPermittedStructureLinksDelegate, this.onGetPermittedStructureLinksCompletedDelegate, userState);
+        }
+        
+        public AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link) {
+            return base.Channel.CreatePermittedStructureLink(link);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginCreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginCreatePermittedStructureLink(link, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public AnnotationService.Types.PermittedStructureLink EndCreatePermittedStructureLink(System.IAsyncResult result) {
+            return base.Channel.EndCreatePermittedStructureLink(result);
+        }
+        
+        private System.IAsyncResult OnBeginCreatePermittedStructureLink(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            AnnotationService.Types.PermittedStructureLink link = ((AnnotationService.Types.PermittedStructureLink)(inValues[0]));
+            return this.BeginCreatePermittedStructureLink(link, callback, asyncState);
+        }
+        
+        private object[] OnEndCreatePermittedStructureLink(System.IAsyncResult result) {
+            AnnotationService.Types.PermittedStructureLink retVal = this.EndCreatePermittedStructureLink(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnCreatePermittedStructureLinkCompleted(object state) {
+            if ((this.CreatePermittedStructureLinkCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.CreatePermittedStructureLinkCompleted(this, new CreatePermittedStructureLinkCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link) {
+            this.CreatePermittedStructureLinkAsync(link, null);
+        }
+        
+        public void CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link, object userState) {
+            if ((this.onBeginCreatePermittedStructureLinkDelegate == null)) {
+                this.onBeginCreatePermittedStructureLinkDelegate = new BeginOperationDelegate(this.OnBeginCreatePermittedStructureLink);
+            }
+            if ((this.onEndCreatePermittedStructureLinkDelegate == null)) {
+                this.onEndCreatePermittedStructureLinkDelegate = new EndOperationDelegate(this.OnEndCreatePermittedStructureLink);
+            }
+            if ((this.onCreatePermittedStructureLinkCompletedDelegate == null)) {
+                this.onCreatePermittedStructureLinkCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnCreatePermittedStructureLinkCompleted);
+            }
+            base.InvokeAsync(this.onBeginCreatePermittedStructureLinkDelegate, new object[] {
+                        link}, this.onEndCreatePermittedStructureLinkDelegate, this.onCreatePermittedStructureLinkCompletedDelegate, userState);
+        }
+        
+        public void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
+            base.Channel.UpdatePermittedStructureLinks(permittedStructureLinks);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public System.IAsyncResult BeginUpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginUpdatePermittedStructureLinks(permittedStructureLinks, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public void EndUpdatePermittedStructureLinks(System.IAsyncResult result) {
+            base.Channel.EndUpdatePermittedStructureLinks(result);
+        }
+        
+        private System.IAsyncResult OnBeginUpdatePermittedStructureLinks(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks = ((AnnotationService.Types.PermittedStructureLink[])(inValues[0]));
+            return this.BeginUpdatePermittedStructureLinks(permittedStructureLinks, callback, asyncState);
+        }
+        
+        private object[] OnEndUpdatePermittedStructureLinks(System.IAsyncResult result) {
+            this.EndUpdatePermittedStructureLinks(result);
+            return null;
+        }
+        
+        private void OnUpdatePermittedStructureLinksCompleted(object state) {
+            if ((this.UpdatePermittedStructureLinksCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.UpdatePermittedStructureLinksCompleted(this, new System.ComponentModel.AsyncCompletedEventArgs(e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
+            this.UpdatePermittedStructureLinksAsync(permittedStructureLinks, null);
+        }
+        
+        public void UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks, object userState) {
+            if ((this.onBeginUpdatePermittedStructureLinksDelegate == null)) {
+                this.onBeginUpdatePermittedStructureLinksDelegate = new BeginOperationDelegate(this.OnBeginUpdatePermittedStructureLinks);
+            }
+            if ((this.onEndUpdatePermittedStructureLinksDelegate == null)) {
+                this.onEndUpdatePermittedStructureLinksDelegate = new EndOperationDelegate(this.OnEndUpdatePermittedStructureLinks);
+            }
+            if ((this.onUpdatePermittedStructureLinksCompletedDelegate == null)) {
+                this.onUpdatePermittedStructureLinksCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnUpdatePermittedStructureLinksCompleted);
+            }
+            base.InvokeAsync(this.onBeginUpdatePermittedStructureLinksDelegate, new object[] {
+                        permittedStructureLinks}, this.onEndUpdatePermittedStructureLinksDelegate, this.onUpdatePermittedStructureLinksCompletedDelegate, userState);
         }
     }
     

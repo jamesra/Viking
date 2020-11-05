@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Geometry
 {
@@ -20,15 +17,16 @@ namespace Geometry
         public readonly int i2;
         public readonly int i3;
 
-        private GridCircle _Circle; 
+        private GridCircle _Circle;
 
         public GridCircle Circle
         {
-            get{
-                if(_Circle.Radius == 0)
+            get
+            {
+                if (_Circle.Radius == 0)
                     GridCircle.CircleFromThreePoints(points[i1], points[i2], points[i3], ref _Circle);
 
-                return _Circle; 
+                return _Circle;
             }
         }
 
@@ -42,7 +40,7 @@ namespace Geometry
 
         public int[] Indicies()
         {
-            return new int[] { i1, i2, i3 }; 
+            return new int[] { i1, i2, i3 };
         }
 
         public static implicit operator GridTriangle(GridIndexTriangle t)
@@ -51,7 +49,7 @@ namespace Geometry
                 throw new ArgumentNullException("t");
 
 
-            return new GridTriangle(t.points[t.i1], t.points[t.i2], t.points[t.i3]); 
+            return new GridTriangle(t.points[t.i1], t.points[t.i2], t.points[t.i3]);
         }
 
         public GridVector2 P1

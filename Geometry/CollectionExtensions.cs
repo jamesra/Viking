@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections;
 
 namespace Geometry
 {
@@ -73,7 +69,7 @@ namespace Geometry
             //Extend our vertex array
             T[] output = new T[existing.Length - 1];
             Array.Copy(existing, output, index);
-            Array.Copy(existing, index+1, output, index, output.Length - index);
+            Array.Copy(existing, index + 1, output, index, output.Length - index);
             /////////////////////////
             return output;
         }
@@ -118,7 +114,7 @@ namespace Geometry
 
             T[] output = existing.Insert(index, newValue);
 
-            if(index == 0)
+            if (index == 0)
             {
                 //Close the loop
                 output[output.Length - 1] = newValue;

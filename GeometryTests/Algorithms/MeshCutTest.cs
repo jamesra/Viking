@@ -1,12 +1,9 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Collections.Generic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using FsCheck;
+﻿using FsCheck;
 using Geometry;
 using Geometry.Meshing;
-using FsCheck; 
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Linq;
 
 namespace GeometryTests.Algorithms
 {
@@ -100,18 +97,18 @@ namespace GeometryTests.Algorithms
 
             //////////////////////////////////////
             //Ensure vert sorting order is correct
-            for(int i = 0; i < vertSet.Count-1; i++)
+            for (int i = 0; i < vertSet.Count - 1; i++)
             {
                 int v1 = (int)vertSet.SortedAlongCutAxisVertSet[i];
-                int v2 = (int)vertSet.SortedAlongCutAxisVertSet[i+1];
+                int v2 = (int)vertSet.SortedAlongCutAxisVertSet[i + 1];
 
                 GridVector2 p1 = mesh[v1].Position;
                 GridVector2 p2 = mesh[v2].Position;
 
-                if(vertSet.CutAxis == CutDirection.HORIZONTAL)
+                if (vertSet.CutAxis == CutDirection.HORIZONTAL)
                 {
                     Assert.IsTrue(p1.X <= p2.X);
-                    if(p1.X == p2.X)
+                    if (p1.X == p2.X)
                     {
                         Assert.IsTrue(vertSet.XSecondAxisAscending ? p1.Y < p2.Y : p2.Y < p1.Y);
                     }
@@ -151,7 +148,7 @@ namespace GeometryTests.Algorithms
 
         static Property PropertyEachPointInOrder(TriangulationMesh<Vertex2D> mesh)
         {
-            for(int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
+            for (int iVert = 0; iVert < mesh.Verticies.Count; iVert++)
             {
                 long iA = mesh.XSorted[iVert];
                 long iB = mesh.YSorted[iVert];
@@ -162,7 +159,7 @@ namespace GeometryTests.Algorithms
                 if (A.X > B.X)
                     return false.Label(string.Format("X is not sorted {0} > {1}", A.X, B.X));
                 if (A.X == B.X && A.Y > B.Y)
-                    return false.Label(string.Format("Equal X is not sorted on Y {0} > {1}", A, B)); 
+                    return false.Label(string.Format("Equal X is not sorted on Y {0} > {1}", A, B));
             }
 
             return true.Label("Mesh verticies properly sorted");

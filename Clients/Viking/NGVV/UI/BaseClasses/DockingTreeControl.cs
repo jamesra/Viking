@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
 using System.Windows.Forms;
-using Viking.Common; 
+using Viking.Common;
 
 namespace Viking.UI.BaseClasses
 {
-    public partial  class DockingTreeControl : Viking.UI.BaseClasses.DockableUserControl
+    public partial class DockingTreeControl : Viking.UI.BaseClasses.DockableUserControl
     {
         protected TreeNode ContextMenuNode = null;
 
@@ -33,7 +30,7 @@ namespace Viking.UI.BaseClasses
                 supportedTypes.AddRange(attrib.Types);
             }
 
-            Tree.ValidDragDropTypes = supportedTypes.ToArray(); 
+            Tree.ValidDragDropTypes = supportedTypes.ToArray();
         }
 
         #region Properties
@@ -57,7 +54,7 @@ namespace Viking.UI.BaseClasses
         {
             Tree.BeginUpdate();
             this.InitializeTree();
-            Tree.EndUpdate(); 
+            Tree.EndUpdate();
         }
 
         protected virtual void InitializeTree() { }
