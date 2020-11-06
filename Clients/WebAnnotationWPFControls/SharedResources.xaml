@@ -1,0 +1,22 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:WebAnnotation.WPF"
+                    xmlns:conv="clr-namespace:WebAnnotation.WPF.Converters"
+                    >
+    <conv:StructureTypeIDsToStructureTypeObjsConverter x:Key="StructureTypeIDsToStructureTypeObjsConverter"/>
+    <conv:IntToBrushConverter x:Key="IntToBrushConverter"/>
+    <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+
+    <ControlTemplate x:Key="StructureTypeLabel" TargetType="ContentControl">
+        <DockPanel Visibility="{Binding Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" >
+                <Border CornerRadius="5" BorderThickness="2" BorderBrush="{Binding Color, Converter={StaticResource IntToBrushConverter}}">
+                    <TextBlock FontWeight="Bold" Text="{Binding Code}" Padding="2,2,2,2"  VerticalAlignment="Center" />
+                </Border>
+                <TextBlock  Text="{Binding Name}" Padding="8,0,8,0" VerticalAlignment="Center"/>
+                
+            </StackPanel>
+            <ContentPresenter DockPanel.Dock="Right"/>
+        </DockPanel>
+    </ControlTemplate> 
+</ResourceDictionary>

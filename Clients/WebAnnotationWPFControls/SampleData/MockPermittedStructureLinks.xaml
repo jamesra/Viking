@@ -1,0 +1,9 @@
+﻿<MockData:MockPermittedStructureLinks
+    xmlns:MockData="clr-namespace:WebAnnotation.WPF.MockData"
+    xmlns:ViewModel="clr-namespace:Annotation.ViewModels;assembly=Annotation.ViewModels"
+    xmlns:System="clr-namespace:System;assembly=mscorlib"
+    xmlns:Markup="clr-namespace:System.Windows.Markup;assembly=System.Xaml">
+    <MockData:MockPermittedStructureLink SourceTypeID="28" TargetTypeID="28" Directional="False"/>
+    <MockData:MockPermittedStructureLink SourceTypeID="34" TargetTypeID="35" Directional="True"/>
+    <MockData:MockPermittedStructureLink SourceTypeID="73" TargetTypeID="35" Directional="True"/>
+</MockData:MockPermittedStructureLinks>

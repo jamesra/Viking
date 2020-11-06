@@ -1,0 +1,5 @@
+﻿<System:UInt64
+    xmlns:MockData="clr-namespace:WebAnnotation.WPF.MockData"
+    xmlns:System="clr-namespace:System;assembly=mscorlib"
+    xmlns:Markup="clr-namespace:System.Windows.Markup;assembly=System.Xaml">4
+</System:UInt64>

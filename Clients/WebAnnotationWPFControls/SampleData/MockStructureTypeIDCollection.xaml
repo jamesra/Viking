@@ -1,0 +1,12 @@
+﻿<x:Array Type="sys:UInt64"
+    xmlns:MockData="clr-namespace:WebAnnotation.WPF.MockData"
+    xmlns:System="clr-namespace:System;assembly=mscorlib"
+    xmlns:Markup="clr-namespace:System.Windows.Markup;assembly=System.Xaml"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <sys:UInt64>0</sys:UInt64>
+    <sys:UInt64>1</sys:UInt64>
+    <sys:UInt64>2</sys:UInt64>
+    <sys:UInt64>3</sys:UInt64>
+</x:Array> 

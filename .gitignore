@@ -12,8 +12,13 @@
 *.pdb
 *.user
 *.cachefile
+**/*.xnb
 TestResults
 /Packages/
 /Papers/
+**/Modules/*.dll
+**/Modules/*.dll.config
+**/Modules/**/*.dll
+**/Modules/**/*.dll.config
 **/.vs/
 **/MigrationBackup

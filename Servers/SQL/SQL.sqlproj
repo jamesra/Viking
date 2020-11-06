@@ -1,0 +1,219 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Name>SQL</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.1</ProjectVersion>
+    <ProjectGuid>{e7245607-fe4f-4b94-b766-5e55e0e03f4d}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql150DatabaseSchemaProvider</DSP>
+    <OutputType>Database</OutputType>
+    <RootPath>
+    </RootPath>
+    <RootNamespace>SQL</RootNamespace>
+    <AssemblyName>SQL</AssemblyName>
+    <ModelCollation>1033, CI</ModelCollation>
+    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
+    <DeployToDatabase>True</DeployToDatabase>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetLanguage>CS</TargetLanguage>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SqlServerVerification>False</SqlServerVerification>
+    <IncludeCompositeObjects>True</IncludeCompositeObjects>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+    <ConcatNullYieldsNull>False</ConcatNullYieldsNull>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <!-- Default to the v11.0 targets path if the targets file for the current VS version is not found -->
+    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
+    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Condition="'$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="Properties" />
+    <Folder Include="BackupScripts" />
+    <Folder Include="Constants" />
+    <Folder Include="DatabaseCreateUpdate" />
+    <Folder Include="Functions" />
+    <Folder Include="InDevelopment" />
+    <Folder Include="Migration" />
+    <Folder Include="RepairScripts" />
+    <Folder Include="SpatialCache" />
+    <Folder Include="StoredProcedures" />
+    <Folder Include="UtilityScripts" />
+    <Folder Include="Views" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="InDevelopment\SelectStructureCenter3D.sql" />
+    <Build Include="InDevelopment\ArborVisualization.sql" />
+    <Build Include="InDevelopment\ArborVisualization_RodBC_Only.sql" />
+    <Build Include="InDevelopment\GapJunctionMixedSynapseDistanceWithinVaricosityPrototype..sql" />
+    <Build Include="InDevelopment\GraphbasedMixedSynapses.sql" />
+    <Build Include="InDevelopment\GraphDatabaseCreation.sql" />
+    <Build Include="InDevelopment\GraphQueries.sql" />
+    <Build Include="InDevelopment\MixedSynapseStructureToNearestGapJunctionDistance.sql" />
+    <Build Include="InDevelopment\SelectChildStructureCenters3D.sql" />
+    <Build Include="InDevelopment\SelectStructureCenters3D.sql" />
+    <Build Include="InDevelopment\SynapseToNearestGapJunctionDistance.sql" />
+    <Build Include="InDevelopment\SynapseToNearestGapJunctionDistanceMixedSynapsesOnly.sql" />
+    <Build Include="InDevelopment\SynapseToPairedGapJunctionDistanceMixedSynapsesOnly.sql" />
+    <Build Include="Constants\XYScale.sql" />
+    <Build Include="Constants\XYScaleUnits.sql" />
+    <Build Include="Constants\ZScale.sql" />
+    <Build Include="Constants\ZScaleUnits.sql" />
+    <Build Include="DatabaseCreateUpdate\CopyStructureTypes.sql" />
+    <Build Include="DatabaseCreateUpdate\CreateNewDatabasePermissionsForUtahServers.sql" />
+    <Build Include="DatabaseCreateUpdate\CreateUpdateDatabase.sql" />
+    <Build Include="DatabaseCreateUpdate\DownsizeTestDatabase.sql" />
+    <Build Include="DatabaseCreateUpdate\MigrateStructureTypes.sql" />
+    <Build Include="DatabaseCreateUpdate\ToggleSchemaBindingScratch.sql" />
+    <Build Include="Functions\CenterToCenterIntersectionPoint.sql" />
+    <Build Include="Functions\ufnNetworkChildStructureIDs.sql" />
+    <Build Include="Functions\ufnStructureVolume.sql" />
+    <Build Include="InDevelopment\dbo.ufnDistance3D.sql" />
+    <Build Include="InDevelopment\dbo.ufnShapeDistance3D.sql" />
+    <Build Include="InDevelopment\ufnShapeDistance3D.sql" />
+    <Build Include="Migration\XMLToJSON.sql" />
+    <Build Include="RepairScripts\AssignSynapsesToCells.sql" />
+    <Build Include="RepairScripts\DeleteDuplicateStructureLinks.sql" />
+    <Build Include="RepairScripts\DeleteLocationLinksWithMismatchedParents.sql" />
+    <Build Include="RepairScripts\DeleteOverlappingCircleLocations.sql" />
+    <Build Include="RepairScripts\DeleteStructureLinksBetweenCells.sql" />
+    <Build Include="RepairScripts\DeleteUnlocatedStructures.sql" />
+    <Build Include="RepairScripts\FixChildrenWithChildParents.sql" />
+    <Build Include="RepairScripts\ListDuplicateStructureLinks.sql" />
+    <Build Include="RepairScripts\RemoveSemicolonTags.sql" />
+    <Build Include="RepairScripts\SelectDuplicateStructureLinks.sql" />
+    <Build Include="RepairScripts\SwapStructureLinks.sql" />
+    <Build Include="SpatialCache\CreateStructureSpatialCache.sql" />
+    <Build Include="SpatialCache\DropStructureSpatialView.sql" />
+    <Build Include="SpatialCache\LocationTableTriggerForSpatialCache.sql" />
+    <Build Include="SpatialCache\RecreateSpatialCache.sql" />
+    <Build Include="SpatialCache\SelectNetworkChildStructureSpatialData.sql" />
+    <Build Include="SpatialCache\SelectNetworkStructureSpatialData.sql" />
+    <Build Include="StoredProcedures\DeepDeleteStructure.sql" />
+    <Build Include="StoredProcedures\LocationHasTag.sql" />
+    <Build Include="StoredProcedures\QueryTestScratchPad.sql" />
+    <Build Include="StoredProcedures\RecursiveSelectChildStructureIDs.sql" />
+    <Build Include="StoredProcedures\SelectNetworkChildStructures.sql" />
+    <Build Include="StoredProcedures\SelectSectionLocationLinks.sql" />
+    <Build Include="StoredProcedures\SelectSectionLocationLinksInVolumeBounds.sql" />
+    <Build Include="StoredProcedures\SelectSectionLocations.sql" />
+    <Build Include="StoredProcedures\SelectSectionLocationsAndLinks.sql" />
+    <Build Include="StoredProcedures\SelectSectionLocationsAndLinksInMosaicBounds.sql" />
+    <Build Include="StoredProcedures\SelectSectionStructures.sql" />
+    <Build Include="StoredProcedures\SelectSectionStructuresAndLinks.sql" />
+    <Build Include="StoredProcedures\SelectSectionStructuresAndLinksInBounds.sql" />
+    <Build Include="StoredProcedures\SelectSectionStructuresAndLinksInVolumeBounds.sql" />
+    <Build Include="StoredProcedures\SelectSectionStructuresInBounds.sql" />
+    <Build Include="StoredProcedures\SelectStructureLocationLinks.sql" />
+    <Build Include="StoredProcedures\SelectStructureLocationsAndLinks.sql" />
+    <Build Include="StoredProcedures\spSplitStructure.sql" />
+    <Build Include="StoredProcedures\StructureHasTag.sql" />
+    <Build Include="StoredProcedures\ufnLastStructureModification.sql" />
+    <Build Include="StoredProcedures\ufnLastStructureModificationRecursive.sql" />
+    <Build Include="StoredProcedures\ufnLastStructureNetworkModification.sql" />
+    <Build Include="StoredProcedures\ufnLastStructureNetworkModificationRecursive.sql" />
+    <Build Include="StoredProcedures\ufnStructureVolume.sql" />
+    <Build Include="UtilityScripts\ChangeLogScratchPad.sql" />
+    <Build Include="UtilityScripts\CloneDatabase.sql" />
+    <Build Include="UtilityScripts\ConnectedCellsContainingLabel.sql" />
+    <Build Include="UtilityScripts\CopyStructureTypeAcrossDatabases.sql" />
+    <Build Include="UtilityScripts\CreateAnnotationDatabase.sql" />
+    <Build Include="UtilityScripts\CreateAnnotationDatabaseTest.sql" />
+    <Build Include="UtilityScripts\DeepDeleteStructure.sql" />
+    <Build Include="UtilityScripts\DeleteDuplicateRows.sql" />
+    <Build Include="UtilityScripts\DeleteLocationBetweenZ.sql" />
+    <Build Include="UtilityScripts\DeleteLocationLinksBelowZ.sql" />
+    <Build Include="UtilityScripts\DeleteLocationsInZRange.sql" />
+    <Build Include="UtilityScripts\Maintenence.sql" />
+    <Build Include="UtilityScripts\MergeStructures.sql" />
+    <Build Include="UtilityScripts\RemoveTestStructures.sql" />
+    <Build Include="UtilityScripts\SelectAllLocations.sql" />
+    <Build Include="UtilityScripts\SelectAreaOfStructureLinks.sql" />
+    <Build Include="UtilityScripts\SelectCellsNearTarget.sql" />
+    <Build Include="UtilityScripts\SelectChildStructuresWithStructureLink.sql" />
+    <Build Include="UtilityScripts\SelectConnectedBetweenLabels.sql" />
+    <Build Include="UtilityScripts\SelectConnectedStructures.sql" />
+    <Build Include="UtilityScripts\SelectDistancesBetweenCellsOfClass.sql" />
+    <Build Include="UtilityScripts\SelectDistancesBetweenCellsOfIDs.sql" />
+    <Build Include="UtilityScripts\SelectDistinctTags.sql" />
+    <Build Include="UtilityScripts\SelectDistinctTagsAndCounts.sql" />
+    <Build Include="UtilityScripts\SelectDuplicateLocations.sql" />
+    <Build Include="UtilityScripts\SelectLastModificationToStructure.sql" />
+    <Build Include="UtilityScripts\SelectLocationLinksForStructure.sql" />
+    <Build Include="UtilityScripts\SelectLocationsForSectionAndLinks.sql" />
+    <Build Include="UtilityScripts\SelectLocationsForStructure.sql" />
+    <Build Include="UtilityScripts\SelectLocationsForStructureType.sql" />
+    <Build Include="UtilityScripts\SelectON_BC_GapJunctions_Coupled_To_AII.sql" />
+    <Build Include="UtilityScripts\SelectOverlappingUnlinkedChildren.sql" />
+    <Build Include="UtilityScripts\SelectPercentageOfReceptiveFieldOverlap.sql" />
+    <Build Include="UtilityScripts\SelectReversedLocationLinks.sql" />
+    <Build Include="UtilityScripts\SelectSectionLocationsAndLinksInBounds.sql" />
+    <Build Include="UtilityScripts\SelectStructuresLinkedToParent.sql" />
+    <Build Include="UtilityScripts\SelectStructuresNearTarget.sql" />
+    <Build Include="UtilityScripts\SelectStructuresWithTag.sql" />
+    <Build Include="UtilityScripts\SpatialDebugScratchPad.sql" />
+    <Build Include="UtilityScripts\SpatialDistributionOfGapJunctionsForCellLabelClass.sql" />
+    <Build Include="UtilityScripts\SplitStructureScratchPad.sql" />
+    <Build Include="UtilityScripts\spMergeStructures.sql" />
+    <Build Include="UtilityScripts\spSelecSectionLocationAndLinks.sql" />
+    <Build Include="UtilityScripts\spSelectAllStructureLocationLinks.sql" />
+    <Build Include="UtilityScripts\spSelectAllStructureLocations.sql" />
+    <Build Include="UtilityScripts\spSelectLocationsForSectionAndLinks.sql" />
+    <Build Include="UtilityScripts\spSelectNumConnectionsForStructure.sql" />
+    <Build Include="UtilityScripts\spSelectSectionLocationLinks.sql" />
+    <Build Include="UtilityScripts\spSelectSectionLocationsAndLinksAfterTime.sql" />
+    <Build Include="UtilityScripts\spSelectStructureLocation.sql" />
+    <Build Include="UtilityScripts\spSelectStructureLocationLinks.sql" />
+    <Build Include="UtilityScripts\spSelectStructureLocationLinksAfterTime.sql" />
+    <Build Include="UtilityScripts\spSelectStructuresAndLinks.sql" />
+    <Build Include="UtilityScripts\spSelectStructuresOnSection.sql" />
+    <Build Include="UtilityScripts\spSplitStructuresByLocationLink.sql" />
+    <Build Include="UtilityScripts\SQLQuery30.sql" />
+    <Build Include="UtilityScripts\SwapLocationsOnSections.sql" />
+    <Build Include="UtilityScripts\SwapLocationsOnSections_V2.sql" />
+    <Build Include="UtilityScripts\SwapStructureLinks.sql" />
+    <Build Include="Views\StructureSpatialView.sql" />
+    <Build Include="Views\StructureSpatialView2.sql" />
+    <Build Include="ArborVisualization.sql" />
+    <Build Include="ArborVisualization_RodBC_Only.sql" />
+    <Build Include="DebugNetworkScratchPad.sql" />
+    <Build Include="GapJunctionMixedSynapseDistanceWithinVaricosityPrototype..sql" />
+    <Build Include="GraphbasedMixedSynapses.sql" />
+    <Build Include="GraphQueries.sql" />
+    <Build Include="MixedSynapseStructureToNearestGapJunctionDistance.sql" />
+    <Build Include="SelectParentIDsLinkedInNetwork.sql" />
+    <Build Include="SelectTotalNumberOfAnnotations.sql" />
+    <Build Include="SynapseToNearestGapJunctionDistance.sql" />
+    <Build Include="SynapseToNearestGapJunctionDistanceMixedSynapsesOnly.sql" />
+    <Build Include="SynapseToPairedGapJunctionDistanceMixedSynapsesOnly.sql" />
+    <Build Include="InDevelopment\Scratch.sql" />
+  </ItemGroup>
+</Project>

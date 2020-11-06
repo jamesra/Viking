@@ -1,0 +1,7 @@
+﻿<MockData:MockStructureType ID="1" Color="0xFF00FF00" Name="Ribbon" Code="R"
+    xmlns:MockData="clr-namespace:WebAnnotation.WPF.MockData"
+    xmlns:System="clr-namespace:System;assembly=mscorlib"
+    xmlns:Markup="clr-namespace:System.Windows.Markup;assembly=System.Xaml">
+    <MockData:MockStructureType.Children>
+    </MockData:MockStructureType.Children> 
+</MockData:MockStructureType>
