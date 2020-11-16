@@ -15,8 +15,8 @@ namespace Client
 
         private static async Task MainAsync()
         {
-            //string IdentityServerEndpoint = "https://webdev.connectomes.utah.edu/identityserver/";
-            string IdentityServerEndpoint = "http://localhost:5000";
+            string IdentityServerEndpoint = "https://identity.connectomes.utah.edu";
+            //string IdentityServerEndpoint = "http://localhost:5000";
 
             // discover endpoints from metadata
             //var disco = await DiscoveryClient.GetAsync("http://localhost:5000");
@@ -28,10 +28,10 @@ namespace Client
             }
             
             // request token
-            var tokenClient = new TokenClient(disco.TokenEndpoint, "ro.viking", "secret");
+            var tokenClient = new TokenClient(disco.TokenEndpoint, "ro.viking", "CorrectHorseBatteryStaple");
             //var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
             //var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jander42@hotmail.com", "Wat>com3", "Viking.Annotation openid");
-            var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("james.r.anderson@utah.edu", "Wat>com3", "Viking.Annotation openid");
+            var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jamesan", "Wat>com3", "openid Viking.Annotation");
 
             if (tokenResponse.IsError)
             {

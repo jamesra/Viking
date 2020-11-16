@@ -4,10 +4,14 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using IdentityModel;
 
+
 namespace IdentityServer
-{
+{ 
+
     public static class Config
     {
+        private const string Secret = "CorrectHorseBatteryStaple";
+
         public const string AdminRoleName = "Access Manager";
         public static string AdminRoleId { get; set; }
 
@@ -17,7 +21,7 @@ namespace IdentityServer
             return new List<IdentityResource>
             {
                 new IdentityResources.OpenId(),
-                new IdentityResources.Profile()                
+                new IdentityResources.Profile()
             };
         }
 
@@ -25,24 +29,33 @@ namespace IdentityServer
         {
             return new List<ApiResource>
             {
-                new ApiResource("Viking.Annotation", "Viking.Annotation")
+                new ApiResource("Viking.Annotation", "Viking Annotation API")
                 {
                     UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name, "Affiliation"},
-                    ApiSecrets = { new Secret("secret".Sha256())}
+                    ApiSecrets = { new Secret(Secret.Sha256())},
                 }
             };
         }
 
-        // clients want to access resources (aka scopes)
-        public static IEnumerable<Client> GetClients()
+        public static IEnumerable<ApiScope> GetApiScopes()
         {
-            string[] AnnotationScopes =
+            return new List<ApiScope>
             {
-                "Viking.Annotation",
+                new ApiScope(name: "Viking.Annotation", displayName:"Access to Annotate a volume")
+            };
+        }
+
+        public static readonly string[] AnnotationScopes =
+            new string[]
+            {
                 IdentityServerConstants.StandardScopes.OpenId,
-                IdentityServerConstants.StandardScopes.Profile
+                IdentityServerConstants.StandardScopes.Profile,
+                "Viking.Annotation"
             };
 
+        // clients want to access resources (aka scopes)
+        public static IEnumerable<Client> GetClients()
+        { 
             // client credentials client
             return new List<Client>
             {
@@ -53,7 +66,7 @@ namespace IdentityServer
 
                     ClientSecrets =
                     {
-                        new Secret("secret".Sha256()) //"My co-workers remove eyeballs from cute mammals for a living"
+                        new Secret(Secret.Sha256()) //"My co-workers remove eyeballs from cute mammals for a living"
                     },
                     AllowedScopes = AnnotationScopes 
                 },
@@ -66,7 +79,7 @@ namespace IdentityServer
                      
                     ClientSecrets =
                     {
-                        new Secret("secret".Sha256())
+                        new Secret(Secret.Sha256())
                     },
                     AllowedScopes = AnnotationScopes
                 },
@@ -83,7 +96,7 @@ namespace IdentityServer
 
                     ClientSecrets =
                     {
-                        new Secret("secret".Sha256())
+                        new Secret(Secret.Sha256())
                     },
 
                     RedirectUris = { "http://localhost:5001/signin-oidc" },

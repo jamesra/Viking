@@ -113,8 +113,9 @@ namespace IdentityServer
                             sql => sql.MigrationsAssembly(migrationsAssembly));
                 })
                 */
-                .AddInMemoryClients(Config.GetClients()) 
+                .AddInMemoryApiScopes(Config.GetApiScopes())
                 .AddInMemoryApiResources(Config.GetApiResources())
+                .AddInMemoryClients(Config.GetClients()) 
                 .AddInMemoryIdentityResources(Config.GetIdentityResources())
                 // this adds the operational data from DB (codes, tokens, consents)
                 .AddOperationalStore(options =>
