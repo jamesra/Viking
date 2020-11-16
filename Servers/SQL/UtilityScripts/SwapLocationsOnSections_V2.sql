@@ -3,8 +3,8 @@
 declare @ZA int 
 declare @ZB int 
 
-set @ZA = 886
-set @ZB = 887
+set @ZA = 291
+set @ZB = 292
 
 if OBJECT_ID('tempdb..#AllLocationsInZRange') is not null
 	DROP Table #AllLocationsInZRange
@@ -16,9 +16,9 @@ if OBJECT_ID('tempdb..#LocationPairs') is not null
 if OBJECT_ID('tempdb..#FinalMapping') is not null
 	DROP Table #FinalMapping
 	 
-CREATE TABLE #AllLocationsInZRange(ID bigint)
+declare @AllLocationsInZRange integer_list
 
-insert into #AllLocationsInZRange (ID)
+insert into @AllLocationsInZRange (ID)
 	select ID From Location L where Z = @ZA OR Z = @ZB
 /*insert into #AllLocationsInZRange (ID)
 	select ID From Location L where Z = @ZB
@@ -31,31 +31,33 @@ CREATE TABLE #LocationPairs(A bigint, B bigint)
 CREATE TABLE #FinalMapping(NewA bigint, NewB bigint, IDofSwappedZ bigint, IDofConstantZ bigint)
 
 insert into #LocationPairs (A,B)
-	select A, B from LocationLink where
-		A IN (select ID from #AllLocationsInZRange )
-		AND 
-		B IN (select ID from #AllLocationsInZRange )
+	select A, B from LocationLink LL
+		inner join @AllLocationsInZRange ALink on ALink.ID = LL.A 
+		inner join @AllLocationsInZRange BLink on BLink.ID = LL.B
 
 insert into #LocationPairs (B,A)
-	select A, B from LocationLink where
-		A IN (select ID from #AllLocationsInZRange )
-		AND 
-		B IN (select ID from #AllLocationsInZRange )
+	select A, B from LocationLink LL
+		inner join @AllLocationsInZRange ALink on ALink.ID = LL.A 
+		inner join @AllLocationsInZRange BLink on BLink.ID = LL.B
 
 --select * from #LocationPairs order by A
 
 /* A table of links from swapped sections to adjacent unswapped sections */
 insert into #DeadLinks (IDofSwappedZ, IDofConstantZ)
-	Select A as IDofSwappedZ, B as IDofConstantZ from LocationLink Where
-		A IN (select ID from #AllLocationsInZRange )
+	Select A as IDofSwappedZ, B as IDofConstantZ 
+	from LocationLink
+	Where
+		A IN (select ID from @AllLocationsInZRange )
 		AND 
-		B NOT IN (select ID from #AllLocationsInZRange )
+		B NOT IN (select ID from @AllLocationsInZRange )
 
 insert into #DeadLinks (IDofSwappedZ, IDofConstantZ)
-	Select B as IDofSwappedZ, A as IDofConstantZ from LocationLink Where
-		B IN (select ID from #AllLocationsInZRange )
+	Select B as IDofSwappedZ, A as IDofConstantZ 
+	from LocationLink 
+	Where
+		B IN (select ID from @AllLocationsInZRange )
 		AND 
-		A NOT IN (select ID from #AllLocationsInZRange )
+		A NOT IN (select ID from @AllLocationsInZRange )
 
 insert into #FinalMapping (NewA, NewB, IDofSwappedZ, IDofConstantZ)
 	select LP.B as NewA, DL.IDofConstantZ as NewB, DL.IDofSwappedZ, DL.IDofConstantZ from #DeadLinks DL 
@@ -76,7 +78,7 @@ update Link set Link.A = FM.NewA, Link.B = FM.NewB from LocationLink Link
 		  
 --Update Link Set A = (Select top IDof
   
-DROP TABLE #AllLocationsInZRange
+--DROP TABLE #AllLocationsInZRange
 DROP TABLE #DeadLinks
 DROP TABLE #LocationPairs
 DROP Table #FinalMapping
