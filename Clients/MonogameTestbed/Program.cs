@@ -213,6 +213,15 @@ namespace MonogameTestbed
         [STAThread]
         static void Main(string[] args)
         {
+#if DEBUG
+            Console.WriteLine($"App Domain Base Directory: {AppDomain.CurrentDomain.BaseDirectory}");
+            //Console.WriteLine("Press any key to continue");
+            //while (Console.Read() < 0)
+            {
+                System.Threading.Tasks.Task.Delay(10000).Wait();
+            }
+#endif 
+
             CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args)
                 .WithParsed<CommandLineOptions>(o =>
                 {

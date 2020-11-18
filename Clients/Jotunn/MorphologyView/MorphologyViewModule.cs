@@ -44,7 +44,7 @@ namespace MorphologyView
             
             System.Threading.Tasks.Task t = new System.Threading.Tasks.Task(() =>
             {
-                AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 8883 }, true, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData"));
+                AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 8883 }, true, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData"));
                 //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, true, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData"));
                 if (graph != null)
                 {

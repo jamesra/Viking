@@ -1182,11 +1182,35 @@ namespace Geometry
             return null;
         }
 
-        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null, SortedSet<IFace> AlreadyChecked = null)
+        /// <summary>
+        /// Helper function to track pairs of faces
+        /// </summary>
+        /// <param name="AlreadyFlipped"></param>
+        static void AddFacePair(Dictionary<IFace, SortedSet<IFace>> dict, IFace A, IFace B)
         {
-            if (AlreadyChecked == null)
-                AlreadyChecked = new SortedSet<IFace>();
+            if (false == dict.ContainsKey(A))
+            {
+                dict.Add(A,  new SortedSet<IFace>());
+            }
 
+            if (false == dict.ContainsKey(B))
+            {
+                dict.Add(B, new SortedSet<IFace>());
+            }
+
+            dict[B].Add(A);
+            dict[A].Add(B);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="f"></param>
+        /// <param name="ReportProgress"></param>
+        /// <param name="AlreadyFlipped">Lists combination of faces and edges we've already flipped, so we should flip them over and over</param>
+        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null, Dictionary<IFace, SortedSet<IFace>> AlreadyFlipped = null)
+        { 
             //Check if the face has already been removed.
             if (mesh.Contains(f) == false)
                 return;
@@ -1201,13 +1225,24 @@ namespace Geometry
 
             Debug.Assert(circlePoints.AreClockwise() == false, "Face verts aren't counter-clockwise");
 
+
+
+            SortedSet<IFace> AlreadyFlippedOppositeFaces = null;
+            if (AlreadyFlipped != null && AlreadyFlipped.ContainsKey(f))
+            {
+                AlreadyFlippedOppositeFaces = AlreadyFlipped[f];
+            }
+
             foreach (var edge in f.Edges)
             {
+                
+
                 TriangleFace oppositeFace = mesh[edge].Faces.Where(face => f != face as Face).FirstOrDefault() as TriangleFace;
                 if (oppositeFace == null)
                     continue;
 
-                if (AlreadyChecked.Contains(oppositeFace))
+                //See if we've flipped this pair of faces before
+                if (AlreadyFlippedOppositeFaces != null && AlreadyFlippedOppositeFaces.Contains(oppositeFace))
                     continue;
 
                 int face_opposite_vert = f.OppositeVertex(edge);
@@ -1292,6 +1327,11 @@ namespace Geometry
                     {
                         mesh.AddFace(A);
                         mesh.AddFace(B);
+
+                        if (AlreadyFlipped == null)
+                            AlreadyFlipped = new Dictionary<IFace, SortedSet<IFace>>();
+
+                        AddFacePair(AlreadyFlipped, f, oppositeFace);
                     }
                     catch
                     {
@@ -1307,10 +1347,10 @@ namespace Geometry
                     //Rarely we get into an infinite recursion here.  Finding a way to detect these cycles needs to be found
                     try
                     {
-                        CheckEdgeFlip(mesh, A, ReportProgress, AlreadyChecked);
+                        CheckEdgeFlip(mesh, A, ReportProgress, AlreadyFlipped);
 
                         if (mesh.Contains(B)) //Check that the face wasn't removed when checking A for flips
-                            CheckEdgeFlip(mesh, B, ReportProgress, AlreadyChecked);
+                            CheckEdgeFlip(mesh, B, ReportProgress, AlreadyFlipped);
                     }
                     catch (StackOverflowException)
                     {

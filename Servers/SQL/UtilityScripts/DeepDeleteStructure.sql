@@ -1,5 +1,5 @@
 DECLARE @DeleteID bigint
-Set @DeleteID = 60806
+Set @DeleteID = 8069
 
 if OBJECT_ID('tempdb..#StructuresToDelete') is not null
 	DROP Table #StructuresToDelete

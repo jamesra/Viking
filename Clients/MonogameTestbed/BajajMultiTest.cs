@@ -56,7 +56,7 @@ namespace MonogameTestbed
         PolygonSetView PolyViews;
         List<LineView> OTVTableView = null;
          
-        BajajGeneratorMesh FirstPassTriangulation = null;
+        //BajajGeneratorMesh FirstPassTriangulation = null;
 
         public List<RegionView> RegionViews = new List<RegionView>();
 
@@ -71,7 +71,7 @@ namespace MonogameTestbed
         } 
 
 
-        MeshModel<VertexPositionColor> meshViewModel = null;
+        //MeshModel<VertexPositionColor> meshViewModel = null;
 
 
         MeshView<VertexPositionColor> SliceMeshView = null;
@@ -487,8 +487,8 @@ namespace MonogameTestbed
 
         AnnotationVizLib.MorphologyGraph graph;
 
-        GridPolygon A;
-        GridPolygon B;
+        //GridPolygon A;
+        //GridPolygon B;
 
         PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
@@ -627,12 +627,18 @@ namespace MonogameTestbed
             */
         }
 
+
         public void Update()
         {
-            GamePadState state = GamePad.GetState(PlayerIndex.One);
-            Gamepad.Update(state);
+            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController();
+            if (InputSource == null)
+                InputSource = PlayerIndex.One;
 
-            if(!Draw3D)
+            GamePadState state = GamePad.GetState(InputSource.Value);
+            Gamepad.Update(state);
+            keyboard.Update(Keyboard.GetState());
+
+            if (!Draw3D)
                 CameraManipulator.Update(scene.Camera);
             else
                 StandardCameraManipulator.Update(this.scene3D.Camera);
@@ -727,12 +733,12 @@ namespace MonogameTestbed
 
                 if (Gamepad.Back_Clicked || keyboard.Pressed(Keys.S))
                 {
-                    if (wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
+                    if(wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                         SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.BoundingBox.CenterPoint, wrapView.Graph.StructureID);
                 } 
             }
 
-            if (Gamepad.Back_Clicked)
+            if (Gamepad.Back_Clicked || keyboard.Pressed(Keys.S))
             {
                 //if (wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                 //SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.StructureID);
@@ -793,6 +799,9 @@ namespace MonogameTestbed
 
             foreach (var view in wrapViews)
             {
+                if (view.meshAssemblyPlan == null || view.Graph == null)
+                    continue;
+
                 ulong structure_id = view.Graph.StructureID;
                 if (view.meshAssemblyPlan.Root.MeshModel != null)
                 {
@@ -805,7 +814,10 @@ namespace MonogameTestbed
                 }
             }
 
-            DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, string.Format("C:\\Temp\\BajajMultitest.dae"));
+            string outputPath = System.IO.Path.Combine(new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Morphology", $"BajajMultitest.dae" });
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(outputPath));
+
+            DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputPath);
         }
 
         public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, GridVector3 Position, ulong structure_id)
@@ -819,7 +831,10 @@ namespace MonogameTestbed
 
             ColladaView.Add(rootModel);
 
-            DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, string.Format("C:\\Temp\\BajajMultitest-{0}.dae", structure_id));
+            string outputPath = System.IO.Path.Combine(new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Morphology", $"Morphology-{structure_id}.dae" });
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(outputPath));
+
+            DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputPath);
         }
     }
 }

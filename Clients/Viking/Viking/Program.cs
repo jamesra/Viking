@@ -1,4 +1,4 @@
-﻿#define USEASPMEMBERSHIP
+﻿//#define USEASPMEMBERSHIP
 
 using System;
 using System.Diagnostics;
@@ -175,7 +175,7 @@ namespace Viking
                 UI.State.UserCredentials = vikingLogon.Credentials;
 
                 Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
-                Viking.Tokens.TokenInjector.BearerTokenAuthority = "https://webdev.connectomes.utah.edu/identityserver";
+                Viking.Tokens.TokenInjector.BearerTokenAuthority = "https://identity.connectomes.utah.edu";
             }
 #else
             using (LogonASPMembership vikingLogon = new LogonASPMembership("https://connectomes.utah.edu/Viz/", website))
@@ -190,7 +190,6 @@ namespace Viking
                 website = vikingLogon.VolumeURL;
                 UI.State.UserCredentials = vikingLogon.Credentials;
             }
-
 #endif 
 
             //Make sure the website includes a file, if it does not then include Volume.VikingXML by default

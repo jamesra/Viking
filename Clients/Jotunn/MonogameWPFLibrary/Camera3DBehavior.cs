@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Interactivity;
+using Microsoft.Xaml.Behaviors;
 using MonogameWPFLibrary.Views;
 using MathNet.Numerics.LinearAlgebra;
 using VikingXNAGraphics;

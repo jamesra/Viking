@@ -165,8 +165,10 @@ namespace Viking.UI.Forms
             get { return "marclab.connectome.utah"; }
         }
 
-        public Logon(string AuthenticationURL, string VolumePath = null)
+        public Logon(string authenticationURL, string VolumePath = null)
         {
+            this.AuthenticationServiceURL = authenticationURL;
+
             if (VolumePath != null)
                 Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => VolumeURL = VolumePath));
 
@@ -268,7 +270,7 @@ namespace Viking.UI.Forms
             //var discoTask = DiscoveryClient.GetAsync("http://localhost:5000");
             using (HttpClient client = new HttpClient())
             {
-                var disco = await client.GetDiscoveryDocumentAsync("https://webdev.connectomes.utah.edu/identityserver");
+                var disco = await client.GetDiscoveryDocumentAsync("https://identity.connectomes.utah.edu");
                 if (disco.IsError)
                 {
                     SetUpdateText(disco.Error);
@@ -280,8 +282,10 @@ namespace Viking.UI.Forms
                 {
                     Address = disco.TokenEndpoint,
                     ClientId = "ro.viking",
-                    ClientSecret = "secret",
-                    Scope = "Viking.Annotation openid"
+                    ClientSecret = "CorrectHorseBatteryStaple",
+                    Scope = "Viking.Annotation openid",
+                    UserName = username, 
+                    Password = password
                 };
 
                 var tokenResponse = await client.RequestPasswordTokenAsync(request);

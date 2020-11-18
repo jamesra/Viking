@@ -19,6 +19,8 @@ namespace MorphologyView
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
+            throw new NotImplementedException();
+            /*
             DynamicRenderMesh mesh = value as DynamicRenderMesh;
             if(mesh == null)
             {
@@ -29,6 +31,7 @@ namespace MorphologyView
             model.Verticies = mesh.Verticies.Select(v => new VertexPositionColor(v.Position.ToXNAVector3(), Color.Blue)).ToArray();
             model.Faces = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
             return model;
+            */
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

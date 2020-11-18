@@ -38,7 +38,7 @@ namespace DataExport.Controllers
         [AcceptVerbs(HttpVerbs.Post)]
         public async Task<ActionResult> PostTLP()
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
 
             string OutputFile = GetOutputFilename(requestIDs, "tlp");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -49,7 +49,7 @@ namespace DataExport.Controllers
                                                                                    GetStructureColorMap(),
                                                                                    GetColorMapImage());
 
-            MorphologyGraph structure_graph = GetGraph(requestIDs);
+            MorphologyGraph structure_graph = await GetGraph(requestIDs);
             if (RequestedStickFigure())
                 structure_graph.ToStickFigure();
             MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, scale, colorMap, AppSettings.VolumeURL);
@@ -62,14 +62,14 @@ namespace DataExport.Controllers
         [AcceptVerbs(HttpVerbs.Post)]
         public async Task<ActionResult> PostJSON()
         { 
-            ICollection<long> requestIDs = await RequestVariables.GetIDsFromQueryData(Request.QueryString);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
 
             string OutputFile = GetOutputFilename(requestIDs, "json");
             string userOutputDirectory = GetAndCreateOutputDirectories();
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
             Scale scale = AppSettings.GetScale();
 
-            MorphologyGraph structure_graph = GetGraph(requestIDs);
+            MorphologyGraph structure_graph = await GetGraph(requestIDs);
             if (RequestedStickFigure())
                 structure_graph.ToStickFigure();
             MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
@@ -82,7 +82,7 @@ namespace DataExport.Controllers
         [AcceptVerbs(HttpVerbs.Post)]
         public async Task<ActionResult> PostDAE()
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDsFromQueryData(Request.QueryString);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
 
             string OutputFile = GetOutputFilename(requestIDs, "dae");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -92,7 +92,7 @@ namespace DataExport.Controllers
                                                                                    GetStructureColorMap(),
                                                                                    GetColorMapImage());
 
-            MorphologyGraph structure_graph = GetGraph(requestIDs);
+            MorphologyGraph structure_graph = await GetGraph(requestIDs);
             if (RequestedStickFigure())
                 structure_graph.ToStickFigure();
             MorphologyMesh.MorphologyColladaView view = new MorphologyMesh.MorphologyColladaView(structure_graph.scale, colorMap);
@@ -106,7 +106,7 @@ namespace DataExport.Controllers
         [ActionName("GetTLP")]
         public async Task<ActionResult> GetTLP()
         { 
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
 
             string OutputFile = GetOutputFilename(requestIDs, "tlp");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -116,7 +116,7 @@ namespace DataExport.Controllers
                                                                                    GetStructureColorMap(),
                                                                                    GetColorMapImage());
 
-            MorphologyGraph structure_graph = GetGraph(requestIDs);
+            MorphologyGraph structure_graph = await GetGraph(requestIDs);
             if (RequestedStickFigure())
                 structure_graph.ToStickFigure();
             MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, structure_graph.scale, colorMap, AppSettings.VolumeURL);
@@ -129,13 +129,13 @@ namespace DataExport.Controllers
         public async Task<ActionResult> GetJSON()
         {
 
-            ICollection<long> requestIDs = await RequestVariables.GetIDsFromQueryData(Request.QueryString);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
 
             string OutputFile = GetOutputFilename(requestIDs, "json");
             string userOutputDirectory = GetAndCreateOutputDirectories();
             string userOutputFileFullPath = System.IO.Path.Combine(userOutputDirectory, OutputFile);
 
-            MorphologyGraph structure_graph = GetGraph(requestIDs);
+            MorphologyGraph structure_graph = await  GetGraph(requestIDs);
             if (RequestedStickFigure())
                 structure_graph.ToStickFigure();
 
@@ -148,7 +148,7 @@ namespace DataExport.Controllers
         [ActionName("GetDAE")]
         public async Task<ActionResult> GetDAE()
         { 
-            ICollection<long> requestIDs = await RequestVariables.GetIDsFromQueryData(Request.QueryString);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
 
             string OutputFile = GetOutputFilename(requestIDs, "dae");
             string userOutputDirectory = GetAndCreateOutputDirectories();
@@ -159,7 +159,7 @@ namespace DataExport.Controllers
                                                                                    GetStructureColorMap(),
                                                                                    GetColorMapImage());
 
-            MorphologyGraph structure_graph = GetGraph(requestIDs);
+            MorphologyGraph structure_graph = await  GetGraph(requestIDs);
             if (RequestedStickFigure())
                 structure_graph.ToStickFigure();
 

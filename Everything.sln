@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.30503.244
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Clients", "Clients", "{155AD3E4-3129-491A-8416-F94DAE798A3D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8307721A-5FD6-45ED-B870-A65C2AB87388}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{85C6261E-0199-4737-ACCA-DD3A461BEA3D}"
 	ProjectSection(SolutionItems) = preProject
 		Connectome Project.vsmdi = Connectome Project.vsmdi
 		Clients\LocalTestRun.testrunconfig = Clients\LocalTestRun.testrunconfig
@@ -115,7 +115,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitsAndScale", "UnitsAndSc
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Servers", "Servers", "{3377B811-CB5D-41CA-9CD9-2417483C943D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8307721A-5FD6-45ED-B870-A65C2AB87388}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{85C6261E-0199-4737-ACCA-DD3A461BEA3D}"
 	ProjectSection(SolutionItems) = preProject
 		Connectome Project.vsmdi = Connectome Project.vsmdi
 		Clients\LocalTestRun.testrunconfig = Clients\LocalTestRun.testrunconfig
@@ -211,6 +211,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MIConvexHullExtensions", "MIConvexHullExtensions\MIConvexHullExtensions.csproj", "{F89734AB-4604-45FA-B17E-B6D040FA51B6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Jotunn", "Jotunn", "{A57365BE-B5A0-4496-932C-E242456C328C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrpcAnnotationService", "Servers\GrpcAnnotationService\GrpcAnnotationService.csproj", "{56629A12-0E23-4CC1-A35B-A9385D79BB7C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NewFolder1", "NewFolder1", "{28837490-7CBE-4641-82D5-AEF86D878FD7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -2013,12 +2017,35 @@ Global
 		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
 		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
 		{F89734AB-4604-45FA-B17E-B6D040FA51B6}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Debug|x64.Build.0 = Debug|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Debug|x86.Build.0 = Debug|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Release|x64.ActiveCfg = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Release|x64.Build.0 = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Release|x86.ActiveCfg = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.Release|x86.Build.0 = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.ReleaseWithSymbols|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.ReleaseWithSymbols|Mixed Platforms.Build.0 = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.ReleaseWithSymbols|x64.ActiveCfg = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{72911505-DB93-432C-B340-FBEE8D23037B} = {3377B811-CB5D-41CA-9CD9-2417483C943D}
 		{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D} = {62EE2942-A198-4038-962A-EC8C4C50E861}
 		{006AE0D6-265F-41B2-9D37-DED07E6279B4} = {62EE2942-A198-4038-962A-EC8C4C50E861}
 		{F5088C5A-C64D-4ECC-88A2-B286ABD9E4EE} = {62EE2942-A198-4038-962A-EC8C4C50E861}
@@ -2077,6 +2104,8 @@ Global
 		{6AB21366-0BBD-44C9-84BC-360E7A31383A} = {3A1E8B14-1209-4346-8682-3CA01299024F}
 		{F89734AB-4604-45FA-B17E-B6D040FA51B6} = {3A1E8B14-1209-4346-8682-3CA01299024F}
 		{A57365BE-B5A0-4496-932C-E242456C328C} = {155AD3E4-3129-491A-8416-F94DAE798A3D}
+		{56629A12-0E23-4CC1-A35B-A9385D79BB7C} = {3377B811-CB5D-41CA-9CD9-2417483C943D}
+		{28837490-7CBE-4641-82D5-AEF86D878FD7} = {3377B811-CB5D-41CA-9CD9-2417483C943D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F9607612-2CF2-4BF6-BA54-42F646BAA65D}

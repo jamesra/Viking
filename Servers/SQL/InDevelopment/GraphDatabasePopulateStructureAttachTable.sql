@@ -1,23 +1,8 @@
 /*********************************************
-/*Run this block of code if you change any of the first three queries or annotations for the structure.  It will clear the cache.*/
 
-if OBJECT_ID('tempdb..#LocCenters') is not null
-	DROP Table #LocCenters
-
-if OBJECT_ID('tempdb..#Connection') is not null
-	DROP Table #Connection
-
-if OBJECT_ID('tempdb..#DistancePairs') is not null
-	DROP Table #DistancePairs
-
-if OBJECT_ID('tempdb..#MinDistancePair') is not null
-	DROP Table #MinDistancePair
-
-if OBJECT_ID('tempdb..#MixedSynapses') is not null
-	DROP Table #MixedSynapses
-
-if OBJECT_ID('tempdb..#JoinableMixedSynapses') is not null
-	DROP Table #JoinableMixedSynapses
+This query populates the GraphDatabasePopulateStructureAttachTable in the graph schema. 
+It creates edges between locations of parent <-> child structures at the closest point 
+of approach.
 
 **********************************************/
 
@@ -38,89 +23,28 @@ In the example above, B is a child structure of A.  By searching +/- 1 Z levels 
 
 ***********************/
 DROP TABLE IF EXISTS tempdb.#ChildLocParentLocPairingCandidates
-
-DROP TABLE IF EXISTS tempdb.#ChildLocParentDistance
-DROP TABLE IF EXISTS tempdb.#ChildStructureCenters
 DROP TABLE IF EXISTS tempdb.#MinChildLocParentDistance
 DROP TABLE IF EXISTS tempdb.#ChildLocParentDistance
-DROP TABLE IF EXISTS tempdb.#MinChildLocParentDistance
-DROP TABLE IF EXISTS tempdb.#ChildAttachLocations
-
-DROP TABLE IF EXISTS tempdb.#ChildStructureEdgeCount
-DROP TABLE IF EXISTS tempdb.#ChildStructureCenters
+DROP TABLE IF EXISTS tempdb.#ChildAttachLocations 
+DROP TABLE IF EXISTS tempdb.#ChildStructureEdgeCount 
 DROP TABLE IF EXISTS tempdb.#ChildAttachLocationsRefinedDistances
 DROP TABLE IF EXISTS tempdb.#MinChildAttachLocationsRefinedDistances
 DROP TABLE IF EXISTS tempdb.#RefinedChildAttachLocations
+
 
 print 'Building list of potential child->parent location attachment points'
 go
 
 if OBJECT_ID('tempdb..#ChildLocParentLocPairingCandidates') is null
 BEGIN
-	declare @AllowedZRange float
-	set @AllowedZRange = 1
-
-	--Start by finding shapes on the same Z level +/-  as the origin location
-	select L.ID as ChildLocationID, Child.ID as ChildStructureID, PL.ID as ParentLocationID, Child.ParentID as ParentStructureID
-			 --MIN( [dbo].[ufnShapeDistance3D](L.VolumeShape, L.Z, PL.VolumeShape, PL.Z) ) as Distance
-		into #ChildLocParentLocPairingCandidates
-		from Location L
-		inner join Structure Child on Child.ID = L.ParentID 
-		inner join Location PL on PL.ParentID = Child.ParentID
-		where Child.ParentID is not NULL
-			  AND ABS(L.Z - PL.Z) <= @AllowedZRange  
-
-	--select * from #ChildLocParentLocPairingCandidates
-
-	Declare @MissingLocIDs integer_list
-	INSERT INTO @MissingLocIDs select L.ID 
-			from Location L
-			inner join Structure S on S.ID = L.ParentID
-			where S.ParentID is not NULL AND 
-				  L.ID NOT IN (Select ChildLocationID from #ChildLocParentLocPairingCandidates) AND
-				  0 < (SELECT COUNT(ID) from Location PL where PL.ParentID = S.ID) --Ensure parent structure has at least one location
-
-    --select ID from @MissingLocIDs
-	select COUNT(ID) as NumRemaining from @MissingLocIDs 
-
-	----------------------------------------------------------
-
-	--Select * from @MissingLocIDs Missing
-	--    inner join Location L ON L.ID = Missing.ID
-	--	inner join Structure S on S.ID = L.ParentID
-	--	inner join Location PL on PL.ParentID = s.ParentID
-
-
-	----------------------------------------------------------
-	 
-	declare @MaxZ float
-	set @MaxZ = (Select Max(L.Z) from Location L) 
-
-	select TOP 10 ID from @MissingLocIDs
-	set @AllowedZRange = @AllowedZRange + 1
-
-	WHILE (select COUNT(ID) from @MissingLocIDs) > 1 AND @AllowedZRange < @MaxZ
-	BEGIN 
-		insert into #ChildLocParentLocPairingCandidates (ChildLocationID, ChildStructureID, ParentLocationID, ParentStructureID)
-			SELECT L.ID as ID, Child.ID as ChildStructureID, PL.ID as ParentLocationID, Child.ParentID as ParentStructureID
-			 --MIN( [dbo].[ufnShapeDistance3D](L.VolumeShape, L.Z, PL.VolumeShape, PL.Z) ) as Distance
-			 from @MissingLocIDs Missing
-			inner join Location L on L.ID = Missing.ID
-			inner join Structure Child on Child.ID = L.ParentID 
-			inner join Location PL on PL.ParentID = Child.ParentID
-			where Child.ParentID is not NULL 
-				AND ABS(L.Z - PL.Z) <= @AllowedZRange  
-
-		delete from @MissingLocIDs WHERE ID in (Select ID from #ChildLocParentLocPairingCandidates)
-
-		--select COUNT(ID) as NumRemaining from @MissingLocIDs 
-
-		set @AllowedZRange = @AllowedZRange + 1
-	end
+	declare @candidates udtParentChildLocationPairs
+	--exec @candidates = EXEC SelectAllNearestParentChildAttachLocationCandidates
+	INSERT into @candidates EXEC SelectAllNearestParentChildAttachLocationCandidates 
+	select * into #ChildLocParentLocPairingCandidates from @candidates
 END
 go
 
---select top 100 * from #ChildLocParentLocPairingCandidates
+select top 100 * from #ChildLocParentLocPairingCandidates
  
 print 'Calculating child->parent candidate attachment point distances'
 go
@@ -281,12 +205,18 @@ INSERT INTO graph.StructureAttachLocation($from_id, $to_id, FromStructureID, ToS
 	from #RefinedChildAttachLocations CAL
 		INNER JOIN (Select $node_id as NodeID, ID from graph.Location) ParentLoc on CAL.ParentLocationID = ParentLoc.ID
 		INNER JOIN (Select $node_id as NodeID, ID from graph.Location) ChildLoc  on CAL.ChildLocationID  = ChildLoc.ID
-
+		
+DROP TABLE IF EXISTS tempdb.#ChildLocParentLocPairingCandidates
 DROP TABLE IF EXISTS tempdb.#ChildLocParentDistance
-DROP TABLE IF EXISTS tempdb.#MinChildLocParentDistance
-DROP TABLE IF EXISTS tempdb.#ChildLocParentDistance
-DROP TABLE IF EXISTS tempdb.#MinChildLocParentDistance
+DROP TABLE IF EXISTS tempdb.#MinChildLocParentDistance  
 DROP TABLE IF EXISTS tempdb.#ChildAttachLocations
+DROP TABLE IF EXISTS tempdb.#ChildStructureEdgeCount
+DROP TABLE IF EXISTS tempdb.#ChildAttachLocationsRefinedDistances
+DROP TABLE IF EXISTS tempdb.#MinChildAttachLocationsRefinedDistances
+DROP TABLE IF EXISTS tempdb.#RefinedChildAttachLocations
+ 
+ 
+
 
 /*
 IF OBJECT_ID('tempdb..#ParentAttachment') is null

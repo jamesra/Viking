@@ -36,7 +36,7 @@ namespace DataExport.Controllers
         [AcceptVerbs(HttpVerbs.Post)]
         public async Task<ActionResult> PostDot(HttpPostedFileBase req)
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
 
             string outputFilename = GetOutputFilename(requestIDs, "dot");
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
@@ -52,7 +52,7 @@ namespace DataExport.Controllers
         [AcceptVerbs(HttpVerbs.Post)]
         public async Task<ActionResult> PostTLP(HttpPostedFileBase req)
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
 
             string outputFilename = GetOutputFilename(requestIDs, "tlp");
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
@@ -68,7 +68,7 @@ namespace DataExport.Controllers
         [AcceptVerbs(HttpVerbs.Post)]
         public async Task<ActionResult> PostGML(HttpPostedFileBase req)
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
 
             string outputFilename = GetOutputFilename(requestIDs, "graphml");
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
@@ -84,7 +84,7 @@ namespace DataExport.Controllers
         [AcceptVerbs(HttpVerbs.Post)]
         public async Task<ActionResult> PostJSON(HttpPostedFileBase req)
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
 
             string outputFilename = GetOutputFilename(requestIDs, "json");
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
@@ -102,7 +102,7 @@ namespace DataExport.Controllers
         [HttpGet]
         public async Task<ActionResult> GetDot()
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
             string outputFilename = GetOutputFilename(requestIDs, "dot");
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
@@ -117,7 +117,7 @@ namespace DataExport.Controllers
         [HttpGet]
         public async Task<ActionResult> GetTLP()
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
             string outputFilename = GetOutputFilename(requestIDs, "tlp");
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
@@ -133,7 +133,7 @@ namespace DataExport.Controllers
         [HttpGet]
         public async Task<ActionResult> GetGML()
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
             string outputFilename = GetOutputFilename(requestIDs, "graphml");
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
@@ -148,7 +148,7 @@ namespace DataExport.Controllers
         [HttpGet]
         public async Task<ActionResult> GetJSON()
         {
-            ICollection<long> requestIDs = await RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
             string outputFilename = GetOutputFilename(requestIDs, "json");
             string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 

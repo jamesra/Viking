@@ -336,7 +336,6 @@
     <Content Include="Modules\VolumeViewModel\VolumeViewModel.pdb" />
     <Content Include="Modules\VolumeView\VolumeView.dll" />
     <Content Include="Modules\VolumeView\VolumeView.pdb" />
-    <Content Include="SqlServerTypes\readme.htm" />
     <Content Include="SqlServerTypes\x64\msvcr120.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

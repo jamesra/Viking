@@ -4,13 +4,39 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework;
 
 namespace MonogameTestbed
 {
     class GamePadStateTracker
     {
         private GamePadState LastState;
-        public GamePadState CurrentState; 
+        public GamePadState CurrentState;
+         
+        static readonly PlayerIndex[] inputs = new PlayerIndex[] { PlayerIndex.One, PlayerIndex.Two, PlayerIndex.Three, PlayerIndex.Four };
+
+        public static PlayerIndex? GetFirstConnectedController()
+        {
+            foreach (var input in inputs)
+            {
+                if (IsValidController(input))
+                    return input;
+            }
+
+            return new PlayerIndex?();
+        }
+
+        private static bool IsValidController(PlayerIndex index)
+        {
+            var padcaps = GamePad.GetCapabilities(PlayerIndex.One);
+            if (GamePad.GetCapabilities(PlayerIndex.One).IsConnected)
+            {
+                return padcaps.HasLeftXThumbStick && padcaps.HasLeftYThumbStick && padcaps.HasRightXThumbStick && padcaps.HasRightYThumbStick;
+            }
+
+            return false;
+        }
+
 
         public void Update(GamePadState state)
         {

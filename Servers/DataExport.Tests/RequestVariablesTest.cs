@@ -33,11 +33,11 @@ namespace DataExport.Tests
             Uri endpoint;
             Uri.TryCreate("http://webdev.connectomes.utah.edu/RC1Test/OData", UriKind.Absolute, out endpoint);
 
-            ICollection<long> network_ids = await RequestVariables.GetIDsFromQuery(endpoint, "Network(IDs=[172]Hops=0)");
+            ICollection<long> network_ids = RequestVariables.GetIDsFromQuery(endpoint, "Network(IDs=[172]Hops=0)");
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(network_ids.Count == 1);
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(network_ids.Contains(172));
 
-            ICollection<long> ids = await RequestVariables.GetIDsFromQuery(endpoint, "Structures?$filter=ID eq 180");
+            ICollection<long> ids = RequestVariables.GetIDsFromQuery(endpoint, "Structures?$filter=ID eq 180");
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ids.Count == 1);
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ids.Contains(180));
 
@@ -52,7 +52,7 @@ namespace DataExport.Tests
             Uri endpoint;
             Uri.TryCreate("http://webdev.connectomes.utah.edu/RC1Test/OData", UriKind.Absolute, out endpoint);
               
-            ICollection<long> ids = await RequestVariables.GetIDsFromQueryData(HttpContext.Current.Request.QueryString);
+            ICollection<long> ids = RequestVariables.GetIDsFromQueryData(HttpContext.Current.Request.QueryString);
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ids.Count == 1);
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ids.Contains(180));
 

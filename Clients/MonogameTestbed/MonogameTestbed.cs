@@ -101,7 +101,7 @@ namespace MonogameTestbed
         SpriteFont ILabelRenderInfo.font => this.fontArial;
 
         public MonoTestbed()
-        {
+        { 
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
             graphics = new GraphicsDeviceManager(this);
             VikingXNAGraphics.Global.Content = this.Content;

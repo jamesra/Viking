@@ -170,8 +170,8 @@ namespace Geometry
             this._p1.Y = Math.Round(this._p1.Y, 2);
             this._p2.Y = Math.Round(this._p2.Y, 2);
             this._p3.Y = Math.Round(this._p3.Y, 2);
+            */
 
-             */
             this.color = color;
 
             //  _v1 = 
@@ -182,7 +182,6 @@ namespace Geometry
 
             //if (this.Area < Global.EpsilonSquared)
             //    throw new ArgumentException("This is not a triangle, it is a line");
-
         }
 
         public GridVector2 Centroid

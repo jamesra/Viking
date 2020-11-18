@@ -1,3 +1,16 @@
+/*
+
+This script creates a Graph schema in parallel to the normal annotation schema.  
+It then populates the graph, with the exception of the StructureAttachLocation 
+table.  The StructureAttachLocation table is populated with an expensive 
+calculation in GraphDatabasePopulateStructureAttachTable.sql.  The 
+StructureAttachTable creates links between locations in child and parent structures
+at the point of closest approach.
+
+*/
+
+
+
 IF NOT EXISTS (SELECT 0
                FROM information_schema.schemata 
                WHERE schema_name='graph')
@@ -199,7 +212,7 @@ GO
 CREATE TABLE graph.StructureAttachLocation(
 	 FromStructureID bigint NOT NULL,
 	 ToStructureID   bigint NOT NULL,
-	 Distance		 float
+	 Distance		 float  NOT NULL
 	CONSTRAINT [PK_StructureAttachLocation] PRIMARY KEY CLUSTERED 
 	(
 		$edge_id ASC
