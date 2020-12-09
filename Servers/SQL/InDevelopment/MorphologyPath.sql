@@ -220,7 +220,7 @@ insert into @VisitedIDs
   END
 
   --Remove incomplete paths to handle the case where all targets were found
-  delete P from @Path P 
+  delete P from @Path P
   where P.Completed = 0
 
   --Return all of the identified paths
