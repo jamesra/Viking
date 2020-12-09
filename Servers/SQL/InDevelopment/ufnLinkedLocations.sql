@@ -24,9 +24,13 @@ CREATE FUNCTION ufnLinkedToLocations
 	 @SourceLocIDs integer_list READONLY --The location IDs we are starting from
 )
 RETURNS @Links TABLE ( 
-	SourceID bigint, --One of the Location IDs from @SourceLocIDs
-	TargetID bigint  --The ID of a linked location
-	)
+	SourceID bigint NOT NULL, --One of the Location IDs from @SourceLocIDs
+	TargetID bigint NOT NULL,  --The ID of a linked location
+	PRIMARY KEY CLUSTERED 
+(
+	[SourceID] ASC,
+	[TargetID] ASC
+) WITH (IGNORE_DUP_KEY = OFF) )
 AS
 BEGIN
 	INSERT @Links
