@@ -196,12 +196,13 @@ namespace Viking.AU
             }
 
             //OK.  Figure out which command we are executing.
-            UpdateVolumePositionsAsync(SectionsToProcess);
+            UpdateVolumePositionsAsync(SectionsToProcess).Wait();
+            //UpdateVolumePositions(SectionsToProcess);
 
             System.GC.Collect();
         }
 
-        static void UpdateVolumePositions(IList<long> SectionNumbers)
+        static async Task UpdateVolumePositions(IList<long> SectionNumbers)
         {
             SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
             foreach (long sectionNumber in SectionNumbers)
@@ -212,28 +213,76 @@ namespace Viking.AU
             }
         }
 
-        static void UpdateVolumePositionsAsync(IList<long> SectionNumbers)
+        static async Task UpdateVolumePositionsAsync(IList<long> SectionNumbers)
         {
-            SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
+            //SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
+            object LockConsole = new object();
 
-
-
-            TaskFactory taskFactory = new TaskFactory(TaskCreationOptions.LongRunning, TaskContinuationOptions.None);
-            foreach (long sectionNumber in SectionNumbers)
+            using (System.Threading.SemaphoreSlim concurrencySemaphore = new System.Threading.SemaphoreSlim(System.Environment.ProcessorCount * 2))
             {
-                //    UpdateVolumePositions(sectionNumber);
+                List<Task<string>> tasks = new List<Task<string>>(SectionNumbers.Count);
+                List<long> taskSectionNumbers = new List<long>(SectionNumbers.Count);
 
-                var task = taskFactory.StartNew(() => UpdateVolumePositions(sectionNumber));
-
-                //var task = System.Threading.Tasks.Task.Run();
-                tasks.Add(sectionNumber, task);
-
-                while (tasks.Keys.Count > 2)
+                TaskFactory taskFactory = new TaskFactory(TaskCreationOptions.LongRunning, TaskContinuationOptions.None);
+                foreach (long sectionNumber in SectionNumbers)
                 {
-                    RemoveCompletedTasks(tasks);
+                    //    UpdateVolumePositions(sectionNumber);
+                    await concurrencySemaphore.WaitAsync();
+
+                    taskSectionNumbers.Add(sectionNumber);
+                    var task = taskFactory.StartNew(() =>
+                    {
+                        try
+                        {
+                            string result =  UpdateVolumePositions(sectionNumber);
+                            
+                            lock (LockConsole)
+                            {
+                                Console.WriteLine(result);
+                            }
+
+                            State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
+                            return result;
+                        }
+                        finally
+                        {
+                            concurrencySemaphore.Release();
+                        }
+                    }
+                    );
+
+                    tasks.Add(task);
+                    //var task = System.Threading.Tasks.Task.Run();
+                    //tasks.Add(sectionNumber, task);
+
+                    /*while (tasks.Keys.Count > 2)
+                    {
+                        RemoveCompletedTasks(tasks);
+                    }*/ 
                 }
+
+                Task<string>[] taskArray = tasks.ToArray();
+                Task.WaitAll(taskArray);
+
+                /*
+                while (tasks.Count > 0)
+                {
+                    Task<string>[] taskArray = tasks.ToArray();
+                    int iTask = Task.WaitAny(taskArray);
+                    var finishedTask = tasks[iTask];
+                    var sectionNumber = taskSectionNumbers[iTask];
+
+                    tasks.RemoveAt(iTask);
+                    taskSectionNumbers.RemoveAt(iTask);
+                    string result = finishedTask.Result;
+
+                    Console.WriteLine(result);
+                    State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
+                }
+                */
             }
 
+            /*
             foreach (long sectionNumber in tasks.Keys.ToArray())
             {
                 var task = tasks[sectionNumber];
@@ -243,6 +292,7 @@ namespace Viking.AU
 
                 State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
             }
+            */
         }
 
         private static void RemoveCompletedTasks(SortedDictionary<long, Task<string>> tasks)
@@ -273,26 +323,28 @@ namespace Viking.AU
         static string UpdateVolumePositions(long SectionNumber)
         {
             LocationStore threadLocationStore = new LocationStore();
+            int NumUpdated = 0;
 
             var LocDict = threadLocationStore.GetObjectsForSection(SectionNumber);
 
-            Viking.VolumeModel.Section section = State.Volume.Sections[(int)SectionNumber];
-
-            MappingBase mapper = State.MappingsManager.GetMapping(State.Volume.DefaultVolumeTransform, (int)SectionNumber, section.DefaultChannel, section.DefaultPyramidTransform);
-            if (mapper == null)
+            if(LocDict.Count >= 0)
             {
-                throw new Exception("No mapping found for section " + SectionNumber.ToString());
-            }
+                Viking.VolumeModel.Section section = State.Volume.Sections[(int)SectionNumber];
 
-            int NumUpdated = 0;
-            foreach (LocationObj loc in LocDict.Values)
-            {
-                bool result = UpdateVolumeShape(loc, mapper);
-                if (result)
-                    NumUpdated++;
-            }
+                MappingBase mapper = State.MappingsManager.GetMapping(State.Volume.DefaultVolumeTransform, (int)SectionNumber, section.DefaultChannel, section.DefaultPyramidTransform);
+                if (mapper == null)
+                {
+                    throw new Exception("No mapping found for section " + SectionNumber.ToString());
+                }
 
-
+                foreach (LocationObj loc in LocDict.Values)
+                {
+                    bool result = UpdateVolumeShape(loc, mapper);
+                    if (result)
+                        NumUpdated++;
+                }
+            } 
+             
             if (NumUpdated > 0)
             {
                 try
