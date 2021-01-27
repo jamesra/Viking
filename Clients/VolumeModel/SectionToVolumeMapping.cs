@@ -205,7 +205,7 @@ namespace Viking.VolumeModel
                 this.HasBeenWarped = true;
 
                 //Try to save the transform to our cache
-                SaveToCache();
+                SaveToCache(CachedTransformsFileName, listTiles.ToArray());
             }
         }
 

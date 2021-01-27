@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
@@ -180,7 +181,7 @@ namespace Viking.VolumeModel
 
         #region CacheIO
 
-        protected virtual void SaveToCache()
+        protected static async Task SaveToCache(string CachedTransformsFileName, ITransform[] transforms)
         {
             //The corrupted memory error disappeared when I stopped using the cache.  There are also 
             //memory leak issues documented on MSDN regarding BinaryFormatters
@@ -189,11 +190,9 @@ namespace Viking.VolumeModel
             using (FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
             {
                 BinaryFormatter binFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-
-                //new System.Runtime.Serialization.Formatters.Binary.
-
-                if (_TileTransforms != null)
-                    binFormatter.Serialize(fstream, _TileTransforms);
+                  
+                if (transforms != null)
+                    binFormatter.Serialize(fstream, transforms);
             }
         }
 

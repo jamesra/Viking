@@ -14,6 +14,8 @@ using Geometry;
 using Geometry.Transforms;
 using Viking.VolumeModel;
 using UnitsAndScale;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
@@ -624,14 +626,19 @@ namespace Viking.VolumeModel
 
         void Initialize(XDocument reader, Viking.Common.IProgressReporter workerThread)
         {
-            List<CreateSectionThreadingObj> ListSectionThreadingObj = new List<CreateSectionThreadingObj>();
-            List<CreateStosTransformThreadingObj> ListStosGridTransformThreadingObj = new List<CreateStosTransformThreadingObj>();
-             
             //Fetch the volume information which should be the top level of the XML
-            
+            SemaphoreSlim loadSectionSemaphore = new SemaphoreSlim(Environment.ProcessorCount * 2, Environment.ProcessorCount * 2);
+            SemaphoreSlim loadStosSemaphore = new SemaphoreSlim(Environment.ProcessorCount * 2, Environment.ProcessorCount * 2);
+            ReaderWriterLockSlim rwSectionLock = new ReaderWriterLockSlim(); //Prevents multiple sections from updating datastructures simultaneously after loading
+            ReaderWriterLockSlim rwStosLock = new ReaderWriterLockSlim(); //Prevents multiple stos transforms from updating datastructures simultaneously after loading
+
+
             int NumStosFiles = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(VolumeElement, "num_stos").Value);
             int NumSections = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(VolumeElement, "num_sections").Value);
 
+            var ListSectionLoadingTasks = new List<Task<Section>>(NumSections); 
+            var ListStosLoadingTasks = new List<Task<LoadStosResult>>(NumStosFiles);
+             
             XAttribute VolumePathAttrib = IO.GetAttributeCaseInsensitive(VolumeElement, "path");
             if (VolumePathAttrib != null)
                 this._Host = VolumePathAttrib.Value;
@@ -661,9 +668,7 @@ namespace Viking.VolumeModel
             }
 
             int countStos = 0;
-            int countSections = 0;
-            ListSectionThreadingObj.Capacity = NumSections;
-            ListStosGridTransformThreadingObj.Capacity = NumStosFiles;
+            int countSections = 0; 
 
             LoadDefaultsFromXML(VolumeElement);
 
@@ -687,27 +692,51 @@ namespace Viking.VolumeModel
                         int ProgressPercent = (countStos * 100) / NumStosFiles;
                         countStos++;
                         workerThread.ReportProgress(ProgressPercent, "Loading " + StosPath);
-
-                        CreateStosTransformThreadingObj CreateStosThreadObj = null;
-
-                        if (HaveStosZip)
+                          
+                        ListStosLoadingTasks.Add(Task<LoadStosResult>.Run(async () =>
                         {
-                            String StosFileCacheFullPath = System.IO.Path.Combine(this.Paths.ServerStosCachePath, StosFileName);
-                            if (System.IO.File.Exists(StosFileCacheFullPath))
+                            LoadStosResult result = null;
+
+                            try
                             {
-                                CreateStosThreadObj = new CreateStosTransformThreadingObj(StosFileCacheFullPath, elem, Paths.StosCacheDir);
+                                await loadStosSemaphore.WaitAsync();
+
+                                if (HaveStosZip)
+                                {
+                                    String StosFileCacheFullPath = System.IO.Path.Combine(this.Paths.ServerStosCachePath, StosFileName);
+                                    if (System.IO.File.Exists(StosFileCacheFullPath))
+                                    {
+                                        result = await LoadStosResult.LoadAsync(StosFileCacheFullPath, elem).ConfigureAwait(false);
+                                    }
+                                }
+
+                                //Load from server if it is not in the zip
+                                if (result == null)
+                                {
+                                    //    Trace.WriteLine("Loading " + StosFileName + " from HTTP Server", "VolumeModel");
+                                    result = await  LoadStosResult.LoadAsync(StosPath, this.UserCredentials, elem).ConfigureAwait(false); 
+                                }
                             }
-                        }
+                            finally
+                            {
+                                loadStosSemaphore.Release();
+                            }
 
-                        //Load from server if it is not in the zip
-                        if (CreateStosThreadObj == null)
-                        {
-                            //    Trace.WriteLine("Loading " + StosFileName + " from HTTP Server", "VolumeModel");
-                            CreateStosThreadObj = new CreateStosTransformThreadingObj(StosPath, this.UserCredentials, elem, Paths.StosCacheDir);
-                        }
-
-                        ListStosGridTransformThreadingObj.Add(CreateStosThreadObj);
-                        System.Threading.ThreadPool.QueueUserWorkItem(CreateStosThreadObj.ThreadPoolCallback);
+                            if (result != null)
+                            {
+                                try
+                                {
+                                    rwStosLock.EnterWriteLock();
+                                    OnStosTransformLoadComplete(result.Transform, result.element);
+                                }
+                                finally
+                                {
+                                    rwStosLock.ExitWriteLock();
+                                }
+                            }
+                            
+                            return result;
+                        }));
 
                         break;
                     case "section":
@@ -726,17 +755,33 @@ namespace Viking.VolumeModel
                         countSections++;
                         workerThread.ReportProgress(ProgressPercent, "Queueing " + SectionPath);
 
-                        CreateSectionThreadingObj newCreateSectionThreadObj = new CreateSectionThreadingObj(this,
-                            SectionPath,
-                            elem);
-                        ListSectionThreadingObj.Add(newCreateSectionThreadObj);
+                        var task = Task.Run(async () =>
+                        {
+                            Section newSection = null;
+                            try
+                            {
+                                await loadSectionSemaphore.WaitAsync(); 
+                                newSection = new Section(this, SectionPath, elem);
+                            }
+                            finally
+                            {
+                                loadSectionSemaphore.Release();
+                            }
 
-                        System.Threading.ThreadPool.QueueUserWorkItem(newCreateSectionThreadObj.ThreadPoolCallback);
+                            try
+                            {
+                                rwSectionLock.EnterWriteLock();
+                                OnSectionLoadComplete(newSection);
+                            }
+                            finally
+                            {
+                                rwSectionLock.ExitWriteLock();
+                            }
+                            
+                            return newSection;
+                        });
 
-                        //                        newCreateSectionThreadObj.ThreadPoolCallback(null);
-                        //                        Section s = new Section(this, SectionPath, elem.CreateReader());
-                        //                        this.sections.Add(s.Number, s);
-
+                        ListSectionLoadingTasks.Add(task);
                         break;
                     case "ocptileserver":
                         TileServerInfo info = TileServerInfo.CreateFromElement(elem);
@@ -752,103 +797,65 @@ namespace Viking.VolumeModel
                 }
             }
 
-            {
-                workerThread.ReportProgress(0, "Waiting for Stos Transform Loading Threads");
-                int countFinished = 0;
-
-                while (ListStosGridTransformThreadingObj.Count > 0)
-                {
-                    for (int iObj = 0; iObj < ListStosGridTransformThreadingObj.Count; iObj++)
-                    {
-                        CreateStosTransformThreadingObj CreateStosGridTransformObj = ListStosGridTransformThreadingObj[iObj];
-
-                        //Test to see if the wait state is set
-                        bool Result = CreateStosGridTransformObj.DoneEvent.WaitOne(0);
-                        if (Result == true)
-                        {
-                            ListStosGridTransformThreadingObj.RemoveAt(iObj);
-                            iObj--;
-                            countFinished++;
-                            int Progress;
-                            if (NumStosFiles > 0)
-                                Progress = (countFinished * 100) / NumStosFiles;
-                            else
-                                Progress = 100;
-
-                            if (CreateStosGridTransformObj.stosTransform == null)
-                            {
-                                workerThread.ReportProgress(Progress, "Failed Loading " + CreateStosGridTransformObj.ToString());
-                                continue;
-                            }
-                            else
-                            {
-                                workerThread.ReportProgress(Progress, "Loaded " + CreateStosGridTransformObj.stosTransform.ToString());
-                            }
-                            
-                            XElement elem = CreateStosGridTransformObj.element;
-
-                            int pixelSpacing = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(elem, "pixelSpacing").Value);
-                            string type = IO.GetAttributeCaseInsensitive(elem, "type").Value;
-                            string groupName = type + " " + pixelSpacing.ToString();
-
-                            XAttribute GroupNameAttribute = CreateStosGridTransformObj.element.Attribute("GroupName");
-                            if (GroupNameAttribute != null)
-                            {
-                                groupName = GroupNameAttribute.Value;
-                            }
-
-                            if (false == VolumeTransformNames.Contains(groupName))
-                            {
-                                VolumeTransformNames.Add(groupName);
-                            }
-
-                            if (this.DefaultVolumeTransform == null || this.DefaultVolumeTransform == "None")
-                                this.DefaultVolumeTransform = groupName;
-
-                            if (CreateStosGridTransformObj.stosTransform != null)
-                            {
-                                //IContinuousTransform stosTransform = EnsureTransformIsContinuous(CreateStosGridTransformObj.stosTransform);
-                                ITransform stosTransform = CreateStosGridTransformObj.stosTransform;
-                                StosTransformInfo info = (stosTransform as ITransformInfo)?.Info as StosTransformInfo;
-                                SortedList<int, ITransform> transformDict = null;
-                                if (this.Transforms.ContainsKey(groupName))
-                                {
-                                    transformDict = this.Transforms[groupName];
-                                }
-                                else
-                                {
-                                    transformDict = new SortedList<int, ITransform>();
-                                    Transforms.Add(groupName, transformDict);
-                                }
-
-                                if (transformDict.ContainsKey(info.MappedSection))
-                                {
-                                    Console.WriteLine("Volume stos mapping already contains " + info.ToString());
-                                }
-                                else
-                                {
-                                    transformDict.Add(info.MappedSection, stosTransform);
-                                }
-                            }
-                            else
-                            {
-                                Trace.WriteLine("Could not load stos file: " + CreateStosGridTransformObj.element.ToString());
-                            }
-                        }
-                    }
-
-                    System.Threading.Thread.Sleep(100);
-                }
-
-            }
-
-            WaitForCreateSectionThreads(ListSectionThreadingObj, workerThread);
+            WaitForLoadStosTransformThreads(ListStosLoadingTasks, workerThread); 
 
             CreateVolumeTransforms(workerThread);
+
+            WaitForCreateSectionThreads(ListSectionLoadingTasks, workerThread);
+
             workerThread.ReportProgress(101, "Done!");
         }
 
-       
+        private void OnStosTransformLoadComplete(ITransform Transform, XElement element)
+        {  
+            int pixelSpacing = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(element, "pixelSpacing").Value);
+            string type = IO.GetAttributeCaseInsensitive(element, "type").Value;
+            string groupName = type + " " + pixelSpacing.ToString();
+
+            XAttribute GroupNameAttribute = element.Attribute("GroupName");
+            if (GroupNameAttribute != null)
+            {
+                groupName = GroupNameAttribute.Value;
+            }
+
+            if (false == VolumeTransformNames.Contains(groupName))
+            {
+                VolumeTransformNames.Add(groupName);
+            }
+
+            if (this.DefaultVolumeTransform == null || this.DefaultVolumeTransform == "None")
+                this.DefaultVolumeTransform = groupName;
+
+            if (Transform != null)
+            {
+                //IContinuousTransform stosTransform = EnsureTransformIsContinuous(CreateStosGridTransformObj.stosTransform);
+                ITransform stosTransform = Transform;
+                StosTransformInfo info = (stosTransform as ITransformInfo)?.Info as StosTransformInfo;
+                SortedList<int, ITransform> transformDict = null;
+                if (this.Transforms.ContainsKey(groupName))
+                {
+                    transformDict = this.Transforms[groupName];
+                }
+                else
+                {
+                    transformDict = new SortedList<int, ITransform>();
+                    Transforms.Add(groupName, transformDict);
+                }
+
+                if (transformDict.ContainsKey(info.MappedSection))
+                {
+                    Console.WriteLine("Volume stos mapping already contains " + info.ToString());
+                }
+                else
+                {
+                    transformDict.Add(info.MappedSection, stosTransform);
+                }
+            }
+            else
+            {
+                Trace.WriteLine("Could not load stos file: " + element.ToString());
+            }
+        }
         
 
         private IContinuousTransform EnsureTransformIsContinuous(ITransform transform)
@@ -863,39 +870,74 @@ namespace Viking.VolumeModel
             return transform as IContinuousTransform;
         }
 
-        private void WaitForCreateSectionThreads(List<CreateSectionThreadingObj> ListSectionThreadingObj, Viking.Common.IProgressReporter workerThread)
+        /// <summary>
+        /// Displays a string in the UI as sections load
+        /// </summary>
+        /// <param name="ListSectionThreadingObj"></param>
+        /// <param name="workerThread"></param>
+        private static void WaitForLoadStosTransformThreads(List<Task<LoadStosResult>> ListStosTransformTasks, Viking.Common.IProgressReporter workerThread)
         {
-            //            XMLStream.Close();
-            //            response.Close();
+            workerThread.ReportProgress(0, "Waiting for Stos Transform Loading Threads");
+            int countFinished = 0;
+            int NumStosFiles = ListStosTransformTasks.Count;
+
+            while (ListStosTransformTasks.Count > 0)
+            {  
+                Task<LoadStosResult>[] stosTasks = ListStosTransformTasks.ToArray();
+
+                int iObj = System.Threading.Tasks.Task.WaitAny(stosTasks);
+
+                LoadStosResult result = stosTasks[iObj].Result;
+
+                //Test to see if the wait state is set 
+                ListStosTransformTasks.RemoveAt(iObj);
+
+                countFinished++;
+                int Progress;
+                if (NumStosFiles > 0)
+                    Progress = (countFinished * 100) / NumStosFiles;
+                else
+                    Progress = 100;
+
+                if (result.Transform == null)
+                {
+                    workerThread.ReportProgress(Progress, "Failed Loading " + result.element.ToString());
+                    continue;
+                }
+                else
+                {
+                    workerThread.ReportProgress(Progress, "Loaded " + result.Transform.ToString());
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Displays a string in the UI as sections load
+        /// </summary>
+        /// <param name="ListSectionThreadingObj"></param>
+        /// <param name="workerThread"></param>
+        private static void WaitForCreateSectionThreads(List<Task<Section>> ListSectionThreadingObj, Viking.Common.IProgressReporter workerThread)
+        {
             workerThread.ReportProgress(0, "Waiting for Section Loading Threads");
 
+            var taskArray = ListSectionThreadingObj.ToArray();
             int countFinished = 0;
-            while (ListSectionThreadingObj.Count > 0)
+            int NumSections = taskArray.Length;
+            while (taskArray.Length > 0)
             {
-                for (int iObj = 0; iObj < ListSectionThreadingObj.Count; iObj++)
-                {
-                    CreateSectionThreadingObj CreateSectionObj = ListSectionThreadingObj[iObj];
+                int iCompleted = Task.WaitAny(taskArray);
+                var Section = taskArray[iCompleted].Result;
+                taskArray = taskArray.RemoveAt(iCompleted); 
+                 
+                countFinished++;
+                int Progress;
+                if (NumSections > 0)
+                    Progress = (countFinished * 100) / NumSections;
+                else
+                    Progress = 100;
 
-                    //Test to see if the wait state is set
-                    bool Result = CreateSectionObj.DoneEvent.WaitOne(0);
-                    if (Result == true)
-                    {
-                        ListSectionThreadingObj.RemoveAt(iObj);
-                        iObj--;
-                        countFinished++;
-                        int Progress;
-                        if (NumSections > 0)
-                            Progress = (countFinished * 100) / NumSections;
-                        else
-                            Progress = 100;
-
-                        workerThread.ReportProgress(Progress, "Loaded " + CreateSectionObj.newSection.ToString());
-
-                        this.OnSectionLoadComplete(CreateSectionObj.newSection);
-                    }
-                }
-
-                System.Threading.Thread.Sleep(100);
+                workerThread.ReportProgress(Progress, "Loaded " + Section.ToString());
             }
         }
 
@@ -977,9 +1019,11 @@ namespace Viking.VolumeModel
                     StosTransformInfo stosInfo = new StosTransformInfo(ControlToVolumeInfo.ControlSection, SectionToControlInfo.MappedSection, CacheLastModifiedUtc);
                     using (Stream stostext = System.IO.File.OpenRead(CacheStosPath) as Stream)
                     {
-                        cachedTransform = TransformFactory.ParseStos(stostext,
+                        var cachedTransformTask = TransformFactory.ParseStos(stostext,
                                                                         stosInfo,
-                                                                            1) as TriangulationTransform;
+                                                                            1);
+
+                        cachedTransform = cachedTransformTask.Result as TriangulationTransform;
 
                         continuousTransform = new DiscreteTransformWithContinuousFallback(cachedTransform,
                                                                                             new RBFTransform(((ITransformControlPoints)cachedTransform).MapPoints, stosInfo),

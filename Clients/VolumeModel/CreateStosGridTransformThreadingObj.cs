@@ -5,132 +5,57 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Xml.Linq;
+using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
-    class CreateStosTransformThreadingObj : IDisposable
+    internal class LoadStosResult 
     {
-        public ManualResetEvent DoneEvent = new ManualResetEvent(false);
+        public ITransform Transform; 
+        public XElement element;
 
-        readonly Uri ServerPath;
-        readonly string LocalCachePath;
-        readonly string LocalCacheDir;
-        readonly System.Net.NetworkCredential UserCredentials;
-
-        public readonly XElement element;
-        private Stream stream;
-
-        public ITransform stosTransform;
-
-        protected DateTime? lastModified;
-
-        public override string ToString()
+        public static async Task<LoadStosResult> LoadAsync(Stream stream, XElement element, DateTime? lastModified = null)
         {
-            return element.ToString();
-        }
+            var result = new LoadStosResult();
 
-        public CreateStosTransformThreadingObj(Stream stream, XElement reader, DateTime LastModified, string LocalCacheDir)
-        {
-            this.element = reader;
-            this.stream = stream;
-            this.lastModified = new DateTime?(LastModified);
-            this.LocalCacheDir = LocalCacheDir;
-        }
+            //stosTransform = new StosGridTransform(stream, element);
+            int pixelSpacing = System.Convert.ToInt32(element.Attribute("pixelSpacing").Value);
+            int MappedSection = System.Convert.ToInt32(element.Attribute("mappedSection").Value);
+            int ControlSection = System.Convert.ToInt32(element.Attribute("controlSection").Value);
 
-        public CreateStosTransformThreadingObj(String localCachePath, XElement reader, string LocalCacheDir)
-        {
-            this.element = reader;
-            this.LocalCachePath = localCachePath;
-            this.LocalCacheDir = LocalCacheDir;
-        }
-
-        public CreateStosTransformThreadingObj(Uri path, System.Net.NetworkCredential userCreds, XElement reader, string LocalCacheDir)
-        {
-            this.element = reader;
-            this.ServerPath = path;
-            UserCredentials = userCreds;
-            this.LocalCacheDir = LocalCacheDir;
-        }
-
-        public void ThreadPoolCallback(Object threadContext)
-        {
-            if (stream != null)
+            if (false == lastModified.HasValue)
             {
-                //stosTransform = new StosGridTransform(stream, element);
-                int pixelSpacing = System.Convert.ToInt32(element.Attribute("pixelSpacing").Value);
-                int MappedSection = System.Convert.ToInt32(element.Attribute("mappedSection").Value);
-                int ControlSection = System.Convert.ToInt32(element.Attribute("controlSection").Value);
-
-                if (!this.lastModified.HasValue)
-                {
-                    Trace.WriteLine("Stos stream from zip has no lastModified date.  Caching is probably not working.");
-                    this.lastModified = DateTime.UtcNow;
-                }
-
-                Geometry.Transforms.StosTransformInfo info = new Geometry.Transforms.StosTransformInfo(ControlSection, MappedSection, this.lastModified.Value);
-
-                stosTransform = TransformFactory.ParseStos(stream, info, pixelSpacing);
-
-                if (stream != null)
-                {
-                    stream.Close();
-                    stream.Dispose();
-                    stream = null;
-                }
-            }
-            else if (LocalCachePath != null)
-            {
-                stosTransform = TransformFactory.ParseStos(LocalCachePath);
-            }
-            else
-            {
-                //stosTransform = new StosGridTransform(Path, element, UserCredentials); 
-                stosTransform = TransformFactory.ParseStos(ServerPath, element, UserCredentials);
+                Trace.WriteLine("Stos stream from zip has no lastModified date.  Caching is probably not working.");
+                lastModified = DateTime.UtcNow;
             }
 
-            /*
-            if(loadedTransform as IDiscreteTransform != null)
-            {
-                Geometry.Transforms.StosTransformInfo info = ((ITransformInfo)loadedTransform).Info as Geometry.Transforms.StosTransformInfo;
-                string SerializerCacheFullPath = Path.Combine(this.LocalCacheDir, info.GetCacheFilename(".stos_bin"));
-                if (Geometry.Global.IsCacheFileValid(SerializerCacheFullPath, info.LastModified))
-                {
-                    stosTransform = Serialization.LoadSerializedTransformFromCache(SerializerCacheFullPath);
-                }
-                else
-                {
-                    stosTransform = loadedTransform;
-                }
-            }
-            else
-            {
-                stosTransform = loadedTransform as IContinuousTransform;
-            }*/
+            Geometry.Transforms.StosTransformInfo info = new Geometry.Transforms.StosTransformInfo(ControlSection, MappedSection, lastModified.Value);
 
-            DoneEvent.Set();
-        }
-
-
-
-        #region IDisposable Members
-
-        public void Dispose()
-        {
-            if (DoneEvent != null)
-            {
-                DoneEvent.Close();
-                DoneEvent.Dispose();
-                DoneEvent = null;
-            }
+            result.Transform = await TransformFactory.ParseStos(stream, info, pixelSpacing);
 
             if (stream != null)
             {
+                //TODO: Try to get this out of here, or at least wrap in try/finally
                 stream.Close();
                 stream.Dispose();
                 stream = null;
             }
+
+            return result;
         }
 
-        #endregion
-    }
+        public static async Task<LoadStosResult> LoadAsync(String localCachePath, XElement reader)
+        {
+            var result = new LoadStosResult() { element = reader };
+            result.Transform = await TransformFactory.ParseStos(localCachePath).ConfigureAwait(false);
+            return result;
+        }
+
+        public static async Task<LoadStosResult> LoadAsync(Uri ServerPath, System.Net.NetworkCredential UserCredentials, XElement element)
+        {
+            var result = new LoadStosResult() { element = element };
+            result.Transform = await TransformFactory.ParseStos(ServerPath, element, UserCredentials).ConfigureAwait(false);
+            return result;
+        }
+    } 
 }

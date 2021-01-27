@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
@@ -13,23 +15,32 @@ namespace Viking.VolumeModel
     /// </summary>
     class TilesToSectionMapping : FixedTileCountMapping
     {
+        private SemaphoreSlim LoadTransformSemaphore = new SemaphoreSlim(1 , 1);
         /// <summary>
         /// Starts as false since we don't load transforms from the disk by default.  Once we do this it is set to true. 
         /// </summary>
         protected bool HasBeenLoaded = false;
-        private object LockObj = new object();
+        private ReaderWriterLockSlim rwLockObj = new ReaderWriterLockSlim();
 
         public override ITransform[] TileTransforms
         {
             get
             {
-                if (HasBeenLoaded == false)
-                    LoadTransform();
+                try
+                {
+                    rwLockObj.EnterUpgradeableReadLock();
+                    if (HasBeenLoaded == false)
+                        LoadTransform().Wait();
 
-                if (_TileTransforms == null)
-                    return new ITransform[0];
+                    if (_TileTransforms == null)
+                        return new ITransform[0];
 
-                return _TileTransforms;
+                    return _TileTransforms;
+                }
+                finally
+                {
+                    rwLockObj.ExitUpgradeableReadLock();
+                } 
             }
         }
 
@@ -111,18 +122,18 @@ namespace Viking.VolumeModel
 
         public override void FreeMemory()
         {
-            lock (LockObj)
+            lock (rwLockObj)
             {
                 HasBeenLoaded = false;
                 _TileTransforms = null;
             }
         }
 
-        private System.Net.HttpWebRequest CreateRequest(Uri uri)
+        private static System.Net.HttpWebRequest CreateRequest(Uri uri)
         {
             System.Net.HttpWebRequest request = System.Net.WebRequest.CreateDefault(uri) as System.Net.HttpWebRequest;
-            if (uri.Scheme.ToLower() == "https")
-                request.Credentials = this.Section.volume.UserCredentials;
+            //if (uri.Scheme.ToLower() == "https")
+            //    request.Credentials = this.Section.volume.UserCredentials;
 
             request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
             request.Timeout = 300000;
@@ -145,90 +156,125 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Loads the transform from the storage device
         /// </summary>
-        public void LoadTransform()
+        public async Task LoadTransform()
         {
-            lock (LockObj)
-            {
-                if (HasBeenLoaded)
-                    return;
+            try
+            { 
+                await LoadTransformSemaphore.WaitAsync();
 
-                Uri mosaicURI = new Uri(this.RootPath + '/' + MosaicPath);
-
-
-                DateTime serverlastModified = DateTime.MaxValue;
                 try
                 {
-                    serverlastModified = ServerSideLastModifed(mosaicURI);
+                    rwLockObj.EnterReadLock();
+                    if (HasBeenLoaded)
+                        return;
+                }
+                finally
+                {
+                    rwLockObj.EnterReadLock();
+                }
 
-                    //Do we need to delete a stale version of the cache file?
-                    if (System.IO.File.Exists(this.CachedTransformsFileName))
-                    {
-                        if (System.IO.File.GetLastWriteTime(this.CachedTransformsFileName) < serverlastModified)
-                        {
-                            Trace.WriteLine("Deleting stale cache file: " + this.CachedTransformsFileName);
-                            try
-                            {
-                                System.IO.File.Delete(this.CachedTransformsFileName);
-                            }
-                            catch (System.IO.IOException e)
-                            {
-                                Trace.WriteLine("Failed to delete stale cache file: " + this.CachedTransformsFileName);
-                            }
-                        }
-                    }
+                Uri mosaicURI = new Uri(this.RootPath + '/' + MosaicPath);
+                DateTime serverlastModified = DateTime.MaxValue; 
+                serverlastModified = ServerSideLastModifed(mosaicURI);
 
-                    //The file was in the internet cache.  Do we have a pre-parsed local copy we've processed in our cache?
-                    bool LoadedFromCache = false;
-                    if (System.IO.File.Exists(this.CachedTransformsFileName))
+                //Do we need to delete a stale version of the cache file?
+                if (System.IO.File.Exists(this.CachedTransformsFileName))
+                {
+                    if (System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName) < serverlastModified)
                     {
+                        Trace.WriteLine("Deleting stale cache file: " + this.CachedTransformsFileName);
                         try
                         {
-                            this._TileTransforms = LoadFromCache();
-                            LoadedFromCache = true;
-                            this._LastModified = System.IO.File.GetLastWriteTime(this.CachedTransformsFileName);
+                            System.IO.File.Delete(this.CachedTransformsFileName);
                         }
-                        catch (Exception)
+                        catch (System.IO.IOException e)
                         {
-                            //On any error, use the traditional path
-                            this._TileTransforms = null;
-                            LoadedFromCache = false;
-                            Trace.WriteLine(string.Format("Could not load {0} from cache even though file existed", CachedTransformsFileName));
+                            Trace.WriteLine("Failed to delete stale cache file: " + this.CachedTransformsFileName);
                         }
+                    }
+                }
 
-                        if (this._TileTransforms == null)
-                            LoadedFromCache = false;
-
+                //The file was in the internet cache.  Do we have a pre-parsed local copy we've processed in our cache?
+                bool LoadedFromCache = false;
+                if (System.IO.File.Exists(this.CachedTransformsFileName))
+                {
+                    try
+                    {
+                        var loadedTransforms = LoadFromCache();
+                        LoadedFromCache = loadedTransforms != null;
                         if (LoadedFromCache)
                         {
-                            this.HasBeenLoaded = true;
-                            return;
+                            try
+                            {
+                                rwLockObj.EnterWriteLock();
+                                this._TileTransforms = loadedTransforms;
+                                LoadedFromCache = true;
+                                this._LastModified = System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName);
+                                this.HasBeenLoaded = true;
+                                return;
+                            }
+                            finally
+                            {
+                                rwLockObj.ExitWriteLock();
+                            }
                         }
                     }
-
-                    //Not in the local cache
-
-                    HttpWebRequest request = CreateRequest(mosaicURI);
-                    using (WebResponse response = request.GetResponse())
+                    catch (Exception)
                     {
-                        using (Stream MosaicDataStream = response.GetResponseStream())
-                        {
-                            string[] MosaicLines = Geometry.StreamUtil.StreamToLines(MosaicDataStream);
-
-                            this._TileTransforms = TransformFactory.LoadMosaic(this.RootPath, MosaicLines, serverlastModified);
-
-                            HasBeenLoaded = _TileTransforms != null;
-                            if (HasBeenLoaded)
-                                SaveToCache();
-                        }
-                    }
-
+                        //On any error, use the traditional path
+                        this._TileTransforms = null;
+                        LoadedFromCache = false;
+                        Trace.WriteLine(string.Format("Could not load {0} from cache even though file existed", CachedTransformsFileName));
+                    } 
                 }
-                catch (System.Net.WebException webException)
+
+                //Not in the local cache
+                var transforms = await LoadTransforms(mosaicURI, RootPath, serverlastModified);
+                bool LoadedFromServer = transforms != null;
+                if (LoadedFromServer)
+                { 
+                    SaveToCache(this.CachedTransformsFileName, transforms);
+
+                    try
+                    {
+                        rwLockObj.EnterWriteLock();
+                        this._TileTransforms = transforms;
+                        HasBeenLoaded = true;
+                    }
+                    finally
+                    {
+                        rwLockObj.ExitWriteLock();
+                    }
+                }  
+            }
+            finally
+            {
+                LoadTransformSemaphore.Release();
+            }
+        }
+
+        private static async Task<ITransform[]> LoadTransforms(Uri mosaicURI, string RootPath, DateTime serverlastModified)
+        {
+            try
+            {
+                HttpWebRequest request = CreateRequest(mosaicURI);
+                using (WebResponse response = await request.GetResponseAsync())
                 {
-                    Trace.WriteLine("Could not load transform: " + mosaicURI);
-                    Trace.WriteLine(webException.ToString());
+                    using (Stream MosaicDataStream = response.GetResponseStream())
+                    {
+                        string[] MosaicLines = await Geometry.StreamUtil.StreamToLines(MosaicDataStream);
+
+                        return TransformFactory.LoadMosaic(RootPath, MosaicLines, serverlastModified);
+                    }
                 }
             }
+            catch (System.Net.WebException webException)
+            {
+                Trace.WriteLine("Could not load transform: " + mosaicURI);
+                Trace.WriteLine(webException.ToString());
+            }
+
+            return null;
         }
 
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
