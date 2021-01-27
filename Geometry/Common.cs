@@ -1,35 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace Geometry
 {
     public static class StreamUtil
     {
-        public static string[] StreamToLines(System.IO.Stream stream)
+        public static async Task<string[]> StreamToLines(System.IO.Stream stream)
         {
             if (stream == null)
                 throw new ArgumentNullException("stream");
 
+            if (stream.CanSeek)
+            {
+                stream.Seek(0, System.IO.SeekOrigin.Begin);
+            }
+
             using (System.IO.StreamReader MosaicStream = new System.IO.StreamReader(stream))
             {
-                List<string> Lines;
-                if (stream.CanSeek)
+                string streamData = await MosaicStream.ReadToEndAsync().ConfigureAwait(false);
+
+                var lines = Regex.Split(streamData, "\r\n|\r|\n");
+                 
+                //List<string> output = new List<string>(lines.Length);
+
+                for (int i = 0; i < lines.Length; i++)
                 {
-                    stream.Seek(0, System.IO.SeekOrigin.Begin);
-                    Lines = new List<string>((int)(stream.Length / 80));
-                }
-                else
-                {
-                    Lines = new List<string>(100);
+                    lines[i] = lines[i].Trim();
                 }
 
-                while (!MosaicStream.EndOfStream)
-                {
-                    Lines.Add(MosaicStream.ReadLine());
-                }
-
-                return Lines.ToArray();
+                return lines;  
             }
+
+            return null; 
         }
     }
 }
