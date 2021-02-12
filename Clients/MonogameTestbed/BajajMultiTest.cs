@@ -494,6 +494,8 @@ namespace MonogameTestbed
         PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
 
         Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        Camera3DManipulator Camera3DManipulator = new Camera3DManipulator();
+
 
         List<BajajMultiOTVAssignmentView> wrapViews = new List<BajajMultiOTVAssignmentView>();
 
@@ -641,7 +643,10 @@ namespace MonogameTestbed
             if (!Draw3D)
                 CameraManipulator.Update(scene.Camera);
             else
-                StandardCameraManipulator.Update(this.scene3D.Camera);
+            {
+                Camera3DManipulator.Update(this.scene3D.Camera);
+                //StandardCameraManipulator.Update(this.scene3D.Camera);
+            }
 
             foreach (var wrapView in wrapViews)
             {
@@ -731,14 +736,14 @@ namespace MonogameTestbed
                     wrapView.ShowCompositeMesh = !wrapView.ShowCompositeMesh;
                 }
 
-                if (Gamepad.Back_Clicked || keyboard.Pressed(Keys.S))
+                if (Gamepad.Back_Clicked || keyboard.Pressed(Keys.PrintScreen))
                 {
                     if(wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                         SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.BoundingBox.CenterPoint, wrapView.Graph.StructureID);
                 } 
             }
 
-            if (Gamepad.Back_Clicked || keyboard.Pressed(Keys.S))
+            if (Gamepad.Back_Clicked || (keyboard.Pressed(Keys.S) && (keyboard.Pressed(Keys.LeftControl) || keyboard.Pressed(Keys.RightControl))))
             {
                 //if (wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                 //SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.StructureID);

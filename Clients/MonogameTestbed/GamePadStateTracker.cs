@@ -41,7 +41,7 @@ namespace MonogameTestbed
         public void Update(GamePadState state)
         {
             LastState = CurrentState;
-            CurrentState = state; 
+            CurrentState = state;  
         }
 
         public bool Start_Clicked
