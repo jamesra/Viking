@@ -67,7 +67,7 @@ namespace WebAnnotation
 
         static AnnotationOverlay()
         {
-            cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory;
+            cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory; 
         }
 
         public AnnotationOverlay()
@@ -882,6 +882,7 @@ namespace WebAnnotation
             if (GoToStructureForm == null)
             {
                 GoToStructureForm = new UI.Forms.GoToStructureForm();
+                GoToStructureForm.OnGo += GoToStructure;
                 GoToStructureForm.Closed += GoToStructureForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToStructureForm);
                 GoToStructureForm.Show();
@@ -896,7 +897,8 @@ namespace WebAnnotation
         {
             if (GoToLocationForm == null)
             {
-                GoToLocationForm = new UI.Forms.GoToLocationForm();
+                GoToLocationForm = new UI.Forms.GoToLocationForm(); 
+                GoToLocationForm.OnGo += GoToLocation;
                 GoToLocationForm.Closed += GoToLocationForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToLocationForm);
                 GoToLocationForm.Show();
@@ -1069,12 +1071,14 @@ namespace WebAnnotation
         }
 
         private void GoToStructureForm_Closed(object sender, EventArgs e)
-        {
+        { 
+            GoToStructureForm.OnGo -= GoToStructure;
             WebAnnotation.AnnotationOverlay.GoToStructureForm = null;
         }
 
         private void GoToLocationForm_Closed(object sender, EventArgs e)
         {
+            GoToLocationForm.OnGo -= GoToLocation; 
             WebAnnotation.AnnotationOverlay.GoToLocationForm = null;
         }
 

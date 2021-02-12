@@ -17,6 +17,7 @@ using System.Diagnostics;
 using WebAnnotationModel;
 using Annotation.ViewModels.Commands;
 using WebAnnotationModel.Objects;
+using Annotation.ViewModels;
 
 namespace WebAnnotation.WPF.Forms
 { 
@@ -24,8 +25,7 @@ namespace WebAnnotation.WPF.Forms
     /// Interaction logic for StructureTypeManagementForm.xaml
     /// </summary>
     public partial class StructureTypeManagementForm : Window
-    {
-          
+    {  
         public StructureTypeManagementForm()
         {
             InitializeComponent();
@@ -88,14 +88,33 @@ namespace WebAnnotation.WPF.Forms
                         return;
                 }
 
-                TreeViewItem item = (TreeViewItem)parent;
-                item.IsSelected = true;
+                try
+                {
+                    TreeViewItem item = parent as TreeViewItem;
+                    item.IsSelected = true;
+                }
+                catch(Exception exp)
+                {
+                    Trace.WriteLine($"{exp}");
+                }
             }
         }
 
         private void OnChooseColor(object sender, RoutedEventArgs e)
         { 
             
+        } 
+
+        private void On_Drop_ParentStructure(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetData(typeof(StructureTypeObj)) is StructureTypeObj newParent)
+            {
+                if(this.StructureTypeDetailsTabControl.DataContext is StructureTypeObjViewModel model)
+                {
+                    if (model.AssignParentCommand != null)
+                        model.AssignParentCommand.Execute(newParent);
+                }
+            }
         }
     }
 }

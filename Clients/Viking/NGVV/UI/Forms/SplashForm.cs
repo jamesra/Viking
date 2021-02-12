@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using Viking.ViewModels;
-
+using System.Threading.Tasks;
 
 namespace Viking.UI.Forms
 {
@@ -20,22 +20,41 @@ namespace Viking.UI.Forms
 
         readonly string VolumePath;
 
+        private Task _Task = null;
+
+        /// <summary>
+        /// The task we are reporting on until it finishes
+        /// </summary>
+        public Task TrackedTask { get { return _Task; }
+            set
+            {
+                _Task = value;
+                if(_Task != null)
+                {
+                    LoadVolumeWorker.RunWorkerAsync();
+                }
+            } }
+
+        public readonly BackgroundThreadProgressReporter progressReporter;
+
         /// <summary>
         /// Using the built-in Dialog result always seems to return DialogResult.Cancel
         /// </summary>
         public DialogResult Result = DialogResult.Cancel;
 
-        public SplashForm(string path)
+        public SplashForm()
         {
-            VolumePath = path;
             InitializeComponent();
+
+            
+            progressReporter = new BackgroundThreadProgressReporter(this.LoadVolumeWorker);
         }
 
         private void SplashForm_Load(object sender, EventArgs e)
         {
             startTime = DateTime.Now;
 
-            LoadVolumeWorker.RunWorkerAsync();
+            //LoadVolumeWorker.RunWorkerAsync();
 
             // Add-on Module list initialization
 
@@ -76,9 +95,13 @@ namespace Viking.UI.Forms
 
         private void backgroundWorker_DoWork(object sender, DoWorkEventArgs e)
         {
-            BackgroundThreadProgressReporter progressReporter = new BackgroundThreadProgressReporter(this.LoadVolumeWorker);
-            Viking.VolumeModel.Volume _Volume = new Viking.VolumeModel.Volume(this.VolumePath, UI.State.CachePath, progressReporter);
-            State.volume = new VolumeViewModel(_Volume);
+            //Wait for the volume to initialize
+            if(TrackedTask != null)
+                TrackedTask.Wait();
+            else
+            {
+                throw new ArgumentException("Running background worker without a task to wait on");
+            }
         }
 
         private void backgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
@@ -92,17 +115,27 @@ namespace Viking.UI.Forms
             PanelProgress.Invalidate();
         }
 
+        
         private void backgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            endVolumeLoadTime = DateTime.Now;
+            this.LabelInfo.Text = "Task completed";
+            this.Progress = 100;
+            this.MaxProgress = 100;
 
-            TimeSpan elapsedTime = endVolumeLoadTime.Subtract(startTime);
-            Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
+            PanelProgress.Invalidate();
+
+            this.Result = DialogResult.OK;
+            this.Close();
+
+            //endVolumeLoadTime = DateTime.Now;
+
+            //TimeSpan elapsedTime = endVolumeLoadTime.Subtract(startTime);
+            //Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
 
             //OK, basic info about volume is in place.  Time to extensions if they want to load
-            LoadExtensionsWorker.RunWorkerAsync();
+            //LoadExtensionsWorker.RunWorkerAsync();
         }
-
+        /*
         private void LoadExtensionsWorker_DoWork(object sender, DoWorkEventArgs e)
         {
             this.BeginInvoke((Action)delegate () { LabelInfo.Text = "Loading extensions"; });
@@ -119,7 +152,6 @@ namespace Viking.UI.Forms
             TimeSpan elapsedTime = endExtensionLoadTime.Subtract(endVolumeLoadTime);
             Trace.WriteLine("Extension Load Time: " + elapsedTime.ToString());
         }
-
-
+        */
     }
 }

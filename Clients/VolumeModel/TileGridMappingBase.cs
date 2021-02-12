@@ -1,6 +1,8 @@
 ﻿using Geometry;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Viking.VolumeModel
 {
@@ -275,6 +277,11 @@ namespace Viking.VolumeModel
         protected virtual int[] TriangleEdges
         {
             get { return new int[] { 0, 1, 2, 1, 3, 2 }; }
+        }
+
+        public override Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
+        {
+            return Task.Run(() => VisibleTiles(VisibleBounds, DownSample));
         }
 
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)

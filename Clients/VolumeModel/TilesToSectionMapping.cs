@@ -20,17 +20,53 @@ namespace Viking.VolumeModel
         /// Starts as false since we don't load transforms from the disk by default.  Once we do this it is set to true. 
         /// </summary>
         protected bool HasBeenLoaded = false;
-        private ReaderWriterLockSlim rwLockObj = new ReaderWriterLockSlim();
+        private ReaderWriterLockSlim rwLockObj = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
+        public override ITransform[] GetLoadedTransformsOrNull()
+        {
+            if (HasBeenLoaded)
+                return _TileTransforms;
+
+            return null;
+        }
+
+        protected ITransform[] _TileTransforms = null;
+        public async override Task<ITransform[]> GetOrCreateTransforms()
+        {
+            if (HasBeenLoaded == false)
+            {
+                await LoadTransform().ConfigureAwait(false);
+            }
+
+            try
+            {
+                rwLockObj.EnterReadLock();
+
+                if (_TileTransforms == null)
+                    return new ITransform[0];
+
+                return _TileTransforms;
+            }
+            finally
+            {
+                rwLockObj.ExitReadLock();
+            }
+        }
+
+        /*
         public override ITransform[] TileTransforms
         {
             get
-            {
+            { 
+                if (HasBeenLoaded == false)
+                {
+                    var t = Task.Run(() => LoadTransform());
+                    t.Wait();
+                }
+
                 try
                 {
-                    rwLockObj.EnterUpgradeableReadLock();
-                    if (HasBeenLoaded == false)
-                        LoadTransform().Wait();
+                    rwLockObj.EnterReadLock();
 
                     if (_TileTransforms == null)
                         return new ITransform[0];
@@ -43,6 +79,7 @@ namespace Viking.VolumeModel
                 } 
             }
         }
+        */
 
         protected string RootPath;
         /// <summary>
@@ -280,6 +317,11 @@ namespace Viking.VolumeModel
         public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {
             return base.VisibleTiles(VisibleBounds, null, DownSample);
+        }
+
+        public override System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
+        {
+            return Task.Run(() => base.VisibleTiles(VisibleBounds, null, DownSample));
         }
     }
 }

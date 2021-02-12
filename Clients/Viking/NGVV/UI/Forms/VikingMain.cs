@@ -18,11 +18,7 @@ namespace Viking
         {
             InitializeComponent();
 
-            TabsModules.TabCategory = TABCATEGORY.ACTION;
-
-            State.Appwindow = this;
-
-            State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+            TabsModules.TabCategory = TABCATEGORY.ACTION; 
         }
 
 
@@ -136,20 +132,21 @@ namespace Viking
                 return;
             }
 
+            bool GestureConfigured = GestureSupport.ConfigureDefaultGestures(this.Handle);
+            Trace.WriteLine($"Gesture support configuration: { (GestureConfigured ? "Successful" : "Failed") } ");
+             
             //bool RegisteredTouch = Touch.RegisterTouchWindow(this.Handle, TouchRegisterOptions.None);
+
             //
             //bool RegisteredTouchHitTesting = Touch.RegisterTouchHitTestingWindow(this.Handle, TouchHitTesting.Client);
 
             //Calling EnableMouseInPointer routes mouse inpt to WM_POINT* events.  It was simpler to only have pen inputs send those events.  
             //However, for some reason setting MouseInPointer allowed the pen buttons to properly set the SecondButtonUp/Down flags in the pointer state.
             //
-            bool MouseInPointerEnabled = Touch.EnableMouseInPointer(true);
-
-
+            bool MouseInPointerEnabled = WinMsgInput.EnableMouseInPointer(true);
+             
             this.Text = UI.State.volume.Name;
-
-            Global.TextureCache.PopulateCache(UI.State.VolumeCachePath);
-
+             
             /* PORT
             if (UI.State.volume.Sections == null)
                 return;
@@ -162,32 +159,36 @@ namespace Viking
 
             SectionViewerForm SectionViewer = SectionViewerForm.Show(DefaultSection);
 
-            bool UseDefaultPosition = false;
+            bool UseDefaultPosition = true;
 
             //Check if we have startup arguments to send us to a specific location
-            try
+            if (UI.State.StartupArguments != null)
             {
-                string strX = UI.State.StartupArguments["X"];
-                string strY = UI.State.StartupArguments["Y"];
-                string strZ = UI.State.StartupArguments["Z"];
-
-                if (strX == null || strY == null || strZ == null)
-                    UseDefaultPosition = true;
-                else
+                try
                 {
-                    float X = System.Convert.ToSingle(strX);
-                    float Y = System.Convert.ToSingle(strY);
-                    int Z = System.Convert.ToInt32(strZ);
+                    string strX = UI.State.StartupArguments["X"];
+                    string strY = UI.State.StartupArguments["Y"];
+                    string strZ = UI.State.StartupArguments["Z"];
+                    
+                    if (strX == null || strY == null || strZ == null)
+                        UseDefaultPosition = true;
+                    else
+                    {
+                        UseDefaultPosition = false;
+                        float X = System.Convert.ToSingle(strX);
+                        float Y = System.Convert.ToSingle(strY);
+                        int Z = System.Convert.ToInt32(strZ);
 
-                    SectionViewer.GoToLocation(new Vector2(X, Y), Z, false);
+                        SectionViewer.GoToLocation(new Vector2(X, Y), Z, false);
+                    }
                 }
-            }
-            catch (Exception)
-            {
-                //Oh well, just go to the default
+                catch (Exception)
+                {
+                    //Oh well, just go to the default
 
-                Trace.WriteLine("Unable to restore view position from application settings.");
-                UseDefaultPosition = true;
+                    Trace.WriteLine("Unable to restore view position from application settings.");
+                    UseDefaultPosition = true;
+                }
             }
 
             //Adjust the downsample level

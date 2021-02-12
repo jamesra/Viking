@@ -93,7 +93,7 @@ namespace Annotation
             db.ConfigureAsReadOnlyWithLazyLoading();
         }
 
-        ConnectomeDataModel.ConnectomeEntities GetOrCreateDatabaseContext()
+        static ConnectomeDataModel.ConnectomeEntities GetOrCreateDatabaseContext()
         {
             return new ConnectomeEntities();
             /*
@@ -1460,11 +1460,11 @@ namespace Annotation
                     IQueryable<ConnectomeDataModel.Location> locObjs;
                     if (IncludeLinks)
                     {
-                        locObjs = from s in db.Locations.Include("LocationLinksA").Include("LocationLinksB").AsNoTracking()
-                                  where s.ID >= minIDValue &&
-                                          s.ID <= maxIDValue &&
-                                          IDs.Contains(s.ID)
-                                  select s;
+                        locObjs = (from s in db.Locations.Include("LocationLinksA").Include("LocationLinksB").AsNoTracking()
+                                   where s.ID >= minIDValue &&
+                                           s.ID <= maxIDValue &&
+                                           IDs.Contains(s.ID)
+                                   select s);
                     }
                     else
                     {
@@ -1496,13 +1496,13 @@ namespace Annotation
             return ListLocations;
         }
 
-            /// <summary>
-            /// Fetch database objects for the IDs in bulk
-            /// </summary>
-            /// <param name="db"></param>
-            /// <param name="IDs"></param>
-            /// <returns></returns>
-            private List<ConnectomeDataModel.Location> _GetLocationsByID(ConnectomeEntities db, long[] IDs, bool IncludeLinks)
+        /// <summary>
+        /// Fetch database objects for the IDs in bulk
+        /// </summary>
+        /// <param name="db"></param>
+        /// <param name="IDs"></param>
+        /// <returns></returns>
+        private static List<ConnectomeDataModel.Location> _GetLocationsByID(ConnectomeEntities db, long[] IDs, bool IncludeLinks)
         {
             List<long> ListIDs = new List<long>(IDs);
             ListIDs.Sort();  //Sort the list to slightly optimize the query

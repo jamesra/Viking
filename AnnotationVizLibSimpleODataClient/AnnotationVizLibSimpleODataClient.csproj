@@ -96,7 +96,7 @@
       <Version>2.2.29</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.SqlServer.Types">
-      <Version>14.0.314.76</Version>
+      <Version>14.0.1016.290</Version>
     </PackageReference>
     <PackageReference Include="Simple.OData.V4.Client">
       <Version>4.27.0</Version>

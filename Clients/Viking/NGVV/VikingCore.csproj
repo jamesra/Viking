@@ -164,6 +164,7 @@
     <Compile Include="Threading\DisposeTextureThreadingObj.cs" />
     <Compile Include="ExtensionManager.cs" />
     <Compile Include="Threading\StreamToTexture.cs" />
+    <Compile Include="Threading\TextureReaderV2.cs" />
     <Compile Include="Threading\TextureRequestQueue.cs" />
     <Compile Include="TileViewModelCache.cs" />
     <Compile Include="UI\BackgroundThreadProgressReporter.cs" />
@@ -359,6 +360,8 @@
     </Compile>
     <Compile Include="UI\Command\RectangleCommand.cs" />
     <Compile Include="UI\Command\ScreenCaptureCommand.cs" />
+    <Compile Include="UI\GestureEventManager.cs" />
+    <Compile Include="UI\GestureSupport.cs" />
     <Compile Include="UI\PenEventManager.cs" />
     <Compile Include="UI\State.cs" />
     <Compile Include="UI\Forms\VikingMain.cs">
@@ -368,6 +371,7 @@
       <DependentUpon>VikingMain.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VikingApplicationContext.cs" />
     <EmbeddedResource Include="PropertyPages\SectionChannelsPage.resx">
       <DependentUpon>SectionChannelsPage.cs</DependentUpon>
     </EmbeddedResource>
@@ -494,6 +498,7 @@
     <Compile Include="TextureCache.cs">
     </Compile>
     <Compile Include="Threading\TextureReader.cs" />
+    <Compile Include="UI\TouchEventManager.cs" />
     <Compile Include="UI\TouchSupport.cs" />
     <Compile Include="Util\BmpWriter.cs" />
     <Compile Include="Util\OpenConnectomeProject.cs" />

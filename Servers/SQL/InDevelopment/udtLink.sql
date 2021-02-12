@@ -9,7 +9,9 @@ CREATE TYPE [dbo].[udtLinks] AS TABLE(
 (
 	[SourceID] ASC,
 	[TargetID] ASC
-)WITH (IGNORE_DUP_KEY = OFF)
+)WITH (IGNORE_DUP_KEY = OFF),
+	INDEX SourceID_idx NONCLUSTERED (SourceID asc), 
+	INDEX TargetID_idx NONCLUSTERED (TargetID asc)
 )
 GO
 

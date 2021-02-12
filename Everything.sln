@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.30503.244
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Clients", "Clients", "{155AD3E4-3129-491A-8416-F94DAE798A3D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{85C6261E-0199-4737-ACCA-DD3A461BEA3D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9B40FA06-2F7E-4689-8B8E-9FFBB58D1E46}"
 	ProjectSection(SolutionItems) = preProject
 		Connectome Project.vsmdi = Connectome Project.vsmdi
 		Clients\LocalTestRun.testrunconfig = Clients\LocalTestRun.testrunconfig
@@ -115,7 +115,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitsAndScale", "UnitsAndSc
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Servers", "Servers", "{3377B811-CB5D-41CA-9CD9-2417483C943D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{85C6261E-0199-4737-ACCA-DD3A461BEA3D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9B40FA06-2F7E-4689-8B8E-9FFBB58D1E46}"
 	ProjectSection(SolutionItems) = preProject
 		Connectome Project.vsmdi = Connectome Project.vsmdi
 		Clients\LocalTestRun.testrunconfig = Clients\LocalTestRun.testrunconfig
@@ -1929,15 +1929,15 @@ Global
 		{5F9CAF24-0CF5-481F-B7EC-9327ECB269A7}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|Any CPU.ActiveCfg = Debug|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x64.ActiveCfg = Debug|x86
-		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x64.Build.0 = Debug|x86
-		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x86.ActiveCfg = Debug|x86
-		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x86.Build.0 = Debug|x86
+		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x64.ActiveCfg = Debug|x64
+		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x64.Build.0 = Debug|x64
+		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x86.ActiveCfg = Debug|x64
+		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x86.Build.0 = Debug|x64
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|Any CPU.ActiveCfg = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|Mixed Platforms.ActiveCfg = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|Mixed Platforms.Build.0 = Release|x86
-		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x64.ActiveCfg = Release|x86
-		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x64.Build.0 = Release|x86
+		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x64.ActiveCfg = Release|x64
+		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x64.Build.0 = Release|x64
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x86.ActiveCfg = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|x86.Build.0 = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|x86

@@ -122,7 +122,7 @@ namespace VikingXNAWinForms
 
         protected virtual void OnSceneChanged(object sender, PropertyChangedEventArgs e)
         {
-            throw new NotImplementedException();
+            
         }
 
         private Matrix worldMatrix

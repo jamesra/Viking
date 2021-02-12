@@ -23,6 +23,19 @@ namespace GraphLib
             Nodes = new Dictionary<KEY, NODETYPE>();
         }
 
+        public Graph(IEnumerable<NODETYPE> nodes, IEnumerable<EDGETYPE> edges) : this()
+        {
+            foreach (var n in nodes)
+            {
+                this.AddNode(n);
+            }
+
+            foreach (var e in edges)
+            {
+                this.AddEdge(e);
+            }
+        }
+
         public Graph(SerializationInfo info, StreamingContext context)
         {
             Edges = (SortedList<EDGETYPE, EDGETYPE>)info.GetValue("Edges", typeof(SortedList<EDGETYPE, EDGETYPE>));

@@ -22,7 +22,13 @@ namespace WebAnnotation.UI.Forms
     /// </summary>
     public partial class GoToStructureForm
     {
-        public long ID; 
+
+        public Int64 ID;
+
+        /// <summary>
+        /// Called when the user requests we go to an ID
+        /// </summary>
+        public event Action<Int64> OnGo;
 
         public GoToStructureForm()
         {
@@ -42,6 +48,9 @@ namespace WebAnnotation.UI.Forms
 
             if (Store.Locations.GetObjectByID(this.ID, true) != null)
             {
+                if (OnGo != null)
+                    this.Dispatcher.BeginInvoke(new Action(() => { OnGo(this.ID); } ) );
+
                 //Todo: Fire an event or set a property the creator can subscribe to, or pass a delegate
                 //WebAnnotation.AnnotationOverlay.GoToStructure(this.ID);
                 this.Close();
@@ -58,6 +67,9 @@ namespace WebAnnotation.UI.Forms
             {
                 return;
             }
+
+            if (OnGo != null)
+                this.Dispatcher.BeginInvoke(new Action(() => { OnGo(this.ID); }));
 
             //WebAnnotation.AnnotationOverlay.GoToStructure(this.ID);
         }

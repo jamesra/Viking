@@ -70,14 +70,14 @@ namespace GeometryTests
             {
                 ControlTriangulation = TransformFactory.ParseStos(controlStosTextStream,
                                                                                            new StosTransformInfo(37, 35, DateTime.UtcNow),
-                                                                                            1) as TriangulationTransform;
+                                                                                            1).Result as TriangulationTransform;
             }
 
             using (System.IO.FileStream mappedStosTextStream = System.IO.File.OpenRead(MappedStosFile))
             {
                 MappedTriangulation = TransformFactory.ParseStos(mappedStosTextStream,
                                                                                             new StosTransformInfo(35, 34, DateTime.UtcNow),
-                                                                                             1) as TriangulationTransform;
+                                                                                             1).Result as TriangulationTransform;
             }
 
             TriangulationTransform SliceToVolumeTriangulation = TriangulationTransform.Transform(ControlTriangulation,

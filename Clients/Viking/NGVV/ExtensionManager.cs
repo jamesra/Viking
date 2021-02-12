@@ -264,7 +264,7 @@ namespace Viking.Common
             return listFiles;
         }
 
-        internal static void LoadExtensions(BackgroundWorker workerThread)
+        internal static void LoadExtensions(IProgressReporter progressReporter)
         {
             //Put in an array so we can change the collection in the loop
 
@@ -274,7 +274,7 @@ namespace Viking.Common
             {
                 Assembly A = ExtensionToAssemblyTable[Extension];
 
-                workerThread.ReportProgress((int)((double)extensionCount / (double)ExtensionToAssemblyTable.Count), "Loading " + Extension.Name);
+                progressReporter.ReportProgress((int)((double)extensionCount / (double)ExtensionToAssemblyTable.Count), "Loading " + Extension.Name);
 
                 //Before we agree to load an assembly we need to determine if it can initialize correctly
                 bool canInit = CanAssemblyInitialize(A);
@@ -293,7 +293,7 @@ namespace Viking.Common
                 catch(System.Reflection.ReflectionTypeLoadException e)
                 {
                     Trace.WriteLine($"Unable to load {A.ToString()}.");
-                    workerThread.ReportProgress(100, $"Unable to load {A.ToString()}.");
+                    progressReporter.ReportProgress(100, $"Unable to load {A.ToString()}.");
                     foreach (var loaderException in e.LoaderExceptions)
                     {
                         Trace.WriteLine($"{loaderException.ToString()}");
@@ -306,7 +306,7 @@ namespace Viking.Common
                 }
             }
 
-            workerThread.ReportProgress(100, "Extensions loading complete");
+            progressReporter.ReportProgress(100, "Extensions loading complete");
         }
 
         private static bool CanAssemblyInitialize(Assembly A)
@@ -362,7 +362,7 @@ namespace Viking.Common
                 OKToLoad = InitObj.Initialize();
 
                 if (OKToLoad == false)
-                    return false; 
+                    return false;
             }
 
             return true; 
@@ -387,10 +387,21 @@ namespace Viking.Common
             {
                 foreach (Module M in A.GetModules(true))
                 {
-                    if (LoadedModuleTable.ContainsKey(M.FullyQualifiedName))
+                    string FullyQualifiedName   = null;
+                    try
+                    {
+                        FullyQualifiedName = M.FullyQualifiedName;
+                    }
+                    catch(ArgumentException e)
+                    {
+                        Trace.WriteLine("Could not generate FullyQualifiedName for M.ToString(), this is probably OK if it is generated code or a resource.");
+                        continue;
+                    }
+
+                    if (LoadedModuleTable.ContainsKey(FullyQualifiedName))
                         continue;
 
-                    LoadedModuleTable.Add(M.FullyQualifiedName, M);
+                    LoadedModuleTable.Add(FullyQualifiedName, M);
                 }
             }
 

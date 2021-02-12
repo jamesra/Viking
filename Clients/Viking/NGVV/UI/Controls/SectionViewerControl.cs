@@ -23,7 +23,7 @@ using VikingXNAGraphics.Controls;
 
 namespace Viking.UI.Controls
 {
-    public partial class SectionViewerControl : VikingXNAWinForms.ViewerControl, IHelpStrings, IPenEvents
+    public partial class SectionViewerControl : VikingXNAWinForms.ViewerControl, IHelpStrings, IPenEvents, IGestureEvents
     {
         Viking.UI.Commands.Command _CurrentCommand;
         public Viking.UI.Commands.Command CurrentCommand
@@ -338,6 +338,7 @@ namespace Viking.UI.Controls
         private Viking.WPF.StringArrayAutoScroller commandHelpText;
 
         private PenEventManager penEventManager;
+        private GestureEventManager gestureEventManager;
 
         public SectionViewerControl()
         {
@@ -426,9 +427,9 @@ namespace Viking.UI.Controls
 
             if (penEventManager != null && penEventManager.ProcessPenMessages(ref msg))
             {
-                uint pointerID = Touch.GetPointerID(msg.WParam);
+                uint pointerID = WinMsgInput.GetPointerID(msg.WParam);
                 PointerMessageData pointerState = new PointerMessageData(msg);
-                Touch.GetPointerType((uint)pointerID, out PointerType type);
+                WinMsgInput.GetPointerType((uint)pointerID, out PointerType type);
                 //bool isPen = Touch.IsPenEvent(out uint pointerID);
                 //if(isPen)
                 if (type == PointerType.Pen)
@@ -449,10 +450,22 @@ namespace Viking.UI.Controls
                 //Trace.WriteLine(string.Format("{0}", msg.Msg));
             }
 
-            if (msg.Msg == Touch.WM_LBUTTONDOWN || msg.Msg == Touch.WM_RBUTTONDOWN)
+            if (gestureEventManager != null && gestureEventManager.ProcessGestureMessages(ref msg)) // || msg.Msg == WinMsgInput.WM_GESTURENOTIFY)
             {
-                bool isPen = Touch.IsPenEvent(out uint pointerID);
-                if (Touch.IsPenEvent(out uint PointerID))
+                return; //Message is handled
+                /*
+                GestureSupport.ProcessGestureMessage(ref msg, out GestureInfo info);
+                if(info.Gesture == Gesture.Zoom)
+                {
+
+                }
+                */
+            }
+
+            if (msg.Msg == WinMsgInput.WM_LBUTTONDOWN || msg.Msg == WinMsgInput.WM_RBUTTONDOWN)
+            {
+                //bool isPen = Touch.IsPenEvent(out uint pointerID);
+                if (WinMsgInput.IsPenEvent(out uint PointerID))
                 {
                     Trace.WriteLine(string.Format("Pen button down {0}", PointerID));
                 }
@@ -488,6 +501,7 @@ namespace Viking.UI.Controls
                 this.menuStrip.Parent = this.Parent;
 
                 penEventManager = new PenEventManager(this);
+                gestureEventManager = new GestureEventManager(this);
 
                 OnCommandCompleteHandler = new Viking.Common.CommandCompleteEventHandler(this.OnCommandCompleted);
 
@@ -526,6 +540,39 @@ namespace Viking.UI.Controls
         public event PenEventHandler OnPenContact { add { penEventManager.OnPenContact += value; } remove { penEventManager.OnPenContact -= value; } }
         public event PenEventHandler OnPenLeaveContact { add { penEventManager.OnPenLeaveContact += value; } remove { penEventManager.OnPenLeaveContact -= value; } }
         public event PenEventHandler OnPenMove { add { penEventManager.OnPenMove += value; } remove { penEventManager.OnPenMove -= value; } }
+        #endregion
+
+        #region IGestureEvents
+        public event PanGestureEventHandler OnGesturePan { add { gestureEventManager.OnGesturePan += value; } remove { gestureEventManager.OnGesturePan -= value; } }
+        public event ZoomGestureEventHandler OnGestureZoom { add { gestureEventManager.OnGestureZoom += value; } remove { gestureEventManager.OnGestureZoom -= value; } }
+        public event BeginGestureEventHandler OnGestureBegin { add { gestureEventManager.OnGestureBegin += value; } remove { gestureEventManager.OnGestureBegin -= value; } }
+        public event EndGestureEventHandler OnGestureEnd { add { gestureEventManager.OnGestureEnd += value; } remove { gestureEventManager.OnGestureEnd -= value; } }
+
+        public event PenEventHandler OnPenButtonDown
+        {
+            add
+            {
+                ((IPenEvents)penEventManager).OnPenButtonDown += value;
+            }
+
+            remove
+            {
+                ((IPenEvents)penEventManager).OnPenButtonDown -= value;
+            }
+        }
+
+        public event PenEventHandler OnPenButtonUp
+        {
+            add
+            {
+                ((IPenEvents)penEventManager).OnPenButtonUp += value;
+            }
+
+            remove
+            {
+                ((IPenEvents)penEventManager).OnPenButtonUp -= value;
+            }
+        }
         #endregion
 
         /// <summary>
@@ -775,8 +822,7 @@ namespace Viking.UI.Controls
 
 
             Queue<Task> listTasks = new Queue<Task>();
-            int MaxActiveExports = 2;
-
+            int MaxActiveExports = 2; 
             {
                 GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
 
@@ -792,7 +838,7 @@ namespace Viking.UI.Controls
 
                         VikingXNA.Scene TileScene = new Scene(new Viewport(0, 0, CapturedTileSizeX, CapturedTileSizeY), camera);
                         TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
-                        string tile_filename = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Filename), string.Format("X{0}_Y{1}_{2}.png", X, Y, System.IO.Path.GetFileName(Filename)));
+                        string tile_filename = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Filename), string.Format("{0}_Z{1}_X{2}_Y{3}_W{4}_H{5}_DS{6}.png", System.IO.Path.GetFileNameWithoutExtension(Filename), Z, X, Y, Width, Height, Downsample));
 
                         if (!System.IO.File.Exists(tile_filename))
                         {
@@ -1007,6 +1053,13 @@ namespace Viking.UI.Controls
 
         private Task ExportScene(VikingXNA.Scene TileScene, float CenterX, float CenterY, int Z, string Filename)
         {
+            Task preloadTask = PreloadSceneTexturesAsync(TileScene, Z, false);
+            do
+            { 
+                Application.DoEvents();
+            }
+            while (preloadTask.IsCompleted == false && preloadTask.IsFaulted == false && preloadTask.IsCanceled == false);
+             
             Task T = null;
             Scene originalScene = this.Scene;
             bool OriginalOverlays = this.ShowOverlays;
@@ -1018,8 +1071,7 @@ namespace Viking.UI.Controls
             GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
             TileScene.Camera.LookAt = new Vector2(CenterX, CenterY);
 
-            PreloadSceneTextures(TileScene, Z, false);
-
+            
             this.Scene = TileScene;
             RenderTarget2D renderTargetTile = new RenderTarget2D(graphicsDevice, TileScene.Viewport.Width, TileScene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
 
@@ -1365,9 +1417,11 @@ namespace Viking.UI.Controls
                         Trace.WriteLine("Could not create render target for channels", "UI");
                     }
                 }
+
+
+                DrawXNAControls(scene);
             }
 
-            DrawXNAControls(scene);
 
             graphicsDevice.Textures[0] = null;
             graphicsDevice.Textures[1] = null;
@@ -1413,10 +1467,12 @@ namespace Viking.UI.Controls
             return System.IO.Path.Combine(new string[] { State.TextureCachePath, section.SectionSubPath, TextureFileName });
         }
 
+        /*
         protected override void OnSceneChanged(object sender, PropertyChangedEventArgs e)
         {
             PreloadSceneTextures(this.Scene, this.Section.section.Number);
         }
+        */
 
         /// <summary>
         /// Return true if any channel in the scene has a visible tile texture
@@ -1456,7 +1512,7 @@ namespace Viking.UI.Controls
             return false;
         }
 
-        protected void PreloadSceneTextures(Scene scene, int Z, bool AsyncTextureLoad = true)
+        protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool AsyncTextureLoad = true)
         {
             List<Task<Texture2D>> listGetTextureTasks = new List<Task<Texture2D>>();
             List<TileViewModel> listTileViewModels = new List<ViewModels.TileViewModel>();
@@ -1484,7 +1540,14 @@ namespace Viking.UI.Controls
                     DownsamplesToRender = new int[] { DownsamplesToRender.Last() };
 
                 //Get all of the visible tiles
-                TilePyramid visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
+                var tilePyramidTask = Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
+                while ((tilePyramidTask.IsCompleted || tilePyramidTask.IsFaulted || tilePyramidTask.IsCanceled) == false)
+                {
+                    Application.DoEvents();
+                 //   TilePyramid visibleTiles = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
+                }
+
+                var visibleTiles = tilePyramidTask.Result;
 
                 for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
                 {
@@ -1517,7 +1580,8 @@ namespace Viking.UI.Controls
                             continue;
 
                         if (tileViewModel.TextureNeedsLoading)
-                            listGetTextureTasks.Add(Task<Texture2D>.Run(() => { return tileViewModel.GetTexture(this.graphicsDeviceService.GraphicsDevice); }));
+                            listGetTextureTasks.Add(tileViewModel.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice));
+                            //listGetTextureTasks.Add(Task<Texture2D>.Run(() => { return tileViewModel.GetOrRequestTexture(this.graphicsDeviceService.GraphicsDevice); }));
 
                         listTileViewModels.Add(tileViewModel);
                     }
@@ -1526,20 +1590,32 @@ namespace Viking.UI.Controls
 
 
             if (!AsyncTextureLoad)
-            {
-                while (!AllTileViewsHaveTexture(listTileViewModels))
-                    Application.DoEvents();
+            {                 
+                foreach(var t in listGetTextureTasks)
+                {
+                    await t;
+                }
+                //while (!AllTileViewsHaveTexture(listTileViewModels))
+                //    Application.DoEvents();
             }
-
-
         }
 
         private bool AllTileViewsHaveTexture(IList<TileViewModel> listTiles)
         {
-            if (listTiles.All(t => t.TextureReadComplete))
+            listTiles = listTiles.Where(t => t.TextureReadComplete == false).ToList();
+            if (listTiles.All(t => t.TextureReadComplete) || listTiles.Count == 0)
                 return true;
 
-            listTiles.Where(t => t.TextureNeedsLoading).Select(t => t.GetTexture(this.graphicsDeviceService.GraphicsDevice)).ToList();
+            /*
+            foreach(var t in listTiles)
+            {
+                if(t.TextureIsLoading == false && t.TextureNeedsLoading)
+                {
+                    t.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice)
+                }
+            }
+            */
+            //listTiles.Where(t => t.TextureNeedsLoading).Select(t => t.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice)).ToList();
             return false;
         }
 
@@ -1562,7 +1638,7 @@ namespace Viking.UI.Controls
                 DownsamplesToRender = new int[] { DownsamplesToRender.Last() };
 
             //Get all of the visible tiles
-            TilePyramid visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
+            var visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
 
             RenderTarget2D renderTarget = new RenderTarget2D(graphicsDevice,
                                               scene.Viewport.Width,
@@ -1619,8 +1695,9 @@ namespace Viking.UI.Controls
                         continue;
 
                     //Request a texture if we need one
-                    if (tileViewModel.TextureNeedsLoading)
-                        listGetTextureTasks.Add(Task<Texture2D>.Run(() => tileViewModel.GetTexture(graphicsDevice)));
+                    if (tileViewModel.TextureNeedsLoading && !tileViewModel.TextureIsLoading)
+                        //listGetTextureTasks.Add(Task<Texture2D>.Run(() => tileViewModel.GetOrRequestTexture(graphicsDevice)));
+                        tileViewModel.GetOrLoadTextureAsync(graphicsDevice);
                     else if (tileViewModel.TextureReadComplete)
                         tileViewsToDraw.Add(tileViewModel);
                 }
@@ -2358,8 +2435,9 @@ namespace Viking.UI.Controls
                         //   else
                         //       continue;
                         //  } 
-
                         this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay);
+                        //var task = System.Threading.Tasks.Task.Run(() => this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay));
+                        //task.Wait();
                         progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
                         //System.Windows.Forms.Application.DoEvents();
                         if (progressForm.DialogResult == DialogResult.Cancel)

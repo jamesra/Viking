@@ -12,7 +12,7 @@
             FocusManager.FocusedElement="{Binding ElementName=NumberTextbox}">
     <Grid>
         <StackPanel>
-            <TextBox Margin="10" Name="NumberTextbox" PreviewTextInput="NumberTextbox_PreviewTextInput" />
+            <TextBox Margin="10" Name="NumberTextbox" PreviewTextInput="NumberTextbox_PreviewTextInput"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
                 <Button Content="OK" Margin="5" Width="100" Click="OK_Button_Click"/>
                 <Button Content="Cancel" Margin="5" Width="102" Click="Cancel_Button_Click" IsCancel="True"/>

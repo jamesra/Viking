@@ -448,6 +448,11 @@ namespace WebAnnotation.UI.Commands
             {
                 base.OnPenMove(sender, e);
             }
+            else if(PenInput != null && e.Barrel)
+            {
+                this.CancelCommand();
+                return;
+            }
             else
             {
                 GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);

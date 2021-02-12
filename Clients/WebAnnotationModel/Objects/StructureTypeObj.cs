@@ -34,7 +34,9 @@ namespace WebAnnotationModel
         public override long? ParentID
         {
             get { return Data.ParentID; }
-            set { Data.ParentID = value; }
+            set { 
+                Data.ParentID = value; 
+            }
         }
 
         public override string ToString()

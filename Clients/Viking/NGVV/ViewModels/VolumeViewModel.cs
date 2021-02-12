@@ -56,6 +56,7 @@ namespace Viking.ViewModels
         public VolumeViewModel(Volume volume)
         {
             this._Volume = volume;
+
             _MappingManager = new MappingManager(volume);
 
             SectionViewModels = new SortedList<int, SectionViewModel>(_Volume.Sections.Count);

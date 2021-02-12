@@ -410,7 +410,7 @@ namespace AnnotationVizLib.SimpleOData
         /// </summary>
         /// <param name="rootGraph"></param>
         /// <param name="StructureIDs"></param>
-        private static async void MorphologyForStructures(Uri Endpoint, MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, UnitsAndScale.IScale scale)
+        private static async Task MorphologyForStructures(Uri Endpoint, MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, UnitsAndScale.IScale scale)
         {
             //Queries.PopulateStructureTypes();
 
@@ -432,7 +432,7 @@ namespace AnnotationVizLib.SimpleOData
                     //graph.AddSubgraph(subgraph);
 
                     List<Structure> child_structs = LoadStructures(new Simple.OData.Client.ODataClient(Endpoint), s.Children.Select(child => System.Convert.ToUInt64(child.ID)).ToArray(), scale);
-                    MorphologyForStructures(Endpoint, graph, child_structs, include_children, scale);
+                    await MorphologyForStructures(Endpoint, graph, child_structs, include_children, scale);
 
                     //IList<Structure> child_structs = client.Structures.Expand(st => st.Locations).Expand(st => st.Type).Expand(st => st.Children).Where(st => st.ParentID == s.ID).ToList();
                     //LoadStructureLocationLinks(container, child_structs);

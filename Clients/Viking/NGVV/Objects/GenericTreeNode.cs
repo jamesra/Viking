@@ -143,7 +143,7 @@ namespace Viking.UI.Controls
             //Remove all Nodes who are not accounted for and therefore no longer our children
             foreach (GenericTreeNode Node in NodesToDelete.Values)
             {
-                TreeView.RemoveNode(Node);
+                TreeView?.RemoveNode(Node);
             }
 
             this.HasExpanded = true;

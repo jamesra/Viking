@@ -114,12 +114,10 @@ namespace Viking.UI.Forms
                 _VolumeDocument = value;
                 OnVolumeDocumentChanged(_VolumeDocument);
             }
-        }
+        } 
 
-        private string userName = UI.State.AnonymousCredentials.UserName;
-        private string password = UI.State.AnonymousCredentials.Password;
         public string keyFile;
-        private string readUserName;
+        private string UsernameFromCache;
         private int counter = 0;
 
         public NetworkCredential Credentials = UI.State.AnonymousCredentials;
@@ -141,15 +139,14 @@ namespace Viking.UI.Forms
             get { return "marclab.connectome.utah"; }
         }
 
-        public LogonASPMembership(string AuthenticationURL, string VolumePath = null)
+        public LogonASPMembership(string volumeUrl = null, string username=null, string password=null)
         {
-            if (VolumePath != null)
-                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => VolumeURL = VolumePath));
+            if (volumeUrl != null)
+                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => this.VolumeURL = volumeUrl));
 
             keyFile = "usrcrd.vkg";
 
-            State.UserCredentials = new NetworkCredential(userName, password);
-
+             
             State.userAccessLevel = "Exit";
 
             InitializeComponent();
@@ -172,14 +169,44 @@ namespace Viking.UI.Forms
 #else
             NetworkCredential cachedCredentials = ReadCredentialsFromEncryptedFile();
 #endif
-            if (cachedCredentials == null)
+
+            if(cachedCredentials != null)
+            {
+                UsernameFromCache = cachedCredentials.UserName;
+            }
+
+            string chosen_username = null; 
+            //Populate our login based on arguments if passed, cached credentials if not
+            if (username == null)
+            {
+                chosen_username = cachedCredentials != null ? cachedCredentials.UserName : "";
+            }
+            else
+            {
+                chosen_username = username;
+            }
+
+            string chosen_password = null;
+
+            if (password == null)
+            {
+                chosen_password = cachedCredentials != null ? cachedCredentials.Password : "";
+            }
+            else
+            {
+                chosen_password = password;
+            }
+
+            Credentials = new NetworkCredential(chosen_username, chosen_password);
+            this.textUsername.Text = Credentials.UserName;
+            this.textPassword.Text = Credentials.Password;
+
+            if (string.IsNullOrWhiteSpace(Credentials.UserName))
             {
                 this.btnLogin.Enabled = false;
             }
             else
-            {
-                this.textUsername.Text = readUserName = cachedCredentials.UserName;
-                this.textPassword.Text = cachedCredentials.Password;
+            { 
                 this.btnLogin.Enabled = true;
                 this.AcceptButton = btnLogin;
             }
@@ -242,11 +269,9 @@ namespace Viking.UI.Forms
         {
             SetUpdateText("Authenticating...");
 
-            userName = this.textUsername.Text;
-
-            password = this.textPassword.Text;
-
-
+            string userName = this.textUsername.Text; 
+            string password = this.textPassword.Text;
+             
             if (String.IsNullOrEmpty(userName))
                 SetUpdateText("Enter Username");
 
@@ -261,8 +286,7 @@ namespace Viking.UI.Forms
             {
                 SetUpdateText("Oops! Server Error, try again");
                 return;
-            }
-
+            } 
 
             if (responseData == "Invalid")
             {
@@ -276,7 +300,7 @@ namespace Viking.UI.Forms
             }
             else //Login successful
             {
-                if (this.textUsername.Text != readUserName)
+                if (this.textUsername.Text != UsernameFromCache)
                     System.IO.File.Delete(this.KeyFileFullPath);
 
                 if (remember_me_check_box.Checked)
@@ -415,8 +439,7 @@ namespace Viking.UI.Forms
             string keyFileFullPath = this.KeyFileFullPath;
             NetworkCredential credentials = null;
             if (System.IO.File.Exists(KeyFileFullPath))
-            {
-
+            { 
                 try
                 {
                     File.Decrypt(KeyFileFullPath);
@@ -454,9 +477,7 @@ namespace Viking.UI.Forms
             {
                 SetUpdateText("Authenticating...");
 
-                userName = "anonymous";
-
-                password = "connectome";
+                this.Credentials = Viking.UI.State.AnonymousCredentials;
 
                 string responseData = createConnection();
 
@@ -485,7 +506,9 @@ namespace Viking.UI.Forms
 
         string createConnection()
         {
-            string postdata = string.Format("userName={0}&password={1}", userName, password);
+            string postdata = string.Format("userName={0}&password={1}",
+                this.Credentials.UserName,
+                this.Credentials.Password);
 
             Uri AuthenticationURI;
             try
@@ -503,6 +526,7 @@ namespace Viking.UI.Forms
             }
 
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(AuthenticationURI);
+            request.Credentials = Credentials;
             request.Method = "POST";
 
             using (StreamWriter stream = new StreamWriter(request.GetRequestStream()))

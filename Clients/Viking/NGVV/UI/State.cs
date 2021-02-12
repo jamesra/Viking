@@ -47,7 +47,7 @@ namespace Viking.UI
 
         static public string CurrentMode = "";
 
-        static private string CacheSubPath = "Cache";
+        
 
         //Stores userAccessLevel for the profided credentials: Include: Admin, Modify, Read
         static public string userAccessLevel;
@@ -59,7 +59,8 @@ namespace Viking.UI
 
         static public System.Net.NetworkCredential AnonymousCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
-        static public string CachePath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\" + CacheSubPath;
+        static private readonly string CacheSubPath = "Cache";
+        static public readonly string CachePath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\" + CacheSubPath;
 
         static public string VolumeCachePath
         {
@@ -67,12 +68,17 @@ namespace Viking.UI
             {
                 if (volume != null)
                 {
-                    return System.IO.Path.Combine(CachePath, volume.Name);
+                    return GetVolumeCachePath(volume.Name);
                 }
 
                 throw new InvalidOperationException("Requesting Volume Cache Path before volume.name is available");
 
             }
+        }
+
+        static public string GetVolumeCachePath(string VolumeName)
+        {
+            return System.IO.Path.Combine(CachePath, VolumeName);
         }
 
         static public string TextureCachePath

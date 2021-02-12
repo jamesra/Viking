@@ -1,18 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <StartArguments>http://storage1.connectomes.utah.edu/RABBIT/WebDevFullTestNewIdentityServer.VikingXml</StartArguments>
+    <StartArguments>-v http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML -u jamesan -p 4%25w%25o06</StartArguments>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
     <EnableSQLServerDebugging>false</EnableSQLServerDebugging>
     <StartAction>Project</StartAction>
     <StartURL>http://connectomes.utah.edu/softwaretest/viking.application?http://155.100.104.153/Cornea/Volume.VikingXML</StartURL>
+    <RemoteDebugEnabled>false</RemoteDebugEnabled>
+    <RemoteDebugMachine>Opr-marc-JAL2</RemoteDebugMachine>
+    <StartProgram>\\OPR-MARC-JANUC\Viking\Debug\Viking.exe</StartProgram>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <StartArguments>
-    </StartArguments>
+    <StartArguments>http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXml</StartArguments>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
     <StartAction>Project</StartAction>
-    <StartProgram>C:\Users\u0490822\AppData\Local\Apps\2.0\G88WEAX2.RG6\PX1NHYXW.6XV\viki..tion_0000000000000000_0001.0001_50322093621bebd7\Viking.exe</StartProgram>
+    <StartProgram>\\OPR-MARC-JANUC\Viking\Debug\Viking.exe</StartProgram>
+    <StartWorkingDirectory>
+    </StartWorkingDirectory>
+    <RemoteDebugEnabled>false</RemoteDebugEnabled>
+    <RemoteDebugMachine>OpR-Marc-JAL2</RemoteDebugMachine>
   </PropertyGroup>
   <PropertyGroup>
     <PublishUrlHistory>C:\Src\git\Viking\Publish\|Z:\Volumes\Software\Viking4Test\|X:\Volumes\Software\Viking4Test\|X:\Volumes\Software\Viking4\|C:\Src\Viking\Publish\</PublishUrlHistory>

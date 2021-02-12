@@ -274,6 +274,18 @@ namespace Viking.VolumeModel
                                                  double DownSample
                                                  );
 
+        /// <summary>
+        /// Returns a set of tiles which should be rendered in the order returned
+        /// </summary>
+        /// <param name="VisibleBounds">Visible region of the section</param>
+        /// <returns></returns>
+        public virtual System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds,
+                                                 double DownSample
+                                                 )
+        {
+            return System.Threading.Tasks.Task<TilePyramid>.Run(() => VisibleTiles(VisibleBounds, DownSample));
+        }
+
 
         /// <summary>
         /// Maps the point from the volume to the section if this is overriden by a volume mapping class

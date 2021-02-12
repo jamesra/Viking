@@ -23,7 +23,7 @@ namespace Viking.VolumeModel
             {
                 if (_VolumeBounds.HasValue == false)
                 {
-                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(TileTransforms.Cast<ITransformControlPoints>().ToArray());
+                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(GetOrCreateTransforms().Result.Cast<ITransformControlPoints>().ToArray());
                     _VolumeBounds = new GridRectangle?(bounds);
                 }
 
@@ -39,7 +39,7 @@ namespace Viking.VolumeModel
             {
                 if (_SectionBounds.HasValue == false)
                 {
-                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(TileTransforms.Cast<ITransformControlPoints>().ToArray());
+                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(GetOrCreateTransforms().Result.Cast<ITransformControlPoints>().ToArray());
                     _SectionBounds = new GridRectangle?(bounds);
                 }
 
@@ -53,7 +53,7 @@ namespace Viking.VolumeModel
             {
                 if (_VolumeBounds.HasValue == false)
                 {
-                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(TileTransforms.Cast<ITransformControlPoints>().ToArray());
+                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(GetOrCreateTransforms().Result.Cast<ITransformControlPoints>().ToArray());
                     _VolumeBounds = new GridRectangle?(bounds);
                 }
 
@@ -69,12 +69,25 @@ namespace Viking.VolumeModel
             }
         }
 
-        protected ITransform[] _TileTransforms = null;
+        public abstract Task<ITransform[]> GetOrCreateTransforms();
 
+        /// <summary>
+        /// Returns NULL if transforms are not loaded
+        /// </summary>
+        /// <returns></returns>
+        public abstract ITransform[] GetLoadedTransformsOrNull();
+        //{
+        //    return _TileTransforms;
+        //}
+
+        //protected ITransform[] _TileTransforms = null;
+
+        /*
         public virtual ITransform[] TileTransforms
         {
             get { return _TileTransforms; }
         }
+        */
 
         //PORT: Only used for mipmaps so we don't need to know anymore
         private Pyramid _CurrentPyramid = null;
@@ -124,7 +137,11 @@ namespace Viking.VolumeModel
 
         internal string TileTextureFileName(int number)
         {
-            Geometry.Transforms.TileTransformInfo info = ((ITransformInfo)this._TileTransforms[number]).Info as TileTransformInfo;
+            ITransform[] transforms = GetLoadedTransformsOrNull();
+            if (transforms == null)
+                return null;
+
+            Geometry.Transforms.TileTransformInfo info = ((ITransformInfo)transforms[number]).Info as TileTransformInfo;
             if (info == null)
                 return null;
 
@@ -251,8 +268,9 @@ namespace Viking.VolumeModel
             if (roundedDownsample == int.MaxValue || roundedScaledDownsample == int.MaxValue)
                 return VisibleTiles;
 
-            ITransform[] Tranforms = this.TileTransforms;
-            if (TileTransforms == null)
+            //TODO: Need a flag to indicate if transforms are loaded so we can skip
+            ITransform[] Tranforms = GetLoadedTransformsOrNull();
+            if (Tranforms == null)
                 return VisibleTiles;
 
             int ExpectedTileCount = Tranforms.Length;

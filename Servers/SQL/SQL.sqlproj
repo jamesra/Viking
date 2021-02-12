@@ -215,5 +215,6 @@
     <Build Include="SynapseToNearestGapJunctionDistanceMixedSynapsesOnly.sql" />
     <Build Include="SynapseToPairedGapJunctionDistanceMixedSynapsesOnly.sql" />
     <Build Include="InDevelopment\Scratch.sql" />
+    <Build Include="InDevelopment\MorphologyPath.sql" />
   </ItemGroup>
 </Project>

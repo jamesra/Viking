@@ -3,6 +3,8 @@ using Geometry.Transforms;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Viking.VolumeModel
 {
@@ -24,6 +26,24 @@ namespace Viking.VolumeModel
             get { return -1; }
         }
 
+        protected ITransform[] _TileTransforms = null;
+
+        public override ITransform[] GetLoadedTransformsOrNull()
+        {
+            if (HasBeenWarped)
+                return _TileTransforms;
+
+            return null;
+        }
+
+        public async override  Task<ITransform[]> GetOrCreateTransforms()
+        {
+            if (HasBeenWarped == false)
+                await Warp().ConfigureAwait(false);
+
+            return _TileTransforms;
+        }
+        /*
         public override ITransform[] TileTransforms
         {
             get
@@ -33,7 +53,7 @@ namespace Viking.VolumeModel
 
                 return _TileTransforms;
             }
-        }
+        }*/
 
         /// <summary>
         /// .mosaic files load as being warped.  Volume sections have to passed through a volume transform first, which we do in a lazy fashion
@@ -80,17 +100,19 @@ namespace Viking.VolumeModel
             Warp();
         }
 
+        private SemaphoreSlim LoadTransformSemaphore = new SemaphoreSlim(1, 1);
+
         /// <summary>
         /// If this section has not yet been warped, then do so.
         /// This method is invoked by threads.  
         /// </summary>
-        public void Warp()
+        public async Task Warp()
         {
             if (HasBeenWarped)
                 return;
 
-            lock (LockObj)
-            {
+            try { 
+                await LoadTransformSemaphore.WaitAsync();
                 if (HasBeenWarped)
                     return;
 
@@ -154,7 +176,7 @@ namespace Viking.VolumeModel
                 }
 
                 // Get the transform tiles from the source mapping, which loads the .mosaic if it hasn't alredy been loaded
-                ITransform[] volTransforms = SourceMapping.TileTransforms;
+                ITransform[] volTransforms = await SourceMapping.GetOrCreateTransforms();
 
                 // We add transforms which surivive addition with at least three points to this list
                 List<ITransform> listTiles = new List<ITransform>(volTransforms.Length);
@@ -206,6 +228,10 @@ namespace Viking.VolumeModel
 
                 //Try to save the transform to our cache
                 SaveToCache(CachedTransformsFileName, listTiles.ToArray());
+            }
+            finally
+            {
+                LoadTransformSemaphore.Release();
             }
         }
 
@@ -262,7 +288,7 @@ namespace Viking.VolumeModel
             return this.VolumeTransform.TryTransform(P, out transformedP);
         }
 
-        public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
+        public override TilePyramid  VisibleTiles(GridRectangle VisibleBounds, double DownSample)
         {
             if (VolumeTransform != null)
             {

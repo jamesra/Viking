@@ -119,8 +119,15 @@ namespace Annotation.ViewModels
             SaveModelCommand = new DelegateCommand(SaveModel, CanSaveModel);
             ResetModelCommand = new DelegateCommand(RestoreModel, CanRestoreModel);
 
-            Model = model;
+            Model = model; 
             Model.PermittedLinks.CollectionChanged += OnPermittedLinksCollectionChanged;
+            Model.PropertyChanged += Model_PropertyChanged;
+        }
+
+        private void Model_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if(this.PropertyChanged != null)
+                this.PropertyChanged(this, new PropertyChangedEventArgs("Model"));
         }
 
         public static void PropertyChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -179,15 +186,54 @@ namespace Annotation.ViewModels
 
         private bool CanAssignParent(StructureTypeObj arg)
         {
-            if(arg == null && Model.ParentID.HasValue == false)
-                return false;
+            
+            if (arg == null)
+                return true;  //We can make it a root node
 
+            //Make sure we don't create a cycle with this assignment where a type is its own parent
+            var step = arg;
+            while(step != null)
+            {
+                if (step.ID == this.Model.ID)
+                    return false;
+
+                step = step.Parent;
+            }
+             
             return true; 
         }
 
         private void AssignParent(StructureTypeObj obj)
         {
-            Model.Parent = obj;
+            if(CanAssignParent(obj))
+                Model.Parent = obj;
+        }
+
+        public string Name
+        {
+            get { return Model.Name;  }
+            set
+            {
+                Model.Name = value; 
+            }
+        }
+
+        public uint Color
+        {
+            get { return Model.Color; }
+            set
+            {
+                Model.Color = value;
+            }
+        }
+
+        public string Code
+        {
+            get { return Model.Code; }
+            set
+            {
+                Model.Code = value;
+            }
         }
 
         #region Delete commands
@@ -300,8 +346,9 @@ namespace Annotation.ViewModels
         private void AddPermittedLinkSourceType(object item)
         {
             long ID = ParamterToStructureTypeID(item);
-
+            
             PermittedStructureLinkObj key = new PermittedStructureLinkObj(ID, Model.ID, false);
+            NewPermits.Add(key);
             Store.PermittedStructureLinks.Add(key);
         }
 
@@ -316,6 +363,7 @@ namespace Annotation.ViewModels
             long ID = ParamterToStructureTypeID(item);
 
             PermittedStructureLinkObj key = new PermittedStructureLinkObj(Model.ID, ID, false);
+            NewPermits.Add(key);
             Store.PermittedStructureLinks.Add(key);
         }
 
@@ -330,6 +378,7 @@ namespace Annotation.ViewModels
             long ID = ParamterToStructureTypeID(item);
 
             PermittedStructureLinkObj key = new PermittedStructureLinkObj(Model.ID, ID, true);
+            NewPermits.Add(key);
             Store.PermittedStructureLinks.Add(key);
         }
 
@@ -353,7 +402,8 @@ namespace Annotation.ViewModels
 
             foreach (PermittedStructureLinkObj newObj in NewPermits)
             {
-                Store.PermittedStructureLinks.Create(newObj);
+                //Store.PermittedStructureLinks.Create(newObj);
+                Store.PermittedStructureLinks.Save();
             }
         }
 

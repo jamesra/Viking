@@ -69,7 +69,7 @@ namespace Viking
 
         static private Dictionary<int, string> AllocatedTextureReaders = new Dictionary<int, string>();
 
-        static public void AddTextureReader(TextureReader tex, string msg)
+        static public void AddTextureReader(object tex, string msg)
         {
             //            Trace.WriteLine("Adding Texture Reader: " + tex.GetHashCode().ToString(), "TextureUse");
 
@@ -83,7 +83,7 @@ namespace Viking
 
         }
 
-        static public void RemoveTextureReader(TextureReader tex)
+        static public void RemoveTextureReader(object tex)
         {
 
             //            Trace.WriteLine("Removing Texture Reader: " + tex.GetHashCode().ToString(), "TextureUse");

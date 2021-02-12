@@ -1,4 +1,4 @@
-﻿//#define USEASPMEMBERSHIP
+﻿#define USEASPMEMBERSHIP
 
 using System;
 using System.Diagnostics;
@@ -6,11 +6,26 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 using Viking.UI.Forms;
-
-
-
+using CommandLine;
+using CommandLine.Text;
+ 
 namespace Viking
 {
+    class CommandLineOptions
+    {
+        [Option('v', "Volume", Required = true, HelpText = "URL of VolumeXML file")]
+        public string VolumeURL { get; set; }
+
+        [Option('u', "user", Default = "Anonymous", Required = false, HelpText = "URL of VolumeXML file")]
+        public string Username { get; set; }
+
+        [Option('p', "pwd", Default = "connectome", Required = false, HelpText = "URL of VolumeXML file")]
+        public string Password { get; set; }
+         
+        //[Option('c', "position", Required = false, HelpText= "Position to start viewer at")]
+        
+    }
+
     static class Program
     {
         static System.IO.StreamWriter DebugLogFile = null;
@@ -61,7 +76,7 @@ namespace Viking
             //Change to the executing assemblies directory so we can load modules correctly
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
-            //SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
             try
             {
@@ -90,13 +105,17 @@ namespace Viking
                 MessageBox.Show("XNA framework 4.0 does not appear to be installed.  Viking will display a blank gray screen without it.  Please check the documentation or internet for links to the XNA Framework 4.0 Redistributable.", "Missing XNA 4.0 Redistributable", MessageBoxButtons.OK);
             }
 
+            var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
+
+            /*
             if (args.Length > 0)
             {
                 website = args[0];
             }
             else
-            {
+            { 
                 bool ShowUsage = true;
+                
                 if (AppDomain.CurrentDomain.SetupInformation.ActivationArguments != null)
                 {
                     string[] ClickOnceArgs = AppDomain.CurrentDomain.SetupInformation.ActivationArguments.ActivationData;
@@ -152,15 +171,24 @@ namespace Viking
                     //System.Diagnostics.Process WebBrowser = new System.Diagnostics.Process();
                     //WebBrowser.StartInfo.FileName = homepage;
                     //WebBrowser.Start();
-                }
+                } 
             }
-
+            */
             // ----------------------------------------------------------------------------
             //   Logon nag screen, I've only added this tiny code here, and made a logon form in 
             //  Viking/UI/forms
 
+            options.WithParsed((o) =>
+            {
+                website = o.VolumeURL;
+                TryBypassSplash(o);
+            });
+
+            options.WithNotParsed((o) => { website = ShowLoginWindow(website); });
+
+            /*
 #if !USEASPMEMBERSHIP
-            using (Logon vikingLogon = new Logon("https://connectomes.utah.edu/Viz/", website))
+            using (Logon vikingLogon = new Logon(website))
             {
                 vikingLogon.ShowDialog();
 
@@ -178,7 +206,7 @@ namespace Viking
                 Viking.Tokens.TokenInjector.BearerTokenAuthority = "https://identity.connectomes.utah.edu";
             }
 #else
-            using (LogonASPMembership vikingLogon = new LogonASPMembership("https://connectomes.utah.edu/Viz/", website))
+            using (LogonASPMembership vikingLogon = new LogonASPMembership(website))
             {
                 vikingLogon.ShowDialog();
 
@@ -191,6 +219,7 @@ namespace Viking
                 UI.State.UserCredentials = vikingLogon.Credentials;
             }
 #endif 
+            */
 
             //Make sure the website includes a file, if it does not then include Volume.VikingXML by default
             website = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(website);
@@ -199,9 +228,11 @@ namespace Viking
 
             Trace.WriteLine("Loading: " + website, "Viking");
 
+            /*
+
             using (SplashForm Splash = new SplashForm(website))
             {
-
+                UI.State.volume = new Viking.VolumeModel.Volume(this.VolumePath, UI.State.CachePath, progressReporter);
                 Splash.ShowDialog();
                 DialogResult splashResult = Splash.Result;
 
@@ -210,8 +241,9 @@ namespace Viking
                     return;
                 }
             }
+            */
 
-            Application.Run(new VikingMain());
+            Application.Run(new VikingApplicationContext(website));
 
             if (SynchronizedDebugWriter != null)
                 SynchronizedDebugWriter.Close();
@@ -220,6 +252,61 @@ namespace Viking
                 DebugLogFile.Close();
         }
 
+        private static string TryBypassSplash(CommandLineOptions options)
+        {
+            string VolumeURL; 
+            if (options.VolumeURL != null && options.Username != null && options.Password != null)
+            {
+                UI.State.UserCredentials = new System.Net.NetworkCredential(options.Username, options.Password);
+                VolumeURL = options.VolumeURL;
+            }
+            else
+            {
+                VolumeURL = ShowLoginWindow(options.VolumeURL, options.Username, options.Password); 
+            }
+
+            return VolumeURL;
+        }
+
+        private static string ShowLoginWindow(string VolumePath, string username=null, string password=null)
+        {
+
+#if !USEASPMEMBERSHIP
+            using (Logon vikingLogon = new Logon(website))
+            {
+                vikingLogon.ShowDialog();
+
+                if (vikingLogon.Result == DialogResult.Cancel)
+                { 
+                    return null;
+                }
+
+                
+
+                UI.State.UserBearerToken = vikingLogon.BearerToken;
+                UI.State.UserCredentials = vikingLogon.Credentials;
+
+                Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
+                Viking.Tokens.TokenInjector.BearerTokenAuthority = "https://identity.connectomes.utah.edu";
+
+                return vikingLogon.VolumeURL;
+            }
+#else
+            using (LogonASPMembership vikingLogon = new LogonASPMembership(VolumePath, username, password))
+            {
+                vikingLogon.ShowDialog();
+
+                if (vikingLogon.Result == DialogResult.Cancel)
+                {
+                    return null;
+                }
+
+                
+                UI.State.UserCredentials = vikingLogon.Credentials;
+                return vikingLogon.VolumeURL;
+            }
+#endif
+        } 
 
 
         [Conditional("DEBUG")]

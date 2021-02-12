@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -95,7 +96,7 @@ namespace Geometry.Transforms
 
         #region Stos Parsing code
 
-        public static ITransform ParseStos(string stosfile)
+        public static async Task<ITransform> ParseStos(string stosfile)
         {
             string filename = System.IO.Path.GetFileNameWithoutExtension(stosfile);
 
@@ -120,14 +121,13 @@ namespace Geometry.Transforms
 
             using (Stream transformStream = File.OpenRead(stosfile))
             {
-                ITransform transform = ParseStos(transformStream, Info, pixelSpacing);
-
+                ITransform transform = await ParseStos(transformStream, Info, pixelSpacing); 
                 return transform;
             }
 
         }
 
-        public static ITransform ParseStos(Uri stosURI, XElement elem, System.Net.NetworkCredential UserCredentials)
+        public static async Task<ITransform> ParseStos(Uri stosURI, XElement elem, System.Net.NetworkCredential UserCredentials)
         {
             if (elem == null || stosURI == null)
                 throw new ArgumentNullException();
@@ -146,15 +146,17 @@ namespace Geometry.Transforms
 
             try
             {
-                using (System.Net.HttpWebResponse response = (System.Net.HttpWebResponse)request.GetResponse())
+                using (System.Net.HttpWebResponse response = (System.Net.HttpWebResponse)(await request.GetResponseAsync()))
                 {
                     StosTransformInfo info = null;
                     info = new StosTransformInfo(ControlSection, MappedSection, response.LastModified.ToUniversalTime());
 
-                    Trace.WriteLine(stosURI.ToString() + " From Cache: " + response.IsFromCache.ToString() + " Modified: " + info.LastModified.ToString(), "Geometry");
+#if DEBUG
+                    //Trace.WriteLine(stosURI.ToString() + " From Cache: " + response.IsFromCache.ToString() + " Modified: " + info.LastModified.ToString(), "Geometry");
+#endif 
                     using (Stream stream = response.GetResponseStream())
                     {
-                        return ParseStos(stream, info, pixelSpacing);
+                        return await ParseStos(stream, info, pixelSpacing);
                     }
                 }
             }
@@ -165,14 +167,12 @@ namespace Geometry.Transforms
             }
         }
 
-        public static ITransform ParseStos(Stream stream, StosTransformInfo info, int pixelSpacing)
+        public static async Task<ITransform> ParseStos(Stream stream, StosTransformInfo info, int pixelSpacing)
         {
-            string[] lines = StreamUtil.StreamToLines(stream);
+            string[] lines = await StreamUtil.StreamToLines(stream);
             string[] controlDims = lines[4].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
             string[] mappedDims = lines[5].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-
-
-
+              
             double ControlLeft = (System.Convert.ToDouble(controlDims[0]) * pixelSpacing);
             double ControlBottom = (System.Convert.ToDouble(controlDims[1]) * pixelSpacing);
             double ControlRight = ControlLeft + (System.Convert.ToDouble(controlDims[2]) * pixelSpacing);
@@ -520,7 +520,7 @@ namespace Geometry.Transforms
             }
             else if (formatVersion == 1)
             {
-                for (int i = iTileStart; i < mosaic.Length; i += 3)
+                for (int i = iTileStart; i < mosaic.Length-1; i += 3)
                 {
                     string TileFileName = mosaic[i + 1];
                     string Transform = mosaic[i + 2];

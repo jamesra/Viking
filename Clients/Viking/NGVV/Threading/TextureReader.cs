@@ -6,6 +6,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Viking
 {
@@ -265,8 +266,9 @@ namespace Viking
                 {
                     if (_Result.IsDisposed == false)
                     {
-                        DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_Result);
-                        ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
+                        DisposeTextureThreadingObj.DisposeTexture(_Result);
+                        //DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_Result);
+                        //ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
                     }
 
                     _Result = null;
@@ -599,6 +601,7 @@ namespace Viking
 
             return data;
         }
+         
 
         public void ThreadPoolCallback(Object threadContext)
         {

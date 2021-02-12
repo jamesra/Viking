@@ -25,6 +25,11 @@ namespace WebAnnotation.UI.Forms
     {
         public long LocationID;
 
+        /// <summary>
+        /// Called when the user requests we go to an ID
+        /// </summary>
+        public event Action<Int64> OnGo;
+
         public GoToLocationForm()
         {
             InitializeComponent();
@@ -43,6 +48,9 @@ namespace WebAnnotation.UI.Forms
 
             if(Store.Locations.GetObjectByID(this.LocationID, true) != null)
             {
+                if (OnGo != null)
+                    this.Dispatcher.BeginInvoke(new Action(() => { OnGo(this.LocationID); }));
+
                 //TODO: Set a property that fires an event so WebAnnotation can travel where it needs to go
                 //WebAnnotation.AnnotationOverlay.GoToLocation(this.LocationID);
                 this.Close();
@@ -59,6 +67,9 @@ namespace WebAnnotation.UI.Forms
             {
                 return;
             }
+
+            if (OnGo != null)
+                this.Dispatcher.BeginInvoke(new Action(() => { OnGo(this.LocationID); }));
 
             //WebAnnotation.AnnotationOverlay.GoToLocation(this.LocationID);
         }

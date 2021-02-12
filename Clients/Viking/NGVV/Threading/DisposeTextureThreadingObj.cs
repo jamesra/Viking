@@ -31,6 +31,23 @@ namespace Viking
 
             this.texture = null;
         }
+
+        public async static System.Threading.Tasks.Task DisposeTexture(Texture2D texture)
+        {
+            if(texture.IsDisposed == false)
+            {
+                try
+                {
+                    Global.RemoveTexture(texture);
+                    texture.Dispose();
+                }
+                catch(Exception e)
+                {
+                    Trace.WriteLine("Exception caught disposing of texture: " + e.ToString(), "TextureUse");
+                    throw;
+                }
+            }
+        }
     }
 
 }

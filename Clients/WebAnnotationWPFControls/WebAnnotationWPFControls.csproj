@@ -55,6 +55,7 @@
     <Compile Include="Converters\MockStructureTypeIDToStructureConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Converters\PermittedStructureLinkToStructureTypeConverters.cs" />
+    <Compile Include="Converters\StructureTypeToStructureTypeViewModel.cs" />
     <Compile Include="Forms\GoToLocationForm.xaml.cs">
       <DependentUpon>GoToLocationForm.xaml</DependentUpon>
     </Compile>

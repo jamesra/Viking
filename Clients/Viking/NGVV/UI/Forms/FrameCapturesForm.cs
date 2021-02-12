@@ -18,12 +18,9 @@ namespace Viking.UI.Forms
     {
         public FrameCapture[] Frames = new FrameCapture[0];
 
-        public string Prefix = "";
-        public string Path;
-
-        static string LastPath = System.Environment.CurrentDirectory;
-        static string LastPrefix = "VikingFrame_";
-
+        public string Prefix = Properties.Settings.Default.FrameExportPrefix;
+        public string Path = Properties.Settings.Default.FrameExportPath;
+          
         private const int iX = 0;
         private const int iY = 1;
         private const int iZ = 2;
@@ -38,16 +35,18 @@ namespace Viking.UI.Forms
 
         private void FrameCapturesForm_Load(object sender, EventArgs e)
         {
-            if (String.IsNullOrEmpty(Prefix))
+            if (Prefix == null)
             {
-                this.textPrefix.Text = FrameCapturesForm.LastPrefix;
+                this.textPrefix.Text = "";
             }
-            else
-                this.textPrefix.Text = Prefix;
 
             if (String.IsNullOrEmpty(this.Path))
             {
-                this.textPath.Text = FrameCapturesForm.LastPath;
+                this.textPath.Text = System.Environment.CurrentDirectory;
+            }
+            else if(System.IO.Directory.Exists(this.Path) == false)
+            {
+                this.textPath.Text = System.Environment.CurrentDirectory;
             }
             else
                 this.textPath.Text = Path;
@@ -96,8 +95,17 @@ namespace Viking.UI.Forms
         {
             //These need to be initialized before we create frame structures
             this.Prefix = this.textPrefix.Text;
-            FrameCapturesForm.LastPrefix = this.Prefix;
+            
+            Properties.Settings.Default.FrameExportPrefix = this.Prefix;
+            
+             
             this.Path = this.textPath.Text;
+
+            if(System.IO.Directory.Exists(this.Path))
+                Properties.Settings.Default.FrameExportPath = this.Path;
+
+            Properties.Settings.Default.Save();
+
             int FirstFrameNum = System.Convert.ToInt32(this.numStartFrame.Value);
 
             //Walk each cell and create a screenshot object
@@ -151,9 +159,7 @@ namespace Viking.UI.Forms
                         return;
                 }
             }
-
-            FrameCapturesForm.LastPath = this.Path;
-
+              
             this.Frames = listFrames.ToArray();
             this.DialogResult = DialogResult.OK;
             this.Close();

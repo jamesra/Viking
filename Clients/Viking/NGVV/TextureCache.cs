@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using Viking.Common;
 using Viking.UI;
+using System.Threading.Tasks;
 
 namespace Viking
 {
@@ -40,9 +41,9 @@ namespace Viking
             this.MaxCacheSize <<= 30;
         }
 
-        public void PopulateCache(string Path)
+        public async Task PopulateCache(string Path)
         {
-            System.Threading.Tasks.Task.Run(() => _PopulateCacheThreadStart(Path));
+            await _PopulateCacheThreadStart(Path);
             //Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);
             //checkAction.BeginInvoke(Path, null, null); 
         }
@@ -51,12 +52,12 @@ namespace Viking
         /// Add all textures found under the specified directory to the cache
         /// </summary>
         /// <param name="path"></param>
-        private void _PopulateCacheThreadStart(string path)
+        private async System.Threading.Tasks.Task _PopulateCacheThreadStart(string path)
         {
             DateTime Start = DateTime.Now;
             Trace.WriteLine("Populating cache", "TextureUse");
 
-            CheckDirectory(path);
+            await CheckDirectory(path);
 
             TimeSpan elapsed = new TimeSpan(DateTime.Now.Ticks - Start.Ticks);
             Trace.WriteLine("Finish cache populate: " + elapsed.ToString(), "TextureUse");
@@ -66,16 +67,16 @@ namespace Viking
         /// Recursively check the supplied directory and all subdirectories, adding files to cache lists
         /// </summary>
         /// <param name="path"></param>
-        private void CheckDirectory(string path)
+        private async Task CheckDirectory(string path)
         {
             string[] dirs = System.IO.Directory.GetDirectories(path);
+            System.Collections.Generic.List<Task> listTasks = new System.Collections.Generic.List<Task>(dirs.Length);
             foreach (string dir in dirs)
             {
-                CheckDirectory(dir);
+                listTasks.Add(CheckDirectory(dir));
             }
 
-            string[] files = System.IO.Directory.GetFiles(path);
-
+            string[] files = System.IO.Directory.GetFiles(path); 
 
             foreach (string file in files)
             {
@@ -88,6 +89,11 @@ namespace Viking
                     entry = null;
                 }
             }
+
+            if(listTasks.Count > 0)
+                Task.WaitAll(listTasks.ToArray());
+
+            return;
         }
 
         //      static public List<int> AllocatedTextures = new List<int>();

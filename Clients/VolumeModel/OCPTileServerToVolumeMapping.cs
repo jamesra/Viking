@@ -39,7 +39,7 @@ namespace Viking.VolumeModel
         }
 
 
-        public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
+        public override async System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
         {
 
             GridQuad VisibleQuad = null;

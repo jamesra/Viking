@@ -706,14 +706,14 @@ namespace WebAnnotationModel
         protected void TraceQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime)
         {
 #if DEBUG
-            Trace.WriteLine(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime));
+            //Trace.WriteLine(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime));
 #endif
         }
 
         protected void TraceQueryDetails(long SectionNumber, long numObjects, DateTime StartTime, DateTime QueryEndTime, DateTime ParseEndTime, DateTime EventsEndTime)
         {
 #if DEBUG
-            Trace.WriteLine(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime, EventsEndTime));
+            //Trace.WriteLine(PrepareQueryDetails(SectionNumber, numObjects, StartTime, QueryEndTime, ParseEndTime, EventsEndTime));
 #endif
         }
 

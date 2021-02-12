@@ -214,9 +214,7 @@ namespace Viking.VolumeViewModel
                         }
                     }
                 }
-            }
-
-            
+            } 
 
             //Create tiles which are new
             for(int iLevel = newTilePyramid.AvailableLevels.Length -1; iLevel >= 0; iLevel--)

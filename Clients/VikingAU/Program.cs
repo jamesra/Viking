@@ -47,9 +47,6 @@ namespace Viking.AU
             }
         }
 
-        [ParserState]
-        public IParserState LastParsertState { get; set; }
-
         [HelpOption]
         public string GetUsage()
         {

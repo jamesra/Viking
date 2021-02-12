@@ -112,6 +112,10 @@ namespace WebAnnotation.WPF.Converters
                     throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter Convert got unknown IEnumerable {0}", value.ToString()));
                 }*/
             }
+            else if(value is StructureTypeObj)
+            {
+                return value; 
+            }
             else
             {
                 long ID;

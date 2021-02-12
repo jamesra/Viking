@@ -115,9 +115,7 @@
             // LoadExtensionsWorker
             // 
             this.LoadExtensionsWorker.WorkerReportsProgress = true;
-            this.LoadExtensionsWorker.DoWork += new System.ComponentModel.DoWorkEventHandler(this.LoadExtensionsWorker_DoWork);
             this.LoadExtensionsWorker.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.backgroundWorker_ProgressChanged);
-            this.LoadExtensionsWorker.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.LoadExtensionsWorker_RunWorkerCompleted);
             // 
             // SplashForm
             // 

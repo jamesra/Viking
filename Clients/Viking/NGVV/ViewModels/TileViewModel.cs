@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using Viking.UI;
 using Viking.VolumeModel;
 
@@ -48,6 +49,11 @@ namespace Viking.ViewModels
         public bool ServerTextureNotFound = false;
 
         /// <summary>
+        /// This is not null if we have a thread loading our texture.  It can be cancelled to abort the loading.
+        /// </summary>
+        private CancellationTokenSource TextureLoadCancellationTokenSource = null;
+
+        /// <summary>
         /// This should only be written via the texture member 
         /// </summary>
         private Microsoft.Xna.Framework.Graphics.Texture2D _texture;
@@ -56,26 +62,60 @@ namespace Viking.ViewModels
         {
             get
             {
-                if (_texture != null)
+                try
                 {
-                    if (_texture.IsDisposed)
-                        _texture = null;
+                    rwTextureLock.EnterUpgradeableReadLock();
+
+                    if (_texture != null)
+                    {
+                        try
+                        {
+                            rwTextureLock.EnterWriteLock();
+
+                            if (_texture.IsDisposed)
+                                _texture = null;
+
+                            if (_texture.GraphicsDevice.IsDisposed)
+                                _texture = null;
+                        }
+                        finally
+                        {
+                            rwTextureLock.ExitWriteLock();
+                        }
+                    }
+
+                    if (ServerTextureNotFound)
+                        return null;
+
+                    return _texture;
                 }
-                return _texture;
+                finally
+                {
+                    rwTextureLock.ExitUpgradeableReadLock();
+                }
             }
             set
             {
-                if (value == _texture)
-                    return;
-
-                if (_texture != null)
+                try
                 {
-                    DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_texture);
-                    ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
-                    //Global.RemoveTexture(_texture);  //Texture removed from global records within the thread
-                }
+                    rwTextureLock.EnterWriteLock();
+                    if (value == _texture)
+                        return;
 
-                _texture = value;
+                    if (_texture != null)
+                    {
+                        DisposeTextureThreadingObj.DisposeTexture(_texture);
+                        //DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_texture);
+                        //ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
+                        //Global.RemoveTexture(_texture);  //Texture removed from global records within the thread
+                    }
+
+                    _texture = value;
+                }
+                finally
+                {
+                    rwTextureLock.ExitWriteLock();
+                }
             }
         }
 
@@ -94,14 +134,20 @@ namespace Viking.ViewModels
             get { return this.ServerTextureNotFound == false && this.texture == null && this.TexReader == null; }
         }
 
-        private TextureReader _TexReader;
-        private TextureReader TexReader
+        internal bool TextureIsLoading
+        {
+            get { return TexReader != null; }
+        }
+
+        private TextureReaderV2 _TexReader;
+        private TextureReaderV2 TexReader
         {
             get { return _TexReader; }
             set
             {
-                lock (thisLock)
+                try
                 {
+                    rwTextureLock.EnterWriteLock();
                     if (_TexReader != null && _TexReader != value)
                     {
                         _TexReader.Dispose();
@@ -110,8 +156,11 @@ namespace Viking.ViewModels
 
                     _TexReader = value;
                 }
+                finally
+                {
+                    rwTextureLock.ExitWriteLock();
+                }
             }
-
         }
 
         public int TileID;
@@ -123,7 +172,9 @@ namespace Viking.ViewModels
 
         private Color TileColor;
 
-        private Object thisLock = new Object();
+        //private Object thisLock = new Object();
+
+        private readonly ReaderWriterLockSlim rwTextureLock = new ReaderWriterLockSlim();
 
         private static ushort IntToShort(int value)
         {
@@ -200,11 +251,17 @@ namespace Viking.ViewModels
 
         public void FreeTexture()
         {
-            //Stop trying to load textures if we have a request out
-            AbortRequest();
-
-            lock (thisLock)
+            try
             {
+                //rwTextureLock.EnterWriteLock();
+
+                //Stop trying to load textures if we have a request out
+                if (TextureLoadCancellationTokenSource != null)
+                {
+                    TextureLoadCancellationTokenSource.Cancel();
+                    TextureLoadCancellationTokenSource = null;
+                }
+
                 //This disposes of the texture
                 this.texture = null;
 
@@ -219,30 +276,40 @@ namespace Viking.ViewModels
                     this.IndBuffer.Dispose();
                     this.IndBuffer = null;
                 }
-
+            }
+            finally
+            {
+               // rwTextureLock.ExitWriteLock();
             }
 
         }
 
         public void AbortRequest()
         {
-            if (this.TexReader != null)
-            {
-                //Other methods may be counting on TexReader not being set to null, so take a lock
-                lock (thisLock)
-                {
-                    if (this.TexReader != null)
-                    {
-                        if (this.TexReader.FinishedReading)
-                            HandleTextureReaderResult();
-                        else
-                        {
-                            this.TexReader.AbortRequest();
-                        }
 
-                        this.TexReader = null;
+            //Other methods may be counting on TexReader not being set to null, so take a lock
+            try
+            {
+                rwTextureLock.EnterWriteLock();
+                if (TextureLoadCancellationTokenSource != null)
+                {
+                    TextureLoadCancellationTokenSource.Cancel();
+                    TextureLoadCancellationTokenSource = null;
+                }
+
+                if (this.TexReader != null)
+                {
+                    if (this.TexReader.FinishedReading)
+                        HandleTextureReaderResult();
+                    else
+                    {
+                        this.TexReader.AbortRequest();
                     }
                 }
+            }
+            finally
+            {
+                rwTextureLock.ExitWriteLock();
             }
         }
 
@@ -253,33 +320,53 @@ namespace Viking.ViewModels
         /// <returns></returns>
         private bool HandleTextureReaderResult()
         {
-            lock (thisLock)
+            try
             {
-                if (this.TexReader == null)
+
+                GetTextureSemaphore.Wait();
+                var tex_reader = this.TexReader;
+
+                if (tex_reader == null)
                 {
                     Trace.WriteLine("Missing texture reader in TextureReaderResult");
                     return false;
                 }
 
                 //If reading the texture failed don't change our state. 
-                if (this.TexReader.FinishedReading)
+                if (tex_reader.FinishedReading)
                 {
-                    if (this.TexReader.HasTexture)
+                    try
                     {
-                        this.texture = this.TexReader.GetTexture();
-                    }
-                    else
-                    {
-                        //We should stop asking if the server just doesn't have it. 
-                        this.ServerTextureNotFound = this.TexReader.TextureNotFound;
-                    }
+                        //rwTextureLock.EnterWriteLock();
 
-                    this.TexReader.Dispose();
-                    this.TexReader = null;
+                        if (tex_reader.HasTexture)
+                        {
+                            this.texture = tex_reader.GetTexture();
+                        }
+                        else
+                        {
+                            //We should stop asking if the server just doesn't have it. 
+                            this.ServerTextureNotFound = tex_reader.TextureNotFound;
+                        }
+
+                        this.TexReader.Dispose();
+                        this.TexReader = null;
+
+                        return this.texture != null;
+                    }
+                    finally
+                    {
+                        //rwTextureLock.ExitWriteLock();
+                    }
                 }
             }
+            finally
+            {
+                GetTextureSemaphore.Release();
+            }
 
-            return this.texture != null;
+            return false;
+
         }
 
         private void OnTextureReaderCompleted()
@@ -287,8 +374,16 @@ namespace Viking.ViewModels
             HandleTextureReaderResult();
         }
 
-        public Texture2D GetTexture(GraphicsDevice graphicsDevice)
+        SemaphoreSlim GetTextureSemaphore = new SemaphoreSlim(1, 1);
+
+        /// <summary>
+        /// Returns a texture if it is loaded, otherwise begins a request to get the texture
+        /// </summary>
+        /// <param name="graphicsDevice"></param>
+        /// <returns></returns>
+        public Texture2D GetOrRequestTexture(GraphicsDevice graphicsDevice)
         {
+
             //Check if the texture's graphics device has been disposed, in which case load a new texture
             if (texture != null)
             {
@@ -302,12 +397,12 @@ namespace Viking.ViewModels
             if (this.ServerTextureNotFound)
             {
 #if DEBUG
-                lock (thisLock)
+                /*lock (thisLock)
                 {
                     //Don't know how this could happen, but we should not have a texture if the server does not.  This indicates the code will leak resources
                     Debug.Assert(TexReader == null);
                     Debug.Assert(texture == null);
-                }
+                }*/
 #endif
 
                 return null;
@@ -323,33 +418,142 @@ namespace Viking.ViewModels
             }
             else
             {
-
-                //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
-                if (this.TexReader == null)
+                try
                 {
-                    //If the section is read over a network provide a cache path too
-                    if (State.volume.IsLocal == false)
-                    {
-                        this.TexReader = new TextureReader(graphicsDevice,
-                                                            new Uri(this.TextureFileName),
-                                                            this.TextureCachedFileName,
-                                                            this.MipMapLevels,
-                                                            () => this.OnTextureReaderCompleted());
-                    }
-                    else
-                    {
-                        this.TexReader = new TextureReader(graphicsDevice,
-                                                            new Uri(this.TextureFileName),
-                                                            this.MipMapLevels,
-                                                            () => this.OnTextureReaderCompleted());
-                    }
+                    GetTextureSemaphore.Wait();
+                    if (texture != null)
+                        return texture; 
 
-                    ThreadPool.QueueUserWorkItem((TexReader.ThreadPoolCallback));
+                    //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
+                    if (this.TexReader == null)
+                    {
+                        if (TextureLoadCancellationTokenSource != null)
+                            TextureLoadCancellationTokenSource.Cancel();
+
+                        TextureLoadCancellationTokenSource = new CancellationTokenSource();
+                        //If the section is read over a network provide a cache path too
+                        if (State.volume.IsLocal == false)
+                        {
+                            this.TexReader = new TextureReaderV2(graphicsDevice,
+                                                                new Uri(this.TextureFileName),
+                                                                this.TextureCachedFileName,
+                                                                this.MipMapLevels,
+                                                                () => this.OnTextureReaderCompleted(),
+                                                                TextureLoadCancellationTokenSource.Token);
+                        }
+                        else
+                        {
+                            this.TexReader = new TextureReaderV2(graphicsDevice,
+                                                                new Uri(this.TextureFileName),
+                                                                this.MipMapLevels,
+                                                                () => this.OnTextureReaderCompleted(),
+                                                                TextureLoadCancellationTokenSource.Token);
+                        }
+
+                        this.TexReader.LoadTexture();
+                    }
                 }
-
+                finally
+                {
+                    GetTextureSemaphore.Release();
+                }
 
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Returns a texture if it is loaded, otherwise begins a request to get the texture
+        /// </summary>
+        /// <param name="graphicsDevice"></param>
+        /// <returns></returns>
+        public async Task<Texture2D> GetOrLoadTextureAsync(GraphicsDevice graphicsDevice)
+        {
+            try
+            {
+                //rwTextureLock.EnterReadLock();
+                //Check if the texture's graphics device has been disposed, in which case load a new texture
+                var currentTexture = texture; 
+                if (currentTexture != null)
+                {
+                    if (currentTexture.GraphicsDevice.IsDisposed)
+                    {
+                        texture = null;
+                        return null; 
+                    }
+                }
+
+                //Don't bother asking if we've already tried
+                if (this.ServerTextureNotFound)
+                {
+#if DEBUG
+                    {
+                        //Don't know how this could happen, but we should not have a texture if the server does not.  This indicates the code will leak resources
+                        Debug.Assert(TexReader == null);
+                        Debug.Assert(texture == null);
+                    }
+#endif
+
+                    return null;
+                }
+
+                if (currentTexture != null)
+                    return currentTexture;
+            }
+            finally
+            {
+                //rwTextureLock.ExitReadLock();
+            }
+
+          
+            try
+            {
+                await GetTextureSemaphore.WaitAsync();
+
+                if (texture != null)
+                    return this.texture;
+
+                TextureReaderV2 texReader = null;
+
+                //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
+                if (texReader == null)
+                {
+                    if (TextureLoadCancellationTokenSource != null)
+                        TextureLoadCancellationTokenSource.Cancel();
+
+                    TextureLoadCancellationTokenSource = new CancellationTokenSource();
+                    //If the section is read over a network provide a cache path too
+                    if (State.volume.IsLocal == false)
+                    {
+                        texReader = new TextureReaderV2(graphicsDevice,
+                                                            new Uri(this.TextureFileName),
+                                                            this.TextureCachedFileName,
+                                                            this.MipMapLevels,
+                                                            null,
+                                                            TextureLoadCancellationTokenSource.Token);
+                    }
+                    else
+                    {
+                        texReader = new TextureReaderV2(graphicsDevice,
+                                                            new Uri(this.TextureFileName),
+                                                            this.MipMapLevels,
+                                                            null,
+                                                            TextureLoadCancellationTokenSource.Token);
+                    }
+
+                    var result = await texReader.LoadTexture();
+                    this.texture = texReader.GetTexture();
+                    this.ServerTextureNotFound = texReader.TextureNotFound;
+
+                    return result; 
+                }
+            }
+            finally
+            {
+                GetTextureSemaphore.Release();
+            }
+
+            return null;
         }
 
 
@@ -384,15 +588,19 @@ namespace Viking.ViewModels
                 return;
             }
 
-            Texture2D currentTexture = GetTexture(graphicsDevice);
-
-            //Do not draw if we don't have a texture
-            if (currentTexture == null)
-                return;
-
-            lock (thisLock)
+            Texture2D currentTexture = null;
+            try
             {
-                currentTexture = GetTexture(graphicsDevice);
+                //rwTextureLock.EnterReadLock();
+
+                //Texture2D currentTexture = GetOrRequestTexture(graphicsDevice);
+                currentTexture = this.texture;
+
+                //Do not draw if we don't have a texture
+                if (currentTexture == null)
+                    return;
+
+                currentTexture = this.texture;
 
                 //Do not draw if we don't have a texture
                 if (currentTexture == null)
@@ -416,45 +624,46 @@ namespace Viking.ViewModels
                     IndBuffer = new IndexBuffer(graphicsDevice, IndexElementSize.SixteenBits, Tile.TriangleIndicies.Length, BufferUsage.None);
                     IndBuffer.SetData<ushort>(Array.ConvertAll<int, ushort>(TriangleIndicies, new Converter<int, ushort>(IntToShort)));
                 }
-
-
-
-                graphicsDevice.SetVertexBuffer(this.VertBuffer);
-                graphicsDevice.Indices = this.IndBuffer;
-
-
-                effect.Texture = currentTexture;
-
-                if (UseColor)
-                    effect.TileColor = TileColor;
-
-
-                //PORT XNA 4
-                //effect.effect.Begin();
-
-                foreach (EffectPass pass in effect.effect.CurrentTechnique.Passes)
-                {
-                    //PORT XNA 4
-                    //pass.Begin();
-                    pass.Apply();
-
-                    graphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, VertBuffer.VertexCount, 0, TriangleIndicies.Length / 3);
-                    /*
-                    graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList,
-                                            this.Verticies,
-                                            0,
-                                            this.Verticies.Length, 
-                                            TriangleIndicies, 
-                                            0,
-                                            TriangleIndicies.Length / 3);
-                    */
-                    //PORT XNA 4
-                    //pass.End();
-                }
-
-                //PORT XNA 4
-                //effect.effect.End();
             }
+            finally
+            {
+               // rwTextureLock.ExitReadLock();
+            }
+
+            graphicsDevice.SetVertexBuffer(this.VertBuffer);
+            graphicsDevice.Indices = this.IndBuffer;
+
+            effect.Texture = currentTexture;
+
+            if (UseColor)
+                effect.TileColor = TileColor;
+
+
+            //PORT XNA 4
+            //effect.effect.Begin();
+
+            foreach (EffectPass pass in effect.effect.CurrentTechnique.Passes)
+            {
+                //PORT XNA 4
+                //pass.Begin();
+                pass.Apply();
+
+                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, VertBuffer.VertexCount, 0, TriangleIndicies.Length / 3);
+                /*
+                graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList,
+                                        this.Verticies,
+                                        0,
+                                        this.Verticies.Length, 
+                                        TriangleIndicies, 
+                                        0,
+                                        TriangleIndicies.Length / 3);
+                */
+                //PORT XNA 4
+                //pass.End();
+            }
+
+                //PORT XNA 4
+                //effect.effect.End(); 
         }
 
         //PORT XNA 4
@@ -646,8 +855,10 @@ namespace Viking.ViewModels
         {
             if (disposing)
             {
-                lock (thisLock)
+                try
                 {
+                    rwTextureLock.EnterWriteLock();
+
                     //This disposes of the texture
                     //_texture = null;
                     if (this._texture != null)
@@ -689,6 +900,10 @@ namespace Viking.ViewModels
                         this.IndBuffer.Dispose();
                         this.IndBuffer = null;
                     }
+                }
+                finally
+                {
+                    rwTextureLock.ExitWriteLock();
                 }
             }
         }
