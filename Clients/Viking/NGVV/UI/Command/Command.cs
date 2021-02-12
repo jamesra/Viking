@@ -319,9 +319,15 @@ namespace Viking.UI.Commands
             Parent.OnPenContact += OnPenContact;
             Parent.OnPenLeaveContact += OnPenLeaveContact;
             Parent.OnPenMove += OnPenMove;
+
+            Parent.OnGestureBegin += OnGestureBegin;
+            Parent.OnGestureZoom += OnGestureZoom;
+            Parent.OnGesturePan += OnGesturePan; 
              
             Parent.Camera.PropertyChanged += MyCameraChanged;
         }
+
+        
 
         public void UnsubscribeToInterfaceEvents()
         {
@@ -345,6 +351,10 @@ namespace Viking.UI.Commands
             Parent.OnPenContact -= OnPenContact;
             Parent.OnPenLeaveContact -= OnPenLeaveContact;
             Parent.OnPenMove -= OnPenMove;
+
+            Parent.OnGestureBegin -= OnGestureBegin;
+            Parent.OnGestureZoom -= OnGestureZoom;
+            Parent.OnGesturePan -= OnGesturePan;
 
             Parent.Camera.PropertyChanged -= MyCameraChanged;
         }
@@ -477,14 +487,19 @@ namespace Viking.UI.Commands
             //This is the point the mouse is at after zooming camera...
             GridVector2 AfterZoomPosition = Parent.ScreenToWorld(e.X, e.Y);
 
+            RecenterCameraAfterZoom(BeforeZoomPosition, AfterZoomPosition);
+
+            this.Parent.Invalidate();
+        }
+
+        protected void RecenterCameraAfterZoom(GridVector2 BeforeZoomPosition, GridVector2 AfterZoomPosition)
+        {
             GridVector2 Offset = BeforeZoomPosition - AfterZoomPosition;
 
             //Move the camera position by the offset.
-            GridVector2 CameraLookat = new GridVector2(Parent.Camera.LookAt.X, Parent.Camera.LookAt.Y);
+            GridVector2 CameraLookat = Parent.Camera.LookAt.ToGridVector2();
             GridVector2 NewCameraLookat = CameraLookat + Offset;
             Parent.Camera.LookAt = new Vector2((float)NewCameraLookat.X, (float)NewCameraLookat.Y);
-
-            this.Parent.Invalidate();
         }
 
         protected void StepCameraDistance(float multiplier)
@@ -558,6 +573,14 @@ namespace Viking.UI.Commands
             GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
             this.Parent.StatusPosition = NewPosition;
 
+            //Cancel the command on a barrel click
+            if (oldPen != null && e.Barrel && oldPen.Barrel == false)
+            {
+                CancelCommand();
+                SaveAsOldPenPosition(e);
+                return;
+            }
+             
             if (oldPen != null && e.Erase && e.InContact)
             {
                 GridVector2 OldPosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
@@ -614,6 +637,19 @@ namespace Viking.UI.Commands
 
         #endregion
 
+        /// <summary>
+        /// If this method is overrriden the implementation should call the baseimplemen
+        /// </summary>
+        protected void CancelCommand()
+        {
+            //On escape kill the current command, and any active queues
+            this.Parent.CommandQueue.ClearQueue();
+            UI.State.SelectedObject = null;
+
+            //This will probably already be set by adjusting the selected object, but to be safe...
+            this.Deactivated = true;
+        }
+
         #region Key Event Handlers
         protected virtual void OnKeyPress(object sender, KeyPressEventArgs e)
         {
@@ -621,12 +657,7 @@ namespace Viking.UI.Commands
             //Escape cancels the current command and sets the selected item to null
             if (e.KeyChar == (char)Keys.Escape)
             {
-                //On escape kill the current command, and any active queues
-                this.Parent.CommandQueue.ClearQueue(); 
-                UI.State.SelectedObject = null;
-
-                //This will probably already be set by adjusting the selected object, but to be safe...
-                this.Deactivated = true;
+                CancelCommand();
             }
             else if (e.KeyChar == '=' || e.KeyChar == '+')
             {
@@ -726,6 +757,107 @@ namespace Viking.UI.Commands
         }
 
         #endregion
+
+        /// <summary>
+        /// Where a gesture began in world coordinates
+        /// </summary>
+        /// 
+        GridVector2 PanGestureWorldPositionOrigin;
+
+        /// <summary>
+        /// Distance between the fingers when they first begin the zoom gesture
+        /// </summary>
+        double ZoomGestureInitialLineLength;
+        
+        /// <summary>
+        /// Magnification level when a zoom gesture first began
+        /// </summary>
+        double ZoomGestureStartingMagnification;
+
+        protected virtual void OnGestureBegin(object sender, BeginGestureEventArgs e)
+        {
+            Trace.WriteLine($"{this.ID}: Begin Gesture");
+            PanGestureWorldPositionOrigin = Parent.Camera.LookAt.ToGridVector2();
+            ZoomGestureStartingMagnification = Parent.Camera.Downsample;
+        }
+
+        protected virtual void OnGesturePan(object sender, PanGestureEventArgs e)
+        {
+            GridVector2 screen_begin = new GridVector2(e.BeginPt.X, e.BeginPt.Y);
+            GridVector2 screen_end = new GridVector2(e.EndPt.X, e.EndPt.Y);
+
+            //Trace.WriteLine($"{e}");
+            /*
+            GridVector2 screen_delta = new GridVector2(e.Delta.X, e.Delta.Y);
+            GridVector2 screen_origin = screen_end - screen_delta; 
+
+            GridVector2 Begin = Parent.ScreenToWorld(screen_origin.X, screen_origin.Y);
+            GridVector2 End   = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
+            GridVector2 World_Delta = End - Begin;
+            Parent.Camera.LookAt = World_Delta.ToXNAVector2();
+            this.Parent.Invalidate();  
+            */
+            
+            
+            if (e.Gesture.State == GestureState.GF_BEGIN)
+            {
+                //PanGestureWorldPositionOrigin = Parent.ScreenToWorld(e.BeginPt.X, e.BeginPt.Y);
+                return;
+            }
+            
+
+            GridVector2 Begin = Parent.ScreenToWorld(screen_begin.X, screen_begin.Y);
+            GridVector2 End = Parent.ScreenToWorld(screen_end.X, screen_end.Y);
+            GridVector2 World_Delta = End - Begin;
+            //Trace.WriteLine($"{this.ID}: {End} - {Begin} = {World_Delta}");
+            Parent.Camera.LookAt = (PanGestureWorldPositionOrigin - World_Delta).ToXNAVector2();
+            this.Parent.Invalidate();
+        }
+
+        protected virtual void OnGestureZoom(object sender, PanGestureEventArgs e)
+        {
+            
+            //GridVector2 screen_begin = new GridVector2(e.BeginPt.X, e.BeginPt.Y);
+            GridVector2 screen_Center = new GridVector2(e.EndPt.X, e.EndPt.Y);
+
+            /*if (screen_begin == screen_end)
+                return;
+            */
+
+            //Figure out how much of the total client screen the distance represents
+            double DistanceBetweenFingers = (double)e.Gesture.Arguments;
+
+            if (e.Gesture.State == GestureState.GF_BEGIN)
+            {
+                ZoomGestureInitialLineLength = DistanceBetweenFingers;
+                return;
+            }
+
+            double scale = ZoomGestureInitialLineLength / DistanceBetweenFingers;
+            double newDownsample = ZoomGestureStartingMagnification * scale;
+            //Trace.WriteLine($"{this.ID}: Zoom: {newDownsample} = {ZoomGestureStartingMagnification:F2} * {scale:F2} Length: {ZoomGestureInitialLineLength:F2} / {DistanceBetweenFingers:F2}");
+
+            /*
+            if (newDownsample < 0.5)
+                newDownsample = 0.5; 
+
+            if (newDownsample > 256)
+                newDownsample = 256;
+            */
+
+            //This is the point the mouse is at before zoom...
+            GridVector2 BeforeZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
+
+            Parent.Camera.Downsample = newDownsample;
+
+            //This is the point the mouse is at after zoom...
+            GridVector2 AfterZoomPosition = Parent.ScreenToWorld(screen_Center.X, screen_Center.Y);
+
+            RecenterCameraAfterZoom(BeforeZoomPosition, AfterZoomPosition);
+
+            this.Parent.Invalidate();
+        }
+
 
         /// <summary>
         /// Called when the user input is completed and the command should make whatever changes are required and shut down

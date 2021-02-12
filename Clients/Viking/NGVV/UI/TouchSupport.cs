@@ -273,16 +273,25 @@ namespace Viking.UI
         public readonly System.Int32 tiltX;
         public readonly System.Int32 tiltY;
 
+        public bool PenFlagsChange(PointerPenInfo other)
+        { 
+            PenFlags pen_flags_changed = this.flags ^ other.flags;
+            return pen_flags_changed > 0;
+        }
+
         public bool PositioningChange(PointerPenInfo other)
         {
             if (!this.pointerInfo.ptPixelLocationRaw.Equals(other.pointerInfo.ptPixelLocationRaw))
                 return true;
 
+            if (PenFlagsChange(other))
+                return true; 
+
             PenMask changed = this.mask ^ other.mask;
             PenMask comparable = this.mask & other.mask;
             if (changed > 0)
                 return true;
-
+            
             if (this.pressure != other.pressure && (comparable & PenMask.Pressure) > 0)
                 return true;
 
@@ -297,10 +306,24 @@ namespace Viking.UI
 
             return false;
         }
+
+        public override string ToString()
+        {
+            StringBuilder sb = new StringBuilder($"{flags} {pointerInfo.ptPixelLocation}");
+            sb.Append(pointerInfo.ButtonChange != PointerButtonChangeType.None ? $"{pointerInfo.ButtonChange.ToString()}" : "");
+            sb.Append((mask & PenMask.Pressure) > 0 ? $" Pressure: {pressure}" : "");
+            sb.Append((mask & PenMask.Rotation) > 0 ? $" Rotation: {rotation}" : "");
+            sb.Append((mask & PenMask.TiltX) > 0 ? $" TiltX: {tiltX}" : "");
+            sb.Append((mask & PenMask.TiltY) > 0 ? $" TiltY: {tiltY}" : "");
+            return sb.ToString();
+        }
     }
 
     public enum TouchMessageType : int
     {
+        WM_GESTURE = 0x0119,
+        WM_GESTURENOTIFY = 0x011A,
+
         WM_TOUCHHITTESTING = 0x024D,
         WM_POINTERDEVICEINRANGE = 0X239,
         WM_POINTERDEVICEOUTOFRANGE = 0X23A,
@@ -312,8 +335,10 @@ namespace Viking.UI
         WM_POINTERLEAVE = 0x24A,
         WM_POINTERWHEEL = 0x24E,
         WM_POINTERHWHEEL = 0x024F,
-        DM_POINTERHITTEST = 0x0250
-    }
+        DM_POINTERHITTEST = 0x0250,
+
+     
+}
 
     /// <summary>
     /// Contains variables that can be adjusted to change user experience
@@ -342,8 +367,24 @@ namespace Viking.UI
         }
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WinMsgPoints
+    {
+        public readonly short x;
+        public readonly short y;
 
-    public static class Touch
+        public override string ToString()
+        {
+            return $"{x}, {y}";
+        }
+
+        public static implicit operator System.Drawing.Point(WinMsgPoints obj)
+        {
+            return new System.Drawing.Point(obj.x, obj.y);
+        }
+    }
+
+    public static class WinMsgInput
     {
         public const int WM_MOUSEMOVE = 0x0200;
         public const int WM_LBUTTONDOWN = 0x0201;
@@ -361,6 +402,9 @@ namespace Viking.UI
         public const int WM_POINTERWHEEL = 0x24E;
         public const int WM_POINTERHWHEEL = 0x024F;
         public const int DM_POINTERHITTEST = 0x0250;
+
+        public const int WM_GESTURE = 0x0119;
+        public const int WM_GESTURENOTIFY = 0x011A;
 
         public static TouchConfig Config = new TouchConfig();
 
@@ -444,7 +488,7 @@ namespace Viking.UI
 
             PointerMessageData data = new PointerMessageData(msg);
             
-            bool success = Touch.GetPointerPenInfo(data.PointerID, out PointerPenInfo info);
+            bool success = WinMsgInput.GetPointerPenInfo(data.PointerID, out PointerPenInfo info);
             if (success)
             {
                 //System.Diagnostics.Trace.WriteLine(string.Format("{0} {1} pen:{2} pointer: {4} pressure:{5} ", Header, data.ToString(), info.flags.ToString(), info.mask.ToString(), info.pointerInfo.pointerFlags, info.pressure));
@@ -478,7 +522,30 @@ namespace Viking.UI
         public static extern bool GetPointerCursorId(System.UInt32 pPointerID, out System.UInt32 cursorID);
 
         [DllImport("User32.dll")]
-        private static extern bool GetPointerPenInfo(System.UInt32 pPointerID, out PointerPenInfo info);
+        public static extern bool GetPointerPenInfo(System.UInt32 pPointerID, out PointerPenInfo info);
+
+        public static bool SetGestureConfig(IntPtr hWnd, GestureConfig[] configs)
+        {
+            return SetGestureConfig(hWnd, 0, (UInt32)configs.Length, configs, (UInt32)Marshal.SizeOf<GestureConfig>());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="hWnd">Window handle</param>
+        /// <param name="reserved">must be zero</param>
+        /// <param name="cIDs"># of gesture config entries</param>
+        /// <param name="configs">gesture config array</param>
+        /// <param name="cbSize">size of gesture config structure in bytes</param>
+        /// <returns></returns>
+        [DllImport("User32.dll")]
+        public static extern bool SetGestureConfig(IntPtr hWnd, System.UInt32 reserved, UInt32 cIDs, GestureConfig[] configs, UInt32 cbSize);
+
+        [DllImport("User32.dll")]
+        public static extern bool GetGestureInfo(System.IntPtr hGestureInfo, out GestureInfo info);
+
+        [DllImport("User32.dll")]
+        public static extern bool CloseGestureInfoHandle(System.IntPtr hGestureInfo);
 
         [DllImport("User32.dll")]
         public static extern System.IntPtr GetMessageExtraInfo();

@@ -66,7 +66,7 @@ namespace Viking.UI
                     return 0;
                 }
 
-                return Touch.Config.NormalizeStylusPressure(Pen.pressure);
+                return WinMsgInput.Config.NormalizeStylusPressure(Pen.pressure);
             }
         }
 
@@ -82,11 +82,34 @@ namespace Viking.UI
 
     public interface IPenEvents
     {
+        /// <summary>
+        /// The pen is close enough to the surface to be detected
+        /// </summary>
         event PenEventHandler OnPenEnterRange;
+        /// <summary>
+        /// The pen is no longer close enough to the surface to be detected
+        /// </summary>
         event PenEventHandler OnPenLeaveRange;
+        /// <summary>
+        /// The pen began touching the surface
+        /// </summary>
         event PenEventHandler OnPenContact;
+        /// <summary>
+        /// The pen is no longer touching the surface
+        /// </summary>
         event PenEventHandler OnPenLeaveContact;
+        /// <summary>
+        /// The pen has moved or the state of the pen has changed
+        /// </summary>
         event PenEventHandler OnPenMove;
+        /// <summary>
+        /// A button on the pen has been depressed
+        /// </summary>
+        event PenEventHandler OnPenButtonDown;
+        /// <summary>
+        /// A button on the pen has been released
+        /// </summary>
+        event PenEventHandler OnPenButtonUp;
     }
 
 
@@ -100,6 +123,15 @@ namespace Viking.UI
         public event PenEventHandler OnPenContact;
         public event PenEventHandler OnPenLeaveContact;
         public event PenEventHandler OnPenMove;
+        /// <summary>
+        /// A button on the pen has been depressed
+        /// </summary>
+        public event PenEventHandler OnPenButtonDown;
+        /// <summary>
+        /// A button on the pen has been released
+        /// </summary>
+        public event PenEventHandler OnPenButtonUp;
+
         //It may appear tempting to add an erase event, but when erase is used the OS messages result in sending LeaveContact and Contact messages with the erase flag set on the latter.
 
         PointerPenInfo? previousPenState;
@@ -121,28 +153,28 @@ namespace Viking.UI
         {
             switch (msg.Msg)
             {
-                case Touch.WM_TOUCHHITTESTING:
-                    Touch.LogPenData(msg, "TouchHitTesting");
+                case WinMsgInput.WM_TOUCHHITTESTING:
+                    WinMsgInput.LogPenData(msg, "TouchHitTesting");
                     UpdatePenState(ref msg);
                     break;
-                case Touch.WM_POINTERDEVICEINRANGE:
-                    Touch.LogPenData(msg, "PointerDeviceInRange");
+                case WinMsgInput.WM_POINTERDEVICEINRANGE:
+                    WinMsgInput.LogPenData(msg, "PointerDeviceInRange");
                     UpdatePenState(ref msg);
                     break;
-                case Touch.WM_POINTERDEVICEOUTOFRANGE:
-                    Touch.LogPenData(msg, "PointerDeviceOutOfRange");
+                case WinMsgInput.WM_POINTERDEVICEOUTOFRANGE:
+                    WinMsgInput.LogPenData(msg, "PointerDeviceOutOfRange");
                     UpdatePenState(ref msg);
                     break;
-                case Touch.WM_POINTERUPDATE:
-                    Touch.LogPenData(msg, "PointerUpdate");
+                case WinMsgInput.WM_POINTERUPDATE:
+                    WinMsgInput.LogPenData(msg, "PointerUpdate");
                     UpdatePenState(ref msg);
                     break;
-                case Touch.WM_POINTERDOWN:
-                    Touch.LogPenData(msg, "PointerDown");
+                case WinMsgInput.WM_POINTERDOWN:
+                    WinMsgInput.LogPenData(msg, "PointerDown");
                     UpdatePenState(ref msg);
                     break;
-                case Touch.WM_POINTERUP:
-                    Touch.LogPenData(msg, "PointerUp");
+                case WinMsgInput.WM_POINTERUP:
+                    WinMsgInput.LogPenData(msg, "PointerUp");
                     UpdatePenState(ref msg);
                     break;
                 default:
@@ -157,16 +189,16 @@ namespace Viking.UI
         {
             TouchMessageType msgType = (TouchMessageType)msg.Msg;
             PointerMessageData pointerState = new PointerMessageData(msg);
-            Touch.GetPointerType(pointerState.PointerID, out PointerType type);
-            Touch.IsPenEvent(out uint altID);
+            WinMsgInput.GetPointerType(pointerState.PointerID, out PointerType type);
+            WinMsgInput.IsPenEvent(out uint altID);
             //System.Diagnostics.Debug.Assert(altID == pointerState.PointerID); //WTF if this is wrong
             if (type != PointerType.Pen)
             {
                 return;
             }
 
-            PointerPenInfo penState = Touch.GetPenInfo(pointerState.PointerID);
-
+            PointerPenInfo penState = WinMsgInput.GetPenInfo(pointerState.PointerID);
+            System.Diagnostics.Trace.WriteLine($"{penState}");
             bool NewPointer = true; //True if we have a new pointer ID than last time.  From what I can tell each time the pen leaves range of the surface a new ID is assigned when moves back into range
 
             //Reset our previous state if the ID has changed
@@ -206,14 +238,10 @@ namespace Viking.UI
                 {
                     FireOnPenContact(args);
                 }
-                //}
-                //else
-                //{
                 else if (msgType == TouchMessageType.WM_POINTERUPDATE && previousPenState.Value.PositioningChange(penState))
                 {
                     FireOnPenMove(args);
-                }
-
+                } 
             }
 
             if (pointerState.Flags.InRange == false)
@@ -260,6 +288,22 @@ namespace Viking.UI
             if (OnPenMove != null)
             {
                 Parent.BeginInvoke(OnPenMove, Parent, e);
+            }
+        }
+
+        private void FireOnPenButtonDown(PenEventArgs e)
+        {
+            if (OnPenButtonDown != null)
+            {
+                Parent.BeginInvoke(OnPenButtonDown, Parent, e);
+            }
+        }
+
+        private void FireOnPenButtonUp(PenEventArgs e)
+        {
+            if (OnPenButtonUp != null)
+            {
+                Parent.BeginInvoke(OnPenButtonUp, Parent, e);
             }
         }
 
