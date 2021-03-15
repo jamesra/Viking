@@ -23,30 +23,35 @@ namespace IdentityServer.Models.UserViewModels
     /// </summary>
     public static class OrganizationSelectedViewModelExtensions
     {
-        public static void UpdateOrganizationUsers(this ApplicationUser user, IEnumerable<GroupSelectedViewModel> Organizations)
+        public static void UpdateOrganizations(this ApplicationUser user, IEnumerable<GroupSelectedViewModel> Organizations)
         {
             foreach (GroupSelectedViewModel org in Organizations)
             {
-                var ExistingMapping = user.GroupAssignments.FirstOrDefault(o => o.GroupId == org.Id);
+                user.UpdateOrganization(org);
+            }
+        }
 
-                if (org.Selected)
+        public static void UpdateOrganization(this ApplicationUser user, GroupSelectedViewModel org)
+        {
+            var ExistingMapping = user.GroupAssignments.FirstOrDefault(o => o.GroupId == org.Id);
+
+            if (org.Selected)
+            {
+                if (ExistingMapping == null)
                 {
-                    if (ExistingMapping == null)
-                    {
-                        //Create the mapping
-                        GroupAssignment oa = new GroupAssignment() { GroupId = org.Id, UserId = user.Id };
-                        user.GroupAssignments.Add(oa);
-                    }
-                }
-                else
-                {
-                    if (ExistingMapping != null)
-                    {
-                        //Remove the mapping
-                        user.GroupAssignments.Remove(ExistingMapping);
-                    }
+                    //Create the mapping
+                    UserToGroupAssignment oa = new UserToGroupAssignment() { GroupId = org.Id, UserId = user.Id };
+                    user.GroupAssignments.Add(oa);
                 }
             }
+            else
+            {
+                if (ExistingMapping != null)
+                {
+                    //Remove the mapping
+                    user.GroupAssignments.Remove(ExistingMapping);
+                }
+            } 
         }
     }
 }

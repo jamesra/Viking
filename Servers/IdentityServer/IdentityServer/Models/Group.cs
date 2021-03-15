@@ -9,43 +9,50 @@ using Microsoft.AspNetCore.Mvc;
 namespace IdentityServer.Models
 {
     /// <summary>
+    /// A resource that can contain sets of users
     /// Records the lab or organization that the user belongs to.
     /// </summary>
-    public class Group
-    {
-        [Key]
-        [Display(Name = "ID", Description = "Database generated ID")]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long Id { get; set; }
+    public class Group : Resource
+    {  
+       // [InverseProperty(nameof(UserToGroupAssignment.Group))]
+        [Display(Name = "Users", Description = "Users assigned to group")]
+        public virtual List<UserToGroupAssignment> MemberUsers { get; set; } = new List<UserToGroupAssignment>();
 
-        [ForeignKey("Group")]
-        [Display(Name = "ParentID", Description = "Optional parent group ID")]
-        public long? ParentID { get; set; }
+        //public ICollection<GrantedGroupPermission> HasPermissions { get; } = new List<GrantedGroupPermission>();
+          
+        [NotMapped]
+        [Display(Name = "Users", Description = "Users assigned to group")]
+        public virtual List<ApplicationUser> Users => MemberUsers.Select(oa => oa.User).ToList();
+        
 
-        /// <summary>
-        /// null if there is no parent
-        /// </summary>
-        [ForeignKey("ParentID")]
-        public Group Parent { get; set; }
-
-        [Required(AllowEmptyStrings = false)]
-        [MaxLength(128)]
-        [Remote(action: "VerifyUniqueGroupName", controller: "Groups")]
-        [Display(Name = "Name", Description ="Name of the group")]
-        public string Name { get; set; }
-
-        [Display(Name = "Description", Description = "Information about the group")] 
-        [MaxLength(2048)]
-        public string Description { get; set; }
-
-        public ICollection<GroupAssignment> GroupAssignments { get; } = new List<GroupAssignment>();
+        [Display(Name = "Groups", Description = "Groups assigned to group")]
+//        [InverseProperty(nameof(GroupToGroupAssignment.Container))]
+        public virtual List<GroupToGroupAssignment> MemberGroups { get; set; } = new List<GroupToGroupAssignment>();
 
         [NotMapped]
-        public virtual List<ApplicationUser> Users => GroupAssignments.Select(oa => oa.User).ToList();
+        [Display(Name = "Groups", Description = "Groups assigned to group")]
+        public virtual List<Group> Groups => MemberGroups.Select(oa => oa.Member).ToList();
+
+        [Display(Name = "Member Of", Description = "Groups we are a member of")]
+        //        [InverseProperty(nameof(GroupToGroupAssignment.Container))]
+        public virtual List<GroupToGroupAssignment> MemberOfGroups { get; set; } = new List<GroupToGroupAssignment>();
+
+        [NotMapped]
+        [Display(Name = "Member Of", Description = "Groups we are a member of")]
+        public virtual List<Group> MemberOf => MemberOfGroups.Select(oa => oa.Container).ToList();
+
+        //public ICollection<GrantedGroupPermission> HasPermissions { get; } = new List<GrantedGroupPermission>();
+
+        [Display(Name = "Permissions Held", Description="Permissions this group has been granted to other resources")]
+        public virtual List<GrantedGroupPermission> PermissionsHeld { get; set; }
          
-        [NotMapped]
-        public virtual int UsersCount { get { return GroupAssignments.Select(oa => oa.User).Count(); } }
 
-        public ICollection<Group> Children { get; } = new List<Group>();
+        [NotMapped]
+        [Display(Name = "User Count", Description = "Number of users assigned to group")]
+        public virtual int UsersCount { get { return MemberUsers.Select(oa => oa.User).Count(); } }
+
+        [InverseProperty(nameof(Resource.Parent))]
+        [Display(Name = "Owned resources", Description = "Resources contained within this group")]
+        public virtual List<Resource> Children { get; } = new List<Resource>();
     }
 }

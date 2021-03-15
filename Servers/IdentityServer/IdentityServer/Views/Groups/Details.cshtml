@@ -7,6 +7,15 @@
 
 <h2>Details</h2>
 
+<style>
+    th {
+        padding: 12px
+    }
+    ul.no-bullets{
+        list-style-type: none
+    }
+</style>
+
 <div>
     <h4>Organization</h4>
     <hr />
@@ -17,7 +26,16 @@
         <dd>
             @Html.DisplayFor(model => model.Name)
         </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.Id)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Id)
+        </dd>
 
+        <dt>
+            @Html.DisplayNameFor(model => model.Parent)
+        </dt>
         <dd>
             @if (Model.ParentID.HasValue)
             {
@@ -35,33 +53,69 @@
         <dd>
             @Html.DisplayFor(model => model.Description)
         </dd>
-        <dt>
-            @Html.DisplayNameFor(model => Model.Users)
-        </dt>
-        <dd>
-            <table>
-                @for (int i = 0; i < Model.Users.Count(); i++)
-                {
-                    <tr>
-                        <td>
-                            @Html.DisplayFor(x => Model.GroupAssignments.ElementAt(i).User.UserName)
-                        </td>
-                    </tr>
-                }
-            </table>
-        </dd>
-        <dd>
-            <table>
-                @for (int i = 0; i < Model.Children.Count(); i++)
-                {
-                    <tr>
-                        <td>
-                            @Html.DisplayFor(x => Model.Children.ElementAt(i).Name)
-                        </td>
-                    </tr>
-                }
-            </table>
-        </dd>
+        <table>
+            <thead>
+                <tr>
+                    <th style="padding: 12px">
+                        @Html.DisplayNameFor(model => Model.Children)
+                    </th>
+                    <th style="padding: 12px">
+                        @Html.DisplayNameFor(model => Model.Users)
+                    </th>
+                    <th style="padding: 12px">
+                        @Html.DisplayNameFor(model => Model.GroupsWithPermissions)
+                    </th>
+                    <th style="padding: 12px">
+                        @Html.DisplayNameFor(model => Model.UsersWithPermissions)
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        @for (int i = 0; i < Model.Children.Count(); i++)
+                        {
+                            <ul class="no-bullets">
+                                <li>
+                                    @Html.DisplayFor(x => Model.Children.ElementAt(i).Name)
+                                </li>
+                            </ul>
+                        }
+                    </td>
+                    <td>
+                        @for (int i = 0; i < Model.Users.Count(); i++)
+                        {
+                        <ul class="no-bullets">
+                            <li>
+                                @Html.DisplayFor(x => Model.Users.ElementAt(i).UserName)
+                            </li>
+                        </ul>
+                        }
+                    </td>
+                    <td>
+                        @for (int i = 0; i < Model.GroupsWithPermissions.Count(); i++)
+                        {
+                        <ul class="no-bullets">
+                            <li>
+                                @Html.DisplayFor(x => Model.GroupsWithPermissions.ElementAt(i).PermittedGroup.Name) - @Html.DisplayFor(x => Model.GroupsWithPermissions.ElementAt(i).PermissionId)
+                            </li>
+                        </ul>
+                        }
+                    </td>
+                    <td>
+                        @for (int i = 0; i < Model.UsersWithPermissions.Count(); i++)
+                        {
+                        <ul class="no-bullets">
+                            <li>
+                                @Html.DisplayFor(x => Model.UsersWithPermissions.ElementAt(i).UserId) - @Html.DisplayFor(x => Model.UsersWithPermissions.ElementAt(i).PermissionId)
+                            </li>
+                        </ul>
+                        }
+                    </td>
+                </tr>
+            </tbody>
+
+        </table>
     </dl>
 
 </div>

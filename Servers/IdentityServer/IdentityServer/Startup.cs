@@ -6,11 +6,14 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+
 using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer.Services; 
@@ -32,8 +35,7 @@ namespace IdentityServer
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
-             
-
+              
             Log.Logger = new LoggerConfiguration()
               .Enrich.FromLogContext()
               .WriteTo.File("IDServerLogs.json", Serilog.Events.LogEventLevel.Verbose)
@@ -48,7 +50,7 @@ namespace IdentityServer
             services.AddControllersWithViews();
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
 
-            var connectionString = Configuration.GetConnectionString("IdentityConnection"); 
+            var connectionString = Configuration.GetConnectionString("IdentityConnection");
             var persistedGrantConnectionString = Configuration.GetConnectionString("PersistedGrantConnection");
             var configConnectionString = Configuration.GetConnectionString("ConfigConnection");
 
@@ -57,6 +59,11 @@ namespace IdentityServer
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")));
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy(Config.AccessManagerPolicy, policy => policy.Requirements.Add(Authorization.Operations.AccessManager));
+            });
 
             var https_port_section = Configuration.GetSection("https_port");
             int? https_port = new int?();
@@ -127,7 +134,7 @@ namespace IdentityServer
                     // this enables automatic token cleanup. this is optional.
                     options.EnableTokenCleanup = true;
                     options.TokenCleanupInterval = 30;
-                })
+                })                
                 .AddAspNetIdentity<ApplicationUser>();
 
             //            builder.AddDeveloperSigningCredential();

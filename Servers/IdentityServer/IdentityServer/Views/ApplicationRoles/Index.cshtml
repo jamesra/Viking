@@ -7,7 +7,7 @@
 
 <h2>Roles</h2>
 
-@if (this.User.IsInRole("Access Manager"))
+@if (this.User.IsInRole(Config.AdminRoleName))
 {
     <p>There is no benefit to adding additional roles without also recompiling the web services code to provide the roles meaning.  Similarly, renaming an existing role is almost certain to break something.</p>
 }
@@ -24,7 +24,7 @@
             <th>
                 @Html.DisplayNameFor(model => model.NormalizedName)
             </th>
-            @if (this.User.IsInRole("Access Manager"))
+            @if (this.User.IsInRole(Config.AdminRoleName))
             {
                 <th>
 
@@ -44,19 +44,19 @@
                 <td>
                     @Html.DisplayFor(modelItem => item.NormalizedName)
                 </td>
-                @if (this.User.IsInRole("Access Manager"))
+                @if (this.User.IsInRole(Config.AdminRoleName))
                 {
                     <td>
                         @Html.DisplayFor(modelItem => item.ConcurrencyStamp)
                     </td>
                 }
                 <td>
-                    @if (this.User.IsInRole("Access Manager"))
+                    @if (this.User.IsInRole(Config.AdminRoleName))
                     {
                         <a asp-action="Edit" asp-route-id="@item.Id">Edit</a>
                     }
                     <a asp-action="Details" asp-route-id="@item.Id">Details</a>
-                    @if (this.User.IsInRole("Access Manager"))
+                    @if (this.User.IsInRole(Config.AdminRoleName))
                     {
                         @Html.Raw("|")
                         <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>

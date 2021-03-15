@@ -24,7 +24,7 @@
             @Html.DisplayFor(model => model.NormalizedName)
         </dd>
 
-        @if (this.User.IsInRole("Access Manager"))
+        @if (this.User.IsInRole(Config.AdminRoleName))
         {
             <dt>
                 @Html.DisplayNameFor(model => model.ConcurrencyStamp)

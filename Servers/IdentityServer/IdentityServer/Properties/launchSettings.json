@@ -21,7 +21,10 @@
       }
     },
     "IdentityServer": {
-      "commandName": "IIS",
+      "commandName": "Executable",
+      "executablePath": "dotnet",
+      "commandLineArgs": "ef migrations add Initial -c ApplicationDbContext --no-build",
+      "workingDirectory": "C:\\src\\git\\Viking\\Servers\\IdentityServer\\IdentityServer",
       "launchBrowser": true,
       "launchUrl": "http://localhost:5000",
       "environmentVariables": {

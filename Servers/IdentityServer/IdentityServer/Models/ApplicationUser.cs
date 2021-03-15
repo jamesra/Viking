@@ -13,7 +13,7 @@ namespace IdentityServer.Models
     // Add profile data for application users by adding properties to the ApplicationUser class
     public class ApplicationUser : IdentityUser
     {
-        public ICollection<GroupAssignment> GroupAssignments { get; set; }
+        public virtual ICollection<UserToGroupAssignment> GroupAssignments { get; set; }
         [NotMapped]
         public virtual List<Group> Groups => GroupAssignments?.Select(oa => oa.Group).ToList();
 
@@ -28,5 +28,8 @@ namespace IdentityServer.Models
         [Required(AllowEmptyStrings = false)]
         [Display(Name = "Last Name", Description = "Family Name")]
         public string FamilyName { get; set; }
+
+        [Display(Name = "Permissions Held", Description = "Permissions this user has been granted directly")]
+        public virtual List<GrantedUserPermission> PermissionsHeld { get; set; }
     }
 }

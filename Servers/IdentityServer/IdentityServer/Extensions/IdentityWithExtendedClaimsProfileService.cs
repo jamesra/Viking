@@ -44,15 +44,38 @@ namespace IdentityServer.Extensions
             {
                 switch (claimType)
                 {
-                    case "affiliation":
+                    case "group":
                     {
-                        var OrgAssignments = _Dbcontext.GroupAssignments.Include("Group").Where(oa => oa.UserId == user.Id).ToList();
-                        foreach(GroupAssignment oa in OrgAssignments)
+                        var OrgAssignments = _Dbcontext.UserToGroupAssignments.Include("Group").Where(oa => oa.UserId == user.Id).ToList();
+                        foreach(var oa in OrgAssignments)
                         {
-                            claims.Add(new Claim("Affiliation", oa.Group.Name));
+                            //TODO: Add the role name they have under that group
+                            claims.Add(new Claim("MemberOf", oa.Group.Id.ToString()));
                         }
                     }
-                    break;
+                    break;/*
+                    case "group role":
+                        {
+                            //Add a claim for each group the user had a role within
+                            var UserGroupRoles = from u in _Dbcontext.Users
+                                                  join ga in _Dbcontext.GroupAssignments on u.Id equals ga.UserId //This is probably paranoid, but it ensures the user is still assigned to the group 
+                                                  join ur in _Dbcontext.UserRoles on ga.GroupId equals ur.GroupID
+                                                  where u.Id == user.Id
+                                                  select new
+                                                  {
+                                                      GroupRole = ur,
+                                                      User = u,
+                                                      Group = ga.GroupId
+                                                  };
+
+                            foreach (var ugr in UserGroupRoles)
+                            {
+                                string claim_value = $"{ugr.Group},{ugr.GroupRole.RoleId}";
+                                //TODO: Add the role name they have under that group
+                                claims.Add(new Claim("group Role", claim_value));
+                            }
+                        }
+                        break;*/
                     case JwtClaimTypes.FamilyName:
                         claims.Add(new Claim(JwtClaimTypes.FamilyName, user.FamilyName));
                         break;

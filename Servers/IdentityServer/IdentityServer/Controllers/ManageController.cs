@@ -137,8 +137,7 @@ namespace IdentityServer.Controllers
             var Roles = requestor.AvailableRoles;
             var Organizations = requestor.AvailableOrganizations;
 
-
-            var AdminUsers = _context.GetAdminUsers();
+            var AdminUsers = _context.GetUsersInAdminRole();
 
             UserClaimRequestViewModel ExistingClaims = await User.CreateUserClaimsRequest(_context);
 
@@ -147,7 +146,7 @@ namespace IdentityServer.Controllers
 
             List<string> InvolvedAdmins = new List<string>();
 
-            Dictionary<long, List<ApplicationUser>> OrgAdmins = _context.GetOrganizationAdminMap();
+            Dictionary<long, List<ApplicationUser>> OrgAdmins = _context.GetOrganizationAdminMap(Config.GroupAccessManagerPermission);
 
             //Create the message
             string message = string.Format("{0} is requesting additional claims\n\n", User.UserName);

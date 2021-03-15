@@ -1,4 +1,4 @@
-﻿@model IEnumerable<IdentityServer.Models.UserViewModels.UserRolesViewModel>
+﻿@model IdentityServer.Models.UserViewModels.ListUserRolesViewModel
 
 @{
     ViewData["Title"] = "Roles";
@@ -6,44 +6,54 @@
 }
 
 <h2>User Role Assignments</h2>
-<p>Users can be associated with any number of the roles listed below.  Role membership is used by the web service to determine which functions a user can perform.
-   Roles currently apply to all volumes.  However for finer grain control an additional test for group membership may be added in the future.</p>
+<p>
+    Users can be associated with any number of the roles listed below.  Role membership is used by the web service to determine which functions a user can perform.
+    Roles currently apply to all volumes.  However for finer grain control an additional test for group membership may be added in the future.
+</p>
 
+<!--
+<select asp-for="Group" asp-items="Model.RoleSelectList" class="form-control">
+    <option value="">Select Group</option>
+</select>
+    -->
 
 <table class="table">
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Username)
+                Username
             </th>
-            @{
-                IdentityServer.Models.UserViewModels.UserRolesViewModel firstModel = Model.FirstOrDefault();
-                if (firstModel != null)
+            @{ 
+                foreach (var role in Model.AvailableRoles)
                 {
-                    foreach (var role in firstModel.AvailableRoles)
-                    {
-                        <th>
-                            @role.Name
-                        </th>
-                    }
+                    <th>
+                        @role.Name
+                    </th>
                 }
             }
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                @if (User.IsInRole("Access Manager"))
+        @{
+            if (User.IsInRole(Config.AdminRoleName))
+            {
+                foreach (var item in Model.UsersRoles)
                 {
-                    @Html.Partial("View", item)
+                    <tr>
+                        @{ @Html.PartialAsync("View", new IdentityServer.Models.UserViewModels.EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
+                    </tr>
                 }
-                else
+            }
+            else
+            {
+                foreach (var item in Model.UsersRoles)
                 {
-                    @Html.Partial("ReadOnlyUserRolesView", item)
+                    <tr>
+                        @{ @Html.PartialAsync("ReadOnlyUserRolesView", new IdentityServer.Models.UserViewModels.EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
+                    </tr> 
                 }
-            </tr>
+            }
         }
     </tbody>
 </table>

@@ -31,6 +31,11 @@ To Initially populate the database follow these steps:
     2. dotnet ef database update --no-build -v --context ApplicationDbContext
     3. dotnet ef database update --no-build -v --context ConfigurationDbContext
 
+Rolling back to earlier migrations
+----------------------------------
+
+dotnet ef database update InitialApplicationDatabaseMigration -c ApplicationDbContext -v --no-build
+
 SSL
 ---
 

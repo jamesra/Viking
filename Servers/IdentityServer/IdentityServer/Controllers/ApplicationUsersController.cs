@@ -16,16 +16,23 @@ namespace IdentityServer.Controllers
     public class ApplicationUsersController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAuthorizationService _authorizationService;
 
-        public ApplicationUsersController(ApplicationDbContext context)
+        public ApplicationUsersController(ApplicationDbContext context, IAuthorizationService authorizationService)
         {
             _context = context;
+            _authorizationService = authorizationService;
         }
 
         // GET: ApplicationUsers
         public async Task<IActionResult> Index()
         {
             return View(await _context.ApplicationUser.Include("GroupAssignments").ToListAsync());
+        }
+
+        public ActionResult ReturnChallengeOrForbidOnFailedAuthorization()
+        {
+            return User.Identity.IsAuthenticated ? new ForbidResult() : (ActionResult)Challenge();
         }
 
         // GET: ApplicationUsers/Details/5
@@ -88,7 +95,7 @@ namespace IdentityServer.Controllers
 
         private bool IsUserAnAdminOrSelf(string UserId)
         {
-            if (!this.User.IsInRole("Access Manager"))
+            if (!this.User.IsInRole(Config.AdminRoleName))
             {
                 var originalUsername = _context.ApplicationUser.Where(u => u.Id == UserId).Select(u => u.Email).FirstOrDefault();
                 if (!(this.User.Identity.Name == originalUsername))
@@ -185,13 +192,28 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Access Manager")]
+        [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> EditOrganizations(string id, [Bind("Id, Name")] UserGroupsViewModel applicationUser, [Bind] IEnumerable<GroupSelectedViewModel> UserOrganizations)
         {
             if (id != applicationUser.Id)
             {
                 return NotFound();
             }
+
+            ///Check that the user has the right to alter group membership in every affected group
+            var groups = _context.Group.Where(g => UserOrganizations.Any(uo => uo.Id == g.Id));
+            foreach(var group in groups)
+            {
+                var result = await _authorizationService.AuthorizeAsync(User, group, IdentityServer.Authorization.Operations.AccessManager);
+                if (result.Succeeded)
+                {
+                    continue;
+                }
+                else
+                    return ReturnChallengeOrForbidOnFailedAuthorization();
+            }
+            /////////////////////////////////////////////////////////////////////////////////////
+    
 
             var user = await _context.ApplicationUser.Include("GroupAssignments").SingleOrDefaultAsync(u => u.Id == id);
             if (user == null)
@@ -203,7 +225,10 @@ namespace IdentityServer.Controllers
             {
                 try
                 {
-                    user.UpdateOrganizationUsers(UserOrganizations);
+                    foreach(var org in UserOrganizations)
+                    {
+                        user.UpdateOrganization(org); 
+                    } 
 
                     _context.Update(user);
                     await _context.SaveChangesAsync();
@@ -245,7 +270,7 @@ namespace IdentityServer.Controllers
         // POST: ApplicationUsers/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Access Manager")]
+        [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var applicationUser = await _context.ApplicationUser.SingleOrDefaultAsync(m => m.Id == id);

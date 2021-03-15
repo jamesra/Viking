@@ -236,7 +236,9 @@ namespace IdentityServer.Controllers
                     _logger.LogInformation("User created a new account with password.");
 
                     if (firstUser)
+                    {
                         await _userManager.AddToRoleAsync(user, Config.AdminRoleName);
+                    }
 
                     try
                     {

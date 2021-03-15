@@ -11,8 +11,24 @@ namespace IdentityServer
     public static class Config
     {
         private const string Secret = "CorrectHorseBatteryStaple";
+        public const string AdminRoleName = "Administrator";
 
-        public const string AdminRoleName = "Access Manager";
+        public const string AccessManagerPolicy = "Access Manager";
+
+        public const string GroupAccessManagerPermission = "Access Manager";
+
+        /// <summary>
+        /// Permissions defined in the global group are available to all groups (All child groups?)
+        /// </summary>
+        public const long AdminGroupId = -1;
+        public const string AdminGroupName = "Administrators";
+
+        public const long EveryoneGroupId = 0;
+        public const string EveryoneGroupName = "Everyone";
+
+        public const string GroupResourceType = "Group";
+        public const string VolumeResourceType = "Volume";
+
         public static string AdminRoleId { get; set; }
 
         // scopes define the resources in your system

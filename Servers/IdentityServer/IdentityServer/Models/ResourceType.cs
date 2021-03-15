@@ -1,0 +1,24 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc;
+
+namespace IdentityServer.Models
+{
+    /// <summary>
+    /// The permissions exposed by a resource are determined by its type
+    /// </summary>
+    public class ResourceType
+    {
+        [Key]
+        [MaxLength(128)]
+        [Display(Name = "Name", Description = "Name of the resource type")]
+        public string Id { get; set; }
+
+        [Display(Name = "Permissions", Description = "Permissions that can be set on the resource type")]
+        public virtual List<ResourceTypePermission> Permissions { get; set; }
+    }
+}

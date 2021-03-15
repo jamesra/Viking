@@ -36,7 +36,11 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var organization = await _context.Group.Include("GroupAssignments.User")
+            var organization = await _context.Group
+                .Include("GroupAssignments.User")
+                .Include(g => g.UsersWithPermissions)
+                .Include(g => g.ResourceType)
+                .Include(g => g.GroupsWithPermissions)
                .SingleOrDefaultAsync(m => m.Id == id);
 
             if (organization == null)
@@ -58,7 +62,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Access Manager")]
+        [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> Create([Bind("Name,ShortName")] Group group)
         {
             if (ModelState.IsValid)
@@ -80,6 +84,12 @@ namespace IdentityServer.Controllers
         }
 
         // GET: Organizations/Edit/5
+        public async Task<IActionResult> ViewGroupPermissions(long id)
+        {   
+            return RedirectToAction("Index", "GroupPermissions", new { GroupId = id });
+        }
+
+        // GET: Organizations/Edit/5
         public async Task<IActionResult> Edit(long? id)
         {
             if (id == null)
@@ -87,7 +97,9 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var groupEditDetials = await _context.Group.Include("GroupAssignments").Select(org => new GroupDetailsViewModel
+            var groupEditDetails = await _context.Group
+                .Include("GroupAssignments")
+                .Select(org => new GroupDetailsViewModel
             {
                 Name = org.Name,
                 Id = org.Id,
@@ -95,7 +107,7 @@ namespace IdentityServer.Controllers
                 {
                     Id = u.Id,
                     Name = u.UserName,
-                    Selected = org.GroupAssignments.Any(oa => oa.UserId == u.Id)
+                    Selected = org.Users.Any(oa => oa.Id == u.Id)
                 }).ToList(),
                 Children = org.Children.Select(g => new GroupDetailsViewModel
                 {
@@ -106,20 +118,20 @@ namespace IdentityServer.Controllers
             })
             .SingleOrDefaultAsync(m => m.Id == id);
              
-        if (groupEditDetials == null)
-        {
-            return NotFound();
-        }
+            if (groupEditDetails == null)
+            {
+                return NotFound();
+            }
 
-        return View(groupEditDetials);
-    }
+            return View(groupEditDetails);
+        }
 
         // POST: Organizations/Edit/5
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Access Manager")]
+        [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Description")] GroupDetailsViewModel groupDetails, [Bind] IEnumerable<UserSelectedViewModel> usersSelected)
         {
             if (id != groupDetails.Id)
@@ -209,7 +221,7 @@ namespace IdentityServer.Controllers
         // POST: Organizations/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Access Manager")]
+        [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             var organization = await _context.Group.SingleOrDefaultAsync(m => m.Id == id);
@@ -222,5 +234,7 @@ namespace IdentityServer.Controllers
         {
             return _context.Group.Any(e => e.Id == id);
         }
+
+
     }
 }

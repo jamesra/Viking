@@ -1,25 +1,21 @@
-﻿@model IdentityServer.Models.UserViewModels.UserRolesViewModel
+﻿@model IdentityServer.Models.UserViewModels.EditUserRolesViewModel
+ 
+@using (Html.BeginForm("Edit", "UserRoles", FormMethod.Post))
+{
+    @Html.AntiForgeryToken()
+    <div hidden="hidden">
+        @Html.EditorForModel()
+        @Html.EditorFor(model => model.Username)
+    </div>
 
-<div>
+    <td>
+        @Html.DisplayFor(model => model.Username)
+    </td>
 
-    @using (Html.BeginForm("Edit", "UserRoles", FormMethod.Post))
+    @foreach (var role in Model.AvailableRoles)
     {
-        @Html.AntiForgeryToken()
-        <div hidden="hidden">
-            @Html.EditorForModel()
-            @Html.EditorFor(model => model.Username)
-        </div>
-
-        <td>
-            @Html.DisplayFor(model => model.Username)
-        </td>
-
-        @foreach (var role in Model.AvailableRoles)
-        {
         <td> 
-            @Html.CheckBox(@role.Id, Model.Roles.Contains(role.Id), new { onclick = "this.form.submit();", @disabled = "disabled" })
-
+            @Html.CheckBox(@role.Id, Model.Roles.Contains(role.Id), new { @disabled = "disabled" })
         </td>
-        }
     }
-</div>
+} 

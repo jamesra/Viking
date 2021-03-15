@@ -1,0 +1,57 @@
+﻿@model IEnumerable<IdentityServer.Models.ResourceTypePermission>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h2>@Html.DisplayNameFor(model => model.ResourceTypeId) Index</h2>
+
+<p>
+
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.FirstOrDefault().ResourceTypeId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.FirstOrDefault().PermissionId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.FirstOrDefault().Description)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var resourceType in Model.GroupBy(rtp => rtp.ResourceTypeId))
+        {
+            <tr>
+                <td colspan="2">
+                    @Html.DisplayFor(modelItem => resourceType.Key)
+                </td>
+                <td>
+                    @Html.ActionLink("Create", "Create", new { ResourceTypeId = resourceType.Key })
+                </td>
+            </tr>
+
+            @foreach (var permission in resourceType)
+            {
+                <tr>
+                    <td />
+                    <td>
+                        @Html.DisplayFor(modelItem => permission.PermissionId)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => permission.Description)
+                    </td>
+                    <td>
+                        @Html.ActionLink("Edit", "Edit", permission) <text> | </text>
+                        @Html.ActionLink("Delete", "Delete", permission)
+                    </td>
+                </tr> 
+            }
+        }
+    </tbody>
+</table>

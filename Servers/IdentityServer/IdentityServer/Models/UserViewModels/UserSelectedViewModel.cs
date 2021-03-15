@@ -27,15 +27,15 @@ namespace IdentityServer.Models.UserViewModels
         {
             foreach (UserSelectedViewModel user in Users)
             {
-                var ExistingMapping = organization.GroupAssignments.FirstOrDefault(u => u.UserId == user.Id);
+                var ExistingMapping = organization.MemberUsers.FirstOrDefault(u => u.UserId == user.Id);
 
                 if (user.Selected)
                 {
                     if (ExistingMapping == null)
                     {
                         //Create the mapping
-                        GroupAssignment oa = new GroupAssignment() { GroupId = organization.Id, UserId = user.Id };
-                        organization.GroupAssignments.Add(oa);
+                        UserToGroupAssignment oa = new UserToGroupAssignment() { GroupId = organization.Id, UserId = user.Id };
+                        organization.MemberUsers.Add(oa);
                     }
                 }
                 else
@@ -43,7 +43,7 @@ namespace IdentityServer.Models.UserViewModels
                     if (ExistingMapping != null)
                     {
                         //Remove the mapping
-                        organization.GroupAssignments.Remove(ExistingMapping);
+                        organization.MemberUsers.Remove(ExistingMapping);
                     }
                 }
             }

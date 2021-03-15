@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace IdentityServer.Data.Migrations.Application
+namespace IdentityServer.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
@@ -15,8 +15,8 @@ namespace IdentityServer.Data.Migrations.Application
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "3.1.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
+                .HasAnnotation("ProductVersion", "5.0.3")
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
             modelBuilder.Entity("IdentityServer.Models.ApplicationUser", b =>
@@ -32,8 +32,8 @@ namespace IdentityServer.Data.Migrations.Application
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Email")
-                        .HasColumnType("nvarchar(256)")
-                        .HasMaxLength(256);
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
@@ -53,12 +53,12 @@ namespace IdentityServer.Data.Migrations.Application
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("NormalizedEmail")
-                        .HasColumnType("nvarchar(256)")
-                        .HasMaxLength(256);
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("NormalizedUserName")
-                        .HasColumnType("nvarchar(256)")
-                        .HasMaxLength(256);
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
@@ -79,20 +79,54 @@ namespace IdentityServer.Data.Migrations.Application
                         .HasColumnType("bit");
 
                     b.Property<string>("UserName")
-                        .HasColumnType("nvarchar(256)")
-                        .HasMaxLength(256);
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedEmail")
-                        .HasName("EmailIndex");
+                        .HasDatabaseName("EmailIndex");
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasName("UserNameIndex")
+                        .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.GrantedGroupPermission", b =>
+                {
+                    b.Property<long>("ResourceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PermissionId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<long>("GroupId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ResourceId", "PermissionId", "GroupId");
+
+                    b.HasIndex("GroupId");
+
+                    b.ToTable("GrantedGroupPermissions");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.GrantedUserPermission", b =>
+                {
+                    b.Property<long>("ResourceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PermissionId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("ResourceId", "PermissionId", "UserId");
+
+                    b.ToTable("GrantedUserPermissions");
                 });
 
             modelBuilder.Entity("IdentityServer.Models.Group", b =>
@@ -103,13 +137,13 @@ namespace IdentityServer.Data.Migrations.Application
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(2048)")
-                        .HasMaxLength(2048);
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(128)")
-                        .HasMaxLength(128);
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<long?>("ParentID")
                         .HasColumnType("bigint");
@@ -119,6 +153,13 @@ namespace IdentityServer.Data.Migrations.Application
                     b.HasIndex("ParentID");
 
                     b.ToTable("Group");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = -1L,
+                            Name = "Administrators"
+                        });
                 });
 
             modelBuilder.Entity("IdentityServer.Models.GroupAssignment", b =>
@@ -136,21 +177,29 @@ namespace IdentityServer.Data.Migrations.Application
                     b.ToTable("GroupAssignments");
                 });
 
-            modelBuilder.Entity("IdentityServer.Models.UserViewModels.UserSelectedViewModel", b =>
+            modelBuilder.Entity("IdentityServer.Models.GroupPermission", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<long>("GroupId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PermissionId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("Description")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
-                    b.Property<bool>("Selected")
-                        .HasColumnType("bit");
+                    b.HasKey("GroupId", "PermissionId");
 
-                    b.HasKey("Id");
+                    b.ToTable("Permissions");
 
-                    b.ToTable("UserSelectedViewModel");
+                    b.HasData(
+                        new
+                        {
+                            GroupId = -1L,
+                            PermissionId = "Access Manager",
+                            Description = "Add/Remove group members"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -167,18 +216,18 @@ namespace IdentityServer.Data.Migrations.Application
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(256)")
-                        .HasMaxLength(256);
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("NormalizedName")
-                        .HasColumnType("nvarchar(256)")
-                        .HasMaxLength(256);
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasName("RoleNameIndex")
+                        .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles");
@@ -299,11 +348,41 @@ namespace IdentityServer.Data.Migrations.Application
                     b.HasData(
                         new
                         {
-                            Id = "512ee016-aa68-4bf6-89d3-9fae586f7aee",
-                            ConcurrencyStamp = "9d7992db-4991-4631-a2b0-7fb09d929bda",
-                            Name = "Access Manager",
-                            NormalizedName = "Access Manager"
+                            Id = "87aa0c03-6fac-412b-8226-128aaaacefc6",
+                            ConcurrencyStamp = "09fff261-651a-4f3b-9369-6a16a25c16a4",
+                            Name = "Administrator",
+                            NormalizedName = "Administrator"
                         });
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.GrantedGroupPermission", b =>
+                {
+                    b.HasOne("IdentityServer.Models.Group", "PermittedGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.HasOne("IdentityServer.Models.Group", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PermittedGroup");
+
+                    b.Navigation("Resource");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.GrantedUserPermission", b =>
+                {
+                    b.HasOne("IdentityServer.Models.Group", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Resource");
                 });
 
             modelBuilder.Entity("IdentityServer.Models.Group", b =>
@@ -311,6 +390,8 @@ namespace IdentityServer.Data.Migrations.Application
                     b.HasOne("IdentityServer.Models.Group", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentID");
+
+                    b.Navigation("Parent");
                 });
 
             modelBuilder.Entity("IdentityServer.Models.GroupAssignment", b =>
@@ -326,6 +407,21 @@ namespace IdentityServer.Data.Migrations.Application
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.GroupPermission", b =>
+                {
+                    b.HasOne("IdentityServer.Models.Group", "Group")
+                        .WithMany("AvailablePermissions")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -377,6 +473,20 @@ namespace IdentityServer.Data.Migrations.Application
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.ApplicationUser", b =>
+                {
+                    b.Navigation("GroupAssignments");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.Group", b =>
+                {
+                    b.Navigation("AvailablePermissions");
+
+                    b.Navigation("Children");
+
+                    b.Navigation("GroupAssignments");
                 });
 #pragma warning restore 612, 618
         }

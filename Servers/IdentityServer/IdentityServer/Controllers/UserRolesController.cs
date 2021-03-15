@@ -33,20 +33,34 @@ namespace IdentityServer.Controllers
             _context = context;
             _logger = logger;
         }
-         
+          
         // GET: UserRoles 
         public async Task<IActionResult> Index()
         {
+            //var Group = ViewData["Group"] as Group; 
+
             List<ApplicationRole> AvailableRoles = _context.ApplicationRole.ToList();
-            List<UserRolesViewModel> UserRolesModels = _context.ApplicationUser.Select(
+
+            var UserRolesModels = (from user in _context.ApplicationUser 
+                                  select new UserRolesViewModel
+                                  {
+                                      Username = user.UserName,
+                                      Roles = _context.UserRoles.Where(ur => ur.UserId == user.Id).Select(ur => ur.RoleId).ToList()
+                                  }).ToList();
+
+            var listRoles = new ListUserRolesViewModel() { AvailableRoles = AvailableRoles, UsersRoles = UserRolesModels };
+
+            /*
+            List < UserRolesViewModel > UserRolesModels = _context.ApplicationUser.Where(u => u.Groups.Any(g => g.Id == GroupId)).Select(
                 user => new UserRolesViewModel
                 {
                     Username = user.UserName,
                     Roles = _context.UserRoles.Where(ur => ur.UserId == user.Id).Select(ur => ur.RoleId).ToList(),
                     AvailableRoles = AvailableRoles,
                 }).ToList();
+            */
 
-            return View(UserRolesModels);
+            return View(listRoles);
             /*
             return View(await _context.ApplicationUser.Select(
                 user => new UserRolesViewModel
@@ -131,7 +145,7 @@ namespace IdentityServer.Controllers
                             if(otherAdminUsers== false)
                             {
                                 _logger.LogWarning("Cannot remove the last admin user");
-                                continue; 
+                                continue;
                             }
                         }
                         var urToRemove = listUserRoles.First(ur => ur.RoleId == userRole.Id && ur.UserId == User.Id);
