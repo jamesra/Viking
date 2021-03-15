@@ -68,5 +68,5 @@ Indices and tables
 .. _SSTEM and Computation Molecular Phenotyping: http://www.plosbiology.org/article/info%3Adoi%2F10.1371%2Fjournal.pbio.1000074#abstract0
 .. _original visualization site: http://connectomes.utah.edu/viz/
 .. _.NET Framework 4.6: https://www.microsoft.com/en-us/download/details.aspx?id=48130
-.. _XNA 4.0 Framework Redistributable: https://www.microsoft.com/en-us/download/details.aspx?id=27598
+.. _XNA 4.0 Framework Redistributable: http://connectomes.utah.edu/XNA Framework 4.0 Redist.msi
 .. _public key: https://connectomes.utah.edu/Software/Viking4/VikingPublicKey.cer
