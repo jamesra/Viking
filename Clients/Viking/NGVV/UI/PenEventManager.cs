@@ -198,7 +198,8 @@ namespace Viking.UI
             }
 
             PointerPenInfo penState = WinMsgInput.GetPenInfo(pointerState.PointerID);
-            System.Diagnostics.Trace.WriteLine($"{penState}");
+            if(Global.TracePenEvents)
+                System.Diagnostics.Trace.WriteLine($"{penState}");
             bool NewPointer = true; //True if we have a new pointer ID than last time.  From what I can tell each time the pen leaves range of the surface a new ID is assigned when moves back into range
 
             //Reset our previous state if the ID has changed

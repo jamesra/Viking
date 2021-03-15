@@ -392,7 +392,8 @@ namespace Viking.UI
             Parent.OnPenMove += OnPenMove;
 
             this.SimplifiedPathToleranceInPixels = simplifiedPathToleranceInPixels;
-            System.Diagnostics.Trace.WriteLine(string.Format("PenInputHelper {0} Subscribed to events", this.ID));
+            if(Global.TracePenEvents)
+                System.Diagnostics.Trace.WriteLine(string.Format("PenInputHelper {0} Subscribed to events", this.ID));
         }
 
         public void UnsubscribeEvents()
@@ -407,7 +408,8 @@ namespace Viking.UI
             Parent.OnPenLeaveContact -= OnPenLeaveContact;
             Parent.OnPenMove -= OnPenMove;
 
-            System.Diagnostics.Trace.WriteLine(string.Format("PenInputHelper {0} Unsubscribed from events", this.ID));
+            if (Global.TracePenEvents)
+                System.Diagnostics.Trace.WriteLine(string.Format("PenInputHelper {0} Unsubscribed from events", this.ID));
         }
 
         public void Push(GridVector2 p)
