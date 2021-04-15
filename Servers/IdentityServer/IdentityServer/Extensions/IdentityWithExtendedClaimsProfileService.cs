@@ -46,8 +46,9 @@ namespace IdentityServer.Extensions
                 {
                     case "group":
                     {
-                        var OrgAssignments = _Dbcontext.UserToGroupAssignments.Include("Group").Where(oa => oa.UserId == user.Id).ToList();
-                        foreach(var oa in OrgAssignments)
+                        var GroupAssignments = _Dbcontext.UserToGroupAssignments.Include("Group").Where(oa => oa.UserId == user.Id).ToList();
+                        
+                        foreach(var oa in GroupAssignments)
                         {
                             //TODO: Add the role name they have under that group
                             claims.Add(new Claim("MemberOf", oa.Group.Id.ToString()));

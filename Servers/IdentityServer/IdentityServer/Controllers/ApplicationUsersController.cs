@@ -9,6 +9,7 @@ using IdentityServer.Data;
 using IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
 using IdentityServer.Models.UserViewModels;
+using IdentityServer.Extensions;
 
 namespace IdentityServer.Controllers
 { 
@@ -49,6 +50,8 @@ namespace IdentityServer.Controllers
             {
                 return NotFound();
             }
+
+            ViewBag.RecursiveGroups = await _context.RecursiveMemberOfGroups(id);
 
             return View(applicationUser);
         }

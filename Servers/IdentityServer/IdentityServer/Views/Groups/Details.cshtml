@@ -36,7 +36,7 @@
             else
             {
                 @Html.Display("<b>None</b>")
-            } 
+            }
         </dd>
         <dt>
             @Html.DisplayNameFor(model => model.Description)
@@ -44,10 +44,25 @@
         <dd>
             @Html.DisplayFor(model => model.Description)
         </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.NumMemberGroups)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.NumMemberGroups)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.NumMemberUsers)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.NumMemberUsers)
+        </dd>
         <dd>
             <table class="edit-settings">
                 <thead>
-                    <tr> 
+                    <tr>
+                        <th>
+                            @Html.DisplayNameFor(model => Model.MemberOf)
+                        </th>
                         <th>
                             @Html.DisplayNameFor(model => Model.MemberUsers)
                         </th>
@@ -63,7 +78,18 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr> 
+                    <tr>
+                        <td>
+                            <ul>
+                                @for (int i = 0; i < Model.MemberOf.Count(); i++)
+                                {
+                                    <li>
+                                        @Html.DisplayFor(x => Model.MemberOf.ElementAt(i).Name)
+                                    </li>
+
+                                }
+                            </ul>
+                        </td>
                         <td>
                             <ul>
                                 @for (int i = 0; i < Model.Users.Count(); i++)
@@ -75,7 +101,7 @@
 
                                 }
                             </ul>
-                            </td>
+                        </td>
                         <td>
                             <ul>
                                 @for (int i = 0; i < Model.Groups.Count(); i++)
@@ -112,7 +138,7 @@
                             </ul>
                         </td>
                     </tr>
-                </tbody> 
+                </tbody>
             </table>
         </dd>
     </dl> 

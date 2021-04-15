@@ -14,7 +14,7 @@
         <form asp-action="Edit">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="Group" />
-            <input type="hidden" asp-for="Group.Id" /> 
+            <input type="hidden" asp-for="Group.Id" />
             <div class="form-group">
                 <label asp-for="Group.Name" class="control-label"></label>
                 <input asp-for="Group.Name" class="form-control" />
@@ -32,6 +32,22 @@
                 </select>
                 <span asp-validation-for="Group.ParentID" class="text-danger"></span>
             </div>
+            @if (Model.AlreadyMemberOf != null && Model.AlreadyMemberOf.Any())
+            {
+                <div class="form-group">
+                    <dl class="dl-traditional">
+                        <dt>
+                            <label asp-for="AlreadyMemberOf" class="control-label"></label>
+                        </dt>
+                        @for (int i = 0; i < Model.AlreadyMemberOf.Count(); i++)
+                        {
+                        <dd>
+                            @Model.AlreadyMemberOf[i]
+                        </dd>
+                        }
+                    </dl>
+                </div>
+            }
             <div class="form-group">
                 <partial name="~/Views/Shared/_MembershipEditTablePartialView.cshtml" for="@Model.Members" />
             </div>

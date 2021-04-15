@@ -46,5 +46,7 @@ namespace IdentityServer.Extensions
 
             return new UserClaimRequestViewModel() { UserId = user.Id, AvailableOrganizations = orgs, AvailableRoles = roles, NewOrganization="" };
         }
+
+
     }
 }

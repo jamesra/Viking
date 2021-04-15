@@ -29,6 +29,13 @@ namespace IdentityServer.Models
 //        [InverseProperty(nameof(GroupToGroupAssignment.Container))]
         public virtual List<GroupToGroupAssignment> MemberGroups { get; set; } = new List<GroupToGroupAssignment>();
 
+        /// <summary>
+        /// Computed column to save round-trips to the database when recursively determining user group membership
+        /// </summary>
+        [NotMapped]
+        [Display(Name = "Number of member groups")]
+        public virtual int NumMemberGroups { get { return MemberGroups.Count(); } }
+
         [NotMapped]
         [Display(Name = "Member Groups", Description = "Groups assigned to group")]
         public virtual List<Group> Groups => MemberGroups.Select(oa => oa.Member).ToList();
@@ -45,10 +52,9 @@ namespace IdentityServer.Models
 
         [Display(Name = "Permissions Held", Description="Permissions this group has been granted to other resources")]
         public virtual List<GrantedGroupPermission> PermissionsHeld { get; set; }
-         
-
+          
         [NotMapped]
-        [Display(Name = "User Count", Description = "Number of users assigned to group")]
-        public virtual int UsersCount { get { return MemberUsers.Select(oa => oa.User).Count(); } }
+        [Display(Name = "Number of member users", Description = "Number of users assigned to group")]
+        public virtual int NumMemberUsers { get { return MemberUsers.Count(); } }
     }
 }

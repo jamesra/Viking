@@ -9,6 +9,7 @@ using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer.Models.UserViewModels;
 using Microsoft.AspNetCore.Authorization;
+using IdentityServer.Extensions;
 
 
 namespace IdentityServer.Controllers
@@ -48,7 +49,8 @@ namespace IdentityServer.Controllers
                 //.Include(g => g.MemberGroups)
                 .Include("MemberGroups.Member")
                 .Include(g => g.MemberOfGroups)
-                .Include(g => g.PermissionsHeld) 
+                .Include(g => g.PermissionsHeld)
+                .Include(g => g.MemberOfGroups).ThenInclude(mog => mog.Container)
                .SingleOrDefaultAsync(m => m.Id == id);
 
             if (organization == null)
@@ -158,6 +160,9 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
+            //Determine which groups we are already a member of, this prevents cycles
+            List<Group> AlreadyMemberOf = await _context.RecursiveMemberOfGroups(id.Value,false);
+
             var groupEditDetails = await _context.Group
                 .Include(g => g.GroupsWithPermissions)
                 .Include(g => g.UsersWithPermissions)
@@ -178,13 +183,14 @@ namespace IdentityServer.Controllers
                             Name = u.UserName,
                             Selected = g.MemberUsers.Any(uwp => uwp.UserId == u.Id)
                         }).ToList(),
-                        GroupList = _context.Group.Where(mg => mg.Id != g.Id).OrderBy(mg => mg.Name).Select(mg => new GroupSelectedViewModel
+                        GroupList = _context.Group.Where(mg => mg.Id != g.Id && AlreadyMemberOf.Contains(mg) == false).OrderBy(mg => mg.Name).Select(mg => new GroupSelectedViewModel
                         {
                             Id = mg.Id,
                             Name = mg.Name,
-                            Selected = g.MemberGroups.Any(uwp => uwp.MemberGroupId == mg.Id)
+                            Selected = g.MemberGroups.Any(uwp => uwp.MemberGroupId == mg.Id),
                         }).ToList(),
                     },
+                    AlreadyMemberOf = AlreadyMemberOf.Select(am => am.Name).ToList()
                     /*
                     Children = g.Children.OrderBy(c => c.Name).Select(g => new GroupDetailsViewModel
                     {
@@ -314,8 +320,16 @@ namespace IdentityServer.Controllers
         [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
-            var organization = await _context.Group.SingleOrDefaultAsync(m => m.Id == id);
-            _context.Group.Remove(organization);
+            var group = await _context.Group
+                .Include(g => g.MemberGroups)
+                .SingleOrDefaultAsync(m => m.Id == id);
+
+            foreach(var memberGroupAssignment in group.MemberGroups)
+            {
+                _context.GroupToGroupAssignments.Remove(memberGroupAssignment);
+            }
+
+            _context.Group.Remove(group);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }

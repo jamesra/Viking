@@ -34,7 +34,7 @@
                 <a asp-action="Details" asp-controller="GrantedPermissions" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.UsersCount)
+                @Html.DisplayFor(modelItem => item.NumMemberUsers)
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.Description)

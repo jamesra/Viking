@@ -33,7 +33,13 @@ namespace IdentityServer.Data
             // Customize the ASP.NET Identity model and override the defaults if needed.
             // For example, you can rename the ASP.NET Identity table names and more.
             // Add your customizations after calling base.OnModelCreating(builder);
-             
+            
+            /*
+            builder.Entity<Group>()
+                .Property(g => g.NumMemberGroups)
+                .HasComputedColumnSql($"Select COUNT({nameof(GroupToGroupAssignment.MemberGroupId)}) FROM {nameof(GroupToGroupAssignment)} GGA WHERE GGA.{nameof(GroupToGroupAssignment.ContainerGroupId)} = {nameof(Models.Group.Id)}");
+            */
+
             builder.Entity<ResourceTypePermission>().HasOne(rtp => rtp.ResourceType).WithMany(nameof(Models.ResourceType.Permissions)).HasForeignKey(rtp => rtp.ResourceTypeId);
              
             builder.Entity<UserToGroupAssignment>().HasKey(oa => new { oa.GroupId, oa.UserId});

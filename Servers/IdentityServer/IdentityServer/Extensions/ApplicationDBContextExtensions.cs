@@ -144,6 +144,57 @@ namespace IdentityServer.Extensions
            return OrgAdminMap;
             */
        }
-   
+
+        /// <summary>
+        /// Returns all groups the user belongs to, as well as all groups those are a part of recursivelyfs
+        /// </summary>
+        /// <param name="UserId"></param>
+        /// <returns></returns>
+        public static async Task<IEnumerable<Group>> RecursiveMemberOfGroups(this ApplicationDbContext context, string userId)
+        {
+            var GroupAssignments = await context.UserToGroupAssignments
+                .Include(uga => uga.Group).ThenInclude(uga => uga.MemberOfGroups)
+                .Where(uga => uga.UserId == userId).ToListAsync();
+
+            var Results = GroupAssignments.Select(dmg => dmg.Group).ToList();
+
+            //Recursivly add any groups our direct groups are a member of
+
+            var recursiveResults = GroupAssignments.SelectMany(ga => ga.Group.MemberOfGroups.Select(mog => context.RecursiveMemberOfGroups(mog.ContainerGroupId))).ToList();
+
+            await Task.WhenAll(recursiveResults);
+
+            var rr = recursiveResults.SelectMany(rr => rr.Result);
+            Results.AddRange(rr);
+            return Results.Distinct();
+        }
+
+        /// <summary>
+        /// Recursively returns all groups the passed GroupId belongs to
+        /// </summary> 
+        /// <param name="groupId">Group we are returning membership info for</param>
+        /// <param name="includePassedGroup">True if the passed GroupId should appear in the result set, false if it should not.  Default true</param>
+        /// <returns></returns>
+        public static async Task<List<Group>> RecursiveMemberOfGroups(this ApplicationDbContext context, long groupId, bool includePassedGroup = true)
+        { 
+            var GroupAssignments = await context.GroupToGroupAssignments
+                .Include(gga => gga.Container).ThenInclude(ggam => ggam.MemberOfGroups)
+                .Where(gga => gga.MemberGroupId == groupId)
+                .ToListAsync();
+
+            var Results = GroupAssignments.Select(dmg => dmg.Container).ToList();
+
+            var recursiveResults = GroupAssignments.SelectMany(ga => ga.Container.MemberOfGroups.Select(mog => context.RecursiveMemberOfGroups(mog.ContainerGroupId, false))).ToList();
+              
+            await Task.WhenAll(recursiveResults);
+
+            var rr = recursiveResults.SelectMany(rr => rr.Result).ToList();
+            Results.AddRange(rr);
+
+            if (includePassedGroup)
+                Results.Insert(0, await context.Group.FindAsync(groupId));
+
+            return Results;
+        }
     }
 }

@@ -13,6 +13,11 @@ namespace IdentityServer.Models
     /// </summary>
     public class Resource
     {
+        public override string ToString()
+        {
+            return $"{Id}: {Name} {ResourceTypeId}";
+        }
+
         [Key]
         [Display(Name = "ID", Description = "Database generated ID")]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

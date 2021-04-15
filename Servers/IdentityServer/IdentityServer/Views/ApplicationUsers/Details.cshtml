@@ -41,7 +41,7 @@
         <dd>
             <a asp-action="EditOrganizations" asp-route-id="@Model.Id">Edit</a>
             <table>
-                @foreach (var org in Model.Groups)
+                @foreach (var org in ViewBag.RecursiveGroups)
                 {
                     <tr>
                         <td>

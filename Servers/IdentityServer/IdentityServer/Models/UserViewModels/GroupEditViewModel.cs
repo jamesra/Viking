@@ -58,5 +58,8 @@ namespace IdentityServer.Models.UserViewModels
 
         [Display(Name = "Owner of")]
         public IList<GroupDetailsViewModel> Children { get; set; }
+
+        [Display(Name = "Member of", Description = "Groups we are a member of cannot be assigned to this group as a member")]
+        public IList<string> AlreadyMemberOf { get; set; }
     }
 }
