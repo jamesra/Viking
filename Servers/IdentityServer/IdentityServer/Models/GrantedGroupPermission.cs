@@ -15,12 +15,17 @@ namespace IdentityServer.Models
     /// </summary>
     public class GrantedGroupPermission : GrantedPermissionBase
     {
+        /// <summary>
+        /// The group being granted permission
+        /// </summary>
         [Required]
         [Key, ForeignKey(nameof(IdentityServer.Models.Group))]
         [Display(Name = "Group", Description = "Group granted permission")]
         public long GroupId { get; set; }
 
-        
+        /// <summary>
+        /// The group being granted permission
+        /// </summary>
         [ForeignKey(nameof(GroupId))]
         //[InverseProperty("HasPermissions")]
         public virtual Group PermittedGroup { get; set; }

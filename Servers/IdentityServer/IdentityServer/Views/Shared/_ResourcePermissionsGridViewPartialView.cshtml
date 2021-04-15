@@ -1,0 +1,80 @@
+﻿@model IdentityServer.Models.UserViewModels.ResourcePermissionsEditGridViewModel
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<div class="form-group">
+    <h4><label asp-for="@Model.GroupPermissions"></label></h4>
+    <table class="edit-settings">
+        <thead>
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(x => Model.GroupPermissions[0].Name)
+                </th>
+
+                @for (int i = 0; i < Model.AvailablePermissions.Count(); i++)
+                {
+                    <th>
+                        @Html.DisplayFor(x => Model.AvailablePermissions[i])
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.GroupPermissions.Count(); i++)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(x => Model.GroupPermissions[i].Name)
+                        @Html.HiddenFor(x => Model.GroupPermissions[i].Name)
+                        @Html.HiddenFor(x => Model.GroupPermissions[i].GranteeId)
+                    </td>
+
+                    @for (int iPermission = 0; iPermission < Model.GroupPermissions[i].Permissions.Count(); iPermission++)
+                    {
+                        <td>
+                            <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.GroupPermissions[i].Permissions[iPermission]" />
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div class="form-group">
+    <h4><label asp-for="@Model.UserPermissions"></label></h4>
+    <table class="edit-settings">
+        <thead>
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(x => Model.UserPermissions[0].Name)
+                </th>
+
+                @for (int i = 0; i < Model.AvailablePermissions.Count(); i++)
+                {
+                    <th>
+                        @Html.DisplayFor(x => Model.AvailablePermissions[i])
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.UserPermissions.Count(); i++)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(x => Model.UserPermissions[i].Name)
+                        @Html.HiddenFor(x => Model.UserPermissions[i].Name)
+                        @Html.HiddenFor(x => Model.UserPermissions[i].GranteeId)
+                    </td>
+
+                    @for (int iPermission = 0; iPermission < Model.UserPermissions[i].Permissions.Count(); iPermission++)
+                    {
+                        <td>
+                            <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.UserPermissions[i].Permissions[iPermission]" />
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

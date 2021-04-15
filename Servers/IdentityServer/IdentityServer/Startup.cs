@@ -58,7 +58,7 @@ namespace IdentityServer
                 loggingBuilder.AddSerilog(dispose: true));
 
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")));
+                options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")).EnableDetailedErrors().EnableSensitiveDataLogging());
 
             services.AddAuthorization(options =>
             {
@@ -100,6 +100,9 @@ namespace IdentityServer
              
             // Add application services.
             services.AddTransient<IEmailSender, EmailSender>();
+
+            //Add a helper service to pull permissions
+            services.AddTransient<IPermissionsViewModelHelper, PermissionsViewModelHelper>();
              
             //services.AddMvc(options => options.EnableEndpointRouting = false);
 

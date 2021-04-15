@@ -15,7 +15,7 @@ namespace IdentityServer.Models.UserViewModels
         public long Id { get; set; }
 
         [Required(AllowEmptyStrings = false)]
-        [Display(Name = "Organization")]
+        [Display(Name = "Name")]
         [MaxLength(450)]
         public string Name { get; set; }
 
@@ -24,12 +24,18 @@ namespace IdentityServer.Models.UserViewModels
         public string Description { get; set; }
 
         /// <summary>
-        /// All users in the database, the selected property is true if they are a member of the organization
+        /// All users in the database, the selected property is true if they are a member of the Group
         /// </summary>
-        [Display(Name = "Users")]
+        [Display(Name = "Members")]
         public List<UserSelectedViewModel> UserList { get; set; }
 
-        [Display(Name = "Children")]
+        /// <summary>
+        /// All groups in the database, the selected property is true if they are a member of the Group
+        /// </summary>
+        [Display(Name = "Member Groups")]
+        public List<GroupSelectedViewModel> GroupList { get; set; }
+
+        [Display(Name = "Owner of")]
         public List<GroupDetailsViewModel> Children { get; set; }
     }
 }

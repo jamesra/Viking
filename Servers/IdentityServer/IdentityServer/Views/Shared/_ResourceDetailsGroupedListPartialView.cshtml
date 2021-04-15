@@ -1,0 +1,86 @@
+﻿@model IList<IdentityServer.Models.Resource>
+
+<dl class="dl-traditional">
+    @foreach (var rtype in Model.GroupBy(m => m.ResourceTypeId).OrderBy(m => m.Key))
+    {
+
+
+        string detailsController = null;
+        string detailsDescription = null;
+        switch (rtype.Key)
+        {
+
+            case nameof(Group):
+                detailsController = detailsDescription = "Groups";
+                break;
+            case nameof(Volume):
+                detailsController = detailsDescription = "Volumes";
+                break;
+            case nameof(OrganizationalUnit):
+                detailsController = "OrganizationalUnits";
+                detailsDescription = "Organizational Units";
+                break;
+            case nameof(Resource):
+                detailsController = detailsDescription = "Resources";
+                break;
+            default:
+                break;
+        }
+        <dt><u>@detailsDescription</u></dt>
+
+        <dd class="dl-traditional" >
+            <table class="grid-settings">
+                <thead>
+                    <tr>
+                        <th>
+                            @Html.DisplayNameFor(model => Model[0].Name)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => Model[0].Description)
+                        </th>
+                        <th>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var rows = rtype.OrderBy(r => r.Name).ToList();
+                        @for (int i = 0; i < rows.Count(); i++)
+                        {
+                            <tr>
+                                <td>
+                                    @if (detailsController != null)
+                                    {
+                                        <a asp-action="Details" asp-route-id="@rows[i].Id" asp-controller="@detailsController">@Html.DisplayFor(model => rows[i].Name)</a>
+                                    }
+                                    else
+                                    {
+                                        @Html.DisplayFor(model => rows[i].Name)
+                                    }
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(model => rows[i].Description)
+                                </td>
+                                @if (detailsController != null)
+                                {
+                                <td>
+                                    <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@rows[i].Id">Permissions</a> |
+                                    @if (ViewData.ContainsKey("ShowEdit") && (bool)ViewData["ShowEdit"] == true)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@rows[i].Id" asp-controller="@detailsController">Edit</a>
+                                    }
+                                    @if (ViewData.ContainsKey("ShowDelete") && (bool)ViewData["ShowDelete"] == true)
+                                    {
+                                        <a asp-action="Delete" asp-route-id="@rows[i].Id" asp-controller="@detailsController">Delete</a>
+                                    }
+                                </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </dd>
+
+    }
+</dl> 

@@ -1,0 +1,22 @@
+﻿@model IdentityServer.Models.UserViewModels.GroupMembershipViewModel
+
+
+<table class="edit-settings" style="width:100%">
+    <tr>
+        <th>
+            @Html.DisplayNameFor(model => Model.UserList)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => Model.GroupList)
+        </th>
+    </tr>
+    <tr>
+        <td>
+            <partial name="~/Views/Shared/_UserChecklistPartialView.cshtml" for="@Model.UserList" />
+        </td>
+
+        <td>
+            <partial name="~/Views/Shared/_GroupChecklistPartialView.cshtml" for="@Model.GroupList" />
+        </td>
+    </tr>
+</table>

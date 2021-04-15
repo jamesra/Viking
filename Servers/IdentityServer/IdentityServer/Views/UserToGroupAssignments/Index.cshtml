@@ -1,0 +1,31 @@
+﻿@model IList<IdentityServer.Models.UserToGroupAssignment>
+
+@{
+    ViewData["Title"] = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Index</h2>
+
+<table class="table">
+    <form asp-action="Edit">
+        <thead>
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(model => model[0].UserId)
+                </th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (var i = 0; i < Model.Count(); i++)
+            {
+                <tr>
+                    <td>
+                        <partial name="~/Views/Shared/_UserCheckbox.cshtml" for="@Model[i]" />
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </form>
+</table>

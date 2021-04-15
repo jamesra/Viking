@@ -1,0 +1,15 @@
+﻿@model IdentityServer.Models.UserViewModels.ResourcePermissionsEditGridViewModel
+
+@{
+    ViewData["Title"] = "Permissions Granted";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Permissions</h2>
+
+<form asp-action="Edit">
+    <partial name="~/Views/Shared/_ResourcePermissionsGridViewPartialView.cshtml" for="@Model"/>
+    <div class="form-group">
+        <input type="submit" value="Update" class="btn btn-default" />
+    </div>
+</form>

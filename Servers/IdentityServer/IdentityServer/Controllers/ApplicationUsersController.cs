@@ -227,7 +227,7 @@ namespace IdentityServer.Controllers
                 {
                     foreach(var org in UserOrganizations)
                     {
-                        user.UpdateOrganization(org); 
+                        user.UpdateGroupMembership(org); 
                     } 
 
                     _context.Update(user);

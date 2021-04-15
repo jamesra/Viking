@@ -3,6 +3,7 @@ using IdentityServer4.Models;
 using System.Collections.Generic;
 using System.Security.Claims;
 using IdentityModel;
+using IdentityServer.Models;
 
 
 namespace IdentityServer
@@ -20,14 +21,14 @@ namespace IdentityServer
         /// <summary>
         /// Permissions defined in the global group are available to all groups (All child groups?)
         /// </summary>
-        public const long AdminGroupId = -1;
+        public const long AdminGroupId = -2;
         public const string AdminGroupName = "Administrators";
 
-        public const long EveryoneGroupId = 0;
+        public const long EveryoneGroupId = -1;
         public const string EveryoneGroupName = "Everyone";
 
-        public const string GroupResourceType = "Group";
-        public const string VolumeResourceType = "Volume";
+        public const string GroupResourceType = nameof(Group);
+        public const string VolumeResourceType = nameof(Volume);
 
         public static string AdminRoleId { get; set; }
 

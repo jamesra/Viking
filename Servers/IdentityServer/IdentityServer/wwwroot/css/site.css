@@ -21,10 +21,91 @@
     width: 100%;
 }
 
+.no-bullets {
+    list-style-type: none; 
+}
+
+dl.dl-traditional {
+    display:block;
+}
+
+.dl-traditional dd {
+    margin-left: 1em;
+    margin-bottom: 1em;
+}
+
+table.grid-settings {
+    /* border: 1px solid black; */
+    text-align: left;
+    padding-left: 0px;
+    padding-right: 5%;
+    width: 100%;
+}
+
+
+.grid-settings th {
+    text-align: left;
+    padding-left: 0px;
+}
+
+.grid-settings td {
+    /*border-block: 1px solid red;*/
+    text-align: left;
+    vertical-align: top;
+}
+
+.grid-settings ul {
+    list-style-type: none;
+    margin-left: 0px;
+    padding-left: 0px;
+}
+
+.grid-settings li {
+    margin-left: 0px;
+    padding-left: 2px;
+    text-align: left;
+}
+ 
+.grid-settings tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+ 
+table.edit-settings {
+   /* border: 1px solid black; */
+    text-align: left;
+    padding-left: 0px;
+    padding-right: 5%;
+    width:100%;
+}
+
+.edit-settings th {
+    text-align: left; 
+    padding-left: 0px; 
+}
+
+.edit-settings td { 
+    /*border-block: 1px solid red;*/
+    text-align: left;
+    vertical-align: top;
+}
+
+.edit-settings ul {
+    list-style-type: none;
+    margin-left: 0px;
+    padding-left: 0px;
+}
+
+.edit-settings li {
+    margin-left: 0px;
+    padding-left: 2px;
+    text-align: left;
+}
+
 /* QR code generator */
 #qrCode {
     margin: 15px;
 }
+
 
 /* Hide/rearrange for smaller screens */
 @media screen and (max-width: 767px) {

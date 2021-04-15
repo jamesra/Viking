@@ -16,16 +16,18 @@ namespace IdentityServer.Controllers
     public class GroupsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IPermissionsViewModelHelper _permissionsHelper;
 
-        public GroupsController(ApplicationDbContext context)
+        public GroupsController(ApplicationDbContext context, IPermissionsViewModelHelper permissionsHelper)
         {
             _context = context;
+            _permissionsHelper = permissionsHelper;
         }
 
         // GET: Organizations
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Group.Include("GroupAssignments").ToListAsync());
+            return View(await _context.Group.ToListAsync());
         }
 
         // GET: Organizations/Details/5
@@ -37,10 +39,16 @@ namespace IdentityServer.Controllers
             }
 
             var organization = await _context.Group
-                .Include("GroupAssignments.User")
                 .Include(g => g.UsersWithPermissions)
-                .Include(g => g.ResourceType)
-                .Include(g => g.GroupsWithPermissions)
+                .Include(g => g.GroupsWithPermissions).ThenInclude(g => g.PermittedGroup)
+                .Include(g => g.ResourceType.Permissions)
+                .Include(g => g.Parent)
+                .Include("MemberUsers.User")
+                //.Include(g => g.MemberUsers)
+                //.Include(g => g.MemberGroups)
+                .Include("MemberGroups.Member")
+                .Include(g => g.MemberOfGroups)
+                .Include(g => g.PermissionsHeld) 
                .SingleOrDefaultAsync(m => m.Id == id);
 
             if (organization == null)
@@ -54,7 +62,60 @@ namespace IdentityServer.Controllers
         // GET: Organizations/Create
         public IActionResult Create()
         {
-            return View();
+            CreateGroupViewModel groupModel = new CreateGroupViewModel()
+            {
+                Members = new GroupMembershipViewModel()
+                {
+                    UserList = _context.Users.OrderBy(u => u.UserName).Select(u => new UserSelectedViewModel
+                    {
+                        Id = u.Id,
+                        Name = u.UserName,
+                        Selected = false
+                    }).ToList(),
+                    GroupList = _context.Group.OrderBy(mg => mg.Name).Select(mg => new GroupSelectedViewModel
+                    {
+                        Id = mg.Id,
+                        Name = mg.Name,
+                        Selected = false
+                    }).ToList(),
+                }
+            };
+
+            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name));
+
+            return View(groupModel);
+        }
+
+        [HttpGet]
+        public IActionResult CreateContinue([Bind("Id,Name,Description,ParentId")] CreateResourceViewModel model)
+        {
+            //Continues creation after user selects a resource type
+
+            CreateGroupViewModel groupModel = new CreateGroupViewModel()
+            {
+                Name = model.Name,
+                Description = model.Description,
+                ParentId = model.ParentId,
+                Members = new GroupMembershipViewModel()
+                {
+                    UserList = _context.Users.OrderBy(u => u.UserName).Select(u => new UserSelectedViewModel
+                    {
+                        Id = u.Id,
+                        Name = u.UserName,
+                        Selected = false
+                    }).ToList(),
+                    GroupList = _context.Group.OrderBy(mg => mg.Name).Select(mg => new GroupSelectedViewModel
+                    {
+                        Id = mg.Id,
+                        Name = mg.Name,
+                        Selected = false
+                    }).ToList(),
+                } 
+            };
+
+            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+
+            return View(nameof(Create), groupModel);
         }
 
         // POST: Organizations/Create
@@ -63,32 +124,32 @@ namespace IdentityServer.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = Config.AdminRoleName)]
-        public async Task<IActionResult> Create([Bind("Name,ShortName")] Group group)
+        public async Task<IActionResult> Create([Bind("Name,ParentId,Description,Members")] CreateGroupViewModel model)
         {
+            Group group = new Group()
+            {
+                Name = model.Name,
+                ParentID = model.ParentId == 0 ? null : model.ParentId,
+                Description = model.Description,
+                ResourceTypeId = nameof(Group)
+            };
+
             if (ModelState.IsValid)
             {
-                _context.Add(group);
+                group.UpdateUserMembership(model.Members.UserList);
+                group.UpdateGroupMembership(model.Members.GroupList);
+                _context.Group.Add(group);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
 
+            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+
             return View(group);
         }
 
-        public IActionResult VerifyUniqueGroupName(string groupName)
-        {
-            if (_context.Group.Any(g => g.Name == groupName))
-                return Json($"A group named {groupName} already exists");
-
-            return Json(true); 
-        }
-
-        // GET: Organizations/Edit/5
-        public async Task<IActionResult> ViewGroupPermissions(long id)
-        {   
-            return RedirectToAction("Index", "GroupPermissions", new { GroupId = id });
-        }
-
+        
+          
         // GET: Organizations/Edit/5
         public async Task<IActionResult> Edit(long? id)
         {
@@ -98,26 +159,45 @@ namespace IdentityServer.Controllers
             }
 
             var groupEditDetails = await _context.Group
-                .Include("GroupAssignments")
-                .Select(org => new GroupDetailsViewModel
-            {
-                Name = org.Name,
-                Id = org.Id,
-                UserList = _context.Users.Select(u => new UserSelectedViewModel
+                .Include(g => g.GroupsWithPermissions)
+                .Include(g => g.UsersWithPermissions)
+                .Include(g => g.ResourceType.Permissions)
+                .Include(g => g.MemberOfGroups)
+                .Include(g => g.PermissionsHeld)
+                .Include(g => g.MemberUsers)
+                .Include(g => g.MemberGroups)
+                .Include(g => g.Parent)
+                .Where(g => g.Id == id)
+                .Select(g => new GroupEditViewModel
                 {
-                    Id = u.Id,
-                    Name = u.UserName,
-                    Selected = org.Users.Any(oa => oa.Id == u.Id)
-                }).ToList(),
-                Children = org.Children.Select(g => new GroupDetailsViewModel
-                {
-                    Name = g.Name,
-                    Id = g.Id
-                }
-                ).ToList()
-            })
-            .SingleOrDefaultAsync(m => m.Id == id);
-             
+                    Group = g, 
+                    Members = new GroupMembershipViewModel() {
+                        UserList = _context.Users.OrderBy(u => u.UserName).Select(u => new UserSelectedViewModel
+                        {
+                            Id = u.Id,
+                            Name = u.UserName,
+                            Selected = g.MemberUsers.Any(uwp => uwp.UserId == u.Id)
+                        }).ToList(),
+                        GroupList = _context.Group.Where(mg => mg.Id != g.Id).OrderBy(mg => mg.Name).Select(mg => new GroupSelectedViewModel
+                        {
+                            Id = mg.Id,
+                            Name = mg.Name,
+                            Selected = g.MemberGroups.Any(uwp => uwp.MemberGroupId == mg.Id)
+                        }).ToList(),
+                    },
+                    /*
+                    Children = g.Children.OrderBy(c => c.Name).Select(g => new GroupDetailsViewModel
+                    {
+                        Name = g.Name,
+                        Id = g.Id,
+                        Children = new List<GroupDetailsViewModel>()
+                    }).ToList()
+                    */
+                })
+                .SingleOrDefaultAsync(g => g.Group.Id == id);
+
+            ViewBag.AvailableParents = _context.OrgUnit.Select(ou => new SelectListItem(ou.Name, ou.Id.ToString())).ToList();
+
             if (groupEditDetails == null)
             {
                 return NotFound();
@@ -132,14 +212,22 @@ namespace IdentityServer.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = Config.AdminRoleName)]
-        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Description")] GroupDetailsViewModel groupDetails, [Bind] IEnumerable<UserSelectedViewModel> usersSelected)
+        public async Task<IActionResult> Edit(long id, [Bind("Group", "Members", "Children")] GroupEditViewModel groupDetails)
         {
-            if (id != groupDetails.Id)
+            if (id != groupDetails.Group.Id)
             {
                 return NotFound();
             }
 
-            var group = await _context.Group.Include("GroupAssignments").SingleOrDefaultAsync(m => m.Id == id);
+            var group = await _context.Group
+                .Include(g => g.GroupsWithPermissions)
+                .Include(g => g.UsersWithPermissions)
+                .Include(g => g.ResourceType.Permissions)
+                .Include(g => g.MemberOfGroups)
+                .Include(g => g.PermissionsHeld)
+                .Include(g => g.MemberUsers)
+                .Include(g => g.MemberGroups)
+                .SingleOrDefaultAsync(m => m.Id == id);
 
             if (group == null)
             {
@@ -151,10 +239,12 @@ namespace IdentityServer.Controllers
             {
                 try
                 {
-                    group.Name = groupDetails.Name;
-                    group.Description = groupDetails.Description;
+                    group.Name = groupDetails.Group.Name;
+                    group.Description = groupDetails.Group.Description;
+                    group.ParentID = groupDetails.Group.ParentID;
 
-                    group.UpdateUserOrganizations(usersSelected);
+                    group.UpdateUserMembership(groupDetails.Members.UserList);
+                    group.UpdateGroupMembership(groupDetails.Members.GroupList);
                     /*
                     foreach(UserSelectedViewModel user in usersSelected)
                     {
@@ -197,7 +287,7 @@ namespace IdentityServer.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            return View(groupDetails);
+            return RedirectToAction(nameof(Details));
         }
 
         // GET: Organizations/Delete/5
@@ -234,7 +324,6 @@ namespace IdentityServer.Controllers
         {
             return _context.Group.Any(e => e.Id == id);
         }
-
-
+          
     }
 }

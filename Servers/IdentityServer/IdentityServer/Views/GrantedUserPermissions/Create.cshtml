@@ -1,0 +1,68 @@
+﻿@model IdentityServer.Models.UserViewModels.CreateGrantedResourcePermissionViewModel
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h2>Add group permissions</h2>
+
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <h5>
+                    @Html.DisplayNameFor(m => m.Resource)
+                </h5>
+
+                <label asp-for="@Model.Resource.Name" class="control-label"></label>
+                @Html.HiddenFor(m => m.Resource.Id)
+                @Html.HiddenFor(m => m.Resource.Name)
+            </div>
+                <!--
+        <div class="form-group">
+            <label asp-for="ResourceTypeId" class="control-label"></label>
+            <select asp-for="ResourceTypeId" class="form-control" asp-items="ViewBag.ResourceTypeId"></select>
+        </div>
+            -->
+            <div class="form-group">
+                <label asp-for="Permissions" class="control-label"></label>
+                <ul class="no-bullets">
+                    @for (var i = 0; i < Model.Permissions.Count(); i++)
+                    {
+                        <li>
+                            <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="Permissions[i]" />
+                        </li>
+                        //                    @Html.Partial("~/Views/Shared/UserSelectedList.cshtml", Model.UserList)
+                    }
+                </ul> 
+                <span asp-validation-for="Permissions" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Users" class="control-label"></label>
+                <ul class="no-bullets">
+                    @for (var i = 0; i < Model.Users.Count(); i++)
+                    {
+                        <li>
+                            <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="Users[i]" />
+                        </li>
+                        //                    @Html.Partial("~/Views/Shared/UserSelectedList.cshtml", Model.UserList)
+                    }
+                </ul>
+                <span asp-validation-for="Users" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                 <input type="submit" value="Create" class="btn btn-default" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

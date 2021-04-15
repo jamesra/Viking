@@ -1,0 +1,56 @@
+﻿@model IList<IdentityServer.Models.Resource>
+
+<table class="table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => Model[0].Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => Model[0].Description)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @for (int i = 0; i < Model.Count(); i++)
+        {
+            <tr>
+                <td>
+                    @{
+                        string detailsController = null;
+                        switch (Model[i].ResourceTypeId)
+                        {
+
+                            case nameof(Group):
+                                detailsController = "Groups";
+                                break;
+                            case nameof(Volume):
+                                detailsController = "Volumes";
+                                break;
+                            case nameof(OrganizationalUnit):
+                                detailsController = "OrganizationalUnits";
+                                break;
+                            case nameof(Resource):
+                                detailsController = "Resources";
+                                break;
+                            default:
+                                @Html.DisplayFor(model => Model[i].ResourceTypeId)
+                                break;
+                        }
+                        @if (detailsController != null)
+                        {
+                            <a asp-action="Details" asp-route-id="@Model[i].Id" asp-controller="@detailsController">@Html.DisplayFor(model => Model[i].Name)</a>
+                        }
+                        else
+                        {
+                            @Html.DisplayFor(model => Model[i].Name)
+                        }
+                    }
+                </td>
+                <td>
+                    @Html.DisplayFor(model => Model[i].Description)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

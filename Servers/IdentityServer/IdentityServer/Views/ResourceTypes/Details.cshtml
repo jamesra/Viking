@@ -1,0 +1,47 @@
+﻿@model IdentityServer.Models.ResourceType
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h2>Details</h2>
+
+
+<style>
+    th {
+        padding: 12px
+    }
+
+    ul.no-bullets {
+        list-style-type: none
+    }
+</style>
+
+<div>
+    <h4>Resource Type</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.Id)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Id)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.Description)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Description)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.Permissions)
+        </dt>
+        <dd>
+            @Html.Partial("~/Views/Shared/EditResourceTypePermissionsList.cshtml", Model)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a> |
+    <a asp-action="Index">Back to List</a>
+</div>

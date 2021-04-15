@@ -1,4 +1,4 @@
-﻿@model IdentityServer.Models.Group
+﻿@model IdentityServer.Models.UserViewModels.CreateGroupViewModel
 
 @{
     ViewData["Title"] = "Create";
@@ -13,15 +13,11 @@
     <div class="col-md-4">
         <form asp-action="Create">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <partial name="~/Views/Shared/_CreateResourceBasicsPartialForm.cshtml" for="@Model" />
+            @Html.HiddenFor(x => Model.ResourceTypeId)
             <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
+                Add user and group permissions to new group
+                <partial name="~/Views/Shared/_MembershipEditTablePartialView.cshtml" for="@Model.Members" />
             </div>
             <div class="form-group">
                 <input type="submit" value="Create" class="btn btn-default" />

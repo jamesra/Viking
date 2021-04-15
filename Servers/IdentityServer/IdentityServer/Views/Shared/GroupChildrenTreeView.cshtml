@@ -8,7 +8,7 @@
                 @Html.HiddenFor(x => Model[i].Id)
                 @Html.HiddenFor(x => Model[i].Name) 
                 @Html.DisplayFor(x => Model[i].Name) 
-                @Html.Partial("~/Views/Shared/GroupChildrenTreeView", Model[i].Children)  
+                @Html.Partial("~/Views/Shared/GroupChildrenTreeView.cshtml", Model[i].Children)  
             </td>
         </tr>            
     }

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
 using IdentityServer.Models;
+using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Controllers
 {
@@ -20,9 +21,10 @@ namespace IdentityServer.Controllers
         }
 
         // GET: GrantedUserPermissions
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(long? ResourceId)
         {
-            var applicationDbContext = _context.GrantedUserPermissions.Include(g => g.Resource);
+            var applicationDbContext = GetPermittedUsersForGroup(ResourceId);
+
             return View(await applicationDbContext.ToListAsync());
         }
 
@@ -35,6 +37,7 @@ namespace IdentityServer.Controllers
             }
 
             var grantedUserPermission = await _context.GrantedUserPermissions
+                .Include(g => g.PermittedUser)
                 .Include(g => g.Resource)
                 .FirstOrDefaultAsync(m => m.ResourceId == id);
             if (grantedUserPermission == null)
@@ -46,10 +49,28 @@ namespace IdentityServer.Controllers
         }
 
         // GET: GrantedUserPermissions/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create(long ?ResourceId)
         {
-            ViewData["ResourceId"] = new SelectList(_context.Group, "Id", "Name");
-            return View();
+            if (ResourceId == null || ResourceId.HasValue == false)
+            {
+                return NotFound();
+            }
+
+            var resource = await _context.Resource.Include(r => r.UsersWithPermissions).Include(r => r.GroupsWithPermissions).FirstAsync(r => r.Id == ResourceId.Value);
+            if (resource == null)
+            {
+                return NotFound();
+            }
+
+            var viewData = new CreateGrantedResourcePermissionViewModel()
+            {
+                Resource = resource,
+                Permissions = _context.Permissions.Where(p => p.ResourceTypeId == resource.ResourceTypeId).Select(p => new NamedItemSelectedViewModel<string>() { Id = p.PermissionId, Name = p.PermissionId, Selected = false }).ToList(),
+                Users = _context.Users.Select(u => new NamedItemSelectedViewModel<string>() { Id = u.Id, Name = u.UserName, Selected = false }).ToList(),
+                //Groups = _context.Group.Select(g => new ItemSelectedViewModel<long>() { Id = g.Id, Name = g.Name, Selected = false }).ToList()
+            };
+
+            return View(viewData);
         }
 
         // POST: GrantedUserPermissions/Create
@@ -57,16 +78,28 @@ namespace IdentityServer.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ResourceId,PermissionId,UserId")] GrantedUserPermission grantedUserPermission)
+        public async Task<IActionResult> Create([Bind(new string[] { nameof(CreateGrantedResourcePermissionViewModel.Resource),
+                                                                     nameof(CreateGrantedResourcePermissionViewModel.Users), 
+                                                                     nameof(CreateGrantedResourcePermissionViewModel.Permissions)})] CreateGrantedResourcePermissionViewModel grantedPermissions)
         {
+             
             if (ModelState.IsValid)
             {
-                _context.Add(grantedUserPermission);
+                var resource = await _context.Resource.Include(r => r.UsersWithPermissions).Include(r => r.GroupsWithPermissions).FirstAsync(r => r.Id == grantedPermissions.Resource.Id);
+                if(resource == null)
+                {
+                    return NotFound();
+                }
+
+                resource.AddGrantedUserPermissions(grantedPermissions.Permissions, grantedPermissions.Users);
+                //resource.AddGrantedGroupPermissions(grantedPermissions.Permissions, grantedPermissions.Groups);
+
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Index), grantedPermissions.Resource.Id);
             }
-            ViewData["ResourceId"] = new SelectList(_context.Group, "Id", "Name", grantedUserPermission.ResourceId);
-            return View(grantedUserPermission);
+
+            //ViewData["ResourceId"] = new SelectList(_context.Group, "Id", "Name", grantedUserPermission.ResourceId);
+            return View(grantedPermissions.Resource); 
         }
 
         // GET: GrantedUserPermissions/Edit/5
@@ -150,6 +183,17 @@ namespace IdentityServer.Controllers
             _context.GrantedUserPermissions.Remove(grantedUserPermission);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        private IQueryable<GrantedUserPermission> GetPermittedUsersForGroup(long? ResourceId)
+        {
+            IQueryable<GrantedUserPermission> applicationDbContext;
+            if (ResourceId.HasValue)
+                applicationDbContext = _context.GrantedUserPermissions.Include(g => g.Resource).Include(g => g.PermittedUser).Where(gup => gup.ResourceId == ResourceId);
+            else
+                applicationDbContext = _context.GrantedUserPermissions.Include(g => g.Resource).Include(g => g.PermittedUser);
+
+            return applicationDbContext;
         }
 
         private bool GrantedUserPermissionExists(long id)

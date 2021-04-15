@@ -1,0 +1,47 @@
+﻿@model IList<IdentityServer.Models.GrantedGroupPermission>
+
+@{
+    ViewData["Title"] = "Permissions Granted to Groups";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Groups</h2>
+<p>Users can be associated with any number of the groups listed below.  The meaning of group membership is arbitrary.  The description for a group should indicate its purpose.</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model[0].PermissionId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model[0].PermittedGroup.Name)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.GroupBy(m => m.PermissionId).OrderBy(m => m.Key))
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Key)
+                </td>
+                <td>
+                    <ul class="no-bullets">
+                        @foreach (var entity in item)
+                        {
+                            <li>
+                                @Html.DisplayFor(e => entity.PermittedGroup.Name)
+                            </li>
+                        }
+                    </ul>
+                </td>
+                <!--
+                <td>
+                    <a asp-action="Delete" asp-route-id="@item">Delete</a>
+                </td>
+                -->
+            </tr>
+        }
+    </tbody>
+</table>

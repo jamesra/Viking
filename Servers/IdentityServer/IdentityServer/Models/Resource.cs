@@ -20,7 +20,7 @@ namespace IdentityServer.Models
 
         [Required(AllowEmptyStrings = false)]
         [MaxLength(128)]
-        [Remote(action: "VerifyUniqueGroupName", controller: "Groups")]
+        [Remote(action: "VerifyUniqueName", controller: "Resources", AdditionalFields ="Id")]
         [Display(Name = "Name", Description = "Name of the group")]
         public string Name { get; set; }
 
@@ -31,7 +31,7 @@ namespace IdentityServer.Models
         /// <summary>
         /// Resource ownership can be assigned to groups, , , 
         /// </summary>
-        [ForeignKey(nameof(Group))]
+        [ForeignKey(nameof(OrganizationalUnit))]
         [Display(Name = nameof(ParentID), Description = "Optional parent/owner of this resource ID")]
         public long? ParentID { get; set; }
 
@@ -40,16 +40,16 @@ namespace IdentityServer.Models
         /// </summary>
         [ForeignKey(nameof(ParentID))]
         [Display(Name = nameof(Parent), Description = "Optional parent/owner of this resource ID")]
-        public virtual Group Parent { get; set; }
+        public virtual OrganizationalUnit Parent { get; set; }
          
         /// <summary>
         /// Resources can be assigned a type, this determines which permissions are available
         /// </summary>
         [ForeignKey(nameof(ResourceType))]
         [Display(Name = "Resource Type", Description = "Describes what type of resource this entity represents")]
-        public virtual string TypeId { get; set; }
+        public virtual string ResourceTypeId { get; set; }
 
-        [ForeignKey(nameof(TypeId))]
+        [ForeignKey(nameof(ResourceTypeId))]
         [Display(Name = "Resource Type", Description = "Describes what type of resource this entity represents")]
         public virtual ResourceType ResourceType { get; set; }
          
@@ -64,7 +64,7 @@ namespace IdentityServer.Models
         /// </summar
         [NotMapped]
         [Display(Name = "Permissions", Description = "Permissions that can be granted to this resource")]
-        public virtual ICollection<ResourceTypePermission> AvailablePermissions => this.ResourceType.Permissions;
+        public virtual ICollection<ResourceTypePermission> AvailablePermissions => this.ResourceType == null ? new List<ResourceTypePermission>() : this.ResourceType.Permissions;
 
     }
 }

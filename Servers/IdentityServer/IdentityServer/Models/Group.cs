@@ -15,22 +15,22 @@ namespace IdentityServer.Models
     public class Group : Resource
     {  
        // [InverseProperty(nameof(UserToGroupAssignment.Group))]
-        [Display(Name = "Users", Description = "Users assigned to group")]
+        [Display(Name = "Member Users", Description = "Users assigned to group")]
         public virtual List<UserToGroupAssignment> MemberUsers { get; set; } = new List<UserToGroupAssignment>();
 
         //public ICollection<GrantedGroupPermission> HasPermissions { get; } = new List<GrantedGroupPermission>();
           
         [NotMapped]
-        [Display(Name = "Users", Description = "Users assigned to group")]
+        [Display(Name = "Member Users", Description = "Users assigned to group")]
         public virtual List<ApplicationUser> Users => MemberUsers.Select(oa => oa.User).ToList();
         
 
-        [Display(Name = "Groups", Description = "Groups assigned to group")]
+        [Display(Name = "Member Groups", Description = "Groups assigned to group")]
 //        [InverseProperty(nameof(GroupToGroupAssignment.Container))]
         public virtual List<GroupToGroupAssignment> MemberGroups { get; set; } = new List<GroupToGroupAssignment>();
 
         [NotMapped]
-        [Display(Name = "Groups", Description = "Groups assigned to group")]
+        [Display(Name = "Member Groups", Description = "Groups assigned to group")]
         public virtual List<Group> Groups => MemberGroups.Select(oa => oa.Member).ToList();
 
         [Display(Name = "Member Of", Description = "Groups we are a member of")]
@@ -50,9 +50,5 @@ namespace IdentityServer.Models
         [NotMapped]
         [Display(Name = "User Count", Description = "Number of users assigned to group")]
         public virtual int UsersCount { get { return MemberUsers.Select(oa => oa.User).Count(); } }
-
-        [InverseProperty(nameof(Resource.Parent))]
-        [Display(Name = "Owned resources", Description = "Resources contained within this group")]
-        public virtual List<Resource> Children { get; } = new List<Resource>();
     }
 }

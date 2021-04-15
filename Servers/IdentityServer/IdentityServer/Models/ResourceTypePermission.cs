@@ -34,5 +34,7 @@ namespace IdentityServer.Models
         [Display(Name ="Description", Description = "Description of permission")]
         [MaxLength(2048)]
         public string Description { get; set; }
+
+        //public virtual ICollection<GrantedPermissionBase> GrantedTo { get; set; }
     }
 }

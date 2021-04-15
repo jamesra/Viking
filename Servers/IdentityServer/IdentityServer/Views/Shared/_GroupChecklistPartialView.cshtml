@@ -1,0 +1,11 @@
+﻿@model IList<IdentityServer.Models.UserViewModels.GroupSelectedViewModel>
+
+<ul class="no-bullets">
+    @for (var i = 0; i < Model.Count(); i++)
+    {
+        <li>
+            <partial name="~/Views/Shared/_GroupCheckbox.cshtml" for="@Model[i]" />
+        </li>
+        //@Html.Partial("~/Views/Shared/GroupSelectedChecklist.cshtml", Model.GroupList)
+    }
+</ul>

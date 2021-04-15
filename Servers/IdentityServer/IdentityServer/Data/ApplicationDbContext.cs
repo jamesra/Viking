@@ -23,11 +23,10 @@ namespace IdentityServer.Data
         }
         
         protected override void OnModelCreating(ModelBuilder builder)
-        {
-            
+        { 
             if (System.Diagnostics.Debugger.IsAttached == false)
             {
-                System.Diagnostics.Debugger.Launch();
+                //System.Diagnostics.Debugger.Launch();
             }
 
             base.OnModelCreating(builder);
@@ -44,28 +43,39 @@ namespace IdentityServer.Data
             //builder.Entity<Group>().HasMany(typeof(UserToGroupAssignment), "MemberUsers").WithMany(nameof(UserToGroupAssignment));
 
             builder.Entity<GroupToGroupAssignment>().HasKey(gga => new { gga.ContainerGroupId, gga.MemberGroupId });
-            builder.Entity<GroupToGroupAssignment>().HasOne(gga => gga.Container).WithMany(nameof(Models.Group.MemberGroups)).HasForeignKey(gga => gga.ContainerGroupId);
+            builder.Entity<GroupToGroupAssignment>().HasOne(gga => gga.Container).WithMany(nameof(Models.Group.MemberGroups)).HasForeignKey(gga => gga.ContainerGroupId).OnDelete(DeleteBehavior.ClientCascade);
             builder.Entity<GroupToGroupAssignment>().HasOne(gga => gga.Member).WithMany(nameof(Models.Group.MemberOfGroups)).HasForeignKey(gga => gga.MemberGroupId);
 
             builder.Entity<ResourceTypePermission>().HasKey(c => new { c.ResourceTypeId, c.PermissionId });
 
+            //Do not duplicate columns in inherited tables///
             builder.Entity<GrantedUserPermission>().Property(gup => gup.ResourceId).HasColumnName(nameof(GrantedPermissionBase.ResourceId));
-            builder.Entity<GrantedGroupPermission>().Property(gup => gup.ResourceId).HasColumnName(nameof(GrantedPermissionBase.ResourceId));
             builder.Entity<GrantedUserPermission>().Property(gup => gup.PermissionId).HasColumnName(nameof(GrantedPermissionBase.PermissionId));
-            builder.Entity<GrantedGroupPermission>().Property(gup => gup.PermissionId).HasColumnName(nameof(GrantedPermissionBase.PermissionId));
 
+            builder.Entity<GrantedGroupPermission>().Property(gup => gup.ResourceId).HasColumnName(nameof(GrantedPermissionBase.ResourceId));
+            builder.Entity<GrantedGroupPermission>().Property(gup => gup.PermissionId).HasColumnName(nameof(GrantedPermissionBase.PermissionId));
+            /////////////////////////////////////////////////
+            
+            //Define discriminator for inherited table///////
             builder.Entity<GrantedUserPermission>()
-                .HasDiscriminator<string>("GranteeType") 
+                .HasDiscriminator<string>(nameof(GrantedPermissionBase.GranteeType))
                 .HasValue<GrantedUserPermission>("User");
 
             builder.Entity<GrantedGroupPermission>()
-                .HasDiscriminator<string>("GranteeType")
+                .HasDiscriminator<string>(nameof(GrantedPermissionBase.GranteeType))
                 .HasValue<GrantedGroupPermission>("Group");
+            /////////////////////////////////////////////////
             
+            // Define multi-column keys for permissions /////
             builder.Entity<GrantedUserPermission>().HasKey(c => new { c.ResourceId, c.PermissionId, c.UserId }); 
             builder.Entity<GrantedGroupPermission>().HasKey(c => new { c.ResourceId, c.PermissionId, c.GroupId});
 
-           // builder.Entity<GrantedPermissionBase>().HasOne(oa => oa.Resource).WithMany(nameof(Models.Group.PermissionsHeld)).HasForeignKey(oa => oa.GroupId).OnDelete(DeleteBehavior.ClientCascade);
+            /////////////////////////////////////////////////
+
+            //builder.Entity<GrantedPermissionBase>().HasOne(c => c.Permission).WithMany(nameof(Models.ResourceTypePermission.GrantedTo)).HasForeignKey(c => new { c.ResourceId, c.PermissionId });
+            //builder.Entity<GrantedGroupPermission>().HasOne(c => c.Permission).WithMany(nameof(Models.ResourceTypePermission.GrantedTo)).HasForeignKey(c => new { c.ResourceId, c.PermissionId });
+
+            // builder.Entity<GrantedPermissionBase>().HasOne(oa => oa.Resource).WithMany(nameof(Models.Group.PermissionsHeld)).HasForeignKey(oa => oa.GroupId).OnDelete(DeleteBehavior.ClientCascade);
 
             builder.Entity<GrantedGroupPermission>().HasOne(oa => oa.PermittedGroup).WithMany(nameof(Models.Group.PermissionsHeld)).HasForeignKey(oa => oa.GroupId).OnDelete(DeleteBehavior.ClientCascade);
             builder.Entity<GrantedGroupPermission>().HasOne(oa => oa.Resource).WithMany(nameof(Models.Resource.GroupsWithPermissions)).HasForeignKey(oa => oa.ResourceId);
@@ -73,34 +83,45 @@ namespace IdentityServer.Data
             builder.Entity<GrantedUserPermission>().HasOne(oa => oa.PermittedUser).WithMany(nameof(Models.ApplicationUser.PermissionsHeld)).HasForeignKey(oa => oa.UserId).OnDelete(DeleteBehavior.ClientCascade);
             builder.Entity<GrantedUserPermission>().HasOne(oa => oa.Resource).WithMany(nameof(Models.Resource.UsersWithPermissions)).HasForeignKey(oa => oa.ResourceId);
 
-            builder.Entity<Resource>().HasOne(oa => oa.Parent).WithMany(nameof(Models.Group.Children)).HasForeignKey(oa => oa.ParentID);
+            builder.Entity<Resource>().HasOne(oa => oa.Parent)
+                .WithMany(nameof(Models.OrganizationalUnit.Children))
+                .HasForeignKey(oa => oa.ParentID);
 
             builder.Entity<Resource>()
-                .HasDiscriminator<string>(nameof(Models.Resource.TypeId))
+                .HasDiscriminator<string>(nameof(Models.Resource.ResourceTypeId))
                 .HasValue<Resource>(nameof(Models.Resource))
+                .HasValue<Volume>(nameof(Models.Volume))
+                .HasValue<OrganizationalUnit>(nameof(Models.OrganizationalUnit))
                 .HasValue<Group>(nameof(Models.Group));
+                 
+            InitialPopulationOfDatabase(builder);
+        }
 
-            builder.Entity<Resource>().ToTable(nameof(Resource));
-            builder.Entity<Group>().ToTable(nameof(Group)).HasBaseType(nameof(Resource));
-
+        /// <summary>
+        /// Adds default values to the database
+        /// </summary>
+        /// <param name="builder"></param>
+        private void InitialPopulationOfDatabase(ModelBuilder builder)
+        {
             builder.Entity<ApplicationRole>().HasData(
                 new ApplicationRole() { Name = Config.AdminRoleName, NormalizedName = Config.AdminRoleName });
 
-            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = Config.GroupResourceType });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() {  ResourceTypeId= Config.GroupResourceType, PermissionId=Config.GroupAccessManagerPermission });
+            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Resource) });
+            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.OrganizationalUnit) });
 
-            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = Config.VolumeResourceType });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = Config.VolumeResourceType, PermissionId = "Read" });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = Config.VolumeResourceType, PermissionId = "Annotate" });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = Config.VolumeResourceType, PermissionId = "Review" });
-            builder.Entity<ResourceTypePermission>().HasData(
-                new ResourceTypePermission() { ResourceTypeId = Config.GroupResourceType, PermissionId = Config.GroupAccessManagerPermission, Description = "Add/Remove group members" });
+            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Group) });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = Config.GroupResourceType,
+                                                                                            PermissionId = Config.GroupAccessManagerPermission, 
+                                                                                            Description = "Add/Remove group members" });
 
-            builder.Entity<Group>().HasData( new Group[] {
+            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Volume) });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = "Read" });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = "Annotate" });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = "Review" });
+             
+            builder.Entity<Group>().HasData(new Group[] {
                 new Group { Id = Config.EveryoneGroupId, Name = Config.EveryoneGroupName}
-            }
-            );
-
+            });
         }
 
         private void LogShadowProperties()
@@ -123,6 +144,10 @@ namespace IdentityServer.Data
         public DbSet<IdentityServer.Models.ApplicationUser> ApplicationUser { get; set; }
 
         public DbSet<Resource> Resource { get; set; }
+
+        public DbSet<OrganizationalUnit> OrgUnit { get; set; }
+         
+        public DbSet<Volume> Volume { get; set; }
 
         public DbSet<Group> Group { get; set; }
 

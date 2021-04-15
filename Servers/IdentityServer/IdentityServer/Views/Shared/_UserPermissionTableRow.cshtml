@@ -1,0 +1,13 @@
+﻿@model IdentityServer.Models.UserViewModels.UserResourcePermissionsViewModel
+
+@{
+    ViewData["Title"] = "Permissions Granted to Groups";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    IList<string> AvailablePermissions = ViewData["AvailablePermissions"] as IList<string>;
+}
+
+<td>
+    <label asp-for="@Model.GranteeId" class="control-label"></label>
+</td>
+
+ 

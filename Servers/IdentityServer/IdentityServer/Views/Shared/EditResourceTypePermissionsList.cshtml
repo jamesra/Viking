@@ -1,0 +1,42 @@
+﻿@model IdentityServer.Models.ResourceType
+
+<p>
+    @Html.ActionLink("Create New Permission", "Create", "ResourceTypePermissions", new { ResourceTypeId = Model.Id })
+    <!--<a asp-action="Create" asp-controller="ResourceTypePermissions" asp-ResourceTypeId="@Model.Id">Create New Permission</a>-->
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Permissions.ElementAt(0).PermissionId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Permissions.ElementAt(0).ResourceTypeId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Permissions.ElementAt(0).Description)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Permissions) {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PermissionId)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ResourceType.Id)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Description)
+                </td>
+                <td>
+                    @Html.ActionLink("Edit", "Edit", "ResourceTypePermissions", item) |
+                    @Html.ActionLink("Details", "Details", "ResourceTypePermissions", item) |
+                    @Html.ActionLink("Delete", "Delete", "ResourceTypePermissions", item)
+                </td>
+            </tr>
+         }
+    </tbody>
+</table>

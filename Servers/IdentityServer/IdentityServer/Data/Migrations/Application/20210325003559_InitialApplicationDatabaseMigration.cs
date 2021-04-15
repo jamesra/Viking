@@ -1,9 +1,9 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace IdentityServer.Migrations
+namespace IdentityServer.Data.Migrations.Application
 {
-    public partial class GroupPermissions : Migration
+    public partial class InitialApplicationDatabaseMigration : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -51,24 +51,14 @@ namespace IdentityServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Group",
+                name: "ResourceTypes",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ParentID = table.Column<long>(type: "bigint", nullable: true),
-                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true)
+                    Id = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Group", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Group_Group_ParentID",
-                        column: x => x.ParentID,
-                        principalTable: "Group",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                    table.PrimaryKey("PK_ResourceTypes", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -178,26 +168,74 @@ namespace IdentityServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Permissions",
+                columns: table => new
+                {
+                    ResourceTypeId = table.Column<string>(type: "nvarchar(128)", nullable: false),
+                    PermissionId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Permissions", x => new { x.ResourceTypeId, x.PermissionId });
+                    table.ForeignKey(
+                        name: "FK_Permissions_ResourceTypes_ResourceTypeId",
+                        column: x => x.ResourceTypeId,
+                        principalTable: "ResourceTypes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Resource",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    ParentID = table.Column<long>(type: "bigint", nullable: true),
+                    TypeId = table.Column<string>(type: "nvarchar(128)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Resource", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Resource_Resource_ParentID",
+                        column: x => x.ParentID,
+                        principalTable: "Resource",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Resource_ResourceTypes_TypeId",
+                        column: x => x.TypeId,
+                        principalTable: "ResourceTypes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "GrantedGroupPermissions",
                 columns: table => new
                 {
                     ResourceId = table.Column<long>(type: "bigint", nullable: false),
                     PermissionId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    GroupId = table.Column<long>(type: "bigint", nullable: false)
+                    GroupId = table.Column<long>(type: "bigint", nullable: false),
+                    GranteeType = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_GrantedGroupPermissions", x => new { x.ResourceId, x.PermissionId, x.GroupId });
                     table.ForeignKey(
-                        name: "FK_GrantedGroupPermissions_Group_GroupId",
+                        name: "FK_GrantedGroupPermissions_Resource_GroupId",
                         column: x => x.GroupId,
-                        principalTable: "Group",
+                        principalTable: "Resource",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_GrantedGroupPermissions_Group_ResourceId",
+                        name: "FK_GrantedGroupPermissions_Resource_ResourceId",
                         column: x => x.ResourceId,
-                        principalTable: "Group",
+                        principalTable: "Resource",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -208,21 +246,52 @@ namespace IdentityServer.Migrations
                 {
                     ResourceId = table.Column<long>(type: "bigint", nullable: false),
                     PermissionId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    GranteeType = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_GrantedUserPermissions", x => new { x.ResourceId, x.PermissionId, x.UserId });
                     table.ForeignKey(
-                        name: "FK_GrantedUserPermissions_Group_ResourceId",
+                        name: "FK_GrantedUserPermissions_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_GrantedUserPermissions_Resource_ResourceId",
                         column: x => x.ResourceId,
-                        principalTable: "Group",
+                        principalTable: "Resource",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "GroupAssignments",
+                name: "GroupToGroupAssignments",
+                columns: table => new
+                {
+                    MemberGroupId = table.Column<long>(type: "bigint", nullable: false),
+                    ContainerGroupId = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GroupToGroupAssignments", x => new { x.ContainerGroupId, x.MemberGroupId });
+                    table.ForeignKey(
+                        name: "FK_GroupToGroupAssignments_Resource_ContainerGroupId",
+                        column: x => x.ContainerGroupId,
+                        principalTable: "Resource",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_GroupToGroupAssignments_Resource_MemberGroupId",
+                        column: x => x.MemberGroupId,
+                        principalTable: "Resource",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserToGroupAssignments",
                 columns: table => new
                 {
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -230,36 +299,17 @@ namespace IdentityServer.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_GroupAssignments", x => new { x.GroupId, x.UserId });
+                    table.PrimaryKey("PK_UserToGroupAssignments", x => new { x.GroupId, x.UserId });
                     table.ForeignKey(
-                        name: "FK_GroupAssignments_AspNetUsers_UserId",
+                        name: "FK_UserToGroupAssignments_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_GroupAssignments_Group_GroupId",
+                        name: "FK_UserToGroupAssignments_Resource_GroupId",
                         column: x => x.GroupId,
-                        principalTable: "Group",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Permissions",
-                columns: table => new
-                {
-                    GroupId = table.Column<long>(type: "bigint", nullable: false),
-                    PermissionId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Permissions", x => new { x.GroupId, x.PermissionId });
-                    table.ForeignKey(
-                        name: "FK_Permissions_Group_GroupId",
-                        column: x => x.GroupId,
-                        principalTable: "Group",
+                        principalTable: "Resource",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -267,17 +317,33 @@ namespace IdentityServer.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetRoles",
                 columns: new[] { "Id", "ConcurrencyStamp", "Discriminator", "Name", "NormalizedName" },
-                values: new object[] { "87aa0c03-6fac-412b-8226-128aaaacefc6", "09fff261-651a-4f3b-9369-6a16a25c16a4", "ApplicationRole", "Administrator", "Administrator" });
+                values: new object[] { "747fdd8a-2f9e-48ee-ac5e-cec25e832765", "1a8edd37-13a5-4bca-a4c4-1e5c487b3757", "ApplicationRole", "Administrator", "Administrator" });
 
             migrationBuilder.InsertData(
-                table: "Group",
-                columns: new[] { "Id", "Description", "Name", "ParentID" },
-                values: new object[] { -1L, null, "Administrators", null });
+                table: "ResourceTypes",
+                column: "Id",
+                value: "Group");
+
+            migrationBuilder.InsertData(
+                table: "ResourceTypes",
+                column: "Id",
+                value: "Volume");
 
             migrationBuilder.InsertData(
                 table: "Permissions",
-                columns: new[] { "GroupId", "PermissionId", "Description" },
-                values: new object[] { -1L, "Access Manager", "Add/Remove group members" });
+                columns: new[] { "PermissionId", "ResourceTypeId", "Description" },
+                values: new object[,]
+                {
+                    { "Access Manager", "Group", "Add/Remove group members" },
+                    { "Read", "Volume", null },
+                    { "Annotate", "Volume", null },
+                    { "Review", "Volume", null }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Resource",
+                columns: new[] { "Id", "Description", "Name", "ParentID", "TypeId" },
+                values: new object[] { -1L, null, "Everyone", null, "Group" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -324,13 +390,28 @@ namespace IdentityServer.Migrations
                 column: "GroupId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Group_ParentID",
-                table: "Group",
+                name: "IX_GrantedUserPermissions_UserId",
+                table: "GrantedUserPermissions",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GroupToGroupAssignments_MemberGroupId",
+                table: "GroupToGroupAssignments",
+                column: "MemberGroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Resource_ParentID",
+                table: "Resource",
                 column: "ParentID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_GroupAssignments_UserId",
-                table: "GroupAssignments",
+                name: "IX_Resource_TypeId",
+                table: "Resource",
+                column: "TypeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserToGroupAssignments_UserId",
+                table: "UserToGroupAssignments",
                 column: "UserId");
         }
 
@@ -358,10 +439,13 @@ namespace IdentityServer.Migrations
                 name: "GrantedUserPermissions");
 
             migrationBuilder.DropTable(
-                name: "GroupAssignments");
+                name: "GroupToGroupAssignments");
 
             migrationBuilder.DropTable(
                 name: "Permissions");
+
+            migrationBuilder.DropTable(
+                name: "UserToGroupAssignments");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
@@ -370,7 +454,10 @@ namespace IdentityServer.Migrations
                 name: "AspNetUsers");
 
             migrationBuilder.DropTable(
-                name: "Group");
+                name: "Resource");
+
+            migrationBuilder.DropTable(
+                name: "ResourceTypes");
         }
     }
 }

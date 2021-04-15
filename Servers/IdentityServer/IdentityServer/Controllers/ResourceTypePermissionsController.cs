@@ -4,101 +4,113 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
 using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Controllers
 {
     public class ResourceTypePermissionsController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
 
-        public ResourceTypePermissionsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public ResourceTypePermissionsController(ApplicationDbContext context)
         {
             _context = context;
-            _userManager = userManager;
         }
 
-        // GET: GroupPermissions
-        public async Task<IActionResult> Index(string ResourceTypeId)
+        // GET: ResourceTypePermissions
+        public async Task<IActionResult> Index()
         {
-            IEnumerable<ResourceTypePermission> permissions;
-
-            if (ResourceTypeId != null)
-                permissions = _context.Permissions
-                                               .Where(g => g.ResourceTypeId == ResourceTypeId);
-            else
-                permissions = _context.Permissions;
-
-            //GroupPermissionsViewModel viewModel = new GroupPermissionsViewModel() { Group = _context.Group.Find(GroupId.Value), AvailablePermissions = await applicationDbContext.ToListAsync() };
-
-            return View(permissions);
+            var applicationDbContext = _context.Permissions.Include(r => r.ResourceType);
+            return View(await applicationDbContext.ToListAsync());
         }
 
-
-        // GET: GroupPermissions/Create
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="GroupId">The group ID the form will select by default</param>
-        /// <returns></returns>
-        [Authorize(Roles = Config.AdminRoleName)]
-        public async Task<IActionResult> Create(string ResourceTypeId)
+        // GET: ResourceTypePermissions/Details/5
+        public async Task<IActionResult> Details(string ResourceTypeId, string PermissionId)
         {
-            var userId = _userManager.GetUserId(User);
-            var eligibleResourceTypes = await _context.ResourceTypes.ToListAsync(); //.Include(g => g.GroupAssignments).Where(g => g.GroupAssignments.Any(ga => ga.UserId == userId)).ToListAsync();
-            var selectGroup = new SelectList(eligibleResourceTypes, "Id", "Name", ResourceTypeId);
+            if (ResourceTypeId == null || PermissionId == null)
+            {
+                return NotFound();
+            }
 
+            var resourceTypePermission = await _context.Permissions
+                .Include(r => r.ResourceType)
+                .FirstOrDefaultAsync(m => m.ResourceTypeId == ResourceTypeId && m.PermissionId == PermissionId);
+            if (resourceTypePermission == null)
+            {
+                return NotFound();
+            }
+
+            //return View(resourceTypePermission);
+            return RedirectToAction("Details", "ResourceTypes", resourceTypePermission.ResourceType);
+            //return View("Details", resourceTypePermission.ResourceType);
+        }
+
+        /*
+        // GET: ResourceTypePermissions/Create
+        public IActionResult Create()
+        {
+            var selectList = new SelectList(_context.ResourceTypes, "Id", "Id");
+            ViewData["ResourceTypeId"] = selectList;
+            ViewBag.ResourceTypeId = selectList.First().Value;
             return View();
         }
+        */
 
-        // POST: GroupPermissions/Create
+        public async Task<IActionResult> Create(string ResourceTypeId)
+        {
+            var rt = await _context.ResourceTypes.FirstOrDefaultAsync(rt => rt.Id == ResourceTypeId);
+            //ViewData["ResourceTypeId"] = new SelectList(_context.ResourceTypes.Where(rt => rt.Id == ResourceTypeId), "Id", "Id");
+            //ViewBag.ResourceTypeId = ResourceTypeId;
+            return View(new ResourceTypePermission() { ResourceTypeId = ResourceTypeId, ResourceType = rt});
+        }
+
+        // POST: ResourceTypePermissions/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ResourceTypeId,PermissionId,Description")] ResourceTypePermission permission)
+        public async Task<IActionResult> Create([Bind("ResourceTypeId,PermissionId,Description")] ResourceTypePermission resourceTypePermission)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(permission);
+                _context.Add(resourceTypePermission);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index), new { ResourceTypeId = permission.ResourceTypeId });
+                return RedirectToAction(nameof(Index));
             }
-
-            return View();
+            //ViewData["ResourceTypeId"] = new SelectList(_context.ResourceTypes, "Id", "Id", resourceTypePermission.ResourceTypeId);
+            //return View("Details", resourceTypePermission.ResourceType);
+            return RedirectToAction("Details", "ResourceTypes", resourceTypePermission.ResourceType);
         }
 
-        // GET: GroupPermissions/Edit/5
-        public async Task<IActionResult> Edit(ResourceTypePermission permission)
+        // GET: ResourceTypePermissions/Edit/5
+        public async Task<IActionResult> Edit(string ResourceTypeId, string PermissionId)
         {
-            if (permission == null)
+            if (ResourceTypeId == null || PermissionId == null)
+            {
+                return NotFound();
+            } 
+
+            var resourceTypePermission = await _context.Permissions
+                .FirstOrDefaultAsync(m => m.ResourceTypeId == ResourceTypeId && m.PermissionId == PermissionId);
+            if (resourceTypePermission == null)
             {
                 return NotFound();
             }
 
-            var groupPermission = await _context.Permissions.FindAsync(permission);
-            if (groupPermission == null)
-            {
-                return NotFound();
-            }
-            ViewData["GroupId"] = new SelectList(_context.ResourceTypes, "Id", "Name", permission.ResourceTypeId);
-            return View(groupPermission);
+            //ViewData["ResourceTypeId"] = new SelectList(_context.ResourceTypes, "Id", "Id", resourceTypePermission.ResourceTypeId);
+            return View(resourceTypePermission);
         }
 
-        // POST: GroupPermissions/Edit/5
+        // POST: ResourceTypePermissions/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(string resourceTypeId, [Bind("ResourceTypeId,PermissionId,Description")] ResourceTypePermission resourcePermission)
+        public async Task<IActionResult> Edit(string id, [Bind("ResourceTypeId,PermissionId,Description")] ResourceTypePermission resourceTypePermission)
         {
-            if (resourceTypeId != resourcePermission.ResourceTypeId)
+            if (id != resourceTypePermission.ResourceTypeId)
             {
                 return NotFound();
             }
@@ -107,12 +119,12 @@ namespace IdentityServer.Controllers
             {
                 try
                 {
-                    _context.Update(resourcePermission);
+                    _context.Update(resourceTypePermission);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!ResourceTypePermissionExists(resourcePermission.ResourceTypeId, resourcePermission.PermissionId))
+                    if (!ResourceTypePermissionExists(resourceTypePermission.ResourceTypeId))
                     {
                         return NotFound();
                     }
@@ -121,45 +133,48 @@ namespace IdentityServer.Controllers
                         throw;
                     }
                 }
-                return RedirectToAction(nameof(Index), new { ResourceTypeId = resourcePermission.ResourceTypeId });
+                return RedirectToAction(nameof(Index));
             }
-            ViewData["ResourceTypeId"] = new SelectList(_context.ResourceTypes, "Id", "Name", resourcePermission.ResourceTypeId);
-            return View(resourcePermission);
+            ViewData["ResourceTypeId"] = new SelectList(_context.ResourceTypes, "Id", "Id", resourceTypePermission.ResourceTypeId);
+            return RedirectToAction("Details", "ResourceTypes", resourceTypePermission.ResourceType);
+            //return View(resourceTypePermission.ResourceType);
         }
 
-        // GET: GroupPermissions/Delete/5
-        public async Task<IActionResult> Delete(ResourceTypePermission permission)
+        // GET: ResourceTypePermissions/Delete/5
+        public async Task<IActionResult> Delete(string ResourceTypeId, string PermissionId)
         {
-            if (permission == null)
+            if (ResourceTypeId == null || PermissionId == null)
             {
                 return NotFound();
             }
 
-            var groupPermission = await _context.Permissions 
-                .FirstOrDefaultAsync(m => m.PermissionId == permission.PermissionId && m.ResourceTypeId == permission.ResourceTypeId);
-            if (groupPermission == null)
+            var resourceTypePermission = await _context.Permissions
+                .Include(r => r.ResourceType)
+                .FirstOrDefaultAsync(m => m.ResourceTypeId == ResourceTypeId && m.PermissionId == PermissionId);
+            if (resourceTypePermission == null)
             {
                 return NotFound();
             }
 
-            return View();
+            return View(resourceTypePermission);
         }
 
-        // POST: GroupPermissions/Delete/5
+        // POST: ResourceTypePermissions/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(ResourceTypePermission permission)
+        public async Task<IActionResult> DeleteConfirmed([Bind("ResourceTypeId,PermissionId")] ResourceTypePermission key)
         {
-            var groupPermission = await _context.Permissions 
-                .FirstOrDefaultAsync(m => m.ResourceTypeId == permission.ResourceTypeId && m.PermissionId == permission.PermissionId);
-            _context.Permissions.Remove(groupPermission);
+            var resourceTypeId = key.ResourceTypeId;
+            var resourceTypePermission = await _context.Permissions.FirstAsync(m => m.PermissionId == key.PermissionId && m.ResourceTypeId == key.ResourceTypeId);
+            _context.Permissions.Remove(resourceTypePermission);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index), new { ResourceTypeId = permission.ResourceTypeId });
+            //return RedirectToAction(nameof(Index));
+            return RedirectToAction("Details", "ResourceTypes", await _context.ResourceTypes.FirstOrDefaultAsync(rt => rt.Id == resourceTypeId));
         }
 
-        private bool ResourceTypePermissionExists(string ResourceTypeId, string PermissionId)
+        private bool ResourceTypePermissionExists(string id)
         {
-            return _context.Permissions.Any(e => e.ResourceTypeId == ResourceTypeId && e.PermissionId == PermissionId);
+            return _context.Permissions.Any(e => e.ResourceTypeId == id);
         }
     }
 }

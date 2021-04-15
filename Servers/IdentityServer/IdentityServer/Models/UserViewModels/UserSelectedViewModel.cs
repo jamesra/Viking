@@ -2,51 +2,47 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace IdentityServer.Models.UserViewModels
-{
-    public class UserSelectedViewModel
-    {
-        [Required]
-        public string Id { get; set; }
-        [Required]
-        public string Name { get; set; }
-        [Required]
-        
-        public bool Selected { get; set; }
-    }
+{ 
+    public class UserSelectedViewModel : NamedItemSelectedViewModel<string> { }
+
 
     /// <summary>
     /// Update the organization assignments to match the UserSelectedViewModel
     /// </summary>
     public static class UserSelectedViewModelExtensions
     {
-        public static void UpdateUserOrganizations(this Group organization, IEnumerable<UserSelectedViewModel> Users)
+        public static void UpdateUserMembership(this Group group, IEnumerable<UserSelectedViewModel> Users)
         {
             foreach (UserSelectedViewModel user in Users)
             {
-                var ExistingMapping = organization.MemberUsers.FirstOrDefault(u => u.UserId == user.Id);
+                group.UpdateUserMembership(user);
+            }
+        }
 
-                if (user.Selected)
+        public static void UpdateUserMembership(this Group group, UserSelectedViewModel user)
+        {
+            var ExistingMapping = group.MemberUsers.FirstOrDefault(u => u.UserId == user.Id);
+
+            if (user.Selected)
+            {
+                if (ExistingMapping == null)
                 {
-                    if (ExistingMapping == null)
-                    {
-                        //Create the mapping
-                        UserToGroupAssignment oa = new UserToGroupAssignment() { GroupId = organization.Id, UserId = user.Id };
-                        organization.MemberUsers.Add(oa);
-                    }
+                    //Create the mapping
+                    UserToGroupAssignment oa = new UserToGroupAssignment() { GroupId = group.Id, UserId = user.Id };
+                    group.MemberUsers.Add(oa);
                 }
-                else
+            }
+            else
+            {
+                if (ExistingMapping != null)
                 {
-                    if (ExistingMapping != null)
-                    {
-                        //Remove the mapping
-                        organization.MemberUsers.Remove(ExistingMapping);
-                    }
+                    //Remove the mapping
+                    group.MemberUsers.Remove(ExistingMapping);
                 }
             }
         }
+         
     }
 }

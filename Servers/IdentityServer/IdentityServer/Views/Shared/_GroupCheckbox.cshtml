@@ -1,0 +1,6 @@
+﻿@model IdentityServer.Models.UserViewModels.GroupSelectedViewModel
+
+@Html.HiddenFor(x => Model.Id)
+@Html.HiddenFor(x => Model.Name)
+@Html.CheckBoxFor(x => Model.Selected, Model.Name)
+@Html.DisplayFor(x => Model.Name)

@@ -1,4 +1,4 @@
-﻿@model IdentityServer.Models.UserViewModels.GroupDetailsViewModel
+﻿@model IdentityServer.Models.UserViewModels.GroupEditViewModel
 
 @{
     ViewData["Title"] = "Edit";
@@ -7,30 +7,33 @@
 
 <h2>Edit</h2>
 
-<h4>Organization</h4>
+<h4>@Model.Group.Name Group</h4>
 <hr />
 <div class="row">
     <div class="col-md-4">
         <form asp-action="Edit">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="Group" />
+            <input type="hidden" asp-for="Group.Id" /> 
             <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
+                <label asp-for="Group.Name" class="control-label"></label>
+                <input asp-for="Group.Name" class="form-control" />
+                <span asp-validation-for="Group.Name" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
+                <label asp-for="Group.Description" class="control-label"></label>
+                <input asp-for="Group.Description" class="form-control" />
+                <span asp-validation-for="Group.Description" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="UserList" class="control-label"></label>
-                @Html.Partial("~/Views/Shared/UserSelectedList.cshtml", Model.UserList)
+                <label asp-for="Group.Parent" class="control-label"></label>
+                <select asp-for="Group.ParentID" asp-items="@ViewBag.AvailableParents">
+                    <option value="">None</option>
+                </select>
+                <span asp-validation-for="Group.ParentID" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Children" class="control-label"></label>
-                @Html.Partial("~/Views/Shared/GroupChildrenTreeView.cshtml", Model.Children)
+                <partial name="~/Views/Shared/_MembershipEditTablePartialView.cshtml" for="@Model.Members" />
             </div>
             <div class="form-group">
                 <input type="submit" value="Save" class="btn btn-default" />

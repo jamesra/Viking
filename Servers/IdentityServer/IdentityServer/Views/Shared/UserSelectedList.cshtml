@@ -7,7 +7,7 @@
             <td>
                 @Html.HiddenFor(x => Model[i].Id)
                 @Html.HiddenFor(x => Model[i].Name)
-                @Html.CheckBoxFor(x => Model[i].Selected, Model[i].Name)
+                @Html.CheckBoxFor(x => Model[i].Selected, Model[i].Id)
                 @Html.DisplayFor(x => Model[i].Name)
             </td>
         </tr>            

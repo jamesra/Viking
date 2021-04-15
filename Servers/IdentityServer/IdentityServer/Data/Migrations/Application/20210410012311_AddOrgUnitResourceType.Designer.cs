@@ -4,19 +4,21 @@ using IdentityServer.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace IdentityServer.Migrations
+namespace IdentityServer.Data.Migrations.Application
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20210410012311_AddOrgUnitResourceType")]
+    partial class AddOrgUnitResourceType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
-                .HasAnnotation("ProductVersion", "5.0.3")
+                .HasAnnotation("ProductVersion", "5.0.4")
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
             modelBuilder.Entity("IdentityServer.Models.ApplicationUser", b =>
@@ -98,38 +100,71 @@ namespace IdentityServer.Migrations
             modelBuilder.Entity("IdentityServer.Models.GrantedGroupPermission", b =>
                 {
                     b.Property<long>("ResourceId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ResourceId");
 
                     b.Property<string>("PermissionId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("PermissionId");
 
                     b.Property<long>("GroupId")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("GranteeType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ResourceId", "PermissionId", "GroupId");
 
                     b.HasIndex("GroupId");
 
                     b.ToTable("GrantedGroupPermissions");
+
+                    b.HasDiscriminator<string>("GranteeType").HasValue("Group");
                 });
 
             modelBuilder.Entity("IdentityServer.Models.GrantedUserPermission", b =>
                 {
                     b.Property<long>("ResourceId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ResourceId");
 
                     b.Property<string>("PermissionId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("PermissionId");
 
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("GranteeType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("ResourceId", "PermissionId", "UserId");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("GrantedUserPermissions");
+
+                    b.HasDiscriminator<string>("GranteeType").HasValue("User");
                 });
 
-            modelBuilder.Entity("IdentityServer.Models.Group", b =>
+            modelBuilder.Entity("IdentityServer.Models.GroupToGroupAssignment", b =>
+                {
+                    b.Property<long>("ContainerGroupId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("MemberGroupId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ContainerGroupId", "MemberGroupId");
+
+                    b.HasIndex("MemberGroupId");
+
+                    b.ToTable("GroupToGroupAssignments");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.Resource", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -148,21 +183,95 @@ namespace IdentityServer.Migrations
                     b.Property<long?>("ParentID")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("ResourceTypeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(128)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ParentID");
 
-                    b.ToTable("Group");
+                    b.HasIndex("ResourceTypeId");
+
+                    b.ToTable("Resource");
+
+                    b.HasDiscriminator<string>("ResourceTypeId").HasValue("Resource");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.ResourceType", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ResourceTypes");
 
                     b.HasData(
                         new
                         {
-                            Id = -1L,
-                            Name = "Administrators"
+                            Id = "Resource"
+                        },
+                        new
+                        {
+                            Id = "OrganizationalUnit"
+                        },
+                        new
+                        {
+                            Id = "Group"
+                        },
+                        new
+                        {
+                            Id = "Volume"
                         });
                 });
 
-            modelBuilder.Entity("IdentityServer.Models.GroupAssignment", b =>
+            modelBuilder.Entity("IdentityServer.Models.ResourceTypePermission", b =>
+                {
+                    b.Property<string>("ResourceTypeId")
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("PermissionId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.HasKey("ResourceTypeId", "PermissionId");
+
+                    b.ToTable("Permissions");
+
+                    b.HasData(
+                        new
+                        {
+                            ResourceTypeId = "Group",
+                            PermissionId = "Access Manager",
+                            Description = "Add/Remove group members"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "Volume",
+                            PermissionId = "Read"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "Volume",
+                            PermissionId = "Annotate"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "Volume",
+                            PermissionId = "Review"
+                        });
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.UserToGroupAssignment", b =>
                 {
                     b.Property<long>("GroupId")
                         .HasColumnType("bigint");
@@ -174,32 +283,7 @@ namespace IdentityServer.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("GroupAssignments");
-                });
-
-            modelBuilder.Entity("IdentityServer.Models.GroupPermission", b =>
-                {
-                    b.Property<long>("GroupId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("PermissionId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
-
-                    b.HasKey("GroupId", "PermissionId");
-
-                    b.ToTable("Permissions");
-
-                    b.HasData(
-                        new
-                        {
-                            GroupId = -1L,
-                            PermissionId = "Access Manager",
-                            Description = "Add/Remove group members"
-                        });
+                    b.ToTable("UserToGroupAssignments");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -339,6 +423,37 @@ namespace IdentityServer.Migrations
                     b.ToTable("AspNetUserTokens");
                 });
 
+            modelBuilder.Entity("IdentityServer.Models.Group", b =>
+                {
+                    b.HasBaseType("IdentityServer.Models.Resource");
+
+                    b.HasDiscriminator().HasValue("Group");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = -1L,
+                            Name = "Everyone"
+                        });
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.OrganizationalUnit", b =>
+                {
+                    b.HasBaseType("IdentityServer.Models.Resource");
+
+                    b.HasDiscriminator().HasValue("OrganizationalUnit");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.Volume", b =>
+                {
+                    b.HasBaseType("IdentityServer.Models.Resource");
+
+                    b.Property<string>("Endpoint")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasDiscriminator().HasValue("Volume");
+                });
+
             modelBuilder.Entity("IdentityServer.Models.ApplicationRole", b =>
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityRole");
@@ -348,8 +463,8 @@ namespace IdentityServer.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "87aa0c03-6fac-412b-8226-128aaaacefc6",
-                            ConcurrencyStamp = "09fff261-651a-4f3b-9369-6a16a25c16a4",
+                            Id = "8fc96f07-55a6-4392-bb31-a692d6327673",
+                            ConcurrencyStamp = "e7ff244b-a4cb-420e-8382-5a4320e4eceb",
                             Name = "Administrator",
                             NormalizedName = "Administrator"
                         });
@@ -358,13 +473,13 @@ namespace IdentityServer.Migrations
             modelBuilder.Entity("IdentityServer.Models.GrantedGroupPermission", b =>
                 {
                     b.HasOne("IdentityServer.Models.Group", "PermittedGroup")
-                        .WithMany()
+                        .WithMany("PermissionsHeld")
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
-                    b.HasOne("IdentityServer.Models.Group", "Resource")
-                        .WithMany()
+                    b.HasOne("IdentityServer.Models.Resource", "Resource")
+                        .WithMany("GroupsWithPermissions")
                         .HasForeignKey("ResourceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -376,28 +491,74 @@ namespace IdentityServer.Migrations
 
             modelBuilder.Entity("IdentityServer.Models.GrantedUserPermission", b =>
                 {
-                    b.HasOne("IdentityServer.Models.Group", "Resource")
-                        .WithMany()
+                    b.HasOne("IdentityServer.Models.Resource", "Resource")
+                        .WithMany("UsersWithPermissions")
                         .HasForeignKey("ResourceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("IdentityServer.Models.ApplicationUser", "PermittedUser")
+                        .WithMany("PermissionsHeld")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.Navigation("PermittedUser");
+
                     b.Navigation("Resource");
                 });
 
-            modelBuilder.Entity("IdentityServer.Models.Group", b =>
+            modelBuilder.Entity("IdentityServer.Models.GroupToGroupAssignment", b =>
                 {
-                    b.HasOne("IdentityServer.Models.Group", "Parent")
+                    b.HasOne("IdentityServer.Models.Group", "Container")
+                        .WithMany("MemberGroups")
+                        .HasForeignKey("ContainerGroupId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.HasOne("IdentityServer.Models.Group", "Member")
+                        .WithMany("MemberOfGroups")
+                        .HasForeignKey("MemberGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Container");
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.Resource", b =>
+                {
+                    b.HasOne("IdentityServer.Models.OrganizationalUnit", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentID");
 
+                    b.HasOne("IdentityServer.Models.ResourceType", "ResourceType")
+                        .WithMany()
+                        .HasForeignKey("ResourceTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Parent");
+
+                    b.Navigation("ResourceType");
                 });
 
-            modelBuilder.Entity("IdentityServer.Models.GroupAssignment", b =>
+            modelBuilder.Entity("IdentityServer.Models.ResourceTypePermission", b =>
+                {
+                    b.HasOne("IdentityServer.Models.ResourceType", "ResourceType")
+                        .WithMany("Permissions")
+                        .HasForeignKey("ResourceTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ResourceType");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.UserToGroupAssignment", b =>
                 {
                     b.HasOne("IdentityServer.Models.Group", "Group")
-                        .WithMany("GroupAssignments")
+                        .WithMany("MemberUsers")
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -411,17 +572,6 @@ namespace IdentityServer.Migrations
                     b.Navigation("Group");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("IdentityServer.Models.GroupPermission", b =>
-                {
-                    b.HasOne("IdentityServer.Models.Group", "Group")
-                        .WithMany("AvailablePermissions")
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Group");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -478,15 +628,36 @@ namespace IdentityServer.Migrations
             modelBuilder.Entity("IdentityServer.Models.ApplicationUser", b =>
                 {
                     b.Navigation("GroupAssignments");
+
+                    b.Navigation("PermissionsHeld");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.Resource", b =>
+                {
+                    b.Navigation("GroupsWithPermissions");
+
+                    b.Navigation("UsersWithPermissions");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.ResourceType", b =>
+                {
+                    b.Navigation("Permissions");
                 });
 
             modelBuilder.Entity("IdentityServer.Models.Group", b =>
                 {
-                    b.Navigation("AvailablePermissions");
+                    b.Navigation("MemberGroups");
 
+                    b.Navigation("MemberOfGroups");
+
+                    b.Navigation("MemberUsers");
+
+                    b.Navigation("PermissionsHeld");
+                });
+
+            modelBuilder.Entity("IdentityServer.Models.OrganizationalUnit", b =>
+                {
                     b.Navigation("Children");
-
-                    b.Navigation("GroupAssignments");
                 });
 #pragma warning restore 612, 618
         }
