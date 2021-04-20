@@ -207,7 +207,7 @@ namespace IdentityServer.Controllers
             var groups = _context.Group.Where(g => UserOrganizations.Any(uo => uo.Id == g.Id));
             foreach(var group in groups)
             {
-                var result = await _authorizationService.AuthorizeAsync(User, group, IdentityServer.Authorization.Operations.AccessManager);
+                var result = await _authorizationService.AuthorizeAsync(User, group, IdentityServer.Authorization.Operations.GroupAccessManager);
                 if (result.Succeeded)
                 {
                     continue;

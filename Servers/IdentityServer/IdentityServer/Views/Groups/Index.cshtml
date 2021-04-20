@@ -28,10 +28,10 @@
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
+        @foreach (var item in Model) {
         <tr>
             <td>
-                <a asp-action="Details" asp-controller="GrantedPermissions" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
+                <a asp-action="Details" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.NumMemberUsers)
@@ -40,10 +40,17 @@
                 @Html.DisplayFor(modelItem => item.Description)
             </td>
             <td>
-                <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id">Permissions</a> |
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.GroupAccessManager)).Succeeded)
+                {
+                    <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id">Permissions</a><text> | </text>
+                    <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> <text> | </text>
+                    <a asp-action="Details" asp-route-id="@item.Id">Details</a> <text> | </text>
+                    <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                }
+                else {
+                    <a asp-action="Details" asp-route-id="@item.Id">Details</a>
+                }
+
             </td>
         </tr>
 }

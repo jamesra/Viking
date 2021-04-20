@@ -129,48 +129,43 @@ namespace IdentityServer.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RequestClaims([Bind("UserId, AvailableRoles, AvailableOrganizations, NewOrganization")] UserClaimRequestViewModel requestor)
+        public async Task<IActionResult> RequestClaims([Bind("UserId, UserComments, AvailableOrganizations, NewOrganization")] UserClaimRequestViewModel requestor)
         {
             //Send an E-mail to the admins requesting new claims
             var User = _context.ApplicationUser.FirstOrDefault(u => u.Id == requestor.UserId);
 
-            var Roles = requestor.AvailableRoles;
             var Organizations = requestor.AvailableOrganizations;
 
             var AdminUsers = _context.GetUsersInAdminRole();
 
             UserClaimRequestViewModel ExistingClaims = await User.CreateUserClaimsRequest(_context);
 
-            var ExistingOrganziationClaims = ExistingClaims.AvailableOrganizations.Where(o => o.Selected).ToList();
-            var ExistingRoleClaims = ExistingClaims.AvailableRoles.Where(r => r.Selected).ToList();
+            var ExistingOrganziationClaims = ExistingClaims.AvailableOrganizations.Where(o => o.Selected).ToList(); 
 
             List<string> InvolvedAdmins = new List<string>();
 
             Dictionary<long, List<ApplicationUser>> OrgAdmins = _context.GetOrganizationAdminMap(Config.GroupAccessManagerPermission);
 
             //Create the message
-            string message = string.Format("{0} is requesting additional claims\n\n", User.UserName);
-            string RoleMessage = "";
+            string message = string.Format("<p><b>{0}</b> is requesting additional claims:</p>", User.UserName);
+            string UserMessage = "";
             string OrgMessage = "";
             string NewOrgMessage = "";
 
-            if (Roles != null && Roles.Any(r => r.Selected))
+            if(string.IsNullOrEmpty(requestor.UserComments) == false)
             {
-                RoleMessage = "Roles:\n";
-                foreach (var role in Roles.Where(r => r.Selected && !ExistingRoleClaims.Any(erc => erc.Id == r.Id)))
-                {
-                    RoleMessage += string.Format("\t{0}\n", role.Name);
-                }
+                UserMessage = $"<dl><dt>User Message</dt><dd>{requestor.UserComments}</dd></dl>";
             }
 
             if(Organizations != null && Organizations.Any(o => o.Selected))
             {
-                OrgMessage = "Organizations:\n";
+                OrgMessage = "<p>Organizations:</p><ul>";
                 foreach (var org in Organizations.Where(o => o.Selected && !ExistingOrganziationClaims.Any(oa => oa.Id == o.Id)))
                 {
                     InvolvedAdmins.AddRange(OrgAdmins[org.Id].Select(u => u.Email));
-                    OrgMessage += string.Format("\t{0}\n", org.Name);
+                    OrgMessage += $"<li>{org.Name}</li>";
                 }
+                OrgMessage += "</ul>";
             }
 
             if(!string.IsNullOrWhiteSpace(requestor.NewOrganization))
@@ -178,7 +173,7 @@ namespace IdentityServer.Controllers
                 NewOrgMessage = string.Format("<p>New Organization: {0}</p>", requestor.NewOrganization);
             }
 
-            message += RoleMessage + OrgMessage + NewOrgMessage;
+            message += UserMessage + OrgMessage + NewOrgMessage;
 
             try
             {

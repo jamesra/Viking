@@ -16,7 +16,7 @@ namespace IdentityServer.Models
     public class GrantedGroupPermission : GrantedPermissionBase
     {
         /// <summary>
-        /// The group being granted permission
+        /// The group permission grants access to
         /// </summary>
         [Required]
         [Key, ForeignKey(nameof(IdentityServer.Models.Group))]

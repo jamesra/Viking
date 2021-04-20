@@ -46,12 +46,12 @@ namespace IdentityServer.Extensions
                 {
                     case "group":
                     {
-                        var GroupAssignments = _Dbcontext.UserToGroupAssignments.Include("Group").Where(oa => oa.UserId == user.Id).ToList();
+                        var GroupAssignments = await _Dbcontext.RecursiveMemberOfGroups(user.Id);
                         
                         foreach(var oa in GroupAssignments)
                         {
                             //TODO: Add the role name they have under that group
-                            claims.Add(new Claim("MemberOf", oa.Group.Id.ToString()));
+                            claims.Add(new Claim("MemberOf", oa.Id.ToString()));
                         }
                     }
                     break;/*
@@ -77,6 +77,12 @@ namespace IdentityServer.Extensions
                             }
                         }
                         break;*/
+                    case JwtClaimTypes.Id:
+                        claims.Add(new Claim(JwtClaimTypes.Id, user.Id));
+                        break;
+                    case JwtClaimTypes.Name:
+                        claims.Add(new Claim(JwtClaimTypes.Name, user.UserName));
+                        break;
                     case JwtClaimTypes.FamilyName:
                         claims.Add(new Claim(JwtClaimTypes.FamilyName, user.FamilyName));
                         break;

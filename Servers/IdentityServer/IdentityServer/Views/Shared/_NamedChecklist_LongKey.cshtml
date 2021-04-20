@@ -1,0 +1,10 @@
+﻿@model IList<IdentityServer.Models.UserViewModels.NamedItemSelectedViewModel<long>>
+
+<ul class="no-bullets">
+    @for (var i = 0; i < Model.Count(); i++)
+    {
+        <li>
+            <partial name="~/Views/Shared/_NamedCheckbox_LongKey.cshtml" for="@Model[i]" />
+        </li>
+    }
+</ul>

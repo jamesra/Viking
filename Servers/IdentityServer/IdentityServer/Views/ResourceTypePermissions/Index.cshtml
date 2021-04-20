@@ -6,9 +6,13 @@
 
 <h2>Index</h2>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
+@if (this.User.IsInRole(Config.AdminRoleName))
+{
+    <p>
+        <a asp-action="Create">Create New</a>
+    </p>
+}
+
 <table class="table">
     <thead>
         <tr>
@@ -25,23 +29,27 @@
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.ResourceType.Id)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PermissionId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Description)
-            </td>
-            <td>
-                @Html.ActionLink("Edit", "Edit", item) |
-                @Html.ActionLink("Details", "Details", item) |
-                @Html.ActionLink("Delete", "Delete", item)
-            </td>
-        </tr>
-}
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ResourceType.Id)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PermissionId)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Description)
+                </td> 
+                <td>
+                    @if (this.User.IsInRole(Config.AdminRoleName))
+                    {
+                        @Html.ActionLink("Edit", "Edit", item)<text> | </text>
+                        @Html.ActionLink("Details", "Details", item)<text> | </text>
+                        @Html.ActionLink("Delete", "Delete", item)
+                    }
+                </td>
+            </tr>
+        }
     </tbody>
 </table>

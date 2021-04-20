@@ -13,10 +13,12 @@ namespace Client
     {
         public static void Main(string[] args) => MainAsync().GetAwaiter().GetResult();
 
+        private const string Secret = "CorrectHorseBatteryStaple";
+
         private static async Task MainAsync()
         {
-            string IdentityServerEndpoint = "https://identity.connectomes.utah.edu";
-            //string IdentityServerEndpoint = "http://localhost:5000";
+            //string IdentityServerEndpoint = "https://identity.connectomes.utah.edu";
+            string IdentityServerEndpoint = "https://localhost:44322";
 
             // discover endpoints from metadata
             //var disco = await DiscoveryClient.GetAsync("http://localhost:5000");
@@ -28,10 +30,10 @@ namespace Client
             }
             
             // request token
-            var tokenClient = new TokenClient(disco.TokenEndpoint, "ro.viking", "CorrectHorseBatteryStaple");
+            var tokenClient = new TokenClient(disco.TokenEndpoint, "ro.viking", Secret);
             //var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
             //var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jander42@hotmail.com", "Wat>com3", "Viking.Annotation openid");
-            var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jamesan", "Wat>com3", "openid Viking.Annotation");
+            var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jamesan", "Wat>com3", "openid Viking.Annotation RC1.Annotate RC1.Read");
 
             if (tokenResponse.IsError)
             {
@@ -47,35 +49,28 @@ namespace Client
 
             if (userInfo.IsError)
             {
-                Console.WriteLine(userInfo.Error);
+                Console.WriteLine($"Error: {userInfo.Error}");
                 return;
             }
-
+            
+            Console.WriteLine("Claims");
+            Console.ForegroundColor = ConsoleColor.Yellow;
             foreach (var claim in userInfo.Claims)
             {
                 Console.WriteLine(claim.ToString()); 
             }
+            Console.ForegroundColor = ConsoleColor.White;
 
             Console.WriteLine("\n\n");
 
-            var validationClient = new IntrospectionClient(disco.IntrospectionEndpoint, "Viking.Annotation", "secret");
-            var validation = await validationClient.SendAsync(new IntrospectionRequest() { Token = tokenResponse.AccessToken, ClientId = "Viking.Annotation", ClientSecret = "secret" });
+            await CheckClaims(disco, tokenResponse, "RC1.Annotate");
+            await CheckClaims(disco, tokenResponse, "RC1.Read");
+            await CheckClaims(disco, tokenResponse, "Viking.Annotation");
+            await CheckClaims(disco, tokenResponse, "openid");
 
-            if (validation.IsError)
-            {
-                Console.WriteLine(validation.Error);
-                return;
-            }
+            Console.WriteLine("Press a key to continue");
 
-
-            foreach (var claim in validation.Claims)
-            {
-                Console.WriteLine(claim.ToString());
-            }
-
-            Console.WriteLine(validation.Json);
-
-            Console.WriteLine("");
+            var key = Console.ReadKey();
             /*
             // call api
             var client = new HttpClient();
@@ -92,6 +87,31 @@ namespace Client
                 Console.WriteLine(JArray.Parse(content));
             }
             */
+        }
+
+        private static async Task<bool> CheckClaims(DiscoveryResponse disco, TokenResponse tokenResponse, string client)
+        {
+            var validationClient = new IntrospectionClient(disco.IntrospectionEndpoint, client, Secret);
+            var validation = await validationClient.SendAsync(new IntrospectionRequest() { Token = tokenResponse.AccessToken, ClientId = client, ClientSecret = Secret });
+
+            if (validation.IsError)
+            {
+                Console.WriteLine($"{client}: {validation.Error}");
+                return false;
+            }
+             
+            Console.WriteLine($"Validated Claim: {client}");
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            foreach (var claim in validation.Claims)
+            {
+                Console.WriteLine(claim.ToString());
+            }
+            Console.ForegroundColor = ConsoleColor.White;
+
+            Console.WriteLine(validation.Json);
+
+            return true;
         }
     }
 }

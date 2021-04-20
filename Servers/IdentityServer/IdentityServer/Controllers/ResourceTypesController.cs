@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
@@ -55,6 +56,7 @@ namespace IdentityServer.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> Create([Bind("Id")] ResourceType resourceType)
         {
             if (ModelState.IsValid)
@@ -87,6 +89,7 @@ namespace IdentityServer.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> Edit(string id, [Bind("Id")] ResourceType resourceType)
         {
             if (id != resourceType.Id)
@@ -138,6 +141,7 @@ namespace IdentityServer.Controllers
         // POST: ResourceTypes/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var resourceType = await _context.ResourceTypes.FindAsync(id);

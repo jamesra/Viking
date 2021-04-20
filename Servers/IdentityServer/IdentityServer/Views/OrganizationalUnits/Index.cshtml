@@ -53,10 +53,16 @@
                     </ul>
                 </td>
                 <td>
-                    <a asp-action="CreateChild" asp-controller="Resources" asp-route-ParentId="@item.Id">Create Child</a> |
-                    <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                    <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                    <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.GroupAccessManager)).Succeeded)
+                    {
+                        <a asp-action="CreateChild" asp-controller="Resources" asp-route-ParentId="@item.Id">Create Child</a><text> | </text>
+                        <a asp-action="Edit" asp-route-id="@item.Id">Edit</a><text> | </text>
+                        <a asp-action="Details" asp-route-id="@item.Id">Details</a><text> | </text>
+                        <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                    }
+                    else {
+                    <a asp-action="Details" asp-route-id="@item.Id">Details</a>
+                    }
                 </td>
             </tr>
         }

@@ -18,10 +18,12 @@ namespace IdentityServer.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IPermissionsViewModelHelper _permissionsHelper;
+        private readonly IAuthorizationService _authorization;
 
-        public GroupsController(ApplicationDbContext context, IPermissionsViewModelHelper permissionsHelper)
+        public GroupsController(ApplicationDbContext context, IAuthorizationService authorization, IPermissionsViewModelHelper permissionsHelper)
         {
             _context = context;
+            _authorization = authorization;
             _permissionsHelper = permissionsHelper;
         }
 
@@ -38,9 +40,9 @@ namespace IdentityServer.Controllers
             {
                 return NotFound();
             }
-
+              
             var organization = await _context.Group
-                .Include(g => g.UsersWithPermissions)
+                .Include(g => g.UsersWithPermissions).ThenInclude(g => g.PermittedUser)
                 .Include(g => g.GroupsWithPermissions).ThenInclude(g => g.PermittedGroup)
                 .Include(g => g.ResourceType.Permissions)
                 .Include(g => g.Parent)
@@ -57,6 +59,8 @@ namespace IdentityServer.Controllers
             {
                 return NotFound();
             }
+
+            ViewBag.AccessManagers = await _context.GetGroupAccessManagers(id.Value).Select(u => u.UserName).ToListAsync();
 
             return View(organization);
         }
@@ -202,6 +206,12 @@ namespace IdentityServer.Controllers
                 })
                 .SingleOrDefaultAsync(g => g.Group.Id == id);
 
+            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, groupEditDetails.Group, IdentityServer.Authorization.Operations.GroupAccessManager);
+            if(authResult.Succeeded == false)
+            {
+                return Unauthorized();
+            }
+
             ViewBag.AvailableParents = _context.OrgUnit.Select(ou => new SelectListItem(ou.Name, ou.Id.ToString())).ToList();
 
             if (groupEditDetails == null)
@@ -216,8 +226,7 @@ namespace IdentityServer.Controllers
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [ValidateAntiForgeryToken] 
         public async Task<IActionResult> Edit(long id, [Bind("Group", "Members", "Children")] GroupEditViewModel groupDetails)
         {
             if (id != groupDetails.Group.Id)
@@ -240,7 +249,12 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-
+            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, group, IdentityServer.Authorization.Operations.GroupAccessManager);
+            if (authResult.Succeeded == false)
+            {
+                return Unauthorized();
+            }
+             
             if (ModelState.IsValid)
             {
                 try
@@ -304,6 +318,12 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
+            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, id.Value, IdentityServer.Authorization.Operations.GroupAccessManager);
+            if (authResult.Succeeded == false)
+            {
+                return Unauthorized();
+            }
+
             var organization = await _context.Group
                 .SingleOrDefaultAsync(m => m.Id == id);
             if (organization == null)
@@ -324,7 +344,13 @@ namespace IdentityServer.Controllers
                 .Include(g => g.MemberGroups)
                 .SingleOrDefaultAsync(m => m.Id == id);
 
-            foreach(var memberGroupAssignment in group.MemberGroups)
+            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, id, IdentityServer.Authorization.Operations.GroupAccessManager);
+            if (authResult.Succeeded == false)
+            {
+                return Unauthorized();
+            }
+
+            foreach (var memberGroupAssignment in group.MemberGroups)
             {
                 _context.GroupToGroupAssignments.Remove(memberGroupAssignment);
             }

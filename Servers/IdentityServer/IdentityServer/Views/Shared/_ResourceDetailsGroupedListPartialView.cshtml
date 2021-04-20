@@ -61,7 +61,7 @@
                                 <td>
                                     @Html.DisplayFor(model => rows[i].Description)
                                 </td>
-                                @if (detailsController != null)
+                                @if (detailsController != null && (await AuthorizationService.AuthorizeAsync(User, rows[i].Id, Operations.GroupAccessManager)).Succeeded)
                                 {
                                 <td>
                                     <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@rows[i].Id">Permissions</a> |

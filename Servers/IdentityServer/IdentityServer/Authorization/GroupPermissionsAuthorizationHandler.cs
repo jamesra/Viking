@@ -8,12 +8,14 @@ using IdentityServer.Models;
 using IdentityServer.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
+using IdentityServer.Extensions;
 
 namespace IdentityServer.Authorization
 {
     public static class Operations
     {
-        public static GroupPermissionRequirement AccessManager = new GroupPermissionRequirement(Config.AdminRoleName);
+        public static ResourcePermissionRequirement GroupAccessManager = new ResourcePermissionRequirement(Config.GroupAccessManagerPermission);
+        public static ResourcePermissionRequirement OrgUnitAdmin = new ResourcePermissionRequirement(Config.OrgUnitAdminPermission);
     }
 
     public static class AuthorizationServiceExtensions
@@ -23,25 +25,64 @@ namespace IdentityServer.Authorization
             if (User.IsInRole(Config.AdminRoleName))
                 return true; 
 
-            var result = await _authorizationService.AuthorizeAsync(User, group, IdentityServer.Authorization.Operations.AccessManager);
+            var result = await _authorizationService.AuthorizeAsync(User, group, IdentityServer.Authorization.Operations.GroupAccessManager);
+            return result.Succeeded;
+        }
+
+        public static async Task<bool> IsOrgUnitAdmin(this IAuthorizationService _authorizationService, System.Security.Claims.ClaimsPrincipal User, OrganizationalUnit orgUnit)
+        {
+            if (User.IsInRole(Config.AdminRoleName))
+                return true;
+
+            var result = await _authorizationService.AuthorizeAsync(User, orgUnit, IdentityServer.Authorization.Operations.OrgUnitAdmin);
             return result.Succeeded;
         }
     }
+      
+    public class ResourcePermissionRequirement : IAuthorizationRequirement
+    {
+        public readonly string Permission;
+         
+        public ResourcePermissionRequirement(string permission)
+        {
+            Permission = permission; 
+        }
 
-    public class GroupPermissionsAuthorizationHandler : AuthorizationHandler<GroupPermissionRequirement, Group>
+        public override string ToString()
+        {
+            return Permission;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if(obj is ResourcePermissionRequirement other)
+            {
+                return other.Permission.Equals(this.Permission);
+            }
+
+            return base.Equals(obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return Permission.GetHashCode();
+        }
+    }
+
+    public class ResourcePermissionsAuthorizationHandler : AuthorizationHandler<ResourcePermissionRequirement, Resource>
     {
         private ApplicationDbContext DbContext;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public GroupPermissionsAuthorizationHandler(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager)
+        public ResourcePermissionsAuthorizationHandler(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager)
         {
             DbContext = dbContext;
             _userManager = userManager;
         }
 
-        protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, GroupPermissionRequirement requirement, Group group_requested)
+        protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, ResourcePermissionRequirement requirement, Resource resource_requested)
         {
-            
+
             if (context.User.Identity == null)
             {
                 context.Fail();
@@ -61,29 +102,59 @@ namespace IdentityServer.Authorization
             }
 
             var UserId = _userManager.GetUserId(context.User);
-            /*
 
-            var userPermissionInGroup = (from ur in DbContext.Granted
-                                   where ur.UserId == context.User.Identity.Name &&
-                                         ur.GroupID == group_requested.Id &&
-                                         ur.RoleId == requirement.Role
-                                   select ur);
-
-            if (userRoleInGroup.Any())
+            if (await DbContext.IsUserPermitted(resource_requested.Id, UserId, requirement.Permission))
+            {
                 context.Succeed(requirement);
+            }
             else
+            {
                 context.Fail();
-            */
+            }
         }
     }
 
-    public class GroupPermissionRequirement : IAuthorizationRequirement
+    public class ResourceIdPermissionsAuthorizationHandler : AuthorizationHandler<ResourcePermissionRequirement, long>
     {
-        public readonly string Permission;
+        private ApplicationDbContext DbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public GroupPermissionRequirement(string permission)
+        public ResourceIdPermissionsAuthorizationHandler(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager)
         {
-            Permission = permission; 
+            DbContext = dbContext;
+            _userManager = userManager;
+        }
+
+        protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, ResourcePermissionRequirement requirement, long resource_id)
+        { 
+            if (context.User.Identity == null)
+            {
+                context.Fail();
+                return;
+            }
+
+            if (context.User.Identity.IsAuthenticated == false)
+            {
+                context.Fail();
+                return;
+            }
+
+            if (context.User.IsInRole(Config.AdminRoleName))
+            {
+                context.Succeed(requirement);
+                return;
+            }
+
+            var UserId = _userManager.GetUserId(context.User);
+
+            if (await DbContext.IsUserPermitted(resource_id, UserId, requirement.Permission))
+            {
+                context.Succeed(requirement);
+            }
+            else
+            {
+                context.Fail();
+            }
         }
     }
 }

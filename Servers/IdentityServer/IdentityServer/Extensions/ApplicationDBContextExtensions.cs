@@ -28,11 +28,42 @@ namespace IdentityServer.Extensions
             return permitted_users;
         }
 
-        public static IQueryable<ApplicationUser> GetGroupAdmins(this ApplicationDbContext context, long ResourceId, string PermissionId)
+        public static IQueryable<ApplicationUser> GetGroupAccessManagers(this ApplicationDbContext context, long ResourceId)
         {
             return context.GetPermittedUsers(ResourceId, Config.GroupAccessManagerPermission);
         }
 
+        public static Task<bool> IsOrgAdministrator(this ApplicationDbContext context, long GroupId, string UserId)
+        {
+            return context.IsUserPermitted(GroupId, UserId, Config.OrgUnitAdminPermission);
+        }
+
+        public static Task<bool> IsGroupAccessManager(this ApplicationDbContext context, long GroupId, string UserId)
+        {
+            return context.IsUserPermitted(GroupId, UserId, Config.GroupAccessManagerPermission);
+        }
+
+        public static async Task<bool> IsUserPermitted(this ApplicationDbContext context, long ResourceId, string UserId, string PermissionId)
+        {
+            var permitted_users = from user in context.Users
+                                  join permit in context.GrantedUserPermissions on user.Id equals permit.UserId
+                                  where permit.PermissionId == PermissionId && permit.ResourceId == ResourceId && permit.UserId == UserId
+                                  select user;
+
+            if (permitted_users.Any())
+                return true;
+
+            var group_memberships = await context.RecursiveMemberOfGroups(UserId);
+
+            var permitted_groups = from g in group_memberships
+                                    join ggp in context.GrantedGroupPermissions on g.Id equals ggp.GroupId
+                                    where ggp.PermissionId == PermissionId && ggp.ResourceId == ResourceId
+                                    select ggp.GroupId;
+
+            var intersection = permitted_groups.Intersect(group_memberships.Select(g => g.Id));
+
+            return intersection.Any();
+        }
 
         public static IQueryable<ApplicationUser> GetPermittedUsers(this ApplicationDbContext context, long ResourceId, string PermissionId)
         {
@@ -41,24 +72,63 @@ namespace IdentityServer.Extensions
                                   where permit.PermissionId == PermissionId && permit.ResourceId == ResourceId
                                   select user;
 
-            var permitted_group_users = from pg in context.GrantedGroupPermissions
-                                        join usersInGroup in context.UserToGroupAssignments on pg.GroupId equals usersInGroup.GroupId
+            var permitted_groups = from ggp in context.GrantedGroupPermissions
+                                   where ggp.PermissionId == PermissionId && ggp.ResourceId == ResourceId
+                                   select ggp.GroupId;
+
+            var recursive_permitted_groups = context.RecursiveMemberOfGroups(permitted_groups, true).Result;
+
+            var recursive_permitted_group_Ids = recursive_permitted_groups.Select(g => g.Id);
+
+            //Return all members of the groups
+
+            var recursive_permitted_users = from u_to_g in context.UserToGroupAssignments
+                                            join g in context.Group on u_to_g.GroupId equals g.Id
+                                            join u in context.Users on u_to_g.UserId equals u.Id
+                                            where recursive_permitted_group_Ids.Contains(g.Id)
+                                            select u;
+
+            /*
+            var permitted_group_users = from ggp in context.GrantedGroupPermissions
+                                        join usersInGroup in context.UserToGroupAssignments on ggp.GroupId equals usersInGroup.GroupId
                                         join user in context.ApplicationUser on usersInGroup.UserId equals user.Id
-                                        where pg.PermissionId == PermissionId && pg.ResourceId == ResourceId
+                                        where ggp.PermissionId == PermissionId && ggp.ResourceId == ResourceId
                                         select user;
+            */
 
-            return permitted_users.Union(permitted_group_users);
+
+            return permitted_users.Union(recursive_permitted_users).Distinct();
         }
-
-
-        public static IEnumerable<ApplicationUser> GetGroupsAdmins(this ApplicationDbContext context, IEnumerable<long> ResourceIds, string PermissionId)
+         
+        public static IEnumerable<ApplicationUser> GetGroupAccessManagers(this ApplicationDbContext context, IEnumerable<long> ResourceIds, string PermissionId)
         {
             return context.GetPermittedUsers(ResourceIds, Config.GroupAccessManagerPermission);
         }
 
+        /// <summary>
+        /// Returns the set of users that have the permission in every single one of the passed resources
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="ResourceIds"></param>
+        /// <param name="PermissionId"></param>
+        /// <returns></returns>
         public static IEnumerable<ApplicationUser> GetPermittedUsers(this ApplicationDbContext context, IEnumerable<long> ResourceIds, string PermissionId)
         {
-            return ResourceIds.SelectMany(resId => context.GetPermittedUsers(resId, PermissionId));
+            var permissionsByResource = ResourceIds.Select(resId => context.GetPermittedUsers(resId, PermissionId)).ToList();
+
+            if (permissionsByResource.Any() == false)
+                return new List<ApplicationUser>();
+
+            var intersection = permissionsByResource.First();
+            permissionsByResource.RemoveAt(0);
+
+            while(permissionsByResource.Any())
+            {
+                intersection = intersection.Intersect(permissionsByResource[0]);
+                permissionsByResource.RemoveAt(0);
+            }
+
+            return intersection;
         }
 
         /*
@@ -87,14 +157,22 @@ namespace IdentityServer.Extensions
        /// <returns></returns>
        public static Dictionary<long, List<ApplicationUser>> GetOrganizationAdminMap(this ApplicationDbContext context, string PermissionId)
        {
-           Dictionary<long, List<ApplicationUser>> OrgAdminMap = new Dictionary<long, List<ApplicationUser>>();
-            /*   var AdminUsers = context.GetUsersInAdminRole();
+            Dictionary<long, List<ApplicationUser>> result = new Dictionary<long, List<ApplicationUser>>();
+           foreach(var org in context.OrgUnit)
+           {
+                result[org.Id] = context.GetPermittedUsers(org.Id, PermissionId).ToList();
+           }
 
+            return result;
+           /*
+           Dictionary<long, List<ApplicationUser>> OrgAdminMap = new Dictionary<long, List<ApplicationUser>>();
+               var AdminUsers = context.GetUsersInAdminRole();
+            
                if(AdminUsers.Any() == false)
                {
                    return OrgAdminMap;
                }
-            */
+            
             var permitted_users = from user in context.Users
                                   join permit in context.GrantedUserPermissions on user.Id equals permit.UserId
                                   where permit.PermissionId == PermissionId
@@ -122,7 +200,7 @@ namespace IdentityServer.Extensions
             }
 
             return OrgAdminMap;
-
+           */
             /*
 
             IQueryable<GroupAssignment> AdminOrgAssignments;
@@ -193,6 +271,34 @@ namespace IdentityServer.Extensions
 
             if (includePassedGroup)
                 Results.Insert(0, await context.Group.FindAsync(groupId));
+
+            return Results;
+        }
+
+        /// <summary>
+        /// Recursively returns all groups the passed GroupIds belong to
+        /// </summary> 
+        /// <param name="groupId">Group we are returning membership info for</param>
+        /// <param name="includePassedGroup">True if the passed GroupId should appear in the result set, false if it should not.  Default true</param>
+        /// <returns></returns>
+        public static async Task<List<Group>> RecursiveMemberOfGroups(this ApplicationDbContext context, IEnumerable<long> groupIds, bool includePassedGroups = true)
+        {
+            var GroupAssignments = await context.GroupToGroupAssignments
+                .Include(gga => gga.Container).ThenInclude(ggam => ggam.MemberOfGroups)
+                .Where(gga => groupIds.Contains(gga.MemberGroupId))
+                .ToListAsync();
+
+            var Results = GroupAssignments.Select(dmg => dmg.Container).ToList();
+
+            var recursiveResults = GroupAssignments.SelectMany(ga => ga.Container.MemberOfGroups.Select(mog => context.RecursiveMemberOfGroups(mog.ContainerGroupId, false))).ToList();
+
+            await Task.WhenAll(recursiveResults);
+
+            var rr = recursiveResults.SelectMany(rr => rr.Result).ToList();
+            Results.AddRange(rr);
+
+            if (includePassedGroups)
+                Results.AddRange(context.Group.Where(g => groupIds.Contains(g.Id)));
 
             return Results;
         }

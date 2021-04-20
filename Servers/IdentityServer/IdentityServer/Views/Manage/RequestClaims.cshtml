@@ -5,53 +5,35 @@
     ViewData.AddActivePage(ManageNavPages.RequestClaims);
 }
  
-<p> Please select the roles and organization claims you would like to make.  The request will be sent to the site administrators for review.  Your claims are used to determine permissions in the system.</p>
+<p> Please select the organizations you'd like to contact for access rights.  The request will be sent to the organization administrators for review.  Many volumes can be viewed without specific rights.</p>
 
 <div class="row">
     <div class="col-md-4">
         <form asp-action="RequestClaims">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="UserId" />
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <h4> Groups </h4>
-                <table>
-                    @for (int i = 0; i < Model.AvailableRoles.Count(); i++)
-                    {
-                        <tr>
-                            <td>
-                                @Html.HiddenFor(x => Model.AvailableRoles[i].Id)
-                                @Html.HiddenFor(x => Model.AvailableRoles[i].Name)
-                                @Html.CheckBoxFor(x => Model.AvailableRoles[i].Selected, Model.AvailableRoles[i].Name)
-                                @Html.DisplayFor(x => Model.AvailableRoles[i].Name)
-                            </td>
-                        </tr>
-                    }
-                </table>
-                <hr />
-            </div>
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div> 
             <div class="form-group">
                 <h4> Organizations </h4>
-                <table>
-                    @for (int i = 0; i < Model.AvailableOrganizations.Count(); i++)
-                    {
-                        <tr>
-                            <td>
-                                @Html.HiddenFor(x => Model.AvailableOrganizations[i].Id)
-                                @Html.HiddenFor(x => Model.AvailableOrganizations[i].Name)
-                                @Html.CheckBoxFor(x => Model.AvailableOrganizations[i].Selected, Model.AvailableOrganizations[i].Name)
-                                @Html.DisplayFor(x => Model.AvailableOrganizations[i].Name)
-                            </td>
-                        </tr>
-                    }
-                    <tr>
-                        <td>
-                            <p>New Organization</p>
-                            @Html.EditorFor(x => x.NewOrganization)
-                        </td>
-                    </tr>
-                </table>
-                <hr />
+                <dl>
+                    <dt>Text in this box will be included in your introduction message to admins.  Please feel free to include specific access requests or an introduction.</dt>
+                    <dd>
+                        @Html.TextBoxFor(x => Model.UserComments)
+                    </dd>
+                
+                    <dt>
+                        @Html.DisplayNameFor(x => Model.AvailableOrganizations)
+                    </dt>
+                    <dd>
+                         <partial name="~/Views/Shared/_NamedChecklist_LongKey.cshtml" for="@Model.AvailableOrganizations" />
+                    </dd>
+                    <dt>
+                        <p>I want my own Organization:</p>
+                    </dt>
+                    <dd>
+                        @Html.EditorFor(x => x.NewOrganization)
+                    </dd>
+                </dl>
             </div>
 
             <input type="submit" value="Request Claims" class="btn btn-default" />

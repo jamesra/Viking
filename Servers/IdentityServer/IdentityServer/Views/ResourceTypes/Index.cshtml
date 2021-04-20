@@ -6,28 +6,39 @@
 
 <h2>Index</h2>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
+@if (this.User.IsInRole(Config.AdminRoleName))
+{
+    <p>
+        <a asp-action="Create">Create New</a>
+    </p>
+}
 <table class="table">
     <thead>
         <tr>
             <th>@Html.DisplayNameFor(m => m.Id)</th>
             <th></th>
-        </tr> 
+        </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Id)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Id)
+                </td>
+                <td>
+                    @if (this.User.IsInRole(Config.AdminRoleName))
+                    {
+                        <a asp-action="Edit" asp-route-id="@item.Id">Edit</a><text> | </text>
+                        <a asp-action="Details" asp-route-id="@item.Id">Details</a><text> | </text>
+                        <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                    }
+                    else
+                    {
+                        <a asp-action="Details" asp-route-id="@item.Id">Details</a>
+                    }
+                </td>
+            </tr>
+        }
     </tbody>
 </table>

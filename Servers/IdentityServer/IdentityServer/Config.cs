@@ -1,21 +1,30 @@
 ﻿using IdentityServer4;
 using IdentityServer4.Models;
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using IdentityModel;
 using IdentityServer.Models;
+using IdentityServer.Data;
 
 
 namespace IdentityServer
 { 
 
-    public static class Config
+    public class Config
     {
-        private const string Secret = "CorrectHorseBatteryStaple";
+        internal const string Secret = "CorrectHorseBatteryStaple";
         public const string AdminRoleName = "Administrator";
 
-        public const string AccessManagerPolicy = "Access Manager";
+        public struct Policy
+        {
+            public const string GroupAccessManager = "Access Manager";
+            public const string OrgUnitAdmin = "Administrator";
+        }
+        
 
+        public const string OrgUnitAdminPermission = "Administrator";
         public const string GroupAccessManagerPermission = "Access Manager";
 
         /// <summary>
@@ -31,6 +40,13 @@ namespace IdentityServer
         public const string VolumeResourceType = nameof(Volume);
 
         public static string AdminRoleId { get; set; }
+
+        ApplicationDbContext _context; 
+
+        public Config(IdentityServer.Data.ApplicationDbContext context)
+        {
+            _context = context;
+        }
 
         // scopes define the resources in your system
         public static IEnumerable<IdentityResource> GetIdentityResources()
@@ -48,11 +64,36 @@ namespace IdentityServer
             {
                 new ApiResource("Viking.Annotation", "Viking Annotation API")
                 {
-                    UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name, "Affiliation"},
-                    ApiSecrets = { new Secret(Secret.Sha256())},
-                }
+                    UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
+                    ApiSecrets = { new Secret(Secret.Sha256())}
+                },
             };
         }
+        /*
+        public IEnumerable<ApiResource> GetApiResources()
+        {
+            var resources = _context.ResourceTypes.Include(rt => rt.Permissions);
+
+            var apiResources = new List<ApiResource>();
+
+            foreach (var r in resources)
+            {
+                var ar = new ApiResource(r.Id, r.Id)
+                {
+                    UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name },
+                    ApiSecrets = { new Secret(Secret.Sha256()) },
+                    Scopes = r.Permissions.Select(perm => $"{r.Id}.{perm.PermissionId}").ToList(),
+                    Description = r.Description,
+                };
+
+                apiResources.Add(ar);
+            }
+
+            apiResources.AddRange(GetLegacyClientApiResources());
+
+            return apiResources;
+        }
+        */
 
         public static IEnumerable<ApiScope> GetApiScopes()
         {
@@ -61,6 +102,31 @@ namespace IdentityServer
                 new ApiScope(name: "Viking.Annotation", displayName:"Access to Annotate a volume")
             };
         }
+        /*
+        public IEnumerable<ApiResource> GetApiScopes()
+        {
+            var resources = _context.ResourceTypes.Include(rt => rt.Permissions);
+
+            var apiScopes = new List<ApiResource>();
+
+            foreach (var r in resources)
+            {
+                var ar = new ApiResource(r.Id, r.Id)
+                {
+                    UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name },
+                    ApiSecrets = { new Secret(Secret.Sha256()) },
+                    Scopes = r.Permissions.Select(perm => $"{r.Id}.{perm.PermissionId}").ToList(),
+                    Description = r.Description,
+                };
+
+                apiScopes.Add(ar);
+            }
+
+            apiScopes.AddRange(GetLegacyClientApiResources());
+
+            return apiScopes;
+        }
+        */
 
         public static readonly string[] AnnotationScopes =
             new string[]
@@ -76,6 +142,7 @@ namespace IdentityServer
             // client credentials client
             return new List<Client>
             {
+                /*
                 new Client
                 {
                     ClientId = "Viking",
@@ -85,9 +152,10 @@ namespace IdentityServer
                     {
                         new Secret(Secret.Sha256()) //"My co-workers remove eyeballs from cute mammals for a living"
                     },
-                    AllowedScopes = AnnotationScopes 
+                    AllowedScopes = AnnotationScopes,
                 },
-
+                */
+                /*
                 // resource owner password grant client
                 new Client
                 {
@@ -100,7 +168,7 @@ namespace IdentityServer
                     },
                     AllowedScopes = AnnotationScopes
                 },
-
+                */
                 // OpenID Connect hybrid flow and client credentials client (MVC)
                 new Client
                 {

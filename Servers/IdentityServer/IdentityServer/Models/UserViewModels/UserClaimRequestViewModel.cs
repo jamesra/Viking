@@ -12,9 +12,11 @@ namespace IdentityServer.Models.UserViewModels
         [Required]
         public string UserId { get; set; }
 
-        public List<GroupSelectedViewModel> AvailableOrganizations { get; set; }
+        public List<NamedItemSelectedViewModel<long>> AvailableOrganizations { get; set; }
 
-        public List<RoleSelectedViewModel> AvailableRoles { get; set; }
+        //public List<RoleSelectedViewModel> AvailableRoles { get; set; }
+
+        public string UserComments { get; set; }
 
         public string NewOrganization { get; set; }
     }

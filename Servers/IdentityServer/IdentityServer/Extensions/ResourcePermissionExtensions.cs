@@ -7,7 +7,7 @@ using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Extensions
 {
-    public static class ResourcePermissionExtensions
+    public static class UpdateResourcePermissionExtensions
     {
         #region Users
 

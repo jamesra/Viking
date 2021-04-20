@@ -8,8 +8,11 @@
 }
 
 <h2>Index</h2>
-
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<partial name="~/Views/Shared/_ResourceDetailsGroupedListPartialView.cshtml" for="@Model"/> 
+@if (this.User.IsInRole(Config.AdminRoleName))
+{
+    <p>
+        <a asp-action="Create">Create New</a>
+    </p>
+}
+ 
+<partial name="~/Views/Shared/_ResourceDetailsGroupedListPartialView.cshtml" for="@Model" />

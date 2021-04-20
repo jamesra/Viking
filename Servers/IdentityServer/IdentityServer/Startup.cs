@@ -62,8 +62,12 @@ namespace IdentityServer
 
             services.AddAuthorization(options =>
             {
-                options.AddPolicy(Config.AccessManagerPolicy, policy => policy.Requirements.Add(Authorization.Operations.AccessManager));
+                options.AddPolicy(Config.Policy.GroupAccessManager, policy => policy.Requirements.Add(Authorization.Operations.GroupAccessManager));
+                options.AddPolicy(Config.Policy.OrgUnitAdmin,       policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
             });
+
+            services.AddScoped<IAuthorizationHandler, IdentityServer.Authorization.ResourceIdPermissionsAuthorizationHandler>();
+            services.AddScoped<IAuthorizationHandler, IdentityServer.Authorization.ResourcePermissionsAuthorizationHandler>();
 
             var https_port_section = Configuration.GetSection("https_port");
             int? https_port = new int?();
@@ -103,9 +107,9 @@ namespace IdentityServer
 
             //Add a helper service to pull permissions
             services.AddTransient<IPermissionsViewModelHelper, PermissionsViewModelHelper>();
-             
-            //services.AddMvc(options => options.EnableEndpointRouting = false);
 
+            //services.AddMvc(options => options.EnableEndpointRouting = false);
+             
             // configure identity server with in-memory stores, keys, clients and scopes
             var builder = services.AddIdentityServer(options =>
             {
@@ -123,10 +127,13 @@ namespace IdentityServer
                             sql => sql.MigrationsAssembly(migrationsAssembly));
                 })
                 */
+                //.AddScopeParser<ParameterizedScopeParser>()
                 .AddInMemoryApiScopes(Config.GetApiScopes())
                 .AddInMemoryApiResources(Config.GetApiResources())
                 .AddInMemoryClients(Config.GetClients()) 
                 .AddInMemoryIdentityResources(Config.GetIdentityResources())
+                .AddResourceStore<IdentityServerCustomResourceStore>()
+                .AddClientStore<IdentityServerVikingClientStore>()
                 // this adds the operational data from DB (codes, tokens, consents)
                 .AddOperationalStore(options =>
                 {

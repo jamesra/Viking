@@ -56,6 +56,23 @@
         <dd>
             @Html.DisplayFor(model => model.NumMemberUsers)
         </dd>
+        @if (ViewData.ContainsKey("AccessManagers"))
+        {
+            <dt>
+                Access Managers
+            </dt>
+            <dd>
+                <ul class="no-bullets">
+                    @for (int i = 0; i < ViewBag.AccessManagers.Count; i++)
+                    {
+                    <li>
+                        @ViewBag.AccessManagers[i]
+                    </li>
+                    }
+                </ul>
+                
+            </dd>
+        }
         <dd>
             <table class="edit-settings">
                 <thead>
