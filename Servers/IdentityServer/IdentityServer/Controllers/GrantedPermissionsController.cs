@@ -9,18 +9,22 @@ using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer.Extensions;
 using IdentityServer.Models.UserViewModels;
+using Microsoft.AspNetCore.Authorization;
+using IdentityServer.Extensions;
+using IdentityServer.Authorization;
 
 namespace IdentityServer.Controllers
 {
     public class GrantedPermissionsController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context; 
+        private readonly IPermissionsViewModelHelper _permissionsHelper;
+        private readonly IAuthorizationService _authorization;
 
-        private readonly IPermissionsViewModelHelper _permissionsHelper; 
-
-        public GrantedPermissionsController(ApplicationDbContext context, IPermissionsViewModelHelper permissionsHelper)
+        public GrantedPermissionsController(ApplicationDbContext context, IAuthorizationService authorization, IPermissionsViewModelHelper permissionsHelper)
         {
             _context = context;
+            _authorization = authorization;
             _permissionsHelper = permissionsHelper;
         }
 
@@ -33,6 +37,19 @@ namespace IdentityServer.Controllers
             {
                 return NotFound("Resource not found");
             }
+
+            if (false == await CanEditResourcePermissions(id))
+            {
+                return Unauthorized();
+            }
+
+            /*
+            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, id, IdentityServer.Authorization.Operations.O);
+            if (authResult.Succeeded == false)
+            {
+                return Unauthorized();
+            }
+            */
 
             ResourcePermissionsEditGridViewModel model = new ResourcePermissionsEditGridViewModel
             {
@@ -50,6 +67,11 @@ namespace IdentityServer.Controllers
             if (id == null)
             {
                 return NotFound();
+            }
+
+            if (false == await CanEditResourcePermissions(id.Value))
+            {
+                return Unauthorized();
             }
 
             var grantedUserPermission = await _context.GrantedUserPermissions
@@ -101,10 +123,19 @@ namespace IdentityServer.Controllers
              
             if (ModelState.IsValid)
             {
-                var resource = await _context.Resource.Include(r => r.UsersWithPermissions).Include(r => r.GroupsWithPermissions).FirstAsync(r => r.Id == grantedPermissions.Resource.Id);
+                var resource = await _context.Resource
+                                             .Include(r => r.UsersWithPermissions)
+                                             .Include(r => r.GroupsWithPermissions)
+                                             .Include(r => r.Parent)
+                                             .FirstAsync(r => r.Id == grantedPermissions.Resource.Id);
                 if(resource == null)
                 {
                     return NotFound();
+                }
+
+                if (false == await CanEditResourcePermissions(resource))
+                {
+                    return Unauthorized();
                 }
 
                 resource.AddGrantedUserPermissions(grantedPermissions.Permissions, grantedPermissions.Users);
@@ -148,11 +179,17 @@ namespace IdentityServer.Controllers
             var resource = await _context.Resource
                 .Include(r => r.UsersWithPermissions)
                 .Include(r => r.GroupsWithPermissions)
+                .Include(r => r.Parent)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if(resource == null)
             {
                 return NotFound();
+            }
+
+            if (false == await CanEditResourcePermissions(resource))
+            {
+                return Unauthorized();
             }
 
             if (ModelState.IsValid)
@@ -180,6 +217,7 @@ namespace IdentityServer.Controllers
             return View(grantedPermissions);
         }
 
+        /*
         // GET: GrantedUserPermissions/Delete/5
         public async Task<IActionResult> Delete(long? id)
         {
@@ -209,6 +247,7 @@ namespace IdentityServer.Controllers
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+        */
 
         private Task<Resource> GetPermittedForResource(long ResourceId)
         {
@@ -224,6 +263,23 @@ namespace IdentityServer.Controllers
         private bool GrantedUserPermissionExists(long id)
         {
             return _context.GrantedUserPermissions.Any(e => e.ResourceId == id);
+        }
+
+        private async Task<bool> CanEditResourcePermissions(long id)
+        {
+            var resource = await _context.Resource.Include(r => r.Parent).FirstAsync(r => r.Id == id);
+            return await CanEditResourcePermissions(resource);
+        }
+
+        private async Task<bool> CanEditResourcePermissions(Resource resource)
+        {
+            return resource.ResourceTypeId switch
+            {
+                nameof(OrganizationalUnit) => (await _authorization.AuthorizeAsync(HttpContext.User, resource, Operations.OrgUnitAdmin)).Succeeded,
+                nameof(Group) => (await _authorization.AuthorizeAsync(HttpContext.User, resource, Operations.GroupAccessManager)).Succeeded ||
+                                 (await _authorization.AuthorizeAsync(HttpContext.User, resource.Parent, Operations.OrgUnitAdmin)).Succeeded,
+                _ => (await _authorization.AuthorizeAsync(HttpContext.User, resource.Parent, Operations.OrgUnitAdmin)).Succeeded
+            };
         }
     }
 }

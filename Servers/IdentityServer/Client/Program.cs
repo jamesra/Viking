@@ -6,6 +6,8 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Linq;
+
 
 namespace Client
 {
@@ -14,6 +16,8 @@ namespace Client
         public static void Main(string[] args) => MainAsync().GetAwaiter().GetResult();
 
         private const string Secret = "CorrectHorseBatteryStaple";
+
+        private const string Client = "ro.viking";
 
         private static async Task MainAsync()
         {
@@ -30,10 +34,11 @@ namespace Client
             }
             
             // request token
-            var tokenClient = new TokenClient(disco.TokenEndpoint, "ro.viking", Secret);
+            var tokenClient = new TokenClient(disco.TokenEndpoint, Client , Secret);
+            
             //var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
             //var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jander42@hotmail.com", "Wat>com3", "Viking.Annotation openid");
-            var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jamesan", "Wat>com3", "openid Viking.Annotation RC1.Annotate RC1.Read");
+            var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jamesan", "Wat>com3", "openid Viking.Annotation RC1.Read");
 
             if (tokenResponse.IsError)
             {
@@ -63,10 +68,13 @@ namespace Client
 
             Console.WriteLine("\n\n");
 
-            await CheckClaims(disco, tokenResponse, "RC1.Annotate");
-            await CheckClaims(disco, tokenResponse, "RC1.Read");
-            await CheckClaims(disco, tokenResponse, "Viking.Annotation");
-            await CheckClaims(disco, tokenResponse, "openid");
+            await CheckClaims(disco, tokenResponse, Client, "RC1.Read");
+            await CheckClaims(disco, tokenResponse, Client, "RC1.Annotate");
+            await CheckClaims(disco, tokenResponse, Client, "Viking.Annotation");
+            await CheckClaims(disco, tokenResponse, Client, "openid");
+
+            await CheckClaims(disco, tokenResponse, Client, "Bogus.Read");
+            await CheckClaims(disco, tokenResponse, Client, "RC1.Bogus");
 
             Console.WriteLine("Press a key to continue");
 
@@ -89,29 +97,48 @@ namespace Client
             */
         }
 
-        private static async Task<bool> CheckClaims(DiscoveryResponse disco, TokenResponse tokenResponse, string client)
+        private static async Task<bool> CheckClaims(DiscoveryResponse disco, TokenResponse tokenResponse, string client, string scope)
         {
-            var validationClient = new IntrospectionClient(disco.IntrospectionEndpoint, client, Secret);
-            var validation = await validationClient.SendAsync(new IntrospectionRequest() { Token = tokenResponse.AccessToken, ClientId = client, ClientSecret = Secret });
+            //The way I'm using scope and client is a bit odd, after a lot of troubleshooting I am basing it off of this post:
+            //https://stackoverflow.com/questions/42126909/how-to-correctly-use-the-introspection-endpoint-with-identity-server-4
+            
+            var validationClient = new IntrospectionClient(disco.IntrospectionEndpoint, clientId: scope, clientSecret: Secret);
+            
+            var validation = await validationClient.SendAsync(new IntrospectionRequest() { Token = tokenResponse.AccessToken });
 
             if (validation.IsError)
             {
-                Console.WriteLine($"{client}: {validation.Error}");
+                Console.WriteLine($"Could not connect to client {client} to validate scope claim {scope}:\n\t{validation.Error}");
                 return false;
             }
-             
-            Console.WriteLine($"Validated Claim: {client}");
+
+            bool FoundClaim = false;
 
             Console.ForegroundColor = ConsoleColor.Yellow;
-            foreach (var claim in validation.Claims)
+            foreach (var c in validation.Claims)
             {
-                Console.WriteLine(claim.ToString());
+                Console.WriteLine($"\t{c}");
+                if (c.Type == "scope")
+                    FoundClaim = FoundClaim | c.Value.Split().Contains(scope);
+
             }
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+
+            //Console.WriteLine(validation.Json);
+
+            Console.ForegroundColor = FoundClaim ? ConsoleColor.Green : ConsoleColor.Red;
+            if (FoundClaim)
+            {
+                Console.WriteLine($"Validated scope claim: {scope}");
+            }
+            else
+            {
+                Console.WriteLine($"Cound not validate scope claim: {scope}");
+            }
+
             Console.ForegroundColor = ConsoleColor.White;
 
-            Console.WriteLine(validation.Json);
-
-            return true;
+            return FoundClaim;
         }
     }
 }

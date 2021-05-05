@@ -56,6 +56,12 @@ The Visual Studio project is current configured to deploy to IIS.  To set this u
     * Configure Web Deploy via "Deploy -> Configure Web Deploy" context menu option of main website in IIS Manager
     * Within the visual studio project, select "publish" from the projects context menu and specify the IIS Server.
 
+Endpoints
+---------
+
+    I've added two endpoints to facilitate Viking clients determining which access tokens they should ask for:
+    ResourceTypes/List -> Returns all resource types including the permissions available
+    Resources/UserPermissions/{id}?user={username} -> Returns all permissions the username has on the given resource
 
 
 Debugging

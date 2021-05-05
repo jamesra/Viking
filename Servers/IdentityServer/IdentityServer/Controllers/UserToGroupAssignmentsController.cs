@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
 using IdentityServer.Models;
+using IdentityServer.Authorization;
 
 namespace IdentityServer.Controllers
 {
@@ -72,7 +73,7 @@ namespace IdentityServer.Controllers
         public async Task<IActionResult> Create([Bind("UserId,GroupId")] UserToGroupAssignment userToGroupAssignment)
         {
             var authResult = await _authorization.AuthorizeAsync(HttpContext.User, userToGroupAssignment.GroupId, IdentityServer.Authorization.Operations.GroupAccessManager);
-            if (authResult.Succeeded == false)
+            if (false == authResult.Succeeded)
             {
                 return Unauthorized();
             }
@@ -150,6 +151,7 @@ namespace IdentityServer.Controllers
             return View(userToGroupAssignment);
         }
 
+        /*
         // GET: UserToGroupAssignments/Delete/5
         public async Task<IActionResult> Delete(long? id)
         {
@@ -181,7 +183,7 @@ namespace IdentityServer.Controllers
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
-
+        */ 
         private bool UserToGroupAssignmentExists(long id)
         {
             return _context.UserToGroupAssignments.Any(e => e.GroupId == id);

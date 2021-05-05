@@ -2,21 +2,26 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer.Models.UserViewModels;
+using IdentityServer.Extensions;
+using IdentityServer.Authorization;
 
 namespace IdentityServer.Controllers
 {
     public class OrganizationalUnitsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        IAuthorizationService _authorization;
 
-        public OrganizationalUnitsController(ApplicationDbContext context)
+        public OrganizationalUnitsController(ApplicationDbContext context, IAuthorizationService authorization)
         {
+            _authorization = authorization;
             _context = context;
         }
 
@@ -77,6 +82,7 @@ namespace IdentityServer.Controllers
         {
             if (ModelState.IsValid)
             {
+                 
                 OrganizationalUnit ou = new OrganizationalUnit()
                 {
                     Name = model.Name,
@@ -84,9 +90,15 @@ namespace IdentityServer.Controllers
                     ResourceTypeId = nameof(OrganizationalUnit),
                     ParentID = model.ParentId
                 };
-                _context.OrgUnit.Add(ou);
 
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, ou))
+                {
+                    return Unauthorized();
+                }
+
+                _context.OrgUnit.Add(ou);
                 _context.Add(ou);
+
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
@@ -110,6 +122,7 @@ namespace IdentityServer.Controllers
             }
 
             ViewBag.ParentID = new SelectList(_context.OrgUnit.Where(ou => ou.Id != organizationalUnit.Id), "Id", "Name", organizationalUnit.ParentID);
+            ViewBag.AvailableParents = new SelectList(await GetAvailableParents(id.Value), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), organizationalUnit.Id);
             return View(organizationalUnit);
         }
 
@@ -124,9 +137,14 @@ namespace IdentityServer.Controllers
             {
                 return NotFound();
             }
-
+              
             if (ModelState.IsValid)
             {
+                if (false == await _authorization.IsOrgUnitAdminAsync(HttpContext.User, organizationalUnit))
+                {
+                    return Unauthorized();
+                }
+
                 try
                 {
                     _context.Update(organizationalUnit);
@@ -173,8 +191,13 @@ namespace IdentityServer.Controllers
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)
-        {
+        {   
             var organizationalUnit = await _context.OrgUnit.FindAsync(id);
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, organizationalUnit))
+            {
+                return Unauthorized();
+            }
+
             _context.OrgUnit.Remove(organizationalUnit);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
@@ -183,6 +206,14 @@ namespace IdentityServer.Controllers
         private bool OrganizationalUnitExists(long id)
         {
             return _context.OrgUnit.Any(e => e.Id == id);
+        }
+         
+
+        private async Task<IEnumerable<OrganizationalUnit>> GetAvailableParents(long Id)
+        {
+            var children = (await _context.RecursiveChildrenOfOrg(Id)).Select(ou => ou.Id);
+
+            return await _context.OrgUnit.Where(ou => ou.Id != Id && children.Contains(ou.Id) == false).ToListAsync();
         }
     }
 }

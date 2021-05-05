@@ -10,6 +10,7 @@ using IdentityServer.Models;
 using IdentityServer.Models.UserViewModels;
 using Microsoft.AspNetCore.Authorization;
 using IdentityServer.Extensions;
+using IdentityServer.Authorization;
 
 
 namespace IdentityServer.Controllers
@@ -132,13 +133,20 @@ namespace IdentityServer.Controllers
         [Authorize(Roles = Config.AdminRoleName)]
         public async Task<IActionResult> Create([Bind("Name,ParentId,Description,Members")] CreateGroupViewModel model)
         {
+            long? ParentID = (model.ParentId.Value != 0 ? model.ParentId : default) ?? default;
+            
             Group group = new Group()
             {
                 Name = model.Name,
-                ParentID = model.ParentId == 0 ? null : model.ParentId,
+                ParentID = ParentID,
                 Description = model.Description,
                 ResourceTypeId = nameof(Group)
             };
+
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, group))
+            {
+                return Unauthorized();
+            }
 
             if (ModelState.IsValid)
             {
@@ -233,7 +241,7 @@ namespace IdentityServer.Controllers
             {
                 return NotFound();
             }
-
+              
             var group = await _context.Group
                 .Include(g => g.GroupsWithPermissions)
                 .Include(g => g.UsersWithPermissions)
@@ -249,8 +257,8 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, group, IdentityServer.Authorization.Operations.GroupAccessManager);
-            if (authResult.Succeeded == false)
+            if (false == await _authorization.IsGroupAccessManagerAsync(HttpContext.User, group) &&
+                false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, group))
             {
                 return Unauthorized();
             }
@@ -343,9 +351,13 @@ namespace IdentityServer.Controllers
             var group = await _context.Group
                 .Include(g => g.MemberGroups)
                 .SingleOrDefaultAsync(m => m.Id == id);
+            if(group == null)
+            {
+                return NotFound();
+            }
 
-            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, id, IdentityServer.Authorization.Operations.GroupAccessManager);
-            if (authResult.Succeeded == false)
+            if (false == await _authorization.IsGroupAccessManagerAsync(HttpContext.User, group) &&
+                false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, group))
             {
                 return Unauthorized();
             }

@@ -9,6 +9,7 @@ using IdentityServer.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using IdentityServer.Extensions;
+using System.Security.Claims;
 
 namespace IdentityServer.Authorization
 {
@@ -20,7 +21,7 @@ namespace IdentityServer.Authorization
 
     public static class AuthorizationServiceExtensions
     {
-        public static async Task<bool> IsGroupAccessManager(this IAuthorizationService _authorizationService, System.Security.Claims.ClaimsPrincipal User, Group group)
+        public static async Task<bool> IsGroupAccessManagerAsync(this IAuthorizationService _authorizationService, System.Security.Claims.ClaimsPrincipal User, Group group)
         {
             if (User.IsInRole(Config.AdminRoleName))
                 return true; 
@@ -29,7 +30,7 @@ namespace IdentityServer.Authorization
             return result.Succeeded;
         }
 
-        public static async Task<bool> IsOrgUnitAdmin(this IAuthorizationService _authorizationService, System.Security.Claims.ClaimsPrincipal User, OrganizationalUnit orgUnit)
+        public static async Task<bool> IsOrgUnitAdminAsync(this IAuthorizationService _authorizationService, System.Security.Claims.ClaimsPrincipal User, OrganizationalUnit orgUnit)
         {
             if (User.IsInRole(Config.AdminRoleName))
                 return true;
@@ -37,8 +38,28 @@ namespace IdentityServer.Authorization
             var result = await _authorizationService.AuthorizeAsync(User, orgUnit, IdentityServer.Authorization.Operations.OrgUnitAdmin);
             return result.Succeeded;
         }
+
+        /// <summary>
+        /// The ability to manage a volume is controlled by the administrator of the org unit it belongs to, or the site manager if not
+        /// </summary>
+        /// <param name="_authorizationService"></param>
+        /// <param name="User"></param>
+        /// <param name="resource"></param>
+        /// <returns></returns>
+        public static async Task<bool> IsParentOrgUnitAdminAsync(this IAuthorizationService _authorizationService, System.Security.Claims.ClaimsPrincipal User, Resource resource)
+        {
+            if (User.IsInRole(Config.AdminRoleName))
+                return true;
+
+            if (resource.ParentID.HasValue == false)
+                return false;
+
+            var result = await _authorizationService.AuthorizeAsync(User, resource.Parent == null ? resource.ParentID.Value : resource.Parent, IdentityServer.Authorization.Operations.OrgUnitAdmin);
+            return result.Succeeded;
+        } 
     }
-      
+     
+
     public class ResourcePermissionRequirement : IAuthorizationRequirement
     {
         public readonly string Permission;
@@ -69,6 +90,7 @@ namespace IdentityServer.Authorization
         }
     }
 
+
     public class ResourcePermissionsAuthorizationHandler : AuthorizationHandler<ResourcePermissionRequirement, Resource>
     {
         private ApplicationDbContext DbContext;
@@ -81,8 +103,7 @@ namespace IdentityServer.Authorization
         }
 
         protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, ResourcePermissionRequirement requirement, Resource resource_requested)
-        {
-
+        { 
             if (context.User.Identity == null)
             {
                 context.Fail();
@@ -94,10 +115,20 @@ namespace IdentityServer.Authorization
                 context.Fail();
                 return;
             }
-
+            
+            //If the user is a site admin they can do anything, note this also covers the case
+            //where resource_requested is null because we asked about the parent org of an OrgUnit 
+            //with no parent. i.e. Only admins can edit OrgUnits/Resources at the root of the heirarchy.
             if (context.User.IsInRole(Config.AdminRoleName))
             {
                 context.Succeed(requirement);
+                return;
+            }
+
+            //If there is no resource to check and we are not an admin the requirement is not met
+            if (resource_requested == null)
+            {
+                context.Fail();
                 return;
             }
 

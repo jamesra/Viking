@@ -34,7 +34,7 @@ namespace IdentityServer.Models
         public string Description { get; set; }
 
         /// <summary>
-        /// Resource ownership can be assigned to groups, , , 
+        /// Resource ownership can be assigned to organizational units
         /// </summary>
         [ForeignKey(nameof(OrganizationalUnit))]
         [Display(Name = nameof(ParentID), Description = "Optional parent/owner of this resource ID")]

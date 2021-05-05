@@ -7,17 +7,22 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
 using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
+using IdentityServer.Models.UserViewModels; 
+using Microsoft.AspNetCore.Authorization;
+using IdentityServer.Extensions;
+using IdentityServer.Authorization;
 
 namespace IdentityServer.Controllers
 {
     public class ResourcesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAuthorizationService _authorization;
 
-        public ResourcesController(ApplicationDbContext context)
+        public ResourcesController(ApplicationDbContext context, IAuthorizationService authorization)
         {
             _context = context;
+            _authorization = authorization;
         }
 
         public IActionResult VerifyUniqueName(string Name, long? Id)
@@ -40,6 +45,34 @@ namespace IdentityServer.Controllers
         {
             var applicationDbContext = _context.Resource.Include(r => r.Parent).Include(r => r.ResourceType);
             return View(await applicationDbContext.ToListAsync());
+        }
+
+        /// <summary>
+        /// Return the permissions the specfied user has on the resource
+        /// </summary>
+        /// <returns></returns>
+        /// <param name="id"></param>
+        // GET: Resources/UserPermissions/5/jamesan
+        public async Task<IActionResult> UserPermissions(long? id, string user)
+        {
+            if (id.HasValue == false)
+                return NotFound();
+
+            var resource = await _context.Resource.FirstOrDefaultAsync(r => r.Id == id.Value);
+            if (resource == null)
+            {
+                return NotFound();
+            }
+
+            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == user);
+            if(appUser == null)
+            {
+                return NotFound();
+            }
+
+            var result = await _context.UserResourcePermissions(resource.Id, appUser.Id);
+
+            return Json(result);
         }
 
         // GET: Resources/Details/5
@@ -122,6 +155,12 @@ namespace IdentityServer.Controllers
                 var result = TryRedirectByResourceType("CreateContinue", model.ResourceTypeId, model, () => {
 
                     Resource obj = new Resource() { Name = model.Name, Description = model.Description, ParentID = model.ParentId, ResourceTypeId = model.ResourceTypeId };
+
+                    if (false == _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, obj).Result)
+                    {
+                        return Unauthorized();
+                    }
+
                     _context.Resource.Add(obj);
                     _context.SaveChanges();
                     return View(obj);
@@ -136,6 +175,7 @@ namespace IdentityServer.Controllers
             return View(model);
         }
 
+        
         // GET: Resources/Edit/5
         public async Task<IActionResult> Edit(long? id)
         {
@@ -149,11 +189,11 @@ namespace IdentityServer.Controllers
             {
                 return NotFound();
             }
-            ViewData["ParentID"] = new SelectList(_context.Group, "Id", "Name", resource.ParentID);
-            ViewData["ResourceTypeId"] = new SelectList(_context.ResourceTypes, "Id", "Id", resource.ResourceTypeId);
-            return View(resource);
+
+            return TryRedirectByResourceType(nameof(Edit), resource.ResourceTypeId, id, () => NotFound());
         }
 
+        /*
         // POST: Resources/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
@@ -168,6 +208,11 @@ namespace IdentityServer.Controllers
 
             if (ModelState.IsValid)
             {
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, resource))
+                {
+                    return Unauthorized();
+                }
+
                 try
                 {
                     _context.Update(resource);
@@ -190,6 +235,7 @@ namespace IdentityServer.Controllers
             ViewData["ResourceTypeId"] = new SelectList(_context.ResourceTypes, "Id", "Id", resource.ResourceTypeId);
             return View(resource);
         }
+        */
 
         // GET: Resources/Delete/5
         public async Task<IActionResult> Delete(long? id)
@@ -217,6 +263,12 @@ namespace IdentityServer.Controllers
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             var resource = await _context.Resource.FindAsync(id);
+
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, resource))
+            {
+                return Unauthorized();
+            }
+
             _context.Resource.Remove(resource);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
@@ -240,11 +292,11 @@ namespace IdentityServer.Controllers
             switch (ResourceTypeId)
             {
                 case nameof(Models.OrganizationalUnit):
-                    return RedirectToAction("CreateContinue", "OrganizationalUnits", RouteValues);
+                    return RedirectToAction(ActionName, "OrganizationalUnits", RouteValues);
                 case nameof(Models.Volume):
-                    return RedirectToAction("CreateContinue", "Volumes", RouteValues);
+                    return RedirectToAction(ActionName, "Volumes", RouteValues);
                 case nameof(Models.Group):
-                    return RedirectToAction("CreateContinue", "Groups", RouteValues);
+                    return RedirectToAction(ActionName, "Groups", RouteValues);
                 case nameof(Models.Resource):
                     if (IsResourceAction != null)
                         return IsResourceAction(); 

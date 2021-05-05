@@ -8,51 +8,56 @@
 <h2>Groups</h2>
 <p>Users can be associated with any number of the groups listed below.  The meaning of group membership is arbitrary.  The description for a group should indicate its purpose.</p>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
+@if (this.User.IsInRole(Config.AdminRoleName))
+{
+    <p>
+        <a asp-action="Create">Create New</a>
+    </p>
+}
 <table class="table">
     <thead>
         <tr>
             <th>
                 @Html.DisplayNameFor(model => model.Name)
             </th>
-        <th>
-            Number of Users:
-        </th>
+            <th>
+                Number of Users:
+            </th>
             <th>
                 @Html.DisplayNameFor(model => model.Description)
             </th>
-        <th> 
-        </th>
+            <th>
+            </th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model) {
-        <tr>
-            <td>
-                <a asp-action="Details" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.NumMemberUsers)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Description)
-            </td>
-            <td>
-                @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.GroupAccessManager)).Succeeded)
-                {
-                    <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id">Permissions</a><text> | </text>
-                    <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> <text> | </text>
-                    <a asp-action="Details" asp-route-id="@item.Id">Details</a> <text> | </text>
-                    <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-                }
-                else {
-                    <a asp-action="Details" asp-route-id="@item.Id">Details</a>
-                }
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    <a asp-action="Details" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.NumMemberUsers)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Description)
+                </td>
+                <td>
+                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.GroupAccessManager)).Succeeded)
+                    {
+                        <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id">Permissions</a><text> | </text>
+                        <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> <text> | </text>
+                        <a asp-action="Details" asp-route-id="@item.Id">Details</a> <text> | </text>
+                        <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                    }
+                    else
+                    {
+                        <a asp-action="Details" asp-route-id="@item.Id">Details</a>
+                    }
 
-            </td>
-        </tr>
-}
+                </td>
+            </tr>
+        }
     </tbody>
 </table>

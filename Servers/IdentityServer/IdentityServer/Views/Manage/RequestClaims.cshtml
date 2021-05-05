@@ -16,22 +16,21 @@
             <div class="form-group">
                 <h4> Organizations </h4>
                 <dl>
-                    <dt>Text in this box will be included in your introduction message to admins.  Please feel free to include specific access requests or an introduction.</dt>
-                    <dd>
-                        @Html.TextBoxFor(x => Model.UserComments)
-                    </dd>
-                
                     <dt>
                         @Html.DisplayNameFor(x => Model.AvailableOrganizations)
                     </dt>
                     <dd>
-                         <partial name="~/Views/Shared/_NamedChecklist_LongKey.cshtml" for="@Model.AvailableOrganizations" />
+                        <partial name="~/Views/Shared/_NamedChecklist_LongKey.cshtml" for="@Model.AvailableOrganizations" />
                     </dd>
                     <dt>
                         <p>I want my own Organization:</p>
                     </dt>
                     <dd>
-                        @Html.EditorFor(x => x.NewOrganization)
+                        <textarea asp-for="NewOrganization" rows="1" cols="120" class="form-control" text-wrap:normal type="text" placeholder="Proposed Organization Name"></textarea>
+                    </dd>
+                    <dt>@Html.DisplayNameFor(x => Model.UserComments)</dt>
+                    <dd>
+                        <textarea asp-for="UserComments" rows="10" cols="120" class="form-control" text-wrap:normal type="text" placeholder="Text in this box will be included in your request to admins.  Please feel free to include specific access requests or an introduction."></textarea>
                     </dd>
                 </dl>
             </div>

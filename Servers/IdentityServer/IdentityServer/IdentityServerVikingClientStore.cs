@@ -17,6 +17,8 @@ namespace IdentityServer
         ApplicationDbContext _context;
         IResourceStore _resourceStore;
 
+        Dictionary<string, Client> ClientCache = new Dictionary<string, Client>();
+
         public IdentityServerVikingClientStore(ApplicationDbContext context, IResourceStore resourceStore)
         {
             _context = context;
@@ -28,6 +30,9 @@ namespace IdentityServer
             if (clientId != "ro.viking")
                 return null;
 
+            if (ClientCache.ContainsKey(clientId))
+                return ClientCache[clientId];
+
             var allResources = await _resourceStore.GetAllResourcesAsync();
 
             var scopes = allResources.ApiScopes.Select(s => s.Name).ToList();
@@ -38,7 +43,7 @@ namespace IdentityServer
 
             var result = new Client
             {
-                ClientId = "ro.viking",
+                ClientId = clientId,
                 AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
                 ClientSecrets =
                     {
@@ -46,6 +51,8 @@ namespace IdentityServer
                     },
                 AllowedScopes = scopes,
             };
+
+            ClientCache[clientId] = result;
 
             return result;
         }

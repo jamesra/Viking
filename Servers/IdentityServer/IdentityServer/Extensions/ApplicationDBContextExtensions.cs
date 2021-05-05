@@ -65,6 +65,33 @@ namespace IdentityServer.Extensions
             return intersection.Any();
         }
 
+        /// <summary>
+        /// Returns all PermissionIds the user has for the specified resource
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="ResourceId"></param>
+        /// <param name="UserId"></param>
+        /// <returns></returns>
+        public static async Task<IEnumerable<string>> UserResourcePermissions(this ApplicationDbContext context, long ResourceId, string UserId)
+        {
+            var user_permissions = from gup in context.GrantedUserPermissions
+                                   where gup.ResourceId == ResourceId && gup.UserId == UserId
+                                   select gup.PermissionId;
+
+            var group_memberships = (await context.RecursiveMemberOfGroups(UserId)).Select(g => g.Id);
+
+            var resource_group_permissions = (from ggp in context.GrantedGroupPermissions
+                                             where ggp.ResourceId == ResourceId
+                                             select ggp);
+
+            var group_permissions = resource_group_permissions.Where(rgp => rgp.ResourceId == ResourceId && group_memberships.Contains(rgp.GroupId)).Select(rgp => rgp.PermissionId);
+
+            var result = new SortedSet<string>(user_permissions);
+            result.UnionWith(group_permissions);
+
+            return result;
+        }
+
         public static IQueryable<ApplicationUser> GetPermittedUsers(this ApplicationDbContext context, long ResourceId, string PermissionId)
         {
             var permitted_users = from user in context.Users
@@ -301,6 +328,59 @@ namespace IdentityServer.Extensions
                 Results.AddRange(context.Group.Where(g => groupIds.Contains(g.Id)));
 
             return Results;
+        }
+
+        /// <summary>
+        /// Returns all groups the user belongs to, as well as all groups those are a part of recursivelyfs
+        /// </summary>
+        /// <param name="UserId"></param>
+        /// <returns></returns>
+        public static async Task<IEnumerable<Resource>> RecursiveChildrenOfOrg(this ApplicationDbContext context, long Id)
+        {
+            var ou = await context.OrgUnit
+                .Include(o => o.Children)
+                .FirstOrDefaultAsync(o => o.Id == Id);
+
+            List<Resource> children = new List<Resource>();
+
+            if (ou == null || ou.Children == null)
+                return new List<Resource>();
+            else
+                children.AddRange(ou.Children);
+
+            foreach(var child in children.Where(c => c.ResourceTypeId == nameof(OrganizationalUnit)))
+            {
+                children.AddRange(await context.RecursiveChildrenOfOrg(child.Id));
+            }
+
+            return children.Distinct();
+        }
+
+        /// <summary>
+        /// Returns all groups the user belongs to, as well as all groups those are a part of recursivelyfs
+        /// </summary>
+        /// <param name="UserId"></param>
+        /// <returns></returns>
+        public static async Task<IEnumerable<OrganizationalUnit>> RecursiveParentsOfOrg(this ApplicationDbContext context, long Id)
+        {
+            var ou = await context.OrgUnit
+                .Include(o => o.Parent)
+                .FirstOrDefaultAsync(o => o.Id == Id);
+
+            List<OrganizationalUnit> parents = new List<OrganizationalUnit>();
+
+            while (ou.ParentID.HasValue)
+            {
+                parents.Add(ou.Parent);
+
+                var parent = await context.OrgUnit
+                .Include(o => o.Parent)
+                .FirstOrDefaultAsync(o => o.Id == ou.Id);
+
+                ou = parent;
+            }
+
+            return parents;
         }
     }
 }

@@ -8,16 +8,20 @@ using Microsoft.EntityFrameworkCore;
 using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer.Models.UserViewModels;
+using IdentityServer.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IdentityServer.Controllers
 {
     public class VolumesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAuthorizationService _authorization;
 
-        public VolumesController(ApplicationDbContext context)
+        public VolumesController(ApplicationDbContext context, IAuthorizationService authorization)
         {
             _context = context;
+            _authorization = authorization;
         }
 
         // GET: Volumes
@@ -68,10 +72,10 @@ namespace IdentityServer.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Endpoint,Name,Description,ParentID,URL")] CreateVolumeViewModel model)
+        public async Task<IActionResult> Create([Bind("Endpoint,Name,Description,ParentId,URL")] CreateVolumeViewModel model)
         {
             if (ModelState.IsValid)
-            {
+            { 
                 Volume obj = new Volume()
                 {
                     Name = model.Name,
@@ -79,6 +83,11 @@ namespace IdentityServer.Controllers
                     Description = model.Description,
                     Endpoint = model.URL
                 };
+
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, obj))
+                {
+                    return Unauthorized();
+                }
 
                 _context.Volume.Add(obj);
                 await _context.SaveChangesAsync();
@@ -120,6 +129,11 @@ namespace IdentityServer.Controllers
 
             if (ModelState.IsValid)
             {
+                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume))
+                {
+                    return Unauthorized();
+                }
+
                 try
                 {
                     _context.Update(volume);
@@ -168,6 +182,16 @@ namespace IdentityServer.Controllers
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             var volume = await _context.Volume.FindAsync(id);
+            if(volume == null)
+            {
+                return NotFound();
+            }
+
+            if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume))
+            {
+                return Unauthorized();
+            }
+
             _context.Volume.Remove(volume);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
