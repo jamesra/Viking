@@ -46,6 +46,7 @@ Ensure that the identities (active directory users) for the IIS application pool
        * Ensure the IIS website has an SSL binding that points to the certificate you want to use. 
        * Disable HTTP access to the identity website to prevent unencrypted communication.
        * Ensure the appsettings.json file refers to the correct SSL key.  The serial number is stored under "SSL -> SerialNumber"
+       * Ensure the identity the IIS application runs as has access rights to the SSL certificate's private key via certificate manager.
 
 Deploy to IIS
 -------------

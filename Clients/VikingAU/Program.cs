@@ -170,6 +170,8 @@ namespace Viking.AU
 
             State.Volume = new Volume(Program.options.VolumeURL, State.CachePath, progressReporter);
 
+            State.Volume.Initialize(progressReporter).Wait();
+
             State.MappingsManager = new MappingManager(State.Volume);
 
             Console.Write("Endpoint: " + State.Volume.Endpoint.EndpointURL.ToString());

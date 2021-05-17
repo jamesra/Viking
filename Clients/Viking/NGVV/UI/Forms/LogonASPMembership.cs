@@ -146,8 +146,8 @@ namespace Viking.UI.Forms
 
             keyFile = "usrcrd.vkg";
 
-             
-            State.userAccessLevel = "Exit";
+
+            State.UserAccessLevel = new string[0];
 
             InitializeComponent();
 
@@ -333,7 +333,7 @@ namespace Viking.UI.Forms
 
                 SetUpdateText("Login Successful! -- Access Level: " + responseData.ToUpper());
 
-                State.userAccessLevel = responseData;
+                State.UserAccessLevel = new string[] { responseData };
 
                 this.Result = DialogResult.OK;
 
@@ -485,7 +485,7 @@ namespace Viking.UI.Forms
                 {
                     SetUpdateText("Anonymous Login Successful! -- Access Level: " + responseData.ToUpper());
 
-                    State.userAccessLevel = responseData;
+                    State.UserAccessLevel = new string[] { responseData };
 
                     this.Result = DialogResult.OK;
 
@@ -499,7 +499,7 @@ namespace Viking.UI.Forms
             else
             {
                 this.Result = DialogResult.OK;
-                State.userAccessLevel = "Read";
+                State.UserAccessLevel = new string[] { "Read" };
                 this.Close();
             }
         }

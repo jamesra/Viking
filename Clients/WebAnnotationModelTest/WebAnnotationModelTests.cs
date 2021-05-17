@@ -14,6 +14,8 @@ using System.ComponentModel;
 using AnnotationService.Types;
 using Annotation.Interfaces;
 using Microsoft.SqlServer.Types;
+using Viking.Tokens;
+using IdentityModel.Client;
 
 
 namespace WebAnnotationModelTest
@@ -21,19 +23,55 @@ namespace WebAnnotationModelTest
     [TestClass]
     public class WebAnnotationModelTests
     {
-        static public System.Net.NetworkCredential TestCredentials = new System.Net.NetworkCredential("VikingUnitTests", "4%w%o06");
-        static public EndpointAddress Endpoint;
+        string Username = "VikingUnitTests";
+        string Password = "4%W%o06";
+        string VolumeName = "RC1Test";
+        public System.Net.NetworkCredential TestCredentials;
+        //static public EndpointAddress Endpoint;
+
+        static public string Endpoint = "https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc";
+        static public string IdentityEndpoint = "https://identity.connectomes.utah.edu/";
+
+        static public Viking.Tokens.IdentityServerHelper TokenHelper;
 
         [TestInitialize]
         public void Init()
         {
-            WebAnnotationModel.State.Endpoint = new Uri("https://webdev.connectomes.utah.edu/RC1Test/Annotation/Service.svc");
-            WebAnnotationModel.State.UserCredentials = TestCredentials;
+            TestCredentials = new System.Net.NetworkCredential(Username, Password);
+            WebAnnotationModel.State.Endpoint = new Uri(Endpoint);
+            //WebAnnotationModel.State.UserCredentials = TestCredentials;
 
             System.Net.ServicePointManager.ServerCertificateValidationCallback =
                             ((sender, certificate, chain, sslPolicyErrors) => true);
 
-            WebAnnotationModel.State.UseAsynchEvents = false; 
+            WebAnnotationModel.State.UseAsynchEvents = false;
+
+            InitIdentity().Wait();
+        }
+
+        private async System.Threading.Tasks.Task InitIdentity()
+        {
+            TokenHelper = new IdentityServerHelper()
+            {
+                IdentityServerURL = IdentityEndpoint,
+            };
+
+            var token = await TokenHelper.RetrieveBearerToken(Username, Password);
+            Assert.IsFalse(token.IsError, token.Error);
+
+            var permissions = await TokenHelper.RetrieveUserVolumePermissions(token as TokenResponse, VolumeName);
+            Assert.IsFalse(permissions == null || permissions.Length == 0, $"No permissions found for test user {Username} in volume {VolumeName}");
+
+            List<string> list_permissions = new List<string>();
+            list_permissions.Add("openid");
+            list_permissions.Add("Viking.Annotation");
+            list_permissions.AddRange(permissions.Select(p => $"{VolumeName}.{p}"));
+
+            var bearer_token_response = await TokenHelper.RetrieveBearerToken(Username, Password, list_permissions.ToArray());
+            Assert.IsFalse(bearer_token_response.IsError, token.Error);
+
+            TokenInjector.BearerToken = bearer_token_response as TokenResponse;
+            TokenInjector.BearerTokenAuthority = IdentityEndpoint;
         }
 
         #region StructureTypes
@@ -336,9 +374,7 @@ namespace WebAnnotationModelTest
 
                 Assert.IsFalse(linkedLoc.Links.Contains(locObj.ID));
                 Assert.IsFalse(locObj.Links.Contains(linkedLoc.ID));
-
-
-
+                 
                 //Delete the structure
                 structObj.DBAction = DBACTION.DELETE;
 

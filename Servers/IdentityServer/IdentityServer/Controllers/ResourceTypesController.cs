@@ -11,6 +11,7 @@ using IdentityServer.Models;
 
 namespace IdentityServer.Controllers
 {
+    [Authorize]
     public class ResourceTypesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -24,6 +25,20 @@ namespace IdentityServer.Controllers
         public async Task<IActionResult> Index()
         {
             return View(await _context.ResourceTypes.ToListAsync());
+        }
+
+        // GET: ResourceTypes/List 
+        [HttpGet]
+        public async Task<IActionResult> List()
+        {
+            var result = await _context.ResourceTypes
+                                    .Include(r => r.Permissions)
+                                    .Select(r => new
+                                        {
+                                            Id = r.Id,
+                                            Permissions = r.Permissions.Select(p => p.PermissionId)
+                                        }).ToListAsync();
+            return Json(result);
         }
 
         // GET: ResourceTypes/Details/5

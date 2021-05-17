@@ -136,7 +136,7 @@ namespace WebAnnotationModel
         /// <param name="tag"></param>
         public bool ToggleAttribute(string tag, string value = null)
         {
-            ObjAttribute attrib = new ObjAttribute(tag, value);
+            //ObjAttribute attrib = new ObjAttribute(tag, value);
             List<ObjAttribute> listAttributes = this.Attributes.ToList();
             bool InList = listAttributes.ToggleAttribute(tag, value);
             this.Attributes = listAttributes;
@@ -164,7 +164,7 @@ namespace WebAnnotationModel
             get { return Data.Username; }
         }
 
-        private object LinksLock = new object();
+        private readonly object LinksLock = new object();
         private ObservableCollection<StructureLinkObj> _Links = null;
         internal ObservableCollection<StructureLinkObj> Links
         {
@@ -183,11 +183,10 @@ namespace WebAnnotationModel
                             foreach (StructureLink link in Data.Links)
                             {
                                 Debug.Assert(link != null);
-                                bool added;
                                 //Add it if it doesn't exist, otherwise get the official version
                                 StructureLinkObj linkObj = Store.StructureLinks.GetOrAdd(new StructureLinkKey(link),
                                                                                          new Func<StructureLinkKey, StructureLinkObj>(key => { return new StructureLinkObj(link); }),
-                                                                                         out added); //This call will fire events that add the link to this.Links if it is new to the local store
+                                                                                         out bool added); //This call will fire events that add the link to this.Links if it is new to the local store
                                 Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
                                 linkArray.Add(linkObj);
                             }
@@ -419,17 +418,14 @@ namespace WebAnnotationModel
         protected static event EventHandler OnCreate;
         protected void CallOnCreate()
         {
-            if (OnCreate != null)
-            {
-                //TODO, create notification
-                //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
-                OnCreate(this, null);
-            }
+            //TODO, create notification
+            //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
+            OnCreate?.Invoke(this, null);
         }
 
         public bool Equals(IStructure other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (ReferenceEquals(other, null))
                 return false;
 
             return (long)other.ID == this.ID;

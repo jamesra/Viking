@@ -23,6 +23,7 @@ namespace IdentityServer.Controllers
 {
  
     [Route("[controller]/[action]")]
+    [Authorize]
     public class UserRolesController : Controller
     {
         private readonly ApplicationDbContext _context;

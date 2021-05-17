@@ -44,6 +44,7 @@ namespace IdentityServer.Extensions
             {
                 switch (claimType)
                 {
+                    /*
                     case "group":
                     {
                         var GroupAssignments = await _Dbcontext.RecursiveMemberOfGroups(user.Id);
@@ -54,7 +55,7 @@ namespace IdentityServer.Extensions
                             claims.Add(new Claim("MemberOf", oa.Id.ToString()));
                         }
                     }
-                    break;/*
+                    break;
                     case "group role":
                         {
                             //Add a claim for each group the user had a role within

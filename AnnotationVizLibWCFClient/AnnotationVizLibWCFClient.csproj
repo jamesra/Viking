@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>AnnotationVizLib.WCFClient</RootNamespace>
     <AssemblyName>AnnotationVizLib.WCFClient</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <NuGetPackageImportStamp>
@@ -110,7 +110,21 @@
     <None Include="Properties\DataSources\AnnotationService.Types.Structure.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.StructureLink.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.StructureType.datasource" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="Service References\AnnotationClient\AnnotateService.wsdl" />
+    <None Include="Service References\AnnotationClient\Annotation.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationClient\Annotation1.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationClient\Annotation2.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\AnnotationClient\Annotation3.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.GetAnnotationsInMosaicRegionResponse1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
@@ -144,27 +158,12 @@
     <None Include="Service References\AnnotationClient\AnnotationVizLib.WCFClient.AnnotationClient.SynapseObject1.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>
-    <None Include="Service References\AnnotationClient\service2.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationClient\service21.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationClient\service22.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\AnnotationClient\service23.xsd">
-      <SubType>Designer</SubType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Service References\AnnotationClient\configuration91.svcinfo" />
     <None Include="Service References\AnnotationClient\configuration.svcinfo" />
     <None Include="Service References\AnnotationClient\Reference.svcmap">
       <Generator>WCF Proxy Generator</Generator>
       <LastGenOutput>Reference.cs</LastGenOutput>
     </None>
-    <None Include="Service References\AnnotationClient\service.disco" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
@@ -188,6 +187,9 @@
     <PackageReference Include="System.Spatial">
       <Version>5.8.4</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Service References\AnnotationClient\Annotation.disco" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

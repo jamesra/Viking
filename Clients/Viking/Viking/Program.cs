@@ -1,4 +1,4 @@
-﻿#define USEASPMEMBERSHIP
+﻿//#define USEASPMEMBERSHIP
 
 using System;
 using System.Diagnostics;
@@ -272,16 +272,14 @@ namespace Viking
         {
 
 #if !USEASPMEMBERSHIP
-            using (Logon vikingLogon = new Logon(website))
+            using (Logon vikingLogon = new Logon(VolumePath))
             {
                 vikingLogon.ShowDialog();
 
                 if (vikingLogon.Result == DialogResult.Cancel)
                 { 
                     return null;
-                }
-
-                
+                } 
 
                 UI.State.UserBearerToken = vikingLogon.BearerToken;
                 UI.State.UserCredentials = vikingLogon.Credentials;

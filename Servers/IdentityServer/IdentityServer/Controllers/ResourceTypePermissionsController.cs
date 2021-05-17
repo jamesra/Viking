@@ -11,6 +11,7 @@ using IdentityServer.Models;
 
 namespace IdentityServer.Controllers
 {
+    [Authorize]
     public class ResourceTypePermissionsController : Controller
     {
         private readonly ApplicationDbContext _context;

@@ -215,7 +215,7 @@ namespace Viking.UI.Forms
             this.btnLogin.TabIndex = 5;
             this.btnLogin.Text = "Login";
             this.btnLogin.UseVisualStyleBackColor = true;
-            this.btnLogin.Click += new System.EventHandler(this.login_handle);
+            this.btnLogin.Click += new System.EventHandler(this.OnLogin);
             // 
             // remember_me_check_box
             // 

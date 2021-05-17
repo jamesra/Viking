@@ -1,11 +1,11 @@
-﻿using IdentityModel.Client;
-using System;
+﻿using System;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
+using System.Net; 
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,13 +14,14 @@ using System.Windows.Threading;
 using System.Xml.Linq;
 using Utils;
 using Viking.Properties;
+using IdentityModel.Client;
+using Viking.Tokens;
 
 namespace Viking.UI.Forms
-{
-
-
+{ 
     public partial class Logon : Form
     {
+        public const string IdentityServerUri = "https://identity.connectomes.utah.edu/";
         private string _AuthenticationServiceURL = null;
         public string AuthenticationServiceURL
         {
@@ -138,6 +139,8 @@ namespace Viking.UI.Forms
             }
         }
 
+        private string VolumeName => VolumeDocument.Root.Attribute("Name")?.Value;
+
         private string userName = UI.State.AnonymousCredentials.UserName;
         private string password = UI.State.AnonymousCredentials.Password;
         public string keyFile;
@@ -176,7 +179,7 @@ namespace Viking.UI.Forms
 
             //State.UserCredentials = new NetworkCredential(userName, password);
 
-            State.userAccessLevel = "Exit";
+            State.UserAccessLevel = new string[0];
 
             InitializeComponent();
 
@@ -262,48 +265,27 @@ namespace Viking.UI.Forms
         void linkLabel1_Click(object sender, System.EventArgs e)
         {
             System.Diagnostics.Process.Start("https://connectomes.utah.edu/Viz/Account/Register");
-        }
+        } 
 
-        private async Task<TokenResponse> RetrieveBearerToken(string username, string password)
+        
+
+        Task LoginTask = null;
+
+        void OnLogin(object sender, System.EventArgs e)
         {
-            //The url must match and is case-sensitive
-            //var discoTask = DiscoveryClient.GetAsync("http://localhost:5000");
-            using (HttpClient client = new HttpClient())
-            {
-                var disco = await client.GetDiscoveryDocumentAsync("https://identity.connectomes.utah.edu");
-                if (disco.IsError)
-                {
-                    SetUpdateText(disco.Error);
-                    return null;
-                }
+            login_handle();
+            //Task newLoginTask = 
+            //Task oldLoginTask = Interlocked.CompareExchange(ref LoginTask, newLoginTask, null);
 
-                // request token
-                PasswordTokenRequest request = new PasswordTokenRequest()
-                {
-                    Address = disco.TokenEndpoint,
-                    ClientId = "ro.viking",
-                    ClientSecret = "CorrectHorseBatteryStaple",
-                    Scope = "Viking.Annotation openid",
-                    UserName = username, 
-                    Password = password
-                };
+            //if(null == oldLoginTask || oldLoginTask.IsCompleted)
+            //{
+            //    newLoginTask.Start();
+            //}
 
-                var tokenResponse = await client.RequestPasswordTokenAsync(request);
-
-                if (tokenResponse.IsError)
-                {
-                    Console.WriteLine(tokenResponse.Error);
-                    SetUpdateText(tokenResponse.Error);
-                    return null;
-                }
-
-                Console.WriteLine("Bearer Token: " + tokenResponse.Json);
-
-                return tokenResponse;
-            }
+            //return;
         }
 
-        async void login_handle(object sender, System.EventArgs e)
+        async Task login_handle()
         {
             SetUpdateText("Authenticating...");
 
@@ -312,22 +294,72 @@ namespace Viking.UI.Forms
             password = this.textPassword.Text;
 
             if (String.IsNullOrEmpty(userName))
-                SetUpdateText("Enter Username");
-
-            if (String.IsNullOrEmpty(password))
-                SetUpdateText("Enter Password");
-
-            this.BearerToken = await RetrieveBearerToken(userName, password);
-
-            if (BearerToken == null)
             {
+                SetUpdateText("Enter Username");
                 return;
             }
+
+            if (String.IsNullOrEmpty(password))
+            {
+                SetUpdateText("Enter Password");
+                return;
+            }
+             
+            var TokenHelper = new Viking.Tokens.IdentityServerHelper()
+            {
+                IdentityServerURL = this.AuthenticationServiceURL,
+                ClientId = "ro.viking",
+                ClientSecret = "CorrectHorseBatteryStaple"
+            };
+
+            var id_token_response = await TokenHelper.RetrieveBearerToken(userName, password);
+            if(id_token_response.IsError)
+            {
+                SetUpdateText($"{id_token_response.Error}\n{id_token_response.HttpErrorReason}");
+                return;
+            }
+
+            var id_token = id_token_response as TokenResponse;
+              
+            var permissions = await TokenHelper.RetrieveUserVolumePermissions(id_token, VolumeName);
+
+            if (permissions != null)
+            {
+                string Permissions = "";
+                foreach (string p in permissions)
+                {
+                    Permissions += p + ", ";
+                }
+
+                if(Permissions.Length > 0)
+                    SetUpdateText($"Login Successful!\nPermissions: {Permissions}");
+                else
+                    SetUpdateText($"User does not have permissions in volume");
+            }
+            else
+            {
+                SetUpdateText($"Could not optain permissions information for user");
+                return;
+            }
+
+            List<string> list_permissions = new List<string>();
+            list_permissions.Add("openid");
+            list_permissions.Add("Viking.Annotation");
+            list_permissions.AddRange(permissions.Select(p => $"{VolumeName}.{p}"));
+
+            var bearer_token_response = await TokenHelper.RetrieveBearerToken(userName, password, list_permissions.ToArray());
+            if (bearer_token_response.IsError)
+            {
+                SetUpdateText($"{id_token_response.Error}\n{id_token_response.HttpErrorReason}");
+                return;
+            }
+
+            this.BearerToken = bearer_token_response as TokenResponse;
 
             this.Credentials = new NetworkCredential(userName, password);
             //this.Credentials = new NetworkCredential("jamesan", "4%w%o06");
 
-            State.userAccessLevel = "Admin";
+            State.UserAccessLevel = permissions;
 
             if (this.textUsername.Text != readUserName)
                 System.IO.File.Delete(this.KeyFileFullPath);
@@ -364,9 +396,7 @@ namespace Viking.UI.Forms
 
             this.Result = DialogResult.OK;
 
-            this.Close();
-
-
+            this.BeginInvoke(new Action(() => this.Close()));
         }
 
 
@@ -515,7 +545,7 @@ namespace Viking.UI.Forms
                 {
                     SetUpdateText("Anonymous Login Successful! -- Access Level: " + responseData.ToUpper());
                     */
-                State.userAccessLevel = "Read";
+                State.UserAccessLevel = new string[] { "Read" };
 
                 this.Result = DialogResult.OK;
 
@@ -530,7 +560,7 @@ namespace Viking.UI.Forms
             else
             {
                 this.Result = DialogResult.OK;
-                State.userAccessLevel = "Read";
+                State.UserAccessLevel = new string[] { "Read" };
                 this.Close();
             }
         }
@@ -765,7 +795,9 @@ namespace Viking.UI.Forms
                 {
                     //We managed to load our URL so add it to our list of defaults
                     AddToDefaultVolumeURLs(this.VolumeURL);
-                    this.AuthenticationServiceURL = AuthenticationURLForVolume(volElem);
+                    this.AuthenticationServiceURL = "https://identity.connectomes.utah.edu/";
+                    //TODO: Place authentication URL back in the xml file
+                    //this.AuthenticationServiceURL = AuthenticationURLForVolume(volElem);
                 }
             }
             else
@@ -793,12 +825,15 @@ namespace Viking.UI.Forms
 
         private void DisableLogins()
         {
-            groupCredentials.Enabled = false;
+            if(groupCredentials != null)
+                groupCredentials.Enabled = false;
         }
 
         private void EnableLogins()
         {
-            groupCredentials.Enabled = true;
+            if(groupCredentials != null)
+                groupCredentials.Enabled = true;
+
             BeginInvoke(new Action(() => createConnection()));
         }
 

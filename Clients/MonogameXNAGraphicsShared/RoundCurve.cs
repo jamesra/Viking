@@ -116,7 +116,7 @@ namespace RoundCurve
 
         public override string ToString()
         {
-            return string.Format("{1} - {2}", _controlPoints[0], _controlPoints.Last());
+            return string.Format("{0} - {1}", _controlPoints[0], _controlPoints.Last());
         }
     };
 

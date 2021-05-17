@@ -15,20 +15,23 @@
 
   <ItemGroup> 
     <PackageReference Include="IdentityModel" Version="5.1.0" /> 
+    <PackageReference Include="IdentityModel.AspNetCore.AccessTokenValidation" Version="1.0.0-preview.0" /> 
+    <PackageReference Include="IdentityModel.AspNetCore.OAuth2Introspection" Version="5.1.0" /> 
     <PackageReference Include="IdentityServer4" Version="4.1.2" /> 
     <PackageReference Include="IdentityServer4.AspNetIdentity" Version="4.1.2" /> 
     <PackageReference Include="IdentityServer4.EntityFramework" Version="4.1.2" /> 
     <PackageReference Include="log4net" Version="2.0.12" /> 
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="5.0.4" /> 
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="5.0.4" /> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.4" /> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.4">
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.5" /> 
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="5.0.5" /> 
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="5.0.5" /> 
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.5" /> 
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.4" /> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.4" /> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.4">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.5" /> 
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.5" /> 
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference> 
@@ -51,6 +54,12 @@
   <ItemGroup>
     <Folder Include="Views\Permission\" />
     <Folder Include="Views\Shared\EditorTemplates\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="IDServerLogs.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

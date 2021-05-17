@@ -310,6 +310,7 @@ namespace Viking.VolumeModel
 
             this._VolumeElement = GetVolumeElement(VolumeXML);
             LoadDefaultsFromVolumeElement(_VolumeElement);
+            LoadDefaultsFromXML(_VolumeElement);
 
             this.Paths = new VolumePaths(localCachePath, this.Name); 
         }
@@ -329,6 +330,7 @@ namespace Viking.VolumeModel
             this._Host = path;
             this._VolumeElement = GetVolumeElement(VolumeXML);
             LoadDefaultsFromVolumeElement(_VolumeElement);
+            LoadDefaultsFromXML(_VolumeElement);
 
             this.Paths = new VolumePaths(localCachePath, this.Name);
 
@@ -534,11 +536,8 @@ namespace Viking.VolumeModel
         /// <param name="volumeElement"></param>
         private void LoadDefaultsFromXML(XElement volumeElement)
         {
-            foreach (XNode node in volumeElement.Nodes().ToList<XNode>())
-            {
-                if (node.NodeType == System.Xml.XmlNodeType.Whitespace)
-                    continue;
-
+            foreach (XNode node in volumeElement.Nodes().Where(n => n.NodeType == System.Xml.XmlNodeType.Element).ToList<XNode>())
+            { 
                 XElement elem = node as XElement;
                 if (elem == null)
                     continue;
@@ -827,9 +826,10 @@ namespace Viking.VolumeModel
 
                     WaitForLoadStosTransformThreads(ListStosLoadingTasks, workerThread);
 
+                    WaitForCreateSectionThreads(ListSectionLoadingTasks, workerThread);
+
                     CreateVolumeTransforms(workerThread);
 
-                    WaitForCreateSectionThreads(ListSectionLoadingTasks, workerThread);
 
                     workerThread?.ReportProgress(101, "Done!");
 

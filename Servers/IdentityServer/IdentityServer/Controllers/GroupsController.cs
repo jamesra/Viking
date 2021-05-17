@@ -15,6 +15,7 @@ using IdentityServer.Authorization;
 
 namespace IdentityServer.Controllers
 {
+    [Authorize]
     public class GroupsController : Controller
     {
         private readonly ApplicationDbContext _context;

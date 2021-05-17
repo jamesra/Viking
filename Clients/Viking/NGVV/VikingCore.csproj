@@ -15,7 +15,7 @@
     <OldToolsVersion>3.5</OldToolsVersion>
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <TargetZone>LocalIntranet</TargetZone>
     <GenerateManifests>false</GenerateManifests>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -129,7 +129,6 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -498,7 +497,6 @@
     <Compile Include="TextureCache.cs">
     </Compile>
     <Compile Include="Threading\TextureReader.cs" />
-    <Compile Include="UI\TouchEventManager.cs" />
     <Compile Include="UI\TouchSupport.cs" />
     <Compile Include="Util\BmpWriter.cs" />
     <Compile Include="Util\OpenConnectomeProject.cs" />
@@ -556,6 +554,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
+      <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
+      <Name>Geometry</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\UnitsAndScale\UnitsAndScale.csproj">
       <Project>{d451457b-2782-4473-a935-efa25c4fad7c}</Project>
       <Name>UnitsAndScale</Name>
@@ -568,10 +570,6 @@
       <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
       <Name>Common</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
-      <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
-      <Name>Geometry</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj">
       <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
       <Name>VikingXNAGraphics</Name>
@@ -583,6 +581,10 @@
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
       <Project>{2EBA2A77-F7F0-4EFC-AC06-A12FE249388F}</Project>
       <Name>VolumeModel</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj">
+      <Project>{61452f17-ca41-4bbe-8d20-3c6339cd4626}</Project>
+      <Name>WCFTokenInjector</Name>
     </ProjectReference>
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
       <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
@@ -630,19 +632,19 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="IdentityModel">
-      <Version>3.10.10</Version>
+      <Version>5.1.0</Version>
     </PackageReference>
     <PackageReference Include="MathNet.Numerics">
       <Version>4.12.0</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
-      <Version>12.0.3</Version>
+      <Version>13.0.1</Version>
     </PackageReference>
     <PackageReference Include="System.Net.Http">
       <Version>4.3.4</Version>
     </PackageReference>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe">
-      <Version>4.7.1</Version>
+      <Version>5.0.0</Version>
     </PackageReference>
     <PackageReference Include="System.Security.Cryptography.Algorithms">
       <Version>4.3.1</Version>
@@ -651,7 +653,7 @@
       <Version>4.3.2</Version>
     </PackageReference>
     <PackageReference Include="System.Text.Encodings.Web">
-      <Version>4.7.1</Version>
+      <Version>5.0.1</Version>
     </PackageReference>
     <PackageReference Include="System.ValueTuple">
       <Version>4.5.0</Version>

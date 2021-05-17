@@ -19,6 +19,7 @@ using IdentityServer.Services;
 namespace IdentityServer.Controllers
 {
     [Route("[controller]/[action]")]
+    [Authorize]
     public class ApplicationRolesController : Controller
     {
         private readonly ApplicationDbContext _context;

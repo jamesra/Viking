@@ -9,11 +9,13 @@ using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer.Models.UserViewModels; 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 using IdentityServer.Extensions;
 using IdentityServer.Authorization;
 
 namespace IdentityServer.Controllers
 {
+    [Authorize]
     public class ResourcesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -53,24 +55,40 @@ namespace IdentityServer.Controllers
         /// <returns></returns>
         /// <param name="id"></param>
         // GET: Resources/UserPermissions/5/jamesan
-        public async Task<IActionResult> UserPermissions(long? id, string user)
+
+        [Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> UserPermissions(string id)
         {
-            if (id.HasValue == false)
+            if (id == null)
                 return NotFound();
 
-            var resource = await _context.Resource.FirstOrDefaultAsync(r => r.Id == id.Value);
-            if (resource == null)
+            var username = User.Identity.GetUsername();
+            if (username == null)
+                return Unauthorized();
+
+            Resource resourceObj = null;
+            try
+            {
+                long ResourceId = System.Convert.ToInt64(id);
+                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Id == ResourceId);
+            }
+            catch(FormatException e)
+            {
+                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Name == id);
+            }
+
+            if (resourceObj == null)
             {
                 return NotFound();
             }
 
-            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == user);
-            if(appUser == null)
+            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+            if (appUser == null)
             {
                 return NotFound();
             }
 
-            var result = await _context.UserResourcePermissions(resource.Id, appUser.Id);
+            var result = await _context.UserResourcePermissions(resourceObj.Id, appUser.Id);
 
             return Json(result);
         }

@@ -384,7 +384,7 @@ namespace Viking.UI.Controls
             commandHelpText = new Viking.WPF.StringArrayAutoScroller();
             commandHelpText.DataContext = this.CurrentCommand as IHelpStrings;
             //commandHelpText.TextArray = new String[] { "Hello", "world" };
-            commandHelpText.InitializeComponent();
+            //commandHelpText.InitializeComponent();
             commandHelpTextScrollerHost.Child = commandHelpText;
 
             commandHelpTextScrollerHost.Height /= 2;

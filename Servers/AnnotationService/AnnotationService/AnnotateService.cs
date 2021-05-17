@@ -26,7 +26,7 @@ namespace Annotation
     {
         static bool _isSqlTypesLoaded = false;
 
-        static object lockObject = new object();
+        static readonly object  lockObject = new object();
 
         public static void TryLoadSqlServerTypes()
         {
@@ -1362,8 +1362,7 @@ namespace Annotation
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                long NewStructureID;
-                int retval = db.SplitStructure(KeepStructureID, LocationIDInSplitStructure,  out NewStructureID);
+                int retval = db.SplitStructure(KeepStructureID, LocationIDInSplitStructure,  out long NewStructureID);
                 return NewStructureID;
             }
         }
@@ -1381,8 +1380,7 @@ namespace Annotation
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
-                long NewStructureID;
-                int retval = db.SplitStructureAtLocationLink(LocationIDOfKeepStructure, LocationIDOfSplitStructure, out NewStructureID);
+                int retval = db.SplitStructureAtLocationLink(LocationIDOfKeepStructure, LocationIDOfSplitStructure, out long NewStructureID);
                 return NewStructureID;
             }
         }
@@ -2265,8 +2263,8 @@ namespace Annotation
                 username = ServiceModelUtil.GetUserForCall();
 
             ConnectomeDataModel.LocationLink newLink = db.LocationLinks.Create();
-            ConnectomeDataModel.Location Source = null;
-            ConnectomeDataModel.Location Target = null;
+            ConnectomeDataModel.Location Source;
+            ConnectomeDataModel.Location Target;
 
             try
             {
@@ -2596,7 +2594,7 @@ namespace Annotation
             // connect to the AnnotationService.Types.Structure webservice 
             AnnotationService.Types.Structure[] FoundStructures = GetStructuresByIDs(ids, true);
 
-            List<long> ListMissingChildrenIDs = new List<long>();
+            //List<long> ListMissingChildrenIDs = new List<long>();
 
             //Add the root structure to nodelist if it not already added
             foreach (AnnotationService.Types.Structure structure in FoundStructures)

@@ -14,6 +14,7 @@ using IdentityServer.Authorization;
 
 namespace IdentityServer.Controllers
 {
+    [Authorize]
     public class OrganizationalUnitsController : Controller
     {
         private readonly ApplicationDbContext _context;

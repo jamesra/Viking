@@ -8,15 +8,20 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using IdentityModel.AspNetCore.AccessTokenValidation;
 using IdentityServer.Data;
 using IdentityServer.Models;
-using IdentityServer.Services; 
+using IdentityServer.Services;
+using IdentityServer; 
 using System.Reflection;
 using IdentityServer4;
 using Serilog;
@@ -43,10 +48,39 @@ namespace IdentityServer
         }
 
         public IConfiguration Configuration { get; }
+         
+        /*
+        private string ForwardReferenceToken(HttpContext context)
+        {
+            var auth = context.Request.Headers["Authorization"];
+
+            int iBearer;
+            for(iBearer = 0; iBearer < auth.Count; iBearer++)
+            {
+                if (auth[iBearer].StartsWith("Bearer"))
+                    break;
+            }
+
+            if (iBearer == auth.Count)
+                return null;
+
+            var token = auth[iBearer];
+             
+            if (token.Contains('.'))
+                return "introspection";
+            
+            return "Bearer";
+        } 
+        */
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            //System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap = new Dictionary<string, string>();
+            //System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap = new Dictionary<string, string>();
+
+            //System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Add("sub", System.IdentityModel.ClaimTypes.NameIdentifier);
+
             services.AddControllersWithViews();
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
 
@@ -60,21 +94,87 @@ namespace IdentityServer
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")).EnableDetailedErrors().EnableSensitiveDataLogging());
 
+
+            IConfigurationSection identityServerConfig = Configuration.GetSection("IdentityServer");
+
+            services.AddAuthentication(options =>
+            { 
+            })
+                .AddCookie()
+            //.AddApplicationCookie()
+            /*.AddOpenIdConnect("oidc", options => { 
+                options.Authority = "https://localhost:44322/";
+                options.ClientId = "mvc";
+                options.ClientSecret = Config.Secret.ToSha256();
+                options.SaveTokens = true;
+                options.Scope.Add("Viking.Annotation");
+                options.Scope.Add("openid");
+            })*/
+            // JWT tokens 
+            /*I spent an eternity getting authentication with a token to work and I was never
+             * able to get jwt+cookies to work side-by-side
+             * https://stackoverflow.com/questions/49455943/asp-net-core-webapi-cookie-jwt-authentication
+             * The end result is any Web API style calls that require a token must be decorated with
+             * [Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)]
+             * */
+            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateAudience = false,
+                    ValidateLifetime = true,
+                    ValidateIssuer = true,
+                    ValidateTokenReplay = true,
+
+                };
+                options.RequireHttpsMetadata = true;
+                options.Authority = identityServerConfig["Endpoint"];
+                options.SaveToken = true;
+
+                options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
+                //options.MapInboundClaims = false; 
+
+                // if token does not contain a dot, it is a reference token
+                //options.ForwardDefaultSelector = ForwardReferenceToken;//Selector.ForwardReferenceToken("introspection");
+            })
+            //.AddApplicationCookie()
+             
+            // reference tokens
+            /*
+            .AddOAuth2Introspection("introspection", options =>
+            {
+                options.Authority = identityServerConfig["Endpoint"];
+                options.ClientId = "mvc";
+                options.ClientSecret = Config.Secret;
+                options.SaveToken = true;
+                options.SkipTokensWithDots = true;
+                options.
+            }) */
+            ;
+
             services.AddAuthorization(options =>
             {
+                var builder = new AuthorizationPolicyBuilder();
+                builder.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+                builder.RequireAuthenticatedUser();
+                options.AddPolicy(Config.Policy.BearerToken, builder.Build());
                 options.AddPolicy(Config.Policy.GroupAccessManager, policy => policy.Requirements.Add(Authorization.Operations.GroupAccessManager));
-                options.AddPolicy(Config.Policy.OrgUnitAdmin,       policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
+                options.AddPolicy(Config.Policy.OrgUnitAdmin, policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
             });
 
+            //services.AddHttpContextAccessor();
+            //services.AddTransient<System.Security.Claims.ClaimsPrincipal>(provider => provider.GetService<IHttpContextAccessor>().HttpContext.User);
+            services.AddTransient<IdentityServer4.Validation.ICustomTokenRequestValidator, IdentityServer.Extensions.UserScopeTokenRequestValidator>();
+            services.AddScoped<IdentityServer.Extensions.AuthorizationHelper>();
             services.AddScoped<IAuthorizationHandler, IdentityServer.Authorization.ResourceIdPermissionsAuthorizationHandler>();
             services.AddScoped<IAuthorizationHandler, IdentityServer.Authorization.ResourcePermissionsAuthorizationHandler>();
+            //services.AddTransient<IdentityServer.Extensions.AuthorizationHelper>();
 
             var https_port_section = Configuration.GetSection("https_port");
             int? https_port = new int?();
 
             if (https_port_section.Value != null)
-            {
-
+            { 
                 try
                 {
                     https_port = System.Convert.ToInt32(https_port_section.Value);
@@ -98,8 +198,9 @@ namespace IdentityServer
             });
 
             services.AddIdentity<ApplicationUser, ApplicationRole>(config =>
-             { config.SignIn.RequireConfirmedEmail = true; })
-                .AddEntityFrameworkStores<ApplicationDbContext>()
+             { config.SignIn.RequireConfirmedEmail = true;  
+             })
+                .AddEntityFrameworkStores<ApplicationDbContext>() 
                 .AddDefaultTokenProviders();
              
             // Add application services.
@@ -145,7 +246,8 @@ namespace IdentityServer
                     options.EnableTokenCleanup = true;
                     options.TokenCleanupInterval = 30;
                 })                
-                .AddAspNetIdentity<ApplicationUser>();
+                .AddAspNetIdentity<ApplicationUser>()
+                .AddJwtBearerClientAuthentication();
 
             //            builder.AddDeveloperSigningCredential();
             IConfigurationSection sslConfig = Configuration.GetSection("SSL");
@@ -190,10 +292,10 @@ namespace IdentityServer
             }
 
             app.UseHttpsRedirection();
-            app.UseStaticFiles();            
-
+            app.UseStaticFiles();           
             app.UseIdentityServer();
-            app.UseRouting();
+            app.UseRouting(); 
+            //app.UseAuthentication();
             app.UseAuthorization();
             app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 

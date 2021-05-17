@@ -21,6 +21,7 @@ namespace IdentityServer
         {
             public const string GroupAccessManager = "Access Manager";
             public const string OrgUnitAdmin = "Administrator";
+            public const string BearerToken = "BearerToken";
         }
         
 

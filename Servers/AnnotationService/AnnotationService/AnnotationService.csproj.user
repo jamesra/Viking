@@ -1,11 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <StartAction>URL</StartAction>
+    <StartAction>Project</StartAction>
     <StartURL>https://localhost/Test/Annotation/Annotate.svc</StartURL>
     <StartArguments>/service:AnnotationService.dll /config:web.config /client:wcftestclient.exe</StartArguments>
-    <StartProgram>C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\IDE\WcfSvcHost.exe</StartProgram>
-    <StartWorkingDirectory>C:\Src\AnnotationService\AnnotationService\bin\Debug\</StartWorkingDirectory>
+    <StartProgram>C:\Program Files %28x86%29\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\WcfSvcHost.exe</StartProgram>
+    <StartWorkingDirectory>C:\src\git\Viking\Servers\AnnotationService\AnnotationService\bin\</StartWorkingDirectory>
+    <RemoteDebugEnabled>true</RemoteDebugEnabled>
+    <RemoteDebugMachine>OpR-Marc-Webdv2</RemoteDebugMachine>
   </PropertyGroup>
   <PropertyGroup>
     <ProjectView>ShowAllFiles</ProjectView>
@@ -15,8 +17,8 @@
       <FlavorProperties GUID="{3D9AD99F-2412-4246-B90B-4EAA41C64699}">
         <WcfProjectProperties>
           <PublishCopyOption>RunFiles</PublishCopyOption>
-          <PublishTargetLocation>C:\Src\Git\Viking\Servers\Deployment\Release\AnnotationService\</PublishTargetLocation>
-          <PublishDeleteAllFiles>True</PublishDeleteAllFiles>
+          <PublishTargetLocation>\\OpR-Marc-WebDv2\C$\Services\Debug\AnnotationService\</PublishTargetLocation>
+          <PublishDeleteAllFiles>False</PublishDeleteAllFiles>
         </WcfProjectProperties>
       </FlavorProperties>
     </VisualStudio>

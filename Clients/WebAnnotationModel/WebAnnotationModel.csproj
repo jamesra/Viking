@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>WebAnnotationModel</RootNamespace>
     <AssemblyName>WebAnnotationModel</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -121,19 +121,7 @@
     <None Include="Properties\DataSources\AnnotationService.Types.Structure.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.StructureLink.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.StructureType.datasource" />
-    <None Include="Service References\Service\AnnotationService.Types.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\Arrays.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\service.wsdl" />
-    <None Include="Service References\Service\service.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Service References\Service\service1.xsd">
-      <SubType>Designer</SubType>
-    </None>
+    <None Include="Service References\Service\AnnotateService.wsdl" />
     <None Include="Service References\Service\WebAnnotationModel.Service.Graphx.datasource">
       <DependentUpon>Reference.svcmap</DependentUpon>
     </None>

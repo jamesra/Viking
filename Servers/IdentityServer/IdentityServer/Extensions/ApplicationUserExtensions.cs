@@ -35,8 +35,25 @@ namespace IdentityServer.Extensions
 
             var orgs = await _context.OrgUnit.Select(o => new NamedItemSelectedViewModel<long>() { Id = o.Id, Name = o.Name, Selected = false }).ToListAsync();
             return new UserClaimRequestViewModel() { UserId = user.Id, AvailableOrganizations = orgs, UserComments="", NewOrganization="" };
-        }
+        }  
 
+        public static string GetUsername(this System.Security.Principal.IIdentity identity)
+        {
+            if (identity.IsAuthenticated == false)
+                return null;
 
+            if (identity.Name != null)
+                return identity.Name;
+
+            if (identity is System.Security.Claims.ClaimsIdentity principal)
+            {
+                var result =  principal.Claims.FirstOrDefault(c => c.Type.Equals("name", StringComparison.OrdinalIgnoreCase))?.Value;
+                return result;
+            }
+
+            return null;
+        } 
     }
+
+
 }

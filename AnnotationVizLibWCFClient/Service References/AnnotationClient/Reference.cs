@@ -528,18 +528,6 @@ namespace AnnotationVizLib.WCFClient.AnnotationClient {
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse")]
         System.Threading.Tasks.Task<long[]> UpdateStructureTypesAsync(AnnotationService.Types.StructureType[] structType);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
-        AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link);
-        
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/CreatePermittedStructureLinkResponse")]
-        System.Threading.Tasks.Task<AnnotationService.Types.PermittedStructureLink> CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link);
-        
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
-        void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks);
-        
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/UpdatePermittedStructureLinksResponse")]
-        System.Threading.Tasks.Task UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks);
-        
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotateStructureTypes/TestMethod", ReplyAction="http://tempuri.org/IAnnotateStructureTypes/TestMethodResponse")]
         string TestMethod();
         
@@ -612,22 +600,6 @@ namespace AnnotationVizLib.WCFClient.AnnotationClient {
         
         public System.Threading.Tasks.Task<long[]> UpdateStructureTypesAsync(AnnotationService.Types.StructureType[] structType) {
             return base.Channel.UpdateStructureTypesAsync(structType);
-        }
-        
-        public AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link) {
-            return base.Channel.CreatePermittedStructureLink(link);
-        }
-        
-        public System.Threading.Tasks.Task<AnnotationService.Types.PermittedStructureLink> CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link) {
-            return base.Channel.CreatePermittedStructureLinkAsync(link);
-        }
-        
-        public void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
-            base.Channel.UpdatePermittedStructureLinks(permittedStructureLinks);
-        }
-        
-        public System.Threading.Tasks.Task UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
-            return base.Channel.UpdatePermittedStructureLinksAsync(permittedStructureLinks);
         }
         
         public string TestMethod() {
@@ -1804,6 +1776,89 @@ namespace AnnotationVizLib.WCFClient.AnnotationClient {
         
         public System.Threading.Tasks.Task<AnnotationService.Types.LocationHistory[]> GetLocationChangeLogAsync(System.Nullable<long> structure_id, System.Nullable<System.DateTime> begin_time, System.Nullable<System.DateTime> end_time) {
             return base.Channel.GetLocationChangeLogAsync(structure_id, begin_time, end_time);
+        }
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    [System.ServiceModel.ServiceContractAttribute(ConfigurationName="AnnotationClient.IAnnotatePermittedStructureLinks")]
+    public interface IAnnotatePermittedStructureLinks {
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotatePermittedStructureLinks/GetPermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/GetPermittedStructureLinksRes" +
+            "ponse")]
+        AnnotationService.Types.PermittedStructureLink[] GetPermittedStructureLinks();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotatePermittedStructureLinks/GetPermittedStructureLinks", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/GetPermittedStructureLinksRes" +
+            "ponse")]
+        System.Threading.Tasks.Task<AnnotationService.Types.PermittedStructureLink[]> GetPermittedStructureLinksAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotatePermittedStructureLinks/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/CreatePermittedStructureLinkR" +
+            "esponse")]
+        AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotatePermittedStructureLinks/CreatePermittedStructureLink", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/CreatePermittedStructureLinkR" +
+            "esponse")]
+        System.Threading.Tasks.Task<AnnotationService.Types.PermittedStructureLink> CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotatePermittedStructureLinks/UpdatePermittedStructureLinks" +
+            "", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/UpdatePermittedStructureLinks" +
+            "Response")]
+        void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAnnotatePermittedStructureLinks/UpdatePermittedStructureLinks" +
+            "", ReplyAction="http://tempuri.org/IAnnotatePermittedStructureLinks/UpdatePermittedStructureLinks" +
+            "Response")]
+        System.Threading.Tasks.Task UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks);
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public interface IAnnotatePermittedStructureLinksChannel : AnnotationVizLib.WCFClient.AnnotationClient.IAnnotatePermittedStructureLinks, System.ServiceModel.IClientChannel {
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class AnnotatePermittedStructureLinksClient : System.ServiceModel.ClientBase<AnnotationVizLib.WCFClient.AnnotationClient.IAnnotatePermittedStructureLinks>, AnnotationVizLib.WCFClient.AnnotationClient.IAnnotatePermittedStructureLinks {
+        
+        public AnnotatePermittedStructureLinksClient() {
+        }
+        
+        public AnnotatePermittedStructureLinksClient(string endpointConfigurationName) : 
+                base(endpointConfigurationName) {
+        }
+        
+        public AnnotatePermittedStructureLinksClient(string endpointConfigurationName, string remoteAddress) : 
+                base(endpointConfigurationName, remoteAddress) {
+        }
+        
+        public AnnotatePermittedStructureLinksClient(string endpointConfigurationName, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(endpointConfigurationName, remoteAddress) {
+        }
+        
+        public AnnotatePermittedStructureLinksClient(System.ServiceModel.Channels.Binding binding, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(binding, remoteAddress) {
+        }
+        
+        public AnnotationService.Types.PermittedStructureLink[] GetPermittedStructureLinks() {
+            return base.Channel.GetPermittedStructureLinks();
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationService.Types.PermittedStructureLink[]> GetPermittedStructureLinksAsync() {
+            return base.Channel.GetPermittedStructureLinksAsync();
+        }
+        
+        public AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link) {
+            return base.Channel.CreatePermittedStructureLink(link);
+        }
+        
+        public System.Threading.Tasks.Task<AnnotationService.Types.PermittedStructureLink> CreatePermittedStructureLinkAsync(AnnotationService.Types.PermittedStructureLink link) {
+            return base.Channel.CreatePermittedStructureLinkAsync(link);
+        }
+        
+        public void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
+            base.Channel.UpdatePermittedStructureLinks(permittedStructureLinks);
+        }
+        
+        public System.Threading.Tasks.Task UpdatePermittedStructureLinksAsync(AnnotationService.Types.PermittedStructureLink[] permittedStructureLinks) {
+            return base.Channel.UpdatePermittedStructureLinksAsync(permittedStructureLinks);
         }
     }
     

@@ -255,7 +255,9 @@ namespace WebAnnotationModel
 
         private void CallOnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
-            if (OnCollectionChanged != null)
+            OnCollectionChanged?.Invoke(this, e);
+            /*
+             if (OnCollectionChanged != null)
             {
                 OnCollectionChanged(this, e);
                 //System.Threading.Tasks.Task.Factory.StartNew(() => OnCollectionChanged(this, e));
@@ -277,7 +279,8 @@ namespace WebAnnotationModel
                     a.Invoke(); 
                 }
                 */
-            }
+            
+            //}
         }
 
         /*

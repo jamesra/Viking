@@ -50,7 +50,7 @@ namespace Viking.UI
         
 
         //Stores userAccessLevel for the profided credentials: Include: Admin, Modify, Read
-        static public string userAccessLevel;
+        static public string[] UserAccessLevel;
 
         //User credentials used during authentication
         static public IdentityModel.Client.TokenResponse UserBearerToken = null;

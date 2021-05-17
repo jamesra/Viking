@@ -46,7 +46,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// Setting this to true indicates we've already asked the server for this texture and it was not found.  We should stop asking.
         /// </summary>
-        public bool ServerTextureNotFound = false;
+        public bool ServerTextureNotFound { get; private set; }
 
         /// <summary>
         /// This is not null if we have a thread loading our texture.  It can be cancelled to abort the loading.
@@ -66,6 +66,9 @@ namespace Viking.ViewModels
                 {
                     rwTextureLock.EnterUpgradeableReadLock();
 
+                    if (ServerTextureNotFound)
+                        return null;
+
                     if (_texture != null)
                     {
                         try
@@ -83,9 +86,6 @@ namespace Viking.ViewModels
                             rwTextureLock.ExitWriteLock();
                         }
                     }
-
-                    if (ServerTextureNotFound)
-                        return null;
 
                     return _texture;
                 }
@@ -285,8 +285,7 @@ namespace Viking.ViewModels
         }
 
         public void AbortRequest()
-        {
-
+        { 
             //Other methods may be counting on TexReader not being set to null, so take a lock
             try
             {

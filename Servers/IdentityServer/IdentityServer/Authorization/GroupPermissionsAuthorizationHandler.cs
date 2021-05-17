@@ -90,7 +90,6 @@ namespace IdentityServer.Authorization
         }
     }
 
-
     public class ResourcePermissionsAuthorizationHandler : AuthorizationHandler<ResourcePermissionRequirement, Resource>
     {
         private ApplicationDbContext DbContext;

@@ -40,8 +40,7 @@ namespace WebAnnotationModel
             {
                 if (proxy != null)
                 {
-                    proxy.Close();
-                    proxy = null;
+                    proxy.Close(); 
                 }
                 throw;
             }

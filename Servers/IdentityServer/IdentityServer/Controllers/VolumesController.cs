@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace IdentityServer.Controllers
 {
+    [Authorize]
     public class VolumesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -76,7 +77,7 @@ namespace IdentityServer.Controllers
         {
             if (ModelState.IsValid)
             { 
-                Volume obj = new Volume()
+                Volume obj = new Volume
                 {
                     Name = model.Name,
                     ParentID = model.ParentId == 0 ? null : model.ParentId,

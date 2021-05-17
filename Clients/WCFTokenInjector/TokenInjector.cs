@@ -15,7 +15,7 @@ namespace Viking.Tokens
         }
 
         public object BeforeSendRequest(ref Message request, IClientChannel channel)
-        {
+        { 
             if (BearerTokenAuthority != null && BearerToken != null)
                 request.Headers.Add(MessageHeader.CreateHeader("Bearer", BearerTokenAuthority, BearerToken.AccessToken));
             return null;
