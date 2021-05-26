@@ -659,7 +659,21 @@ namespace Geometry
                 (LRTouch && UDTouch))
                 return OverlapType.TOUCHING;
 
-            System.Diagnostics.Debug.Assert(false, "Every case should be handled at this point...");
+            
+            if (rect.Width == 0 || rect.Height == 0 || this.Width == 0 || this.Height == 0)
+            {
+                //If we are dealing with a zero height rectangle then check some edge cases
+                if (LRIntersect || UDIntersect)
+                    return OverlapType.INTERSECTING;
+
+                if (LRTouch || UDTouch)
+                    return OverlapType.TOUCHING;
+            }
+            else
+            {
+                System.Diagnostics.Debug.Assert(false, "Every case should be handled at this point for a rectangle with non-zero width and height...");
+            }
+
             return OverlapType.NONE;
         }
 
