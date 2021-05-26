@@ -33,6 +33,7 @@ namespace Geometry.Transforms
             this.fixedTransform = fixedT; 
         }
 
+        //TODO: Convert this entire class to an async method 
         public void ThreadPoolCallback(Object threadContext)
         { 
             GridVector2[] MappedControlPoints;

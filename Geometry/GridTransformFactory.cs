@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
+using Geometry;
 
 namespace Util
 {
+    
     public partial class GridTransform
-    {
-        
-        public static GridTransfrom CreateFromStosFile(string stosfile) : base()
+    { 
+        public static GridTransfrom CreateFromStosFile(string stosfile)
         {
-            string filename = Path.GetFileNameWithoutExtension(stosfile);
+            string filename = System.IO.Path.GetFileNameWithoutExtension(stosfile);
 
             int pixelSpacing = 1;
 
@@ -37,18 +38,23 @@ namespace Util
         {
             string[] controlDims = lines[4].Split(new char[] { ' ','\t'}, StringSplitOptions.RemoveEmptyEntries);
             string[] mappedDims = lines[5].Split(new char[] { ' ','\t' }, StringSplitOptions.RemoveEmptyEntries);
-            GridRectangle ControlBounds;
-            GridRectangle MappedBounds; 
             
-            ControlBounds.Left = (System.Convert.ToDouble(controlDims[0]) * pixelSpacing);
-            ControlBounds.Bottom = (System.Convert.ToDouble(controlDims[1]) * pixelSpacing);
-            ControlBounds.Right = ControlBounds.Left + (System.Convert.ToDouble(controlDims[2]) * pixelSpacing);
-            ControlBounds.Top = ControlBounds.Bottom + (System.Convert.ToDouble(controlDims[3]) * pixelSpacing);
+            GridRectangle MappedBounds = new GridRectangle();
 
-            MappedBounds.Left = (int)(System.Convert.ToDouble(mappedDims[0]) * pixelSpacing);
-            MappedBounds.Bottom = (int)(System.Convert.ToDouble(mappedDims[1]) * pixelSpacing);
-            MappedBounds.Right = ControlBounds.Left + (int)(System.Convert.ToDouble(mappedDims[2]) * pixelSpacing);
-            MappedBounds.Top = ControlBounds.Bottom + (int)(System.Convert.ToDouble(mappedDims[3]) * pixelSpacing);
+            double left, right, bottom, top;
+            left = (System.Convert.ToDouble(controlDims[0]) * pixelSpacing);
+            right = left + (System.Convert.ToDouble(controlDims[2]) * pixelSpacing);
+            bottom = (System.Convert.ToDouble(controlDims[1]) * pixelSpacing);
+            top = bottom + (System.Convert.ToDouble(controlDims[3]) * pixelSpacing);
+              
+            GridRectangle ControlBounds = new GridRectangle(left, right, bottom, top);
+
+            left = (int)(System.Convert.ToDouble(mappedDims[0]) * pixelSpacing);
+            right = left + (int)(System.Convert.ToDouble(mappedDims[2]) * pixelSpacing);
+            bottom = (int)(System.Convert.ToDouble(mappedDims[1]) * pixelSpacing);
+            top = bottom + (int)(System.Convert.ToDouble(mappedDims[3]) * pixelSpacing);
+
+            MappedBounds = new GridRectangle(left, right, bottom, top);
             
             string[] parts = lines[6].Split(new char[] {' '}, StringSplitOptions.RemoveEmptyEntries);
 

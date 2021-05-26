@@ -738,7 +738,7 @@ namespace Geometry.Transforms
                     if (AtoB.MapPoints.Length <= MinThreadPoints)
                     {
                         AddThreadObj.DoneEvent.Set();
-                        AddThreadObj.ThreadPoolCallback(System.Threading.Thread.CurrentContext);
+                        AddThreadObj.ThreadPoolCallback(System.Threading.Thread.CurrentThread);
                     }
                     else
                     {
