@@ -5,7 +5,7 @@ using System.Text;
 using UnitsAndScale;
 
 namespace UnitsAndScale
-{ 
+{
     /// <summary>
     /// Describes scale along an axis
     /// </summary>
@@ -18,7 +18,7 @@ namespace UnitsAndScale
         public AxisUnits(double value, string units)
         {
             Value = value;
-            Units = units; 
+            Units = units;
         }
     }
 
@@ -36,7 +36,7 @@ namespace UnitsAndScale
         {
             this.X = X;
             this.Y = Y;
-            this.Z = Z; 
+            this.Z = Z;
         }
     }
 }

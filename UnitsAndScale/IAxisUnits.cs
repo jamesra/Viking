@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace UnitsAndScale
-{ 
+{
     public interface IAxisUnits
     {
         /// <summary>
