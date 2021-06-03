@@ -1,11 +1,10 @@
-﻿using System;
+﻿using IdentityServer.Data;
+using IdentityServer.Models;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
-using IdentityServer.Models.UserViewModels;
-using IdentityServer.Models;
-using IdentityServer.Data;
 
 namespace IdentityServer.Extensions
 {

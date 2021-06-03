@@ -1,17 +1,6 @@
-﻿using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
+using System.Globalization;
 using System.Windows.Data;
-using AnnotationVizLib;
-using MonogameWPFLibrary;
-using SqlGeometryUtils;
-using Geometry;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using MonogameWPFLibrary.ViewModels;
-using System;
-using Geometry.Meshing;
 
 namespace MorphologyView
 {

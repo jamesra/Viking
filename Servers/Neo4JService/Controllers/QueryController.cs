@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Web;
-using System.Web.Mvc;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Web.Http;
-using VikingWebAppSettings;
-using Neo4j.Driver.V1;
-using System.IO;
-using Newtonsoft.Json.Converters;
+﻿using Neo4j.Driver.V1;
+using System;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.Http;
+using System.Web.Mvc;
 
 namespace Neo4JService.Controllers
 {

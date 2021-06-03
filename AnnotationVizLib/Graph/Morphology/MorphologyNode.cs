@@ -19,7 +19,6 @@ namespace AnnotationVizLib
         //Structure this node represents 
         public MorphologyGraph Graph;
 
-
         public MorphologyNode(ulong key, ILocation Location, MorphologyGraph parent)
             : base(key)
         {

@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Viking
-{ 
+{
 
     class TextureReaderV2 : IDisposable
     {

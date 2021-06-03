@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using IdentityServer.Models;
 using Microsoft.AspNetCore.Mvc;
-using IdentityServer.Models;
+using System.Diagnostics;
 
 namespace IdentityServer.Controllers
 {

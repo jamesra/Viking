@@ -1,10 +1,7 @@
 ﻿using Geometry;
 using Geometry.Meshing;
-using MorphologyMesh;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Diagnostics;
 //using TriangleNet.Meshing;
 
 namespace MorphologyMesh

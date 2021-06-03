@@ -9,7 +9,6 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-
     public class StructureObj : WCFObjBaseWithParent<long, Structure, StructureObj>, IStructure
     {
         public override long ID

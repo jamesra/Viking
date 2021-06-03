@@ -1,16 +1,11 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.ServiceModel;
-using WebAnnotationModel;
-using WebAnnotationModel.Objects;
-using WebAnnotationModel.Service; 
-using System.Diagnostics; 
-using System.Collections.Specialized;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
+using WebAnnotationModel;
 
 
 namespace WebAnnotationModelTest

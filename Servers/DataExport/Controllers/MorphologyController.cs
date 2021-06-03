@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections;
-using System.Linq;
-using System.Web;
-using System.Web.Mvc;
-using AnnotationVizLib;
-using GraphLib;
-using VikingWebAppSettings;
-using Geometry;
+﻿using AnnotationVizLib;
 using AnnotationVizLib.WCFClient;
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Web.Mvc;
 using UnitsAndScale;
+using VikingWebAppSettings;
 
 namespace DataExport.Controllers
 {

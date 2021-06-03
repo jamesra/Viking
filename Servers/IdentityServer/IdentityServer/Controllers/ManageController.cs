@@ -1,22 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Threading.Tasks;
+﻿using IdentityServer.Data;
+using IdentityServer.Extensions;
+using IdentityServer.Models;
+using IdentityServer.Models.ManageViewModels;
+using IdentityServer.Models.UserViewModels;
+using IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using IdentityServer.Models;
-using IdentityServer.Models.ManageViewModels;
-using IdentityServer.Services;
-using IdentityServer.Models.UserViewModels;
-using IdentityServer.Data;
-using IdentityServer.Extensions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 
 namespace IdentityServer.Controllers
 {

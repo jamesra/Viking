@@ -1,11 +1,6 @@
-﻿using System;
-using AnnotationVizLib;
-using AnnotationVizLib.SimpleOData;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
-using Geometry;
-using Geometry.Meshing;
-using UnitsAndScale;
 
 namespace ColladaIOTest
 {

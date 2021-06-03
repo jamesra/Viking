@@ -1,7 +1,7 @@
-﻿using System;
-using Microsoft.Xna.Framework;
-using VikingXNAGraphics;
+﻿using Microsoft.Xna.Framework;
 using MorphologyMesh;
+using System;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

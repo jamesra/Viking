@@ -1,21 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using IdentityModel;
+﻿using IdentityModel;
+using IdentityServer.Data;
+using IdentityServer.Models;
 using IdentityServer4.Extensions;
 using IdentityServer4.Models;
 using IdentityServer4.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using IdentityServer.Models;
-using IdentityServer.Data; 
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace IdentityServer.Extensions
 {
-    using IdentityServer4;
-
     public class IdentityWithExtendedClaimsProfileService : IProfileService
     {
         private readonly IUserClaimsPrincipalFactory<ApplicationUser> _claimsFactory;

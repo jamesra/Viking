@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Viking.Common
+﻿namespace Viking.Common
 {
     public interface IProgressReporter
     {

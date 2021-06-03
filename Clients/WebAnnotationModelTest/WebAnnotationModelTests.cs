@@ -1,21 +1,14 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.ServiceModel;
-using WebAnnotationModel;
-using WebAnnotationModel.Objects;
-using WebAnnotationModel.Service; 
-using System.Diagnostics; 
-using System.Collections.Specialized;
-using System.Collections.Concurrent;
-using System.ComponentModel;
+﻿using Annotation.Interfaces;
 using AnnotationService.Types;
-using Annotation.Interfaces;
-using Microsoft.SqlServer.Types;
-using Viking.Tokens;
 using IdentityModel.Client;
+using Microsoft.SqlServer.Types;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using Viking.Tokens;
+using WebAnnotationModel;
 
 
 namespace WebAnnotationModelTest

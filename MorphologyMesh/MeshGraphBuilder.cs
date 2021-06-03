@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using AnnotationVizLib;
 using Geometry;
 using Geometry.Meshing;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 using System.Collections.Concurrent;
-using AnnotationVizLib;
+using System.Collections.Generic;
+using System.Linq;
 using TriangleNet;
 using TriangleNet.Meshing;
-using System.Diagnostics;
 
 namespace MorphologyMesh
 {

@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Jotunn.Common;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Windows;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jotunn.Common;
-using Viking.VolumeModel;
 using Viking.VolumeViewModel;
 using WebAnnotationModel;
-using System.Collections.Specialized;
 
 
 namespace AnnotationViewModel

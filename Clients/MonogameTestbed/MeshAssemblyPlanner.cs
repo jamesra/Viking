@@ -1,16 +1,12 @@
-﻿using System;
-using Geometry;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Geometry.Meshing;
-using MorphologyMesh;
-using VikingXNA;
-using VikingXNAGraphics;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MorphologyMesh;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

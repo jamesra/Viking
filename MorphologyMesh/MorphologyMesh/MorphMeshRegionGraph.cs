@@ -1,15 +1,9 @@
-﻿using System;
-using System.Diagnostics;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry.Meshing;
-using Geometry;
 
 namespace MorphologyMesh
-{ 
+{
     public class MorphMeshRegionGraph : GraphLib.Graph<MorphMeshRegion, GraphLib.Node<MorphMeshRegion, MorphMeshRegionGraphEdge>, MorphMeshRegionGraphEdge>
     {
         public ImmutableSortedSet<double> ZLevels

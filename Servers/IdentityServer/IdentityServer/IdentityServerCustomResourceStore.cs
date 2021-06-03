@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq; 
-using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using IdentityServer4.Configuration;
+﻿using IdentityModel;
+using IdentityServer.Data;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
-using IdentityServer.Data;
-using IdentityModel;
-using IdentityServer4;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace IdentityServer
 {

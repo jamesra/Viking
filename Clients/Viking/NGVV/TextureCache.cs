@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using Viking.Common;
 using Viking.UI;
-using System.Threading.Tasks;
 
 namespace Viking
 {

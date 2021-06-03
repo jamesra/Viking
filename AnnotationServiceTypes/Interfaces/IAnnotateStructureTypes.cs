@@ -55,16 +55,7 @@ namespace AnnotationService.Interfaces
         /// <returns></returns>
         [OperationContract]
         Int64[] UpdateStructureTypes(StructureType[] structType);
-
-        /// <summary>
-        /// A test method used to ensure the service can handle a basic call
-        /// </summary>
-        /// <param name="structType"></param>
-        /// <returns></returns>
-        [OperationContract]
-        string TestMethod();
-
-
+          
         /// <summary>
         /// Return all structure types in the database
         /// </summary>

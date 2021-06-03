@@ -1,19 +1,15 @@
-﻿using System;
-using System.Runtime.Serialization;
-using System.ServiceModel;
-using System.ServiceModel.Activation;
+﻿using AnnotationService.Interfaces;
+using AnnotationService.Types;
 using ConnectomeDataModel;
-using System.Linq;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Web.Configuration;
-using System.Transactions;
-using System.Security.Permissions;
+using System.Linq;
 using System.Security;
+using System.Security.Permissions;
+using System.ServiceModel;
+using System.ServiceModel.Activation;
 using System.Threading.Tasks;
-
-using AnnotationService.Interfaces;
-using AnnotationService.Types;
 
 namespace Annotation
 {

@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using VikingXNAGraphics;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using VikingXNAGraphics;
 
 namespace VikingXNAGraphics
 {
-    
+
     /// <summary>
     /// A catch all that has all of the objects I usually need to render a scene onto a graphics device
     /// </summary>

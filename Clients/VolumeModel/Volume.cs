@@ -1,21 +1,18 @@
-using System;
-using System.IO;
-using System.Net;
-using System.Collections.Generic;
-using System.Text;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Xml.Linq;
-//using System.IO.Compression;
-using Ionic.Zip;
-using Utils;
 using Geometry;
 using Geometry.Transforms;
-using Viking.VolumeModel;
-using UnitsAndScale;
+//using System.IO.Compression;
+using Ionic.Zip;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using UnitsAndScale;
+using Utils;
 
 namespace Viking.VolumeModel
 {

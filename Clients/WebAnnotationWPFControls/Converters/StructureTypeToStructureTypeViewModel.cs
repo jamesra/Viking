@@ -1,18 +1,10 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Data;
 using WebAnnotationModel;
-using System.Collections.Specialized;
-using Annotation.Interfaces;
-using WebAnnotation.WPF.MockData;
 
-namespace WebAnnotation.WPF.Converters 
-{ 
+namespace WebAnnotation.WPF.Converters
+{
     internal class StructureTypeObjToStructureObjViewModelConverters : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

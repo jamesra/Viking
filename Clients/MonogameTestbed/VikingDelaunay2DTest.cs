@@ -1,19 +1,19 @@
-﻿using Geometry;
-using System.Linq;
-using System.Collections.Generic;
-using Geometry.Meshing;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
-using TriangleNet;
-using VikingXNA;
-using VikingXNAGraphics;
-using System.Threading.Tasks;
+﻿using FsCheck;
+using Geometry;
 using Geometry.JSON;
-using FsCheck;
+using Geometry.Meshing;
 using GeometryTests.Algorithms;
 using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using TriangleNet;
+using VikingXNA;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

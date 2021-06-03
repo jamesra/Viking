@@ -1,9 +1,9 @@
-﻿using System;
-using System.Diagnostics;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.ComponentModel;
-using Geometry;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace VikingXNA

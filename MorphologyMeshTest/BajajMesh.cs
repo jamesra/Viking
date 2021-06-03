@@ -1,14 +1,11 @@
-﻿using System;
-using System.Linq;
-using MorphologyMesh;
-using System.Collections.Generic;
-using FsCheck;
-using GeometryTests;
+﻿using FsCheck;
 using Geometry;
 using Geometry.JSON;
-using Geometry.Meshing;
-
+using GeometryTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MorphologyMesh;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MorphologyMeshTest
 {

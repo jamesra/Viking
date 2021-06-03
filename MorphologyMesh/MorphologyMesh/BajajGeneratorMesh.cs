@@ -1,12 +1,10 @@
-﻿using System;
+﻿using Geometry;
+using Geometry.Meshing;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using Geometry;
-using Geometry.Meshing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Linq;
 
 namespace MorphologyMesh
 {

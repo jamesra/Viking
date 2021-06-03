@@ -1,20 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using Microsoft.SqlServer.Types;
-using Geometry;
+﻿using Geometry;
 using Geometry.Meshing;
-using SqlGeometryUtils;
-using VikingXNAGraphics;
-using VikingXNA;
-using TriangleNet;
-using TriangleNet.Meshing;
+using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using MorphologyMesh;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using TriangleNet;
+using TriangleNet.Meshing;
+using VikingXNA;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

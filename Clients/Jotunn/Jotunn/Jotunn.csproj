@@ -92,8 +92,8 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MathNet.Numerics, Version=4.12.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Packages\MathNet.Numerics.4.12.0\lib\net461\MathNet.Numerics.dll</HintPath>
+    <Reference Include="MathNet.Numerics, Version=4.15.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Packages\MathNet.Numerics.4.15.0\lib\net461\MathNet.Numerics.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.OData.Core, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\..\..\Packages\Microsoft.OData.Core.6.15.0\lib\portable-net45+win+wpa81\Microsoft.OData.Core.dll</HintPath>
@@ -241,6 +241,10 @@
     <Resource Include="Viking.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Utils\Utils.csproj">
+      <Project>{ce81a8d8-0908-4eb3-9033-b7b149182f05}</Project>
+      <Name>Utils</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
       <Name>Common</Name>
@@ -248,10 +252,6 @@
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj">
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\Utils\Utils.csproj">
-      <Project>{49F7DDA5-1634-49ED-99FA-74962E43F2D2}</Project>
-      <Name>Utils</Name>
     </ProjectReference>
     <ProjectReference Include="..\JotunnCommon\JotunnUICommon.csproj">
       <Project>{a4e99a73-849c-44d3-8c1a-f0a942c569b4}</Project>
@@ -362,10 +362,10 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win-x64.2.2.0\build\MathNet.Numerics.MKL.Win-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win-x64.2.2.0\build\MathNet.Numerics.MKL.Win-x64.targets'))" />
     <Error Condition="!Exists('..\..\..\Packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets'))" />
-    <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.4.0\build\MathNet.Numerics.MKL.Win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win.2.4.0\build\MathNet.Numerics.MKL.Win.targets'))" />
+    <Error Condition="!Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.5.0\build\MathNet.Numerics.MKL.Win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Packages\MathNet.Numerics.MKL.Win.2.5.0\build\MathNet.Numerics.MKL.Win.targets'))" />
   </Target>
   <Import Project="..\..\..\Packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets" Condition="Exists('..\..\..\Packages\Microsoft.Bcl.Build.1.0.21\build\Microsoft.Bcl.Build.targets')" />
-  <Import Project="..\..\..\Packages\MathNet.Numerics.MKL.Win.2.4.0\build\MathNet.Numerics.MKL.Win.targets" Condition="Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.4.0\build\MathNet.Numerics.MKL.Win.targets')" />
+  <Import Project="..\..\..\Packages\MathNet.Numerics.MKL.Win.2.5.0\build\MathNet.Numerics.MKL.Win.targets" Condition="Exists('..\..\..\Packages\MathNet.Numerics.MKL.Win.2.5.0\build\MathNet.Numerics.MKL.Win.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
 	     Other similar extension points exist, see Microsoft.Common.targets.
 	<Target Name="BeforeBuild">

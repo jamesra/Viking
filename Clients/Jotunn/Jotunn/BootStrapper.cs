@@ -1,15 +1,9 @@
-﻿using System;
+﻿using Prism.Mef;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using Prism;
-using Prism.Modularity;
-using Prism.Mef.Modularity;
-using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
-using Prism.Mef;
+using System.IO;
 
 namespace Jotunn
 {

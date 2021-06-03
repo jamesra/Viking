@@ -1,10 +1,6 @@
-﻿using System;
+﻿using EntityFrameworkExtras.EF6;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using EntityFrameworkExtras;
-using EntityFrameworkExtras.EF6;
 
 namespace ConnectomeDataModel
 {

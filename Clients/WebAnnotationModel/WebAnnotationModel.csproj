@@ -69,6 +69,7 @@
   <ItemGroup>
     <Compile Include="EventArgs.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="Interfaces.cs" />
     <Compile Include="Objects\Attribute.cs" />
     <Compile Include="Objects\LocationLinkObj.cs" />
     <Compile Include="Objects\PermittedStructureLinkObj.cs" />

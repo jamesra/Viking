@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.ComponentModel;
+﻿using Annotation.ViewModels.Commands;
+using System;
 using System.Collections.ObjectModel;
-using Annotation.Interfaces;
-using WebAnnotationModel;
-using Annotation.ViewModels.Commands;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Windows;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
-using System.Diagnostics;
-using System.Windows;
 
 namespace Annotation.ViewModels
 {

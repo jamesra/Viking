@@ -1,16 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Windows.Forms;
-using System.Diagnostics;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Geometry;
-using System.Windows; 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Forms;
 using Viking.Common;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
-using System.ComponentModel;
-using Viking.UI;
 
 namespace Viking.UI.Commands
 {

@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
+using AnnotationVizLib;
 using Geometry;
 using Geometry.Meshing;
-using AnnotationVizLib;
 using SqlGeometryUtils;
-using Annotation.Interfaces;
+using System;
+using System.Linq;
 
 namespace MorphologyMesh
 {

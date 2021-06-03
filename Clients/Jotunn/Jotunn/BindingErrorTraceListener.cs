@@ -1,10 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using System.Windows;
 
 namespace SOTC_BindingErrorTracer
 {
-  public class BindingErrorTraceListener : DefaultTraceListener
+    public class BindingErrorTraceListener : DefaultTraceListener
   {
     private static BindingErrorTraceListener _Listener;
 

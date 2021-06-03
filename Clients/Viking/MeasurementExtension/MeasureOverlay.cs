@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
+﻿using Geometry;
 using Microsoft.Xna.Framework.Graphics;
+using SIMeasurement;
+using System;
 using Viking.UI.Controls;
 using VikingXNA;
-using SIMeasurement;
 using VikingXNAGraphics;
 
 namespace MeasurementExtension

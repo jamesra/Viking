@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using Prism.Modularity;
+﻿
 using Prism.Mef.Modularity;
-using Prism;
+using Prism.Modularity;
 //using Prism.MefExtensions;
 //using Prism.MefExtensions.Modularity;
 using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
-using System.Diagnostics;
 
 
 namespace Viking.VolumeViewModel

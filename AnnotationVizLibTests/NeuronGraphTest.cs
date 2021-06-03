@@ -1,9 +1,6 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
+﻿using AnnotationVizLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using AnnotationVizLib;
+using System;
 
 namespace AnnotationVizLibTests
 {

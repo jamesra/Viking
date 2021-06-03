@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Prism.Modularity;
+﻿using Microsoft.Practices.ServiceLocation;
 using Prism.Mef.Modularity;
-using Microsoft.Practices.ServiceLocation;
+using Prism.Modularity;
 using Prism.Regions;
-using System.ComponentModel.Composition;  
-using MonogameWPFLibrary.Views;
+using System;
+using System.Linq;
 
 namespace MorphologyView
 {

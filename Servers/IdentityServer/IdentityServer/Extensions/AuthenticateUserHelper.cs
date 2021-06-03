@@ -1,10 +1,10 @@
-﻿using IdentityServer.Data;
+﻿using IdentityServer.Authorization;
+using IdentityServer.Data;
 using IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using IdentityServer.Authorization;
 
 namespace IdentityServer.Extensions
 {

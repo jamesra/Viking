@@ -1,16 +1,13 @@
-﻿using IdentityServer4;
+﻿using IdentityModel;
+using IdentityServer.Data;
+using IdentityServer.Models;
+using IdentityServer4;
 using IdentityServer4.Models;
 using System.Collections.Generic;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using IdentityModel;
-using IdentityServer.Models;
-using IdentityServer.Data;
 
 
 namespace IdentityServer
-{ 
+{
 
     public class Config
     {

@@ -1,16 +1,14 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Geometry;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System;
-using VikingXNAGraphics;
-using VikingXNA;
 using RoundCurve;
 using RoundLineCode;
-using Geometry;
+using System;
 using System.Collections.Generic;
-using MonoGame.Framework;
-using MonoGame;
 using System.Diagnostics;
+using VikingXNA;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

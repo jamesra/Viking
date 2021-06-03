@@ -53,7 +53,7 @@ namespace WebAnnotationModel
         /// </summary>
         System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>>();
 
-        public LocationRTree SpatialSearch;
+        internal LocationRTree SpatialSearch;
 
         #region Proxy
 

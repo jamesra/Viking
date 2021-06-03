@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Geometry;
+using System;
 using System.Threading.Tasks;
-using Geometry;
 
 namespace VikingXNAGraphics
 {

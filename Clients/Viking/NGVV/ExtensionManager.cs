@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection; 
-using System.Linq;
-using System.Text;
-using System.IO;
 using System.Diagnostics;
-using Viking.Common;
-using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace Viking.Common

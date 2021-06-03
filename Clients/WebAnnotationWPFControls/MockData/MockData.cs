@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Annotation.Interfaces;
+﻿using Annotation.Interfaces;
 using Microsoft.SqlServer.Types;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace WebAnnotation.WPF.MockData
 {

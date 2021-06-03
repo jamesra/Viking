@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
+using System;
+using System.Globalization;
 using System.Windows.Data;
 using WebAnnotationModel;
-using System.Collections.Specialized;
-using Annotation.Interfaces;
-using WebAnnotation.WPF.MockData;
-using System.Globalization;
 
 namespace WebAnnotation.WPF.Converters
 {

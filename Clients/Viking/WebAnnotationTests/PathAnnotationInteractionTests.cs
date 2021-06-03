@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Geometry;
-using Viking;
-using WebAnnotation;
+﻿using Geometry;
 using GeometryTests;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using WebAnnotation.UI;
 
 namespace WebAnnotationTests

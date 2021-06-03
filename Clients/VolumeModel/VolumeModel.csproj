@@ -126,8 +126,12 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj">
-      <Project>{d451457b-2782-4473-a935-efa25c4fad7c}</Project>
+      <Project>{54a855c6-e843-4079-85a9-57157662d7e6}</Project>
       <Name>UnitsAndScale</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Utils\Utils.csproj">
+      <Project>{ce81a8d8-0908-4eb3-9033-b7b149182f05}</Project>
+      <Name>Utils</Name>
     </ProjectReference>
     <ProjectReference Include="..\Common\Common.csproj">
       <Project>{B35B0C61-EC9C-425A-846D-F160D5B12158}</Project>
@@ -137,11 +141,6 @@
     <ProjectReference Include="..\..\Geometry\Geometry.csproj">
       <Project>{EACB87E8-A5E3-417E-A9EF-B80C2A68C020}</Project>
       <Name>Geometry</Name>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Utils\Utils.csproj">
-      <Project>{49F7DDA5-1634-49ED-99FA-74962E43F2D2}</Project>
-      <Name>Utils</Name>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>

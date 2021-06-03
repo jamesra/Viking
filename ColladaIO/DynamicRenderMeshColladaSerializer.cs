@@ -1,13 +1,8 @@
-﻿using System;
+﻿using MorphologyMesh;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using Geometry.Meshing;
-using MorphologyMesh;
 using System.IO;
-using System.Xml.Serialization;
+using System.Linq;
 using UnitsAndScale;
 
 namespace ColladaIO

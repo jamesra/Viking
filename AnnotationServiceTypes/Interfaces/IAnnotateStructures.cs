@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.Serialization;
+﻿using AnnotationService.Types;
+using System;
 using System.ServiceModel;
-using Annotation;
-using AnnotationService.Types;
 
 namespace AnnotationService.Interfaces
 {
-    
+
     [ServiceContract]
     public interface IAnnotateStructures
     {

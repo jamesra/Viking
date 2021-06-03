@@ -1,22 +1,14 @@
-﻿using System;
-using System.Windows;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
-using System.Diagnostics; 
-using Microsoft.Xna.Framework;
-using Microsoft.Xna;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoGame.Framework.WpfInterop;
 using MonoGame.Framework.WpfInterop.Input;
 using MonogameWPFLibrary.ViewModels;
+using System;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows;
+using System.Windows.Input;
 
-using MonogameWPFLibrary;
- 
 
 namespace MonogameWPFLibrary.Views
 {

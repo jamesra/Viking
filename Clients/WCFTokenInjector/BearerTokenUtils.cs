@@ -1,17 +1,10 @@
-﻿using System;
-using Newtonsoft.Json;
+﻿using IdentityModel.Client;
 using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks; 
-using System.Xml.Linq; 
-using IdentityModel.Client;
+using System;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+
 
 namespace Viking.Tokens
 {

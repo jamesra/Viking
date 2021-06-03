@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using MonoGame;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Linq;
 using System.Windows;
 
 namespace MonogameWPFLibrary.ViewModels
-{     
+{
     /// <summary>
     /// Describes a mesh
     /// </summary>

@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace AnnotationService.Types
-{ 
+﻿namespace AnnotationService.Types
+{
     public static class StructureLinkExtensions
     {
         public static StructureLink Create(this ConnectomeDataModel.StructureLink obj)

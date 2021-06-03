@@ -1,8 +1,7 @@
-﻿using System;
-using Geometry;
-using SqlGeometryUtils;
+﻿using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SqlGeometryUtils;
 
 namespace SqlGeometryUtilsTest
 {

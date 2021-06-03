@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Diagnostics; 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace Geometry
-{ 
-        [Serializable]
+{
+    [Serializable]
     public struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>, ILineSegment2D, IEquatable<GridLineSegment>
     {
         public readonly GridVector2 A;

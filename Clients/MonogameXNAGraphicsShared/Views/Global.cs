@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Microsoft.Xna.Framework; 
+﻿using Geometry;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Geometry;
+using System;
+using System.Collections.Generic; 
+using System.Text;
+using System.Linq;
 
 namespace VikingXNAGraphics
 {

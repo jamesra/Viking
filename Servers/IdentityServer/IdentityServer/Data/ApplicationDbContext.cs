@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using IdentityServer.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
-using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
 using Microsoft.Extensions.Logging;
 
 namespace IdentityServer.Data

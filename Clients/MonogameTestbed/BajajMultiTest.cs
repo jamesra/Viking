@@ -1,23 +1,20 @@
-﻿using Geometry;
+﻿using AnnotationVizLib;
 using ColladaIO;
+using Geometry;
 using Geometry.Meshing;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MorphologyMesh;
-using SqlGeometryUtils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using TriangleNet;
-using TriangleNet.Meshing;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
-using AnnotationVizLib;
-using System.Threading.Tasks;
 
 
 namespace MonogameTestbed

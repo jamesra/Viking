@@ -1,17 +1,13 @@
 ﻿
 using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Serialization;
-using System.Linq.Expressions;
-using System.Linq;
 
 
 namespace ColladaIO

@@ -19,7 +19,6 @@ namespace AnnotationService.Interfaces
         /// <param name="structType"></param>
         /// <returns>IDs of updated</returns.
         [OperationContract]
-        void UpdatePermittedStructureLinks(PermittedStructureLink[] permittedStructureLinks);
-
+        void UpdatePermittedStructureLinks(PermittedStructureLink[] permittedStructureLinks); 
     }
 }

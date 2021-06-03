@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Geometry;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using VikingXNA;
 
 namespace VikingXNAGraphics
-{  
+{
     /// <summary>
     /// Draws a closed curve through the control points using Catmull-rom
     /// </summary>

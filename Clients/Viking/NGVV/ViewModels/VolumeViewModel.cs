@@ -1,14 +1,12 @@
-﻿using System;
+﻿using Geometry;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Xml.Linq; 
+using System.Xml.Linq;
 using Viking.VolumeModel;
-using Geometry;
 
 namespace Viking.ViewModels
 {
-     
+
     public class VolumeViewModel : IVolumeTransformProvider
     {
         private Volume _Volume;

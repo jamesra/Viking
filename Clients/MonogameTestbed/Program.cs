@@ -1,10 +1,8 @@
-﻿using System;
-using CommandLine;
-using CommandLine.Text;
+﻿using CommandLine;
+using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace MonogameTestbed
 {
@@ -125,14 +123,14 @@ namespace MonogameTestbed
 
             private static List<ulong> InputParameterListToIDs(IEnumerable<string> input)
             {
-                return input.SelectMany(param => InputParameterListToIDs(param)).ToList() ;
+                return input.SelectMany(param => InputParameterListToIDs(param)).ToList();
             }
 
             private static List<ulong> InputParameterListToIDs(string input)
             {
                 List<ulong> listNumbers = new List<ulong>();
 
-                foreach (string chunk in input.Split(new char[] { ',', ';' }).Select(s => s.Trim()))
+                foreach (string chunk in input.Split(new char[] { ',', ';' }).Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)))
                 {
                     if (IsIntegerOrIntegerRange(chunk))
                     {
@@ -181,7 +179,7 @@ namespace MonogameTestbed
                     throw new ArgumentException($"File argument ${filename} was not found, is it in the path?");
                 }
 
-                return results; 
+                return results;
             }
 
             /// <summary>
@@ -234,6 +232,8 @@ namespace MonogameTestbed
                     System.Console.WriteLine($"Unable to parse command line arguments ${errors}, aborting");
                     return;
                 });
+
+            Geometry.Global.TryUseNativeMKL();
              
             using (var game = new MonoTestbed())
                 game.Run();

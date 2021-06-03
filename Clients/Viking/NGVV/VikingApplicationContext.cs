@@ -1,18 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.UI.Forms;
-using System.Diagnostics;
 
 namespace Viking
 {
     /// <summary>
     /// Application context that shows the splash screen, initializes caches and modules, and then shows main Viking form
     /// </summary>
-   
+
     public class VikingApplicationContext : ApplicationContext
     { 
         public VikingApplicationContext(string VolumeURL)

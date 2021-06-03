@@ -1,19 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using VikingXNAGraphics;
-using VikingXNA;
-using Microsoft.Xna.Framework.Graphics;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using Geometry.Meshing;
-using MathNet.Numerics.LinearAlgebra;
-using AnnotationVizLib.SimpleOData;
 using TriangleNet;
+using VikingXNA;
+using VikingXNAGraphics;
 
 
 namespace MonogameTestbed

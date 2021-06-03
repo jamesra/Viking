@@ -1,0 +1,7 @@
+<VisualReCode>
+  <WcfToGrpc SourceSolution="Everything.sln" TargetSolution="gRPC.sln" TargetFramework="net5.0">
+    <Services>
+      <Service ServiceContractProject="AnnotationServiceTypes\AnnotationServiceTypes.csproj" TargetProject="gRPCAnnotationServiceCore" ServiceContract="AnnotationService.Interfaces.IAnnotateLocations" GenerateClientProject="True" GenerateWcfProxyProject="True" Implementation="Annotation.AnnotateService" ImplementationProject="Servers\AnnotationService\AnnotationService\AnnotationService.csproj" TargetClientProject="gRPCAnnotationServiceCore.Client" TargetWcfProxyProject="AnnotationService.WcfProxy" />
+    </Services>
+  </WcfToGrpc>
+</VisualReCode>

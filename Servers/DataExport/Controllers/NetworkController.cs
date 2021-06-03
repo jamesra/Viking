@@ -1,14 +1,11 @@
-﻿using System;
+﻿using AnnotationVizLib;
+using AnnotationVizLib.WCFClient;
+using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
-using System.Net.Http;
-using DataExport;
-using AnnotationVizLib;
 using VikingWebAppSettings;
-using AnnotationVizLib.WCFClient;
-using System.Threading.Tasks;
 
 namespace DataExport.Controllers
 {

@@ -1,17 +1,10 @@
-﻿using System;
+﻿using Neo4j.Driver.V1;
+using Simple.OData.Client;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Neo4j.Driver.V1;
-using System.Web;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json.Converters;
-using Simple.OData.Client.V4;
-using Simple.OData.Client;
-using Simple.OData.Client.Extensions;
 
 namespace Neo4JGenerator
 {

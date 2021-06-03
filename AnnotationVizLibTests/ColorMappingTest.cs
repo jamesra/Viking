@@ -1,9 +1,7 @@
-﻿using System;
-using System.Drawing;
+﻿using AnnotationVizLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Drawing;
 using UnitsAndScale;
-
-using AnnotationVizLib;
 
 namespace AnnotationVizLibTests
 {

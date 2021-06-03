@@ -1,6 +1,6 @@
-﻿using Prism.Modularity;
+﻿using Microsoft.Practices.ServiceLocation;
 using Prism.Mef.Modularity;
-using Microsoft.Practices.ServiceLocation;
+using Prism.Modularity;
 using Prism.Regions;
 
 namespace Viking.VolumeView

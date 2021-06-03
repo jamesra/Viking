@@ -103,7 +103,7 @@
       <Name>TriangleNetGeometryExtensions</Name>
     </ProjectReference>
     <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj">
-      <Project>{d451457b-2782-4473-a935-efa25c4fad7c}</Project>
+      <Project>{54a855c6-e843-4079-85a9-57157662d7e6}</Project>
       <Name>UnitsAndScale</Name>
     </ProjectReference>
   </ItemGroup>

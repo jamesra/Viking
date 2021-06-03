@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Xml.Linq;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
+using System.Xml.Linq;
 
 namespace Jotunn
 {

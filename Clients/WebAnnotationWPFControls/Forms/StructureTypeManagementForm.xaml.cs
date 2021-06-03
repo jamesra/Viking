@@ -1,26 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
+using Annotation.ViewModels;
+using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Controls.Primitives;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
-using Annotation.Interfaces;
-using System.Diagnostics;
 using WebAnnotationModel;
-using Annotation.ViewModels.Commands;
-using WebAnnotationModel.Objects;
-using Annotation.ViewModels;
 
 namespace WebAnnotation.WPF.Forms
-{ 
+{
     /// <summary>
     /// Interaction logic for StructureTypeManagementForm.xaml
     /// </summary>

@@ -1,9 +1,9 @@
-﻿using System.Windows;
+﻿using Jotunn.Common;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Diagnostics;
-using Jotunn.Common; 
 
 namespace Jotunn.Controls
 {

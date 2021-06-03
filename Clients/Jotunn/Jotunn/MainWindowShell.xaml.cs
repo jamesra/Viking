@@ -1,26 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Jotunn.Common;
+using System;
 using System.Diagnostics;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
-using Prism;
-using Prism.Regions;
-using Prism.Modularity;
-using Jotunn.Common;
 
 namespace Jotunn
 {
-	/// <summary>
-	/// Interaction logic for MainWindow.xaml
-	/// </summary>
-	public partial class MainWindow : Window, IShellView
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window, IShellView
 	{
         private static RoutedUICommand incrementCenterIndexCommand;
         private static RoutedUICommand decrementCenterIndexCommand;

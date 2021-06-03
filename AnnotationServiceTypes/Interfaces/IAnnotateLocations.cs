@@ -1,6 +1,6 @@
-﻿using System;
+﻿using AnnotationService.Types;
+using System;
 using System.ServiceModel;
-using AnnotationService.Types;
 
 namespace AnnotationService.Interfaces
 {

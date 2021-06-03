@@ -1,10 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
-using System.Windows.Forms;
-using Viking.ViewModels;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Viking.UI.Forms
 {

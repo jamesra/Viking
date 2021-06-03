@@ -1,11 +1,11 @@
 ﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System.Collections.Generic;
+using System.Linq;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace MonogameTestbed
 {

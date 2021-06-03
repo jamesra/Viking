@@ -1,22 +1,17 @@
-﻿using System;
-using System.ServiceModel; 
-using System.IO; 
-using System.Net;
+﻿using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Xml;  
-using System.Xml.Linq; 
-using System.Text;
-using Viking.Common;
-using Viking;
-using System.Diagnostics;
-using Viking.VolumeModel;
-using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Xml.Linq;
+using Viking.Common;
 //using WebAnnotation.AuthenticationService;
 
 namespace WebAnnotation
-{ 
+{
     public class Global : IInitExtensions
     {
         internal static double DefaultLocationJumpDownsample = 4; //Jumping to a location causes it's diameter to occupy 1/8 the width of the screen

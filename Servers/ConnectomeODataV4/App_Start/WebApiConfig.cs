@@ -1,10 +1,10 @@
-﻿using System.Web.Http;
+﻿//using System.Web.Http.Batch;
+using ConnectomeDataModel;
+using Microsoft.AspNet.OData.Batch;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Extensions;
-using Microsoft.AspNet.OData.Batch;
-//using System.Web.Http.Batch;
-using ConnectomeDataModel;
 using Microsoft.OData.Edm;
+using System.Web.Http;
 
 namespace ConnectomeODataV4
 {

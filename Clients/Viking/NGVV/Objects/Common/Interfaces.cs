@@ -1,7 +1,5 @@
-﻿using System;
+﻿using Geometry;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework; 
-using Geometry; 
 
 namespace Viking.Common
 {

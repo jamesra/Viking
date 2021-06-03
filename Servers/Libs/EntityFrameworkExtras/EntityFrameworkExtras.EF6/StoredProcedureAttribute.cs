@@ -2,7 +2,7 @@
 
 namespace EntityFrameworkExtras.EF6
 {
-	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 	public class StoredProcedureAttribute : Attribute
 	{
 		public StoredProcedureAttribute(string name)

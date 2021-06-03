@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Prism.Modularity;
+﻿using Microsoft.Practices.ServiceLocation;
 using Prism.Mef.Modularity;
-using Microsoft.Practices.ServiceLocation;
+using Prism.Modularity;
 using Prism.Regions;
-using System.ComponentModel.Composition;
-using AnnotationViewModel;
-using Jotunn.Common;
 
 namespace Jotunn.AnnotationView
 {

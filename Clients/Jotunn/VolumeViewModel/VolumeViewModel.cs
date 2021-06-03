@@ -1,17 +1,13 @@
-﻿using System;
+﻿using Jotunn.Common;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Viking.VolumeModel;
-using System.Xml.Linq;
-using System.ComponentModel.Composition;
-using Jotunn.Common;
-using System.Windows;
-using System.Windows.Input;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows;
+using System.Xml.Linq;
+using Viking.VolumeModel;
 
 namespace Viking.VolumeViewModel
-{    
+{
     /// <summary>
     /// A view of a volume and a number of sections of the same X/Y region across all visible regions
     /// </summary>

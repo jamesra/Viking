@@ -1,14 +1,9 @@
-﻿using System;
-using System.Runtime.Serialization.Formatters;
-using System.Text;
+﻿using AnnotationVizLib;
+using Geometry;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using AnnotationVizLib;
-using GraphLib;
-using Geometry;
-using ODataClient;
-using ODataClient.ConnectomeDataModel;
 
 namespace AnnotationVizLibTests
 {

@@ -1,9 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿
+/* Unmerged change from project 'Monographics'
+Before:
+using System;
+After:
+using Geometry;
+using Microsoft.Xna.Framework;
+using System;
+*/
+using
+/* Unmerged change from project 'Monographics'
+Before:
 using System.Threading.Tasks;
 using Geometry;
+using Microsoft.Xna.Framework;
+After:
+using System.Threading.Tasks;
+*/
+Geometry;
 using Microsoft.Xna.Framework;
 
 namespace VikingXNA

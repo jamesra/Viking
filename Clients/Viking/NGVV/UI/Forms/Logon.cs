@@ -1,11 +1,10 @@
-﻿using System;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using IdentityModel.Client;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Net; 
+using System.Net;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,11 +13,9 @@ using System.Windows.Threading;
 using System.Xml.Linq;
 using Utils;
 using Viking.Properties;
-using IdentityModel.Client;
-using Viking.Tokens;
 
 namespace Viking.UI.Forms
-{ 
+{
     public partial class Logon : Form
     {
         public const string IdentityServerUri = "https://identity.connectomes.utah.edu/";

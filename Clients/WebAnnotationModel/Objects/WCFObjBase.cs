@@ -161,7 +161,6 @@ namespace WebAnnotationModel.Objects
         {
             WCFObjBase<T> objClone = Activator.CreateInstance(this.GetType(), new object[] { this.Data }) as WCFObjBase<T>;
             return objClone;
-
         }
 
         /*

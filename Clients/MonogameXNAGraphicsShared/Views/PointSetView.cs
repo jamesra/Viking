@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
+﻿using Geometry;
 using Geometry.Meshing;
-using VikingXNAGraphics;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using VikingXNA;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using VikingXNA; 
+using Microsoft.Xna.Framework.Graphics; 
 
 namespace VikingXNAGraphics
 {

@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace IdentityServer.Models.UserViewModels
-{ 
-    
+{
+
     public class ResourcePermissionsViewModel<KEY>
     {
         [Display(Name = "Grantee", Description = "Entity being granted permission")]

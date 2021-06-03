@@ -1,7 +1,6 @@
-﻿using System.Web.Mvc;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Neo4JService;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Neo4JService.Controllers;
+using System.Web.Mvc;
 
 namespace Neo4JService.Tests.Controllers
 {

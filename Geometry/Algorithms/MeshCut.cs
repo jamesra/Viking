@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("GeometryTests")]
 namespace Geometry.Meshing
 {
 

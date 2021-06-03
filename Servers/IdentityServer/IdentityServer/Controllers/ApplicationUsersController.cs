@@ -1,18 +1,16 @@
-﻿using System;
+﻿using IdentityServer.Data;
+using IdentityServer.Extensions;
+using IdentityServer.Models;
+using IdentityServer.Models.UserViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using IdentityServer.Data;
-using IdentityServer.Models;
-using Microsoft.AspNetCore.Authorization;
-using IdentityServer.Models.UserViewModels;
-using IdentityServer.Extensions;
 
 namespace IdentityServer.Controllers
-{ 
+{
     [Route("[controller]/[action]")]
     public class ApplicationUsersController : Controller
     {

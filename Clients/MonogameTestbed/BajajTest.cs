@@ -1,4 +1,5 @@
 ﻿using Geometry;
+using Geometry.JSON;
 using Geometry.Meshing;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -6,7 +7,6 @@ using Microsoft.Xna.Framework.Input;
 using MorphologyMesh;
 using SqlGeometryUtils;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,7 +15,6 @@ using TriangleNet;
 using TriangleNet.Meshing;
 using VikingXNA;
 using VikingXNAGraphics;
-using Geometry.JSON;
 //using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
 //using SliceChordRTree = RTree.RTree<MorphologyMesh.ISliceChord>;
 

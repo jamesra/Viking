@@ -16,16 +16,23 @@ namespace Geometry
 
         public const float EpsilonSquared = Global.Epsilon * Global.Epsilon;
 
-        static Global()
+        public static bool TryUseNativeMKL()
         {
+            bool loaded = false;
             try
             {
-                MathNet.Numerics.Control.UseNativeMKL();
+                loaded = MathNet.Numerics.Control.TryUseNativeMKL();
+                System.Diagnostics.Trace.WriteLine($"\n\nGeometry: Native MKL library {(loaded ? "" : "not")} found");
+                System.Diagnostics.Trace.WriteLine($"Geometry: Mathnet.Numerics:\n{MathNet.Numerics.Control.Describe()}\n\n");
+                return loaded;
             }
             catch (Exception e)
             {
-                System.Diagnostics.Trace.WriteLine("Unable to load Native MKL library.  Exception text:\n" + e.Message);
+                System.Diagnostics.Trace.WriteLine("Geometry: Unable to load Native MKL library.  Exception text:\n" + e.Message);
+                return false;
             }
+
+            
         }
 
         public static bool IsCacheFileValid(string CacheStosPath, DateTime time)

@@ -22,3 +22,4 @@ TestResults
 **/Modules/**/*.dll.config
 **/.vs/
 **/MigrationBackup
+/src/

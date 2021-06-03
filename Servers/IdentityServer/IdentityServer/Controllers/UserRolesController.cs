@@ -1,27 +1,18 @@
-﻿using System;
+﻿using IdentityServer.Data;
+using IdentityServer.Models;
+using IdentityServer.Models.UserViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using IdentityServer.Data;
-using IdentityServer.Models;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using IdentityServer.Models.AccountViewModels;
-using IdentityServer.Services;
-using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Controllers
 {
- 
+
     [Route("[controller]/[action]")]
     [Authorize]
     public class UserRolesController : Controller

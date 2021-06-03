@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.ComponentModel;
-using System.Collections.ObjectModel;
-using Annotation.Interfaces;
-using WebAnnotationModel;
+﻿using Annotation.Interfaces;
 using Annotation.ViewModels.Commands;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using WebAnnotationModel;
 
 namespace Annotation.ViewModels
 {

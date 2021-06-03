@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Viking.Common;
+﻿using Viking.Common;
 
 namespace Viking.VolumeViewModel
 {

@@ -1,9 +1,8 @@
-﻿using System;
-using System.Linq;
-using Geometry;
+﻿using Geometry;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Linq;
 using VikingXNA;
-using VikingXNAGraphics;
 
 namespace VikingXNAGraphics
 {

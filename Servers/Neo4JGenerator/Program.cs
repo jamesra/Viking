@@ -1,15 +1,10 @@
-﻿using System;
+﻿using Neo4j.Driver.V1;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Neo4j.Driver.V1;
-using System.Web;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json.Converters;
-using CommandLine; 
 
 namespace Neo4JGenerator
 {

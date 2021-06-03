@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WebAnnotationModel;
-using System.Windows;
-using System.ComponentModel;
+﻿using Annotation.ViewModels.Commands;
+using System;
 using System.Collections.ObjectModel;
-using WebAnnotationModel.Objects;
-using Annotation.ViewModels.Commands;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
+using System.Windows;
+using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
-namespace Annotation.ViewModels 
+namespace Annotation.ViewModels
 {
     public class ClearStructureTypeParentCommand : System.Windows.Input.ICommand
     {

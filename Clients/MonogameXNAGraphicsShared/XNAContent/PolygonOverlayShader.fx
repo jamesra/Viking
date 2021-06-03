@@ -11,7 +11,7 @@
 //The program determines the hue via converting the RGB color attribute of the vertex.
 //The alpha channel of vertex color indicates how much the texture value is blended with the background value.
 
- 
+
 struct PolygonVertexShaderInput
 {
     float4 Position : POSITION0;

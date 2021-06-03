@@ -1,21 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using VikingXNAGraphics;
-using VikingXNA;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
+﻿using Geometry;
 using Geometry.Meshing;
-using MathNet.Numerics.LinearAlgebra;
-using AnnotationVizLib.SimpleOData;
 using MIConvexHull;
 using MIConvexHullExtensions;
-using SqlGeometryUtils;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MorphologyMesh;
+using SqlGeometryUtils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using VikingXNA;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

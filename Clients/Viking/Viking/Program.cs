@@ -1,14 +1,13 @@
 ﻿//#define USEASPMEMBERSHIP
 
+using CommandLine;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 using Viking.UI.Forms;
-using CommandLine;
-using CommandLine.Text;
- 
+
 namespace Viking
 {
     class CommandLineOptions

@@ -205,25 +205,24 @@
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Libs\EntityFrameworkExtras\EntityFrameworkExtras.EF6\EntityFrameworkExtras.EF6.csproj">
-      <Project>{7ed1d61c-9396-4663-952d-d2f7dad19b19}</Project>
-      <Name>EntityFrameworkExtras.EF6</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Libs\EntityFrameworkExtras\EntityFrameworkExtras.EF6\EntityFrameworkExtras.EF6.csproj">
-      <Project>{7ed1d61c-9396-4663-952d-d2f7dad19b19}</Project>
-      <Name>EntityFrameworkExtras.EF6</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework">
-      <Version>6.2.0</Version>
+      <Version>6.4.4</Version>
+    </PackageReference>
+    <PackageReference Include="EntityFrameworkExtras">
+      <Version>3.0.5</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.SqlServer.Types">
       <Version>14.0.1016.290</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Libs\EntityFrameworkExtras\EntityFrameworkExtras.EF6\EntityFrameworkExtras.EF6.csproj">
+      <Project>{7ed1d61c-9396-4663-952d-d2f7dad19b19}</Project>
+      <Name>EntityFrameworkExtras.EF6</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

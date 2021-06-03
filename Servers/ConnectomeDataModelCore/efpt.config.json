@@ -1,0 +1,304 @@
+﻿{
+   "CodeGenerationMode": 0,
+   "ContextClassName": "AnnotationContext",
+   "ContextNamespace": null,
+   "DefaultDacpacSchema": null,
+   "FilterSchemas": false,
+   "IncludeConnectionString": true,
+   "ModelNamespace": null,
+   "OutputContextPath": null,
+   "OutputPath": "",
+   "ProceduresReturnList": false,
+   "ProjectRootNamespace": "Viking.DataModel.Annotation",
+   "Schemas": null,
+   "SelectedHandlebarsLanguage": 0,
+   "SelectedToBeGenerated": 0,
+   "Tables": [
+      {
+         "Name": "[dbo].[DeletedLocations]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Location]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[LocationLink]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PermittedStructureLink]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Structure]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[StructureLink]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[StructureSpatialCache]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[StructureTemplates]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[StructureType]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UserActivity]",
+         "ObjectType": 3
+      },
+      {
+         "Name": "[dbo].[ApproximateStructureLocation]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[ApproximateStructureLocations]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[CountChildStructuresByType]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[DeepDeleteStructure]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[MergeStructures]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[RecursiveSelectChildStructureIDs]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectAllStructureLocationLinks]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectAllStructureLocations]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectAllStructures]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectChildrenStructureLinks]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectChildStructureCenters3D]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectLastModifiedLocationByUsers]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNearestChildAttachLocationCandidates]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNearestParentAttachCandidatesForLocations]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNearestParentAttachLocationCandidates]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNetworkChildStructureIDs]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNetworkChildStructures]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNetworkChildStructureSpatialData]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNetworkDetails]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNetworkStructureIDs]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNetworkStructureLinks]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNetworkStructures]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNetworkStructureSpatialData]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectNumConnectionsPerStructure]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectRootStructures]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionAnnotationsInMosaicBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionAnnotationsInVolumeBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionLocationLinks]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionLocationLinksInMosaicBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionLocationLinksInVolumeBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionLocationsAndLinks]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionLocationsAndLinksInMosaicBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionLocationsAndLinksInVolumeBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionStructures]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionStructuresAndLinks]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionStructuresAndLinksInMosaicBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionStructuresAndLinksInVolumeBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionStructuresInMosaicBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectSectionStructuresInVolumeBounds]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructure]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructureChangeLog]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructureLabels]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructureLocationChangeLog]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructureLocationLinks]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructureLocationLinksNoChildren]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructureLocations]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructureLocationsAndLinks]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructuresAndLinks]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectStructuresLinkedViaChildren]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectUnfinishedStructureBranches]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SelectUnfinishedStructureBranchesWithPosition]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SplitStructure]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[SplitStructureAtLocationLink]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[UpdateStructureType]",
+         "ObjectType": 1
+      },
+      {
+         "Name": "[dbo].[XYScale]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[XYScaleUnits]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ZScale]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ZScaleUnits]",
+         "ObjectType": 2
+      }
+   ],
+   "UiHint": "opr-marc-db2.Test.dbo",
+   "UseBoolPropertiesWithoutDefaultSql": false,
+   "UseDatabaseNames": false,
+   "UseDbContextSplitting": false,
+   "UseFluentApiOnly": false,
+   "UseHandleBars": false,
+   "UseInflector": true,
+   "UseLegacyPluralizer": false,
+   "UseNoConstructor": false,
+   "UseNoNavigations": false,
+   "UseNoObjectFilter": false,
+   "UseNodaTime": false,
+   "UseNullableReferences": false,
+   "UseSpatial": true
+}

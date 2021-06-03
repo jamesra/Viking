@@ -6,6 +6,10 @@
     <Copyright>Copyright James Anderson ©  2021</Copyright>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="GridTransformFactory.cs" />
   </ItemGroup>

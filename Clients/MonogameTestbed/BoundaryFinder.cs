@@ -1,13 +1,10 @@
-﻿using System;
+﻿using Geometry;
+using Geometry.Meshing;
+using MorphologyMesh;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Geometry;
-using Geometry.Meshing;
 using TriangleNet;
-using GraphLib;
-using MorphologyMesh;
 
 namespace MonogameTestbed
 {

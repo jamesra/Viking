@@ -1,9 +1,7 @@
-﻿using System;
+﻿using IdentityServer.Models;
+using IdentityServer.Models.UserViewModels;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
 
 namespace IdentityServer.Extensions
 {

@@ -1,10 +1,6 @@
-﻿using System;
+﻿using SqlGeometryUtils;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SqlGeometryUtils;
-using Annotation;
 
 namespace AnnotationService.Types
 {

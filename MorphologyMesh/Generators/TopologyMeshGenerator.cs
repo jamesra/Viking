@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Annotation.Interfaces;
 using AnnotationVizLib;
 using Geometry;
 using Geometry.Meshing;
-using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
-using TriangleNet;
-using TriangleNet.Meshing;
-using TriangleNet.Geometry;
-using Annotation.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MorphologyMesh
-{  
+{
     public class TopologyMeshGenerator
     {
         static public int NumPointsAroundCircle = 16;

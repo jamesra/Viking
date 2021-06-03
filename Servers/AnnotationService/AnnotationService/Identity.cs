@@ -1,19 +1,15 @@
-﻿using System;
+﻿using IdentityModel.Client;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
-using System.IdentityModel.Selectors;
 using System.IdentityModel.Policy;
-using System.Security.Principal;
-using System.ServiceModel.Channels;
-using IdentityModel;
-using IdentityModel.Client; 
-using System.ServiceModel;
-using System.Threading;
+using System.Linq;
 using System.Net.Http;
+using System.Security.Principal;
+using System.ServiceModel;
+using System.ServiceModel.Channels;
+using System.Threading.Tasks;
 
 namespace Annotation.Identity
 {

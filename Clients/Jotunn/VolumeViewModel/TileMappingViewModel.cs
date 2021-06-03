@@ -1,13 +1,10 @@
-﻿using System;
+﻿using Jotunn.Common;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using Viking.VolumeModel;
-using System.Windows;
-using System.Windows.Input;
-using Jotunn.Common;
 using System.Diagnostics;
+using System.Linq;
+using System.Windows;
+using Viking.VolumeModel;
 
 
 namespace Viking.VolumeViewModel

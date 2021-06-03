@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.Xaml.Behaviors;
+using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
-using Microsoft.Xaml.Behaviors;
-using MonogameWPFLibrary.Views;
-using MathNet.Numerics.LinearAlgebra;
 using VikingXNAGraphics;
 
 namespace MonogameWPFLibrary.Views
