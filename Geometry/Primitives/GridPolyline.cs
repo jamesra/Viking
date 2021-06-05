@@ -1,8 +1,9 @@
 ﻿using Geometry.JSON;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-
+ 
 namespace Geometry
 {
     /// <summary>
@@ -15,6 +16,9 @@ namespace Geometry
         public readonly bool AllowsSelfIntersection = false;
 
         private GridLineSegment? KnownSelfIntersection;
+
+        public bool Closed => _Points.Count < 3 ? false
+                                    : _Points.First() == _Points.Last();
 
         public bool HasSelfIntersection
         {
@@ -33,6 +37,13 @@ namespace Geometry
         private RTree.RTree<GridLineSegment> rTree = null;
 
         public int PointCount { get { return _Points.Count; } }
+
+        public int NumUniqueVerticies { get
+            {
+                return _Points.Count - (this.Closed ? 1 : 0);
+            }
+        }
+
         public int LineCount { get { return LineSegments.Count; } }
 
         public GridPolyline(bool AllowSelfIntersection = false)
@@ -62,11 +73,44 @@ namespace Geometry
         {
             this.AllowsSelfIntersection = AllowSelfIntersection;
 
-            _Points = new List<IPoint2D>(points.Count());
+            _Points = points.Cast<IPoint2D>().ToList();
+        }
 
-            foreach (var p in points)
+        /*
+        public static implicit operator IPoint2D[](GridPolyline src)
+        {
+            return src._Points.ToArray();
+        }
+
+        public static implicit operator List<IPoint2D>(GridPolyline src)
+        {
+            return src._Points.ToList();
+        }
+
+        public static implicit operator GridVector2[](GridPolyline src)
+        {
+            return src._Points.Select(p => new GridVector2(p)).ToArray();
+        }
+
+        public static implicit operator List<GridVector2>(GridPolyline src)
+        {
+            return src._Points.Select(p => new GridVector2(p)).ToList();
+        }
+        */
+
+        public GridVector2 this[PolylineIndex index]
+        {
+            get
             {
-                this.Add(p);
+                return _Points[index.iVertex].ToGridVector2();
+            }
+        }
+
+        public IPoint2D this[PolylineIndex index]
+        {
+            get
+            {
+                return _Points[index.iVertex];
             }
         }
 
@@ -113,7 +157,7 @@ namespace Geometry
             }
 
             //Figure out why we can't add and throw an exception
-            if (_Points.Contains(next))
+            if (_Points.Contains(next) && AllowsSelfIntersection == false)
                 throw new ArgumentException("Point already in Polyline that does not allow self-intersection");
 
             GridLineSegment line = new GridLineSegment(_Points.Last(), next);
@@ -123,13 +167,176 @@ namespace Geometry
                 _Points.Add(next);
                 rTree.Add(line.BoundingBox, line);
             }
-            else if (AllowsSelfIntersection == false)
+            else if (AllowsSelfIntersection == false || AllowsSelfIntersection && KnownSelfIntersection.HasValue == false)
             {
                 List<GridLineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox);
 
+                if (line.SelfIntersects(this.LineSegments.Where(l => intersectionCandidates.Contains(l)).ToList(), LineSetOrdering.POLYLINE, out GridLineSegment? intersected))
+                {
+                    if (AllowsSelfIntersection == false)
+                        throw new ArgumentException("Added point created self-intersecting line in Polyline");
+                    else
+                        this.KnownSelfIntersection = intersected;
+                }
+            }
+            
+            _Points.Add(next);
+            var Existing = this.LineSegments;
+            Existing.Add(line);
+            rTree.Add(line.BoundingBox, line);
+            this._LineSegments = Existing;
+            
+        }
+
+        public void Insert(int index, IPoint2D value)
+        {
+            if (rTree == null)
+                rTree = new RTree.RTree<GridLineSegment>();
+
+            if (index < 0 || index > _Points.Count)
+                throw new IndexOutOfRangeException($"{nameof(GridPolyline)}.{nameof(Insert)}: {index} out of bounds");
+
+            /////////////////////////////////////////////////
+            //Simple cases where intersection is not a factor
+            ///////////////////////////////////////////////// 
+
+            //Case for adding to the beginning of the polyline
+            if (_Points.Count == 0)
+            { 
+                _Points.Add(value);
+                return;
+            }
+            else if(_Points.Count == 1)
+            {
+                if (_Points[0] == value)
+                    throw new ArgumentException("Inserting point already in Polyline identical to an adjacent point");
+
+                _Points.Insert(index, value);
+                GridLineSegment line = new GridLineSegment(_Points[0], _Points[1]);
+                rTree.Add(line.BoundingBox, line);
+            }
+
+            //Case for appending to the end of the polyline
+            if (_Points.Count == index && Closed == false)
+            {
+                _Points.Add(value);
+                GridLineSegment line = new GridLineSegment(_Points[_Points.Count - 2], _Points[_Points.Count -1]);
+                rTree.Add(line.BoundingBox, line);
+                return;
+            }
+
+            /////////////////////////////////////////////////
+            //End simple cases
+            /////////////////////////////////////////////////
+
+            //Position the point will be inserted into
+            PolylineIndex insert_index = new PolylineIndex(index, this.NumUniqueVerticies, this.Closed);
+
+            //Check for adjacent duplicate points
+            bool duplicate_point = _Points.Contains(value);
+            if (duplicate_point)
+            {
+                if (AllowsSelfIntersection == false)
+                    throw new ArgumentException("Inserting point already in Polyline that does not allow self-intersection");
+                else
+                {
+                    //Ensure the adjacent points are not duplicates... perhaps this should be a no-op, but for now throw an exception
+                    if(_Points[index] == value)
+                        throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
+
+                    if (false == insert_index.IsFirstIndex)
+                    {
+                        if (_Points[index-1] == value)
+                            throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
+                    }
+                }
+            }
+
+            //Copy the existing line segments so we can test new segments against the existing ones minus the replaced segment
+            var segments = this.LineSegments.ToList();
+            List<GridLineSegment> new_segments = new List<GridLineSegment>();
+            List<GridLineSegment> removed_segments = new List<GridLineSegment>();
+
+            Debug.Assert(segments[index] != value, "Seems a bit odd to be inserting a point with the same value into the polyline, creating a duplicate");
+
+            //Remove the segments that will be replaced by the new vertex from our test set
+
+            if (this.Closed)
+            {
+                if (insert_index.IsFirstIndex || insert_index.IsLastIndex)
+                {
+                    removed_segments.Add(segments[segments.Count - 1]);
+
+                    segments.RemoveAt(0);
+                    segments.RemoveAt(segments.Count-1);
+                }
+                else
+                {
+                    removed_segments.Add(segments[insert_index.iVertex]);
+                    removed_segments.Add(segments[insert_index.Previous.iVertex]);
+
+                    segments.RemoveAt(insert_index.iVertex);
+                    segments.RemoveAt(insert_index.Previous.iVertex);
+                }
+            }
+            else
+            {
+                if (insert_index.IsFirstIndex)
+                {
+                    removed_segments.Add(segments[0]);
+                    segments.RemoveAt(0);
+                }
+                else if (insert_index.IsLastIndex)
+                {
+                    removed_segments.RemoveAt(segments[segments.Count - 1]);
+                    segments.RemoveAt(segments.Count - 1)
+                }
+                else
+                {
+                    removed_segments.Add(segments[insert_index.iVertex]);
+                    removed_segments.Add(segments[insert_index.Previous.iVertex]);
+
+                    segments.RemoveAt(insert_index.iVertex);
+                    segments.RemoveAt(insert_index.Previous.iVertex);
+                }
+            }
+
+            foreach (var removed_segment in removed_segments)
+            {
+                rTree.Delete(removed_segment, out var removed_item);
+            }
+
+            //Create the new segments using the new vertex
+            if (this.Closed)
+            {   
+                new_segments.Add(new GridLineSegment(value, this[index]));
+                new_segments.Add(new GridLineSegment(this[index.Previous], value);   
+            }
+            else
+            {
+                if (insert_index.IsFirstIndex)
+                {
+                    new_segments.Add(new GridLineSegment(value, this[index]));
+                }
+                else
+                {
+                    new_segments.Add(new GridLineSegment(value, this[index]));
+                    new_segments.Add(new GridLineSegment(this[index.Previous], value);
+                }
+            }
+
+            foreach (var added_segment in new_segments)
+            {
+                rTree.Add(added_segment.BoundingBox, added_segment);
+            }
+            
+            if (AllowsSelfIntersection == false)
+            {
+                List<GridLineSegment> intersectionCandidates = rTree.Intersects(line.BoundingBox).Where(l => removed_segments.Contains(l) == false).ToList();
+
                 if (AllowsSelfIntersection == false || AllowsSelfIntersection && KnownSelfIntersection.HasValue == false)
                 {
-                    if (line.SelfIntersects(this.LineSegments.Where(l => intersectionCandidates.Contains(l)).ToList(), LineSetOrdering.POLYLINE, out GridLineSegment? intersected))
+                    if (line.SelfIntersects(segments.Where(l => intersectionCandidates.Contains(l)).ToList(), LineSetOrdering.POLYLINE, out GridLineSegment? intersected))
                     {
                         if (AllowsSelfIntersection == false)
                             throw new ArgumentException("Added point created self-intersecting line in Polyline");
@@ -143,8 +350,7 @@ namespace Geometry
                 Existing.Add(line);
                 rTree.Add(line.BoundingBox, line);
                 this._LineSegments = Existing;
-            }
-
+            } 
         }
 
         public double Area
@@ -223,13 +429,30 @@ namespace Geometry
             return this.LineSegments.Any(line => line.Intersects(shape));
         }
 
-        public IShape2D Translate(IPoint2D offset)
-        {
-            List<IPoint2D> translatedPoints = new List<Geometry.IPoint2D>(this._Points.Count);
+        IShape2D IShape2D.Translate(IPoint2D offset) => this.Translate(offset);
 
-            translatedPoints = this._Points.Select(p => new GridVector2(p.X + offset.X, p.Y + offset.Y)).Cast<IPoint2D>().ToList();
-
+        public GridPolyline Translate(IPoint2D offset)
+        {  
+            var translatedPoints = this._Points.Select(p => new GridVector2(p.X + offset.X, p.Y + offset.Y)); 
             return new GridPolyline(translatedPoints);
+        }
+
+        /// <summary>
+        /// Round all coordinates in the clone of the GridPolygon to the nearest precision
+        /// </summary>
+        /// <param name="precision"></param>
+        /// <returns></returns>
+        public GridPolyline Round(int precision)
+        {
+            GridVector2[] roundedPoints = this.Points.Select(e => e.Round(precision)).ToArray();
+            for (int i = roundedPoints.Length - 1; i > 0; i--)
+            {
+                if (roundedPoints[i] == roundedPoints[i - 1])
+                    roundedPoints.RemoveAt(i);
+            }
+
+            GridPolyline clone = new Geometry.GridPolyline(roundedPoints); 
+            return clone;
         }
 
         public override string ToString()
