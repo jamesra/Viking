@@ -366,6 +366,19 @@ namespace Geometry
         }
     }
 
+    public static class IPoint2DExtensions
+    {
+        public static GridVector2 Round(this IPoint2D p, int precision)
+        {
+            return new GridVector2(Math.Round(p.X, precision), Math.Round(p.Y, precision));
+        }
+
+        public static GridVector2 ToGridVector2(this IPoint2D p)
+        {
+            return new GridVector2(p.X, p.Y);
+        }
+    }
+
     public static class GridVector2Extensions
     {
         /// <summary>
@@ -1218,7 +1231,7 @@ namespace Geometry
          return nearestPolyDistance;
      }
      */
-        private static void AddIntersection(SortedDictionary<double, PointIndex> dict, double key, PointIndex index)
+        private static void AddIntersection(SortedDictionary<double, PolygonIndex> dict, double key, PolygonIndex index)
         {
             dict.Add(key, index);
             /*
@@ -1250,18 +1263,18 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns>A dictionary of Polygon vertex indicies and a distance from that vertex.  </returns>
-        public static SortedDictionary<double, PointIndex> IntersectingSegments(this GridPolygon polygon, GridLineSegment line)
+        public static SortedDictionary<double, PolygonIndex> IntersectingSegments(this GridPolygon polygon, GridLineSegment line)
         {
-            SortedDictionary<double, PointIndex> output = new SortedDictionary<double, PointIndex>();
+            SortedDictionary<double, PolygonIndex> output = new SortedDictionary<double, PolygonIndex>();
 
-            PointIndex[] candidates = polygon.SegmentRTree.Intersects(line.BoundingBox).ToArray();
+            PolygonIndex[] candidates = polygon.SegmentRTree.Intersects(line.BoundingBox).ToArray();
 
             //Due to epsilon factors a single line may intersect the same vertex twice when a line passes near the vertex.
             //We control this by keeping a list of verticies we've already added and not adding them again
 
-            List<PointIndex> AddedVerticies = new List<PointIndex>();
+            List<PolygonIndex> AddedVerticies = new List<PolygonIndex>();
 
-            foreach (PointIndex index in candidates)
+            foreach (PolygonIndex index in candidates)
             {
                 if (AddedVerticies.Contains(index)) //There is an error if we add a vertex twice, so don't.
                     continue;
@@ -1291,7 +1304,7 @@ namespace Geometry
                             if (output.ContainsKey(distance)) //There is an error if we add an endpoint twice, so don't
                                 continue;
 
-                            PointIndex intersection_index = index;
+                            PolygonIndex intersection_index = index;
                             //If the endpoint is equal to segment.B it will be added on the next loop iteration
                             if (p2 == segment.B)
                             {
@@ -1365,19 +1378,19 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        public static SortedDictionary<double, PointIndex> IntersectingSegments(this GridPolygon polygon, GridLineSegment[] path)
+        public static SortedDictionary<double, PolygonIndex> IntersectingSegments(this GridPolygon polygon, GridLineSegment[] path)
         {
-            SortedDictionary<double, PointIndex> output = new SortedDictionary<double, PointIndex>();
+            SortedDictionary<double, PolygonIndex> output = new SortedDictionary<double, PolygonIndex>();
 
             for (int iRing = 0; iRing < polygon.InteriorRings.Count; iRing++)
             {
                 GridPolygon innerPoly = polygon.InteriorPolygons[iRing];// new GridPolygon(polygon.InteriorRings.ToArray()[iRing]);
-                SortedDictionary<double, PointIndex> ring_intersections = innerPoly.IntersectingSegments(path);
+                SortedDictionary<double, PolygonIndex> ring_intersections = innerPoly.IntersectingSegments(path);
                 foreach (var item in ring_intersections)
                 {
                     //foreach (var instance in item.Value)
                     //{
-                    AddIntersection(output, item.Key, new PointIndex(0, iRing, item.Value.iVertex, innerPoly.ExteriorRing.Length - 1));
+                    AddIntersection(output, item.Key, new PolygonIndex(0, iRing, item.Value.iVertex, innerPoly.ExteriorRing.Length - 1));
                     //}
                 }
             }
@@ -1404,12 +1417,12 @@ namespace Geometry
                                 iSegment = iSegment + 1;
                             }
 
-                            AddIntersection(output, distance, new PointIndex(0, iSegment, polygon.ExteriorSegments.Length));
+                            AddIntersection(output, distance, new PolygonIndex(0, iSegment, polygon.ExteriorSegments.Length));
                         }
                         else
                         {
 
-                            AddIntersection(output, distance, new PointIndex(0, iSegment, polygon.ExteriorSegments.Length));
+                            AddIntersection(output, distance, new PolygonIndex(0, iSegment, polygon.ExteriorSegments.Length));
                         }
                     }
                 }

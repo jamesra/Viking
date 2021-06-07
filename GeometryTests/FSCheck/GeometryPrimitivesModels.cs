@@ -1,4 +1,4 @@
-﻿namespace GeometryTests
+﻿namespace GeometryTests.FSCheck
 {
     class GridPolygonModel
     {

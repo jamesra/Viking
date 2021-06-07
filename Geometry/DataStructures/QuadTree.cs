@@ -333,7 +333,10 @@ namespace Geometry
             T retVal = node.Value;
 
             if (node.IsRoot == false)
+            {
                 node.Parent.Remove(node);
+                node.Tree = null; //Remove link to the tree for the removed node
+            }
             else
             {
                 //We are removing the root node.  State that it has no value and return
@@ -343,7 +346,6 @@ namespace Geometry
 
             node.Parent = null;
             node.Value = default(T);
-            node.Tree = null;
 
             return retVal;
         }
@@ -439,6 +441,11 @@ namespace Geometry
         public List<DistanceToPoint<T>> FindNearestPoints(GridVector2 point, int nPoints)
         {
             List<DistanceToPoint<T>> listResults = null;
+
+            if (nPoints < 0)
+            {
+                throw new ArgumentException("Attempting to find a negative number of points");
+            }
 
             try
             {

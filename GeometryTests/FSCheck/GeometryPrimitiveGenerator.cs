@@ -8,39 +8,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace GeometryTests
+namespace GeometryTests.FSCheck
 {
-    public static class GeometryArbitraries
-    {
-        public static void Register()
-        {
-            Arb.Register<GridVector2Generators>();
-            Arb.Register<GridLineSegmentGenerators>();
-            Arb.Register<GridPolygonGenerators>();
-
-            Global.ResetRollingSeed();
-        }
-
-        public static Arbitrary<GridVector2> PointGenerator()
-        {
-            return GridVector2Generators.ArbRandomPoint();
-        }
-
-        public static Arbitrary<GridVector2[]> DistinctPointsGenerator()
-        {
-            return GridVector2Generators.ArbRandomDistinctPoints();
-        }
-
-        public static Arbitrary<GridLineSegment> LineSegmentGenerator()
-        {
-            return GridLineSegmentGenerators.ArbRandomLine();
-        }
-
-        public static Arbitrary<GridPolyline> PolyLineGenerator()
-        {
-            return GridLineSegmentGenerators.ArbPolyLine();
-        }
-    }
 
     public class GridLineSegmentGenerators
     {
@@ -53,8 +22,6 @@ namespace GeometryTests
         {
             return Arb.From(Fresh());
         }
-
-
 
         public static Gen<GridLineSegment> GenLine()
         {

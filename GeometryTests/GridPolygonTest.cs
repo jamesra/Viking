@@ -1,6 +1,7 @@
 ﻿using FsCheck;
 using Geometry;
 using Geometry.JSON;
+using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -300,8 +301,8 @@ namespace GeometryTests
 
         private void CheckVertexEnumerator(GridPolygon polygon)
         {
-            PointIndex[] forward = new PolygonVertexEnum(polygon).ToArray();
-            PointIndex[] backward = new PolygonVertexEnum(polygon, reverse: true).Reverse().ToArray();
+            PolygonIndex[] forward = new PolygonVertexEnum(polygon).ToArray();
+            PolygonIndex[] backward = new PolygonVertexEnum(polygon, reverse: true).Reverse().ToArray();
 
             Assert.AreEqual(forward.Length, backward.Length);
 
@@ -804,7 +805,7 @@ namespace GeometryTests
             GridPolygon[] polyArray = new GridPolygon[] { box };
             PolySetVertexEnum enumerator = new PolySetVertexEnum(polyArray);
 
-            PointIndex[] indicies = enumerator.ToArray();
+            PolygonIndex[] indicies = enumerator.ToArray();
             Assert.IsTrue(indicies.Length == box.ExteriorRing.Length - 1);
             Assert.IsTrue(indicies.Last().IsLastIndexInRing());
             Assert.IsTrue(indicies.Select(p => p.Point(polyArray)).Distinct().Count() == box.ExteriorRing.Length - 1); //Make sure all indicies are unique and not repeating
@@ -850,12 +851,12 @@ namespace GeometryTests
             //Test sorting when we need to prevent breaks at the wraparound at the 0 index..
 
             //Create an array where the first and last index are adjacent, but there is a gap in the center
-            PointIndex[] points = new PointIndex[] {new PointIndex(0,0,6),
-                                                    new PointIndex(0,1,6),
-                                                    new PointIndex(0,2,6),
-                                                    new PointIndex(0,4,6),
-                                                    new PointIndex(0,5,6)};
-            PointIndex[] sorted = PointIndex.SortByRing(points);
+            PolygonIndex[] points = new PolygonIndex[] {new PolygonIndex(0,0,6),
+                                                    new PolygonIndex(0,1,6),
+                                                    new PolygonIndex(0,2,6),
+                                                    new PolygonIndex(0,4,6),
+                                                    new PolygonIndex(0,5,6)};
+            PolygonIndex[] sorted = PolygonIndex.SortByRing(points);
 
             Assert.IsTrue(sorted.First().iVertex == 4);
             Assert.IsTrue(sorted[1].iVertex == 5);
@@ -868,13 +869,13 @@ namespace GeometryTests
             //Test sorting when we need to prevent breaks at the wraparound at the 0 index..
 
             //Create an array where the first and last index are adjacent, but there is a gap in the center
-            PointIndex[] points = new PointIndex[] {new PointIndex(0,0,8),
-                                                    new PointIndex(0,1,8),
-                                                    new PointIndex(0,2,8),
-                                                    new PointIndex(0,4,8),
-                                                    new PointIndex(0,5,8),
-                                                    new PointIndex(0,7,8)};
-            PointIndex[] sorted = PointIndex.SortByRing(points);
+            PolygonIndex[] points = new PolygonIndex[] {new PolygonIndex(0,0,8),
+                                                    new PolygonIndex(0,1,8),
+                                                    new PolygonIndex(0,2,8),
+                                                    new PolygonIndex(0,4,8),
+                                                    new PolygonIndex(0,5,8),
+                                                    new PolygonIndex(0,7,8)};
+            PolygonIndex[] sorted = PolygonIndex.SortByRing(points);
 
             Assert.IsTrue(sorted.First().iVertex == 4);
             Assert.IsTrue(sorted[1].iVertex == 5);
@@ -888,20 +889,20 @@ namespace GeometryTests
             //Test sorting when we need to prevent breaks at the wraparound at the 0 index..
 
             //Create an array where the first and last index are adjacent, but there is a gap in the center
-            PointIndex[] points = new PointIndex[] {new PointIndex(0,0,8),
-                                                    new PointIndex(0,1,8),
-                                                    new PointIndex(0,2,8),
-                                                    new PointIndex(0,4,8),
-                                                    new PointIndex(0,5,8),
-                                                    new PointIndex(0,7,8),
+            PolygonIndex[] points = new PolygonIndex[] {new PolygonIndex(0,0,8),
+                                                    new PolygonIndex(0,1,8),
+                                                    new PolygonIndex(0,2,8),
+                                                    new PolygonIndex(0,4,8),
+                                                    new PolygonIndex(0,5,8),
+                                                    new PolygonIndex(0,7,8),
 
-                                                    new PointIndex(0, 1, 0,8),
-                                                    new PointIndex(0, 1, 1,8),
-                                                    new PointIndex(0,1,2,8),
-                                                    new PointIndex(0,1,4,8),
-                                                    new PointIndex(0,1,5,8),
-                                                    new PointIndex(0,1,7,8),};
-            PointIndex[] sorted = PointIndex.SortByRing(points);
+                                                    new PolygonIndex(0, 1, 0,8),
+                                                    new PolygonIndex(0, 1, 1,8),
+                                                    new PolygonIndex(0,1,2,8),
+                                                    new PolygonIndex(0,1,4,8),
+                                                    new PolygonIndex(0,1,5,8),
+                                                    new PolygonIndex(0,1,7,8),};
+            PolygonIndex[] sorted = PolygonIndex.SortByRing(points);
 
             Assert.IsTrue(sorted.Take(6).All(p => p.IsInner == false));
             Assert.IsTrue(sorted.Skip(6).All(p => p.IsInner));

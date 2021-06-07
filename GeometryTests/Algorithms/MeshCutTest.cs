@@ -1,6 +1,7 @@
 ﻿using FsCheck;
 using Geometry;
 using Geometry.Meshing;
+using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Linq;

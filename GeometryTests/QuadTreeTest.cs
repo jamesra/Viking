@@ -1,5 +1,6 @@
 ﻿using FsCheck;
 using Geometry;
+using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -236,7 +237,7 @@ namespace GeometryTests
 
             Configuration config = Configuration.QuickThrowOnFailure;
             config.StartSize = 128;
-            config.MaxNbOfTest = 250;
+            config.MaxNbOfTest = 250; 
 
             QuadTreeSpec spec = new QuadTreeSpec();
             spec.ToProperty().Check(config);

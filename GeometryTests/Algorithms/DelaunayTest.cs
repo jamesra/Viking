@@ -2,6 +2,7 @@
 using Geometry;
 using Geometry.JSON;
 using Geometry.Meshing;
+using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -417,7 +418,7 @@ namespace GeometryTests.Algorithms
             TriangulatePolygonTest(null);
         }
 
-        public void TriangulatePolygonTest(TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
+        public void TriangulatePolygonTest(TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
         {
             GeometryArbitraries.Register();
 
@@ -444,7 +445,7 @@ namespace GeometryTests.Algorithms
         }
 
 
-        public static TriangulationMesh<IVertex2D<PointIndex>> TriangulatePoly(GridPolygon p, out List<IEdgeKey> expectedConstrainedEdges, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
+        public static TriangulationMesh<IVertex2D<PolygonIndex>> TriangulatePoly(GridPolygon p, out List<IEdgeKey> expectedConstrainedEdges, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
         {
             expectedConstrainedEdges = new List<IEdgeKey>();
 

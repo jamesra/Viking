@@ -1,5 +1,6 @@
 ﻿using FsCheck;
 using Geometry;
+using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;

@@ -98,9 +98,10 @@
     <Compile Include="Algorithms\MeshValidationExtensions.cs" />
     <Compile Include="AssemblyInitialize.cs" />
     <Compile Include="CircleFromPoints.cs" />
-    <Compile Include="FsCheckGenerators.cs" />
-    <Compile Include="FSCheckGeometryPrimitiveGenerator.cs" />
-    <Compile Include="FSCheckGeometryPrimitivesModels.cs" />
+    <Compile Include="FSCheck\Generators.cs" />
+    <Compile Include="FSCheck\GeometryPrimitiveGenerator.cs" />
+    <Compile Include="FSCheck\GeometryPrimitivesModels.cs" />
+    <Compile Include="FSCheck\GeometryArbitraries.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="GridBox.cs" />
     <Compile Include="GridPolygonTest.cs" />
