@@ -174,8 +174,7 @@ namespace MonogameTestbed
 
             Polygons = topology.Polygons;
             PolyZ = topology.PolyZ;
-
-
+             
             //Create our mesh with only the verticies
 
             PolyViews = new PolygonSetView(Polygons);
@@ -230,7 +229,7 @@ namespace MonogameTestbed
             System.Threading.Thread.Sleep(0);
         }
 
-        private void OnSecondPassRegionProgress(TriangulationMesh<IVertex2D<PointIndex>> mesh)
+        private void OnSecondPassRegionProgress(TriangulationMesh<IVertex2D<PolygonIndex>> mesh)
         {
             triView.OnTriangulationProgress(mesh);
             System.Threading.Thread.Sleep(0);
@@ -643,14 +642,14 @@ namespace MonogameTestbed
             return model;
         }
 
-        private void BuildAPort(IMesh mesh, Dictionary<GridVector2, PointIndex> pointToPoly)
+        private void BuildAPort(IMesh mesh, Dictionary<GridVector2, PolygonIndex> pointToPoly)
         {
             List<GridVector2> points = pointToPoly.Keys.ToList();
             Debug.Assert(mesh.Vertices.Select(v => v.ToGridVector2()).SequenceEqual(points));
 
-            Mesh3D<IVertex3D<PointIndex>> SearchMesh = new Mesh3D<IVertex3D<PointIndex>>();
+            Mesh3D<IVertex3D<PolygonIndex>> SearchMesh = new Mesh3D<IVertex3D<PolygonIndex>>();
 
-            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PointIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
+            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PolygonIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
                       

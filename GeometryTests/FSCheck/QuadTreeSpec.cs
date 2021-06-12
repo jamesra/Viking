@@ -6,32 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace GeometryTests
+namespace GeometryTests.FSCheck
 {
-    internal class PointTuple : Tuple<GridVector2, int>, IEquatable<PointTuple>
-    {
-        public PointTuple(GridVector2 item1, int item2) : base(item1, item2)
-        {
-        }
-
-        public GridVector2 Point => this.Item1;
-        public int Value => this.Item2;
-
-        public bool Equals(PointTuple other)
-        {
-            if (ReferenceEquals(this, other))
-                return true;
-
-            return other.Point.Equals(this.Point) && other.Value.Equals(this.Value);
-        }
-
-        public static implicit operator GridVector2(PointTuple t) => t.Point;
-
-        public override string ToString()
-        {
-            return $"{Point} : {Value}";
-        }
-    }
 
     /// <summary>
     /// A brute-force point searching class to compare our quad-tree implementation against
@@ -148,7 +124,7 @@ namespace GeometryTests
 
                 return Gen.Frequency(
                     Tuple.Create(3, GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTree<int>, QuadTreeModel>)),
-                    Tuple.Create(1, Gen.Choose(0, InitialModel.Count-1 < 0 ? 0 : InitialModel.Count).Select(i => new RemovePointOperation(value[i]) as Command<QuadTree<int>, QuadTreeModel>)),
+                    Tuple.Create(1, Gen.Choose(0, InitialModel.Count-1 < 0 ? 0 : InitialModel.Count-1).Select(i => new RemovePointOperation(value[i]) as Command<QuadTree<int>, QuadTreeModel>)),
                     Tuple.Create(1, Gen.Zip(GridVector2Generators.ArbRandomPoint().Generator,
                                             Gen.Choose(0, InitialModel.Count))
                                                                         .Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTree<int>, QuadTreeModel>)));

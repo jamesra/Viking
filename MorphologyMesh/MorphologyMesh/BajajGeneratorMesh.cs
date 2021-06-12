@@ -77,12 +77,12 @@ namespace MorphologyMesh
 
         }
 
-        public GridPolygon[] GetSameLevelPolygons(PointIndex key)
+        public GridPolygon[] GetSameLevelPolygons(PolygonIndex key)
         {
             return IsUpperPolygon[key.iPoly] ? UpperPolygons : LowerPolygons;
         }
 
-        public GridPolygon[] GetAdjacentLevelPolygons(PointIndex key)
+        public GridPolygon[] GetAdjacentLevelPolygons(PolygonIndex key)
         {
             return IsUpperPolygon[key.iPoly] ? LowerPolygons : UpperPolygons;
         }

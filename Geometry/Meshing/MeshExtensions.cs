@@ -203,7 +203,7 @@ namespace Geometry.Meshing
             return face.iVerts.Length == 4;
         }
 
-        public static TriangulationMesh<IVertex2D<PointIndex>> Triangulate(this GridPolygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
+        public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this GridPolygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
         {
             //var polyCopy = (GridPolygon)poly.Clone();
 
@@ -212,21 +212,21 @@ namespace Geometry.Meshing
 
             PolygonVertexEnum vertEnumerator = new PolygonVertexEnum(centeredPoly, iPoly);
 
-            var meshVerts = vertEnumerator.Select(v => new Vertex2D<PointIndex>(v.Point(centeredPoly), v)).ToArray();
+            var meshVerts = vertEnumerator.Select(v => new Vertex2D<PolygonIndex>(v.Point(centeredPoly), v)).ToArray();
 
-            Dictionary<PointIndex, Vertex2D<PointIndex>> IndexToVert = meshVerts.ToDictionary(v => v.Data);
+            Dictionary<PolygonIndex, Vertex2D<PolygonIndex>> IndexToVert = meshVerts.ToDictionary(v => v.Data);
 
-            TriangulationMesh<IVertex2D<PointIndex>> mesh = GenericDelaunayMeshGenerator2D<IVertex2D<PointIndex>>.TriangulateToMesh(meshVerts, OnProgress);
+            TriangulationMesh<IVertex2D<PolygonIndex>> mesh = GenericDelaunayMeshGenerator2D<IVertex2D<PolygonIndex>>.TriangulateToMesh(meshVerts, OnProgress);
 
             SortedSet<IEdgeKey> constrainedEdges = new SortedSet<IEdgeKey>();
 
             //Add constrained edges to the mesh
-            PointIndex[] pIndicies = vertEnumerator.ToArray();
+            PolygonIndex[] pIndicies = vertEnumerator.ToArray();
 
-            Dictionary<PointIndex, Edge> edgeFacesToCheck = new Dictionary<PointIndex, Edge>();
+            Dictionary<PolygonIndex, Edge> edgeFacesToCheck = new Dictionary<PolygonIndex, Edge>();
 
             //while (vertEnumerator.MoveNext() == true)
-            foreach (PointIndex currentVert in pIndicies)
+            foreach (PolygonIndex currentVert in pIndicies)
             {
                 //PointIndex currentVert = vertEnumerator.Current;
                 int A = IndexToVert[currentVert].Index;

@@ -442,7 +442,7 @@ namespace Geometry
 
             //Do any line segments intersect our circle?
             //List<GridLineSegment> Candidates = poly.SegmentRTree.Intersects(circle.BoundingBox.ToRTreeRect()).Select(p => p.Segment(poly)).Where(segment => circle.Intersects(segment)).ToList();
-            foreach (PointIndex p in poly.SegmentRTree.IntersectionGenerator(circle.BoundingBox.ToRTreeRect()))
+            foreach (PolygonIndex p in poly.SegmentRTree.IntersectionGenerator(circle.BoundingBox.ToRTreeRect()))
             {
                 GridLineSegment line = p.Segment(poly);
 
@@ -1349,8 +1349,8 @@ namespace Geometry
             {
                 GridPolygon A = combo.A;
                 GridPolygon B = combo.B;
-                List<GridVector2> newIntersections = A.AddPointsAtIntersections(B);
-                added_intersections.AddRange(newIntersections);
+                List<GridVector2> newIntersections = A.AddPointsAtIntersections(B); 
+                added_intersections.AddRange(newIntersections); 
 
 #if DEBUG
                 foreach (GridVector2 p in newIntersections)
@@ -1365,12 +1365,70 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Add verticies at intersection points for all intersection points
+        /// </summary>
+        /// <param name="Polys"></param>
+        public static List<GridVector2> AddCorrespondingVerticies(this IReadOnlyList<GridPolyline> lines)
+        {
+            List<GridVector2> added_intersections = new List<GridVector2>();
+            foreach (var combo in lines.CombinationPairs())
+            {
+                GridPolyline A = combo.A;
+                GridPolyline B = combo.B;
+                List<GridVector2> newIntersections = A.AddPointsAtIntersections(B);
+
+                if (newIntersections.Any())
+                    B.AddPointsAtIntersections(A);
+
+                added_intersections.AddRange(newIntersections);
+
+#if DEBUG
+                foreach (GridVector2 p in newIntersections)
+                {
+                    Debug.Assert(A.Points.Contains(p));
+                    Debug.Assert(B.Points.Contains(p));
+                }
+#endif
+            }
+
+            return added_intersections;
+        }
+
+        /// <summary>
+        /// Add verticies at intersection points for all intersection points
+        /// </summary>
+        /// <param name="shapes"></param>
+        public static List<GridVector2> AddCorrespondingVerticies(this IReadOnlyList<IShape2D> shapes)
+        {
+            List<GridVector2> added_intersections = new List<GridVector2>();
+            foreach (var combo in shapes.CombinationPairs())
+            {
+                IShape2D A = combo.A;
+                IShape2D B = combo.B;
+
+                if (A is GridPolygon polyA && B is GridPolygon polyB)
+                {
+                    var newIntersections = polyA.AddPointsAtIntersections(polyB);
+                    added_intersections.AddRange(newIntersections); 
+                } 
+                else if(A is GridPolyline lineA && B is GridPolyline lineB)
+                {
+                    var newIntersections = lineA.AddPointsAtIntersections(lineB);
+                    added_intersections.AddRange(newIntersections);
+                }
+
+            }
+
+            return added_intersections;
+        }
+
+        /// <summary>
         /// Given a PointIndex, return the point we'd predict the point be at using the prior two and next two verticies in the polygon.
         /// </summary>
         /// <param name="Polygons"></param>
         /// <param name="cIndex"></param>
         /// <returns></returns>
-        public static GridVector2 PredictPoint(this PointIndex cIndex, GridPolygon[] Polygons)
+        public static GridVector2 PredictPoint(this PolygonIndex cIndex, GridPolygon[] Polygons)
         {
             var p1 = cIndex.Previous.Previous.Point(Polygons);
             var p2 = cIndex.Previous.Point(Polygons);
@@ -1390,20 +1448,20 @@ namespace Geometry
         /// </summary>
         /// <param name="Polygons"></param>
         /// <param name="correspondingPoints"></param>
-        public static PointIndex[][] IndiciesForPoints(this IReadOnlyList<GridPolygon> Polygons, ICollection<GridVector2> correspondingPoints)
+        public static PolygonIndex[][] IndiciesForPoints(this IReadOnlyList<GridPolygon> Polygons, ICollection<GridVector2> correspondingPoints)
         {
             //List<PointIndex[]> output = new List<PointIndex[]>(correspondingPoints.Count);
-            PointIndex[][] output = new PointIndex[correspondingPoints.Count][];
+            PolygonIndex[][] output = new PolygonIndex[correspondingPoints.Count][];
             int iOutput = 0;
             foreach (GridVector2 correspondingPoint in correspondingPoints)
             {
                 //Determine polygon indicies of corresponding verticies
                 output[iOutput] = Polygons.Select((poly, iPoly) =>
                 {
-                    if (poly.TryGetIndex(correspondingPoint, out PointIndex index))
+                    if (poly.TryGetIndex(correspondingPoint, out PolygonIndex index))
                         return index.Reindex(iPoly);
                     else
-                        return new PointIndex?();
+                        return new PolygonIndex?();
                 }).Where(index => index.HasValue).Select(index => index.Value).ToArray();
                 iOutput += 1;
             }

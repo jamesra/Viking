@@ -107,7 +107,7 @@ namespace MorphologyMesh
                 if (_RegionPerimeter != null)
                     return _RegionPerimeter;
 
-                PointIndex[] polyIndicies = Verticies.Select(v => ((MorphMeshVertex)ParentMesh.Verticies[v]).PolyIndex.Value).ToArray();
+                PolygonIndex[] polyIndicies = Verticies.Select(v => ((MorphMeshVertex)ParentMesh.Verticies[v]).PolyIndex.Value).ToArray();
 
                 //var all_exterior_edges = this.Faces.SelectMany(f => f.Edges).Distinct().Where(e => this.ParentMesh[e].Faces.Count == 1).Select(e => ParentMesh[e]).ToList();
                 var all_region_face_edges = this.Faces.SelectMany(f => f.Edges).ToList();
@@ -156,24 +156,24 @@ namespace MorphologyMesh
             }
         }
 
-        private static List<PointIndex[]> IdentifyContours(PointIndex[] polyIndicies)
+        private static List<PolygonIndex[]> IdentifyContours(PolygonIndex[] polyIndicies)
         {
             //Make sure we don't have artificial jumps in the array at 0 indicies. i.e. A line that wraps around the end to the beginning of the ring
-            polyIndicies = PointIndex.SortByRing(polyIndicies);
+            polyIndicies = PolygonIndex.SortByRing(polyIndicies);
 
-            List<PointIndex[]> listContours = new List<PointIndex[]>();
+            List<PolygonIndex[]> listContours = new List<PolygonIndex[]>();
 
-            List<PointIndex> contour = new List<PointIndex>();
+            List<PolygonIndex> contour = new List<PolygonIndex>();
             contour.Add(polyIndicies[0]);
             for (int i = 1; i < polyIndicies.Length; i++)
             {
-                PointIndex lastCountourPoint = contour.Last();
-                PointIndex pi = polyIndicies[i];
+                PolygonIndex lastCountourPoint = contour.Last();
+                PolygonIndex pi = polyIndicies[i];
                 //if (pi.iInnerPoly != lastCountourPoint.iInnerPoly || pi.iPoly != lastCountourPoint.iPoly)
                 if (!lastCountourPoint.AreAdjacent(pi))
                 {
                     listContours.Add(contour.ToArray());
-                    contour = new List<PointIndex>();
+                    contour = new List<PolygonIndex>();
                     contour.Add(pi);
                 }
                 else
@@ -198,18 +198,18 @@ namespace MorphologyMesh
         /// <param name="contours"></param>
         /// <param name="PolyIndexToMeshIndex"></param>
         /// <returns></returns>
-        private PointIndex[] ConnectContours(List<PointIndex[]> contours, Dictionary<PointIndex, int> PolyIndexToMeshIndex)
+        private PolygonIndex[] ConnectContours(List<PolygonIndex[]> contours, Dictionary<PolygonIndex, int> PolyIndexToMeshIndex)
         {
-            List<PointIndex> AssembledContour = new List<PointIndex>();
+            List<PolygonIndex> AssembledContour = new List<PolygonIndex>();
 
-            PointIndex[] lastContour = contours[0];
+            PolygonIndex[] lastContour = contours[0];
             AssembledContour.AddRange(lastContour);
 
             GridVector2[] lastContourEndpoints = ContourEndpoints(lastContour, PolyIndexToMeshIndex);
 
             for (int i = 1; i < contours.Count; i++)
             {
-                PointIndex[] Contour = contours[i];
+                PolygonIndex[] Contour = contours[i];
                 if (Contour.Length == 1)
                 {
                     AssembledContour.AddRange(Contour);
@@ -240,7 +240,7 @@ namespace MorphologyMesh
             return AssembledContour.ToArray();
         }
 
-        GridVector2[] ContourEndpoints(IReadOnlyList<PointIndex> contour, Dictionary<PointIndex, int> PolyIndexToMeshIndex)
+        GridVector2[] ContourEndpoints(IReadOnlyList<PolygonIndex> contour, Dictionary<PolygonIndex, int> PolyIndexToMeshIndex)
         {
             int iStart = PolyIndexToMeshIndex[contour[0]];
             int iEnd = PolyIndexToMeshIndex[contour.Last()];

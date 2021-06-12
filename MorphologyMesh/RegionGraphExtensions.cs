@@ -451,7 +451,7 @@ namespace MorphologyMesh
 
             PolygonVertexEnum polyVertEnum = new PolygonVertexEnum(poly, iPoly);
 
-            Dictionary<PointIndex, int> polyIndexToTriangulationIndex = new Dictionary<PointIndex, int>();
+            Dictionary<PolygonIndex, int> polyIndexToTriangulationIndex = new Dictionary<PolygonIndex, int>();
 
             //Ensure polygon ring is constrained in the mesh
             foreach (IVertex2D<MorphMeshVertex> vert in verts)
@@ -463,7 +463,7 @@ namespace MorphologyMesh
             }
 
             HashSet<IEdge> constrainedEdges = new HashSet<IEdge>();
-            Dictionary<PointIndex, Edge> edgeFacesToCheck = new Dictionary<PointIndex, Edge>();
+            Dictionary<PolygonIndex, Edge> edgeFacesToCheck = new Dictionary<PolygonIndex, Edge>();
 
             foreach (int iPolyVert in polyIndexToTriangulationIndex.Values)
             {
@@ -472,7 +472,7 @@ namespace MorphologyMesh
 
                 IVertex2D<MorphMeshVertex> B = triangulation[polyIndexToTriangulationIndex[MMV_A.PolyIndex.Value.Next]];
                 MorphMeshVertex MMV_B = B.Data; // polyIndexToTriangulationIndex[A.PolyIndex.Value.Next]];
-                PointIndex polyIndex = MMV_A.PolyIndex.Value;
+                PolygonIndex polyIndex = MMV_A.PolyIndex.Value;
 
                 ConstrainedEdge edge = new ConstrainedEdge(A.Index, B.Index);
                 triangulation.AddConstrainedEdge(edge, OnProgress);

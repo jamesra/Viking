@@ -1098,8 +1098,9 @@ namespace Geometry
         {
             foreach (Combo<GridPolygon> combo in polygons.CombinationPairs())
             {
-                combo.A.AddPointsAtIntersections(combo.B);
-                combo.B.AddPointsAtIntersections(combo.A);
+                var result = combo.A.AddPointsAtIntersections(combo.B);
+                if(result.Any())
+                    combo.B.AddPointsAtIntersections(combo.A);
             }
         }
 
@@ -1115,8 +1116,9 @@ namespace Geometry
                 if (polyZ[combo.iA] == polyZ[combo.iB])
                     continue;
 
-                combo.A.AddPointsAtIntersections(combo.B);
-                combo.B.AddPointsAtIntersections(combo.A);
+                var result = combo.A.AddPointsAtIntersections(combo.B);
+                if(result.Any())
+                    combo.B.AddPointsAtIntersections(combo.A);
             }
         }
 

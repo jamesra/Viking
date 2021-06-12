@@ -133,7 +133,7 @@ namespace MonogameTestbed
                 }
             }
 
-            foreach (PointIndex pi in new PolySetVertexEnum(Polygons))
+            foreach (PolygonIndex pi in new PolySetVertexEnum(Polygons))
             {
                 GridVector2 point = pi.Point(Polygons);
                 GridVector2 offset_point = point - new GridVector2(0, (pointradius * 2));

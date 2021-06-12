@@ -148,6 +148,12 @@ namespace Geometry
             this.Y = y;
         }
 
+        public GridVector2(IPoint2D p)
+        {
+            this.X = p.X;
+            this.Y = p.Y;
+        }
+
         public void Deconstruct(out double x, out double y)
         {
             x = X;
@@ -644,6 +650,36 @@ namespace Geometry
             return !GridVector2.Equals(A, B);
         }
 
+        public double this[AXIS axis]
+        {
+            get
+            {
+                switch (axis)
+                {
+                    case AXIS.X:
+                        return X;
+                    case AXIS.Y:
+                        return Y;
+                    default:
+                        throw new IndexOutOfRangeException($"Axis not supported for {nameof(GridVector2)}");
+                } 
+            }
+            set
+            {
+                switch (axis)
+                {
+                    case AXIS.X:
+                        X = value;
+                        break;
+                    case AXIS.Y:
+                        Y = value;
+                        break;
+                    default:
+                        throw new IndexOutOfRangeException($"Axis not supported for {nameof(GridVector2)}");
+                }
+            }
+        }
+
         static public GridVector2 FromBarycentric(GridVector2 v1, GridVector2 v2, GridVector2 v3, double u, double v)
         {
             double x = (v1.X * (1 - u - v)) + (v2.X * u) + (v3.X * v);
@@ -845,7 +881,7 @@ namespace Geometry
                 return ShapeType2D.POINT;
             }
         }
-         
+
 
         #endregion
 

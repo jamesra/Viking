@@ -56,7 +56,7 @@ namespace MorphologyMesh
         /// Caches the shape of each morphology node in the slice graph.  After corresponding verticies are added this cache is used to ensures each section will get the same input shapes
         /// The map can also be used to support simplifying shapes.
         /// </summary>
-        internal Dictionary<ulong, GridPolygon> MorphNodeToShape = null;
+        internal Dictionary<ulong, IShape2D> MorphNodeToShape = null;
 
         private Dictionary<ulong, SliceTopology> SliceToTopology = null;
 
@@ -375,36 +375,60 @@ namespace MorphologyMesh
         /// <param name="graph"></param>
         /// <param name="tolerance"></param>
         /// <returns></returns>
-        public static async Task<Dictionary<ulong, GridPolygon>> InitializeShapes(MorphologyGraph graph, double tolerance = 0)
+        public static async Task<Dictionary<ulong, IShape2D>> InitializeShapes(MorphologyGraph graph, double tolerance = 0)
         {
-            var result = new Dictionary<ulong, GridPolygon>(graph.Nodes.Count);
+            var result = new Dictionary<ulong, IShape2D>(graph.Nodes.Count);
 
-            List<Task<GridPolygon>> tasks = new List<Task<GridPolygon>>(graph.Nodes.Count);
+            GridVector2 translationToCenter = -graph.BoundingBox.CenterPoint.XY();
+
+            List<Task<IShape2D>> tasks = new List<Task<IShape2D>>(graph.Nodes.Count);
             foreach (var node in graph.Nodes.Values)
             {
                 if (node.Geometry == null)
                     continue;
 
                 SupportedGeometryType nodeType = node.Geometry.GeometryType();
-                if (nodeType != SupportedGeometryType.CURVEPOLYGON && nodeType != SupportedGeometryType.POLYGON)
+                switch (nodeType)
                 {
-                    continue;
-                }
-
-                //Start a task to simplify the polygon
-                Task<GridPolygon> t = new Task<GridPolygon>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Translate(-graph.BoundingBox.CenterPoint.XY()).Simplify(tolerance), node);
-
-                t.Start();
-                tasks.Add(t);
+                    case SupportedGeometryType.POINT:
+                        continue;
+                    case SupportedGeometryType.CURVEPOLYGON:
+                    case SupportedGeometryType.POLYGON:
+                        {
+                            //Start a task to simplify the polygon
+                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Translate(translationToCenter).Simplify(tolerance), node);
+                            t.Start();
+                            tasks.Add(t);
+                        }
+                            break;
+                    case SupportedGeometryType.POLYLINE:
+                        {
+                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolyLine().Translate(translationToCenter).Simplify(tolerance), node);
+                            t.Start();
+                            tasks.Add(t);
+                        }
+                        break;
+                } 
             }
 
             foreach (var task in tasks)
             {
                 try
                 {
-                    GridPolygon output = await task;
+                    IShape2D output = await task;
                     //Rounding exposed a rare bug on 82682, 82680 RPC1 where the inner hole was exactly over the exterior ring of the opposite polygon
-                    result[(ulong)((MorphologyNode)(task.AsyncState)).ID] = output.Round(Global.SignificantDigits);
+                    if(output is GridPolygon poly)
+                    {
+                        result[(ulong)((MorphologyNode)(task.AsyncState)).ID] = poly.Round(Global.SignificantDigits);
+                    }
+                    else if (output is GridPolyline line)
+                    {
+                        result[(ulong)((MorphologyNode)(task.AsyncState)).ID] = line.Round(Global.SignificantDigits);
+                    }
+                    else
+                    {
+                        throw new NotImplementedException($"Initializing unknown shape: {output}");
+                    }
                 }
                 catch (AggregateException e)
                 {
@@ -444,7 +468,7 @@ namespace MorphologyMesh
             return SliceToTopology[sliceKey];
         }
 
-        private SliceTopology GetSliceTopology(ulong sliceKey, Dictionary<ulong, GridPolygon> polyLookup = null)
+        private SliceTopology GetSliceTopology(ulong sliceKey, Dictionary<ulong, IShape2D> polyLookup = null)
         {
             return GetSliceTopology(this[sliceKey], polyLookup);
         }
@@ -454,38 +478,40 @@ namespace MorphologyMesh
             return this.GetSliceTopology(group, this.MorphNodeToShape);
         }
 
-        internal SliceTopology GetSliceTopology(Slice group, Dictionary<ulong, GridPolygon> polyLookup = null)
+        internal SliceTopology GetSliceTopology(Slice group, Dictionary<ulong, IShape2D> polyLookup = null)
         {
-            var PolygonList = new List<GridPolygon>();
+            var ShapeList = new List<IShape2D>();
             var IsUpper = new List<bool>();
-            var PolyZ = new List<double>();
-            var PolyIndexToMorphNodeIndex = new List<ulong>();
+            var ShapeZ = new List<double>();
+            var VertexShapeIndexToMorphNodeIndex = new List<ulong>();
 
             if (polyLookup != null)
             {
-                PolygonList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
-                PolygonList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
+                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
+                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
             }
             else
             {
-                PolygonList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToPolygon()));
-                PolygonList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToPolygon()));
+                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToShape2D()));
+                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToShape2D()));
             }
 
-            GridPolygon[] Polygons = PolygonList.ToArray();
 
-            PolyIndexToMorphNodeIndex.AddRange(group.NodesAbove);
-            PolyIndexToMorphNodeIndex.AddRange(group.NodesBelow);
+            VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesAbove);
+            VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesBelow);
 
             IsUpper.AddRange(group.NodesAbove.Select(id => true));
             IsUpper.AddRange(group.NodesBelow.Select(id => false));
 
-            PolyZ.AddRange(group.NodesAbove.Select(id => Graph[id].Z));
-            PolyZ.AddRange(group.NodesBelow.Select(id => Graph[id].Z));
+            ShapeZ.AddRange(group.NodesAbove.Select(id => Graph[id].Z));
+            ShapeZ.AddRange(group.NodesBelow.Select(id => Graph[id].Z));
+
+
+            //
 
             //Todo Monday, this should not be in the constructor or the class I think.
             //Add corresponding points until we've run out of new correspondances
-            var correspondingPoints = Polygons.AddCorrespondingVerticies();
+            var correspondingPoints = ShapeList.AddCorrespondingVerticies();
 
             /*
             List<GridVector2> novelCorrespondingPoints = correspondingPoints.ToList();
@@ -493,7 +519,12 @@ namespace MorphologyMesh
             {
                 var nudgedPoints = SliceTopology.NudgeCorrespondingVerticies(Polygons, novelCorrespondingPoints);
                 */
+            GridPolygon[] Polygons = ShapeList.Where(s => s is GridPolygon).Cast<GridPolygon>().ToArray();
             SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polygons, correspondingPoints);
+
+            GridPolyline[] Polylines = ShapeList.Where(l => l is GridPolyline).Cast<GridPolyline>().ToArray();
+            SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polylines, correspondingPoints);
+            
             /*
                 var NewCorresponingPoints = Polygons.AddCorrespondingVerticies();
 //                novelCorrespondingPoints = NewCorresponingPoints.Where(p => correspondingPoints.Contains(p) == false).ToList();
@@ -501,8 +532,8 @@ namespace MorphologyMesh
             }
             while (novelCorrespondingPoints.Count > 0);
             */
-            
-            SliceTopology output = new SliceTopology(group.Key, Polygons, IsUpper, PolyZ, PolyIndexToMorphNodeIndex);
+
+            SliceTopology output = new SliceTopology(group.Key, Polygons, IsUpper, ShapeZ, VertexShapeIndexToMorphNodeIndex);
 
             return output;
         }
@@ -677,19 +708,19 @@ namespace MorphologyMesh
         /// </summary>
         internal static List<GridVector2> NudgeCorrespondingVerticies(GridPolygon[]  Polygons, List<GridVector2> correspondingPoints)
         {
-            Dictionary<GridVector2, List<PointIndex>> pointToIndexList = new Dictionary<GridVector2, List<PointIndex>>();
+            Dictionary<GridVector2, List<PolygonIndex>> pointToIndexList = new Dictionary<GridVector2, List<PolygonIndex>>();
             //GridPolygon[] Polygons = this.Polygons;
 
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)// GridPolygon poly in Polygons)
             {
                 GridPolygon poly = Polygons[iPoly];
-                List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
+                List<PolygonIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
                 if (correspondingIndicies == null || correspondingIndicies.Count == 0)
                     continue;
 
                 for (int i = 0; i < correspondingIndicies.Count; i++)
                 {
-                    PointIndex pi = correspondingIndicies[i];
+                    PolygonIndex pi = correspondingIndicies[i];
                     GridVector2 cp = pi.Point(poly);
 
                     if (pointToIndexList.ContainsKey(cp))
@@ -698,7 +729,7 @@ namespace MorphologyMesh
                     }
                     else
                     {
-                        List<PointIndex> listPI = new List<PointIndex>();
+                        List<PolygonIndex> listPI = new List<PolygonIndex>();
                         listPI.Add(pi.Reindex(iPoly));
                         pointToIndexList.Add(cp, listPI);
                     }
@@ -709,14 +740,14 @@ namespace MorphologyMesh
 
             foreach (GridVector2 cp in pointToIndexList.Keys)
             {
-                List<PointIndex> correspondingIndicies = pointToIndexList[cp];
+                List<PolygonIndex> correspondingIndicies = pointToIndexList[cp];
 
                 GridVector2[] points = correspondingIndicies.Select(ci => ci.PredictPoint(Polygons)).ToArray();
                 GridVector2 avg = points.Average();
                   
                 try
                 {
-                    foreach (PointIndex pi in correspondingIndicies)
+                    foreach (PolygonIndex pi in correspondingIndicies)
                     {
                         pi.SetPoint(Polygons, avg);
                     }
@@ -725,7 +756,7 @@ namespace MorphologyMesh
                 }
                 catch(ArgumentException e)
                 {
-                    foreach (PointIndex pi in correspondingIndicies)
+                    foreach (PolygonIndex pi in correspondingIndicies)
                     {
                         pi.SetPoint(Polygons, cp);
                     }
@@ -789,7 +820,7 @@ namespace MorphologyMesh
         {
             foreach (GridPolygon poly in Polygons)
             {
-                List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
+                List<PolygonIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
                 if (correspondingIndicies == null || correspondingIndicies.Count == 0)
                     continue;
 
@@ -812,20 +843,20 @@ namespace MorphologyMesh
         {
             GridRectangle bbox = Polygons.BoundingBox();
             bbox.Scale(1.05); //Grow the box slightly so the QuadTree will never resize for a rounding error
-            QuadTree<List<PointIndex>> tree = new QuadTree<List<PointIndex>>(bbox);
+            QuadTree<List<PolygonIndex>> tree = new QuadTree<List<PolygonIndex>>(bbox);
 
             PolySetVertexEnum indexEnum = new PolySetVertexEnum(Polygons);
-            foreach(PointIndex index in indexEnum)
+            foreach(PolygonIndex index in indexEnum)
             {
                 GridVector2 p = index.Point(Polygons);
-                List<PointIndex> existing = tree.FindNearest(p, out GridVector2 foundPoint, out double distance);
+                List<PolygonIndex> existing = tree.FindNearest(p, out GridVector2 foundPoint, out double distance);
                 if (foundPoint == p) //A corresponding point has already been added
                 {
                     existing.Add(index);
                 }
                 else
                 {
-                    existing = new List<PointIndex>(2);
+                    existing = new List<PolygonIndex>(2);
                     existing.Add(index);
                     tree.Add(p, existing);
                 }
@@ -833,7 +864,7 @@ namespace MorphologyMesh
 
             var PointIndexArrays = Polygons.IndiciesForPoints(correspondingPoints);
 
-            foreach (PointIndex[] indicies in PointIndexArrays)
+            foreach (PolygonIndex[] indicies in PointIndexArrays)
             {
                 if (indicies.Length == 0)
                     continue;
@@ -852,7 +883,7 @@ namespace MorphologyMesh
                 minDistance = nearestIndexList[1].Distance;
                 var nearestIndex = nearestIndexList[1].Value;
 
-                foreach (PointIndex pi in indicies)
+                foreach (PolygonIndex pi in indicies)
                 {
                     GridPolygon poly = pi.Polygon(Polygons);
                     
@@ -893,13 +924,12 @@ namespace MorphologyMesh
         {
             foreach (GridPolygon poly in Polygons)
             {
-                List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
+                List<PolygonIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
                 if (correspondingIndicies == null || correspondingIndicies.Count == 0)
                     continue;
 
-                SortedList<PointIndex, GridVector2> PointsToInsert = new SortedList<PointIndex, GridVector2>();
-                correspondingIndicies.Sort(); //Sort the indicies so we can simplify our search.
-
+                SortedList<PolygonIndex, GridVector2> PointsToInsert = new SortedList<PolygonIndex, GridVector2>();
+                correspondingIndicies.Sort(); //Sort the indicies so we can simplify our search. 
             }
         }
 
@@ -910,19 +940,19 @@ namespace MorphologyMesh
         {
             foreach(GridPolygon poly in Polygons)
             { 
-                List<PointIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
+                List<PolygonIndex> correspondingIndicies = poly.TryGetIndicies(correspondingPoints);
                 if (correspondingIndicies == null || correspondingIndicies.Count == 0)
                     continue;
 
-                SortedList<PointIndex, GridVector2> PointsToInsert = new SortedList<PointIndex, GridVector2>();
+                SortedList<PolygonIndex, GridVector2> PointsToInsert = new SortedList<PolygonIndex, GridVector2>();
                 correspondingIndicies.Sort(); //Sort the indicies so we can simplify our search.
 
                 IIndexSet loopingIndex = new InfiniteSequentialIndexSet(0, correspondingIndicies.Count, 0);
-                PointIndex Current = correspondingIndicies[0];
+                PolygonIndex Current = correspondingIndicies[0];
                 for (long i = 0; i < correspondingIndicies.Count; i++)
                 {
                     int iNext = (int)loopingIndex[i + 1];
-                    PointIndex Next = correspondingIndicies[iNext];
+                    PolygonIndex Next = correspondingIndicies[iNext];
 
                     if(Current.Next == Next)
                     {
@@ -946,6 +976,50 @@ namespace MorphologyMesh
                     //Trace.WriteLine(string.Format("Add vertex after {0}", addition));
                     //Insert the vertex, adjust the size of the ring in case we've already inserted into it.
                     poly.InsertVertex(addition.Value, addition.Key.ReindexToSize(poly));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Due to details of the implementation of our bajaj algorithm we need to add a point between adjacent corresponding points on a polygon
+        /// </summary>
+        internal static void AddPointsBetweenAdjacentCorrespondingVerticies(GridPolyline[] Polylines, List<GridVector2> correspondingPoints)
+        {
+            foreach (GridPolyline line in Polylines)
+            {
+                List<PolylineIndex> correspondingIndicies = line.TryGetIndicies(correspondingPoints);
+                if (correspondingIndicies == null || correspondingIndicies.Count == 0)
+                    continue;
+
+                SortedList<int, GridVector2> PointsToInsert = new SortedList<int, GridVector2>();
+                correspondingIndicies.Sort(); //Sort the indicies so we can simplify our search.
+                 
+                PolylineIndex Current = correspondingIndicies[0];
+                for (long i = 0; i < correspondingIndicies.Count-1; i++)
+                {
+                    PolylineIndex Next = correspondingIndicies[(int)i + 1];
+
+                    if (Current.Next == Next)
+                    { 
+                        //This means two corresponding points are adjacent and we need to insert a midpoint into the polygon between them.
+                        GridVector2[] midPoint = CatmullRom.FitCurveSegment(line.Points,
+                                                   Current.iVertex,
+                                                   new double[] {0.5}
+                                                   );
+
+                        //Adding the point will change index of all PointIndex values so we wait until the end
+                        PointsToInsert.Add(Current.iVertex, midPoint[0]);
+                    }
+
+                    Current = Next;
+                }
+
+                //Reverse the order of our list of points to add so we do not break polygon indicies.  Then insert our points
+                foreach (var addition in PointsToInsert.Reverse())
+                {
+                    //Trace.WriteLine(string.Format("Add vertex after {0}", addition));
+                    //Insert the vertex, adjust the size of the ring in case we've already inserted into it.
+                    line.Insert(addition.Key, addition.Value);
                 }
             }
         }

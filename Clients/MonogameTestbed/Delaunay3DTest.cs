@@ -37,7 +37,7 @@ namespace MonogameTestbed
             {
                 var map = Polygons[iPoly].CreatePointToPolyMap();
                 double Z = PolyZ[iPoly];
-                listPoints.AddRange(map.Keys.Select(k => new MIVector3(k.ToGridVector3(Z), new PointIndex(iPoly, map[k].iInnerPoly, map[k].iVertex, Polygons))));
+                listPoints.AddRange(map.Keys.Select((Func<GridVector2, MIVector3>)(k => new MIVector3((GridVector3)k.ToGridVector3(Z), (PolygonIndex)new PolygonIndex((int)iPoly, (int?)map[(GridVector2)k].iInnerPoly, (int)map[(GridVector2)k].iVertex, (IReadOnlyList<GridPolygon>)Polygons)))));
             }
 
             var tri = MIConvexHull.DelaunayTriangulation<MIConvexHullExtensions.MIVector3, DefaultTriangulationCell<MIVector3>>.Create(listPoints, 1e-10);
@@ -69,8 +69,8 @@ namespace MonogameTestbed
                 {
                     GridLineSegment line = new GridLineSegment(combo.A.P, combo.B.P);
 
-                    PointIndex A = cell.Vertices[combo.iA].PolyIndex;
-                    PointIndex B = cell.Vertices[combo.iB].PolyIndex;
+                    PolygonIndex A = cell.Vertices[combo.iA].PolyIndex;
+                    PolygonIndex B = cell.Vertices[combo.iB].PolyIndex;
 
                     if (LineCrossesEmptySpace(A, B, Polygons, line.PointAlongLine(0.5), PolyZ))
                     {
@@ -101,8 +101,8 @@ namespace MonogameTestbed
                     foreach (Combo<int> combo in face.CombinationPairs())
                     {
                         var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
-                        PointIndex A = cell.Vertices[combo.A].PolyIndex;
-                        PointIndex B = cell.Vertices[combo.B].PolyIndex;
+                        PolygonIndex A = cell.Vertices[combo.A].PolyIndex;
+                        PolygonIndex B = cell.Vertices[combo.B].PolyIndex;
 
                         bool EmptySpace = LineCrossesEmptySpace(A, B, Polygons, line.PointAlongLine(0.5), PolyZ);
                         if(EmptySpace)
@@ -209,7 +209,7 @@ namespace MonogameTestbed
             */
         }
 
-        public static bool LineCrossesEmptySpace(PointIndex APoly, PointIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint, double[] PolyZ)
+        public static bool LineCrossesEmptySpace(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint, double[] PolyZ)
         {
             GridPolygon A = Polygons[APoly.iPoly];
             GridPolygon B = Polygons[BPoly.iPoly];
@@ -232,7 +232,7 @@ namespace MonogameTestbed
             }
             else
             {
-                if (!PointIndex.IsBorderLine(APoly, BPoly, A))
+                if (!PolygonIndex.IsBorderLine(APoly, BPoly, A))
                 {
                     return true;
                 }
@@ -241,7 +241,7 @@ namespace MonogameTestbed
             return false;
         }
 
-        private Color GetColorForLine(PointIndex APoly, PointIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
+        private Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
         {
             GridPolygon A = Polygons[APoly.iPoly];
             GridPolygon B = Polygons[BPoly.iPoly];
@@ -316,7 +316,7 @@ namespace MonogameTestbed
                 bool midInA = A.Contains(midpoint);
                 bool midInB = midInA;
 
-                if (PointIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
+                if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
                 {
                     return Color.White;//PolyPointsView[APoly.iPoly].Color;
 

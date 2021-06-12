@@ -44,7 +44,7 @@ namespace SqlGeometryUtils
             return shape.ExteriorRing.ToPolygon(shape.InteriorRings.ToList());
         }
 
-        public static IPolyLine2D ToPolyLine(this SqlGeometry shape)
+        public static GridPolyline ToPolyLine(this SqlGeometry shape)
         {
             if (shape.GeometryType() != SupportedGeometryType.POLYLINE)
                 throw new ArgumentException("SqlGeometry must be a polygon type");

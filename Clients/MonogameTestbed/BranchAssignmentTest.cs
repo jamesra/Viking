@@ -95,14 +95,14 @@ namespace MonogameTestbed
             PolyPointsView = listPointSetView.ToArray();
         }
 
-        private void BuildAPort(IMesh mesh, Dictionary<GridVector2, PointIndex> pointToPoly)
+        private void BuildAPort(IMesh mesh, Dictionary<GridVector2, PolygonIndex> pointToPoly)
         {
             List<GridVector2> points = pointToPoly.Keys.ToList();
             Debug.Assert(mesh.Vertices.Select(v => v.ToGridVector2()).SequenceEqual(points));
 
-            Mesh3D<IVertex3D<PointIndex>> SearchMesh = new Mesh3D<IVertex3D<PointIndex>>();
+            Mesh3D<IVertex3D<PolygonIndex>> SearchMesh = new Mesh3D<IVertex3D<PolygonIndex>>();
 
-            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PointIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
+            SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PolygonIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
         
@@ -116,7 +116,7 @@ namespace MonogameTestbed
             {
                 var map = Polygons[iPoly].CreatePointToPolyMap();
                 double Z = PolyZ[iPoly];  
-                listPoints.AddRange(map.Keys.Select(k => new MIVector3(k.ToGridVector3(Z), new PointIndex(iPoly, map[k].iInnerPoly, map[k].iVertex, Polygons))));
+                listPoints.AddRange(map.Keys.Select((Func<GridVector2, MIVector3>)(k => new MIVector3((GridVector3)k.ToGridVector3(Z), (PolygonIndex)new PolygonIndex((int)iPoly, (int?)map[(GridVector2)k].iInnerPoly, (int)map[(GridVector2)k].iVertex, (IReadOnlyList<GridPolygon>)Polygons)))));
             }
 
             var tri = MIConvexHull.DelaunayTriangulation<MIConvexHullExtensions.MIVector3, DefaultTriangulationCell<MIVector3>>.Create(listPoints, 1e-10);
@@ -142,8 +142,8 @@ namespace MonogameTestbed
                 {
                     GridLineSegment line = new GridLineSegment(combo.A.P, combo.B.P);
 
-                    PointIndex A = cell.Vertices[combo.iA].PolyIndex;
-                    PointIndex B = cell.Vertices[combo.iB].PolyIndex;
+                    PolygonIndex A = cell.Vertices[combo.iA].PolyIndex;
+                    PolygonIndex B = cell.Vertices[combo.iB].PolyIndex;
 
                     tetraLines.Add(line);
 
@@ -174,8 +174,8 @@ namespace MonogameTestbed
                     foreach (Combo<int> combo in face.CombinationPairs())
                     {
                         var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
-                        PointIndex A = cell.Vertices[combo.A].PolyIndex;
-                        PointIndex B = cell.Vertices[combo.B].PolyIndex;
+                        PolygonIndex A = cell.Vertices[combo.A].PolyIndex;
+                        PolygonIndex B = cell.Vertices[combo.B].PolyIndex;
 
                         bool OnSurface = MeshGraphBuilder.IsLineOnSurface(A, B, Polygons, line.PointAlongLine(0.5));
                         if (!surfaceLines.Contains(line))
@@ -447,7 +447,7 @@ namespace MonogameTestbed
         }
          
 
-        private Color GetColorForLine(PointIndex APoly, PointIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
+        private Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
         {
             GridPolygon A = Polygons[APoly.iPoly];
             GridPolygon B = Polygons[BPoly.iPoly];
@@ -522,7 +522,7 @@ namespace MonogameTestbed
                 bool midInA = A.Contains(midpoint);
                 bool midInB = midInA;
 
-                if (PointIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
+                if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
                 {
                     return PolyPointsView[APoly.iPoly].Color;
                     

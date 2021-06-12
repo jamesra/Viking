@@ -55,13 +55,13 @@ namespace MorphologyMesh
     {
         public readonly GridLineSegment Line;
 
-        public readonly PointIndex Origin; //The vertex originating the slice chord
-        public readonly PointIndex Target; //The target vertex
+        public readonly PolygonIndex Origin; //The vertex originating the slice chord
+        public readonly PolygonIndex Target; //The target vertex
 
         //public SliceChordTestType PassedTests; //Tests we know this chord has passed.
         //public SliceChordTestType FailedTests; //Tests we know this chord has failed.
          
-        public SliceChord(PointIndex O, PointIndex T, GridPolygon[] polygons)
+        public SliceChord(PolygonIndex O, PolygonIndex T, GridPolygon[] polygons)
         {
             this.Line = new GridLineSegment(O.Point(polygons), T.Point(polygons));
             this.Origin = O;

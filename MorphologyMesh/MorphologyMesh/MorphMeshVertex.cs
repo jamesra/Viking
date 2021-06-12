@@ -13,7 +13,7 @@ namespace MorphologyMesh
         /// <summary>
         /// Verticies we add to close holes will not have a poly index.  The medial axis verticies must have faces added because at this point they will not autocomplete.
         /// </summary>
-        public readonly PointIndex? PolyIndex;
+        public readonly PolygonIndex? PolyIndex;
 
         public readonly MedialAxisIndex? MedialAxisIndex;
 
@@ -47,12 +47,12 @@ namespace MorphologyMesh
 
         GridVector2 IVertex2D.Position { get { return this.Position.XY(); } }
 
-        public MorphMeshVertex(PointIndex polyIndex, GridVector3 p) : base(p)
+        public MorphMeshVertex(PolygonIndex polyIndex, GridVector3 p) : base(p)
         {
             PolyIndex = polyIndex;
         }
 
-        public MorphMeshVertex(PointIndex polyIndex, GridVector3 p, GridVector3 n) : base(p, n)
+        public MorphMeshVertex(PolygonIndex polyIndex, GridVector3 p, GridVector3 n) : base(p, n)
         {
             PolyIndex = polyIndex;
         }
@@ -126,8 +126,8 @@ namespace MorphologyMesh
             if (FacesAreComplete)
                 return true;
 
-            PointIndex prev = PolyIndex.Value.Previous;
-            PointIndex next = PolyIndex.Value.Next;
+            PolygonIndex prev = PolyIndex.Value.Previous;
+            PolygonIndex next = PolyIndex.Value.Next;
 
             MorphMeshVertex prevVertex = mesh[prev];
             MorphMeshVertex nextVertex = mesh[next];

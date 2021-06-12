@@ -67,7 +67,7 @@ namespace MorphologyMesh
         static public MedialAxisGraph ApproximateMedialAxis(GridPolygon shape)
         {
             TriangleNet.Meshing.IMesh triangulationMesh = null;
-            TriangulationMesh<IVertex2D<PointIndex>> mesh;
+            TriangulationMesh<IVertex2D<PolygonIndex>> mesh;
             try
             {
                 mesh = shape.Triangulate();

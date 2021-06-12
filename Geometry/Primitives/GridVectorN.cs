@@ -21,6 +21,14 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Defaults to comparing the axis values in the order they appear in the points coordinate array. i.e. X,Y,Z..
+        /// </summary>
+        public AxisComparer(AXIS[] axisCompareOrder)
+        {
+            AxisCompareOrder = axisCompareOrder.Cast<int>().ToArray();
+        }
+
+        /// <summary>
         /// This constructor allows the order that axes are compared in
         /// </summary>
         /// <param name="axisCompareOrder"></param>
@@ -345,5 +353,16 @@ namespace Geometry
             return !A.Equals(B);
         }
 
+        public double this[AXIS axis]
+        {
+            get
+            {
+                return coords[(int)axis];
+            }
+            set
+            {
+                coords[(int)axis] = value;
+            }
+        } 
     }
 }

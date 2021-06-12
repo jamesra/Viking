@@ -79,7 +79,7 @@ namespace MorphologyMesh
 
         internal virtual bool[] IsUpperPolygon { get; }
 
-        private Dictionary<PointIndex, long> PolyIndexToVertex = new Dictionary<PointIndex, long>();
+        private Dictionary<PolygonIndex, long> PolyIndexToVertex = new Dictionary<PolygonIndex, long>();
 
         [NonSerialized]
         private double? _avgZ = null; //Cached average Z level of polygons use only for sorting purposes
@@ -126,13 +126,13 @@ namespace MorphologyMesh
         private static void PopulateMesh(MorphRenderMesh mesh)
         {
             //Add verticies
-            List<PointIndex> PolyVerts = new List<PointIndex>(new PolySetVertexEnum(mesh.Polygons));
+            List<PolygonIndex> PolyVerts = new List<PolygonIndex>(new PolySetVertexEnum(mesh.Polygons));
 
             //This is used to identify corresponding edges
             //TODO: PositionToIndex does not handle multiple Z Level meshes correctly when generating corresponding edges
             Dictionary<GridVector2, int> PositionToIndex = new Dictionary<GridVector2, int>();
 
-            foreach (PointIndex i1 in PolyVerts)
+            foreach (PolygonIndex i1 in PolyVerts)
             {
                 MorphMeshVertex v = new MorphMeshVertex(i1, i1.Point(mesh.Polygons).ToGridVector3(mesh.PolyZ[i1.iPoly]));
                 int iV;
@@ -162,9 +162,9 @@ namespace MorphologyMesh
             }
 
             //Add contours
-            foreach (PointIndex i1 in PolyVerts)
+            foreach (PolygonIndex i1 in PolyVerts)
             {
-                PointIndex next = i1.Next; //Next returns the next index in the ring, not in the list, so it will close the contour correctly
+                PolygonIndex next = i1.Next; //Next returns the next index in the ring, not in the list, so it will close the contour correctly
                 MorphMeshEdge edge = new MorphMeshEdge(EdgeType.CONTOUR, mesh[i1].Index, mesh[next].Index);
                 mesh.AddEdge(edge);
             }
@@ -197,7 +197,7 @@ namespace MorphologyMesh
         /// <param name="corresponding"></param>
         private static GridVector2 FitCurveMidpoint(MorphRenderMesh mesh, MorphMeshVertex v)
         {
-            PointIndex cIndex = v.PolyIndex.Value;
+            PolygonIndex cIndex = v.PolyIndex.Value;
             return cIndex.PredictPoint(mesh.Polygons);
         }
 
@@ -210,7 +210,7 @@ namespace MorphologyMesh
         /// <param name="ZLevelA"></param>
         /// <param name="ZLevelB"></param>
         /// <returns></returns>
-        public Dictionary<GridVector2, List<PointIndex>> CreatePointToPolyMap(double ZLevelA, double ZLevelB)
+        public Dictionary<GridVector2, List<PolygonIndex>> CreatePointToPolyMap(double ZLevelA, double ZLevelB)
         {
             throw new NotImplementedException();
         }
@@ -233,7 +233,7 @@ namespace MorphologyMesh
             }
         }
 
-        public virtual MorphMeshVertex this[PointIndex key]
+        public virtual MorphMeshVertex this[PolygonIndex key]
         {
             get
             {
@@ -245,7 +245,7 @@ namespace MorphologyMesh
             }
         }
 
-        public virtual bool Contains(PointIndex key)
+        public virtual bool Contains(PolygonIndex key)
         {
             return PolyIndexToVertex.ContainsKey(key);
         }
@@ -257,7 +257,7 @@ namespace MorphologyMesh
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        public virtual bool Contains(PointIndex A, PointIndex B)
+        public virtual bool Contains(PolygonIndex A, PolygonIndex B)
         {
             if (!this.Contains(A) || !this.Contains(B))
                 return false;
@@ -293,7 +293,7 @@ namespace MorphologyMesh
             return iStartVert;
         }
 
-        public MorphMeshVertex GetOrAddVertex(PointIndex pIndex, GridVector3 vert3)
+        public MorphMeshVertex GetOrAddVertex(PolygonIndex pIndex, GridVector3 vert3)
         {
             MorphMeshVertex meshVertex;
             if (!this.Contains(pIndex))
@@ -423,7 +423,7 @@ namespace MorphologyMesh
         /// <param name="mesh"></param>
         /// <param name="IncompleteVerticies"></param>
         /// <returns></returns>
-        public static MorphMeshRegionGraph SecondPassRegionDetection(MorphRenderMesh mesh, List<MorphMeshVertex> IncompleteVerticies, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
+        public static MorphMeshRegionGraph SecondPassRegionDetection(MorphRenderMesh mesh, List<MorphMeshVertex> IncompleteVerticies, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
         {
             MorphMeshRegionGraph graph = new MorphMeshRegionGraph();
 
@@ -474,7 +474,7 @@ namespace MorphologyMesh
         /// <summary>
         /// Take a list of vertex indicies that describe the closed perimeter of a region without faces in the mesh.  Triangulate the verticies and insert faces based upon the triangulation
         /// </summary>
-        public static List<MorphMeshFace> RegionPerimeterToFaces(MorphRenderMesh mesh, List<int> Face, TriangulationMesh<IVertex2D<PointIndex>>.ProgressUpdate OnProgress = null)
+        public static List<MorphMeshFace> RegionPerimeterToFaces(MorphRenderMesh mesh, List<int> Face, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
         {
             if (Face == null)
                 return new List<MorphMeshFace>();

@@ -184,7 +184,7 @@ namespace MonogameTestbed
 
         public void Init(MonoTestbed window)
         {
-            GeometryTests.TriangulatedMeshGenerators.OnProgress = this.OnTriangulationProgress;
+            GeometryTests.FSCheck.TriangulatedMeshGenerators.OnProgress = this.OnTriangulationProgress;
             Points_X_View.LabelColor = Color.Gold;
             Points_X_View.LabelType = PointLabelType.INDEX;
 

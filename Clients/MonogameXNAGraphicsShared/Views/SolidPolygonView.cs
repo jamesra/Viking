@@ -179,7 +179,7 @@ namespace VikingXNAGraphics
 
             //Center the polygon to reduce rounding error and because we'll position the polygon with the matrix
             GridPolygon centered_poly = InputPolygon.Translate(-_Position);
-            TriangulationMesh<IVertex2D<PointIndex>> Mesh;
+            TriangulationMesh<IVertex2D<PolygonIndex>> Mesh;
             try
             {
                 Mesh = centered_poly.Triangulate();

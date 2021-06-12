@@ -172,7 +172,7 @@ namespace MorphologyMesh
 
             //Create a map so we can record where every vertex came from in the set of points
             //TODO: Overlapping verticies are not going to be handled...
-            Dictionary<GridVector2, List<PointIndex>> pointToPoly = GridPolygon.CreatePointToPolyMap(Polygons.ToArray());
+            Dictionary<GridVector2, List<PolygonIndex>> pointToPoly = GridPolygon.CreatePointToPolyMap(Polygons.ToArray());
 
             //Create a map from the index into our array of polygons to the actual node ID the polygon came from.
             ulong[] PolygonToNodeKey = new ulong[other_nodes.Length + 1];
@@ -227,7 +227,7 @@ namespace MorphologyMesh
 
             //GridLineSegment[] lines = mesh.ToLines().ToArray();
 
-            Dictionary<GridVector2, SortedSet<PointIndex>> pointToConnectedPolys = new Dictionary<GridVector2, SortedSet<PointIndex>>();
+            Dictionary<GridVector2, SortedSet<PolygonIndex>> pointToConnectedPolys = new Dictionary<GridVector2, SortedSet<PolygonIndex>>();
 
 
             GridVector2[] midpoints = lines.Select(l => l.PointAlongLine(0.5)).AsParallel().ToArray();
@@ -241,8 +241,8 @@ namespace MorphologyMesh
                 if (!pointToPoly.ContainsKey(l.A) || !pointToPoly.ContainsKey(l.B))
                     continue;
 
-                PointIndex APolyIndex = pointToPoly[l.A].First();
-                PointIndex BPolyIndex = pointToPoly[l.B].First();
+                PolygonIndex APolyIndex = pointToPoly[l.A].First();
+                PolygonIndex BPolyIndex = pointToPoly[l.B].First();
 
                 int APoly = APolyIndex.iPoly;
                 int BPoly = APolyIndex.iPoly;
@@ -300,7 +300,7 @@ namespace MorphologyMesh
         /// <param name="edge"></param>
         /// <param name="pointToConnectedPolys">A map indicating which polygon verticies each vertex is connected to in the triangulation</param>
         /// <returns></returns>
-        private static void Triangulation(MeshNode node, MeshEdge edge, Dictionary<GridVector2, SortedSet<PointIndex>> pointToConnectedPolys, ulong[] PolygonToNodeKey)
+        private static void Triangulation(MeshNode node, MeshEdge edge, Dictionary<GridVector2, SortedSet<PolygonIndex>> pointToConnectedPolys, ulong[] PolygonToNodeKey)
         {
             ConnectionVerticies port = edge.GetPortForNode(node.Key);
             ConnectionVerticies other_port = edge.GetOppositePortForNode(node.Key);
@@ -315,7 +315,7 @@ namespace MorphologyMesh
                     continue;
                 }
 
-                SortedSet<PointIndex> Connected = pointToConnectedPolys[v];
+                SortedSet<PolygonIndex> Connected = pointToConnectedPolys[v];
 
                 SortedSet<ulong> ConnectedKeys = new SortedSet<ulong>(Connected.Select(i => PolygonToNodeKey[i.iPoly]));
 
@@ -348,7 +348,7 @@ namespace MorphologyMesh
         /// <param name="edge"></param>
         /// <param name="pointToConnectedPolys">A map indicating which polygon verticies each vertex is connected to in the triangulation</param>
         /// <returns></returns>
-        private static void GeneratePortFromTriangulation(MeshNode node, MeshEdge edge, Dictionary<GridVector2, SortedSet<PointIndex>> pointToConnectedPolys, ulong[] PolygonToNodeKey)
+        private static void GeneratePortFromTriangulation(MeshNode node, MeshEdge edge, Dictionary<GridVector2, SortedSet<PolygonIndex>> pointToConnectedPolys, ulong[] PolygonToNodeKey)
         {
             ConnectionVerticies port = edge.GetPortForNode(node.Key);
             ConnectionVerticies other_port = edge.GetOppositePortForNode(node.Key);
@@ -369,7 +369,7 @@ namespace MorphologyMesh
                     continue;
                 }
 
-                SortedSet<PointIndex> Connected = pointToConnectedPolys[v];
+                SortedSet<PolygonIndex> Connected = pointToConnectedPolys[v];
 
                 SortedSet<ulong> ConnectedKeys = new SortedSet<ulong>(Connected.Select(i => PolygonToNodeKey[i.iPoly]));
 
@@ -444,7 +444,7 @@ namespace MorphologyMesh
         }
         */
 
-        private static GridTriangle[] RemoveTrianglesOutsidePolygons(GridTriangle[] triangles, GridLineSegment[] lines, GridPolygon[] polygons, Dictionary<GridVector2, PointIndex> pointToPoly)
+        private static GridTriangle[] RemoveTrianglesOutsidePolygons(GridTriangle[] triangles, GridLineSegment[] lines, GridPolygon[] polygons, Dictionary<GridVector2, PolygonIndex> pointToPoly)
         {
             GridVector2[] midpoints = lines.Select(l => l.PointAlongLine(0.5)).ToArray();
 
@@ -469,15 +469,15 @@ namespace MorphologyMesh
             for (int iLine = 0; iLine < lines.Length; iLine++)
             {
                 GridLineSegment l = lines[iLine];
-                PointIndex APolyIndex = pointToPoly[l.A];
-                PointIndex BPolyIndex = pointToPoly[l.B];
+                PolygonIndex APolyIndex = pointToPoly[l.A];
+                PolygonIndex BPolyIndex = pointToPoly[l.B];
 
                 //Same polygon, check if it is inside
                 if (APolyIndex.iPoly == BPolyIndex.iPoly)
                 {
                     GridPolygon poly = polygons[APolyIndex.iPoly];
                     //Check that the indicies are not adjacent.  If they are part of a border retain the line
-                    if (PointIndex.IsBorderLine(APolyIndex, BPolyIndex, poly))
+                    if (PolygonIndex.IsBorderLine(APolyIndex, BPolyIndex, poly))
                         continue;
 
                     //Check if the line falls outside our polygon, in which case we don't want it;
@@ -499,11 +499,11 @@ namespace MorphologyMesh
         /// <param name="dict"></param>
         /// <param name="key"></param>
         /// <param name="iPoly"></param>
-        private static void CreateOrAddToSet(Dictionary<GridVector2, SortedSet<PointIndex>> dict, GridVector2 key, PointIndex iPoly)
+        private static void CreateOrAddToSet(Dictionary<GridVector2, SortedSet<PolygonIndex>> dict, GridVector2 key, PolygonIndex iPoly)
         {
             if (!dict.ContainsKey(key))
             {
-                dict[key] = new SortedSet<PointIndex>();
+                dict[key] = new SortedSet<PolygonIndex>();
             }
 
             dict[key].Add(iPoly);
@@ -526,7 +526,7 @@ namespace MorphologyMesh
             return pointToPoly;
         }
 
-        public static bool IsLineOnSurface(PointIndex APoly, PointIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
+        public static bool IsLineOnSurface(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
         {
             GridPolygon A = Polygons[APoly.iPoly];
             GridPolygon B = Polygons[BPoly.iPoly];
@@ -573,7 +573,7 @@ namespace MorphologyMesh
                 bool midInA = A.Contains(midpoint);
                 bool midInB = midInA;
 
-                if (PointIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
+                if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
                 {
                     //Line is part of the border, either internal or external
                     return true;

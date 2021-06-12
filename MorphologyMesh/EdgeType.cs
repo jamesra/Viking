@@ -172,7 +172,7 @@ namespace MorphologyMesh
         /// <param name="Polygons"></param>
         /// <param name="midpoint"></param>
         /// <returns></returns>
-        public static EdgeType GetEdgeType(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons, GridVector2 midpoint)
+        public static EdgeType GetEdgeType(PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<GridPolygon> Polygons, GridVector2 midpoint)
         {
             GridPolygon A = Polygons[APoly.iPoly];
             GridPolygon B = Polygons[BPoly.iPoly];
@@ -253,7 +253,7 @@ namespace MorphologyMesh
             {
 
 
-                if (PointIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
+                if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
                 {
                     //Line is part of the border, either internal or external
                     return EdgeType.CONTOUR;
@@ -323,7 +323,7 @@ namespace MorphologyMesh
         }
 
 
-        public static double Orientation(this PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons)
+        public static double Orientation(this PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<GridPolygon> Polygons)
         {
             GridVector2 p1 = APoly.Point(Polygons);
             GridVector2 p2 = BPoly.Point(Polygons);
@@ -347,7 +347,7 @@ namespace MorphologyMesh
             return arcAngle;
         }
 
-        public static bool OrientationsAreMatched(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons)
+        public static bool OrientationsAreMatched(PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<GridPolygon> Polygons)
         {
             double arcAngle = Orientation(APoly, BPoly, Polygons);
             return Math.Abs(arcAngle) < Math.PI / 2.0;
@@ -382,7 +382,7 @@ namespace MorphologyMesh
         /// <param name="midpoint"></param>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public static EdgeType GetContourEdgeTypeWithOrientation(this MorphRenderMesh mesh, PointIndex A, PointIndex B, GridVector2? midpoint = new GridVector2?())
+        public static EdgeType GetContourEdgeTypeWithOrientation(this MorphRenderMesh mesh, PolygonIndex A, PolygonIndex B, GridVector2? midpoint = new GridVector2?())
         {
             if (!midpoint.HasValue)
             {
@@ -401,7 +401,7 @@ namespace MorphologyMesh
         /// <param name="midpoint"></param>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public static EdgeType GetContourEdgeTypeWithOrientation(PointIndex APoly, PointIndex BPoly, IReadOnlyList<GridPolygon> Polygons, GridVector2 midpoint)
+        public static EdgeType GetContourEdgeTypeWithOrientation(PolygonIndex APoly, PolygonIndex BPoly, IReadOnlyList<GridPolygon> Polygons, GridVector2 midpoint)
         {
             EdgeType type = GetEdgeType(APoly, BPoly, Polygons, midpoint); 
             if((type.IsValid() &&

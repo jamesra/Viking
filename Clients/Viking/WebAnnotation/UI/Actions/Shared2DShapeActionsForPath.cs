@@ -19,7 +19,7 @@ namespace WebAnnotation.UI.Actions
             /// <summary>
             /// Which polygon is being cut? This can be either the exterior ring or an interior ring
             /// </summary>
-            PointIndex? PolyBeingCut;
+            PolygonIndex? PolyBeingCut;
 
             List<Change2DContourAction> output = new List<Change2DContourAction>();
 
@@ -36,7 +36,7 @@ namespace WebAnnotation.UI.Actions
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //This can probably be simplified to checking the first and last segment in the path against the smoothed shape displayed in UI since we are using events
 
-            SortedDictionary<double, PointIndex> intersectedSegments = OriginalVolumePolygon.IntersectingSegments(subpath.ToLineSegments());
+            SortedDictionary<double, PolygonIndex> intersectedSegments = OriginalVolumePolygon.IntersectingSegments(subpath.ToLineSegments());
 
             if (intersectedSegments.Count < 2)
             {
@@ -52,8 +52,8 @@ namespace WebAnnotation.UI.Actions
 
             double[] firstTwoIntersections = intersectedSegments.Keys.Take(2).ToArray();
 
-            PointIndex FirstIntersection = intersectedSegments[firstTwoIntersections[0]];
-            PointIndex SecondIntersection = intersectedSegments[firstTwoIntersections[1]];
+            PolygonIndex FirstIntersection = intersectedSegments[firstTwoIntersections[0]];
+            PolygonIndex SecondIntersection = intersectedSegments[firstTwoIntersections[1]];
 
             //We cannot cut across rings, so check that
             if (FirstIntersection.AreOnSameRing(SecondIntersection) == false)

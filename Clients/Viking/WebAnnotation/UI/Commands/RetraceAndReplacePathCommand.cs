@@ -32,9 +32,9 @@ namespace WebAnnotation.UI.Commands
         //Our original polygon plus the origin of retrace and replace and the origin point index
         GridPolygon VolumePolygonPlusOrigin;
 
-        public PointIndex OriginIndex;
+        public PolygonIndex OriginIndex;
 
-        public PointIndex? PolyBeingCut;
+        public PolygonIndex? PolyBeingCut;
 
         //Meshes of the individual cut pieces of the retrace and replace
         PositionColorMeshModel ClockwiseWalkMesh = null;
@@ -280,14 +280,14 @@ namespace WebAnnotation.UI.Commands
                 return RetraceCommandAction.NONE;
             }
 
-            SortedDictionary<double, PointIndex> intersectedSegments = this.OriginalVolumePolygon.IntersectingSegments(path.ToLineSegments());
+            SortedDictionary<double, PolygonIndex> intersectedSegments = this.OriginalVolumePolygon.IntersectingSegments(path.ToLineSegments());
 
             if (intersectedSegments.Count < 2)
             {
                 return RetraceCommandAction.NONE;
             }
 
-            PointIndex FirstIntersection = intersectedSegments.First().Value;
+            PolygonIndex FirstIntersection = intersectedSegments.First().Value;
 
             GridPolygon PolyToCut = OriginalVolumePolygon;
             if (FirstIntersection.IsInner)

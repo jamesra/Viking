@@ -6,10 +6,10 @@ namespace MIConvexHullExtensions
     public struct MIVector3 :  MIConvexHull.IVertex
     {
         public readonly Geometry.GridVector3 P;
-        public readonly PointIndex PolyIndex;
+        public readonly PolygonIndex PolyIndex;
 
 
-        public MIVector3(GridVector3 p, PointIndex index)
+        public MIVector3(GridVector3 p, PolygonIndex index)
         {
             this.P = p;
             PolyIndex = index; 

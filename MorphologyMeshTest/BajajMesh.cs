@@ -2,6 +2,7 @@
 using Geometry;
 using Geometry.JSON;
 using GeometryTests;
+using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MorphologyMesh;
 using System.Collections.Generic;

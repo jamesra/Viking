@@ -19,35 +19,22 @@ namespace Geometry
         public readonly int iVertex;
 
         public readonly int NumUnique; //The total number of verticies in the polyline
+          
 
-        public readonly bool Closed; 
-
-        private static int CalculateNumUniqueVerticies(GridPolyline line)
-        {
-            return CalculateNumUniqueVerticies(line.Points.Count, line.Closed);
-        }
-
-        private static int CalculateNumUniqueVerticies(int lineLength, bool closed)
-        {
-            return lineLength - (closed ? 1 : 0);
-        }
-
-        public PolylineIndex(int iV, int lineLength, bool closed = false)
+        public PolylineIndex(int iV, int lineLength)
         {
             iLine = 0; //Not used in this constructor
             this.iVertex = iV;
-            this.NumUnique = CalculateNumUniqueVerticies(lineLength, closed);
-            Closed = closed;
+            this.NumUnique = lineLength;
             Debug.Assert(NumUnique > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex < NumUnique); //Can be equal if this is the index of the last point in the ring which is a duplicate
         }
 
-        public PolylineIndex(int line, int iV, int lineLength, bool closed = false)
+        public PolylineIndex(int line, int iV, int lineLength)
         {
             iLine = line; 
             this.iVertex = iV;
-            this.NumUnique = CalculateNumUniqueVerticies(lineLength, closed);
-            Closed = closed;
+            this.NumUnique = lineLength;
             Debug.Assert(NumUnique > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex < NumUnique); //Can be equal if this is the index of the last point in the ring which is a duplicate
         }
@@ -56,8 +43,7 @@ namespace Geometry
         {
             iLine = line;
             this.iVertex = iV;
-            this.NumUnique = CalculateNumUniqueVerticies(Lines[iLine]);
-            Closed = Lines[iLine].Closed;
+            this.NumUnique = Lines[iLine].PointCount;
             Debug.Assert(NumUnique > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex < NumUnique); //Can be equal if this is the index of the last point in the ring which is a duplicate
         }
@@ -144,14 +130,20 @@ namespace Geometry
             return this.iVertex.CompareTo(other.iVertex);
         }
 
-        public bool IsFirstIndex()
+        public bool IsFirstIndex
         {
-            return this.iVertex == 0 || (Closed && iVertex == this.NumUnique);
+            get
+            {
+                return this.iVertex == 0;
+            }
         }
 
-        public bool IsLastIndex()
+        public bool IsLastIndex 
         {
-            return this.iVertex == this.NumUnique - 1;
+            get
+            {
+                return this.iVertex == this.NumUnique - 1;
+            }
         }
 
         public int? NextVertex
@@ -159,9 +151,9 @@ namespace Geometry
             get
             {
                 int iNext = iVertex + 1;
-                if (iNext >= this.NumUniqueInRing)
+                if (iNext >= this.NumUnique)
                 {
-                    return this.Closed ? 0 : new int?();
+                    return new int?();
                 }
 
                 return iNext;
@@ -175,7 +167,7 @@ namespace Geometry
                 int iPrevious = iVertex - 1;
                 if (iPrevious < 0)
                 {
-                    return this.Closed ? this.NumUnique - 1 : new int?();
+                    return new int?();
                 }
 
                 return iPrevious;
@@ -186,11 +178,15 @@ namespace Geometry
         /// Return the next index after this one, staying within the same ring
         /// </summary>
         /// <returns></returns>
-        public PolylineIndex Next
+        public PolylineIndex? Next
         {
             get
             {
-                return new PolylineIndex(this.iPoly, this.NextVertex, this.NumUniqueInRing);
+                int? n = NextVertex;
+                if (n.HasValue)
+                    return new PolylineIndex(this.iLine, this.NextVertex.Value, this.NumUnique);
+                else
+                    return default;
             }
         }
 
@@ -198,11 +194,15 @@ namespace Geometry
         /// Return the previous index after this one, staying within the same ring
         /// </summary>
         /// <returns></returns>
-        public PolylineIndex Previous
+        public PolylineIndex? Previous
         {
             get
             {
-                return new PolylineIndex(this.iPoly, this.PreviousVertex, this.NumUniqueInRing);
+                int? p = PreviousVertex;
+                if (p.HasValue)
+                    return new PolylineIndex(this.iLine, this.PreviousVertex.Value, this.NumUnique);
+                else
+                    return default;
             }
         }
 
@@ -220,27 +220,7 @@ namespace Geometry
         { 
             return new GridVector2(lines[iLine].Points[iVertex]);
         }
-
-        /// <summary>
-        /// Return the segment, using this point index and the next index in the ring
-        /// </summary>
-        /// <param name="Polygon"></param>
-        /// <returns></returns>
-        public GridLineSegment Segment(GridPolyline polyline)
-        {
-            return new GridLineSegment(polyline[this],polyline[this.Next]);
-        }
-
-        public GridLineSegment Segment(IReadOnlyList<GridPolyline> polylines)
-        {
-            return new GridLineSegment(Point(Polygons), Next.Point(Polygons));
-        }
-
-        public GridLineSegment Segment(IReadOnlyDictionary<int, GridPolyline> polylines)
-        {
-            return new GridLineSegment(Point(Polygons), Next.Point(Polygons));
-        }
-
+         
         /// <summary>
         /// Return a copy of this PointIndex with iPoly value changed to point at a different polygon index
         /// </summary>
@@ -248,7 +228,7 @@ namespace Geometry
         /// <returns></returns>
         public PolygonIndex Reindex(int iLine)
         {
-            return new PolygonIndex(iLine, this.iVertex, this.NumUniqueInRing);
+            return new PolygonIndex(iLine, this.iVertex, this.NumUnique);
         }
 
         /// <summary>
@@ -269,7 +249,7 @@ namespace Geometry
         /// <returns></returns>
         public PolylineIndex ReindexToSize(GridPolyline line)
         {
-            return ReindexToSize(CalculateNumUniqueVerticies(line));
+            return ReindexToSize(line.PointCount);
         }
 
         /// <summary>
@@ -280,7 +260,7 @@ namespace Geometry
         /// <returns></returns>
         public PolylineIndex ReindexToSize(IReadOnlyList<GridPolyline> lines)
         {
-            return new PolylineIndex(this.iLine, this.iVertex, CalculateNumUniqueVerticies(lines[iLine]));
+            return new PolylineIndex(this.iLine, this.iVertex, lines[iLine].PointCount);
         }
 
         public override string ToString()

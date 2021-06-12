@@ -300,6 +300,18 @@ namespace Geometry
             return !A.Equals(B);
         }
 
+        public double this[AXIS axis]
+        {
+            get
+            {
+                return coords[(int)axis];
+            }
+            set
+            {
+                coords[(int)axis] = value;
+            }
+        }
+
         static public GridVector3 FromBarycentric(GridVector3 v1, GridVector3 v2, GridVector3 v3, double u, double v)
         {
             double[] coords = v1._coords.Select((v1Val, i) => (v1Val * (1 - u - v)) + (v2._coords[i] * u) + (v3._coords[i] * v)).ToArray();

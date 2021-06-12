@@ -164,6 +164,7 @@ namespace Geometry
         /// <returns>False if no points were added</returns>
         public static bool TryAddTPointsAboveThreshold(GridVector2[] output, ref SortedSet<double> TPoints, double angleThresholdInDegrees = 10.0)
         {
+            //TODO: Remove points where curvature is low 
             double[] TPointsArray = TPoints.ToArray();
 
             for (int i = 1; i < output.Length - 1; i++)
@@ -177,9 +178,8 @@ namespace Geometry
 
                     i = i - 1;
                 }
-            }
-
-
+            } 
+             
             double[] degrees;
 
             degrees = output.MeasureCurvature();
