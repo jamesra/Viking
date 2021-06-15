@@ -345,8 +345,8 @@ namespace Geometry
                 return true;
             }
 
-            return (other.IsLastIndexInRing() && this.iVertex == 0) ||
-                   (other.iVertex == 0 && this.IsLastIndexInRing());
+            return (other.IsLastIndexInRing() && this.IsFirstIndexInRing()) ||
+                   (other.IsFirstIndexInRing() && this.IsLastIndexInRing());
         }
 
         /// <summary>
@@ -519,6 +519,9 @@ namespace Geometry
         /// <returns></returns>
         public static bool IsBorderLine(PolygonIndex A, PolygonIndex B, GridPolygon poly)
         {
+            return A.AreAdjacent(B);
+
+            /*
             //TODO: Add unit test
             System.Diagnostics.Debug.Assert(A.iPoly == B.iPoly, "LineIsOnBorder should only called for indicies into the same polygon");
             if (A.iPoly != B.iPoly)
@@ -568,6 +571,7 @@ namespace Geometry
                 return false;
 
             return diff == RingLength - 2;
+            */
         }
 
         public override string ToString()

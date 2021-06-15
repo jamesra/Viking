@@ -130,6 +130,28 @@ namespace Geometry
             return this.iVertex.CompareTo(other.iVertex);
         }
 
+        /// <summary>
+        /// Return true if the index is adjacent to the other index
+        /// </summary>
+        /// <param name="other"></param>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        public bool AreAdjacent(PolylineIndex other)
+        {
+            if (this.iLine != other.iLine)
+                return false;
+             
+            if (this.iVertex == other.iVertex)
+                return false;
+
+            if (Math.Abs(this.iVertex - other.iVertex) == 1)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public bool IsFirstIndex
         {
             get
