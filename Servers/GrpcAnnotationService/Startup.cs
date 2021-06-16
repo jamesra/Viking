@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace GrpcAnnotationService
+namespace gRPCAnnotationService
 {
     public class Startup
     {

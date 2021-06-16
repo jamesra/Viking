@@ -37,7 +37,7 @@ namespace MorphologyView
 
         public static MeshViewModel ConvertMorphologyNodeToBillboardMeshViewModel(MorphologyNode node)
         { 
-            if (node.Location.TypeCode == Annotation.Interfaces.LocationType.CIRCLE)
+            if (node.Location.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
                 return ConvertGeometryToCircle(node);
 
             MeshViewModel mesh = new MeshViewModel();

@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using SqlGeometryUtils;
 using System.Collections.Generic;
 using System.Drawing;

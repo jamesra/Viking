@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using Annotation.ViewModels.Commands;
 using System.Collections.ObjectModel;
 using System.ComponentModel;

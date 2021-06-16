@@ -1,7 +1,7 @@
 using ProtoBuf;
 
 
-namespace Viking.gRPC.AnnotationTypes
+namespace Viking.AnnotationServiceTypes.gRPC
 {
     // I can't use straight inheritance because the relationships do not marshal.  So use interfaces instead
 

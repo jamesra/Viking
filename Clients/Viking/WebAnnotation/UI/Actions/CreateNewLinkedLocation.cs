@@ -56,7 +56,7 @@ namespace WebAnnotation.UI.Actions
                                                      NewMosaicShape.ToSqlGeometry(),
                                                      NewVolumeShape.ToSqlGeometry(),
                                                      SectionNumber,
-                                                     this.NewMosaicShape.ShapeType.IsClosed() ? Annotation.Interfaces.LocationType.POLYGON : Annotation.Interfaces.LocationType.POLYLINE);
+                                                     this.NewMosaicShape.ShapeType.IsClosed() ? Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON : Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE);
 
                 LocationObj NewLocation = Store.Locations.Create(newLoc, new long[] { ExistingLocID });
                 Global.LastEditedAnnotationID = NewLocation.ID;

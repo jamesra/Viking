@@ -216,9 +216,9 @@
       <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
       <Name>AnnotationInterfaces</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
+    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
       <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
-      <Name>AnnotationServiceTypes</Name>
+      <Name>AnnotationServiceTypes.WCF</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj">
       <Project>{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}</Project>

@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using System;
 
@@ -251,7 +251,7 @@ namespace WebAnnotationModel.Objects
             this.Data.Bidirectional = Bidirectional;
 
 
-            this.DBAction = DBACTION.INSERT;
+            this.DBAction = AnnotationService.Types.DBACTION.INSERT;
         }
 
         public PermittedStructureLinkObj(PermittedStructureLink data)

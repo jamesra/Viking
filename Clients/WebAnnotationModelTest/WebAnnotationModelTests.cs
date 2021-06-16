@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using IdentityModel.Client;
 using Microsoft.SqlServer.Types;
@@ -118,8 +118,8 @@ namespace WebAnnotationModelTest
             Assert.IsTrue(test_stype.Children.Contains(testChildObj));
             Assert.IsTrue(testChildObj.ID > 0);
 
-            testChildObj.DBAction = DBACTION.DELETE; 
-            test_stype.DBAction = DBACTION.DELETE; 
+            testChildObj.DBAction = AnnotationService.Types.DBACTION.DELETE; 
+            test_stype.DBAction = AnnotationService.Types.DBACTION.DELETE; 
             Store.StructureTypes.Save();
 
             Assert.IsTrue(EventLog.listCollectionEvents.Count == 1);
@@ -184,7 +184,7 @@ namespace WebAnnotationModelTest
 
             Assert.IsTrue(testChildObj.ID > 0);
 
-            testChildObj.DBAction = DBACTION.DELETE;
+            testChildObj.DBAction = AnnotationService.Types.DBACTION.DELETE;
             
             //Delete the objects
             Store.Structures.Save();
@@ -196,7 +196,7 @@ namespace WebAnnotationModelTest
 
             StructureEventLog.PopObjectRemovedEvent(testChildObj);
              
-            testObj.DBAction = DBACTION.DELETE;
+            testObj.DBAction = AnnotationService.Types.DBACTION.DELETE;
 
             Store.Structures.Save();
             StructureEventLog.PopObjectRemovedEvent(testObj);
@@ -241,7 +241,7 @@ namespace WebAnnotationModelTest
 
             StructureLinkObj link = new StructureLinkObj(sourceStruct.ID, targetStruct.ID, false);
             link = Store.StructureLinks.Create(link);
-            Assert.AreEqual(link.DBAction, DBACTION.NONE);
+            Assert.AreEqual(link.DBAction, AnnotationService.Types.DBACTION.NONE);
 
             StructureLinkEventLog.PopObjectAddedEvent(link);
 
@@ -259,7 +259,7 @@ namespace WebAnnotationModelTest
             */
 
             //Ensure our change was submitted, this should reset DBAction
-            Assert.AreEqual(link.DBAction, DBACTION.NONE);
+            Assert.AreEqual(link.DBAction, AnnotationService.Types.DBACTION.NONE);
             
 
             //Remove the link
@@ -295,7 +295,7 @@ namespace WebAnnotationModelTest
             LocationEventLog.SubscribeToPropertyChangedEvents(obj);
 
 
-            Assert.AreEqual(obj.DBAction, DBACTION.NONE);
+            Assert.AreEqual(obj.DBAction, AnnotationService.Types.DBACTION.NONE);
 
             obj.OffEdge = !obj.OffEdge; 
             LocationEventLog.PopObjectPropertyChangingEvent(obj, "OffEdge");
@@ -303,11 +303,11 @@ namespace WebAnnotationModelTest
             LocationEventLog.PopObjectPropertyChangedEvent(obj, "DBAction");
             LocationEventLog.PopObjectPropertyChangedEvent(obj, "OffEdge");
 
-            Assert.AreEqual(obj.DBAction, DBACTION.UPDATE);
+            Assert.AreEqual(obj.DBAction, AnnotationService.Types.DBACTION.UPDATE);
             
             Store.Locations.Save();
 
-            Assert.AreEqual(obj.DBAction, DBACTION.NONE);
+            Assert.AreEqual(obj.DBAction, AnnotationService.Types.DBACTION.NONE);
             Geometry.GridVector2 oldPosition = obj.VolumePosition; 
             Geometry.GridVector2 newPosition = new Geometry.GridVector2(1,1);
              
@@ -316,7 +316,7 @@ namespace WebAnnotationModelTest
             //LocationEventLog.PopObjectPropertyChangedEvent(obj, "VolumePosition");
 
             //VolumePosition is special because it is not automatically updated.
-            Assert.AreEqual(obj.DBAction, DBACTION.NONE);
+            Assert.AreEqual(obj.DBAction, AnnotationService.Types.DBACTION.NONE);
         }
         
         [TestMethod]
@@ -369,17 +369,17 @@ namespace WebAnnotationModelTest
                 Assert.IsFalse(locObj.Links.Contains(linkedLoc.ID));
                  
                 //Delete the structure
-                structObj.DBAction = DBACTION.DELETE;
+                structObj.DBAction = AnnotationService.Types.DBACTION.DELETE;
 
                 bool result = Store.Structures.Save();
 
-                locObj.DBAction = DBACTION.DELETE;
-                linkedLoc.DBAction = DBACTION.DELETE;
+                locObj.DBAction = AnnotationService.Types.DBACTION.DELETE;
+                linkedLoc.DBAction = AnnotationService.Types.DBACTION.DELETE;
                 Store.Locations.Save();
 
                 LocationEventLog.PopObjectRemovedEvent(new object[] { locObj, linkedLoc });
 
-                structObj.DBAction = DBACTION.DELETE;
+                structObj.DBAction = AnnotationService.Types.DBACTION.DELETE;
                 Store.Structures.Save();
 
                 //Make sure we can't fetch the deleted item
@@ -391,7 +391,7 @@ namespace WebAnnotationModelTest
             }
             finally
             {
-                structObj.DBAction = DBACTION.DELETE; 
+                structObj.DBAction = AnnotationService.Types.DBACTION.DELETE; 
                 bool result = Store.Structures.Save();
             }
 

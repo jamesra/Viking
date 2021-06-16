@@ -163,7 +163,47 @@ namespace MorphologyMesh
                 return EdgeType.SURFACE;
             }
         }
-        
+
+        /// <summary>
+        /// Determine the edge type when comparing polyline to polyline chords
+        /// </summary>
+        /// <param name="APoly"></param>
+        /// <param name="BPoly"></param>
+        /// <param name="Polylines"></param>
+        /// <param name="midpoint"></param>
+        /// <returns></returns>
+        public static EdgeType GetEdgeType(PolylineIndex APoly, PolylineIndex BPoly, IReadOnlyList<GridPolyline> Polylines, GridVector2 midpoint)
+        {
+            GridPolyline A = Polylines[APoly.iLine];
+            GridPolyline B = Polylines[BPoly.iLine];
+
+            GridLineSegment chord = new GridLineSegment(A[APoly], B[BPoly]);
+
+            if (APoly.iLine != BPoly.iLine)
+            {
+                var results = chord.Intersections(Polylines.SelectMany(p => p.LineSegments).ToList(), EndpointsOnLineDoNotIntersect: true, out var Intersections);
+                if(results.Any())
+                {
+                    return EdgeType.INVALID;
+                }
+                else
+                {
+                    return EdgeType.SURFACE;
+                }
+            }
+            else
+            {
+                if (APoly.AreAdjacent(BPoly))
+                {
+                    return EdgeType.CONTOUR;
+                }
+                else
+                {
+                    return EdgeType.INVALID;
+                }
+            }
+        }
+
         /// <summary>
         /// Determines the type of edge.
         /// </summary>
@@ -250,9 +290,7 @@ namespace MorphologyMesh
                 }
             }
             else if (APoly.iPoly == BPoly.iPoly)
-            {
-
-
+            { 
                 if (PolygonIndex.IsBorderLine(APoly, BPoly, Polygons[APoly.iPoly]))
                 {
                     //Line is part of the border, either internal or external
@@ -372,6 +410,12 @@ namespace MorphologyMesh
 
             return AngleMatched;
             */
+        }
+
+        public static bool OrientationsAreMatched(PolylineIndex APoly, PolylineIndex BPoly)
+        {
+            //Polylines have no interior so there is no concept of matching orientation
+            return true;
         }
 
         /// <summary>

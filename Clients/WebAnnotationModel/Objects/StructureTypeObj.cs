@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using System;
 using System.Collections.Generic;
@@ -99,7 +99,7 @@ namespace WebAnnotationModel
             if (this.Data == null)
                 this.Data = new StructureType();
 
-            this.Data.DBAction = DBACTION.INSERT;
+            this.Data.DBAction = AnnotationService.Types.DBACTION.INSERT;
             this.Data.Name = "New Structure Type";
             this.Data.MarkupType = "Point";
             this.Data.ID = Store.StructureTypes.GetTempKey();

@@ -272,9 +272,9 @@ namespace WebAnnotation.ViewModel
             MenuItem menuShape = new MenuItem("Change Shape");
 
             MenuItem menuOpenCurve = new MenuItem("Curve", ContextMenu_ConvertShape);
-            menuOpenCurve.Tag = Annotation.Interfaces.LocationType.OPENCURVE;
+            menuOpenCurve.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE;
             MenuItem menuCircle = new MenuItem("Circle", ContextMenu_ConvertShape);
-            menuCircle.Tag = Annotation.Interfaces.LocationType.CIRCLE;
+            menuCircle.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
 
             menuShape.MenuItems.Add(menuOpenCurve);
             menuShape.MenuItems.Add(menuCircle);
@@ -356,13 +356,13 @@ namespace WebAnnotation.ViewModel
         protected void ContextMenu_ConvertShape(object sender, EventArgs e)
         {
             MenuItem item = sender as MenuItem;
-            Annotation.Interfaces.LocationType targetShape = (Annotation.Interfaces.LocationType)item.Tag;
+            Viking.AnnotationServiceTypes.Interfaces.LocationType targetShape = (Viking.AnnotationServiceTypes.Interfaces.LocationType)item.Tag;
 
             switch (targetShape)
             {
-                case Annotation.Interfaces.LocationType.CIRCLE:
+                case Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE:
                     break;
-                case Annotation.Interfaces.LocationType.OPENCURVE:
+                case Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE:
                     break;
             }
         }
@@ -561,9 +561,9 @@ namespace WebAnnotation.ViewModel
 
 
         [Column("TypeCode")]
-        public Annotation.Interfaces.LocationType TypeCode
+        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode
         {
-            get { return (Annotation.Interfaces.LocationType)modelObj.TypeCode; }
+            get { return (Viking.AnnotationServiceTypes.Interfaces.LocationType)modelObj.TypeCode; }
         }
 
         public bool IsTerminal

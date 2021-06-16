@@ -56,9 +56,9 @@
       <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
       <Name>AnnotationInterfaces</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
+    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
       <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
-      <Name>AnnotationServiceTypes</Name>
+      <Name>AnnotationServiceTypes.WCF</Name>
     </ProjectReference>
     <ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj">
       <Project>{709a3c16-7218-4ff0-9a2d-6bf015c243bf}</Project>

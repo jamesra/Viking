@@ -80,7 +80,7 @@ namespace WebAnnotation.UI.Commands
 
                 LocationObj newLocation = new LocationObj(newStruct,
                                                 Parent.Section.Number,
-                                                Annotation.Interfaces.LocationType.CIRCLE);
+                                                Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE);
 
                 newLocation.MosaicShape = SqlGeometryUtils.Extensions.ToCircle(SectionPos.X, SectionPos.Y, Parent.Section.Number, 16.0);
                 newLocation.VolumeShape = SqlGeometryUtils.Extensions.ToCircle(WorldPos.X, WorldPos.Y, Parent.Section.Number, 16.0);

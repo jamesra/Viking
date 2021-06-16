@@ -5,7 +5,7 @@ namespace Viking.gRPC.AnnotationTypes.V1.Protos
 {
     public partial class Location
     {
-        public static implicit operator Location(global::Viking.gRPC.AnnotationTypes.Location src)
+        public static implicit operator Location(global::Viking.AnnotationServiceTypes.gRPC.Location src)
         {
             var converted = new Location {
                 ParentId = src.ParentID,

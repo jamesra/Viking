@@ -52,9 +52,9 @@
       <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
       <Name>AnnotationInterfaces</Name>
     </ProjectReference>
-    <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
+    <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
       <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
-      <Name>AnnotationServiceTypes</Name>
+      <Name>AnnotationServiceTypes.WCF</Name>
     </ProjectReference>
     <ProjectReference Include="..\Clients\VolumeModel\VolumeModel.csproj">
       <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>

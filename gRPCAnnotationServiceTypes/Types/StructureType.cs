@@ -1,7 +1,7 @@
 using ProtoBuf;
 using System;
 
-namespace Viking.gRPC.AnnotationTypes
+namespace Viking.AnnotationServiceTypes.gRPC
 {
     /* Recoded [DataContract] */
     [ProtoContract]

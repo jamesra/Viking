@@ -43,6 +43,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IAttributes.cs" />
+    <Compile Include="IChangeAction.cs" />
+    <Compile Include="IDataObjectWithKey.cs" />
+    <Compile Include="IDataObjectWithParent.cs" />
     <Compile Include="ILocation.cs" />
     <Compile Include="ILocationLink.cs" />
     <Compile Include="IPermittedStructureLink.cs" />

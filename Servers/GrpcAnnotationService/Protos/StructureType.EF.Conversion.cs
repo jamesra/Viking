@@ -1,8 +1,8 @@
-﻿namespace GrpcAnnotationService.Protos
+﻿namespace gRPCAnnotationService.Protos
 {
     public static class StructureTypeEFExtensions
     {
-        public static Viking.DataModel.Annotation.StructureType ToStructure(this global::Viking.gRPC.AnnotationTypes.V1.Protos.StructureType src)
+        public static Viking.DataModel.Annotation.StructureType ToStructureType(this global::Viking.gRPC.AnnotationTypes.V1.Protos.StructureType src)
         {
             var converted = new Viking.DataModel.Annotation.StructureType
             {
@@ -30,6 +30,24 @@
                                                                  .ToList();
             */
             return converted;
+        }
+
+        public static void Sync(this global::Viking.gRPC.AnnotationTypes.V1.Protos.StructureType src,
+          ref Viking.DataModel.Annotation.StructureType converted)
+        {
+                converted.Id = src.Id;
+                converted.ParentId = src.HasParentId ? src.ParentId : default;
+                converted.Created = src.Created.ToDateTime();
+                converted.LastModified = src.LastModified.ToDateTime();
+                converted.Notes = src.Notes;
+                converted.Username = src.Username;
+                converted.Tags = src.StructureTags;
+                converted.Abstract = src.Abstract;
+                converted.Code = src.Code;
+                converted.Color = src.Color;
+                converted.Name = src.Name;
+                converted.StructureTags = src.StructureTags;
+                //MarkupType = src.M 
         }
 
 

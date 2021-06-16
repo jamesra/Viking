@@ -88,7 +88,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingXNAGraphicsContent", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Triangle", "Triangle.NET\Triangle\Triangle.csproj", "{F7907A0A-B75F-400B-9E78-BFAD00DB4D6B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationServiceTypes", "AnnotationServiceTypes\AnnotationServiceTypes.csproj", "{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationServiceTypes.WCF", "AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj", "{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TriangleNetGeometryExtensions", "TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj", "{2B2E3C2E-BE56-466C-98F3-6F9BFA82B213}"
 EndProject
@@ -202,7 +202,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gRPCAnnotationService", "Se
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConnectomeDataModelCore", "Servers\ConnectomeDataModelCore\ConnectomeDataModelCore.csproj", "{41219774-1C2D-4D5C-81F4-79B7E125D739}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gRPCAnnotationServiceTypes", "gRPCAnnotationServiceTypes\gRPCAnnotationServiceTypes.csproj", "{6C333067-E783-4590-90FD-23BA09495760}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnnotationServiceTypes.gRPC", "gRPCAnnotationServiceTypes\AnnotationServiceTypes.gRPC.csproj", "{6C333067-E783-4590-90FD-23BA09495760}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gRPCAnnotationServiceTests", "gRPC_Tests\gRPCAnnotationServiceTests.csproj", "{EEB2C561-3BB0-4DE9-9D99-E2984094E9A2}"
 EndProject

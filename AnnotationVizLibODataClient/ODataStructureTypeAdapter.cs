@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using ODataClient.ConnectomeDataModel;
 using System;
 using System.Linq;

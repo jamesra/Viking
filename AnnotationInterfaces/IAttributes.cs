@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Annotation.Interfaces
+namespace Viking.AnnotationServiceTypes.Interfaces
 {
     public interface IAttributes
     {

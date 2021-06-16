@@ -141,7 +141,7 @@ namespace WebAnnotation.UI.Commands
 
             try
             {
-                obj.TypeCode = Annotation.Interfaces.LocationType.CURVEPOLYGON;
+                obj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
                 obj.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, newVolumePoly.ToSqlGeometry());
 
                 Store.Locations.Save();
@@ -166,7 +166,7 @@ namespace WebAnnotation.UI.Commands
             StructureObj newStruct = new StructureObj(type);
             LocationObj newLocation = new LocationObj(newStruct,
                                             Parent.Section.Number,
-                                            Annotation.Interfaces.LocationType.CURVEPOLYGON);
+                                            Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON);
 
             newLocation.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, newVolumePoly.ToSqlGeometry());
 
@@ -275,7 +275,7 @@ namespace WebAnnotation.UI.Commands
 
             ICanvasGeometryView bestObj = null;
 
-            var listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == Annotation.Interfaces.LocationType.CIRCLE);
+            var listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE);
 
             var listCircles = listObjects.Select(o => o as LocationCircleView).Where(o => o != null);
 

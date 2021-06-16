@@ -1,8 +1,9 @@
+using ProtoBuf;
 using System;
 using System.Runtime.Serialization;
 
 
-namespace Viking.AnnotationServiceTypes.gRPC
+namespace Viking.gRPC.AnnotationTypes
 {
     [DataContract]
     [ProtoContract]

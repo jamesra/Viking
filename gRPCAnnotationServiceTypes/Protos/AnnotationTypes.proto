@@ -1,8 +1,8 @@
 syntax = "proto3"; 
 
-option csharp_namespace = "Viking.gRPC.AnnotationTypes.V1.Protos";
+option csharp_namespace = "Viking.AnnotationServiceTypes.gRPC.V1.Protos";
 
-package Viking.gRPC.AnnotationTypes.V1;
+package Viking.AnnotationServiceTypes.gRPC.V1;
 
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/timestamp.proto";

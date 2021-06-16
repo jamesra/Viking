@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using System;
 using WebAnnotationModel.Objects;
@@ -220,7 +220,7 @@ namespace WebAnnotationModel
             this.Data.SourceID = sourceID;
             this.Data.TargetID = targetID;
             this.Data.Bidirectional = Bidirectional;
-            this.DBAction = DBACTION.INSERT;
+            this.DBAction = AnnotationService.Types.DBACTION.INSERT;
         }
 
         public StructureLinkObj(StructureLink data)

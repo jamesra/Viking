@@ -1,19 +1,19 @@
 //using Microsoft.EntityFrameworkCore;
-using NetTopologySuite.Geometries;
-using ProtoBuf;
+using NetTopologySuite.Geometries; 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+using Viking.AnnotationServiceTypes;
 
-namespace Viking.gRPC.AnnotationTypes
+namespace Viking.AnnotationServiceTypes.gRPC
 {
 
 
     [ProtoContract]
     /* Recoded [DataContract] */
     [ProtoInclude(1000, typeof(LocationHistory))]
-    public partial class Location : DataObjectWithKeyOfLong
+    public partial class Location : IDataObjectWithKey<Int64>
     {
         private Int64 _ParentID;
         private Int64 _Section;

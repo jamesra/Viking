@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using AnnotationVizLib.WCFClient.AnnotationClient;
 using System.Collections.Generic;

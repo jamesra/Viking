@@ -125,9 +125,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.csproj">
+    <ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
       <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
-      <Name>AnnotationServiceTypes</Name>
+      <Name>AnnotationServiceTypes.WCF</Name>
     </ProjectReference>
     <ProjectReference Include="..\AnnotationService\AnnotationService.csproj">
       <Project>{1483085c-f381-4252-b2ae-fffbf1abd7a2}</Project>

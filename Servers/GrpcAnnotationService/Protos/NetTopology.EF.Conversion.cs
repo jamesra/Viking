@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace GrpcAnnotationService.Protos
+namespace gRPCAnnotationService.Protos
 {
     public static class NetTopologyGeometryExtensions
     {

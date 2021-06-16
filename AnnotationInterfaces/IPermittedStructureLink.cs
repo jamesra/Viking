@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Annotation.Interfaces
+namespace Viking.AnnotationServiceTypes.Interfaces
 {
     public interface IPermittedStructureLink : IEquatable<IPermittedStructureLink>
     {
