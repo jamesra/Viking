@@ -32,7 +32,7 @@ namespace Geometry.Meshing
     {
         public GridBox BoundingBox { get; private set; }
 
-        public MeshBase3D()
+        protected MeshBase3D()
         {
             CreateOffsetEdge = Edge.CreateOffsetCopy;
             CreateOffsetFace = Face.CreateOffsetCopy;
@@ -292,7 +292,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// This cache needs more careful analysis in the profiler
         /// </summary>
-        Dictionary<IFace, GridVector3> face_normals_cache = new Dictionary<Meshing.IFace, Geometry.GridVector3>();
+        readonly Dictionary<IFace, GridVector3> face_normals_cache = new Dictionary<Meshing.IFace, Geometry.GridVector3>();
 
         /// <summary>
         /// Recalculate normals based on the faces touching each vertex

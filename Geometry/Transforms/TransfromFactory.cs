@@ -434,7 +434,6 @@ namespace Geometry.Transforms
             if (mosaic == null || path == null)
                 throw new ArgumentNullException();
 
-            string[] parts;
             int numTiles = 0;
             //           double PixelSpacing; 
 
@@ -442,6 +441,7 @@ namespace Geometry.Transforms
             int iTileStart = 3;
             for (int i = 0; i < mosaic.Length; i++)
             {
+                string[] parts;
                 string line = mosaic[i];
                 if (line.StartsWith("format_version_number:"))
                 {
@@ -744,7 +744,7 @@ namespace Geometry.Transforms
                     GridVector2 mapPoint = GridTransform.CoordinateFromGridPos(x, y, gridWidth, gridHeight, ImageWidth, ImageHeight);
                     GridVector2 ctrlPoint = Points[i];
 
-                    mapList[i] = new MappingGridVector2(ctrlPoint, mapPoint); ;
+                    mapList[i] = new MappingGridVector2(ctrlPoint, mapPoint);
                 }
             }
 

@@ -24,7 +24,7 @@ namespace Geometry
         {
             get
             {
-                return minVals.Count();
+                return minVals.Length;
             }
         }
 
@@ -112,7 +112,7 @@ namespace Geometry
 
         private void ThrowOnNegativeDimensions()
         {
-            if (this.dimensions.Where(val => val < 0).Any())
+            if (this.dimensions.Any(val => val < 0))
             {
                 throw new ArgumentException("GridBox must have non-negative width and height");
             }
@@ -175,7 +175,7 @@ namespace Geometry
         public GridBox(IPoint position, double[] dimensions)
         {
             if (position == null)
-                throw new ArgumentNullException("points");
+                throw new ArgumentNullException(nameof(position));
 
             minVals = new double[] { position.X, position.Y, position.Z };
             maxVals = minVals.Select((val, i) => val + dimensions[i]).ToArray();
@@ -397,7 +397,10 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            return (GridBox)obj == this;
+            if (obj is GridBox other)
+                return this == other;
+
+            return false;
         }
 
         public static bool operator ==(GridBox A, GridBox B)
@@ -444,7 +447,7 @@ namespace Geometry
             if (points == null)
                 throw new ArgumentException("Bounding box cannot be created for null points collection");
 
-            if (points.First() == null)
+            if (points.Any() == false || points.First() == null)
                 throw new ArgumentException("Bounding box cannot be created for empty points collection");
 
             int numDims = points.First().coords.Length;

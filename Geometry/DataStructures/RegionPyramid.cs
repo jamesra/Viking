@@ -38,11 +38,12 @@ namespace Geometry
             if ((object)obj == null)
                 return false;
 
-            if (!typeof(GridIndex).IsInstanceOfType(obj))
-                return false;
+            if (obj is GridIndex other)
+            {
+                return other.X == this.X && other.Y == this.Y;
+            }
 
-            GridIndex other = (GridIndex)obj;
-            return other.X == this.X && other.Y == this.Y;
+            return false;
         }
 
         public int CompareTo(GridIndex other)

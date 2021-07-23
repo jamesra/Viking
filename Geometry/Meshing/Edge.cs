@@ -16,13 +16,11 @@ namespace Geometry.Meshing
         public int A
         {
             get;
-            private set;
         }
 
         public int B
         {
             get;
-            private set;
         }
 
         public EdgeKey(int a, int b)
@@ -282,7 +280,7 @@ namespace Geometry.Meshing
             if (this.Faces.Count == 1)
                 return null;
 
-            return this.Faces.First(face => face != f);
+            return this.Faces.First(face => face.Equals(f) == false);
         }
 
         public static bool operator ==(Edge A, Edge B)

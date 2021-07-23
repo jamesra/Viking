@@ -12,13 +12,15 @@ namespace Geometry
         public static List<T> Peek(Stack<T> stack, int count)
         {
             List<T> items = new List<T>(count);
-            Stack<T>.Enumerator path_enumerator = stack.GetEnumerator();
-            while (items.Count < count)
+            using (Stack<T>.Enumerator path_enumerator = stack.GetEnumerator())
             {
-                if (false == path_enumerator.MoveNext())
-                    break;
+                while (items.Count < count)
+                {
+                    if (false == path_enumerator.MoveNext())
+                        break;
 
-                items.Add(path_enumerator.Current);
+                    items.Add(path_enumerator.Current);
+                }
             }
 
             return items;

@@ -201,6 +201,9 @@ namespace Geometry.Meshing
             if (object.ReferenceEquals(A, B))
                 return true;
 
+            if (object.ReferenceEquals(A, null))
+                return false;
+
             return A.Equals(B);
         }
 

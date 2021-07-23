@@ -43,20 +43,20 @@ namespace Geometry.Meshing
             }
         }
 
-        public VertexBase()
+        protected VertexBase()
         {
             _Edges = new SortedSet<IEdgeKey>();
             _ImmutableEdges = null;
         }
 
 
-        public VertexBase(IComparer<IEdgeKey> edgeComparer = null)
+        protected VertexBase(IComparer<IEdgeKey> edgeComparer = null)
         {
             _Edges = new SortedSet<IEdgeKey>(edgeComparer);
             _ImmutableEdges = null;
         }
 
-        public VertexBase(int index, IComparer<IEdgeKey> edgeComparer = null) : this(edgeComparer)
+        protected VertexBase(int index, IComparer<IEdgeKey> edgeComparer = null) : this(edgeComparer)
         {
             this.Index = index;
         }
@@ -86,11 +86,17 @@ namespace Geometry.Meshing
 
         public bool Equals(IVertex other)
         {
+            if (ReferenceEquals(other, null))
+                return false;
+
             return this.Index == other.Index;
         }
 
         public bool Equals(VertexBase other)
         {
+            if (ReferenceEquals(other, null))
+                return false;
+
             return this.Index == other.Index;
         }
 
@@ -202,11 +208,17 @@ namespace Geometry.Meshing
 
         int IComparable<IVertex3D>.CompareTo(IVertex3D other)
         {
+            if (ReferenceEquals(other, null))
+                return 1;
+
             return this.Index.CompareTo(other.Index);
         }
 
         bool IEquatable<IVertex3D>.Equals(IVertex3D other)
         {
+            if (ReferenceEquals(other, null))
+                return false;
+
             return this.Index == other.Index;
         }
     }

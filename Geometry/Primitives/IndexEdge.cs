@@ -73,10 +73,9 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            IndexEdge E = (IndexEdge)obj;
-            if (E != null)
+            if(obj is IndexEdge other)
             {
-                return this == E;
+                return this == other;
             }
 
             return base.Equals(obj);

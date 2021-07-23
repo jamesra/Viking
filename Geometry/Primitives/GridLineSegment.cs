@@ -119,39 +119,39 @@ namespace Geometry
         }
 
         public override bool Equals(object obj)
-        { 
-            GridLineSegment ls;
+        {
+            if (obj is ILineSegment2D ls)
+            {
+
 //            try
-//            {
-                ls = (GridLineSegment)obj;
-            //            }
-            //            catch(System.InvalidCastException e)
-            //            {
-            //                return false; 
-            //            }
-            /*
-            if (A.X == ls.A.X &&
-                A.Y == ls.A.Y &&
-                B.X == ls.B.X &&
-                B.Y == ls.B.Y)
-                return true;
-            */
-            if (object.ReferenceEquals(obj, null))
-                return false;
+//            { 
+                //            }
+                //            catch(System.InvalidCastException e)
+                //            {
+                //                return false; 
+                //            }
+                /*
+                if (A.X == ls.A.X &&
+                    A.Y == ls.A.Y &&
+                    B.X == ls.B.X &&
+                    B.Y == ls.B.Y)
+                    return true;
+                */ 
 
-            if (this.A == ls.A && this.B == ls.B)
-                return true;
+                if (this.A == ls.A && this.B == ls.B)
+                    return true;
 
-            if (this.A == ls.B && this.B == ls.A)
-                return true;
+                if (this.A == ls.B && this.B == ls.A)
+                    return true;
 
-            /*
-                if (MaxX == ls.MaxX &&
-                   MaxY == ls.MaxY &&
-                   MinX == ls.MinX &&
-                   MinY == ls.MinY)
-                    return true; 
-                    */
+                /*
+                    if (MaxX == ls.MaxX &&
+                       MaxY == ls.MaxY &&
+                       MinX == ls.MinX &&
+                       MinY == ls.MinY)
+                        return true; 
+                        */
+            }
 
             return false; 
         }
@@ -832,7 +832,7 @@ namespace Geometry
 
         public bool Contains(IPoint2D p)
         {
-            return this.Contains(p.Convert());
+            return Contains(new GridVector2(p.X,p.Y));
         }
 
         public IShape2D Translate(IPoint2D offset)

@@ -7,7 +7,7 @@ using System.Linq;
 namespace Geometry
 {
 
-    public struct DistanceToPoint<T> : IComparable<DistanceToPoint<T>>, IEquatable<DistanceToPoint<T>>
+    public readonly struct DistanceToPoint<T> : IComparable<DistanceToPoint<T>>, IEquatable<DistanceToPoint<T>>
     {
         public readonly GridVector2 Point;
         public readonly double Distance;
@@ -27,18 +27,12 @@ namespace Geometry
 
         public bool Equals(DistanceToPoint<T> other)
         {
-            if (object.ReferenceEquals(this, other))
-                return true;
-
-            if (object.ReferenceEquals(other, null))
-                return false;
-
-            return this.Distance.Equals(other.Distance) && this.Point.Equals(other.Point);
+            return this.Distance.Equals(other.Distance) && this.Point == other.Point;
         }
 
         public override string ToString()
         {
-            return string.Format("{0} {1}", Point, Distance);
+            return $"{Point} {Distance}";
         }
     }
 

@@ -162,7 +162,7 @@ namespace Geometry
         /// </summary>
         protected readonly double PowerScale = 4;
 
-        ConcurrentDictionary<int, BoundlessRegionPyramidLevel<T>> Levels = new ConcurrentDictionary<int, BoundlessRegionPyramidLevel<T>>();
+        readonly ConcurrentDictionary<int, BoundlessRegionPyramidLevel<T>> Levels = new ConcurrentDictionary<int, BoundlessRegionPyramidLevel<T>>();
 
         public BoundlessRegionPyramid(GridCellDimensions cellDimensions, double powerScale)
         {

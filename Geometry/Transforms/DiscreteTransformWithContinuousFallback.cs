@@ -52,9 +52,9 @@ namespace Geometry.Transforms
         {
             get
             {
-                if (DiscreteTransform as IControlPointTriangulation != null)
+                if (DiscreteTransform is IControlPointTriangulation dt)
                 {
-                    return ((IControlPointTriangulation)DiscreteTransform).TriangleIndicies;
+                    return dt.TriangleIndicies;
                 }
 
                 return new int[0];
@@ -65,9 +65,9 @@ namespace Geometry.Transforms
         {
             get
             {
-                if (DiscreteTransform as IControlPointTriangulation != null)
+                if (DiscreteTransform is IControlPointTriangulation dt)
                 {
-                    return ((IControlPointTriangulation)DiscreteTransform).Edges;
+                    return dt.Edges;
                 }
 
                 return new List<int>[] { };

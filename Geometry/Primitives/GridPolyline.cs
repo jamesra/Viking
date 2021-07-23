@@ -149,7 +149,7 @@ namespace Geometry
             if (_Points.Contains(next) && AllowsSelfIntersection == false)
                 throw new ArgumentException("Point already in Polyline that does not allow self-intersection");
 
-            if (_Points.Last() == next)
+            if (_Points.Last().Equals(next))
                 throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
 
             GridLineSegment line = new GridLineSegment(_Points.Last(), next);
@@ -199,7 +199,7 @@ namespace Geometry
             }
             else if(_Points.Count == 1)
             {
-                if (_Points[0] == value)
+                if (_Points[0].Equals(value))
                     throw new ArgumentException("Inserting point already in Polyline identical to an adjacent point");
 
                 _Points.Insert(index, value);
@@ -211,7 +211,7 @@ namespace Geometry
             //Case for appending to the end of the polyline
             if (_Points.Count == index)
             {
-                if (_Points[index - 1] == value)
+                if (_Points[index - 1].Equals(value))
                     throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
 
                 Add(value);
@@ -250,7 +250,7 @@ namespace Geometry
             List<GridLineSegment> new_segments = new List<GridLineSegment>();
             List<GridLineSegment> removed_segments = new List<GridLineSegment>();
 
-            Debug.Assert(_Points[index] != value, "Seems a bit odd to be inserting a point with the same value into the polyline, creating a duplicate");
+            Debug.Assert(_Points[index].Equals(value) == false, "Seems a bit odd to be inserting a point with the same value into the polyline, creating a duplicate");
 
             //Remove the segments that will be replaced by the new vertex from our test set
 
@@ -511,6 +511,14 @@ namespace Geometry
             return this.CalculateCurvePoints(NumInterpolations);
         }
 
+        public override bool Equals(object obj)
+        {
+            if (obj is GridPolyline other)
+                return Equals(other);
+
+            return base.Equals(obj);
+        }
+
         public bool Equals(GridPolyline other)
         {
             if (object.ReferenceEquals(this, other))
@@ -524,7 +532,7 @@ namespace Geometry
 
             for (int i = 0; i < this.PointCount; i++)
             {
-                if (this._Points[i] != other._Points[i])
+                if (false == this._Points[i].Equals(other._Points[i]))
                     return false;
             }
 

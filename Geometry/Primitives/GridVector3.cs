@@ -71,7 +71,7 @@ namespace Geometry
 
             double[] axisdiff = this._coords.Select((val, i) => val - B._coords[i]).ToArray();
 
-            for (int iAxis = 0; iAxis < axisdiff.Count(); iAxis++)
+            for (int iAxis = 0; iAxis < axisdiff.Length; iAxis++)
             {
                 if (Math.Abs(axisdiff[iAxis]) <= Global.Epsilon)
                     continue;
@@ -102,9 +102,13 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            GridVector3 B = (GridVector3)obj;
+            if (obj is GridVector3 other)
+                return GridVector3.Distance(this, other) <= EpsilonSquared;
 
-            return GridVector3.Distance(this, B) <= EpsilonSquared;
+            if (obj is IPoint iOther)
+                return Distance(this, iOther) <= EpsilonSquared;
+
+            return false;
         }
 
         bool IEquatable<GridVector3>.Equals(GridVector3 B)

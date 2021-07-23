@@ -492,7 +492,13 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            return (GridCircle)obj == this;
+            if (obj is GridCircle other)
+                return this == other;
+
+            if (obj is ICircle2D iOther)
+                return iOther.Equals(this);
+
+            return false;
         }
 
         int? _HashCode;

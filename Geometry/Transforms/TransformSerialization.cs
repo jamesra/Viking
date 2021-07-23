@@ -7,8 +7,8 @@ namespace Geometry.Transforms
     {
         public static IContinuousTransform LoadOrCreateContinuousTransform(string SerializerCacheFullPath, IDiscreteTransform discreteTransform)
         {
-            if (discreteTransform as IContinuousTransform != null)
-                return discreteTransform as IContinuousTransform;
+            if (discreteTransform is IContinuousTransform ct)
+                return ct;
 
             ITransformInfo IInfo = discreteTransform as ITransformInfo;
             Geometry.Transforms.StosTransformInfo info = IInfo.Info as Geometry.Transforms.StosTransformInfo;

@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Geometry
 {
-    internal struct Baseline
+    internal readonly struct Baseline
     {
         public readonly GridLineSegment Segment;
         public readonly IVertex2D OriginVert;
@@ -659,9 +659,7 @@ namespace Geometry
 
             GridLineSegment LR_baseline_candidate;
             GridLineSegment RL_baseline_candidate;
-
-
-
+             
             //L = mesh[FirstHalfSet.SortedOppositeCutAxisVertSet.First()];
             //R = mesh[SecondHalfSet.SortedOppositeCutAxisVertSet.First()];
 
@@ -1237,7 +1235,7 @@ namespace Geometry
             {
                 
 
-                TriangleFace oppositeFace = mesh[edge].Faces.Where(face => f != face as Face).FirstOrDefault() as TriangleFace;
+                TriangleFace oppositeFace = mesh[edge].Faces.FirstOrDefault(face => f != face as Face) as TriangleFace;
                 if (oppositeFace == null)
                     continue;
 

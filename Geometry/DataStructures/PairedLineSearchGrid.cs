@@ -259,13 +259,13 @@ namespace Geometry
         #endregion
 
         GridRectangle Bounds;
-        List<GridLineSegmentPair>[,] _LineGrid = new List<GridLineSegmentPair>[0, 0];
+        readonly List<GridLineSegmentPair>[,] _LineGrid;
 
-        double GridWidth;
-        double GridHeight;
+        readonly double GridWidth;
+        readonly double GridHeight;
 
-        int NumGridsX;
-        int NumGridsY;
+        readonly int NumGridsX;
+        readonly int NumGridsY;
 
         int EstimatedLinesPerCell;
 

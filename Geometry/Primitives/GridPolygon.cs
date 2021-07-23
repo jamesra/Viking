@@ -124,8 +124,10 @@ namespace Geometry
             }
             else
             {
-                //return ExteriorSegmentRTree.Intersects(segment.BoundingBox.ToRTreeRect(0)).Contains(segment);  //No need to check in further detail because they should be identical GridLineSegments
-                return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRectEpsilonPadded()).Where(i => i.IsInner == false).Select(p => p.Segment(this)).Contains(segment);  //No need to check in further detail because they should be identical GridLineSegments
+                //No need to check in further detail because they should be identical GridLineSegments
+                //return ExteriorSegmentRTree.Intersects(segment.BoundingBox.ToRTreeRect(0)).Contains(segment);
+                //return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRectEpsilonPadded()).Where(i => i.IsInner == false).Select(p => p.Segment(this)).Contains(segment);
+                return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRectEpsilonPadded()).Any(i => i.IsInner == false && i.Segment(this) == segment);
             }
         }
 
@@ -136,7 +138,7 @@ namespace Geometry
         /// <returns></returns>
         public bool IsExteriorOrInteriorSegment(GridLineSegment segment)
         {
-            return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRectEpsilonPadded()).Where(p => p.Segment(this) == segment).Any();  //No need to check in further detail because they should be identical GridLineSegments
+            return SegmentRTree.Intersects(segment.BoundingBox.ToRTreeRectEpsilonPadded()).Any(p => p.Segment(this) == segment);  //No need to check in further detail because they should be identical GridLineSegments
         }
 
         /// <summary>
@@ -569,7 +571,7 @@ namespace Geometry
                     //this.ExteriorRing[iVertex.iVertex] = old_point;
 
                     //We could help the caller by reversing the winding... should we?
-                    throw new ArgumentException(string.Format("Inserting vertex { 0 } = {1} changed polygon winding order.", iVertex, NewControlPointPosition));
+                    throw new ArgumentException($"Inserting vertex {iVertex} = {NewControlPointPosition} changed polygon winding order.");
                 }
 
                 this._ExteriorRingArea = updated_area;
@@ -714,7 +716,7 @@ namespace Geometry
                     }
                     else
                     {
-                        throw new ArgumentException(string.Format("Removing vertex {0} to {1} resulted in an invalid state.", iVertex));
+                        throw new ArgumentException($"Removing vertex {iVertex} resulted in an invalid state.");
                     }
                 }
                 catch (ArgumentException e)
@@ -1050,7 +1052,7 @@ namespace Geometry
 
         public bool IsValid()
         {
-            if (this.ExteriorRing.Distinct().Count() != this.ExteriorRing.Count() - 1)
+            if (this.ExteriorRing.Distinct().Count() != this.ExteriorRing.Length - 1)
                 return false;
 
             //if (this.ExteriorSegments.SelfIntersects(LineSetOrdering.CLOSED))
@@ -3044,8 +3046,8 @@ namespace Geometry
                             throw new ArgumentException(string.Format("Duplicate inner polygon vertex {0}", p));
                         }
 
-                        List<PolygonIndex> indexList = new List<Geometry.PolygonIndex>();
-                        indexList.Add(value);
+                        //List<PolygonIndex> indexList = new List<Geometry.PolygonIndex>();
+                        //indexList.Add(value);
                         pointToPoly.Add(p, value);
                     }
                 }

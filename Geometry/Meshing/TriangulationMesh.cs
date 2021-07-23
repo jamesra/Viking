@@ -16,7 +16,7 @@ namespace Geometry.Meshing
         where VERTEX : IVertex2D
     {
         IMesh2D<VERTEX> Mesh;
-        public readonly bool ClockwiseOrder = true;
+        public readonly bool ClockwiseOrder;
 
         /// <summary>
         /// A vector originating from 0,0.  It determines which edge is the first in the rotation order.
@@ -63,7 +63,7 @@ namespace Geometry.Meshing
         where VERTEX : IVertex2D
     {
         IMesh<VERTEX> Mesh;
-        public readonly bool ClockwiseOrder = true;
+        public readonly bool ClockwiseOrder;
 
         private int OriginVertex;
         /// <summary>
@@ -307,13 +307,13 @@ namespace Geometry.Meshing
         protected TriangleFace(IEnumerable<int> vertex_indicies, IEnumerable<IEdgeKey> edges) : base(vertex_indicies, edges)
         {
             if (this.iVerts.Length != 3)
-                throw new ArgumentException(string.Format("Three verticies required for triangle face, got {0}", this.ToString()));
+                throw new ArgumentException($"Three verticies required for triangle face, got {this}");
         }
 
         public TriangleFace(IEnumerable<int> vertex_indicies) : base(vertex_indicies)
         {
             if (this.iVerts.Length != 3)
-                throw new ArgumentException(string.Format("Three verticies required for triangle face, got {0}", this.ToString()));
+                throw new ArgumentException($"Three verticies required for triangle face, got {this}");
         }
 
         /// <summary>
@@ -371,7 +371,7 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public static Tuple<TriangleFace, TriangleFace> Flip(IEdge edge)
         {
-            if (edge.Faces.Count() != 2)
+            if (edge.Faces.Count != 2)
                 throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has one face {1}", edge, edge.Faces.First()));
 
             if (!edge.Faces.All(f => f.IsTriangle()))
@@ -397,11 +397,11 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public static Tuple<TriangleFace, TriangleFace> Flip(IEdge existing, IEdge flipped)
         {
-            if (existing.Faces.Count() > 2)
+            if (existing.Faces.Count > 2)
                 throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has more than two faces", existing));
             //return null;
 
-            if (existing.Faces.Count() < 2)
+            if (existing.Faces.Count < 2)
                 throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has one face {1}", existing, existing.Faces.First()));
 
             if (!existing.Faces.All(f => f.IsTriangle()))
@@ -766,7 +766,7 @@ namespace Geometry.Meshing
                 //VERTEX B = this[edge.B];
 
                 //Is the quad formed by the two faces of the edge convex?
-                if (edge.Faces.Count() != 2)
+                if (edge.Faces.Count != 2)
                 {
                     string error = string.Format("Expect two faces for any edge removed for intersecting an edge constraint. {0} intersected edge {1}", constrained_edge, edge);
                     error += edge.Faces.Count > 0 ? string.Format(" with one face {0}", edge.Faces[0]) :
@@ -897,7 +897,7 @@ namespace Geometry.Meshing
                     */
 
                 int[] oppVerts = new int[] { A.OppositeVertex(edge), B.OppositeVertex(edge) };
-                int checkVert = oppVerts.Where(v => A.iVerts.Contains(v) == false).Single();
+                int checkVert = oppVerts.Single(v => A.iVerts.Contains(v) == false);
                 if (GridCircle.Contains(this[A.iVerts].Select(v => v.Position).ToArray(), this[checkVert].Position) == OverlapType.CONTAINED)
                 {
 
@@ -918,7 +918,7 @@ namespace Geometry.Meshing
                     //TODO:  This check can be removed to have an assertion thrown instead.  It should be done at some point to debug.
                     if (edge.Faces.Count != 2)
                     {
-                        Trace.WriteLine(string.Format("Edge found without two faces when adding constrained edge", edge));
+                        Trace.WriteLine($"Edge {edge} found without two faces when adding constrained edge");
                     }
 
                     //Flip the edge to improve the triangulation
@@ -970,7 +970,7 @@ namespace Geometry.Meshing
             GridLineSegment ConstrainedEdge = this.ToGridLineSegment(e);
 
             VERTEX v = this[iStart];
-            IEnumerable<IFace> faces = v.Edges.Where(vert_edge => e != vert_edge).SelectMany(edge => this[edge].Faces).Distinct(); //Our edge may or may not be in the mesh, but we'll exclude any faces it is part of.
+            IEnumerable<IFace> faces = v.Edges.Where(vert_edge => e.Equals(vert_edge) == false).SelectMany(edge => this[edge].Faces).Distinct(); //Our edge may or may not be in the mesh, but we'll exclude any faces it is part of.
 
             foreach (var f in faces)
             {
@@ -1032,7 +1032,7 @@ namespace Geometry.Meshing
                 foreach (var candidate in testFace.Edges.Select(e => this[e]))
                 {
                     //Don't check the same edge again
-                    if (candidate == previous_intersected_edge)
+                    if (candidate.Equals(previous_intersected_edge))
                         continue;
 
                     if (intersected_edges.Contains(candidate))
@@ -1044,9 +1044,9 @@ namespace Geometry.Meshing
                         intersected_edges.Add(candidate);
 
                         //Todo: Handle endpoint intersection case
-                        if (intersection as IPoint2D != null && candidateEdgeSeg.IsEndpoint((IPoint2D)intersection))
+                        if (intersection is IPoint2D inter && candidateEdgeSeg.IsEndpoint((IPoint2D)intersection))
                         {
-                            int iIntersectedVert = candidateEdgeSeg.A == (IPoint2D)intersection ? candidate.A : candidate.B;
+                            int iIntersectedVert = candidateEdgeSeg.A == inter ? candidate.A : candidate.B;
                             //FindIntersectingEdges(testFace, constrained_edge, constrained_seg, candidate, ref intersected_edges);
 
                             throw new EdgeIntersectsVertexException(iIntersectedVert, string.Format("Edge {0} passes directly through vertex {1}", constrained_edge, iIntersectedVert));

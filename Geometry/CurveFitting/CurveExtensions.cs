@@ -9,9 +9,9 @@ namespace Geometry
     {
         public static double CurveSmoothingEpsilon = 1.0;
 
-        public static GridVector2[] CalculateCurvePoints(this GridVector2 ControlPoints, uint NumInterpolations, bool closeCurve)
+        public static GridVector2[] CalculateCurvePoints(this GridVector2[] ControlPoints, uint NumInterpolations, bool closeCurve)
         {
-            return ControlPoints.CalculateCurvePoints(NumInterpolations, closeCurve);
+            return ((ICollection<GridVector2>)ControlPoints).CalculateCurvePoints(NumInterpolations, closeCurve);
         }
 
         public static GridVector2[] CalculateCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations, bool closeCurve)

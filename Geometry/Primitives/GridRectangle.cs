@@ -212,17 +212,17 @@ namespace Geometry
             _Corners = null;
             _Segments = null;
             GridVector2 RectOrigin = new GridVector2(Math.Min(corner.X, oppositeCorner.X), Math.Min(corner.Y, oppositeCorner.Y));
-            double Width = Math.Abs(corner.X - oppositeCorner.X);
-            double Height = Math.Abs(corner.Y - oppositeCorner.Y);
-            if (Width == 0 || Height == 0)
+            double width = Math.Abs(corner.X - oppositeCorner.X);
+            double height = Math.Abs(corner.Y - oppositeCorner.Y);
+            if (width == 0 || height == 0)
             {
                 throw new ArgumentException("Grid Rectangle must have non-negative width and height");
             }
 
             Left = RectOrigin.X;
             Bottom = RectOrigin.Y;
-            Top = RectOrigin.Y + Height;
-            Right = RectOrigin.X + Width;
+            Top = RectOrigin.Y + height;
+            Right = RectOrigin.X + width;
             _HashCode = new int?();
         }
 
@@ -281,7 +281,7 @@ namespace Geometry
             _Corners = null;
             _Segments = null;
             if (position == null)
-                throw new ArgumentNullException("points");
+                throw new ArgumentNullException(nameof(position));
 
             Left = position.X;
             Bottom = position.Y;
@@ -694,7 +694,13 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            return (GridRectangle)obj == this;
+            if(obj is GridRectangle other)
+                return other == this;
+
+            if (obj is IRectangle iOther)
+                return iOther.Equals(this);
+
+            return false;
         }
 
         public static bool operator ==(GridRectangle A, GridRectangle B)

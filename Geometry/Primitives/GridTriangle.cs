@@ -259,7 +259,7 @@ namespace Geometry
         {
             get
             {
-                double[] Angles = new double[3];
+                double[] angles = new double[3];
 
                 //c^2 = a^2 + b^2 - 2ab cos(theta)
                 double a = GridVector2.Distance(p1, p2);
@@ -270,11 +270,11 @@ namespace Geometry
                 double bsqr = Math.Pow(b, 2);
                 double csqr = Math.Pow(c, 2);
 
-                Angles[0] = Math.Acos((asqr + bsqr - csqr) / (2 * a * b));
-                Angles[1] = Math.Acos((bsqr + csqr - asqr) / (2 * b * c));
-                Angles[2] = Math.Acos((csqr + asqr - bsqr) / (2 * c * a));
+                angles[0] = Math.Acos((asqr + bsqr - csqr) / (2 * a * b));
+                angles[1] = Math.Acos((bsqr + csqr - asqr) / (2 * b * c));
+                angles[2] = Math.Acos((csqr + asqr - bsqr) / (2 * c * a));
 
-                return Angles; 
+                return angles; 
             }
         }
         

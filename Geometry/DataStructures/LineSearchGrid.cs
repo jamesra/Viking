@@ -13,18 +13,18 @@ namespace Geometry
     public class LineSearchGrid<T> : IDisposable
     {
         GridRectangle Bounds;
-        List<GridLineSegment>[,] _LineGrid = new List<GridLineSegment>[0, 0];
+        readonly List<GridLineSegment>[,] _LineGrid;
 
-        Dictionary<GridLineSegment, T> tableLineToValue;
-        Dictionary<T, GridLineSegment> tableValueToLine;
+        readonly Dictionary<GridLineSegment, T> tableLineToValue;
+        readonly Dictionary<T, GridLineSegment> tableValueToLine;
 
-        double GridWidth;
-        double GridHeight;
+        readonly double GridWidth;
+        readonly double GridHeight;
 
-        int NumGridsX;
-        int NumGridsY;
+        readonly int NumGridsX;
+        readonly int NumGridsY;
 
-        int EstimatedLinesPerCell;
+        readonly int EstimatedLinesPerCell;
 
         /// <summary>
         /// I base the size of the list to allocate based on how large it was the last time a query was run

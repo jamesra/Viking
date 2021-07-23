@@ -11,8 +11,8 @@ namespace Geometry
         /// <summary>
         /// A line we are ordering points around by angle.  A is the origin.
         /// </summary>
-        private GridLine Line;
-        private GridVector2 ComparisonPoint;
+        private readonly GridLine Line;
+        private readonly GridVector2 ComparisonPoint;
 
         public readonly bool ClockwiseOrder = false;
 

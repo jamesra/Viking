@@ -11,7 +11,7 @@ namespace Geometry
     /// testing intersections on two arrays of shapes. 
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public struct ArrayIntersection<T>
+    public readonly struct ArrayIntersection<T>
         where T : IShape2D
     {
         ///
@@ -65,9 +65,9 @@ namespace Geometry
     {
         public static GridVector2 Convert(this IPoint2D p)
         {
-            if (p is GridVector2)
+            if (p is GridVector2 v)
             {
-                return (GridVector2)p;
+                return v;
             }
 
             return new GridVector2(p.X, p.Y);
@@ -75,9 +75,9 @@ namespace Geometry
 
         public static GridLineSegment Convert(this ILineSegment2D line)
         {
-            if (line is GridLineSegment)
+            if (line is GridLineSegment l)
             {
-                return (GridLineSegment)line;
+                return l;
             }
 
             return new GridLineSegment(line.A, line.B);
@@ -85,9 +85,9 @@ namespace Geometry
 
         public static GridCircle Convert(this ICircle2D c)
         {
-            if (c is GridCircle)
+            if (c is GridCircle circle)
             {
-                return (GridCircle)c;
+                return circle;
             }
 
             return new GridCircle(c.Center, c.Radius);
@@ -95,9 +95,9 @@ namespace Geometry
 
         public static GridTriangle Convert(this ITriangle2D t)
         {
-            if (t is GridTriangle)
+            if (t is GridTriangle tri)
             {
-                return (GridTriangle)t;
+                return tri;
             }
 
             GridVector2[] points = t.Points.Select(p => p.Convert()).ToArray();
@@ -106,9 +106,9 @@ namespace Geometry
 
         public static GridRectangle Convert(this IRectangle r)
         {
-            if (r is GridRectangle)
+            if (r is GridRectangle rect)
             {
-                return (GridRectangle)r;
+                return rect;
             }
 
             return new GridRectangle(r.Left, r.Right, r.Bottom, r.Top);
@@ -117,9 +117,9 @@ namespace Geometry
 
         public static GridPolygon Convert(this IPolygon2D poly)
         {
-            if (poly is GridPolygon)
+            if (poly is GridPolygon p)
             {
-                return poly as GridPolygon;
+                return p;
             }
 
             return new GridPolygon(poly.ExteriorRing, poly.InteriorRings);
@@ -880,10 +880,10 @@ namespace Geometry
             var listLinePairIntersections = new List<ArrayIntersection<GridLineSegment>>();
             List<GridVector2> listIntersections = new List<GridVector2>();
 
-            for (int iA = 0; iA < ALines.Count(); iA++)
+            for (int iA = 0; iA < ALines.Count; iA++)
             {
                 GridLineSegment A = ALines[iA];
-                for (int iB = 0; iB < BLines.Count(); iB++)
+                for (int iB = 0; iB < BLines.Count; iB++)
                 {
                     GridLineSegment B = BLines[iB];
 
@@ -1025,9 +1025,9 @@ namespace Geometry
             RTree.RTree<GridLineSegment> rTree = lines.ToRTree();
 
             IList<GridLineSegment> sortedLines;
-            if (lines as IList<GridLineSegment> != null)
+            if (lines is IList<GridLineSegment> existing)
             {
-                sortedLines = (IList<GridLineSegment>)lines;
+                sortedLines = existing;
             }
             else
             {
@@ -1173,9 +1173,7 @@ namespace Geometry
         /// <returns></returns>
         private static List<GridLineSegment> FindIntersectingSegments(RTree.RTree<GridLineSegment> rTree, GridPolygon poly)
         {
-            List<GridLineSegment> Intersecting;
-
-            Intersecting = FindIntersectingSegments(rTree, poly.ExteriorSegments);
+            List<GridLineSegment> Intersecting = FindIntersectingSegments(rTree, poly.ExteriorSegments);
 
             foreach (GridPolygon innerPoly in poly.InteriorPolygons)
             {
@@ -1208,9 +1206,7 @@ namespace Geometry
         /// <returns></returns>
         private static List<GridLineSegment> FindNonIntersectingSegments(RTree.RTree<GridLineSegment> rTree, GridPolygon poly)
         {
-            List<GridLineSegment> NonIntersecting;
-
-            NonIntersecting = FindNonIntersectingSegments(rTree, poly.ExteriorSegments);
+            List<GridLineSegment> NonIntersecting = FindNonIntersectingSegments(rTree, poly.ExteriorSegments);
 
             foreach (GridPolygon innerPoly in poly.InteriorPolygons)
             {
@@ -1235,7 +1231,7 @@ namespace Geometry
                 List<GridLineSegment> Candidates = rTree.Intersects(l.BoundingBox.ToRTreeRect(0));
 
                 //Find out if there is a segment that we aren't sharing an endpoint with (part of same polygon border) and is not ourselves
-                if (Candidates.Where(c => c != l && !c.SharedEndPoint(l) && c.Intersects(l)).Any())
+                if (Candidates.Any(c => c != l && !c.SharedEndPoint(l) && c.Intersects(l)))
                 {
                     continue;
                 }
@@ -1319,7 +1315,7 @@ namespace Geometry
             //Identify which line segments do not intersect with segments in the RTree
             foreach (GridPolygon poly in Polygons)
             {
-                NonIntersecting.Union(FindNonIntersectingSegments(SegmentRTree, poly));
+                NonIntersecting.UnionWith(FindNonIntersectingSegments(SegmentRTree, poly));
             }
 
             if (!AddPointsAtIntersections)

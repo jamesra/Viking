@@ -12,12 +12,12 @@ namespace Geometry
     {
         PolygonIndex? curIndex;
 
-        IReadOnlyList<GridPolygon> polygons;
+        readonly IReadOnlyList<GridPolygon> polygons;
 
         /// <summary>
         /// The index to use for the first polygon in the list, defaults to zero
         /// </summary>
-        private int StartingPolyIndex;
+        private readonly int StartingPolyIndex;
 
 
         public PolySetVertexEnum(IReadOnlyList<GridPolygon> polys, int iStartingPolyIndex = 0)
@@ -79,10 +79,10 @@ namespace Geometry
             return curIndex.HasValue;
         }
 
-        private PolygonIndex? NextIndex(IReadOnlyList<GridPolygon> polygons, PolygonIndex current)
+        private PolygonIndex? NextIndex(IReadOnlyList<GridPolygon> inputPolygons, PolygonIndex current)
         {
             int iPoly = current.iPoly - StartingPolyIndex;
-            GridPolygon poly = polygons[iPoly];
+            GridPolygon poly = inputPolygons[iPoly];
 
             int iNextVert = current.iVertex + 1;
             GridVector2[] ring = current.GetRing(poly);
@@ -127,13 +127,13 @@ namespace Geometry
                 //OK, we need to move on and could not move to an inner ring.  Go to the next polygon
 
                 int iNextPoly = iPoly + 1;
-                if (iNextPoly >= polygons.Count)
+                if (iNextPoly >= inputPolygons.Count)
                 {
                     return new PolygonIndex?();
                 }
                 else
                 {
-                    return new Geometry.PolygonIndex(current.iPoly + 1, 0, polygons[iNextPoly].ExteriorRing.Length - 1);
+                    return new Geometry.PolygonIndex(current.iPoly + 1, 0, inputPolygons[iNextPoly].ExteriorRing.Length - 1);
                 }
             }
         }

@@ -12,10 +12,10 @@ namespace Geometry.Transforms
     /// </summary>
     static class GridTransformHelper
     {
-        static ConcurrentDictionary<GridVector2, int[]> TriangleIndexDictionary = new ConcurrentDictionary<GridVector2, int[]>();
+        static readonly ConcurrentDictionary<GridVector2, int[]> TriangleIndexDictionary = new ConcurrentDictionary<GridVector2, int[]>();
         //        static ConcurrentDictionary<GridVector2, MappingGridTriangle[]> TriangleListDictionary = new ConcurrentDictionary<GridVector2, MappingGridTriangle[]>();
 
-        static ConcurrentDictionary<GridVector2, List<int>[]> EdgesDictionary = new ConcurrentDictionary<GridVector2, List<int>[]>();
+        static readonly ConcurrentDictionary<GridVector2, List<int>[]> EdgesDictionary = new ConcurrentDictionary<GridVector2, List<int>[]>();
 
         static public int IndexForCoord(int x, int y, int GridSizeX, int GridSizeY)
         {

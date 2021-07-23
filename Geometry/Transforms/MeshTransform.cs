@@ -105,9 +105,7 @@ namespace Geometry.Transforms
 
         object ICloneable.Clone()
         {
-            MeshTransform newObj;
-
-            newObj = this.MemberwiseClone() as MeshTransform;
+            MeshTransform newObj = this.MemberwiseClone() as MeshTransform;
 
             List<MappingGridVector2> TempList = new List<MappingGridVector2>();
 

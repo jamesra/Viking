@@ -122,7 +122,7 @@ namespace Geometry
             if (iNextVert == current.NumUnique) //-1 because we do not want to report a duplicate vertex for a closed ring
             {
                 //Check for the case where the final vertex in the ring is not equal to the first.
-                if (poly.Points[0] != poly.Points[iNextVert])
+                if (false == poly.Points[0].Equals(poly.Points[iNextVert]))
                     return new PolylineIndex(current.iLine, iNextVert, current.NumUnique);
             }
               

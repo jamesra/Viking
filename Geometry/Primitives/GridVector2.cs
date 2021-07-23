@@ -5,7 +5,7 @@ namespace Geometry
 {
     public class GridVectorComparer : IComparer<GridVector2>, IComparer<IPoint2D>
     {
-        public bool XYOrder = true;
+        public bool XYOrder;
 
         public GridVectorComparer(bool xyOrder=true)
         {
@@ -173,9 +173,9 @@ namespace Geometry
         }
         */
 
-        public GridVector3 ToGridVector3(double Z)
+        public GridVector3 ToGridVector3(double z)
         {
-            return new GridVector3(this.X, this.Y, Z);
+            return new GridVector3(this.X, this.Y, z);
         }
 
         /// <summary>
@@ -707,11 +707,11 @@ namespace Geometry
         {
             if (points == null)
             {
-                throw new ArgumentNullException("GridRectangle Border");
+                throw new ArgumentNullException(nameof(points));
             }
 
             if (points.Length == 0)
-                throw new ArgumentException("GridRectangle Border"); 
+                throw new ArgumentException(nameof(points)); 
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;

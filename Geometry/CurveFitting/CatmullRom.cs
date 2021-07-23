@@ -276,10 +276,8 @@ namespace Geometry
                                                     GridVector2 p2, GridVector2 p3,
                                                     uint NumInterpolations = 5)
         {
-            double[] tvalues;
-            SortedSet<double> tPoints;
-            tvalues = new double[NumInterpolations];
-            tPoints = new SortedSet<double>(tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0))));
+            double[] tvalues = new double[NumInterpolations];
+            SortedSet<double> tPoints = new SortedSet<double>(tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0))));
 
             return RecursivelyFitCurveSegment(p0, p1, p2, p3, tPoints);
         }

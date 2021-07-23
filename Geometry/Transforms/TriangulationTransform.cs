@@ -146,7 +146,7 @@ namespace Geometry.Transforms
                 MappingGridTriangle t = GetTransform(p);
                 if (t == null)
                 {
-                    throw new ArgumentOutOfRangeException("Point", string.Format("Transform: Point could not be mapped {0}", p.ToString()));
+                    throw new ArgumentOutOfRangeException(nameof(Points), string.Format("Transform: Point could not be mapped {0}", p.ToString()));
                 }
                 else
                 {
@@ -243,7 +243,7 @@ namespace Geometry.Transforms
                 MappingGridTriangle t = GetInverseTransform(p);
                 if (t == null)
                 {
-                    throw new ArgumentOutOfRangeException("Point", string.Format("InverseTransform: Point could not be mapped {0}", p.ToString()));
+                    throw new ArgumentOutOfRangeException(nameof(Points), string.Format("InverseTransform: Point could not be mapped {0}", p.ToString()));
                 }
                 else
                 {

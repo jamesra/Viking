@@ -246,7 +246,7 @@ namespace Geometry.Meshing
 
             //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
             var EdgesToCheck = mesh.Edges.Keys.Where(k => mesh[k.A].Data.AreOnSameRing(mesh[k.B].Data) && constrainedEdges.Contains(k) == false).ToArray();
-            foreach (EdgeKey key in EdgesToCheck)
+            foreach (IEdgeKey key in EdgesToCheck)
             {
                 GridLineSegment line = mesh.ToGridLineSegment(key);
 
@@ -361,7 +361,7 @@ namespace Geometry.Meshing
 
             //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
             var EdgesToCheck = tri_mesh.Edges.Keys.Where(k => FaceIndicies.Contains(k.A) && FaceIndicies.Contains(k.B) && expectedConstrainedEdges.Contains(k) == false).ToArray();
-            foreach (EdgeKey key in EdgesToCheck)
+            foreach (IEdgeKey key in EdgesToCheck)
             {
                 GridLineSegment line = new GridLineSegment(tri_mesh_verts[key.A].Position, tri_mesh_verts[key.B].Position);// tri_mesh.ToGridLineSegment(key);
 

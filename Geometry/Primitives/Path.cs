@@ -119,7 +119,7 @@ namespace Geometry
         /// <summary>
         /// Segments are ordered so that A is the newer control point and B is the older control point in the path
         /// </summary>
-        private List<GridLineSegment> _Segments = new List<GridLineSegment>();
+        private readonly List<GridLineSegment> _Segments = new List<GridLineSegment>();
         public IReadOnlyList<GridLineSegment> Segments
         {
             get
