@@ -27,6 +27,28 @@ namespace GeometryOGCMapperTest
             "Point (30 10 1)"
         };
 
+        static readonly string[] GoodPoints = new string[]
+        {
+            "Point(10 10)",
+            "Point (10 10)",
+            "Point  (10 10)",
+            "Point(10 10) ",
+            "Point ( 10 10)",
+            "Point (10  10)",
+            "Point (10 10 )",
+            "Point (1 1)",
+            "Point (1.0 1.0)",
+            "Point(-10 -10)",
+            "Point (-10 -10)",
+            "Point  (-10 -10)",
+            "Point(-10 -10) ",
+            "Point ( -10 -10)",
+            "Point (-10  -10)",
+            "Point (-10 -10 )",
+            "Point (-1 -1)",
+            "Point (-1.0 -1.0)",
+        };
+
         static readonly string[] BadCoordLists = new string[]
         {
             null,
@@ -43,6 +65,42 @@ namespace GeometryOGCMapperTest
             "()",
             "10 20 30",
             "10 20, 30 40, 50"
+        };
+
+        static readonly string[] GoodCoordLists = new string[]
+        {
+            "10 20",
+            "10 20, 30 40",
+            "10 20, 30 40, 50 60",
+            "10 20, 30 40, 50 60, 70 80",
+            "10 20, 30 40, 50 60, 70 80",
+            "10 20 , 30 40 , 50 60 , 70 80",
+            " 10  20, 30 40 ,50 60,70 80",
+            "-10 -20",
+            "-10 -20, -30 -40",
+            "-10 -20, -30 -40, -50 -60",
+            "-10 -20, -30 -40, -50 -60, -70 -80",
+            "-10 -20, -30 -40, -50 -60, -70 -80",
+            "-10 -20 , -30 -40 , -50 -60 , -70 -80",
+            " -10  -20, -30 -40 ,-50 -60,-70 -80",
+        };
+
+        static readonly string[] BadParenLists = new string[]
+        {
+            null,
+            "",
+            "Point",
+            "(",
+            ")",
+            ",",
+            "),",
+            "10)",
+            "(10, ",
+            "(10 20), 10",
+            "(10 10), (20 30",
+            "10 20, (20 30)",
+            "() ()",
+            "(),(),() ()",
         };
 
         [TestMethod]
@@ -68,10 +126,31 @@ namespace GeometryOGCMapperTest
             try
             {
                 var result = WKT.ParseWKT(bad_wkt);
-                Assert.Fail($"Should not be able to parse {bad_wkt}");
+                Assert.Fail($"Should not be able to parse '{bad_wkt}'");
             }
             catch (FormatException)
             {
+            }
+        }
+
+        [TestMethod]
+        public void TestReadGoodPoints()
+        {
+            foreach (var good_wkt in GoodPoints)
+            {
+                TestReadGoodWkt(good_wkt);
+            }
+        }
+
+        public void TestReadGoodWkt(string good_wkt)
+        {
+            try
+            {
+                var result = WKT.ParseWKT(good_wkt);
+            }
+            catch (FormatException)
+            {
+                Assert.Fail($"Should be able to parse '{good_wkt}'");
             }
         }
 
@@ -89,7 +168,49 @@ namespace GeometryOGCMapperTest
             try
             {
                 var result = WKT.ParsePointsFromParameters(bad_wkt);
-                Assert.Fail($"Should not be able to parse {bad_wkt}");
+                Assert.Fail($"Should not be able to parse '{bad_wkt}'");
+            }
+            catch (FormatException)
+            {
+            }
+        }
+
+        [TestMethod]
+        public void TestReadGoodCoordLists()
+        {
+            foreach (var good_wkt in GoodCoordLists)
+            {
+                TestReadGoodCoordList(good_wkt);
+            }
+        }
+
+        public void TestReadGoodCoordList(string bad_wkt)
+        {
+            try
+            {
+                var result = WKT.ParsePointsFromParameters(bad_wkt);
+            }
+            catch (FormatException)
+            {
+                Assert.Fail($"Should be able to parse '{bad_wkt}'");
+            }
+        }
+
+        [TestMethod]
+        public void TestReadBadParenLists()
+        {
+            foreach (var bad_wkt in BadParenLists)
+            {
+                TestReadBadWkt(bad_wkt);
+            }
+        }
+
+        public void TestReadBadParenList(string bad_wkt)
+        {
+            try
+            {
+                var result = WKT.ParseParenListFromParameters(bad_wkt);
+                Assert.Fail($"Should not be able to parse '{bad_wkt}'");
             }
             catch (FormatException)
             {
@@ -162,6 +283,16 @@ namespace GeometryOGCMapperTest
 
             expected.AddInteriorRing(innerPoly);
 
+            var result = WKT.ParseWKT(wkt);
+            Assert.IsTrue(expected.Equals(result));
+        }
+
+        [TestMethod]
+        public void TestWKTReadCurvePolygon()
+        {
+            string wkt = @"CURVEPOLYGON ((-1 0, 0 1, 1 0, 0 -1, -1 0))";
+            var expected = new GridCircle(new GridVector2(0, 0), 1);
+            
             var result = WKT.ParseWKT(wkt);
             Assert.IsTrue(expected.Equals(result));
         }

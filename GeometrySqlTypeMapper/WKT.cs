@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
@@ -27,7 +29,7 @@ namespace Geometry
         private static readonly string matched_parenthesis_pattern = 
             @"(?:
                \(                           #First '('
-                    (?<coords_list>
+                    (?<matched_parenthesis>
                         (?:
                             [^()]           #Match all non-braces
                             |
@@ -66,7 +68,7 @@ namespace Geometry
             if (false == m.Success)
                 throw new FormatException($"Unable to parse WKT {input}");
 
-            string coords = m.Groups["coords_list"].Value;
+            string coords = m.Groups["matched_parenthesis"].Value;
 
             switch (m.Groups["type"].Value.ToUpper())
             {
@@ -76,16 +78,13 @@ namespace Geometry
                     return ParsePolylineParameters(coords);
                 case "POLYGON":
                     return ParsePolygonParameters(coords);
+                case "CURVEPOLYGON":
+                    return ParseCurvePolygonParameters(coords);
                 default:
                     throw new FormatException($"Unable to parse WKT {input}");
             }
 
             throw new FormatException($"Unable to parse WKT {input}"); ;
-        }
-
-        public static GridVector2 ParsePoint(string input)
-        {
-            return new GridVector2(30,10);
         }
 
         internal static GridVector2 ParsePointParameters(string coords)
@@ -116,6 +115,20 @@ namespace Geometry
             return points;
         }
 
+        internal static string[] ParseParenListFromParameters(string input)
+        {
+            var m = parenthesis_list_regex.Match(input);
+            if (m.Success == false)
+                throw new FormatException($"Cannot parse WKT parenthesized parameters to a list {input}");
+
+            var captures = m.Groups["matched_parenthesis"].Captures;
+            string[] matchedParenthesis = new string[captures.Count];
+            for (int i = 0; i < matchedParenthesis.Length; i++)
+                matchedParenthesis[i] = captures[i].ToString(); 
+
+            return matchedParenthesis;
+        }
+
         internal static GridPolyline ParsePolylineParameters(string coords)
         {
             var points = ParsePointsFromParameters(coords);
@@ -124,15 +137,12 @@ namespace Geometry
 
         internal static GridPolygon ParsePolygonParameters(string coords)
         {
-            var m = parenthesis_list_regex.Match(coords);
-            if (m.Success == false)
-                throw new FormatException($"Cannot parse WKT to point {coords}");
-
+            var matchedParenthesis = ParseParenListFromParameters(coords);
             GridPolygon poly = null;
 
-            foreach (var cl in m.Groups["coords_list"].Captures)
+            foreach (var coordList in matchedParenthesis)
             {
-                var p = ParsePointsFromParameters(cl.ToString());
+                var p = ParsePointsFromParameters(coordList);
                 if (poly == null)
                     poly = new GridPolygon(p);
                 else
@@ -140,6 +150,27 @@ namespace Geometry
             }
 
             return poly;
+        }
+
+        /// <summary>
+        /// This is a special case for the Viking database, which uses CurvePolygons to
+        /// encode circles only.  Each CurvePolygon is expected to have 5 points, and the
+        /// bounding box is used to define the circle
+        /// </summary>
+        /// <param name="coords"></param>
+        /// <returns></returns>
+        internal static GridCircle ParseCurvePolygonParameters(string coords)
+        {
+            var matchedParenthesis = ParseParenListFromParameters(coords); 
+
+            foreach (var coordList in matchedParenthesis)
+            {
+                var p = ParsePointsFromParameters(coordList);
+                var bRect = p.BoundingBox();
+                return new GridCircle(bRect.Center, bRect.Width / 2.0);
+            }
+
+            return default;
         }
     }
 }
