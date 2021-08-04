@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 namespace Geometry
 {
-    public static class WKT
+    public static class FromWKT
     {
         static readonly string float_pattern = @"-?[0-9]*(?:\.[0-9]*)?";
         static readonly string single_coord_pattern = @"\s*(?<X>" + float_pattern + @"){1}\s+(?<Y>" + float_pattern + @"){1}\s*";
@@ -51,7 +51,7 @@ namespace Geometry
 
         private static readonly Regex parenthesis_list_regex = new Regex(parenthesis_list_pattern, RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
 
-        private static readonly string WKT_pattern = @"\s*(?<type>[\p{Ll}\p{Lu}\p{Lt}]+)\s*" +
+        private static readonly string WKT_pattern = @"\s*\b(?<type>[\p{Ll}\p{Lu}\p{Lt}]+)\b\s*" +
                                                      matched_parenthesis_pattern +
                                                      @"\s*\Z";
 
@@ -76,6 +76,8 @@ namespace Geometry
                     return ParsePointParameters(coords); 
                 case "LINESTRING":
                     return ParsePolylineParameters(coords);
+                case "MULTILINESTRING":
+                    return ParseMultiPolylineParameters(coords);
                 case "POLYGON":
                     return ParsePolygonParameters(coords);
                 case "CURVEPOLYGON":
@@ -129,10 +131,28 @@ namespace Geometry
             return matchedParenthesis;
         }
 
-        internal static GridPolyline ParsePolylineParameters(string coords)
+        internal static IShape2D ParsePolylineParameters(string coords)
         {
             var points = ParsePointsFromParameters(coords);
+            if (points.Count == 2)
+                return new GridLineSegment(points[0], points[1]);
+
             return new GridPolyline(points);
+        }
+
+        internal static IShape2D ParseMultiPolylineParameters(string coords)
+        {
+            var matchedParenthesis = ParseParenListFromParameters(coords);
+
+            Shape2DCollection lineCollection = new Shape2DCollection(matchedParenthesis.Length);
+
+            foreach (var coordList in matchedParenthesis)
+            {
+                var p = ParsePolylineParameters(coordList);
+                lineCollection.Add(p);
+            }
+
+            return lineCollection;
         }
 
         internal static GridPolygon ParsePolygonParameters(string coords)
