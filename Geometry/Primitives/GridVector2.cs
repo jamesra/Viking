@@ -131,7 +131,7 @@ namespace Geometry
     [Serializable]
     public struct GridVector2 : IShape2D, IPoint, ICloneable, IComparable,
                                 IComparable<GridVector2>, IEquatable<GridVector2>,
-                                IComparable<IPoint2D>, IEquatable<IPoint2D>, IEquatable<IShape2D>
+                                IComparable<IPoint2D>, IEquatable<IPoint2D>
     {
         public readonly static GridVector2 UnitX = new GridVector2(1, 0);
         public readonly static GridVector2 UnitY = new GridVector2(0, 1);
@@ -242,14 +242,24 @@ namespace Geometry
             //return DistanceSquared((IPoint2D)this, B) <= Global.EpsilonSquared;
         }
 
+        public bool Equals(IPoint other)
+        {
+            return false;
+        }
+
         public override bool Equals(object obj)
         {
             if (object.ReferenceEquals(obj, null))
                 return false;
 
-            GridVector2 B = (GridVector2)obj;
+            if (obj is GridVector2 other)
+                return Equals(other);
+            if (obj is IPoint2D point2D)
+                return Equals(point2D);
+            if (obj is IPoint point3D)
+                return Equals(point3D);
 
-            return this.Equals(B);
+            return false;
         }
 
         /*

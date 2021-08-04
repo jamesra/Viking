@@ -9,7 +9,7 @@ namespace Geometry
     /// <summary>
     /// A set of lines where the endpoint of each line in the set is the starting point of the next
     /// </summary>
-    public class GridPolyline : IPolyLine2D, IEquatable<GridPolyline>
+    public class GridPolyline : IPolyLine2D, IEquatable<GridPolyline>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
         protected List<IPoint2D> _Points;
 
@@ -545,20 +545,34 @@ namespace Geometry
         public bool Equals(IShape2D other)
         {
             if (other is IPolyLine2D otherPolyline)
-            { 
-                if (this.PointCount != otherPolyline.Points.Count)
+                return Equals(otherPolyline);
+            if (other is ILineSegment2D otherLine)
+                return Equals(otherLine);
+            
+            return false; 
+        }
+
+        public bool Equals(ILineSegment2D other)
+        {
+            if (this.PointCount != 2)
+                return false;
+
+            return (Points[0].Equals(other.A) && Points[1].Equals(other.B)) ||
+                   (Points[1].Equals(other.A) && Points[0].Equals(other.B));
+        }
+
+        public bool Equals(IPolyLine2D other)
+        {
+            if (this.PointCount != other.Points.Count)
+                return false;
+
+            for (int i = 0; i < this.PointCount; i++)
+            {
+                if (false == this._Points[i].Equals(other.Points[i]))
                     return false;
-
-                for (int i = 0; i < this.PointCount; i++)
-                {
-                    if (false == this._Points[i].Equals(otherPolyline.Points[i]))
-                        return false;
-                }
-
-                return true;
             }
 
-            return false; 
-        } 
+            return true;
+        }
     }
 }

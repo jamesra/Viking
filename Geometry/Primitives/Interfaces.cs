@@ -102,13 +102,13 @@ namespace Geometry
     }
 
 
-    public interface IPoint2D : IPointN
+    public interface IPoint2D : IPointN, IEquatable<IPoint2D>
     {
         double X { get; set; }
         double Y { get; set; }
     }
 
-    public interface IPoint : IPoint2D
+    public interface IPoint : IPoint2D, IEquatable<IPoint>
     {
         double Z { get; set; }
     }
@@ -131,7 +131,7 @@ namespace Geometry
         IShape2D Translate(IPoint2D offset);
     }
 
-    public interface IPolygon2D : IShape2D
+    public interface IPolygon2D : IShape2D, IEquatable<IPolygon2D>
     {
         IReadOnlyList<IPoint2D> ExteriorRing { get; }
 
@@ -146,36 +146,36 @@ namespace Geometry
         IPoint2D Centroid { get; }
     }
 
-    public interface ICircle2D : IShape2D
+    public interface ICircle2D : IShape2D, IEquatable<ICircle2D>
     {
         IPoint2D Center { get; }
 
         double Radius { get; }
     }
 
-    public interface IShapeCollection2D : IShape2D
+    public interface IShapeCollection2D : IShape2D, IEquatable<IShapeCollection2D>
     {
         IList<IShape2D> Geometries { get; }
     }
 
-    public interface IPolyLine2D : IShape2D
+    public interface IPolyLine2D : IShape2D, IEquatable<IPolyLine2D>
     {
         IReadOnlyList<IPoint2D> Points { get; }
         IReadOnlyList<ILineSegment2D> LineSegments { get; }
     }
 
-    public interface ITriangle2D : IShape2D
+    public interface ITriangle2D : IShape2D, IEquatable<ITriangle2D>
     {
         IPoint2D[] Points { get; }
     }
 
-    public interface ILineSegment2D : IShape2D
+    public interface ILineSegment2D : IShape2D, IEquatable<ILineSegment2D>
     {
         IPoint2D A { get; }
         IPoint2D B { get; }
     }
 
-    public interface IRectangle : IShape2D
+    public interface IRectangle : IShape2D, IEquatable<IRectangle>
     {
         double Left { get; }
         double Right { get; }

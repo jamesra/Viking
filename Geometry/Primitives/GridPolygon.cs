@@ -19,7 +19,7 @@ namespace Geometry
     /// Uses Counter-Clockwise winding order
     /// </summary>
     [Serializable()]
-    public class GridPolygon : ICloneable, IPolygon2D, IEquatable<GridPolygon>
+    public class GridPolygon : ICloneable, IPolygon2D, IEquatable<GridPolygon>, IEquatable<IPolygon2D>
     {
         /// <summary>
         /// Cached area of ExteriorRing, not subtracting any interior holes.

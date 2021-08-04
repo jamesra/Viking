@@ -59,7 +59,7 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public struct GridTriangle : ICloneable, IShape2D, ITriangle2D, IEquatable<GridTriangle>
+    public struct GridTriangle : ICloneable, IShape2D, ITriangle2D, IEquatable<GridTriangle>, IEquatable<ITriangle2D>
     {
         readonly GridVector2 _p1;
         readonly GridVector2 _p2;
@@ -111,6 +111,19 @@ namespace Geometry
             }
 
             return false;
+        }
+
+        public bool Equals(ITriangle2D other)
+        {
+            if (object.ReferenceEquals(other, null)) return false;
+
+            for (int i = 0; i < Points.Length; i++)
+            {
+                bool equal = Points[i].Equals(other.Points[i]);
+                if (!equal) return false;
+            }
+
+            return true; 
         }
 
         int? _HashCode;

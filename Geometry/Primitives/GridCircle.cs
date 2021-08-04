@@ -6,7 +6,7 @@ using System.Linq;
 namespace Geometry
 {
     [Serializable]
-    public struct GridCircle : IShape2D, ICircle2D
+    public struct GridCircle : IShape2D, ICircle2D, IEquatable<ICircle2D>
     {
         public GridVector2 Center;
         public double Radius;
@@ -503,10 +503,15 @@ namespace Geometry
 
         public bool Equals(IShape2D other)
         {
-            if (other is ICircle2D otherCircle) 
-                return this.Center.Equals(otherCircle.Center) && this.Radius.Equals(otherCircle.Radius);
+            if (other is ICircle2D otherCircle)
+                return Equals(otherCircle);
             
             return false;
+        }
+
+        public bool Equals(ICircle2D other)
+        { 
+            return this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius); 
         }
 
         int? _HashCode;

@@ -429,7 +429,7 @@ namespace Geometry.Meshing
         {
             int v1;
             int v2;
-            int temp;
+            //int temp;
             GridVector2 p1;
             GridVector2 p2;
 

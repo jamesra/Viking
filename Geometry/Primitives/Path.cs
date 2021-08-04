@@ -9,7 +9,7 @@ namespace Geometry
     /// <summary>
     /// Describes a set of points connected sequentially, i.e. a polyline.  Exposes events for changes to the path.
     /// </summary>
-    public class Path : IPolyLine2D, System.Collections.Specialized.INotifyCollectionChanged
+    public class Path : IPolyLine2D, System.Collections.Specialized.INotifyCollectionChanged, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
 
         public delegate void LoopChangedEventHandler(object sender, bool HasLoop);
@@ -702,6 +702,29 @@ namespace Geometry
             }
 
             return false;
+        }
+
+        public bool Equals(ILineSegment2D other)
+        {
+            if (this.Points.Count != 2)
+                return false;
+
+            return (Points[0].Equals(other.A) && Points[1].Equals(other.B)) ||
+                   (Points[1].Equals(other.A) && Points[0].Equals(other.B));
+        }
+
+        public bool Equals(IPolyLine2D other)
+        { 
+            if (this.Points.Count != other.Points.Count)
+                return false;
+
+            for (int i = 0; i < this.Points.Count; i++)
+            {
+                if (false == this.Points[i].Equals(other.Points[i]))
+                    return false;
+            }
+
+            return true;  
         }
 
         #endregion

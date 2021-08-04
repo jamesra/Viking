@@ -6,7 +6,7 @@ using System.Linq;
 namespace Geometry
 {
     [Serializable]
-    public struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>, ILineSegment2D, IEquatable<GridLineSegment>
+    public struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>, ILineSegment2D, IEquatable<GridLineSegment>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
         public readonly GridVector2 A;
         public readonly GridVector2 B;
@@ -124,26 +124,35 @@ namespace Geometry
             {
                 return (this.A.Equals(otherGS.A) && this.B.Equals(otherGS.B)) ||
                        (this.B.Equals(otherGS.A) && this.A.Equals(otherGS.B));
-            }
-            if (obj is ILineSegment2D otherLine)
-            { 
-                return (this.A.Equals(otherLine.A) && this.B.Equals(otherLine.B)) ||
-                       (this.B.Equals(otherLine.A) && this.A.Equals(otherLine.B));
-            }
+            } 
             if (obj is IShape2D otherShape)
                 return Equals(otherShape);
 
             return false; 
         }
 
+        public bool Equals(ILineSegment2D other)
+        {
+            return (this.A.Equals(other.A) && this.B.Equals(other.B)) ||
+                   (this.B.Equals(other.A) && this.A.Equals(other.B));
+        }
+
+        public bool Equals(IPolyLine2D other)
+        {
+            if (other.Points.Count != 2)
+                return false;
+
+            return (A.Equals(other.Points[0]) && B.Equals(other.Points[1])) ||
+                   (B.Equals(other.Points[0]) && A.Equals(other.Points[1]));
+        }
+
         public bool Equals(IShape2D other)
         {
             if (other is ILineSegment2D otherLine)
-            {
-                return (this.A.Equals(otherLine.A) && this.B.Equals(otherLine.B)) ||
-                       (this.B.Equals(otherLine.A) && this.A.Equals(otherLine.B));
-            }
-
+                return Equals(otherLine);
+            if (other is IPolyLine2D otherPoly)
+                return Equals(otherPoly);
+            
             return false;
         }
 

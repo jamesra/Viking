@@ -159,7 +159,7 @@ namespace Geometry.Transforms
                     }
                 }
             }
-            catch (System.Net.WebException e)
+            catch (System.Net.WebException)
             {
                 Trace.WriteLine(stosURI.ToString() + " could not be loaded", "Geometry");
                 return null;

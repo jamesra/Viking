@@ -5,7 +5,7 @@ using System.Linq;
 namespace Geometry
 {
     [Serializable]
-    public struct GridRectangle : IRectangle, ICloneable
+    public struct GridRectangle : IRectangle, ICloneable, IEquatable<IRectangle>, IEquatable<GridRectangle>
     {
         public double Left { get; private set; }
         public double Right { get; private set; }
@@ -694,8 +694,8 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            if(obj is GridRectangle other)
-                return other == this;
+            if (obj is GridRectangle other)
+                return Equals(other);
 
             if (obj is IShape2D otherShape)
                 return Equals(otherShape);
@@ -706,14 +706,25 @@ namespace Geometry
         public bool Equals(IShape2D other)
         {
             if (other is IRectangle otherRect)
-            {
-                return  Left.Equals(otherRect.Left) &&
-                        Right.Equals(otherRect.Right) &&
-                        Top.Equals(otherRect.Top) &&
-                        Bottom.Equals(otherRect.Bottom);
-            }
+                return Equals(otherRect);
 
             return false;
+        }
+
+        public bool Equals(IRectangle other)
+        { 
+                return Left.Equals(other.Left) &&
+                       Right.Equals(other.Right) &&
+                       Top.Equals(other.Top) &&
+                       Bottom.Equals(other.Bottom);
+        }
+
+        public bool Equals(GridRectangle other)
+        {
+            return Left.Equals(other.Left) &&
+                   Right.Equals(other.Right) &&
+                   Top.Equals(other.Top) &&
+                   Bottom.Equals(other.Bottom);
         }
 
         public static bool operator ==(GridRectangle A, GridRectangle B)

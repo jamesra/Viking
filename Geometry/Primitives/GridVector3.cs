@@ -100,18 +100,28 @@ namespace Geometry
             return (int)prod; 
         }
 
+        public bool Equals(IPoint2D other)
+        {
+            return false;
+        }
+
+        public bool Equals(IPoint other)
+        {
+            return Distance(this, other) <= EpsilonSquared;
+        }
+
         public override bool Equals(object obj)
         {
             if (obj is GridVector3 other)
-                return GridVector3.Distance(this, other) <= EpsilonSquared;
+                return Equals(other);
 
             if (obj is IPoint iOther)
-                return Distance(this, iOther) <= EpsilonSquared;
+                return Equals(iOther);
 
             return false;
         }
 
-        bool IEquatable<GridVector3>.Equals(GridVector3 B)
+        public bool Equals(GridVector3 B)
         {
             return GridVector3.Distance(this, B) <= EpsilonSquared;
         }
