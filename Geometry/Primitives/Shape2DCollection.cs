@@ -54,7 +54,7 @@ namespace Geometry
             }
         }
 
-        public ICollection<IShape2D> Geometries
+        public IList<IShape2D> Geometries
         {
             get
             {
@@ -89,6 +89,25 @@ namespace Geometry
             }
 
             return translatedShapes;
+        }
+
+        public bool Equals(IShape2D other)
+        {
+            if (other is IShapeCollection2D otherColl)
+            {
+                if (this.Shapes.Count != otherColl.Geometries.Count)
+                    return false;
+
+                for (int i = 0; i < Shapes.Count; i++)
+                {
+                    bool equal = Shapes[i].Equals((otherColl.Geometries[i]));
+                    if (!equal) return false;
+                }
+
+                return true;
+            }
+
+            return false;
         }
     }
 }

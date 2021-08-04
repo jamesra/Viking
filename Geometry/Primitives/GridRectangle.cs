@@ -697,8 +697,21 @@ namespace Geometry
             if(obj is GridRectangle other)
                 return other == this;
 
-            if (obj is IRectangle iOther)
-                return iOther.Equals(this);
+            if (obj is IShape2D otherShape)
+                return Equals(otherShape);
+
+            return false;
+        }
+
+        public bool Equals(IShape2D other)
+        {
+            if (other is IRectangle otherRect)
+            {
+                return  Left.Equals(otherRect.Left) &&
+                        Right.Equals(otherRect.Right) &&
+                        Top.Equals(otherRect.Top) &&
+                        Bottom.Equals(otherRect.Bottom);
+            }
 
             return false;
         }

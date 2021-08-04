@@ -88,8 +88,29 @@ namespace Geometry
         }
 
         public override bool Equals(object obj)
-        {
-            return (GridTriangle)obj == this;
+        {  
+            if (obj is GridTriangle otherTri)
+                return this == otherTri;
+            if (obj is IShape2D otherShape)
+                return Equals(otherShape);
+
+            return false;
+        }
+
+        public bool Equals(IShape2D obj)
+        {  
+            if (obj is ITriangle2D otherTri)
+            {
+                for (int i = 0; i < Points.Length; i++)
+                {
+                    bool equal = Points[i].Equals(otherTri.Points[i]);
+                    if (!equal) return false;
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         int? _HashCode;
@@ -330,6 +351,13 @@ namespace Geometry
                 return new GridVector2[] { p1, p2, p3 };
             }
         }
+        IPoint2D[] ITriangle2D.Points
+        {
+            get
+            {
+                return new IPoint2D[] { p1, p2, p3 };
+            }
+        }
 
         public GridRectangle BoundingBox
         {
@@ -511,15 +539,7 @@ namespace Geometry
         public ShapeType2D ShapeType
         {
             get { return ShapeType2D.TRIANGLE; }
-        }
-
-        ICollection<IPoint2D> ITriangle2D.Points
-        {
-            get
-            {
-                return new IPoint2D[] { p1, p2, p3 };
-            }
-        }
+        } 
 
         private GridLineSegment[] _Segments;
         public GridLineSegment[] Segments

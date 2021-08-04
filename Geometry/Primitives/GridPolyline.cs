@@ -516,6 +516,9 @@ namespace Geometry
             if (obj is GridPolyline other)
                 return Equals(other);
 
+            if (obj is IShape2D otherShape)
+                return Equals(otherShape);
+
             return base.Equals(obj);
         }
 
@@ -538,5 +541,24 @@ namespace Geometry
 
             return true;
         }
+
+        public bool Equals(IShape2D other)
+        {
+            if (other is IPolyLine2D otherPolyline)
+            { 
+                if (this.PointCount != otherPolyline.Points.Count)
+                    return false;
+
+                for (int i = 0; i < this.PointCount; i++)
+                {
+                    if (false == this._Points[i].Equals(otherPolyline.Points[i]))
+                        return false;
+                }
+
+                return true;
+            }
+
+            return false; 
+        } 
     }
 }

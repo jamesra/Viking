@@ -495,9 +495,17 @@ namespace Geometry
             if (obj is GridCircle other)
                 return this == other;
 
-            if (obj is ICircle2D iOther)
-                return iOther.Equals(this);
+            if (obj is IShape2D otherShape)
+                return Equals(otherShape);
 
+            return false;
+        } 
+
+        public bool Equals(IShape2D other)
+        {
+            if (other is ICircle2D otherCircle) 
+                return this.Center.Equals(otherCircle.Center) && this.Radius.Equals(otherCircle.Radius);
+            
             return false;
         }
 

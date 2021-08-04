@@ -120,43 +120,34 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            if (obj is ILineSegment2D ls)
+            if (obj is GridLineSegment otherGS)
             {
-
-//            try
-//            { 
-                //            }
-                //            catch(System.InvalidCastException e)
-                //            {
-                //                return false; 
-                //            }
-                /*
-                if (A.X == ls.A.X &&
-                    A.Y == ls.A.Y &&
-                    B.X == ls.B.X &&
-                    B.Y == ls.B.Y)
-                    return true;
-                */ 
-
-                if (this.A == ls.A && this.B == ls.B)
-                    return true;
-
-                if (this.A == ls.B && this.B == ls.A)
-                    return true;
-
-                /*
-                    if (MaxX == ls.MaxX &&
-                       MaxY == ls.MaxY &&
-                       MinX == ls.MinX &&
-                       MinY == ls.MinY)
-                        return true; 
-                        */
+                return (this.A.Equals(otherGS.A) && this.B.Equals(otherGS.B)) ||
+                       (this.B.Equals(otherGS.A) && this.A.Equals(otherGS.B));
             }
+            if (obj is ILineSegment2D otherLine)
+            { 
+                return (this.A.Equals(otherLine.A) && this.B.Equals(otherLine.B)) ||
+                       (this.B.Equals(otherLine.A) && this.A.Equals(otherLine.B));
+            }
+            if (obj is IShape2D otherShape)
+                return Equals(otherShape);
 
             return false; 
         }
 
-        static public bool operator ==(GridLineSegment A, GridLineSegment B)
+        public bool Equals(IShape2D other)
+        {
+            if (other is ILineSegment2D otherLine)
+            {
+                return (this.A.Equals(otherLine.A) && this.B.Equals(otherLine.B)) ||
+                       (this.B.Equals(otherLine.A) && this.A.Equals(otherLine.B));
+            }
+
+            return false;
+        }
+
+        public static bool operator ==(GridLineSegment A, GridLineSegment B)
         {
             if (object.ReferenceEquals(A, B))
                 return true;
@@ -173,7 +164,7 @@ namespace Geometry
             return false; 
         }
 
-        static public bool operator !=(GridLineSegment A, GridLineSegment B)
+        public static bool operator !=(GridLineSegment A, GridLineSegment B)
         {
             return !(A == B);
         }

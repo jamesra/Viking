@@ -683,6 +683,25 @@ namespace Geometry
             translatedPoints = this.Points.Select(p => new GridVector2(p.X + offset.X, p.Y + offset.Y)).Cast<IPoint2D>().ToList();
 
             return new GridPolyline(translatedPoints);
+        } 
+
+        public bool Equals(IShape2D other)
+        {
+            if (other is IPolyLine2D otherPolyline)
+            {
+                if (this.Points.Count != otherPolyline.Points.Count)
+                    return false;
+
+                for (int i = 0; i < this.Points.Count; i++)
+                {
+                    if (false == this.Points[i].Equals(otherPolyline.Points[i]))
+                        return false;
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         #endregion

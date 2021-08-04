@@ -113,7 +113,7 @@ namespace Geometry
         double Z { get; set; }
     }
 
-    public interface IShape2D
+    public interface IShape2D : IEquatable<IShape2D>
     {
         GridRectangle BoundingBox { get; }
         double Area { get; }
@@ -155,7 +155,7 @@ namespace Geometry
 
     public interface IShapeCollection2D : IShape2D
     {
-        ICollection<IShape2D> Geometries { get; }
+        IList<IShape2D> Geometries { get; }
     }
 
     public interface IPolyLine2D : IShape2D
@@ -166,7 +166,7 @@ namespace Geometry
 
     public interface ITriangle2D : IShape2D
     {
-        ICollection<IPoint2D> Points { get; }
+        IPoint2D[] Points { get; }
     }
 
     public interface ILineSegment2D : IShape2D

@@ -3327,11 +3327,10 @@ namespace Geometry
             if (other.ShapeType != this.ShapeType)
                 return false;
 
-            IPolygon2D other_poly = other as IPolygon2D;
-            if (other_poly == null)
-                return false;
+            if(other is IPolygon2D otherPoly)
+                return this.Equals(otherPoly);
 
-            return this.Equals(other_poly);
+            return false;
         }
 
         public bool Equals(IPolygon2D other)
