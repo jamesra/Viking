@@ -95,7 +95,7 @@ namespace Geometry
     {
         readonly double[] _coords;
 
-        public int nDims { get { return _coords.Length; } }
+        public int nDims { get => _coords.Length; }
 
         public double[] coords { get => _coords; }
 
@@ -121,10 +121,7 @@ namespace Geometry
         }
 
         public bool Equals(GridVectorN B)
-        {
-            if (object.ReferenceEquals(B, null))
-                return false;
-
+        {  
             return (DistanceSquared(this, B) <= Global.EpsilonSquared);
         }
 
@@ -138,15 +135,12 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            if (object.ReferenceEquals(obj, null))
-                return false;
+            if (obj is GridVectorN otherGVN)
+                return Equals(otherGVN);
+            if (obj is IPointN otherIPN)
+                return Equals(otherIPN);
 
-            IPointN B = obj as IPointN;
-
-            if (object.ReferenceEquals(B, null))
-                return false;
-
-            return this == B;
+            return false;
         }
 
         /// <summary>
@@ -257,37 +251,37 @@ namespace Geometry
             return Compare(this, B);
         }
 
-        static public GridVectorN operator -(GridVectorN A)
+        public static GridVectorN operator -(GridVectorN A)
         {
             return new GridVectorN(A._coords.Select(val => -val).ToArray());
         }
 
-        static public GridVectorN operator -(GridVectorN A, GridVectorN B)
+        public static GridVectorN operator -(GridVectorN A, GridVectorN B)
         {
             return new GridVectorN(A._coords.Select((val, i) => val - B._coords[i]).ToArray());
         }
 
-        static public GridVectorN operator +(GridVectorN A, GridVectorN B)
+        public static GridVectorN operator +(GridVectorN A, GridVectorN B)
         {
             return new GridVectorN(A._coords.Select((val, i) => val + B._coords[i]).ToArray());
         }
 
-        static public GridVectorN operator *(GridVectorN A, double scalar)
+        public static GridVectorN operator *(GridVectorN A, double scalar)
         {
             return new GridVectorN(A._coords.Select((val, i) => val * scalar).ToArray());
         }
 
-        static public GridVectorN operator *(GridVectorN A, GridVectorN B)
+        public static GridVectorN operator *(GridVectorN A, GridVectorN B)
         {
             return new GridVectorN(A._coords.Select((a, i) => a * B._coords[i]).ToArray());
         }
 
-        static public GridVectorN operator /(GridVectorN A, double scalar)
+        public static GridVectorN operator /(GridVectorN A, double scalar)
         {
             return new GridVectorN(A._coords.Select((val, i) => val / scalar).ToArray());
         }
 
-        static public GridVectorN operator /(GridVectorN A, GridVectorN B)
+        public static GridVectorN operator /(GridVectorN A, GridVectorN B)
         {
             return new GridVectorN(A._coords.Select((a, i) => a / B._coords[i]).ToArray());
         }
@@ -333,22 +327,22 @@ namespace Geometry
         #endregion
         */
 
-        static public bool operator ==(GridVectorN A, GridVectorN B)
+        public static bool operator ==(GridVectorN A, GridVectorN B)
         {
             return A.Equals(B);
         }
 
-        static public bool operator !=(GridVectorN A, GridVectorN B)
+        public static bool operator !=(GridVectorN A, GridVectorN B)
         {
             return !A.Equals(B);
         }
 
-        static public bool operator ==(GridVectorN A, IPointN B)
+        public static bool operator ==(GridVectorN A, IPointN B)
         {
             return A.Equals(B);
         }
 
-        static public bool operator !=(GridVectorN A, IPointN B)
+        public static bool operator !=(GridVectorN A, IPointN B)
         {
             return !A.Equals(B);
         }
