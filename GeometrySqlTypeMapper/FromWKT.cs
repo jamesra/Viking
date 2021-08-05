@@ -58,6 +58,10 @@ namespace Geometry
         private static readonly Regex WKT_regex =
             new Regex(WKT_pattern, RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
 
+        public static IShape2D ToShape2D(this string input)
+        {
+            return ParseWKT(input);
+        }
 
         public static IShape2D ParseWKT(this string input)
         {

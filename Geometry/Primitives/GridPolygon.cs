@@ -355,17 +355,9 @@ namespace Geometry
                 return (ExteriorRing.Length - 1) + InteriorRings.Sum(ir => ir.Length - 1);
             }
         }
-
-        IPoint2D IPolygon2D.Centroid
-        {
-            get
-            {
-                return this.Centroid;
-            }
-        }
-
-
-
+          
+        IPoint2D ICentroid.Centroid => Centroid;
+        
         /// <summary>
         /// Adds an Interior Ring to this polygon.  Input must not intersect the exterior ring or existing interior rings.
         /// </summary>
@@ -535,7 +527,7 @@ namespace Geometry
                             throw new ArgumentException("Inner polygon was valid itself, but invalid in the context of the exterior polygon");
                         }
                     }
-                    catch (ArgumentException e)
+                    catch (ArgumentException)
                     {
                         //Restore the inner polygon to a known good state before forwarding the exception
                         ReplaceInteriorRing(iVertex.iInnerPoly.Value, original_poly);
@@ -635,7 +627,7 @@ namespace Geometry
                         throw new ArgumentException(string.Format("Changing vertex {0} to {1} resulted in an invalid state.", iVertex, value));
                     }
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     //Restore our state
                     ReplaceInteriorRing(iVertex.iInnerPoly.Value, original_poly);
@@ -719,7 +711,7 @@ namespace Geometry
                         throw new ArgumentException($"Removing vertex {iVertex} resulted in an invalid state.");
                     }
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     this.ReplaceInteriorRing(iVertex.iInnerPoly.Value, original_poly);
                 }
@@ -3272,7 +3264,7 @@ namespace Geometry
                 Debug.Assert(walkedPoints.Contains(SimplifiedPath[iCut]) == false);
                 if (GridVector2.DistanceSquared(SimplifiedPath[iCut], walkedPoints.Last()) <= Geometry.Global.EpsilonSquared)
                 {
-                    int i = 5; //Temp for debugging
+                    //int i = 5; //Temp for debugging
                     continue;
                 }
 

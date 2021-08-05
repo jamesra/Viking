@@ -179,18 +179,7 @@ namespace Geometry
         }
 
 
-        public double Length
-        {
-            get
-            {
-                double d1 = (A.X - B.X);
-                d1 = d1 * d1;
-                double d2 = (A.Y - B.Y);
-                d2 = d2 * d2; 
-
-                return Math.Sqrt(d1+d2); 
-            }
-        }
+        public double Length => GridVector2.Distance(A, B);
 
         /// <summary>
         /// The change in Y for values of X.
@@ -316,7 +305,7 @@ namespace Geometry
                 {
                     tri = new GridTriangle(A, B, p);
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     return 0; //This means the points are on a line
                 }
@@ -350,6 +339,7 @@ namespace Geometry
 
             return new GridVector2(x, y); 
         }
+        IPoint2D ICentroid.Centroid => Bisect();
 
         public GridVector2 Direction
         {
@@ -390,6 +380,7 @@ namespace Geometry
                 return normal;
             }
         }
+
 
         public double DistanceToPoint(in GridVector2 point)
         {

@@ -203,7 +203,7 @@ namespace Geometry
                 {
                     tri = new GridTriangle(Origin, Origin + Direction, p);
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     return 0; //This means the points are on a line
                 }

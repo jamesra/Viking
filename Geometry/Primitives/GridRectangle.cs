@@ -19,171 +19,54 @@ namespace Geometry
         /// </summary>
         public double Bottom { get; private set; }
 
-
+        IPoint2D IRectangle.Center => Center;
+         
         public override string ToString()
         {
-            return string.Format("{0},{1} W: {2} H: {3} Center: {4}", Left, Bottom, Width, Height, Center.ToString());
+            return $"{Left},{Bottom} W: {Width} H: {Height} Center:{Center}";
         }
 
-        public double Width
-        {
-            get
-            {
-                //Debug.Assert(Right - Left >= 0); 
-                return Right - Left;
-            }
-        }
+        public double Width => Right - Left;
 
-        public double Height
-        {
-            get
-            {
-                //Debug.Assert(Top - Bottom >= 0); 
-                return Top - Bottom;
-            }
-        }
+        public double Height => Top - Bottom;
 
-        public GridVector2 Center
-        {
-            get
-            {
-                return new GridVector2(LowerLeft.X + (Width / 2), LowerLeft.Y + (Height / 2));
-            }
-        }
+        public GridVector2 Center => new GridVector2(LowerLeft.X + (Width / 2.0), LowerLeft.Y + (Height / 2.0)); 
 
-        public GridVector2 LowerLeft
-        {
-            get
-            {
-                return new GridVector2(Left, Bottom);
-            }
-        }
+        public GridVector2 LowerLeft => new GridVector2(Left, Bottom);
 
-        public GridVector2 UpperLeft
-        {
-            get
-            {
-                return new GridVector2(Left, Top);
-            }
-        }
+        public GridVector2 UpperLeft => new GridVector2(Left, Top);
 
-        public GridVector2 LowerRight
-        {
-            get
-            {
-                return new GridVector2(Right, Bottom);
-            }
-        }
+        public GridVector2 LowerRight => new GridVector2(Right, Bottom);
+            
+        public GridVector2 UpperRight => new GridVector2(Right, Top);
 
-        public GridVector2 UpperRight
-        {
-            get
-            {
-                return new GridVector2(Right, Top);
-            }
-        }
+        public double Area => Width * Height;
 
-        public double Area
-        {
-            get
-            {
-                return Width * Height;
-            }
-
-        }
-
-        public GridLineSegment LeftEdge
-        {
-            get
-            {
-                return new GridLineSegment(new GridVector2(Left, Bottom),
+        public GridLineSegment LeftEdge => new GridLineSegment(new GridVector2(Left, Bottom),
                                            new GridVector2(Left, Top));
-            }
-        }
 
-        public GridLineSegment RightEdge
-        {
-            get
-            {
-                return new GridLineSegment(new GridVector2(Right, Bottom),
+        public GridLineSegment RightEdge => new GridLineSegment(new GridVector2(Right, Bottom),
                                            new GridVector2(Right, Top));
-            }
-        }
 
-        public GridLineSegment TopEdge
-        {
-            get
-            {
-                return new GridLineSegment(new GridVector2(Left, Top),
+        public GridLineSegment TopEdge => new GridLineSegment(new GridVector2(Left, Top),
                                            new GridVector2(Right, Top));
-            }
-        }
 
-        public GridLineSegment BottomEdge
-        {
-            get
-            {
-                return new GridLineSegment(new GridVector2(Left, Bottom),
+        public GridLineSegment BottomEdge => new GridLineSegment(new GridVector2(Left, Bottom),
                                            new GridVector2(Right, Bottom));
-            }
-        }
 
-        public GridLineSegment[] Edges
-        {
-            get
-            {
-                return new GridLineSegment[] { TopEdge, BottomEdge, LeftEdge, RightEdge };
-            }
-        }
+        public GridLineSegment[] Edges => new GridLineSegment[] { TopEdge, BottomEdge, LeftEdge, RightEdge };
 
+        public GridRectangle BoundingBox => this;
 
-        public GridRectangle BoundingBox
-        {
-            get
-            {
-                return this;
-            }
-        }
+        public ShapeType2D ShapeType => ShapeType2D.RECTANGLE;
 
-        public ShapeType2D ShapeType
-        {
-            get
-            {
-                return ShapeType2D.RECTANGLE;
-            }
-        }
+        double IRectangle.Left => Left;
 
-        double IRectangle.Left
-        {
-            get
-            {
-                return Left;
-            }
-        }
+        double IRectangle.Right => Right;
 
-        double IRectangle.Right
-        {
-            get
-            {
-                return Right;
-            }
-        }
+        double IRectangle.Top => Top;
 
-        double IRectangle.Top
-        {
-            get
-            {
-                return Top;
-            }
-        }
-
-        double IRectangle.Bottom
-        {
-            get
-            {
-                return Bottom;
-            }
-        }
+        double IRectangle.Bottom => Bottom;
 
         [NonSerialized]
         private GridVector2[] _Corners;
@@ -680,8 +563,7 @@ namespace Geometry
         int? _HashCode;
 
         public override int GetHashCode()
-        {
-
+        { 
             Debug.Assert(!double.IsNaN(this.Left));
 
             if (!_HashCode.HasValue)
@@ -753,7 +635,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public GridRectangle Union(GridRectangle A, GridRectangle B)
+        public static GridRectangle Union(GridRectangle A, GridRectangle B)
         {
             double left = A.Left < B.Left ? A.Left : B.Left;
             double right = A.Right > B.Right ? A.Right : B.Right;
@@ -763,7 +645,7 @@ namespace Geometry
             return new GridRectangle(left, right, bottom, top);
         }
 
-        static public GridRectangle GetBoundingBox(GridVector2[] points)
+        public static GridRectangle GetBoundingBox(GridVector2[] points)
         {
             double MinX = points.Min(v => v.X);
             double MinY = points.Min(v => v.Y);
@@ -818,5 +700,7 @@ namespace Geometry
         }
 
         #endregion
+
+        public IPoint2D Centroid => Center;
     }
 }

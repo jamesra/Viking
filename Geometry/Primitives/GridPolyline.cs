@@ -402,6 +402,8 @@ namespace Geometry
             }
         }
 
+        public double Length => LineSegments.Sum(l => l.Length);
+
         public GridRectangle BoundingBox
         {
             get

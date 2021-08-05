@@ -1,27 +1,27 @@
-namespace Viking.gRPC.AnnotationTypes.V1.Protos
+namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 {
     public partial class BoundingRectangle
     {
-        public static implicit operator BoundingRectangle(global::Viking.gRPC.AnnotationTypes.BoundingRectangle src)
+        public static implicit operator BoundingRectangle(global::Geometry.GridRectangle src)
         {
-            var value = new BoundingRectangle {
-                Xmin = src.XMin,
-                Ymin = src.YMin,
-                Xmax = src.XMax,
-                Ymax = src.YMax,
+            var value = new BoundingRectangle { 
+                Xmin = src.Left,
+                Ymin = src.Bottom,
+                Xmax = src.Right,
+                Ymax = src.Top,
             };
             return value;
         }
 
 
-        public static implicit operator global::Viking.gRPC.AnnotationTypes.BoundingRectangle(BoundingRectangle src)
+        public static implicit operator global::Geometry.GridRectangle(BoundingRectangle src)
         {
-            var value = new global::Viking.gRPC.AnnotationTypes.BoundingRectangle {
-                XMin = src.Xmin,
-                YMin = src.Ymin,
-                XMax = src.Xmax,
-                YMax = src.Ymax,
-            };
+            var value = new global::Geometry.GridRectangle(
+                left: src.Xmin,
+                right: src.Xmax,
+                bottom: src.Ymin,
+                top: src.Ymax
+            );
             return value;
         }
 

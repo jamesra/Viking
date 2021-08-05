@@ -53,6 +53,8 @@ namespace Geometry
 
         public List<GridVector2> Points = new List<GridVector2>();
 
+        public double Length => Segments.Sum(s => s.Length);
+
         /// <summary>
         /// Sets how far from the actual path is a simplified path is allowed to stray.
         /// </summary>

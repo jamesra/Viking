@@ -291,14 +291,12 @@ namespace Geometry
         {
             if (this.IsInner)
             {
-                return poly.InteriorPolygons[this.iInnerPoly.Value];
+                return poly.InteriorPolygons[iInnerPoly.Value];
             }
             else
             {
                 return poly;
             }
-
-            return Polygon(new GridPolygon[] { poly });
         }
 
         /// <summary>

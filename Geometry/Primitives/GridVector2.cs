@@ -377,6 +377,19 @@ namespace Geometry
             return Math.Sqrt((dX * dX) + (dY * dY));
         }
 
+        public static double Distance(in IPoint2D A, in IPoint2D B)
+        {
+            if (A == null)
+                throw new ArgumentNullException("A");
+            if (B == null)
+                throw new ArgumentNullException("B");
+
+            double dX = A.X - B.X;
+            double dY = A.Y - B.Y;
+
+            return Math.Sqrt((dX * dX) + (dY * dY));
+        }
+
         public static double DistanceSquared(in GridVector2 A, in GridVector2 B)
         {
             double dX = A.X - B.X;
@@ -858,7 +871,6 @@ namespace Geometry
 
 
         #endregion
-
-
+        IPoint2D ICentroid.Centroid => this;
     }
 }

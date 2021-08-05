@@ -564,5 +564,7 @@ namespace Geometry
             double width = Math.Cos(angle);
             return Math.Abs(width);
         }
+
+        public IPoint2D Centroid => Center;
     }
 }

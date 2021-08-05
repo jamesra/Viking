@@ -15,7 +15,7 @@ service AnnotateStructureTypes{
   rpc GetStructureTypes (GetStructureTypesRequest) returns (GetStructureTypesResponse);
   rpc GetStructureTypeByID (GetStructureTypeByIDRequest) returns (GetStructureTypeByIDResponse);
   rpc GetStructureTypesByIDs (GetStructureTypesByIDsRequest) returns (GetStructureTypesByIDsResponse);
-  rpc UpdateStructureTypes (UpdateStructureTypesRequest) returns (UpdateStructureTypesResponse); 
+  rpc Update (UpdateStructureTypesRequest) returns (UpdateStructureTypesResponse); 
 }
 
 message CreateStructureTypeRequest {

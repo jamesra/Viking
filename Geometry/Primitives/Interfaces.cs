@@ -97,12 +97,16 @@ namespace Geometry
     /// </summary>
     public interface IPointN
     {
-        double[] coords { get; }
+        double[] coords { get; } 
+    }
 
+    public interface ICentroid
+    {
+        IPoint2D Centroid { get; }
     }
 
 
-    public interface IPoint2D : IPointN, IEquatable<IPoint2D>
+    public interface IPoint2D : IPointN, IEquatable<IPoint2D>, ICentroid
     {
         double X { get; set; }
         double Y { get; set; }
@@ -131,7 +135,7 @@ namespace Geometry
         IShape2D Translate(IPoint2D offset);
     }
 
-    public interface IPolygon2D : IShape2D, IEquatable<IPolygon2D>
+    public interface IPolygon2D : IShape2D, IEquatable<IPolygon2D>, ICentroid
     {
         IReadOnlyList<IPoint2D> ExteriorRing { get; }
 
@@ -142,11 +146,9 @@ namespace Geometry
         int TotalVerticies { get; }
 
         int TotalUniqueVerticies { get; }
-
-        IPoint2D Centroid { get; }
     }
 
-    public interface ICircle2D : IShape2D, IEquatable<ICircle2D>
+    public interface ICircle2D : IShape2D, IEquatable<ICircle2D>, ICentroid
     {
         IPoint2D Center { get; }
 
@@ -162,24 +164,28 @@ namespace Geometry
     {
         IReadOnlyList<IPoint2D> Points { get; }
         IReadOnlyList<ILineSegment2D> LineSegments { get; }
+        double Length { get; }
     }
 
-    public interface ITriangle2D : IShape2D, IEquatable<ITriangle2D>
+    public interface ITriangle2D : IShape2D, IEquatable<ITriangle2D>, ICentroid
     {
-        IPoint2D[] Points { get; }
+        IPoint2D[] Points { get; } 
     }
 
-    public interface ILineSegment2D : IShape2D, IEquatable<ILineSegment2D>
+    public interface ILineSegment2D : IShape2D, IEquatable<ILineSegment2D>, ICentroid
     {
         IPoint2D A { get; }
         IPoint2D B { get; }
+
+        double Length { get; }
     }
 
-    public interface IRectangle : IShape2D, IEquatable<IRectangle>
+    public interface IRectangle : IShape2D, IEquatable<IRectangle>, ICentroid
     {
         double Left { get; }
         double Right { get; }
         double Top { get; }
         double Bottom { get; }
+        IPoint2D Center { get; }
     }
 }

@@ -7,11 +7,10 @@ package Viking.AnnotationServiceTypes.gRPC.V1;
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/timestamp.proto";
 
-message AnnotationPoint {
-
+message AnnotationPoint { 
   double x = 1;
   double y = 2;
-  double z = 3;
+  optional double z = 3;
 }
 
 message Geometry {
@@ -19,6 +18,17 @@ message Geometry {
 		string text = 1;
 		bytes binary = 2;
 	}
+}
+
+message AxisUnits{
+    string Units = 1; //nm, mm, etc...
+    double Value = 2; //Scale, ie 5 nm
+}
+
+message Scale {
+    AxisUnits x = 1;
+    AxisUnits y = 2;
+    optional AxisUnits z = 3;
 }
 
 message BoundingRectangle {
@@ -39,7 +49,7 @@ enum AnnotationType
     OPENCURVE = 5;   //Line segments with a line width, additional control points created using curve fitting function
     CURVEPOLYGON = 6; //Polygon whose outer and inner verticies are supplimented with a curve fitting function
     CLOSEDCURVE = 7; //Ring of line segments with a line width
-}
+} 
  
 enum DBAction
 {
@@ -55,14 +65,15 @@ message StructureType {
   int64 type_id = 3;
   string name = 4;
   string notes = 5;
-  string tags = 7;
-  string structure_tags = 8;
+  string attributes = 7;
+  string structure_attributes = 8;
   bool abstract = 9;
   int32 color = 10;
   string code = 11;
   string username = 12;
   google.protobuf.Timestamp created = 15;
   google.protobuf.Timestamp last_modified = 16;
+  int32 AllowedShapes = 17;
 }
 
 message Structure {
@@ -71,7 +82,7 @@ message Structure {
   int64 type_id = 3;
   string notes = 4;
   bool verified = 5;
-  string attributes_xml = 6;
+  string attributes = 6;
   double confidence = 7;
   repeated StructureLink links = 8;
   repeated int64 child_ids = 9;
@@ -100,14 +111,14 @@ message LocationLink {
 message Location {
 
   int64 id = 1;
-  int64 parent_id = 2;
+  optional int64 parent_id = 2;
   int64 section = 3;
-  AnnotationPoint position = 4;
+  AnnotationPoint mosaic_position = 4;
   AnnotationPoint volume_position = 5;
   Geometry mosaic_shape = 6;
   Geometry volume_shape = 7;
   bool closed = 8;
-  string attributes_xml = 9;
+  string attributes = 9;
   repeated int64 links = 10;
   bool terminal = 11;
   bool off_edge = 12;
@@ -120,8 +131,7 @@ message Location {
 }
 
 
-message PermittedStructureLink {
-
+message PermittedStructureLink { 
   int64 source_type_id = 1;
   int64 target_type_id = 2;
   bool bidirectional = 3;

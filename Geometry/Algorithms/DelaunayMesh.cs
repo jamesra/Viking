@@ -261,6 +261,7 @@ namespace Geometry
 
             GridCircle? LCircle = new GridCircle();
             GridCircle? RCircle = new GridCircle();
+            TriangleFace newFace;
 
             List<Face> AddedFaces = new List<Face>();
 
@@ -338,7 +339,6 @@ namespace Geometry
                     }
                 }
 
-                TriangleFace newFace;
 
             UseLeft:
                 {
@@ -1129,7 +1129,7 @@ namespace Geometry
 
                         mesh.FindIntersectingFaceEdges(key);
                     }
-                    catch (EdgeIntersectsVertexException e)
+                    catch (EdgeIntersectsVertexException)
                     {
                         //This edge intersects a vertex, reject it because it is close enough to 180 degrees that it may as well be the same
                         circle = new GridCircle?();

@@ -113,8 +113,8 @@ namespace Geometry
                 if (ControlPoints[i - 1] == ControlPoints[i])
                 {
                     throw new ArgumentException("Duplicate points found in MeasureCurvature");
-                    Angles[i] = 0;
-                    continue;
+                    //Angles[i] = 0;
+                    //continue;
                 }
                 else if (GridVector2.DistanceSquared(ControlPoints[i], ControlPoints[i - 1]) < Global.EpsilonSquared)
                 {

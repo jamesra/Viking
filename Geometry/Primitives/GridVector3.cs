@@ -394,6 +394,7 @@ namespace Geometry
         }
 
         #endregion
-          
+
+        IPoint2D ICentroid.Centroid => this.XY();
     }
 }

@@ -64,8 +64,7 @@ namespace Geometry
         readonly GridVector2 _p1;
         readonly GridVector2 _p2;
         readonly GridVector2 _p3;
-
-        Color color;
+         
         /*
         public GridTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
             : this(new GridVector2(p1.X, p1.Y), new GridVector2(p2.X, p2.Y), new GridVector2(p3.X, p3.Y), Color.Blue)
@@ -205,7 +204,7 @@ namespace Geometry
             this._p3.Y = Math.Round(this._p3.Y, 2);
             */
 
-            this.color = color;
+            //this.color = color;
 
             //  _v1 = 
             //  _v2 = new VertexPositionColor(new Vector3(_p2, ZHeight), color);
@@ -223,6 +222,8 @@ namespace Geometry
                 return GridVector2.FromBarycentric(p1, p2, p3, 1 / 3.0, 1 / 3.0); 
             }
         }
+
+        IPoint2D ICentroid.Centroid => Centroid;
 
         public GridCircle Circle
         {
@@ -256,6 +257,7 @@ namespace Geometry
         }
 
 
+        /*
         public Color Color
         {
             get { return this.color; }
@@ -264,6 +266,7 @@ namespace Geometry
                 this.color = value; 
             }
         }
+        */
 
         public double VectorProducts
         {
