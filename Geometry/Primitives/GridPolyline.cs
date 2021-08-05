@@ -72,36 +72,28 @@ namespace Geometry
 
             _Points = points.Cast<IPoint2D>().ToList();
         }
-
-        /*
-        public static implicit operator IPoint2D[](GridPolyline src)
+        
+        public static explicit operator IPoint2D[](GridPolyline src)
         {
             return src._Points.ToArray();
         }
 
-        public static implicit operator List<IPoint2D>(GridPolyline src)
+        public static explicit operator List<IPoint2D>(GridPolyline src)
         {
             return src._Points.ToList();
         }
 
-        public static implicit operator GridVector2[](GridPolyline src)
+        public static explicit operator GridVector2[](GridPolyline src)
         {
             return src._Points.Select(p => new GridVector2(p)).ToArray();
         }
 
-        public static implicit operator List<GridVector2>(GridPolyline src)
+        public static explicit operator List<GridVector2>(GridPolyline src)
         {
             return src._Points.Select(p => new GridVector2(p)).ToList();
         }
-        */
 
-        public GridVector2 this[PolylineIndex index]
-        {
-            get
-            {
-                return _Points[index.iVertex].ToGridVector2();
-            }
-        }
+        public GridVector2 this[PolylineIndex index] => _Points[index.iVertex].ToGridVector2();
          
         /// <summary>
         /// Returns true if the point can be added without violating self-intersection restrictions
@@ -511,6 +503,11 @@ namespace Geometry
         public GridPolyline Smooth(uint NumInterpolations)
         {
             return this.CalculateCurvePoints(NumInterpolations);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0; //Use a constant since the polyline can change
         }
 
         public override bool Equals(object obj)

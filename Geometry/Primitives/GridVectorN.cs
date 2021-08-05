@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -89,7 +90,7 @@ namespace Geometry
     }
 
     [Serializable]
-    public struct GridVectorN : ICloneable, IComparable, IPointN,
+    public readonly struct GridVectorN : ICloneable, IComparable, IPointN,
                                 IComparable<GridVectorN>, IComparer<GridVectorN>, IEquatable<GridVectorN>,
                                 IComparable<IPointN>, IComparer<IPointN>, IEquatable<IPointN>, IEquatable<IShape2D>
     {
@@ -141,6 +142,11 @@ namespace Geometry
                 return Equals(otherIPN);
 
             return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return ((IStructuralEquatable)this.coords).GetHashCode(EqualityComparer<double>.Default);
         }
 
         /// <summary>
