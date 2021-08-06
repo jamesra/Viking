@@ -69,7 +69,7 @@ namespace Geometry.Transforms
             : base(info, context)
         {
             if (info == null)
-                throw new ArgumentNullException("info");
+                throw new ArgumentNullException(nameof(info));
 
             this._edges = info.GetValue("_Edges", typeof(List<int>[])) as List<int>[];
         }
@@ -77,7 +77,7 @@ namespace Geometry.Transforms
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException("info");
+                throw new ArgumentNullException(nameof(info));
 
             info.AddValue("_Edges", _edges);
 

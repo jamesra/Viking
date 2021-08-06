@@ -84,10 +84,7 @@ namespace GeometryTests
                 GridPolygon[] polygons = { p1, p2 };
 
 
-                if (OnProgress != null)
-                {
-                    OnProgress(polygons, new List<GridVector2>(), new List<GridVector2>());
-                }
+                OnProgress?.Invoke(polygons, new List<GridVector2>(), new List<GridVector2>());
 
                 var ExpectedIntersectionSegments = p1.ExteriorSegments.Intersections(p2.ExteriorSegments, false);
 
@@ -98,10 +95,7 @@ namespace GeometryTests
                 }).Distinct().ToList();
 
 
-                if (OnProgress != null)
-                {
-                    OnProgress(polygons, new List<GridVector2>(), ExpectedIntersections);
-                }
+                OnProgress?.Invoke(polygons, new List<GridVector2>(), ExpectedIntersections);
 
                 List<GridVector2> Intersections;
                 try
@@ -238,8 +232,7 @@ namespace GeometryTests
                 if (pt != null)
                     return true;
 
-                ILineSegment2D line = result.Intersection as ILineSegment2D;
-                if (line != null)
+                if (result.Intersection is ILineSegment2D line)
                 {
                     bool EndpointAMatched = result.A.A == line.A || result.A.B == line.A || result.B.A == line.A || result.B.B == line.A;
                     bool EndpointBMatched = result.A.A == line.B || result.A.B == line.B || result.B.A == line.B || result.B.B == line.B;

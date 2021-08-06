@@ -108,8 +108,7 @@ namespace Geometry
         /// <returns></returns>
         int IComparable.CompareTo(object Obj)
         {
-            MappingGridVector2 B = Obj as MappingGridVector2;
-            if (B == null)
+            if (!(Obj is MappingGridVector2 B))
                 return int.MaxValue;
 
             double diff = this.MappedPoint.X - B.MappedPoint.X;

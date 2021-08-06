@@ -57,7 +57,7 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public struct GridLine
+    public readonly struct GridLine
     {
         public readonly GridVector2 Origin;
         public readonly GridVector2 Direction;
@@ -129,7 +129,7 @@ namespace Geometry
             Intersection = new GridVector2();
 
             if (seg == null)
-                throw new ArgumentNullException("seg");
+                throw new ArgumentNullException(nameof(seg));
 
             if (this.Direction == seg.Direction)
                 return false;

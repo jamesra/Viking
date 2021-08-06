@@ -121,9 +121,9 @@ namespace Geometry
     {
         GridRectangle BoundingBox { get; }
         double Area { get; }
-        bool Contains(IPoint2D p);
+        bool Contains(in IPoint2D p);
 
-        bool Intersects(IShape2D shape);
+        bool Intersects(in IShape2D shape);
 
         ShapeType2D ShapeType { get; }
 
@@ -132,7 +132,7 @@ namespace Geometry
         /// </summary>
         /// <param name="offset"></param>
         /// <returns></returns>
-        IShape2D Translate(IPoint2D offset);
+        IShape2D Translate(in IPoint2D offset);
     }
 
     public interface IPolygon2D : IShape2D, IEquatable<IPolygon2D>, ICentroid

@@ -128,7 +128,7 @@ namespace Geometry
 
         public bool Equals(IPointN B)
         {
-            if (object.ReferenceEquals(B, null))
+            if (B is null)
                 return false;
 
             return (DistanceSquared(this, B) <= Global.EpsilonSquared);

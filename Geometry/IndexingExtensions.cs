@@ -40,7 +40,7 @@ namespace Geometry
         }
     }
 
-    public struct Combo<T>
+    public readonly struct Combo<T>
     {
         public readonly int iA;
         public readonly int iB;
@@ -56,17 +56,26 @@ namespace Geometry
         }
 
         public override bool Equals(object obj)
-        {
-            if (object.ReferenceEquals(obj, null))
-                return false;
+        {  
+            if(obj is Combo<T> other)
+                return other.iA == this.iA && other.iB == this.iB;
 
-            Combo<T> other = (Combo<T>)obj;
-            return other.iA == this.iA && other.iB == this.iB;
+            return false;
         }
 
         public override int GetHashCode()
         {
             return (iA * 23) + iB;
+        }
+
+        public static bool operator ==(Combo<T> left, Combo<T> right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(Combo<T> left, Combo<T> right)
+        {
+            return !(left == right);
         }
     }
 }

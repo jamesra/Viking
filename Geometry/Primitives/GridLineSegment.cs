@@ -6,12 +6,11 @@ using System.Linq;
 namespace Geometry
 {
     [Serializable]
-    public struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>, ILineSegment2D, IEquatable<GridLineSegment>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
+    public readonly struct GridLineSegment : IComparable, ICloneable, IComparer<GridLineSegment>, ILineSegment2D, IEquatable<GridLineSegment>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
         public readonly GridVector2 A;
         public readonly GridVector2 B;
-
-       
+         
         public GridLineSegment(IPoint2D A, IPoint2D B) : this(A.Convert(), B.Convert())
         {
         }
@@ -24,8 +23,7 @@ namespace Geometry
             this.B = diff <= 0 ? B : A;
             */
             this.A = A;
-            this.B = B;
-
+            this.B = B; 
 
             if (A == B)
             {
@@ -100,22 +98,7 @@ namespace Geometry
 
         public override int GetHashCode()
         {
-            return (int)MinX; 
-            /*
-            int CodeA = A.GetHashCode();
-            int CodeB = B.GetHashCode();
-            int Code;
-
-            try
-            {
-                Code = CodeA + CodeB;
-            }
-            catch (OverflowException e)
-            {
-                Code = CodeA; 
-            }
-
-            return Code; */
+            return (int)MinX;  
         }
 
         public override bool Equals(object obj)
@@ -158,12 +141,6 @@ namespace Geometry
 
         public static bool operator ==(GridLineSegment A, GridLineSegment B)
         {
-            if (object.ReferenceEquals(A, B))
-                return true;
-
-            if (object.ReferenceEquals(A, null) || object.ReferenceEquals(B, null))
-                return false;
-
             if (A.A == B.A && A.B == B.B)
                 return true;
 
@@ -219,13 +196,7 @@ namespace Geometry
         /// The change in Y for values of X.
         /// Returns NAN if the line is vertical
         /// </summary>
-        public double yslope
-        {
-            get
-            {
-                return 1 / slope; 
-            }
-        }
+        public double yslope => 1 / slope;
 
         /// <summary>
         /// The point where the line intercepts the y-axis, returns NAN if the line is vertical
@@ -248,7 +219,7 @@ namespace Geometry
         /// <param name="seg"></param>
         /// <param name="Endpoint"></param>
         /// <returns></returns>
-        public bool SharedEndPoint(GridLineSegment seg)
+        public bool SharedEndPoint(in GridLineSegment seg)
         {
             bool AMatch = A == seg.A || A == seg.B;
             bool BMatch = B == seg.A || B == seg.B;
@@ -262,7 +233,7 @@ namespace Geometry
         /// <param name="seg"></param>
         /// <param name="Endpoint"></param>
         /// <returns></returns>
-        public bool SharedEndPoint(GridLineSegment seg, out GridVector2 Endpoint)
+        public bool SharedEndPoint(in GridLineSegment seg, out GridVector2 Endpoint)
         {
             bool AMatch = A == seg.A || A == seg.B;
             bool BMatch = B == seg.A || B == seg.B;
@@ -279,7 +250,7 @@ namespace Geometry
             }
         }
 
-        public bool IsEndpoint(IPoint2D p)
+        public bool IsEndpoint(in IPoint2D p)
         {
             return A == p || B == p;
         }
@@ -323,7 +294,7 @@ namespace Geometry
             return Math.Sign(result);
         }
 
-        public GridVector2 OppositeEndpoint(GridVector2 p)
+        public GridVector2 OppositeEndpoint(in GridVector2 p)
         {
             return A == p ? B : A;
         }
@@ -411,7 +382,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <returns>True if proejected point lands within line segment</returns>
-        public bool IsNearestPointWithinLineSegment(GridVector2 point)
+        public bool IsNearestPointWithinLineSegment(in GridVector2 point)
         {
             double DX = B.X - A.X;
             double DY = B.Y - A.Y;
@@ -441,7 +412,7 @@ namespace Geometry
         /// <param name="point"></param>
         /// <param name="Intersection"></param>
         /// <returns></returns>
-        public double DistanceToPoint(GridVector2 point, out GridVector2 Intersection)
+        public double DistanceToPoint(in GridVector2 point, out GridVector2 Intersection)
         {
             double DX = B.X - A.X;
             double DY = B.Y - A.Y;
@@ -508,19 +479,19 @@ namespace Geometry
             }
         }
 
-        public bool Intersects(GridLineSegment seg)
+        public bool Intersects(in GridLineSegment seg)
         {
             IShape2D intersection;
             return this.Intersects(seg, out intersection);
         }
 
-        public bool Intersects(GridLineSegment seg, bool EndpointsOnRingDoNotIntersect)
+        public bool Intersects(in GridLineSegment seg, bool EndpointsOnRingDoNotIntersect)
         {
             IShape2D intersection;
             return this.Intersects(seg, EndpointsOnRingDoNotIntersect, out intersection);
         }
 
-        public bool Intersects(GridLineSegment seg, bool EndpointsOnRingDoNotIntersect, out IShape2D Intersection)
+        public bool Intersects(in GridLineSegment seg, bool EndpointsOnRingDoNotIntersect, out IShape2D Intersection)
         { 
             bool intersects = this.Intersects(seg, out Intersection); 
 
@@ -542,7 +513,7 @@ namespace Geometry
             return intersects;
         }
 
-        public bool Intersects(GridLineSegment seg, out GridVector2 Intersection)
+        public bool Intersects(in GridLineSegment seg, out GridVector2 Intersection)
         {
             IShape2D shape;  
             Intersection = new GridVector2();
@@ -691,147 +662,90 @@ namespace Geometry
             }
         }
 
-        public bool Intersects(IEnumerable<GridLineSegment> seg)
+        public bool Intersects(in IEnumerable<GridLineSegment> seg)
         {
             GridLineSegment line = this;
             return seg.Any(ls => line.Intersects(ls));
         }
 
-
-        public bool Intersects(IShape2D shape)
+        public bool Intersects(in IShape2D shape)
         {
             return ShapeExtensions.LineIntersects(this, shape);
         }
 
-
-        public bool Intersects(ICircle2D c)
+        public bool Intersects(in ICircle2D c)
         {
             GridCircle circle = c.Convert();
             return this.Intersects(circle);
         }
 
-        public bool Intersects(GridCircle circle)
+        public bool Intersects(in GridCircle circle)
         {
             return LineIntersectionExtensions.Intersects(this, circle);
-        }
+        } 
 
-
-        public bool Intersects(ILineSegment2D l)
+        public bool Intersects(in ILineSegment2D l)
         {
             GridLineSegment line = l.Convert();
             return this.Intersects(line);
         }
          
-        public bool Intersects(ITriangle2D t)
+        public bool Intersects(in ITriangle2D t)
         {
             GridTriangle tri = t.Convert();
             return this.Intersects(tri);
         }
 
-        public bool Intersects(GridTriangle tri)
+        public bool Intersects(in GridTriangle tri)
         {
             return LineIntersectionExtensions.Intersects(this, tri);
         }
 
-        public bool Intersects(IPolygon2D p)
+        public bool Intersects(in IPolygon2D p)
         {
             GridPolygon poly = p.Convert();
             return this.Intersects(poly);
         }
 
-        public bool Intersects(GridPolygon poly)
+        public bool Intersects(in GridPolygon poly)
         {
             return LineIntersectionExtensions.Intersects(this, poly);
         }
 
-        public double MinX
-        {
-            get
-            {
-                return A.X < B.X ? A.X : B.X;
-            }
-        }
+        public double MinX => A.X < B.X ? A.X : B.X;
 
-        public double MaxX
-        {
-            get
-            {
-                return A.X > B.X ? A.X : B.X;
-            }
-        }
+        public double MaxX => A.X > B.X ? A.X : B.X;
 
-        public double MinY
-        {
-            get
-            {
-                return A.Y < B.Y ? A.Y : B.Y;
-            }
-        }
+        public double MinY => A.Y < B.Y ? A.Y : B.Y;
 
-        public double MaxY
-        {
-            get
-            {
-                return A.Y > B.Y ? A.Y : B.Y;
-            }
-        }
+        public double MaxY => A.Y > B.Y ? A.Y : B.Y; 
 
-        public GridRectangle BoundingBox
-        {
-            get
-            {
-                return new GridRectangle(MinX, MaxX, MinY, MaxY);
-            }
-        }
+        public GridRectangle BoundingBox => new GridRectangle(MinX, MaxX, MinY, MaxY);
+        
+        IPoint2D ILineSegment2D.A => this.A;
 
-        IPoint2D ILineSegment2D.A
-        {
-            get
-            {
-                return this.A;
-            }
-        }
+        IPoint2D ILineSegment2D.B => this.B;
 
-        IPoint2D ILineSegment2D.B
-        {
-            get
-            {
-                return this.B;
-            }
-        }
+        public double Area => throw new NotImplementedException();
 
-        public double Area
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        public ShapeType2D ShapeType
-        {
-            get
-            {
-                return ShapeType2D.LINE;
-            }
-        }
+        public ShapeType2D ShapeType => ShapeType2D.LINE;
 
         public GridLine ToLine()
         {
             return new GridLine(this.A, this.Direction);
         }
 
-        public bool Contains(IPoint2D p)
+        public bool Contains(in IPoint2D p)
         {
             return Contains(new GridVector2(p.X,p.Y));
         }
 
-        public IShape2D Translate(IPoint2D offset)
+        public IShape2D Translate(in IPoint2D offset)
         {
             return this.Translate(offset.Convert());
         }
 
-        public GridLineSegment Translate(GridVector2 offset)
+        public GridLineSegment Translate(in GridVector2 offset)
         {
             return new GridLineSegment(this.A + offset, this.B + offset);
         }

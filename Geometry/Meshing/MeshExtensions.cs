@@ -48,7 +48,7 @@ namespace Geometry.Meshing
         /// <returns>True if the first and last index are identical</returns>
         public static bool IsClosedRing(this IReadOnlyList<int> iVerts)
         {
-            return iVerts[0] == iVerts.Last();
+            return iVerts[0] == iVerts[iVerts.Count - 1];
         }
 
         public static bool IsValidClosedRing(this IEnumerable<int> iVerts)
@@ -134,7 +134,7 @@ namespace Geometry.Meshing
                         continue;
 
                     GridLineSegment testLine = mesh.ToGridLineSegment(intersection);
-                    if (seg.Intersects(testLine, intersection.A == e.A || intersection.B == e.A || intersection.A == e.B || intersection.B == e.B))
+                    if (seg.Intersects(in testLine, intersection.A == e.A || intersection.B == e.A || intersection.A == e.B || intersection.B == e.B))
                     {
                         System.Diagnostics.Trace.WriteLine(string.Format("{0} intersects {1}", e, intersection));
                         return true;
@@ -254,10 +254,7 @@ namespace Geometry.Meshing
                 {
                     mesh.RemoveEdge(key);
 
-                    if (OnProgress != null)
-                    {
-                        OnProgress(mesh);
-                    }
+                    OnProgress?.Invoke(mesh);
                 }
             }
 
@@ -279,10 +276,7 @@ namespace Geometry.Meshing
                 {
                     mesh.RemoveFace(f);
 
-                    if (OnProgress != null)
-                    {
-                        OnProgress(mesh);
-                    }
+                    OnProgress?.Invoke(mesh);
                 }
             }
 
@@ -317,7 +311,7 @@ namespace Geometry.Meshing
 
             //Center the verts on 0,0 to reduce floating point error
             var faceVerts = verts.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
-            var interiorVerts = InteriorPoints == null ? new Vertex2D<int>[0] : InteriorPoints.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
+            var interiorVerts = InteriorPoints == null ? System.Array.Empty<Vertex2D<int>>() : InteriorPoints.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
 
             GridPolygon centeredPoly = new GridPolygon(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
             System.Diagnostics.Debug.Assert(interiorVerts.All(v => centeredPoly.Contains(v.Position)), "Interior points must be inside Face");
@@ -326,8 +320,7 @@ namespace Geometry.Meshing
 
             TriangulationMesh<IVertex2D<int>> tri_mesh = GenericDelaunayMeshGenerator2D<IVertex2D<int>>.TriangulateToMesh(tri_mesh_verts, OnProgress);
 
-            if (OnProgress != null)
-                OnProgress(tri_mesh);
+            OnProgress?.Invoke(tri_mesh);
 
             SortedSet<IEdgeKey> expectedConstrainedEdges = new SortedSet<IEdgeKey>();
 
@@ -350,13 +343,12 @@ namespace Geometry.Meshing
                         tri_mesh.AddEdge(e);
                         tri_mesh.AddFaces(existing_faces);
 
-                        if (OnProgress != null)
-                            OnProgress(tri_mesh);
+                        OnProgress?.Invoke(tri_mesh);
                     }
                 }
 
                 var added_constrained_edges = tri_mesh.AddConstrainedEdge(e, OnProgress);
-                expectedConstrainedEdges.Union(added_constrained_edges.Select(ce => ce.Key));
+                expectedConstrainedEdges.UnionWith(added_constrained_edges.Select(ce => ce.Key));
             }
 
             //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
@@ -372,8 +364,7 @@ namespace Geometry.Meshing
 #endif 
                     tri_mesh.RemoveEdge(key);
 
-                    if (OnProgress != null)
-                        OnProgress(tri_mesh);
+                    OnProgress?.Invoke(tri_mesh);
                 }
             }
 

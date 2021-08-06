@@ -79,12 +79,12 @@ namespace Geometry
 
                 if (false == Reverse)
                 {
-                    curIndex = new PolylineIndex(shapeIndex.HasValue ? shapeIndex.Value : 0, 0, polyline.PointCount - 1);
+                    curIndex = new PolylineIndex(shapeIndex ?? 0, 0, polyline.PointCount - 1);
                     return true;
                 }
                 else
                 { 
-                    curIndex = new PolylineIndex(shapeIndex.HasValue ? shapeIndex.Value : 0, polyline.PointCount - 1, polyline.PointCount - 1); 
+                    curIndex = new PolylineIndex(shapeIndex ?? 0, polyline.PointCount - 1, polyline.PointCount - 1); 
                 }
             }
 
@@ -93,7 +93,7 @@ namespace Geometry
             return curIndex.HasValue;
         }
 
-        private PolylineIndex? PrevIndex(GridPolyline poly, PolylineIndex current)
+        private static PolylineIndex? PrevIndex(GridPolyline poly, PolylineIndex current)
         {
             int iPrevIndex = current.iVertex - 1;
 
@@ -109,7 +109,7 @@ namespace Geometry
             }
         }
 
-        private PolylineIndex? NextIndex(GridPolyline poly, PolylineIndex current)
+        private static PolylineIndex? NextIndex(GridPolyline poly, PolylineIndex current)
         {
             int iNextVert = current.iVertex + 1;
 

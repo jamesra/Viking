@@ -61,6 +61,28 @@ namespace GeometryTests
         #endregion
 
         [TestMethod]
+        public void QuadTreeTestSimpleAddRemove()
+        {
+            GridRectangle border = new GridRectangle(-10, 10, -10, 10);
+            QuadTree<int> tree = new QuadTree<int>(border);
+            Assert.IsTrue(tree.Count == 0);
+
+            GridVector2 p = new GridVector2(0, 0);
+            int value = 0;
+            tree.Add(p, value);
+            Assert.IsTrue(tree.Count == 1);
+            Assert.IsTrue(tree.Contains(p));
+            Assert.IsTrue(tree.Contains(0));
+
+            bool removed = tree.TryRemove(0, out var found);
+            Assert.IsTrue(removed);
+            Assert.IsTrue(tree.Count == 0);
+            Assert.IsTrue(found == value);
+            Assert.IsFalse(tree.Contains(p));
+            Assert.IsFalse(tree.Contains(0));
+        }
+
+        [TestMethod]
         public void QuadTreeTestOne()
         {
             GridVector2[] points = new GridVector2[] { new GridVector2(0,0),
@@ -78,12 +100,12 @@ namespace GeometryTests
             //Start with a basic test ensuring we can find all the existing points
             for (int i = 0; i < points.Length; i++)
             {
-                double distance;
-                int RetValue;
-                RetValue = tree.FindNearest(points[i], out distance);
+                double distance; 
+                bool found = tree.TryFindNearest(points[i], out var retValue, out distance);
 
-                Debug.Assert(RetValue == i);
-                Debug.Assert(distance == 0);
+                Assert.IsTrue(found);
+                Assert.IsTrue(retValue == i);
+                Assert.IsTrue(distance == 0);
             }
 
             //Check to see if we can find nearby points
@@ -99,12 +121,11 @@ namespace GeometryTests
 
             for (int i = 0; i < nearpoints.Length; i++)
             {
-                double distance;
-                int RetValue;
-                RetValue = tree.FindNearest(nearpoints[i], out distance);
+                bool found  = tree.TryFindNearest(nearpoints[i], out var retValue, out var distance);
 
-                Debug.Assert(RetValue == i);
-                Debug.Assert(distance == GridVector2.Distance(points[i], nearpoints[i]));
+                Assert.IsTrue(found);
+                Assert.IsTrue(retValue == i);
+                Assert.IsTrue(distance == GridVector2.Distance(points[i], nearpoints[i]));
             }
 
             //Check to see if we can return all points in a rectangle
@@ -112,9 +133,9 @@ namespace GeometryTests
             List<GridVector2> intersectPoints;
             List<int> intersectValues;
             tree.Intersect(gridRect, out intersectPoints, out intersectValues);
-            Debug.Assert(intersectValues.Contains(0));
-            Debug.Assert(intersectValues.Contains(1));
-            Debug.Assert(intersectValues.Contains(7));
+            Assert.IsTrue(intersectValues.Contains(0));
+            Assert.IsTrue(intersectValues.Contains(1));
+            Assert.IsTrue(intersectValues.Contains(7));
 
             Assert.AreEqual(false, intersectValues.Contains(2));
             Assert.AreEqual(false, intersectValues.Contains(3));
@@ -149,7 +170,8 @@ namespace GeometryTests
             for (int i = 0; i < numPoints; i++)
             {
 
-                int iFound = Tree.FindNearest(points[i], out distance);
+                bool found = Tree.TryFindNearest(points[i], out var iFound, out distance);
+                Assert.IsTrue(found);
                 Assert.AreEqual(iFound, i, "Could not find previously inserted point");
             }
 
@@ -161,15 +183,19 @@ namespace GeometryTests
                 Assert.IsTrue(Success, "Could not remove previously inserted point");
 
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
-                int iFound = Tree.FindNearest(points[i], out distance);
+                bool found = Tree.TryFindNearest(points[i], out var iFound, out distance);
+                Assert.IsTrue(found);
                 Assert.IsTrue(iFound > i, "Found previously deleted point");
+
+                Assert.IsFalse(Tree.Contains(i));
             }
 
             //Look for the remaining points
             for (int i = numPoints / 2; i < numPoints; i++)
             {
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
-                int iFound = Tree.FindNearest(points[i], out distance);
+                bool found = Tree.TryFindNearest(points[i], out var iFound, out distance);
+                Assert.IsTrue(found);
                 Assert.AreEqual(iFound, i, "Could not find previously inserted point after deletes");
             }
 
@@ -179,7 +205,8 @@ namespace GeometryTests
                 Tree.Add(points[i], i);
 
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
-                int iFound = Tree.FindNearest(points[i], out distance);
+                bool found = Tree.TryFindNearest(points[i], out var iFound, out distance);
+                Assert.IsTrue(found);
                 Assert.AreEqual(iFound, i, "Could not find newly inserted point after deletes");
             }
 
@@ -187,7 +214,8 @@ namespace GeometryTests
             for (int i = numPoints / 2; i < numPoints; i++)
             {
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
-                int iFound = Tree.FindNearest(points[i], out distance);
+                bool found = Tree.TryFindNearest(points[i], out var iFound, out distance);
+                Assert.IsTrue(found);
                 Assert.AreEqual(iFound, i, "Could not find previously inserted point after delete and insert");
             }
 
@@ -201,8 +229,9 @@ namespace GeometryTests
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
                 if (i < numPoints - 1)
                 {
-                    int iFound = Tree.FindNearest(points[i], out distance);
-                    Assert.IsTrue(iFound > i, "Found previously deleted point");
+                    bool found = Tree.TryFindNearest(points[i], out var iFound, out distance);
+                    Assert.IsTrue(iFound > i, "Found previously deleted point"); 
+                    Assert.IsFalse(Tree.Contains(i));
                 }
             }
 
@@ -216,8 +245,10 @@ namespace GeometryTests
             //Check to see we can find every item in the quad tree
             for (int i = 0; i < numPoints; i++)
             {
+                Assert.IsTrue(Tree.Contains(i));
 
-                int iFound = Tree.FindNearest(points[i], out distance);
+                bool found = Tree.TryFindNearest(points[i], out var iFound, out distance);
+                Assert.IsTrue(found);
                 Assert.AreEqual(iFound, i, "Could not find previously inserted point");
             }
 

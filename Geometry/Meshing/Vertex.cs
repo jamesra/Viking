@@ -86,7 +86,7 @@ namespace Geometry.Meshing
 
         public bool Equals(IVertex other)
         {
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.Index == other.Index;
@@ -94,7 +94,7 @@ namespace Geometry.Meshing
 
         public bool Equals(VertexBase other)
         {
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.Index == other.Index;
@@ -216,7 +216,7 @@ namespace Geometry.Meshing
 
         bool IEquatable<IVertex3D>.Equals(IVertex3D other)
         {
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.Index == other.Index;

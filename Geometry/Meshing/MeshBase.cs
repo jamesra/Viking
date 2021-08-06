@@ -547,8 +547,10 @@ namespace Geometry.Meshing
             //System.Diagnostics.Trace.WriteLine(Origin.ToString());
             testedFaces.Add(Origin);
 
-            List<IFace> path = new List<IFace>();
-            path.Add(Origin);
+            List<IFace> path = new List<IFace>
+            {
+                Origin
+            };
             if (IsMatch(Origin))
                 return path;
 

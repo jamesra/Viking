@@ -6,7 +6,7 @@ namespace Geometry
     internal class QuadTreeNodeTemplatePoint<TPoint, TValue>
         where TPoint : struct, IPoint
     {
-        QuadTreeTemplatePoint<TPoint, TValue> Tree;
+        readonly QuadTreeTemplatePoint<TPoint, TValue> Tree;
         internal QuadTreeNodeTemplatePoint<TPoint, TValue> Parent = null;
 
         /// <summary>
@@ -233,8 +233,8 @@ namespace Geometry
                     _quadrants[(int)quad] = new QuadTreeNodeTemplatePoint<TPoint, TValue>(this, quad, this.Point, this.Value);
 
                     //Erase our point just to be safe since we aren't a leaf anymore
-                    this.Point = default(TPoint);
-                    this.Value = default(TValue);
+                    this.Point = default;
+                    this.Value = default;
                     this.HasValue = false;
 
                     //Call insert on ourselves to insert the new point
@@ -270,7 +270,7 @@ namespace Geometry
             if (node.HasValue)
                 Tree.ValueToNodeTable.Remove(node.Value);
 
-            node.Value = default(TValue);
+            node.Value = default;
             node.HasValue = false;
 
             //Figure out which quadrant the node lives in
@@ -292,7 +292,7 @@ namespace Geometry
                 {
                     //Looks like we are the last node in the tree
                     Tree.ValueToNodeTable.Remove(this.Value);
-                    this.Value = default(TValue);
+                    this.Value = default;
                     this.HasValue = false;
                 }
             }
@@ -317,8 +317,8 @@ namespace Geometry
             else
             {
                 Quadrant quad = GetQuad(point);
-                TValue retValue = default(TValue);
-                nodePoint = default(TPoint);
+                TValue retValue = default;
+                nodePoint = default;
                 nodePoint.X = double.MinValue;
                 nodePoint.Y = double.MinValue;
 
@@ -344,7 +344,7 @@ namespace Geometry
                     if (_quadrants[iQuad] != null)
                     {
                         //If it is possible the neighboring quadrant has a closer point then check it and update if a nearer point is found
-                        if (_quadrants[iQuad].Border.Intersects(rect))
+                        if (_quadrants[iQuad].Border.Intersects(in rect))
                         {
                             double newDistance = double.MaxValue;
                             TPoint foundNode;
@@ -369,7 +369,7 @@ namespace Geometry
 
         //Returns a list of all points inside the specified rectangle.  If test is false a parents test determined the border
         //was completely inside the RequestRect and no further testing was needed
-        public void Intersect(GridRectangle RequestRect,
+        public void Intersect(in GridRectangle RequestRect,
                                         bool NeedTest,
                                         out List<TPoint> Points,
                                         out List<TValue> Values)
@@ -413,25 +413,25 @@ namespace Geometry
                         {
                             if (this.UpperLeft != null)
                             {
-                                this.UpperLeft.Intersect(RequestRect, false, out outPoints, out outValues);
+                                this.UpperLeft.Intersect(in RequestRect, false, out outPoints, out outValues);
                                 Points.AddRange(outPoints);
                                 Values.AddRange(outValues);
                             }
                             if (this.UpperRight != null)
                             {
-                                this.UpperRight.Intersect(RequestRect, false, out outPoints, out outValues);
+                                this.UpperRight.Intersect(in RequestRect, false, out outPoints, out outValues);
                                 Points.AddRange(outPoints);
                                 Values.AddRange(outValues);
                             }
                             if (this.LowerLeft != null)
                             {
-                                this.LowerLeft.Intersect(RequestRect, false, out outPoints, out outValues);
+                                this.LowerLeft.Intersect(in RequestRect, false, out outPoints, out outValues);
                                 Points.AddRange(outPoints);
                                 Values.AddRange(outValues);
                             }
                             if (this.LowerRight != null)
                             {
-                                this.LowerRight.Intersect(RequestRect, false, out outPoints, out outValues);
+                                this.LowerRight.Intersect(in RequestRect, false, out outPoints, out outValues);
                                 Points.AddRange(outPoints);
                                 Values.AddRange(outValues);
                             }
@@ -447,25 +447,25 @@ namespace Geometry
 
                 if (this.UpperLeft != null)
                 {
-                    this.UpperLeft.Intersect(RequestRect, true, out outPoints, out outValues);
+                    this.UpperLeft.Intersect(in RequestRect, true, out outPoints, out outValues);
                     Points.AddRange(outPoints);
                     Values.AddRange(outValues);
                 }
                 if (this.UpperRight != null)
                 {
-                    this.UpperRight.Intersect(RequestRect, true, out outPoints, out outValues);
+                    this.UpperRight.Intersect(in RequestRect, true, out outPoints, out outValues);
                     Points.AddRange(outPoints);
                     Values.AddRange(outValues);
                 }
                 if (this.LowerLeft != null)
                 {
-                    this.LowerLeft.Intersect(RequestRect, true, out outPoints, out outValues);
+                    this.LowerLeft.Intersect(in RequestRect, true, out outPoints, out outValues);
                     Points.AddRange(outPoints);
                     Values.AddRange(outValues);
                 }
                 if (this.LowerRight != null)
                 {
-                    this.LowerRight.Intersect(RequestRect, true, out outPoints, out outValues);
+                    this.LowerRight.Intersect(in RequestRect, true, out outPoints, out outValues);
                     Points.AddRange(outPoints);
                     Values.AddRange(outValues);
                 }

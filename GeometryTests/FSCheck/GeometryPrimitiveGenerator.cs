@@ -803,8 +803,7 @@ namespace GeometryTests.FSCheck
             List<int> ring = ExteriorPolyRing.ToList();
             List<EdgeKey> edges = ring.ToEdgeKeys().ToList();
 
-            if (TriangulatedMeshGenerators.OnProgress != null)
-                TriangulatedMeshGenerators.OnProgress(mesh);
+            TriangulatedMeshGenerators.OnProgress?.Invoke(mesh);
 
             int nRemoved = 0;
             do
@@ -861,8 +860,7 @@ namespace GeometryTests.FSCheck
                 mesh.RemoveEdge(edge);
                 nRemoved += 1;
 
-                if (TriangulatedMeshGenerators.OnProgress != null)
-                    TriangulatedMeshGenerators.OnProgress(mesh);
+                TriangulatedMeshGenerators.OnProgress?.Invoke(mesh);
 
                 Debug.Assert(ring.IsValidClosedRing(), "Ring should be valid after adjustment");
 

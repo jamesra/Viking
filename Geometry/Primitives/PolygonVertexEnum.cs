@@ -79,7 +79,7 @@ namespace Geometry
 
                 if (false == Reverse)
                 {
-                    curIndex = new PolygonIndex(PolyIndex.HasValue ? PolyIndex.Value : 0, 0, polygon.ExteriorRing.Length - 1);
+                    curIndex = new PolygonIndex(PolyIndex ?? 0, 0, polygon.ExteriorRing.Length - 1);
                     return true;
                 }
                 else
@@ -88,11 +88,11 @@ namespace Geometry
                     {
                         int innerIndex = polygon.InteriorRings.Count - 1;
                         var interiorRing = polygon.InteriorRings[innerIndex];
-                        curIndex = new PolygonIndex(PolyIndex.HasValue ? PolyIndex.Value : 0, innerIndex, interiorRing.Length - 1, interiorRing.Length - 1);
+                        curIndex = new PolygonIndex(PolyIndex ?? 0, innerIndex, interiorRing.Length - 1, interiorRing.Length - 1);
                     }
                     else
                     {
-                        curIndex = new PolygonIndex(PolyIndex.HasValue ? PolyIndex.Value : 0, polygon.ExteriorRing.Length - 1, polygon.ExteriorRing.Length - 1);
+                        curIndex = new PolygonIndex(PolyIndex ?? 0, polygon.ExteriorRing.Length - 1, polygon.ExteriorRing.Length - 1);
                     }
                 }
             }
@@ -102,7 +102,7 @@ namespace Geometry
             return curIndex.HasValue;
         }
 
-        private PolygonIndex? PrevIndex(GridPolygon poly, PolygonIndex current)
+        private static PolygonIndex? PrevIndex(GridPolygon poly, PolygonIndex current)
         {
             int iPrevIndex = current.iVertex - 1;
 
@@ -138,7 +138,7 @@ namespace Geometry
             }
         }
 
-        private PolygonIndex? NextIndex(GridPolygon poly, PolygonIndex current)
+        private static PolygonIndex? NextIndex(GridPolygon poly, PolygonIndex current)
         {
             int iNextVert = current.iVertex + 1;
 
@@ -176,7 +176,7 @@ namespace Geometry
                 {
                     if (poly.HasInteriorRings)
                     {
-                        return new PolygonIndex(current.iPoly, 0, 0, poly.InteriorRings.First().Length - 1); //Go to the first vertex of the first inner polygon
+                        return new PolygonIndex(current.iPoly, 0, 0, poly.InteriorRings[0].Length - 1); //Go to the first vertex of the first inner polygon
                     }
                 }
 

@@ -289,8 +289,7 @@ namespace GeometryTests.Algorithms
         public ConstrainedDelaunaySpec(ConstrainedDelaunayModel model)
         {
             OriginalMesh = model.mesh;//GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(model.mesh.Verticies.Select(v => new Vertex2D(v.Position)).ToArray());
-            if (TriangulatedMeshGenerators.OnProgress != null)
-                TriangulatedMeshGenerators.OnProgress(InitialActual);
+            TriangulatedMeshGenerators.OnProgress?.Invoke(InitialActual);
 
             OriginalModel = model;
 
@@ -302,8 +301,7 @@ namespace GeometryTests.Algorithms
         public ConstrainedDelaunaySpec(GridVector2[] points, int[] Edges)
         {
             OriginalMesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(v => new Vertex2D(v, null)).ToArray());
-            if (TriangulatedMeshGenerators.OnProgress != null)
-                TriangulatedMeshGenerators.OnProgress(InitialActual);
+            TriangulatedMeshGenerators.OnProgress?.Invoke(InitialActual);
 
             OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges.Where(e => e < points.Length).Distinct().ToArray());
 
@@ -457,8 +455,7 @@ namespace GeometryTests.Algorithms
             public override TriangulationMesh<IVertex2D> RunActual(TriangulationMesh<IVertex2D> value)
             {
                 value.AddConstrainedEdge(new ConstrainedEdge(EdgeToAdd), TriangulatedMeshGenerators.OnProgress);
-                if (TriangulatedMeshGenerators.OnProgress != null)
-                    TriangulatedMeshGenerators.OnProgress(value);
+                TriangulatedMeshGenerators.OnProgress?.Invoke(value);
                 return value;
             }
 

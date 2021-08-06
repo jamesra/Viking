@@ -62,7 +62,7 @@ namespace Geometry.Transforms
         /// be replaced during a transformation with a new list, which requires regenerating triangles and any other derived data.
         /// These points are sorted by control point x, lowest to highest
         /// </summary>
-        private MappingGridVector2[] _mapPoints = new MappingGridVector2[0];
+        private MappingGridVector2[] _mapPoints = Array.Empty<MappingGridVector2>();
         public MappingGridVector2[] MapPoints
         {
             get { return _mapPoints; }
@@ -216,22 +216,14 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect)
-        {
-            List<MappingGridVector2> foundPoints = this.controlPointsRTree.Intersects(gridRect.ToRTreeRect(0)).ToList();
-            return foundPoints;
-        }
+        public List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect) => this.controlPointsRTree.Intersects(gridRect).ToList();
 
         /// <summary>
         /// Return mapped control points intersecting the rectangle
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public List<MappingGridVector2> IntersectingMappedRectangle(GridRectangle gridRect)
-        {
-            List<MappingGridVector2> foundPoints = this.mappedPointsRTree.Intersects(gridRect.ToRTreeRect(0)).ToList();
-            return foundPoints;
-        }
+        public List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect) => this.mappedPointsRTree.Intersects(gridRect).ToList();
 
 
         /// <summary>
@@ -355,7 +347,7 @@ namespace Geometry.Transforms
         public virtual void WriteITKTransform(System.IO.StreamWriter stream)
         {
             if (stream == null)
-                throw new ArgumentNullException("stream");
+                throw new ArgumentNullException(nameof(stream));
 
             double Downsample = 1.0;
 

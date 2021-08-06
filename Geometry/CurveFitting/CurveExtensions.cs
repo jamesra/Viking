@@ -128,7 +128,7 @@ namespace Geometry
                 GridVector2 A = line.PointAlongLine(2.0);//ControlPoints[i - 1];
                 GridVector2 B = ControlPoints[i + 1];
 
-                Angles[i] = GridVector2.ArcAngle(Origin, A, B);
+                Angles[i] = GridVector2.ArcAngle(in Origin, in A, in B);
             }
 
             return Angles;
@@ -169,8 +169,8 @@ namespace Geometry
 
             for (int i = 1; i < output.Length - 1; i++)
             {
-                if (GridVector2.DistanceSquared(output[i - 1], output[i]) < Global.EpsilonSquared ||
-                   GridVector2.DistanceSquared(output[i], output[i + 1]) < Global.EpsilonSquared)
+                if (GridVector2.DistanceSquared(in output[i - 1], in output[i]) < Global.EpsilonSquared ||
+                   GridVector2.DistanceSquared(in output[i], in output[i + 1]) < Global.EpsilonSquared)
                 {
                     output = output.RemoveAt(i);
                     TPoints.Remove(TPointsArray[i]);
@@ -196,7 +196,7 @@ namespace Geometry
             {
                 if (degrees[i] > threshold)
                 {
-                    double distance = GridVector2.DistanceSquared(output[i - 1], output[i]) + GridVector2.DistanceSquared(output[i], output[i + 1]);
+                    double distance = GridVector2.DistanceSquared(in output[i - 1], in output[i]) + GridVector2.DistanceSquared(in output[i], in output[i + 1]);
                     NeedsInterpolation[i] = distance > distance_threshold;
                 }
             }
@@ -300,9 +300,11 @@ namespace Geometry
 
             //Identify all zero-crossings, max/min values in the list of angles 
 
-            SortedSet<int> inflection_points = new SortedSet<int>();
-            inflection_points.Add(0);
-            inflection_points.Add(input.Length - 1);
+            SortedSet<int> inflection_points = new SortedSet<int>
+            {
+                0,
+                input.Length - 1
+            };
             int last_sign = 0; //-1, 0, or 1 to indicate direction of change in the last datapoint
             //double total_change = 0;
             //const double one_degree = Math.PI / 180.0;
@@ -355,11 +357,12 @@ namespace Geometry
 
             Int32 firstPoint = 0;
             Int32 lastPoint = Points.Count - 1;
-            SortedSet<Int32> pointIndexsToKeep = new SortedSet<Int32>();
-
-            //Add the first and last index to the keepers
-            pointIndexsToKeep.Add(firstPoint);
-            pointIndexsToKeep.Add(lastPoint);
+            SortedSet<Int32> pointIndexsToKeep = new SortedSet<Int32>
+            { 
+                //Add the first and last index to the keepers
+                firstPoint,
+                lastPoint
+            };
             if (PointsToPreserveIndicies != null)
             {
                 pointIndexsToKeep.UnionWith(PointsToPreserveIndicies);

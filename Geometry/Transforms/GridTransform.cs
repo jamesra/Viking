@@ -73,7 +73,7 @@ namespace Geometry.Transforms
             return Indicies;
         }
 
-        static public MappingGridTriangle TriangleForPoint(int GridSizeX, int GridSizeY, GridRectangle Bounds, MappingGridVector2[] points, int[] TriIndicies, GridVector2 Point)
+        static public MappingGridTriangle TriangleForPoint(int GridSizeX, int GridSizeY, in GridRectangle Bounds, MappingGridVector2[] points, int[] TriIndicies, GridVector2 Point)
         {
             //Having a smaller epsilon caused false positives.  
             //We just want to know if we are close enough to check with the more time consuming math
@@ -253,7 +253,7 @@ namespace Geometry.Transforms
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException("info");
+                throw new ArgumentNullException(nameof(info));
 
             info.AddValue("GridSizeX", GridSizeX);
             info.AddValue("GridSizeY", GridSizeY);
@@ -456,7 +456,6 @@ namespace Geometry.Transforms
             //Find the nearest line segment
             int iStart = GridTransformHelper.IndexForCoord(iX, iY, GridSizeX, GridSizeY);
             int iEnd;
-            GridLineSegmentPair pair;
 
             //Bottom edge intersection
             if ((IntersectDir & (Direction.LEFT | Direction.RIGHT)) > 0)
@@ -486,9 +485,9 @@ namespace Geometry.Transforms
 
             Debug.Assert(iStart != iEnd);
 
-
-            pair.ctrlLine = new GridLineSegment(MapPoints[iStart].ControlPoint, MapPoints[iEnd].ControlPoint);
-            pair.mapLine = new GridLineSegment(MapPoints[iStart].MappedPoint, MapPoints[iEnd].MappedPoint);
+            GridLineSegmentPair pair = new GridLineSegmentPair(
+                mapline: new GridLineSegment(MapPoints[iStart].MappedPoint, MapPoints[iEnd].MappedPoint),
+                ctrlline: new GridLineSegment(MapPoints[iStart].ControlPoint, MapPoints[iEnd].ControlPoint));
 
             return pair;
         }

@@ -297,7 +297,7 @@ namespace Geometry
 
                     //Erase our point just to be safe since we aren't a leaf anymore
                     this.Point = new GridVector2();
-                    this.Value = default(T);
+                    this.Value = default;
                     this.HasValue = false;
 
                     //Call insert on ourselves to insert the new point
@@ -335,7 +335,7 @@ namespace Geometry
         /// <param name="point"></param>
         /// <returns>The new root node if the border expanded or was defined</returns>
 
-        internal bool ExpandBorder(GridVector2 point, out QuadTreeNode<T> new_root)
+        internal bool ExpandBorder(in GridVector2 point, out QuadTreeNode<T> new_root)
         {
             new_root = null;
             if (HasBorder && Border.Contains(point))
@@ -359,9 +359,9 @@ namespace Geometry
                     GridRectangle Bounds = new GridRectangle(point, rounded_quad_size);
                     this.Border = Bounds;
 
-                    Debug.Assert(Bounds.Contains(Point), "The border specified must include the node's point");
+                    Debug.Assert(Bounds.Contains(this.Point), "The border specified must include the node's point");
                     Debug.Assert(Bounds.Contains(point), "The border specified must include the new point");
-                    if (Bounds.Contains(Point) == false)
+                    if (Bounds.Contains(this.Point) == false)
                     {
                         throw new ArgumentException("The border specified must include the node's point");
                     }
@@ -379,15 +379,11 @@ namespace Geometry
                 throw new ArgumentException("Unexpected code path reached in QuadTree ExpandBorder");
             }
 
-            GridRectangle parent_bounds;
-
             double ParentWidth = this.Border.Width * 2;
             double ParentHeight = this.Border.Height * 2;
-
-            GridVector2 ParentCenter;
-
             Quadrant quad = GetQuad(point);
-
+             
+            GridVector2 ParentCenter;
             switch (quad)
             {
                 case Quadrant.LOWERLEFT:
@@ -410,7 +406,7 @@ namespace Geometry
                     throw new ArgumentException("Unexpected quadrant");
             }
 
-            parent_bounds = new GridRectangle(ParentCenter, this.Border.Width);//- new GridVector2(Border.Width, Border.Height), ParentWidth, ParentHeight);
+            GridRectangle parent_bounds = new GridRectangle(ParentCenter, this.Border.Width);
 
             QuadTreeNode<T> new_parent = new QuadTreeNode<T>(this.Tree, parent_bounds);
             new_parent[quad.Opposite()] = this;
@@ -426,7 +422,7 @@ namespace Geometry
 
            */
 
-            if (new_parent.ExpandBorder(point, out new_root))
+            if (new_parent.ExpandBorder(in point, out new_root))
             {
                 Debug.Assert((this.IsLeaf == false) || new_root.Border.Contains(Point), "New root node must include our point");
                 Debug.Assert(new_root.Border.Contains(point), "New root node must include new point");
@@ -452,7 +448,7 @@ namespace Geometry
             if (node.HasValue)
                 Tree.ValueToNodeTable.Remove(node.Value);
 
-            node.Value = default(T);
+            node.Value = default;
             node.HasValue = false;
 
             //Figure out which quadrant the node lives in
@@ -492,14 +488,14 @@ namespace Geometry
             if (this.IsLeaf)
             {
                 Debug.Assert(this.HasValue);
-                distance = GridVector2.Distance(this.Point, point);
+                distance = GridVector2.Distance(in this.Point, in point);
                 nodePoint = this.Point;
                 return this.Value;
             }
             else
             {
                 Quadrant quad = GetQuad(point);
-                T retValue = default(T);
+                T retValue = default;
                 nodePoint = new GridVector2(double.MinValue, double.MinValue);
 
                 //If we aren't a leaf node then do a depth first search to find the nearest point
@@ -641,7 +637,7 @@ namespace Geometry
 
         //Returns a list of all points inside the specified rectangle.  If test is false a parents test determined the border
         //was completely inside the RequestRect and no further testing was needed
-        public void Intersect(GridRectangle RequestRect,
+        public void Intersect(in GridRectangle RequestRect,
                                             bool NeedTest,
                                             ref List<GridVector2> Points,
                                             ref List<T> Values)
@@ -654,7 +650,7 @@ namespace Geometry
 
                 if (NeedTest)
                 {
-                    if (RequestRect.Contains(this.Point))
+                    if (RequestRect.Contains(Point))
                     {
                         Points.Add(this.Point);
                         Values.Add(this.Value);
@@ -673,26 +669,26 @@ namespace Geometry
                 if (NeedTest)
                 {
 
-                    if (Border.Intersects(RequestRect))
+                    if (Border.Intersects(in RequestRect))
                     {
 
                         if (RequestRect.Contains(Border))
                         {
                             if (this.UpperLeft != null)
                             {
-                                this.UpperLeft.Intersect(RequestRect, false, ref Points, ref Values);
+                                this.UpperLeft.Intersect(in RequestRect, false, ref Points, ref Values);
                             }
                             if (this.UpperRight != null)
                             {
-                                this.UpperRight.Intersect(RequestRect, false, ref Points, ref Values);
+                                this.UpperRight.Intersect(in RequestRect, false, ref Points, ref Values);
                             }
                             if (this.LowerLeft != null)
                             {
-                                this.LowerLeft.Intersect(RequestRect, false, ref Points, ref Values);
+                                this.LowerLeft.Intersect(in RequestRect, false, ref Points, ref Values);
                             }
                             if (this.LowerRight != null)
                             {
-                                this.LowerRight.Intersect(RequestRect, false, ref Points, ref Values);
+                                this.LowerRight.Intersect(in RequestRect, false, ref Points, ref Values);
                             }
 
                             return;
@@ -706,19 +702,19 @@ namespace Geometry
 
                 if (this.UpperLeft != null)
                 {
-                    this.UpperLeft.Intersect(RequestRect, true, ref Points, ref Values);
+                    this.UpperLeft.Intersect(in RequestRect, true, ref Points, ref Values);
                 }
                 if (this.UpperRight != null)
                 {
-                    this.UpperRight.Intersect(RequestRect, true, ref Points, ref Values);
+                    this.UpperRight.Intersect(in RequestRect, true, ref Points, ref Values);
                 }
                 if (this.LowerLeft != null)
                 {
-                    this.LowerLeft.Intersect(RequestRect, true, ref Points, ref Values);
+                    this.LowerLeft.Intersect(in RequestRect, true, ref Points, ref Values);
                 }
                 if (this.LowerRight != null)
                 {
-                    this.LowerRight.Intersect(RequestRect, true, ref Points, ref Values);
+                    this.LowerRight.Intersect(in RequestRect, true, ref Points, ref Values);
                 }
                 return;
 

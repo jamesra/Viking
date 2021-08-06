@@ -49,18 +49,18 @@ namespace Geometry.Meshing
                 _BoundingBox = new GridRectangle(vert.Position, 0);
             else
             {
-                _BoundingBox.Value.Union(vert.Position);
+                _BoundingBox += vert.Position;
             }
         }
 
         protected override void UpdateBoundingBox(IEnumerable<VERTEX> verts)
         {
-            GridVector2[] points = verts.Select(v => v.Position).ToArray();
+            var points = verts.Select(v => v.Position);
             if (_BoundingBox == null)
                 _BoundingBox = points.BoundingBox();
             else
             {
-                _BoundingBox.Value.Union(points.BoundingBox());
+                _BoundingBox = _BoundingBox.Value + points.BoundingBox();
             }
         }
 

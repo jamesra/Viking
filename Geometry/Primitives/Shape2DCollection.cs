@@ -38,49 +38,27 @@ namespace Geometry
             Shapes.Remove(shape);
         }
 
-        public double Area
+        public double Area => Shapes.Sum(s => s.Area);
+
+        public GridRectangle BoundingBox => Shapes.Select(s => s.BoundingBox).Aggregate((bb1, bb2) => GridRectangle.Union(bb1, bb2));
+
+        public IList<IShape2D> Geometries => Shapes;
+
+        public virtual ShapeType2D ShapeType => ShapeType2D.COLLECTION;
+
+        public bool Contains(in IPoint2D p)
         {
-            get
-            {
-                return Shapes.Sum(s => s.Area);
-            }
+            IPoint2D pnt = p;
+            return Shapes.Any(s => s.Contains(pnt));
         }
 
-        public GridRectangle BoundingBox
+        public bool Intersects(in IShape2D shape)
         {
-            get
-            {
-                return Shapes.Select(s => s.BoundingBox).Aggregate((bb1, bb2) => GridRectangle.Union(bb1, bb2));
-            }
+            IShape2D shp = shape;
+            return Shapes.Any(s => s.Intersects(shp));
         }
 
-        public IList<IShape2D> Geometries
-        {
-            get
-            {
-                return Shapes;
-            }
-        }
-
-        public virtual ShapeType2D ShapeType
-        {
-            get
-            {
-                return ShapeType2D.COLLECTION;
-            }
-        }
-
-        public bool Contains(IPoint2D p)
-        {
-            return Shapes.Any(s => s.Contains(p));
-        }
-
-        public bool Intersects(IShape2D shape)
-        {
-            return Shapes.Any(s => s.Intersects(shape));
-        }
-
-        public IShape2D Translate(IPoint2D offset)
+        public IShape2D Translate(in IPoint2D offset)
         {
             Shape2DCollection translatedShapes = new Shape2DCollection(Shapes.Count);
             foreach (IShape2D shape in Shapes)

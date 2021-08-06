@@ -17,16 +17,16 @@ namespace Geometry
         public readonly int i2;
         public readonly int i3;
 
-        private GridCircle _Circle;
+        private GridCircle? _Circle;
 
         public GridCircle Circle
         {
             get
             {
-                if (_Circle.Radius == 0)
-                    GridCircle.CircleFromThreePoints(points[i1], points[i2], points[i3], ref _Circle);
+                if (_Circle.HasValue == false)
+                    _Circle = GridCircle.CircleFromThreePoints(points[i1], points[i2], points[i3]);
 
-                return _Circle;
+                return _Circle.Value;
             }
         }
 
@@ -46,7 +46,7 @@ namespace Geometry
         public static implicit operator GridTriangle(GridIndexTriangle t)
         {
             if (t == null)
-                throw new ArgumentNullException("t");
+                throw new ArgumentNullException(nameof(t));
 
 
             return new GridTriangle(t.points[t.i1], t.points[t.i2], t.points[t.i3]);

@@ -74,13 +74,13 @@ namespace Geometry
                                                                pixelDimensionsOfLevel * UnscaledCellDim.Height);
         }
 
-        public T[] ArrayForRegion(GridRectangle volumeBounds)
+        public T[] ArrayForRegion(in GridRectangle volumeBounds)
         {
             GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds, ScaledCellDimensions);
             return BoundlessRegionPyramidLevel<T>.ToArray(Cells, iGrid);
         }
 
-        public GridRange<T> SubGridForRegion(GridRectangle? volumeBounds)
+        public GridRange<T> SubGridForRegion(in GridRectangle? volumeBounds)
         {
             if (!volumeBounds.HasValue)
             {
@@ -195,7 +195,7 @@ namespace Geometry
         /// <param name="screenBounds"></param>
         /// <param name="Level"></param>
         /// <returns></returns>
-        protected virtual double MinRadiusForLevel(GridRectangle screenBounds, int Level)
+        protected virtual double MinRadiusForLevel(in GridRectangle screenBounds, int Level)
         {
             return Math.Pow(PowerScale, Level);
         }

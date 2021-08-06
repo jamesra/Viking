@@ -200,7 +200,7 @@ namespace GeometryTests.FSCheck
             }
             catch (Exception e)
             {
-                InsertToActualExpectedResult = false.Label($"Exception inserting point: {e.ToString()}");
+                InsertToActualExpectedResult = false.Label($"Exception inserting point: {e}");
 #if DEBUG
                 //throw;
 #endif

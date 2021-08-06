@@ -582,7 +582,7 @@ namespace GeometryTests
         {
             Arb.Register<GridVector2Generators>();
 
-            Func<GridVector2, GridVector2, GridVector2, bool> IsLeftCheck = (p, q, r) =>
+            bool IsLeftCheck(GridVector2 p, GridVector2 q, GridVector2 r)
             {
                 if (p == q || q == r || r == p)
                     return true;
@@ -609,7 +609,7 @@ namespace GeometryTests
                     Assert.AreEqual(-q_isleft, r_isleft);
                     return -q_isleft == r_isleft;
                 }
-            };
+            }
 
             Prop.ForAll<GridVector2, GridVector2, GridVector2>(IsLeftCheck).QuickCheckThrowOnFailure();
         }

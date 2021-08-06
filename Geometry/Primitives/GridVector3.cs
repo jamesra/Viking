@@ -9,7 +9,7 @@ namespace Geometry
     [Serializable]
     public struct GridVector3 : IPoint, ICloneable, IComparable, IEquatable<GridVector3>
     {
-        public static double EpsilonSquared = 0.00001;
+        public const double EpsilonSquared = 0.00001;
 
         //Return a new instance for the static in case someone writes back to the value somewhere
 

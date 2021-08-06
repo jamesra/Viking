@@ -120,7 +120,7 @@ namespace Geometry
                 {
                     if (poly.HasInteriorRings)
                     {
-                        return new PolygonIndex(current.iPoly, 0, 0, poly.InteriorRings.First().Length - 1); //Go to the first vertex of the first inner polygon
+                        return new PolygonIndex(current.iPoly, 0, 0, poly.InteriorRings[0].Length - 1); //Go to the first vertex of the first inner polygon
                     }
                 }
 

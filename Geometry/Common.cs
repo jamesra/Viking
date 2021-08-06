@@ -9,7 +9,7 @@ namespace Geometry
         public static async Task<string[]> StreamToLines(System.IO.Stream stream)
         {
             if (stream == null)
-                throw new ArgumentNullException("stream");
+                throw new ArgumentNullException(nameof(stream));
 
             if (stream.CanSeek)
             {

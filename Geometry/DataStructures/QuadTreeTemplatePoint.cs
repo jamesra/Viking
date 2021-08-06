@@ -37,7 +37,7 @@ namespace Geometry
         {
             if (Root.Border.Contains(point) == false)
             {
-                throw new ArgumentOutOfRangeException("point", "The passed point for insertion was out of range of the QuadTree");
+                throw new ArgumentOutOfRangeException(nameof(point), "The passed point for insertion was out of range of the QuadTree");
             }
 
             this.Root.Insert(point, value);
@@ -67,7 +67,7 @@ namespace Geometry
             }
         }
 
-        private void CreateTree(TPoint[] keys, TValue[] values, GridRectangle border)
+        private void CreateTree(TPoint[] keys, TValue[] values, in GridRectangle border)
         {
             //Create a node centered in the border
             //this.Root = new QuadTreeNode<T>(this, new GridRectangle(double.MinValue, double.MaxValue, double.MinValue, double.MaxValue));
@@ -85,11 +85,11 @@ namespace Geometry
             distance = double.MaxValue;
             if (Root == null)
             {
-                return default(TValue);
+                return default;
             }
             else if (Root.IsLeaf == true && Root.HasValue == false)
             {
-                return default(TValue);
+                return default;
             }
 
             return Root.FindNearest(point, out nodePoint, ref distance);
@@ -112,9 +112,9 @@ namespace Geometry
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public void Intersect(GridRectangle gridRect, out List<TPoint> outPoints, out List<TValue> outValues)
+        public void Intersect(in GridRectangle gridRect, out List<TPoint> outPoints, out List<TValue> outValues)
         {
-            this.Root.Intersect(gridRect, true, out outPoints, out outValues);
+            this.Root.Intersect(in gridRect, true, out outPoints, out outValues);
             return;
         }
     }

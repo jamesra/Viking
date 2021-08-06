@@ -101,7 +101,7 @@ namespace Geometry
             return false; 
         }
 
-        public bool Contains(GridRectangle R)
+        public bool Contains(in GridRectangle R)
         {
             return Contains(new GridQuad(new GridVector2(R.Left, R.Bottom), R.Width, R.Height) ); 
         }
@@ -109,7 +109,7 @@ namespace Geometry
         public bool Contains(GridQuad R)
         {
             if (R == null)
-                throw new ArgumentNullException("R");
+                throw new ArgumentNullException(nameof(R));
 
             GridVector2 v1 = R.BottomLeft;
             GridVector2 v2 = R.BottomRight;

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Geometry.Meshing
 {
-    public struct EdgeKey : IComparable<EdgeKey>, IEquatable<EdgeKey>, IComparable<IEdgeKey>, IEquatable<IEdgeKey>, IEdgeKey
+    public readonly struct EdgeKey : IComparable<EdgeKey>, IEquatable<EdgeKey>, IComparable<IEdgeKey>, IEquatable<IEdgeKey>, IEdgeKey
     {
         public int[] Verticies //The two verticies defining the edge
         {
@@ -78,34 +78,26 @@ namespace Geometry.Meshing
         }
 
         public bool Equals(EdgeKey other)
-        {
-            if (object.ReferenceEquals(null, other))
-            {
-                return false;
-            }
-
+        {  
             return this.A == other.A && this.B == other.B;
         }
 
         public bool Equals(IEdgeKey other)
         {
-            if (object.ReferenceEquals(null, other))
-            {
+            if (other is null)
                 return false;
-            }
 
             return this.A == other.A && this.B == other.B;
         }
 
         public override bool Equals(object obj)
         {
-            IEdgeKey E = (IEdgeKey)obj;
-            if (object.ReferenceEquals(E, null))
-            {
-                return false;
-            }
+            if (obj is EdgeKey key)
+                return Equals(key);
+            if (obj is IEdgeKey iKey)
+                return Equals(iKey);
 
-            return this.Equals(E);
+            return false;
         }
 
         public override int GetHashCode()
@@ -115,7 +107,7 @@ namespace Geometry.Meshing
 
         public override string ToString()
         {
-            return string.Format("{0}-{1}", A, B);
+            return $"{A}-{B}";
         }
 
         public int OppositeEnd(int value)
@@ -285,40 +277,32 @@ namespace Geometry.Meshing
 
         public static bool operator ==(Edge A, Edge B)
         {
-            if (object.ReferenceEquals(A, null))
-            {
-                return object.ReferenceEquals(B, null);
-            }
+            if (A is null)
+                return B is null;
 
             return A.Equals(B);
         }
 
         public static bool operator !=(Edge A, Edge B)
         {
-            if (object.ReferenceEquals(A, null))
-            {
-                return !object.ReferenceEquals(B, null);
-            }
-
+            if (A is null)
+                return ! (B is null);
+            
             return !A.Equals(B);
         }
 
         public static bool operator ==(Edge A, IEdge B)
         {
-            if (object.ReferenceEquals(A, null))
-            {
-                return object.ReferenceEquals(B, null);
-            }
+            if (A is null)
+                return B is null;
 
             return A.Equals(B);
         }
 
         public static bool operator !=(Edge A, IEdge B)
         {
-            if (object.ReferenceEquals(A, null))
-            {
-                return !object.ReferenceEquals(B, null);
-            }
+            if (A is null)
+                return !(B is null);
 
             return !A.Equals(B);
         }
@@ -340,48 +324,38 @@ namespace Geometry.Meshing
 
         public bool Equals(Edge other)
         {
-            if (object.ReferenceEquals(null, other))
-            {
+            if (other is null)
                 return false;
-            }
 
             return this.Key.Equals(other.Key);
         }
 
         public bool Equals(IEdge other)
         {
-            if (object.ReferenceEquals(null, other))
-            {
+            if (other is null)
                 return false;
-            }
 
             return this.Key.Equals(other.Key);
         }
 
         public bool Equals(IEdgeKey other)
         {
-            if (object.ReferenceEquals(null, other))
-            {
+            if (other is null)
                 return false;
-            }
 
             return this.Key.Equals(other);
         }
 
         public override bool Equals(object obj)
         {
-            if (object.ReferenceEquals(obj, null) || GetType() != obj.GetType())
-            {
-                return false;
-            }
+            if (obj is Edge other)
+                return Equals(other);
+            if (obj is IEdge iOther)
+                return Equals(iOther);
+            if (obj is IEdgeKey iKey)
+                return Equals(iKey);
 
-            Edge E = obj as Edge;
-            if (object.ReferenceEquals(E, null))
-            {
-                return false;
-            }
-
-            return this.Equals(E);
+            return false;
         }
 
         public override int GetHashCode()
@@ -450,7 +424,7 @@ namespace Geometry.Meshing
             Debug.Assert(this.Faces.Count == 2, "Expected a triangulation when I wrote this function, future uses may render this assert meaningless");
             if (this.Faces.Count == 0)
             {
-                return new int[0];
+                return Array.Empty<int>();
             }
             else if (this.Faces.Count == 1)
             {

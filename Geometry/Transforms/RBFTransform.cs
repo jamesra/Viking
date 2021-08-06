@@ -421,8 +421,7 @@ namespace Geometry.Transforms
         /// <returns></returns>
         private bool SerializeTransformComponents()
         {
-            ITransformCacheInfo cacheInfo = Info as ITransformCacheInfo;
-            if (cacheInfo == null)
+            if (!(Info is ITransformCacheInfo cacheInfo))
                 return false;
 
             using (Stream binFile = System.IO.File.OpenWrite(cacheInfo.CacheFullPath))
@@ -444,8 +443,7 @@ namespace Geometry.Transforms
         /// <returns></returns>
         private bool TryLoadSerializedTransformComponents()
         {
-            ITransformCacheInfo cacheInfo = Info as ITransformCacheInfo;
-            if (cacheInfo == null)
+            if (!(Info is ITransformCacheInfo cacheInfo))
                 return false;
 
             if (!System.IO.File.Exists(cacheInfo.CacheFullPath))

@@ -102,9 +102,9 @@ namespace Geometry
         public static string ToMatlab(this double[] array, string format = "F2")
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append("[");
+            sb.Append('[');
             sb.Append(array.ToCSV(" "));
-            sb.Append("]");
+            sb.Append(']');
 
             return sb.ToString();
         }
@@ -122,12 +122,12 @@ namespace Geometry
             return new RTree.Point(p.coords);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, double MinZ, double MaxZ)
+        public static RTree.Rectangle ToRTreeRect(this in GridRectangle rect, double MinZ, double MaxZ)
         {
             return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, MinZ, MaxZ);
         }
 
-        public static RTree.Rectangle ToRTreeRect(this GridRectangle rect, double Z = 0)
+        public static RTree.Rectangle ToRTreeRect(this in GridRectangle rect, double Z = 0)
         {
             return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, Z, Z);
         }
@@ -137,7 +137,7 @@ namespace Geometry
         /// </summary>
         /// <param name="rect"></param>
         /// <returns></returns>
-        public static RTree.Rectangle ToRTreeRectEpsilonPadded(this GridRectangle rect, double Z = 0)
+        public static RTree.Rectangle ToRTreeRectEpsilonPadded(this in GridRectangle rect, double Z = 0)
         {
             return new RTree.Rectangle(rect.Left - Global.Epsilon, rect.Bottom - Global.Epsilon, rect.Right + Global.Epsilon, rect.Top + Global.Epsilon, (double)Z, (double)Z);
         }
@@ -393,8 +393,10 @@ namespace Geometry
         {
             if (points.First() != points.Last())
             {
-                List<int> newPoints = new List<int>(points);
-                newPoints.Add(points.First());
+                List<int> newPoints = new List<int>(points)
+                {
+                    points.First()
+                };
                 return newPoints;
             }
 
@@ -411,8 +413,10 @@ namespace Geometry
         {
             if (points.First() != points.Last())
             {
-                List<GridVector2> newPoints = new List<Geometry.GridVector2>(points);
-                newPoints.Add(points.First());
+                List<GridVector2> newPoints = new List<Geometry.GridVector2>(points)
+                {
+                    points.First()
+                };
                 return newPoints;
             }
 
@@ -641,7 +645,7 @@ namespace Geometry
                 }
             }
 
-            nonDuplicatePoints.Add(points.Last());
+            nonDuplicatePoints.Add(points[points.Count-1]);
 
             //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
             return nonDuplicatePoints.ToArray();
@@ -728,10 +732,10 @@ namespace Geometry
         public static GridRectangle BoundingBox(this GridVector2[] points)
         {
             if (points == null)
-                throw new ArgumentNullException("points");
+                throw new ArgumentNullException(nameof(points));
 
             if (points.Length == 0)
-                throw new ArgumentException("GridRectangle Border is empty", "points");
+                throw new ArgumentException("GridRectangle Border is empty", nameof(points));
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -752,10 +756,10 @@ namespace Geometry
         public static GridRectangle BoundingBox(this IEnumerable<GridVector2> points)
         {
             if (points == null)
-                throw new ArgumentNullException("points");
+                throw new ArgumentNullException(nameof(points));
 
             if (points.Any() == false)
-                throw new ArgumentException("GridRectangle Border is empty", "points");
+                throw new ArgumentException("GridRectangle Border is empty", nameof(points));
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -849,7 +853,7 @@ namespace Geometry
             double length = 0;
             for (int i = 0; i < points.Length - 1; i++)
             {
-                length += GridVector2.Distance(points[i], points[i + 1]);
+                length += GridVector2.Distance(in points[i], in points[i + 1]);
             }
 
             return length;
@@ -877,10 +881,10 @@ namespace Geometry
         public static GridBox BoundingBox(this IReadOnlyList<GridVector3> points)
         {
             if (points == null)
-                throw new ArgumentNullException("points");
+                throw new ArgumentNullException(nameof(points));
 
             if (points.Count == 0)
-                throw new ArgumentException("GridRectangle Border is empty", "points");
+                throw new ArgumentException("GridRectangle Border is empty", nameof(points));
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -961,12 +965,12 @@ namespace Geometry
 
             if (IgnoreEndpoints)
             {
-                segments = segments.Where(s => !s.SharedEndPoint(testSeg)).ToList();
+                segments = segments.Where(s => !s.SharedEndPoint(in testSeg)).ToList();
             }
 
             foreach (GridLineSegment existingLine in segments)
             {
-                if (existingLine.Intersects(testSeg, out intersection))
+                if (existingLine.Intersects(in testSeg, out intersection))
                 {
                     intersectedSegment = existingLine;
                     return new GridVector2?(intersection);
@@ -1012,7 +1016,7 @@ namespace Geometry
                 return iNearestSegment;
             }
 
-            double[] distancesToNewPoint = segments.Select(l => l.DistanceToPoint(p)).ToArray();
+            double[] distancesToNewPoint = segments.Select(l => l.DistanceToPoint(in p)).ToArray();
             double minDistance = distancesToNewPoint.Min();
 
             iNearestSegment = distancesToNewPoint.TakeWhile(d => d != minDistance).Count();
@@ -1086,7 +1090,7 @@ namespace Geometry
                 dest[i] = src[i];
             }
 
-            GridLineSegment lastSegment = src.Last();
+            GridLineSegment lastSegment = src[src.Count - 1];
             GridVector2 newEndpoint = lastSegment.PointAlongLine(0.99);
             dest[src.Count - 1] = new GridLineSegment(lastSegment.A, newEndpoint);
 
@@ -1267,7 +1271,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns>A dictionary of Polygon vertex indicies and a distance from that vertex.  </returns>
-        public static SortedDictionary<double, PolygonIndex> IntersectingSegments(this GridPolygon polygon, GridLineSegment line)
+        public static SortedDictionary<double, PolygonIndex> IntersectingSegments(this GridPolygon polygon, in GridLineSegment line)
         {
             SortedDictionary<double, PolygonIndex> output = new SortedDictionary<double, PolygonIndex>();
 
@@ -1284,11 +1288,10 @@ namespace Geometry
                     continue;
 
                 GridLineSegment segment = index.Segment(polygon);
-                if (segment.Intersects(line, false, out IShape2D intersection))
+                if (segment.Intersects(in line, false, out IShape2D intersection))
                 {
                     double distance;
-                    IPoint2D p = intersection as IPoint2D;
-                    if (p == null) //It is not a point, it is a line.  Therefore distance is zero
+                    if (!(intersection is IPoint2D p)) //It is not a point, it is a line.  Therefore distance is zero
                     {
                         distance = 0;
                         if (output.ContainsKey(distance)) //There is an error if we add an endpoint twice, so don't
@@ -1445,10 +1448,10 @@ namespace Geometry
         /// <param name="padding"></param>
         /// <param name="Position"></param>
         /// <returns></returns>
-        public static bool PaddedPolygonContains(GridPolygon polygon, double padding, GridVector2 Position)
+        public static bool PaddedPolygonContains(GridPolygon polygon, double padding, GridVector2 position)
         {
-            GridRectangle padded_bbox = polygon.BoundingBox.Pad(padding);
-            return padded_bbox.Contains(Position);
+            GridRectangle padded_bbox = polygon.BoundingBox + padding;
+            return padded_bbox.Contains(position);
         }
 
         public static GridRectangle BoundingBox(this IReadOnlyList<GridPolygon> polygons)
@@ -1461,8 +1464,7 @@ namespace Geometry
             GridRectangle bbox = polygons[0].BoundingBox;
             for (int i = 1; i < polygons.Count; i++)
             {
-                bbox.Union(polygons[i].BoundingBox);
-
+                bbox += polygons[i].BoundingBox;
             }
 
             return bbox;
@@ -1486,7 +1488,7 @@ namespace Geometry
                 }
                 else
                 {
-                    bbox.Union(poly.BoundingBox);
+                    bbox += poly.BoundingBox;
                 }
             }
             return bbox;

@@ -125,14 +125,14 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="NumInterpolations">The number of points we would like returned between p1 and p2</param>
         /// <returns></returns>
-        public static GridVector2[] FitCurveSegment(GridVector2 p0, GridVector2 p1,
-                                                    GridVector2 p2, GridVector2 p3,
+        public static GridVector2[] FitCurveSegment(in GridVector2 p0, in GridVector2 p1,
+            in GridVector2 p2, in GridVector2 p3,
                                                     int NumInterpolations)
         {
             double alpha = 0.5;
             double t0 = 0;
-            double t1 = tj(t0, p0, p1, alpha);
-            double t2 = tj(t1, p1, p2, alpha);
+            double t1 = tj(t0, in p0, in p1, alpha);
+            double t2 = tj(t1, in p1, in p2, alpha);
             //double t3 = tj(t2, p2, p3, alpha); //TODO: Check why this is calculated but not used
 
             double[] tvalues = new double[NumInterpolations];
@@ -162,14 +162,14 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="tPointsArray">Fraction distances along curve between p1 & p2 to add points</param>
         /// <returns></returns>
-        public static GridVector2[] FitCurveSegment(GridVector2 p0, GridVector2 p1,
-                                                    GridVector2 p2, GridVector2 p3,
+        public static GridVector2[] FitCurveSegment(in GridVector2 p0, in GridVector2 p1,
+                                                    in GridVector2 p2, in GridVector2 p3,
                                                     double[] tPointsArray)
         {
             double alpha = 0.5;
             double t0 = 0;
-            double t1 = tj(t0, p0, p1, alpha);
-            double t2 = tj(t1, p1, p2, alpha);
+            double t1 = tj(t0, in p0, in p1, alpha);
+            double t2 = tj(t1, in p1, in p2, alpha);
             //double t3 = tj(t2, p2, p3, alpha); //TODO: Check why this is calculated but not used
 
             double[] tvalues = TScalarsToTValues(tPointsArray, t1, t2);
@@ -272,14 +272,14 @@ namespace Geometry
         /// <param name="tPoints">If null then [NumInterpolations] points are evenly spaced along the curve </param>
         /// <param name="NumInterpolations"></param>
         /// <returns></returns>
-        public static GridVector2[] RecursivelyFitCurveSegment(GridVector2 p0, GridVector2 p1,
-                                                    GridVector2 p2, GridVector2 p3,
+        public static GridVector2[] RecursivelyFitCurveSegment(in GridVector2 p0, in GridVector2 p1,
+            in GridVector2 p2, in GridVector2 p3,
                                                     uint NumInterpolations = 5)
         {
             double[] tvalues = new double[NumInterpolations];
             SortedSet<double> tPoints = new SortedSet<double>(tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0))));
 
-            return RecursivelyFitCurveSegment(p0, p1, p2, p3, tPoints);
+            return RecursivelyFitCurveSegment(in p0, in p1, in p2, in p3, tPoints);
         }
 
         /// <summary>
@@ -293,15 +293,15 @@ namespace Geometry
         /// <param name="p3"></param>
         /// <param name="tPoints">Points along curve between p1 and p2 that we will insert, 0 = p1 & 1 = p2. </param> 
         /// <returns></returns>
-        public static GridVector2[] RecursivelyFitCurveSegment(GridVector2 p0, GridVector2 p1,
-                                                    GridVector2 p2, GridVector2 p3,
+        public static GridVector2[] RecursivelyFitCurveSegment(in GridVector2 p0, in GridVector2 p1,
+            in GridVector2 p2, in GridVector2 p3,
                                                     SortedSet<double> tPoints)
         { 
             double alpha = 0.5;
             double t0 = 0;
-            double t1 = tj(t0, p0, p1, alpha);
-            double t2 = tj(t1, p1, p2, alpha);
-            double t3 = tj(t2, p2, p3, alpha);
+            double t1 = tj(t0, in p0, in p1, alpha);
+            double t2 = tj(t1, in p1, in p2, alpha);
+            double t3 = tj(t2, in p2, in p3, alpha);
 
             double[] tPointsArray = tPoints.ToArray();
             double[] tvalues = TScalarsToTValues(tPoints, t1, t2);
@@ -314,7 +314,7 @@ namespace Geometry
                 return output;
             }
 
-            return RecursivelyFitCurveSegment(p0, p1, p2, p3, tPoints);
+            return RecursivelyFitCurveSegment(in p0, in p1, in p2, in p3, tPoints);
         }
 
         /// <summary>
@@ -342,9 +342,9 @@ namespace Geometry
             return tvalues;
         }
 
-        private static double tj(double ti, GridVector2 Pi, GridVector2 Pj, double Alpha = 0.5)
+        private static double tj(double ti, in GridVector2 Pi, in GridVector2 Pj, double Alpha = 0.5)
         {
-            return Math.Pow(GridVector2.Distance(Pi, Pj), Alpha) + ti;
+            return Math.Pow(GridVector2.Distance(in Pi, in Pj), Alpha) + ti;
         }
     }
 

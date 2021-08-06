@@ -45,8 +45,8 @@ namespace Geometry.Meshing
             GridVector2 Origin = Mesh[origin_vertex].Position;
             GridVector2 ComparisonPoint = Origin + OriginVector;
 
-            double angleA = GridVector2.ArcAngle(Origin, Mesh[APoint].Position, ComparisonPoint);
-            double angleB = GridVector2.ArcAngle(Origin, Mesh[BPoint].Position, ComparisonPoint);
+            double angleA = GridVector2.ArcAngle(in Origin, Mesh[APoint].Position, in ComparisonPoint);
+            double angleB = GridVector2.ArcAngle(in Origin, Mesh[BPoint].Position, in ComparisonPoint);
 
             //We are measuring the angle from the line in one direction, so don't allow negative angles
             angleA = angleA < 0 ? angleA + (Math.PI * 2.0) : angleA;
@@ -532,10 +532,10 @@ namespace Geometry.Meshing
                     throw new EdgesIntersectTriangulationException(e, intersected_edges.Select(edge => (IEdgeKey)edge).ToArray(), string.Format("New edge {0} intersects existing edges: {1}", e, intersected_edges[0]));
                 }
             }
-            catch (EdgeIntersectsVertexException except)
+            catch (EdgeIntersectsVertexException)
             {
                 //Should I add two edges?
-                throw except;
+                throw;
             }
 #endif
 
@@ -587,7 +587,7 @@ namespace Geometry.Meshing
                 if (results[i] == OverlapType.CONTAINED)
                 {
                     //If all points are equidistant then don't call this a failure
-                    double distanceSquared = GridVector2.DistanceSquared(circle.Center, candidates[i]);
+                    double distanceSquared = GridVector2.DistanceSquared(in circle.Center, in candidates[i]);
                     if (Math.Abs(distanceSquared - circle.RadiusSquared) < Global.EpsilonSquared)
                     {
                         continue;
@@ -627,7 +627,7 @@ namespace Geometry.Meshing
 
                 GridLineSegment candidate_seg = this.ToGridLineSegment(candidate);
 
-                if (candidate_seg.Intersects(seg, false, out IShape2D intersection))
+                if (candidate_seg.Intersects(in seg, false, out IShape2D intersection))
                 {
                     foundEdges.Add(candidate);
                     /*
@@ -839,10 +839,7 @@ namespace Geometry.Meshing
                     Trace.WriteLine(string.Format("  Remove {0} Add {1} with faces {2} {3}", edge, newEdge, NewFacesTuple.Item1, NewFacesTuple.Item2));
 #endif
 
-                    if (ReportProgress != null)
-                    {
-                        ReportProgress(this);
-                    }
+                    ReportProgress?.Invoke(this);
 
                     //If the new edge intersects the constrained line, add it to the list of edges to check, 
                     //otherwise add it to the list of CreatedEdges
@@ -854,7 +851,7 @@ namespace Geometry.Meshing
 #endif
                         continue;
                     }
-                    else if (newEdgeSeg.Intersects(ConstrainedEdge, true))
+                    else if (newEdgeSeg.Intersects(in ConstrainedEdge, true))
                     {
 #if TRACEDELAUNAY
                         Trace.WriteLine(string.Format("  {0} intersects constraint {1}, adding to intersect list", newEdge, constrained_edge));
@@ -932,10 +929,7 @@ namespace Geometry.Meshing
                     this.AddFace(NewFacesTuple.Item1);
                     this.AddFace(NewFacesTuple.Item2);
 
-                    if (ReportProgress != null)
-                    {
-                        ReportProgress(this);
-                    }
+                    ReportProgress?.Invoke(this);
 
                     GridLineSegment newEdgeSeg = this.ToGridLineSegment(newEdge);
                     if (newEdge == constrained_edge)
@@ -981,7 +975,7 @@ namespace Geometry.Meshing
 
                 //We should never intersect an endpoint, but if the mesh is not correct and an edge passes through our endpoint we may. 
                 //if (ConstrainedEdge.Intersects(oppEdgeSeg, EndpointsOnRingDoNotIntersect: true)) 
-                if (ConstrainedEdge.Intersects(oppEdgeSeg, EndpointsOnRingDoNotIntersect: false, Intersection: out IShape2D intersection))
+                if (ConstrainedEdge.Intersects(in oppEdgeSeg, EndpointsOnRingDoNotIntersect: false, Intersection: out IShape2D intersection))
                 {
                     //Todo: Handle endpoint intersection case
                     if (intersection.ShapeType == ShapeType2D.POINT)
@@ -1010,9 +1004,8 @@ namespace Geometry.Meshing
             while (new_edge_found)
             {
                 new_edge_found = false;
-                ITriangleFace testFace = previous_intersected_edge.OppositeFace(previous_intersected_face) as ITriangleFace;
 
-                if (testFace == null)
+                if (!(previous_intersected_edge.OppositeFace(previous_intersected_face) is ITriangleFace testFace))
                 {
                     //Not sure how an edge that intersects a constrained edge can only have one face. Returning false for now.
                     //Later thought:  This could mean the endpoint is on the convex hull
@@ -1039,7 +1032,7 @@ namespace Geometry.Meshing
                         continue;
 
                     GridLineSegment candidateEdgeSeg = this.ToGridLineSegment(candidate);
-                    if (constrained_seg.Intersects(candidateEdgeSeg, EndpointsOnRingDoNotIntersect: false, Intersection: out IShape2D intersection))
+                    if (constrained_seg.Intersects(in candidateEdgeSeg, EndpointsOnRingDoNotIntersect: false, Intersection: out IShape2D intersection))
                     {
                         intersected_edges.Add(candidate);
 

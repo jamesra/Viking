@@ -189,7 +189,7 @@ namespace Geometry
         public GridBox(IPoint position, double radius)
         {
             if (position == null)
-                throw new ArgumentNullException("position");
+                throw new ArgumentNullException(nameof(position));
 
             minVals = new double[] { position.X - radius, position.Y - radius, position.Z - radius };
             maxVals = new double[] { position.X + radius, position.Y + radius, position.Z + radius };
@@ -376,7 +376,7 @@ namespace Geometry
         public bool Contains(IPoint pos)
         {
             if (pos == null)
-                throw new ArgumentNullException("pos");
+                throw new ArgumentNullException(nameof(pos));
 
             return this.Contains(new double[] { pos.X, pos.Y, pos.Z });
         }
@@ -410,9 +410,9 @@ namespace Geometry
                 return true;
             }
 
-            if ((object)A == null)
+            if (A is null)
                 return false;
-            if ((object)B == null)
+            if (B is null)
                 return false;
 
             bool mins_match = A.minVals.Select((val, i) => val == B.minVals[i]).All(b => b);
