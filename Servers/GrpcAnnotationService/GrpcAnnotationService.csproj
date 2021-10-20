@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\gRPCAnnotationServiceTypes\gRPCAnnotationServiceTypes.csproj" />
+    <ProjectReference Include="..\..\gRPCAnnotationServiceTypes\AnnotationServiceTypes.gRPC.csproj" />
     <ProjectReference Include="..\ConnectomeDataModelCore\ConnectomeDataModelCore.csproj" />
     <ProjectReference Include="..\Libs\EntityFrameworkExtras\EntityFrameworkExtras.EF6\EntityFrameworkExtras.EF6.csproj" />
   </ItemGroup>

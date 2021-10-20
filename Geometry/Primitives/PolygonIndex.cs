@@ -9,7 +9,7 @@ namespace Geometry
     /// Records the index of a vertex in a polygon
     /// </summary>
     [Serializable()]
-    public struct PolygonIndex : IComparable<PolygonIndex>, IEquatable<PolygonIndex>
+    public readonly struct PolygonIndex : IComparable<PolygonIndex>, IEquatable<PolygonIndex>
     {
         /// <summary>
         /// The index of the polygon 
@@ -31,13 +31,7 @@ namespace Geometry
         /// <summary>
         /// True if the vertex is part of an inner polygon
         /// </summary>
-        public bool IsInner
-        {
-            get
-            {
-                return iInnerPoly.HasValue;
-            }
-        }
+        public bool IsInner => iInnerPoly.HasValue;
 
         public PolygonIndex(int poly, int iV, int ringLength)
         {
@@ -90,14 +84,10 @@ namespace Geometry
             // and also the guidance for operator== at
             //   http://go.microsoft.com/fwlink/?LinkId=85238
             //
+            if (obj is PolygonIndex other)
+                return Equals(other);
 
-            if (object.ReferenceEquals(obj, null) || GetType() != obj.GetType())
-            {
-                return false;
-            }
-
-            PolygonIndex other = (PolygonIndex)obj;
-            return Equals(other);
+            return false;
         }
 
         public bool Equals(PolygonIndex other)
@@ -124,15 +114,7 @@ namespace Geometry
         }
 
         public static bool operator ==(PolygonIndex A, PolygonIndex B)
-        {
-            bool ANull = object.ReferenceEquals(A, null);
-            bool BNull = object.ReferenceEquals(B, null);
-
-            if (ANull && BNull)
-                return true;
-            else if (ANull ^ BNull)
-                return false;
-
+        {  
             if (A.iPoly != B.iPoly)
             {
                 return false;
@@ -291,14 +273,12 @@ namespace Geometry
         {
             if (this.IsInner)
             {
-                return poly.InteriorPolygons[this.iInnerPoly.Value];
+                return poly.InteriorPolygons[iInnerPoly.Value];
             }
             else
             {
                 return poly;
             }
-
-            return Polygon(new GridPolygon[] { poly });
         }
 
         /// <summary>

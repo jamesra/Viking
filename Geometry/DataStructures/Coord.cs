@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Geometry
 {
-    public struct Coord : IComparer<Coord>, IComparable<Coord>
+    public readonly struct Coord : IComparer<Coord>, IComparable<Coord>
     {
         public readonly int iX;
         public readonly int iY;
@@ -21,8 +21,10 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            Coord coord = (Coord)obj;
-            return this == coord;
+            if(obj is Coord coord)
+                return this == coord;
+
+            return false;
         }
 
         public override int GetHashCode()

@@ -14,30 +14,11 @@ namespace Geometry.Meshing
         private readonly ImmutableArray<IEdgeKey> _Edges;
         private readonly ImmutableArray<int> _sorted_verts; //caching sorted verts was a 3% optimization from profiling
 
+        public ImmutableArray<int> iVerts => this._iVerts;
 
-        public ImmutableArray<int> iVerts
-        {
-            get
-            {
-                return this._iVerts;
-            }
-        }
+        public ImmutableArray<IEdgeKey> Edges => this._Edges;
 
-        public ImmutableArray<IEdgeKey> Edges
-        {
-            get
-            {
-                return this._Edges;
-            }
-        }
-
-        public ImmutableArray<int> sortedVerts
-        {
-            get
-            {
-                return this._sorted_verts;
-            }
-        }
+        public ImmutableArray<int> sortedVerts => this._sorted_verts;
 
 
         private IEdgeKey[] CalculateEdges()
@@ -198,43 +179,31 @@ namespace Geometry.Meshing
 
         public static bool operator ==(Face A, Face B)
         {
-            if (object.ReferenceEquals(A, B))
-                return true;
+            if (A is null)
+                return B is null;
 
             return A.Equals(B);
         }
 
         public static bool operator !=(Face A, Face B)
         {
+            if (A is null)
+                return !(B is null);
+
             return !A.Equals(B);
         }
 
         public override bool Equals(object obj)
         {
-            Face E = (Face)obj;
-            if (object.ReferenceEquals(E, null))
-            {
-                return false;
-            }
+            if (obj is Face other)
+                return Equals(other);
 
-            return this.Equals(E);
+            return false;
         }
 
-        public bool IsTriangle
-        {
-            get
-            {
-                return iVerts.Length == 3;
-            }
-        }
+        public bool IsTriangle => iVerts.Length == 3;
 
-        public bool IsQuad
-        {
-            get
-            {
-                return iVerts.Length == 4;
-            }
-        }
+        public bool IsQuad => iVerts.Length == 4;
 
         public int CompareTo(Face other)
         {
@@ -272,10 +241,8 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public bool Equals(IFace other)
         {
-            if (object.ReferenceEquals(other, null))
-            {
+            if (other is null)
                 return false;
-            }
 
             if (other.iVerts.Length != this.iVerts.Length)
                 return false;

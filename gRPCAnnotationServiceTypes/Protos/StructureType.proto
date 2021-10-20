@@ -3,9 +3,9 @@
 //
 syntax = "proto3";
 
-option csharp_namespace = "Viking.gRPC.AnnotationTypes.V1.Protos";
+option csharp_namespace = "Viking.AnnotationServiceTypes.gRPC.V1.Protos";
 
-package Viking.gRPC.AnnotationTypes.V1;
+package Viking.AnnotationServiceTypes.gRPC.V1;
 
 import "Protos/AnnotationTypes.proto";
 import "google/protobuf/timestamp.proto";
@@ -15,7 +15,7 @@ service AnnotateStructureTypes{
   rpc GetStructureTypes (GetStructureTypesRequest) returns (GetStructureTypesResponse);
   rpc GetStructureTypeByID (GetStructureTypeByIDRequest) returns (GetStructureTypeByIDResponse);
   rpc GetStructureTypesByIDs (GetStructureTypesByIDsRequest) returns (GetStructureTypesByIDsResponse);
-  rpc UpdateStructureTypes (UpdateStructureTypesRequest) returns (UpdateStructureTypesResponse); 
+  rpc Update (UpdateStructureTypesRequest) returns (UpdateStructureTypesResponse); 
 }
 
 message CreateStructureTypeRequest {
@@ -56,11 +56,23 @@ message GetStructureTypesByIDsResponse {
 	repeated StructureType results = 1;
 }
 
+
+message StructureTypeChange {
+		DBAction action = 1;
+		StructureType result = 2;
+}
+
+message StructureTypeChangeResponse {
+		DBAction action = 1; //The change that was performed
+		bool Sucess = 2;     //True if the change was applied
+		optional StructureType result = 3; //The updated row from the database
+}
+
 message UpdateStructureTypesRequest { 
-	repeated StructureType objs = 1;
+	repeated StructureTypeChange objs = 1;
 }
  
 message UpdateStructureTypesResponse { 
-	repeated int64 results = 1;
+	repeated StructureTypeChangeResponse results = 1;
 }
  

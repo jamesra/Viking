@@ -28,11 +28,9 @@ namespace Geometry
             }
             catch (Exception e)
             {
-                System.Diagnostics.Trace.WriteLine("Geometry: Unable to load Native MKL library.  Exception text:\n" + e.Message);
+                System.Diagnostics.Trace.WriteLine($"Geometry: Unable to load Native MKL library. {e.Message}");
                 return false;
-            }
-
-            
+            } 
         }
 
         public static bool IsCacheFileValid(string CacheStosPath, DateTime time)
@@ -60,7 +58,7 @@ namespace Geometry
                     System.IO.File.Delete(FilePath);
                     return true;
                 }
-                catch (System.IO.IOException e)
+                catch (System.IO.IOException)
                 {
                     System.Diagnostics.Trace.WriteLine("Unable to delete cache file " + FilePath);
                 }

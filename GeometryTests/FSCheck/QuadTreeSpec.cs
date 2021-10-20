@@ -51,15 +51,15 @@ namespace GeometryTests.FSCheck
 
             ///////////////////////////////////////////
             ///Check that we can find the nearest point
-            int treeNearestIndex = tree.FindNearest(Point, out double treeDistance);
+            bool pointFound = tree.TryFindNearest(Point, out var treeNearestIndex, out double treeDistance);
 
             var modelNearest = modelNearestList.First();
 
             bool correctPointFound = modelNearest.Value.Value == treeNearestIndex;
             bool distanceMatched = modelNearest.Distance == treeDistance;
             ///////////////////////////////////////////
-            ///
-            return (correctPointFound.Label("Nearest point found"))
+            return (pointFound.Label("Point found"))
+                    .And(correctPointFound.Label("Nearest point found"))
                     .And(distanceMatched.Label("Nearest point distance matched"));
         }
 

@@ -41,8 +41,8 @@ namespace Geometry
 
             if (points.Count == 0)
             {
-                original_indicies = new int[0];
-                return new GridVector2[0];
+                original_indicies = Array.Empty<int>();
+                return Array.Empty<GridVector2>();
             }
 
             if (points.Count == 1)
@@ -52,7 +52,7 @@ namespace Geometry
             }
 
             //If the points are a cycle, then make each point unique
-            if (points.First() == points.Last())
+            if (points[0] == points[points.Count-1])
             {
                 if (points.Count <= 4)
                 {
@@ -68,8 +68,10 @@ namespace Geometry
             else if (points.Count <= 3)
             {
                 GridVector2[] ring_points = points.ToArray().EnsureClosedRing();
-                List<int> list_original_indicies = new List<int>(ordered_idx);
-                list_original_indicies.Add(0);
+                List<int> list_original_indicies = new List<int>(ordered_idx)
+                {
+                    0
+                };
                 original_indicies = list_original_indicies.ToArray();
                 return ring_points;
             }

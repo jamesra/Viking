@@ -9,7 +9,7 @@ namespace Geometry
     /// A set of cells in a grid
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public struct GridIndex : IComparable<GridIndex>
+    public readonly struct GridIndex : IComparable<GridIndex>
     {
         public readonly int X;
         public readonly int Y;
@@ -32,17 +32,15 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            if (object.ReferenceEquals(this, obj))
-                return true;
-
-            if ((object)obj == null)
+            if (obj is null)
                 return false;
 
-            if (!typeof(GridIndex).IsInstanceOfType(obj))
-                return false;
+            if (obj is GridIndex other)
+            {
+                return other.X == this.X && other.Y == this.Y;
+            }
 
-            GridIndex other = (GridIndex)obj;
-            return other.X == this.X && other.Y == this.Y;
+            return false;
         }
 
         public int CompareTo(GridIndex other)
@@ -55,24 +53,12 @@ namespace Geometry
 
         public static bool operator ==(GridIndex A, GridIndex B)
         {
-            if (object.ReferenceEquals(A, B))
-                return true;
-
-            if ((object)A != null)
-                return A.Equals(B);
-
-            return false;
+            return A.Equals(B);
         }
 
         public static bool operator !=(GridIndex A, GridIndex B)
         {
-            if (object.ReferenceEquals(A, B))
-                return false;
-
-            if ((object)A != null)
-                return !A.Equals(B);
-
-            return true;
+            return !A.Equals(B);
         }
     }
 
@@ -95,10 +81,10 @@ namespace Geometry
     /// <summary>
     /// Dimensions of a grid cell
     /// </summary>
-    public struct GridCellDimensions
+    public readonly struct GridCellDimensions
     {
-        public double Width;
-        public double Height;
+        public readonly double Width;
+        public readonly double Height;
 
         public GridCellDimensions(double Width, double Height)
         {
@@ -110,10 +96,10 @@ namespace Geometry
     /// <summary>
     /// Dimensions of a grid. 
     /// </summary>
-    public struct GridDimensions
+    public readonly struct GridDimensions
     {
-        public int Width;
-        public int Height;
+        public readonly int Width;
+        public readonly int Height;
 
         public GridDimensions(int Width, int Height)
         {
@@ -122,12 +108,21 @@ namespace Geometry
         }
     }
 
-    public struct GridIndicies : IEnumerable<GridIndex>
+    public readonly struct GridIndicies : IEnumerable<GridIndex>
     {
-        public int iMinY;
-        public int iMaxY;
-        public int iMinX;
-        public int iMaxX;
+        public readonly int iMinY;
+        public readonly int iMaxY;
+        public readonly int iMinX;
+        public readonly int iMaxX;
+
+        public GridIndicies(int minX, int minY, int maxX, int maxY)
+        {
+            iMinX = minX;
+            iMaxX = maxX;
+            iMinY = minY;
+            iMaxY = maxY;
+        }
+
 
         public int Width
         {
@@ -141,42 +136,41 @@ namespace Geometry
 
         public static GridIndicies FromGridDimensions(GridDimensions gridDim)
         {
-            GridIndicies obj = new GridIndicies();
-            //Figure out which grid locations are visible
-            obj.iMinX = 0;
-            obj.iMinY = 0;
-            obj.iMaxX = gridDim.Width;
-            obj.iMaxY = gridDim.Height;
-            return obj;
+            return new GridIndicies(
+                //Figure out which grid locations are visible
+                minX: 0,
+                minY: 0,
+                maxX: gridDim.Width,
+                maxY: gridDim.Height);
         }
 
-        public static GridIndicies FromRectangle(GridRectangle bounds, GridCellDimensions cellDim)
+        public static GridIndicies FromRectangle(in GridRectangle bounds, GridCellDimensions cellDim)
         {
-            return FromRectangle(bounds, cellDim.Width, cellDim.Height);
+            return FromRectangle(in bounds, cellDim.Width, cellDim.Height);
         }
 
-        public static GridIndicies FromRectangle(GridRectangle bounds, double CellWidth, double CellHeight)
+        public static GridIndicies FromRectangle(in GridRectangle bounds, double CellWidth, double CellHeight)
         {
-            GridIndicies obj = new GridIndicies();
-            //Figure out which grid locations are visible
-            obj.iMinX = (int)Math.Floor(bounds.Left / CellWidth);
-            obj.iMinY = (int)Math.Floor(bounds.Bottom / CellHeight);
-            obj.iMaxX = (int)Math.Ceiling(bounds.Right / CellWidth);
-            obj.iMaxY = (int)Math.Ceiling(bounds.Top / CellHeight);
-            return obj;
+            return new GridIndicies(
+                //Figure out which grid locations are visible
+                minX: (int) Math.Floor(bounds.Left / CellWidth),
+                minY: (int) Math.Floor(bounds.Bottom / CellHeight),
+                maxX: (int) Math.Ceiling(bounds.Right / CellWidth),
+                maxY: (int) Math.Ceiling(bounds.Top / CellHeight));
         }
 
-        public void CropToBounds(GridDimensions gridDim)
+        public GridIndicies CropToBounds(GridDimensions gridDim)
         {
-            CropToBounds(0, 0, gridDim.Width, gridDim.Height);
+            return CropToBounds(0, 0, gridDim.Width, gridDim.Height);
         }
 
-        public void CropToBounds(int MinX, int MinY, int MaxX, int MaxY)
+        public GridIndicies CropToBounds(int MinX, int MinY, int MaxX, int MaxY)
         {
-            iMinX = iMinX < MinX ? MinX : iMinX;
-            iMinY = iMinY < MinY ? MinY : iMinY;
-            iMaxX = iMaxX > MaxX ? MaxX : iMaxX;
-            iMaxY = iMaxY > MaxY ? MaxY : iMaxY;
+            return new GridIndicies(
+                minX: iMinX < MinX ? MinX : iMinX,
+                minY: iMinY < MinY ? MinY : iMinY,
+                maxX: iMaxX > MaxX ? MaxX : iMaxX,
+                maxY: iMaxY > MaxY ? MaxY : iMaxY);
         }
 
         IEnumerator<GridIndex> IEnumerable<GridIndex>.GetEnumerator()
@@ -201,7 +195,7 @@ namespace Geometry
 
     public sealed class GridIndexEnumerator : IEnumerator<GridIndex>
     {
-        GridIndicies Indicies;
+        readonly GridIndicies Indicies;
         int iX;
         int iY;
 
@@ -272,9 +266,9 @@ namespace Geometry
 
         bool TryUpdateCell(GridIndex i, T value, T comparisonValue);
 
-        T[] ArrayForRegion(GridRectangle volumeBounds);
+        T[] ArrayForRegion(in GridRectangle volumeBounds);
 
-        GridRange<T> SubGridForRegion(GridRectangle? volumeBounds);
+        GridRange<T> SubGridForRegion(in GridRectangle? volumeBounds);
 
         GridRectangle CellBounds(int iX, int iY);
 
@@ -322,21 +316,17 @@ namespace Geometry
             this._MinRadius = minRadius;
         }
 
-        public T[] ArrayForRegion(GridRectangle volumeBounds)
+        public T[] ArrayForRegion(in GridRectangle volumeBounds)
         {
-            GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds, this.CellDimensions);
-            iGrid.CropToBounds(this.GridDimensions);
-
+            GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds, this.CellDimensions).CropToBounds(GridDimensions);
             return RegionPyramidLevel<T>.ToArray(Cells, iGrid);
         }
 
-        public GridRange<T> SubGridForRegion(GridRectangle? volumeBounds)
+        public GridRange<T> SubGridForRegion(in GridRectangle? volumeBounds)
         {
             if (volumeBounds.HasValue)
             {
-                GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds.Value, this.CellDimensions);
-                iGrid.CropToBounds(this.GridDimensions);
-
+                GridIndicies iGrid = GridIndicies.FromRectangle(volumeBounds.Value, this.CellDimensions).CropToBounds(GridDimensions);
                 return RegionPyramidLevel<T>.ToSubGrid(Cells, iGrid);
             }
             else
@@ -468,7 +458,7 @@ namespace Geometry
             CellDimensions = cellDimensions;//new GridCellDimensions(Boundaries.Width, Boundaries.Height); 
         }
 
-        public int LevelForVisibleBounds(GridRectangle visibleBounds)
+        public int LevelForVisibleBounds(in GridRectangle visibleBounds)
         {
             int level = visibleBounds.Width > visibleBounds.Height ?
                 (int)Math.Floor(Math.Log(RegionBounds.Width / visibleBounds.Width, 2)) :
@@ -485,7 +475,7 @@ namespace Geometry
                                                                          minRadius));
         }
 
-        private double MinRadiusForLevel(GridRectangle screenBounds, int Level)
+        private double MinRadiusForLevel(in GridRectangle screenBounds, int Level)
         {
             double minRadius = screenBounds.Width > screenBounds.Height ? RegionBounds.Width / screenBounds.Width : RegionBounds.Height / screenBounds.Height;
 
@@ -506,21 +496,21 @@ namespace Geometry
                                           this.CellDimensions.Height / Math.Pow(2, Level));
         }
 
-        public IRegionPyramidLevel<T> GetLevelForScreenBounds(GridRectangle screenBounds, double SinglePixelRadius)
+        public IRegionPyramidLevel<T> GetLevelForScreenBounds(in GridRectangle screenBounds, double SinglePixelRadius)
         {
             GridRectangle volumeBounds = new GridRectangle(screenBounds.Left, screenBounds.Right, screenBounds.Bottom, screenBounds.Top);
-            volumeBounds.Scale(SinglePixelRadius);
-            return GetLevelForBounds(screenBounds, volumeBounds, SinglePixelRadius);
+            volumeBounds *= (SinglePixelRadius);
+            return GetLevelForBounds(in screenBounds, in volumeBounds, SinglePixelRadius);
         }
 
-        public IRegionPyramidLevel<T> GetLevelForVolumeBounds(GridRectangle volumeBounds, double SinglePixelRadius)
+        public IRegionPyramidLevel<T> GetLevelForVolumeBounds(in GridRectangle volumeBounds, double SinglePixelRadius)
         {
             GridRectangle screenBounds = new GridRectangle(volumeBounds.Left, volumeBounds.Right, volumeBounds.Bottom, volumeBounds.Top);
-            screenBounds.Scale(1.0 / SinglePixelRadius);
-            return GetLevelForBounds(screenBounds, volumeBounds, SinglePixelRadius);
+            screenBounds *= 1.0 / SinglePixelRadius;
+            return GetLevelForBounds(in screenBounds, in volumeBounds, SinglePixelRadius);
         }
 
-        private RegionPyramidLevel<T> GetLevelForBounds(GridRectangle screenBounds, GridRectangle volumeBounds, double SinglePixelRadius)
+        private RegionPyramidLevel<T> GetLevelForBounds(in GridRectangle screenBounds, in GridRectangle volumeBounds, double SinglePixelRadius)
         {
             int iLevel = LevelForVisibleBounds(volumeBounds);
             return GetOrAddLevel(iLevel, MinRadiusForLevel(screenBounds, iLevel));

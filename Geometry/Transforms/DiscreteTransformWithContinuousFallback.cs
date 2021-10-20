@@ -52,12 +52,12 @@ namespace Geometry.Transforms
         {
             get
             {
-                if (DiscreteTransform as IControlPointTriangulation != null)
+                if (DiscreteTransform is IControlPointTriangulation dt)
                 {
-                    return ((IControlPointTriangulation)DiscreteTransform).TriangleIndicies;
+                    return dt.TriangleIndicies;
                 }
 
-                return new int[0];
+                return Array.Empty<int>();
             }
         }
 
@@ -65,12 +65,12 @@ namespace Geometry.Transforms
         {
             get
             {
-                if (DiscreteTransform as IControlPointTriangulation != null)
+                if (DiscreteTransform is IControlPointTriangulation dt)
                 {
-                    return ((IControlPointTriangulation)DiscreteTransform).Edges;
+                    return dt.Edges;
                 }
 
-                return new List<int>[] { };
+                return Array.Empty<List<int>>();
             }
         }
 
@@ -84,7 +84,7 @@ namespace Geometry.Transforms
         protected DiscreteTransformWithContinuousFallback(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             DiscreteTransform = info.GetValue("DiscreetTransform", typeof(IDiscreteTransform)) as IDiscreteTransform;
             ContinuousTransform = info.GetValue("ContinuousTransform", typeof(IContinuousTransform)) as IContinuousTransform;
@@ -93,7 +93,7 @@ namespace Geometry.Transforms
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             info.AddValue("DiscreetTransform", DiscreteTransform);
             info.AddValue("ContinuousTransform", ContinuousTransform);
@@ -176,12 +176,12 @@ namespace Geometry.Transforms
             (ContinuousTransform as IMemoryMinimization)?.MinimizeMemory();
         }
 
-        public List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect)
+        public List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect)
         {
             return ((ITransformControlPoints)DiscreteTransform).IntersectingControlRectangle(gridRect);
         }
 
-        public List<MappingGridVector2> IntersectingMappedRectangle(GridRectangle gridRect)
+        public List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect)
         {
             return ((ITransformControlPoints)DiscreteTransform).IntersectingMappedRectangle(gridRect);
         }

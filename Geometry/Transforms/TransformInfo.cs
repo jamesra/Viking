@@ -99,7 +99,7 @@ namespace Geometry.Transforms
     public class TransformCacheInfo : ITransformCacheInfo
     {
         private readonly string cacheDirectory;
-        private string _FilenameBase = null;
+        private readonly string _FilenameBase = null;
         private string _Extension = null;
 
         public TransformCacheInfo(string CacheDirectory, string Filename)

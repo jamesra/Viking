@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\gRPCAnnotationServiceTypes\gRPCAnnotationServiceTypes.csproj" />
+    <ProjectReference Include="..\gRPCAnnotationServiceTypes\AnnotationServiceTypes.gRPC.csproj" />
   </ItemGroup>
 
 </Project>

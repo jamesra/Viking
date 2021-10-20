@@ -34,10 +34,8 @@ namespace Geometry.Transforms
 
         //TODO: Convert this entire class to an async method 
         public void ThreadPoolCallback(Object threadContext)
-        { 
-            GridVector2[] MappedControlPoints;
-
-            bool[] mapped = fixedTransform.TryTransform(warpingTransform.MapPoints.Select(p => p.ControlPoint).ToArray(), out MappedControlPoints);
+        {  
+            bool[] mapped = fixedTransform.TryTransform(warpingTransform.MapPoints.Select(p => p.ControlPoint).ToArray(), out var MappedControlPoints);
 
             List<MappingGridVector2> newPointsList = MappedControlPoints.Where((p, i) => mapped[i]).Select((cp, i) => new MappingGridVector2(cp, warpingTransform.MapPoints[i].MappedPoint)).ToList();
              
@@ -85,7 +83,7 @@ namespace Geometry.Transforms
                         {
 
                             //Determine how far along the mapping line on the fixed transfrom is the intersect point.
-                            double mapLineDistance = GridVector2.Distance(foundMapLine.A, intersect);
+                            double mapLineDistance = GridVector2.Distance(in foundMapLine.A, in intersect);
                             double mapLineFraction = mapLineDistance / foundMapLine.Length;
 
                             //How far along the corresponding control line are we?
@@ -93,7 +91,7 @@ namespace Geometry.Transforms
 
                             newCtrlPoint = foundCtrlLine.Direction; //Get unit vector describing direction and scale it
                             newCtrlPoint *= ctrlLineDistance;
-                            newCtrlPoint = newCtrlPoint + foundCtrlLine.A;
+                            newCtrlPoint += foundCtrlLine.A;
                         }
 
                         //Now we must find out where the point on the warping transform is by checking how far along the mapping line on the warping transform we were.
@@ -101,7 +99,7 @@ namespace Geometry.Transforms
                         {
                             //Figure out where the transformed point lies in the moving transform mapped space. 
                             //Make sure we measure from the same origin on both mapped and control lines
-                            double CtrlLineDistance = GridVector2.Distance(ctrlLine.A, intersect);
+                            double CtrlLineDistance = GridVector2.Distance(in ctrlLine.A, in intersect);
                             double fraction = CtrlLineDistance / ctrlLine.Length;
 
                             Debug.Assert(fraction <= 1.0 && fraction >= 0.0);
@@ -114,17 +112,16 @@ namespace Geometry.Transforms
 
                             newMapPoint = mapLine.Direction;
                             newMapPoint *= mappedDistance;
-                            newMapPoint = newMapPoint + mapLine.A;
+                            newMapPoint += mapLine.A;
                         }
 
                         newPointsList.Add(new MappingGridVector2(newCtrlPoint, newMapPoint));
                     }
                 }
             }
-            
 
             MappingGridVector2.RemoveDuplicates(newPointsList);
-            newPoints = newPointsList.ToArray(); 
+            newPoints = newPointsList.ToArray();
             DoneEvent.Set(); 
         }
 

@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using System;
 using System.Collections.Generic;
@@ -356,7 +356,7 @@ namespace WebAnnotationModel
 
         protected void InitNewData(StructureTypeObj type)
         {
-            this.Data.DBAction = DBACTION.INSERT;
+            this.Data.DBAction = AnnotationService.Types.DBACTION.INSERT;
 
             this.Data.ID = Store.Structures.GetTempKey();
             this.Data.TypeID = type.ID;

@@ -12,7 +12,7 @@ namespace Geometry
             return Delaunay2D.Triangulate(points, BoundingPoints);
         }
 
-        public static int[] Triangulate(GridVector2[] points, GridRectangle bounds)
+        public static int[] Triangulate(GridVector2[] points, in GridRectangle bounds)
         {
             double WidthMargin = bounds.Width;
             double HeightMargin = bounds.Height;
@@ -23,7 +23,7 @@ namespace Geometry
             return Delaunay2D.Triangulate(points, BoundingPoints);
         }
 
-        public static int[] TriangulateLeavingBorders(GridVector2[] points, GridRectangle bounds)
+        public static int[] TriangulateLeavingBorders(GridVector2[] points, in GridRectangle bounds)
         {
             double WidthMargin = bounds.Width;
             double HeightMargin = bounds.Height;
@@ -46,16 +46,16 @@ namespace Geometry
         {
             if (BoundingPoints == null)
             {
-                throw new ArgumentNullException("BoundingPoints");
+                throw new ArgumentNullException(nameof(BoundingPoints));
             }
 
             if (points == null)
             {
-                throw new ArgumentNullException("points");
+                throw new ArgumentNullException(nameof(points));
             }
 
             if (points.Length < 3)
-                return new int[0];
+                return Array.Empty<int>();
 
 #if DEBUG
 
@@ -63,7 +63,7 @@ namespace Geometry
             for (int iDebug = 1; iDebug < points.Length; iDebug++)
             {
                 Debug.Assert(points[iDebug - 1].X <= points[iDebug].X);
-                Debug.Assert(GridVector2.Distance(points[iDebug - 1], points[iDebug]) >= Global.Epsilon);
+                Debug.Assert(GridVector2.Distance(in points[iDebug - 1], in points[iDebug]) >= Global.Epsilon);
             }
 #endif
 
@@ -99,7 +99,7 @@ namespace Geometry
                 {
                     GridIndexTriangle tri = triangles[iTri];
                     GridCircle circle = tri.Circle;
-                    if (circle.Contains(P))
+                    if (circle.Contains(in P))
                     {
                         Edges[iEdge++] = new IndexEdge(tri.i1, tri.i2);
                         Edges[iEdge++] = new IndexEdge(tri.i2, tri.i3);

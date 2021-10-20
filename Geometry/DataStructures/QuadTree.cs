@@ -80,16 +80,16 @@ namespace Geometry
             CreateTree(points, values, points.BoundingBox());
         }
 
-        public QuadTree(GridVector2[] keys, T[] values, GridRectangle border)
+        public QuadTree(GridVector2[] keys, T[] values, in GridRectangle border)
         {
-            CreateTree(keys, values, border);
+            CreateTree(keys, values, in border);
         }
 
         public T[] Values
         {
             get
             {
-                T[] values = new T[0];
+                T[] values = Array.Empty<T>();
                 try
                 {
                     rwLock.EnterReadLock();
@@ -142,7 +142,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
-        public void Add(GridVector2 point, T value)
+        public void Add(GridVector2 point, in T value)
         {
             /*
             try
@@ -158,7 +158,7 @@ namespace Geometry
             try
             {
                 rwLock.EnterWriteLock();
-                if (this.Root.ExpandBorder(point, out var new_root))
+                if (this.Root.ExpandBorder(in point, out var new_root))
                 {
                     this.Root = new_root;
                 }
@@ -182,7 +182,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
-        public bool TryAdd(GridVector2 point, T value)
+        public bool TryAdd(GridVector2 point, in T value)
         {
 
             try
@@ -202,7 +202,7 @@ namespace Geometry
                 {
                     rwLock.EnterWriteLock();
 
-                    if (this.Root.ExpandBorder(point, out var new_root))
+                    if (this.Root.ExpandBorder(in point, out var new_root))
                     {
                         this.Root = new_root;
                     }
@@ -226,7 +226,7 @@ namespace Geometry
 
         }
 
-        public bool Contains(T value)
+        public bool Contains(in T value)
         {
             try
             {
@@ -242,9 +242,10 @@ namespace Geometry
 
         public bool Contains(GridVector2 p)
         {
-            var output = this.FindNearest(p, out GridVector2 foundPoint, out double distance);
+            if(this.TryFindNearest(p, out GridVector2 foundPoint, out var val, out double distance))
+                return foundPoint.Equals(p);
 
-            return foundPoint == p;
+            return false;
         }
 
         /// <summary>
@@ -269,7 +270,7 @@ namespace Geometry
                 if (ValueToNodeTable.ContainsKey(value))
                 {
                     QuadTreeNode<T> node = ValueToNodeTable[value];
-                    if (GridVector2.Distance(node.Point, point) == 0)
+                    if (GridVector2.Distance(in node.Point, in point) == 0)
                         return false;
                     else
                     {
@@ -280,7 +281,7 @@ namespace Geometry
 
                             Remove(value);
 
-                            if (this.Root.ExpandBorder(point, out var new_root))
+                            if (this.Root.ExpandBorder(in point, out var new_root))
                             {
                                 this.Root = new_root;
                             }
@@ -300,7 +301,7 @@ namespace Geometry
                     {
                         rwLock.EnterWriteLock();
 
-                        if (this.Root.ExpandBorder(point, out var new_root))
+                        if (this.Root.ExpandBorder(in point, out var new_root))
                         {
                             this.Root = new_root;
                         }
@@ -345,14 +346,14 @@ namespace Geometry
             }
 
             node.Parent = null;
-            node.Value = default(T);
+            node.Value = default;
 
             return retVal;
         }
 
         public bool TryRemove(T value, out T RemovedValue)
         {
-            RemovedValue = default(T);
+            RemovedValue = default;
             try
             {
                 rwLock.EnterUpgradeableReadLock();
@@ -386,7 +387,7 @@ namespace Geometry
             return true;
         }
 
-        private void CreateTree(GridVector2[] keys, T[] values, GridRectangle border)
+        private void CreateTree(GridVector2[] keys, T[] values, in GridRectangle border)
         {
             try
             {
@@ -407,30 +408,32 @@ namespace Geometry
             }
         }
 
-        public T FindNearest(GridVector2 point, out double distance)
+        public bool TryFindNearest(GridVector2 point, out T val, out double distance)
         {
-            return FindNearest(point, out GridVector2 found_point, out distance);
+            return TryFindNearest(point, out GridVector2 found_point, out val, out distance);
         }
 
-        public T FindNearest(GridVector2 point, out GridVector2 found_point, out double distance)
+        public bool TryFindNearest(GridVector2 point, out GridVector2 foundPoint, out T val, out double distance)
         {
+            val = default;
             try
             {
-                found_point = GridVector2.Zero;
+                foundPoint = GridVector2.Zero;
                 distance = double.MaxValue;
 
                 rwLock.EnterReadLock();
 
                 if (Root == null)
                 {
-                    return default(T);
+                    return false;
                 }
                 else if (Root.IsLeaf == true && Root.HasValue == false)
                 {
-                    return default(T);
+                    return false;
                 }
 
-                return Root.FindNearest(point, out found_point, ref distance);
+                val = Root.FindNearest(point, out foundPoint, ref distance);
+                return true;
             }
             finally
             {
@@ -511,7 +514,7 @@ namespace Geometry
         /// </summary>
         /// <param name="gridRect"></param>
         /// <returns></returns>
-        public void Intersect(GridRectangle gridRect, out List<GridVector2> outPoints, out List<T> outValues)
+        public void Intersect(in GridRectangle gridRect, out List<GridVector2> outPoints, out List<T> outValues)
         {
             try
             {
@@ -520,7 +523,7 @@ namespace Geometry
                 outPoints = new List<GridVector2>(this.ValueToNodeTable.Count);
                 outValues = new List<T>(this.ValueToNodeTable.Count);
 
-                this.Root.Intersect(gridRect, true, ref outPoints, ref outValues);
+                this.Root.Intersect(in gridRect, true, ref outPoints, ref outValues);
             }
             finally
             {

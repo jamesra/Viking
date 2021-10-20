@@ -1,4 +1,4 @@
-﻿namespace GrpcAnnotationService.Protos
+﻿namespace gRPCAnnotationService.Protos
 {
     public static class StructureEFExtensions
     {

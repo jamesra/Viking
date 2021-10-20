@@ -92,7 +92,7 @@ namespace GeometryTests
             Assert.IsTrue(success);
 
             /*Scale the rectangle and test again*/
-            rectA.Scale(2);
+            rectA *= 2;
 
             Assert.IsTrue(-10.0 == rectA.Left &&
                          70 == rectA.Right &&
@@ -100,7 +100,7 @@ namespace GeometryTests
                          50 == rectA.Top);
 
             /*Scale the rectangle and test again*/
-            rectA.Scale(0.5);
+            rectA *= 0.5;
 
             Assert.IsTrue(10.0 == rectA.Left &&
                          50 == rectA.Right &&
@@ -117,11 +117,11 @@ namespace GeometryTests
             GridRectangle rectA = new GridRectangle(10, 20, 10, 30);
             GridRectangle rectB = new GridRectangle(-20, -10, -15, -5);
 
-            rectA.Union(rectB);
+            rectA += rectB;
 
             Assert.AreEqual(rectA, new GridRectangle(-20, 20, -15, 30));
 
-            rectB.Union(rectA);
+            rectB += rectA;
 
             Assert.AreEqual(rectB, new GridRectangle(-20, 20, -15, 30));
         }

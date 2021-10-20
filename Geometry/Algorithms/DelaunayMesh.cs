@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Geometry
 {
-    internal struct Baseline
+    internal readonly struct Baseline
     {
         public readonly GridLineSegment Segment;
         public readonly IVertex2D OriginVert;
@@ -67,7 +67,7 @@ namespace Geometry
         {
             if (verts == null)
             {
-                throw new ArgumentNullException("Verticies must not be null.");
+                throw new ArgumentNullException(nameof(verts),"Verticies must not be null.");
             }
 
             TriangulationMesh<VERTEX> mesh = new TriangulationMesh<VERTEX>();
@@ -169,10 +169,7 @@ namespace Geometry
 #endif
                 mesh.AddEdge(new Edge((int)VertSet[0], (int)VertSet[1]));
 
-                if (ReportProgress != null)
-                {
-                    ReportProgress(mesh);
-                }
+                ReportProgress?.Invoke(mesh);
 
                 return mesh;
             }/*
@@ -234,10 +231,7 @@ namespace Geometry
             Edge baseEdge = new Edge(L.Index, R.Index);
             mesh.AddEdge(baseEdge);
 
-            if (ReportProgress != null)
-            {
-                ReportProgress(mesh);
-            }
+            ReportProgress?.Invoke(mesh);
 
             AddedEdges.Add(baseEdge);
 
@@ -252,15 +246,13 @@ namespace Geometry
             IVertex2D RightCandidate = null;
             List<EdgeAngle> LCandidates = EdgesByAngle(mesh, L, R.Index, false).ToList();
             List<EdgeAngle> RCandidates = EdgesByAngle(mesh, R, L.Index, true).ToList();
-
-            double LAngle;
-            double RAngle;
-
+            
             Baseline LRBaseline = new Baseline(L, R);
             Baseline RLBaseline = new Baseline(R, L);
 
             GridCircle? LCircle = new GridCircle();
             GridCircle? RCircle = new GridCircle();
+            TriangleFace newFace;
 
             List<Face> AddedFaces = new List<Face>();
 
@@ -278,14 +270,14 @@ namespace Geometry
                 //TODO: Handle case where there are no left or right candidates
                 if (LeftCandidate == null)
                 {
-                    LeftCandidate = TryGetNextCandidate(mesh, ref LCandidates, LRBaseline, Clockwise: false, angle: out LAngle, circle: out LCircle);
+                    LeftCandidate = TryGetNextCandidate(mesh, ref LCandidates, in LRBaseline, Clockwise: false, angle: out double LAngle, circle: out LCircle);
                     if (LeftCandidate != null)
                         Debug.Assert(LeftCandidate.Index != LOrigin.Index);
                 }
 
                 if (RightCandidate == null)
                 {
-                    RightCandidate = TryGetNextCandidate(mesh, ref RCandidates, RLBaseline, Clockwise: true, angle: out RAngle, circle: out RCircle);
+                    RightCandidate = TryGetNextCandidate(mesh, ref RCandidates, in RLBaseline, Clockwise: true, angle: out double RAngle, circle: out RCircle);
                     if (RightCandidate != null)
                         Debug.Assert(RightCandidate.Index != ROrigin.Index);
                 }
@@ -338,7 +330,6 @@ namespace Geometry
                     }
                 }
 
-                TriangleFace newFace;
 
             UseLeft:
                 {
@@ -444,10 +435,7 @@ namespace Geometry
                 LRBaseline = new Baseline(LOrigin, ROrigin);
                 RLBaseline = new Baseline(ROrigin, LOrigin);
 
-                if (ReportProgress != null)
-                {
-                    ReportProgress(mesh);
-                }
+                ReportProgress?.Invoke(mesh);
             }
 
             List<IEdgeKey> EdgesToCheck = AddedFaces.SelectMany(f => f.Edges).Distinct().ToList();
@@ -659,9 +647,7 @@ namespace Geometry
 
             GridLineSegment LR_baseline_candidate;
             GridLineSegment RL_baseline_candidate;
-
-
-
+             
             //L = mesh[FirstHalfSet.SortedOppositeCutAxisVertSet.First()];
             //R = mesh[SecondHalfSet.SortedOppositeCutAxisVertSet.First()];
 
@@ -1072,7 +1058,7 @@ namespace Geometry
             return edgeAnglesFiltered;
         }
 
-        private static IVertex2D TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, Baseline baseline, bool Clockwise, out double angle, out GridCircle? circle)
+        private static IVertex2D TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, in Baseline baseline, bool Clockwise, out double angle, out GridCircle? circle)
         {
             if (sortedCandidates == null || sortedCandidates.Count == 0)
             {
@@ -1131,7 +1117,7 @@ namespace Geometry
 
                         mesh.FindIntersectingFaceEdges(key);
                     }
-                    catch (EdgeIntersectsVertexException e)
+                    catch (EdgeIntersectsVertexException)
                     {
                         //This edge intersects a vertex, reject it because it is close enough to 180 degrees that it may as well be the same
                         circle = new GridCircle?();
@@ -1237,7 +1223,7 @@ namespace Geometry
             {
                 
 
-                TriangleFace oppositeFace = mesh[edge].Faces.Where(face => f != face as Face).FirstOrDefault() as TriangleFace;
+                TriangleFace oppositeFace = mesh[edge].Faces.FirstOrDefault(face => f != face as Face) as TriangleFace;
                 if (oppositeFace == null)
                     continue;
 
@@ -1256,7 +1242,7 @@ namespace Geometry
 
                 //If the two triangles are not a convex polygon then we need to skip flipping this edge.  Otherwise we will cover an area already
                 //covered by another face
-                if (flippedEdgeCandidate.Intersects(existingEdge) == false)
+                if (flippedEdgeCandidate.Intersects(in existingEdge) == false)
                     continue;
 
                 //I should check angles, but have the code written to look at circles and want to test other things
@@ -1336,13 +1322,11 @@ namespace Geometry
                     catch
                     {
                         Debug.Assert(false);
+                        Trace.WriteLine($"Exception adding face pair {A} {B}");
                         return;
                     }
 
-                    if (ReportProgress != null)
-                    {
-                        ReportProgress(mesh);
-                    }
+                    ReportProgress?.Invoke(mesh);
 
                     //Rarely we get into an infinite recursion here.  Finding a way to detect these cycles needs to be found
                     try
@@ -1384,7 +1368,7 @@ namespace Geometry
 
             //If the two triangles are not a convex polygon then we need to skip flipping this edge.  Otherwise we will cover an area already
             //covered by another face
-            if (flippedEdgeCandidate.Intersects(existingEdge) == false)
+            if (flippedEdgeCandidate.Intersects(in existingEdge) == false)
                 return;
 
             //I should check angles, but have the code written to look at circles and want to test other things
@@ -1412,10 +1396,7 @@ namespace Geometry
                     mesh.AddFace(new_faces.Item2);
 
 
-                    if (ReportProgress != null)
-                    {
-                        ReportProgress(mesh);
-                    }
+                    ReportProgress?.Invoke(mesh);
 
                     //Debug.Assert(mesh.IsTriangleDelaunay(A), string.Format("New triangle should be Delaunay", A));
                     //Debug.Assert(mesh.IsTriangleDelaunay(B), string.Format("New triangle should be Delaunay", B));

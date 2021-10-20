@@ -7,7 +7,7 @@ using System.Linq;
 namespace Geometry
 {
 
-    public struct DistanceToPoint<T> : IComparable<DistanceToPoint<T>>, IEquatable<DistanceToPoint<T>>
+    public readonly struct DistanceToPoint<T> : IComparable<DistanceToPoint<T>>, IEquatable<DistanceToPoint<T>>
     {
         public readonly GridVector2 Point;
         public readonly double Distance;
@@ -25,20 +25,57 @@ namespace Geometry
             return this.Distance.CompareTo(other.Distance);
         }
 
+        public override int GetHashCode()
+        {
+            return Point.GetHashCode() ^ Distance.GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is DistanceToPoint<T> other)
+                return Equals(other);
+
+            return false;
+        }
+
         public bool Equals(DistanceToPoint<T> other)
         {
-            if (object.ReferenceEquals(this, other))
-                return true;
-
-            if (object.ReferenceEquals(other, null))
-                return false;
-
-            return this.Distance.Equals(other.Distance) && this.Point.Equals(other.Point);
+            return this.Distance.Equals(other.Distance) && this.Point == other.Point;
         }
 
         public override string ToString()
         {
-            return string.Format("{0} {1}", Point, Distance);
+            return $"{Point} {Distance}";
+        }
+
+        public static bool operator ==(DistanceToPoint<T> left, DistanceToPoint<T> right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(DistanceToPoint<T> left, DistanceToPoint<T> right)
+        {
+            return !(left == right);
+        }
+
+        public static bool operator <(DistanceToPoint<T> left, DistanceToPoint<T> right)
+        {
+            return left.CompareTo(right) < 0;
+        }
+
+        public static bool operator <=(DistanceToPoint<T> left, DistanceToPoint<T> right)
+        {
+            return left.CompareTo(right) <= 0;
+        }
+
+        public static bool operator >(DistanceToPoint<T> left, DistanceToPoint<T> right)
+        {
+            return left.CompareTo(right) > 0;
+        }
+
+        public static bool operator >=(DistanceToPoint<T> left, DistanceToPoint<T> right)
+        {
+            return left.CompareTo(right) >= 0;
         }
     }
 
@@ -84,8 +121,10 @@ namespace Geometry
                 this.MaxDistance = item.Distance;
             }
 
-            List<DistanceToPoint<T>> newList = new List<DistanceToPoint<T>>(2);
-            newList.Add(item);
+            List<DistanceToPoint<T>> newList = new List<DistanceToPoint<T>>(2)
+            {
+                item
+            };
 
             Data.Add(item.Distance, newList);
             return;

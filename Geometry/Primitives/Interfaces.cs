@@ -97,29 +97,33 @@ namespace Geometry
     /// </summary>
     public interface IPointN
     {
-        double[] coords { get; }
+        double[] coords { get; } 
+    }
 
+    public interface ICentroid
+    {
+        IPoint2D Centroid { get; }
     }
 
 
-    public interface IPoint2D : IPointN
+    public interface IPoint2D : IPointN, IEquatable<IPoint2D>, ICentroid
     {
         double X { get; set; }
         double Y { get; set; }
     }
 
-    public interface IPoint : IPoint2D
+    public interface IPoint : IPoint2D, IEquatable<IPoint>
     {
         double Z { get; set; }
     }
 
-    public interface IShape2D
+    public interface IShape2D : IEquatable<IShape2D>
     {
         GridRectangle BoundingBox { get; }
         double Area { get; }
-        bool Contains(IPoint2D p);
+        bool Contains(in IPoint2D p);
 
-        bool Intersects(IShape2D shape);
+        bool Intersects(in IShape2D shape);
 
         ShapeType2D ShapeType { get; }
 
@@ -128,10 +132,10 @@ namespace Geometry
         /// </summary>
         /// <param name="offset"></param>
         /// <returns></returns>
-        IShape2D Translate(IPoint2D offset);
+        IShape2D Translate(in IPoint2D offset);
     }
 
-    public interface IPolygon2D : IShape2D
+    public interface IPolygon2D : IShape2D, IEquatable<IPolygon2D>, ICentroid
     {
         IReadOnlyList<IPoint2D> ExteriorRing { get; }
 
@@ -142,44 +146,46 @@ namespace Geometry
         int TotalVerticies { get; }
 
         int TotalUniqueVerticies { get; }
-
-        IPoint2D Centroid { get; }
     }
 
-    public interface ICircle2D : IShape2D
+    public interface ICircle2D : IShape2D, IEquatable<ICircle2D>, ICentroid
     {
         IPoint2D Center { get; }
 
         double Radius { get; }
     }
 
-    public interface IShapeCollection2D : IShape2D
+    public interface IShapeCollection2D : IShape2D, IEquatable<IShapeCollection2D>
     {
-        ICollection<IShape2D> Geometries { get; }
+        IList<IShape2D> Geometries { get; }
     }
 
-    public interface IPolyLine2D : IShape2D
+    public interface IPolyLine2D : IShape2D, IEquatable<IPolyLine2D>
     {
         IReadOnlyList<IPoint2D> Points { get; }
         IReadOnlyList<ILineSegment2D> LineSegments { get; }
+        double Length { get; }
     }
 
-    public interface ITriangle2D : IShape2D
+    public interface ITriangle2D : IShape2D, IEquatable<ITriangle2D>, ICentroid
     {
-        ICollection<IPoint2D> Points { get; }
+        IPoint2D[] Points { get; } 
     }
 
-    public interface ILineSegment2D : IShape2D
+    public interface ILineSegment2D : IShape2D, IEquatable<ILineSegment2D>, ICentroid
     {
         IPoint2D A { get; }
         IPoint2D B { get; }
+
+        double Length { get; }
     }
 
-    public interface IRectangle : IShape2D
+    public interface IRectangle : IShape2D, IEquatable<IRectangle>, ICentroid
     {
         double Left { get; }
         double Right { get; }
         double Top { get; }
         double Bottom { get; }
+        IPoint2D Center { get; }
     }
 }

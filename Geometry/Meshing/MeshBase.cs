@@ -547,8 +547,10 @@ namespace Geometry.Meshing
             //System.Diagnostics.Trace.WriteLine(Origin.ToString());
             testedFaces.Add(Origin);
 
-            List<IFace> path = new List<IFace>();
-            path.Add(Origin);
+            List<IFace> path = new List<IFace>
+            {
+                Origin
+            };
             if (IsMatch(Origin))
                 return path;
 
@@ -620,7 +622,7 @@ namespace Geometry.Meshing
 
                 //Otherwise, select the shortest path
                 int MinDistance = listPotentialPaths.Select(L => L.Count).Min();
-                List<IFace> shortestPath = listPotentialPaths.Where(L => L.Count == MinDistance).First();
+                List<IFace> shortestPath = listPotentialPaths.First(L => L.Count == MinDistance);
                 path.AddRange(shortestPath);
                 PathCache[Origin] = path;
                 return path;
@@ -635,7 +637,7 @@ namespace Geometry.Meshing
         /// <returns></returns>
         public IFace[] AdjacentFaces(IFace face)
         {
-            return face.Edges.SelectMany(e => this[e].Faces.Where(f => f != face)).ToArray();
+            return face.Edges.SelectMany(e => this[e].Faces.Where(f => f.Equals(face) == false)).ToArray();
         }
 
         public abstract void SplitFace(IFace face);

@@ -149,7 +149,7 @@ namespace GeometryTests
 
             //Ensure the range returned completely contains the VisibleVolumeBounds
             List<GridRectangle> cellBounds = range.Indicies.Select(key => level.CellBounds(key.X, key.Y)).ToList();
-            GridRectangle rangeBounds = cellBounds.Aggregate((unionRect, next) => { unionRect.Union(next); return unionRect; });
+            GridRectangle rangeBounds = cellBounds.Aggregate((unionRect, next) => unionRect + next);
 
             Assert.IsTrue(rangeBounds.Contains(VisibleVolumeBounds), "Visible volume is not contained within the range returned");
 
@@ -308,7 +308,7 @@ namespace GeometryTests
 
             //Ensure the range returned completely contains the VisibleVolumeBounds
             List<GridRectangle> cellBounds = range.Indicies.Select(key => level.CellBounds(key.X, key.Y)).ToList();
-            GridRectangle rangeBounds = cellBounds.Aggregate((unionRect, next) => { unionRect.Union(next); return unionRect; });
+            GridRectangle rangeBounds = cellBounds.Aggregate((unionRect, next) => unionRect + next);
 
             Assert.IsTrue(rangeBounds.Contains(VisibleVolumeBounds), "Visible volume is not contained within the range returned");
         }

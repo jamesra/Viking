@@ -3,9 +3,9 @@
 //
 syntax = "proto3";
 
-option csharp_namespace = "Viking.gRPC.AnnotationTypes.V1.Protos";
+option csharp_namespace = "Viking.AnnotationServiceTypes.gRPC.V1.Protos";
 
-package Viking.gRPC.AnnotationTypes.V1;
+package Viking.AnnotationServiceTypes.gRPC.V1;
 
 import "Protos/AnnotationTypes.proto";
 import "google/protobuf/timestamp.proto";
@@ -27,6 +27,17 @@ service AnnotateLocations {
   rpc GetLocationLinksForSection (GetLocationLinksForSectionRequest) returns (GetLocationLinksForSectionResponse);
   rpc GetLocationLinksForSectionInMosaicRegion (GetLocationLinksForSectionInMosaicRegionRequest) returns (GetLocationLinksForSectionInMosaicRegionResponse);
   rpc GetLocationChangeLog (GetLocationChangeLogRequest) returns (GetLocationChangeLogResponse);
+}
+ 
+message LocationChange {
+		DBAction action = 1;
+		Location result = 2;
+}
+
+message LocationChangeResponse {
+		DBAction action = 1; //The change that was performed
+		bool Sucess = 2;     //True if the change was applied
+		optional Location result = 3; //The updated row from the database
 }
 
 message CreateLocationRequest {
@@ -95,7 +106,7 @@ message GetLocationChangesRequest {
 
 message UpdateLocationRequest {
 
-  repeated Location locations = 1;
+  repeated LocationChange locations = 1;
 }
 
 
@@ -208,9 +219,10 @@ message GetLocationChangesResponse {
 }
 
 
+
 message UpdateLocationResponse {
 
-  repeated int64 values = 1;
+  repeated LocationChangeResponse values = 1;
 }
  
 message CreateLocationLinkResponse { }

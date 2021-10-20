@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationVizLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;

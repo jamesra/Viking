@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using Microsoft.SqlServer.Types;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

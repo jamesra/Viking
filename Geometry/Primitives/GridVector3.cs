@@ -9,7 +9,7 @@ namespace Geometry
     [Serializable]
     public struct GridVector3 : IPoint, ICloneable, IComparable, IEquatable<GridVector3>
     {
-        public static double EpsilonSquared = 0.00001;
+        public const double EpsilonSquared = 0.00001;
 
         //Return a new instance for the static in case someone writes back to the value somewhere
 
@@ -71,7 +71,7 @@ namespace Geometry
 
             double[] axisdiff = this._coords.Select((val, i) => val - B._coords[i]).ToArray();
 
-            for (int iAxis = 0; iAxis < axisdiff.Count(); iAxis++)
+            for (int iAxis = 0; iAxis < axisdiff.Length; iAxis++)
             {
                 if (Math.Abs(axisdiff[iAxis]) <= Global.Epsilon)
                     continue;
@@ -100,14 +100,28 @@ namespace Geometry
             return (int)prod; 
         }
 
-        public override bool Equals(object obj)
+        public bool Equals(IPoint2D other)
         {
-            GridVector3 B = (GridVector3)obj;
-
-            return GridVector3.Distance(this, B) <= EpsilonSquared;
+            return false;
         }
 
-        bool IEquatable<GridVector3>.Equals(GridVector3 B)
+        public bool Equals(IPoint other)
+        {
+            return Distance(this, other) <= EpsilonSquared;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is GridVector3 other)
+                return Equals(other);
+
+            if (obj is IPoint iOther)
+                return Equals(iOther);
+
+            return false;
+        }
+
+        public bool Equals(GridVector3 B)
         {
             return GridVector3.Distance(this, B) <= EpsilonSquared;
         }
@@ -380,6 +394,7 @@ namespace Geometry
         }
 
         #endregion
-          
+
+        IPoint2D ICentroid.Centroid => this.XY();
     }
 }

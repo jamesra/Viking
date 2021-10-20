@@ -3,9 +3,9 @@
 //
 syntax = "proto3";
 
-option csharp_namespace = "Viking.gRPC.AnnotationTypes.V1.Protos";
+option csharp_namespace = "Viking.AnnotationServiceTypes.gRPC.V1.Protos";
 
-package Viking.gRPC.AnnotationTypes.V1;
+package Viking.AnnotationServiceTypes.gRPC.V1;
 
 import "Protos/AnnotationTypes.proto";
 import "google/protobuf/timestamp.proto";
@@ -34,6 +34,17 @@ service AnnotateStructures {
   rpc Split (SplitRequest) returns (SplitResponse);
   rpc SplitAtLocationLink (SplitAtLocationLinkRequest) returns (SplitAtLocationLinkResponse); 
   rpc GetStructureChangeLog (GetStructureChangeLogRequest) returns (GetStructureChangeLogResponse); 
+}
+ 
+message StructureChange {
+		DBAction action = 1;
+		Structure result = 2;
+}
+
+message StructureChangeResponse {
+		DBAction action = 1; //The change that was performed
+		bool Sucess = 2;     //True if the change was applied
+		optional Structure result = 3; //The updated row from the database
 }
 
 message CreateStructureRequest {
@@ -193,12 +204,12 @@ message NumberOfLocationsForStructureResponse {
 
 message UpdateStructureRequest {
 
-  repeated Structure objs = 1;
+  repeated StructureChange objs = 1;
 }
 
 message UpdateStructureResponse {
 
-  repeated int64 results = 1;
+  repeated StructureChangeResponse results = 1;
 }
 
 message UpdateStructureLinksRequest {

@@ -79,12 +79,12 @@ namespace Geometry
 
                 if (false == Reverse)
                 {
-                    curIndex = new PolylineIndex(shapeIndex.HasValue ? shapeIndex.Value : 0, 0, polyline.PointCount - 1);
+                    curIndex = new PolylineIndex(shapeIndex ?? 0, 0, polyline.PointCount - 1);
                     return true;
                 }
                 else
                 { 
-                    curIndex = new PolylineIndex(shapeIndex.HasValue ? shapeIndex.Value : 0, polyline.PointCount - 1, polyline.PointCount - 1); 
+                    curIndex = new PolylineIndex(shapeIndex ?? 0, polyline.PointCount - 1, polyline.PointCount - 1); 
                 }
             }
 
@@ -93,7 +93,7 @@ namespace Geometry
             return curIndex.HasValue;
         }
 
-        private PolylineIndex? PrevIndex(GridPolyline poly, PolylineIndex current)
+        private static PolylineIndex? PrevIndex(GridPolyline poly, PolylineIndex current)
         {
             int iPrevIndex = current.iVertex - 1;
 
@@ -109,7 +109,7 @@ namespace Geometry
             }
         }
 
-        private PolylineIndex? NextIndex(GridPolyline poly, PolylineIndex current)
+        private static PolylineIndex? NextIndex(GridPolyline poly, PolylineIndex current)
         {
             int iNextVert = current.iVertex + 1;
 
@@ -122,7 +122,7 @@ namespace Geometry
             if (iNextVert == current.NumUnique) //-1 because we do not want to report a duplicate vertex for a closed ring
             {
                 //Check for the case where the final vertex in the ring is not equal to the first.
-                if (poly.Points[0] != poly.Points[iNextVert])
+                if (false == poly.Points[0].Equals(poly.Points[iNextVert]))
                     return new PolylineIndex(current.iLine, iNextVert, current.NumUnique);
             }
               

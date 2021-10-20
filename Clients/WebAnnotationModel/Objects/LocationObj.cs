@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
 using Geometry;
 using Microsoft.SqlServer.Types;
@@ -807,7 +807,7 @@ namespace WebAnnotationModel
                            int SectionNumber, LocationType shapeType)
         {
             this.Data = new Location();
-            this.Data.DBAction = DBACTION.INSERT;
+            this.Data.DBAction = AnnotationService.Types.DBACTION.INSERT;
             this.Data.ID = Store.Locations.GetTempKey();
             this.Data.TypeCode = (short)shapeType;
 
@@ -851,7 +851,7 @@ namespace WebAnnotationModel
         internal override void Update(Location newdata)
         {
             Debug.Assert(this.Data.ID == newdata.ID);
-            this.Data.DBAction = DBACTION.NONE;
+            this.Data.DBAction = AnnotationService.Types.DBACTION.NONE;
             this.Data.Closed = newdata.Closed;
             this.Data.TypeCode = newdata.TypeCode;
             this.Data.Position = newdata.Position;

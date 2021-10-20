@@ -11,8 +11,8 @@ namespace Geometry
         /// <summary>
         /// A line we are ordering points around by angle.  A is the origin.
         /// </summary>
-        private GridLine Line;
-        private GridVector2 ComparisonPoint;
+        private readonly GridLine Line;
+        private readonly GridVector2 ComparisonPoint;
 
         public readonly bool ClockwiseOrder = false;
 
@@ -57,7 +57,7 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public struct GridLine
+    public readonly struct GridLine
     {
         public readonly GridVector2 Origin;
         public readonly GridVector2 Direction;
@@ -129,7 +129,7 @@ namespace Geometry
             Intersection = new GridVector2();
 
             if (seg == null)
-                throw new ArgumentNullException("seg");
+                throw new ArgumentNullException(nameof(seg));
 
             if (this.Direction == seg.Direction)
                 return false;
@@ -203,7 +203,7 @@ namespace Geometry
                 {
                     tri = new GridTriangle(Origin, Origin + Direction, p);
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     return 0; //This means the points are on a line
                 }

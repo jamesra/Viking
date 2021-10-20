@@ -77,7 +77,7 @@ namespace WebAnnotation.View
             get { return modelObj.Z; }
         }
 
-        public Annotation.Interfaces.LocationType TypeCode
+        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode
         {
             get { return modelObj.TypeCode; }
         }

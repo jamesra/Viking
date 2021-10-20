@@ -4,16 +4,23 @@ using System.Diagnostics;
 
 namespace Geometry
 {
-    public struct GridLineSegmentPair : IComparable
+    public readonly struct GridLineSegmentPair : IComparable, IComparable<GridLineSegmentPair>
     {
-        public GridLineSegment mapLine;
-        public GridLineSegment ctrlLine;
+        public readonly GridLineSegment mapLine;
+        public readonly GridLineSegment ctrlLine;
+
+        public GridLineSegmentPair(GridLineSegment mapline, GridLineSegment ctrlline)
+        {
+            mapLine = mapline;
+            ctrlLine = ctrlline;
+        } 
 
         public override bool Equals(object obj)
         {
-            GridLineSegmentPair linePair = (GridLineSegmentPair)obj;
+            if (obj is GridLineSegmentPair p)
+                return this == p;
 
-            return this == linePair;
+            return false;
         }
 
         public override int GetHashCode()
@@ -23,23 +30,28 @@ namespace Geometry
 
         public int CompareTo(object obj)
         {
-            GridLineSegmentPair linePair = (GridLineSegmentPair)obj;
+            if (obj is GridLineSegmentPair other)
+                return CompareTo(other);
 
-            int result = mapLine.CompareTo(linePair.mapLine);
-            if (result == 0)
-            {
-                result = ctrlLine.CompareTo(linePair.ctrlLine);
-            }
+            throw new ArgumentException(
+                $"Attempting to compare {nameof(GridLineSegmentPair)} to unknown type {obj.GetType()}");
+        }
+
+        public int CompareTo(GridLineSegmentPair other)
+        {
+            int result = mapLine.CompareTo(other.mapLine);
+            if (result == 0) 
+                result = ctrlLine.CompareTo(other.ctrlLine);
 
             return result;
         }
 
-        public static bool operator ==(GridLineSegmentPair A, GridLineSegmentPair B)
+        public static bool operator ==(in GridLineSegmentPair A, in GridLineSegmentPair B)
         {
             return (A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine);
         }
 
-        public static bool operator !=(GridLineSegmentPair A, GridLineSegmentPair B)
+        public static bool operator !=(in GridLineSegmentPair A, in GridLineSegmentPair B)
         {
             return !((A.mapLine == B.mapLine) && (A.ctrlLine == B.ctrlLine));
         }
@@ -61,9 +73,9 @@ namespace Geometry
         /// <typeparam name="T"></typeparam>
         private class PairedLineSearchGridCoordListEnumerator : IEnumerable<GridLineSegmentPair>, IEnumerator<GridLineSegmentPair>
         {
-            private PairedLineSearchGrid searchGrid;
+            private readonly PairedLineSearchGrid searchGrid;
             private List<GridLineSegmentPair> currentCell;
-            private IEnumerable<Coord> coords;
+            private readonly IEnumerable<Coord> coords;
             private IEnumerator<Coord> coordEnum;
             private int iGridIndex = -1;
 
@@ -259,15 +271,15 @@ namespace Geometry
         #endregion
 
         GridRectangle Bounds;
-        List<GridLineSegmentPair>[,] _LineGrid = new List<GridLineSegmentPair>[0, 0];
+        readonly List<GridLineSegmentPair>[,] _LineGrid;
 
-        double GridWidth;
-        double GridHeight;
+        readonly double GridWidth;
+        readonly double GridHeight;
 
-        int NumGridsX;
-        int NumGridsY;
+        readonly int NumGridsX;
+        readonly int NumGridsY;
 
-        int EstimatedLinesPerCell;
+        readonly int EstimatedLinesPerCell;
 
 
         public PairedLineSearchGrid(MappingGridVector2[] _mapPoints, GridRectangle bounds, List<int>[] edges)
@@ -326,27 +338,25 @@ namespace Geometry
                     if (iEdgePoint <= iPoint) //We would have tested this point already so skip it
                         continue;
 
-                    if (GridVector2.DistanceSquared(_mapPoints[iPoint].MappedPoint, _mapPoints[iEdgePoint].MappedPoint) <= Global.EpsilonSquared)
+                    if (GridVector2.DistanceSquared(in _mapPoints[iPoint].MappedPoint, in _mapPoints[iEdgePoint].MappedPoint) <= Global.EpsilonSquared)
                     {
                         Debug.Fail("Map points are equal");
                         continue;
                     }
 
-                    if (GridVector2.DistanceSquared(_mapPoints[iPoint].ControlPoint, _mapPoints[iEdgePoint].ControlPoint) <= Global.EpsilonSquared)
+                    if (GridVector2.DistanceSquared(in _mapPoints[iPoint].ControlPoint, in _mapPoints[iEdgePoint].ControlPoint) <= Global.EpsilonSquared)
                     {
                         Debug.Fail("Control points are equal");
                         continue;
                     }
 
                     //Build the edge and find out if it intersects
-                    GridLineSegmentPair pair = new GridLineSegmentPair();
                     try
                     {
                         GridLineSegment mapLine = new GridLineSegment(_mapPoints[iPoint].MappedPoint, _mapPoints[iEdgePoint].MappedPoint);
                         GridLineSegment ctrlLine = new GridLineSegment(_mapPoints[iPoint].ControlPoint, _mapPoints[iEdgePoint].ControlPoint);
 
-                        pair.mapLine = mapLine;
-                        pair.ctrlLine = ctrlLine;
+                        GridLineSegmentPair pair = new GridLineSegmentPair(mapline: mapLine, ctrlline: ctrlLine);
 
                         IEnumerable<Coord> Coords = GetCoordsForLine(mapLine);
                         foreach (Coord coord in Coords)
@@ -530,7 +540,7 @@ namespace Geometry
             //No sense testing if it doesn't intersect our boundary
             if (this.Bounds.Intersects(line.BoundingBox) == false)
             {
-                return new GridLineSegmentPair[0];
+                return Array.Empty<GridLineSegmentPair>();
             }
 
             return new PairedLineSearchGridCoordListEnumerator(this, GetCoordsForLine(line));

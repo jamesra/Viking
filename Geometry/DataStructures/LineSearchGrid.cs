@@ -13,18 +13,18 @@ namespace Geometry
     public class LineSearchGrid<T> : IDisposable
     {
         GridRectangle Bounds;
-        List<GridLineSegment>[,] _LineGrid = new List<GridLineSegment>[0, 0];
+        readonly List<GridLineSegment>[,] _LineGrid;
 
-        Dictionary<GridLineSegment, T> tableLineToValue;
-        Dictionary<T, GridLineSegment> tableValueToLine;
+        readonly Dictionary<GridLineSegment, T> tableLineToValue;
+        readonly Dictionary<T, GridLineSegment> tableValueToLine;
 
-        double GridWidth;
-        double GridHeight;
+        readonly double GridWidth;
+        readonly double GridHeight;
 
-        int NumGridsX;
-        int NumGridsY;
+        readonly int NumGridsX;
+        readonly int NumGridsY;
 
-        int EstimatedLinesPerCell;
+        readonly int EstimatedLinesPerCell;
 
         /// <summary>
         /// I base the size of the list to allocate based on how large it was the last time a query was run
@@ -89,9 +89,9 @@ namespace Geometry
         /// <typeparam name="T"></typeparam>
         private class LineSearchGridCoordListEnumerator : IEnumerable<GridLineSegment>, IEnumerator<GridLineSegment>
         {
-            private LineSearchGrid<T> searchGrid;
+            private readonly LineSearchGrid<T> searchGrid;
             private List<GridLineSegment> currentCell;
-            private IEnumerable<Coord> coords;
+            private readonly IEnumerable<Coord> coords;
             private IEnumerator<Coord> coordEnum;
             private int iGridIndex = -1;
 
@@ -100,12 +100,12 @@ namespace Geometry
             /// <summary>
             /// Set to true if the enumerator should take a read lock as it walks the collection
             /// </summary>
-            private bool UseLock = false;
+            private readonly bool UseLock;
 
             //Only return unique values
-            SortedSet<GridLineSegment> UniqueLines = new SortedSet<GridLineSegment>();
+            readonly SortedSet<GridLineSegment> UniqueLines = new SortedSet<GridLineSegment>();
 
-            public LineSearchGridCoordListEnumerator(LineSearchGrid<T> SearchGrid, IEnumerable<Coord> Coords, bool uselock)
+            public LineSearchGridCoordListEnumerator(LineSearchGrid<T> SearchGrid, IEnumerable<Coord> Coords, bool uselock = false)
             {
                 this.searchGrid = SearchGrid;
                 this.coords = Coords;
@@ -230,10 +230,10 @@ namespace Geometry
         /// <typeparam name="T"></typeparam>
         private class LineSearchGridRectangleEnumerator : IEnumerable<GridLineSegment>, IEnumerator<GridLineSegment>
         {
-            private LineSearchGrid<T> searchGrid;
+            private readonly LineSearchGrid<T> searchGrid;
             private List<GridLineSegment> currentCell;
-            private Coord start;
-            private Coord end;
+            private readonly Coord start;
+            private readonly Coord end;
             private int iX = 0;
             private int iY = 0;
             private int iGridIndex = -1;
@@ -243,12 +243,12 @@ namespace Geometry
             /// <summary>
             /// Set to true if the enumerator should take a read lock as it walks the collection
             /// </summary>
-            private bool UseLock = false;
+            private readonly bool UseLock;
 
             //Only return unique values
-            SortedSet<GridLineSegment> UniqueLines = new SortedSet<GridLineSegment>();
+            readonly SortedSet<GridLineSegment> UniqueLines = new SortedSet<GridLineSegment>();
 
-            public LineSearchGridRectangleEnumerator(LineSearchGrid<T> SearchGrid, Coord Start, Coord End, bool uselock)
+            public LineSearchGridRectangleEnumerator(LineSearchGrid<T> SearchGrid, Coord Start, Coord End, bool uselock = false)
             {
                 this.searchGrid = SearchGrid;
                 this.start = Start;
@@ -566,7 +566,7 @@ namespace Geometry
 
         public bool TryRemove(GridLineSegment line, out T value)
         {
-            value = default(T);
+            value = default;
             try
             {
                 rwLock.EnterUpgradeableReadLock();
@@ -878,7 +878,7 @@ namespace Geometry
             //Only return unique values
             List<U> unique_list = new List<U>(LineList.Count);
             LineList.Sort();
-            U lastItem = default(U);
+            U lastItem = default;
             foreach (U item in LineList)
             {
                 if (item.Equals(lastItem))
@@ -913,7 +913,7 @@ namespace Geometry
         {
             //If the line doesn't intersect our bounding box then skip the search
             if (!Bounds.Intersects(line.BoundingBox))
-                return new GridLineSegment[0];
+                return Array.Empty<GridLineSegment>();
 
             try
             {
@@ -962,12 +962,8 @@ namespace Geometry
                     values.Add(tableLineToValue[gridLine]);
                 }
 
-                IDisposable ListDispose = LineList as IDisposable;
-                if (ListDispose != null)
+                if (LineList is IDisposable ListDispose)
                     ListDispose.Dispose();
-
-                LineList = null;
-
 
                 // Trace.WriteLine("Enumerator: " + values.Count.ToString()); 
                 return values.ToArray();
@@ -983,7 +979,7 @@ namespace Geometry
         /// </summary>
         /// <param name="L"></param>
         /// <returns></returns>
-        public T[] GetValues(GridRectangle rect)
+        public T[] GetValues(in GridRectangle rect)
         {
             try
             {
@@ -1024,10 +1020,10 @@ namespace Geometry
             {
                 rwLock.EnterReadLock();
 
-                intersection = default(GridVector2);
+                intersection = default;
                 nearestIntersect = double.MinValue;
                 IEnumerable<GridLineSegment> potentialIntersections = GetPotentialIntersections(TestLine, !LockTaken);
-                GridLineSegment BestLine = default(GridLineSegment);
+                GridLineSegment BestLine = default;
                 foreach (GridLineSegment l in potentialIntersections)
                 {
                     //Build the edge and find out if it intersects
@@ -1041,8 +1037,8 @@ namespace Geometry
                         continue;
 
                     GridVector2 result;
-                    bool bIntersected = l.Intersects(TestLine, out result);
-                    double distance = GridVector2.Distance(TestLine.A, result);
+                    bool bIntersected = l.Intersects(in TestLine, out result);
+                    double distance = GridVector2.Distance(in TestLine.A, in result);
                     if (distance < nearestIntersect && bIntersected)
                     {
                         nearestIntersect = distance;
@@ -1051,8 +1047,7 @@ namespace Geometry
                     }
                 }
 
-                IDisposable ListDispose = potentialIntersections as IDisposable;
-                if (ListDispose != null)
+                if (potentialIntersections is IDisposable ListDispose)
                     ListDispose.Dispose();
 
                 potentialIntersections = null;
@@ -1060,7 +1055,7 @@ namespace Geometry
                 if (tableLineToValue.ContainsKey(BestLine))
                     return tableLineToValue[BestLine];
 
-                return default(T);
+                return default;
             }
             finally
             {
@@ -1082,7 +1077,7 @@ namespace Geometry
             {
                 rwLock.EnterReadLock();
 
-                BestIntersection = default(GridVector2);
+                BestIntersection = default;
                 ClosestDistance = double.MaxValue;
                 int SearchSize = 1;
                 List<GridLineSegment> potentialIntersections = GetPotentialIntersections(Position, SearchSize, false);
@@ -1096,11 +1091,11 @@ namespace Geometry
                     potentialIntersections = GetPotentialIntersections(Position, SearchSize, true);
                 }
 
-                GridLineSegment BestLine = default(GridLineSegment);
+                GridLineSegment BestLine = default;
                 foreach (GridLineSegment l in potentialIntersections)
                 {
                     GridVector2 thisIntersection;
-                    double distance = l.DistanceToPoint(Position, out thisIntersection);
+                    double distance = l.DistanceToPoint(in Position, out thisIntersection);
                     if (distance < ClosestDistance)
                     {
                         ClosestDistance = distance;
@@ -1112,7 +1107,7 @@ namespace Geometry
                 if (tableLineToValue.ContainsKey(BestLine))
                     return tableLineToValue[BestLine];
 
-                return default(T);
+                return default;
             }
             finally
             {

@@ -58,9 +58,9 @@ namespace Geometry
     {
         MappingGridVector2[] MapPoints { get; }
 
-        List<MappingGridVector2> IntersectingControlRectangle(GridRectangle gridRect);
+        List<MappingGridVector2> IntersectingControlRectangle(in GridRectangle gridRect);
 
-        List<MappingGridVector2> IntersectingMappedRectangle(GridRectangle gridRect);
+        List<MappingGridVector2> IntersectingMappedRectangle(in GridRectangle gridRect);
 
         GridRectangle ControlBounds { get; }
         GridRectangle MappedBounds { get; }

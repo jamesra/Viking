@@ -14,17 +14,8 @@ namespace Geometry
         GridTriangle T1;
 
         public GridQuad(GridVector2 pos, double Width, double Height)
-            : this(pos, new GridVector2(pos.X + Width, pos.Y), new GridVector2(pos.X, pos.Y + Height), new GridVector2(pos.X + Width, pos.Y + Height), Color.Blue)
+            : this(pos, new GridVector2(pos.X + Width, pos.Y), new GridVector2(pos.X, pos.Y + Height), new GridVector2(pos.X + Width, pos.Y + Height))
         { }
-
-        public GridQuad(GridVector2 pos, double Width, double Height, Color color)
-            : this(pos, new GridVector2(pos.X + Width, pos.Y), new GridVector2(pos.X, pos.Y + Height), new GridVector2(pos.X + Width, pos.Y + Height), color)
-        {}
-
-         
-        public GridQuad(GridVector2 p1, GridVector2 p2, GridVector2 p3, GridVector2 p4) 
-            : this(p1,p2,p3,p4, Color.Blue)
-        {}
 
         /// <summary>
         /// 
@@ -34,10 +25,10 @@ namespace Geometry
         /// <param name="p3">TopLeft</param>
         /// <param name="p4">TopRight</param>
         /// <param name="color"></param>
-        public GridQuad(GridVector2 p1, GridVector2 p2, GridVector2 p3, GridVector2 p4, Color color)
+        public GridQuad(GridVector2 p1, GridVector2 p2, GridVector2 p3, GridVector2 p4)
         {
-           T0 = new GridTriangle(p1,p2,p3,color); 
-           T1 = new GridTriangle(p2,p4,p3,color); 
+           T0 = new GridTriangle(p1,p2,p3); 
+           T1 = new GridTriangle(p2,p4,p3); 
         }
 
         public GridQuad(GridRectangle rect)
@@ -45,47 +36,13 @@ namespace Geometry
             T0 = new GridTriangle(rect.LowerLeft, rect.LowerRight, rect.UpperLeft);
             T1 = new GridTriangle(rect.LowerRight, rect.UpperRight, rect.UpperLeft); 
         }
+        
 
-        public Color Color
-        {
-            set
-            {
-                T0.Color = value;
-                T1.Color = value; 
-            }
-            get
-            {
-                return T0.Color; 
-            }
-        }
-
-        public GridVector2 Center
-        {
-            get
-            {
-                return new GridLineSegment(T0.p2, T0.p3).Bisect();
-            }
-        }
-
-        public double Width
-        {
-            get
-            {
-                return GridVector2.Distance(T0.p1, T0.p2);
-            }
-        }
-
-        public double Height
-        {
-            get
-            {
-                return GridVector2.Distance(T0.p1, T0.p3);
-            }
-        }
-
+        public GridVector2 Center => new GridLineSegment(T0.p2, T0.p3).Bisect();
+         
         public GridVector2 BottomLeft
         {
-            get { return T0.p1; }
+            get => T0.p1;
             set {
                 T0 = new GridTriangle(value, T0.p2, T0.p3); 
             }
@@ -93,7 +50,7 @@ namespace Geometry
 
         public GridVector2 BottomRight
         {
-            get { return T0.p2; }
+            get => T0.p2;
             set {
                 T0 = new GridTriangle(T0.p1, value, T0.p3);
                 T1 = new GridTriangle(value, T1.p2, T1.p3); 
@@ -102,7 +59,7 @@ namespace Geometry
 
         public GridVector2 TopLeft
         {
-            get { return T0.p3; }
+            get => T0.p3;
             set {
                 T0 = new GridTriangle(T0.p1, T0.p3, value);
                 T1 = new GridTriangle(T1.p1, T1.p2, value); 
@@ -111,7 +68,7 @@ namespace Geometry
 
         public GridVector2 TopRight
         {
-            get { return T1.p2; }
+            get => T1.p2;
             set {
                 T1 = new GridTriangle(T1.p1,  value, T1.p3); 
             }
@@ -144,7 +101,7 @@ namespace Geometry
             return false; 
         }
 
-        public bool Contains(GridRectangle R)
+        public bool Contains(in GridRectangle R)
         {
             return Contains(new GridQuad(new GridVector2(R.Left, R.Bottom), R.Width, R.Height) ); 
         }
@@ -152,7 +109,7 @@ namespace Geometry
         public bool Contains(GridQuad R)
         {
             if (R == null)
-                throw new ArgumentNullException("R");
+                throw new ArgumentNullException(nameof(R));
 
             GridVector2 v1 = R.BottomLeft;
             GridVector2 v2 = R.BottomRight;
@@ -194,13 +151,6 @@ namespace Geometry
             return false; 
         }
 
-        public double Area
-        {
-            get
-            {
-                return T0.Area + T1.Area; 
-            }
-        }
-
+        public double Area => T0.Area + T1.Area; 
     }
 }

@@ -9,7 +9,7 @@ namespace Geometry
     /// <summary>
     /// A set of lines where the endpoint of each line in the set is the starting point of the next
     /// </summary>
-    public class GridPolyline : IPolyLine2D, IEquatable<GridPolyline>
+    public class GridPolyline : IPolyLine2D, IEquatable<GridPolyline>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
         protected List<IPoint2D> _Points;
 
@@ -33,15 +33,11 @@ namespace Geometry
 
         private RTree.RTree<GridLineSegment> rTree = null;
 
-        public int PointCount { get { return _Points.Count; } }
+        public int PointCount => _Points.Count;
 
-        public int NumUniqueVerticies { get
-            {
-                return _Points.Count;
-            }
-        }
+        public int NumUniqueVerticies => _Points.Count;
 
-        public int LineCount { get { return LineSegments.Count; } }
+        public int LineCount => LineSegments.Count;
 
         public GridPolyline(bool AllowSelfIntersection = false)
         {
@@ -72,43 +68,35 @@ namespace Geometry
 
             _Points = points.Cast<IPoint2D>().ToList();
         }
-
-        /*
-        public static implicit operator IPoint2D[](GridPolyline src)
+        
+        public static explicit operator IPoint2D[](GridPolyline src)
         {
             return src._Points.ToArray();
         }
 
-        public static implicit operator List<IPoint2D>(GridPolyline src)
+        public static explicit operator List<IPoint2D>(GridPolyline src)
         {
             return src._Points.ToList();
         }
 
-        public static implicit operator GridVector2[](GridPolyline src)
+        public static explicit operator GridVector2[](GridPolyline src)
         {
             return src._Points.Select(p => new GridVector2(p)).ToArray();
         }
 
-        public static implicit operator List<GridVector2>(GridPolyline src)
+        public static explicit operator List<GridVector2>(GridPolyline src)
         {
             return src._Points.Select(p => new GridVector2(p)).ToList();
         }
-        */
 
-        public GridVector2 this[PolylineIndex index]
-        {
-            get
-            {
-                return _Points[index.iVertex].ToGridVector2();
-            }
-        }
+        public GridVector2 this[PolylineIndex index] => _Points[index.iVertex].ToGridVector2();
          
         /// <summary>
         /// Returns true if the point can be added without violating self-intersection restrictions
         /// </summary>
         /// <param name="next"></param>
         /// <returns></returns>
-        public bool CanAdd(IPoint2D next)
+        public bool CanAdd(in IPoint2D next)
         {
             if (_Points.Count == 0)
                 return true;
@@ -149,7 +137,7 @@ namespace Geometry
             if (_Points.Contains(next) && AllowsSelfIntersection == false)
                 throw new ArgumentException("Point already in Polyline that does not allow self-intersection");
 
-            if (_Points.Last() == next)
+            if (_Points.Last().Equals(next))
                 throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
 
             GridLineSegment line = new GridLineSegment(_Points.Last(), next);
@@ -199,7 +187,7 @@ namespace Geometry
             }
             else if(_Points.Count == 1)
             {
-                if (_Points[0] == value)
+                if (_Points[0].Equals(value))
                     throw new ArgumentException("Inserting point already in Polyline identical to an adjacent point");
 
                 _Points.Insert(index, value);
@@ -211,7 +199,7 @@ namespace Geometry
             //Case for appending to the end of the polyline
             if (_Points.Count == index)
             {
-                if (_Points[index - 1] == value)
+                if (_Points[index - 1].Equals(value))
                     throw new ArgumentException("Inserting duplicate point into polyline adjacent to the duplicate.");
 
                 Add(value);
@@ -250,7 +238,7 @@ namespace Geometry
             List<GridLineSegment> new_segments = new List<GridLineSegment>();
             List<GridLineSegment> removed_segments = new List<GridLineSegment>();
 
-            Debug.Assert(_Points[index] != value, "Seems a bit odd to be inserting a point with the same value into the polyline, creating a duplicate");
+            Debug.Assert(_Points[index].Equals(value) == false, "Seems a bit odd to be inserting a point with the same value into the polyline, creating a duplicate");
 
             //Remove the segments that will be replaced by the new vertex from our test set
 
@@ -357,11 +345,10 @@ namespace Geometry
                 var intersects = ls.Intersects(other, true, out var intersection);
                 if (intersects)
                 {
-                    IPoint2D point = intersection as IPoint2D;
-                    if (point != null)
+                    if (intersection is IPoint2D point)
                     {
                         GridVector2 p = point.ToGridVector2();
-                        found_or_added_intersections.Insert(0,p);
+                        found_or_added_intersections.Insert(0, p);
                         System.Diagnostics.Debug.Assert(false == _Points.Contains(point));
                         this.Insert(i + 1, point);
                     }
@@ -394,34 +381,24 @@ namespace Geometry
             return found;
         }
 
-        public double Area
-        {
-            get
-            {
-                throw new ArgumentException("No area for Polyline");
-            }
-        }
+        public double Area => throw new ArgumentException("No area for Polyline");
+
+        public double Length => LineSegments.Sum(l => l.Length);
 
         public GridRectangle BoundingBox
         {
             get
             {
-                double MinX = _Points.Min(p => p.X);
-                double MaxX = _Points.Max(p => p.X);
-                double MinY = _Points.Min(p => p.Y);
-                double MaxY = _Points.Max(p => p.Y);
+                var MinX = _Points.Min(p => p.X);
+                var MaxX = _Points.Max(p => p.X);
+                var MinY = _Points.Min(p => p.Y);
+                var MaxY = _Points.Max(p => p.Y);
 
                 return new GridRectangle(MinX, MaxX, MinY, MaxY);
             }
         }
 
-        public ShapeType2D ShapeType
-        {
-            get
-            {
-                return ShapeType2D.POLYLINE;
-            }
-        }
+        public ShapeType2D ShapeType => ShapeType2D.POLYLINE;
 
         private List<GridLineSegment> _LineSegments;
 
@@ -429,48 +406,40 @@ namespace Geometry
         {
             get
             {
-                if (_LineSegments == null || _LineSegments.Count != _Points.Count - 1)
+                if (_LineSegments != null && _LineSegments.Count == _Points.Count - 1)
                 {
-                    _LineSegments = new List<GridLineSegment>(this._Points.Count);
+                    return _LineSegments.ToList();
+                }
 
-                    for (int i = 0; i < _Points.Count - 1; i++)
-                    {
-                        _LineSegments.Add(new GridLineSegment(_Points[i], _Points[i + 1]));
-                    }
+                _LineSegments = new List<GridLineSegment>(this._Points.Count);
+
+                for (int i = 0; i < _Points.Count - 1; i++)
+                {
+                    _LineSegments.Add(new GridLineSegment(_Points[i], _Points[i + 1]));
                 }
 
                 return _LineSegments.ToList();
             }
         }
 
-        IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments
+        IReadOnlyList<ILineSegment2D> IPolyLine2D.LineSegments => _LineSegments.Cast<ILineSegment2D>().ToList();
+
+
+        public IReadOnlyList<IPoint2D> Points => this._Points;
+
+        public bool Contains(in IPoint2D p)
         {
-            get
-            {
-                return _LineSegments.Cast<ILineSegment2D>().ToList();
-            }
+            IPoint2D pnt = p;
+            return this.LineSegments.Any(line => line.Contains(in pnt));
         }
 
-
-        public IReadOnlyList<IPoint2D> Points
+        public bool Intersects(in IShape2D shape)
         {
-            get
-            {
-                return this._Points;
-            }
+            IShape2D shp = shape;
+            return this.LineSegments.Any(line => line.Intersects(shp));
         }
 
-        public bool Contains(IPoint2D p)
-        {
-            return this.LineSegments.Any(line => line.Contains(p));
-        }
-
-        public bool Intersects(IShape2D shape)
-        {
-            return this.LineSegments.Any(line => line.Intersects(shape));
-        }
-
-        IShape2D IShape2D.Translate(IPoint2D offset) => this.Translate(offset);
+        IShape2D IShape2D.Translate(in IPoint2D offset) => this.Translate(offset);
 
         public GridPolyline Translate(IPoint2D offset)
         {  
@@ -511,6 +480,22 @@ namespace Geometry
             return this.CalculateCurvePoints(NumInterpolations);
         }
 
+        public override int GetHashCode()
+        {
+            return 0; //Use a constant since the polyline can change
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is GridPolyline other)
+                return Equals(other);
+
+            if (obj is IShape2D otherShape)
+                return Equals(otherShape);
+
+            return base.Equals(obj);
+        }
+
         public bool Equals(GridPolyline other)
         {
             if (object.ReferenceEquals(this, other))
@@ -524,7 +509,40 @@ namespace Geometry
 
             for (int i = 0; i < this.PointCount; i++)
             {
-                if (this._Points[i] != other._Points[i])
+                if (false == this._Points[i].Equals(other._Points[i]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public bool Equals(IShape2D other)
+        {
+            if (other is IPolyLine2D otherPolyline)
+                return Equals(otherPolyline);
+            if (other is ILineSegment2D otherLine)
+                return Equals(otherLine);
+            
+            return false; 
+        }
+
+        public bool Equals(ILineSegment2D other)
+        {
+            if (this.PointCount != 2)
+                return false;
+
+            return (Points[0].Equals(other.A) && Points[1].Equals(other.B)) ||
+                   (Points[1].Equals(other.A) && Points[0].Equals(other.B));
+        }
+
+        public bool Equals(IPolyLine2D other)
+        {
+            if (this.PointCount != other.Points.Count)
+                return false;
+
+            for (int i = 0; i < this.PointCount; i++)
+            {
+                if (false == this._Points[i].Equals(other.Points[i]))
                     return false;
             }
 

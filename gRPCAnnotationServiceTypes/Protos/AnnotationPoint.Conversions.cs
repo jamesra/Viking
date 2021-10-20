@@ -1,28 +1,36 @@
-namespace Viking.gRPC.AnnotationTypes.V1.Protos
+namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 {
     public partial class AnnotationPoint
     {
-        public static implicit operator AnnotationPoint(global::Viking.gRPC.AnnotationTypes.AnnotationPoint src)
+        public static implicit operator AnnotationPoint(global::Geometry.GridVector3 src)
         {
-            var value = new AnnotationPoint {
+            return new AnnotationPoint
+            {
                 X = src.X,
                 Y = src.Y,
                 Z = src.Z,
             };
-            return value;
         }
-
-
-        public static implicit operator global::Viking.gRPC.AnnotationTypes.AnnotationPoint(AnnotationPoint src)
-        {
-            var value = new global::Viking.gRPC.AnnotationTypes.AnnotationPoint {
+            
+        public static implicit operator AnnotationPoint(global::Geometry.GridVector2 src)
+        { 
+            return new AnnotationPoint
+            {
                 X = src.X,
-                Y = src.Y,
-                Z = src.Z,
-            };
-            return value;
+                Y = src.Y
+            }; 
         }
 
+
+        public static implicit operator global::Geometry.GridVector2(AnnotationPoint src)
+        {
+            return new global::Geometry.GridVector2(src.X, src.Y);
+        }
+
+        public static implicit operator global::Geometry.GridVector3(AnnotationPoint src)
+        {
+            return new global::Geometry.GridVector3(src.X, src.Y, src.Z);
+        }
     }
 }
 

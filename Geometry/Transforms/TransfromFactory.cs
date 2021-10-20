@@ -13,8 +13,8 @@ namespace Geometry.Transforms
     public class TransformParameters
     {
         public string transform_name;
-        public double[] fixedParameters = new double[0];
-        public double[] variableParameters = new double[0];
+        public double[] fixedParameters = Array.Empty<double>();
+        public double[] variableParameters = Array.Empty<double>();
 
         /// <summary>
         /// Read parameters from an enumerator of strings and return an array of numbers.  First value is number of values.  Remaining strings are values themselves.
@@ -159,7 +159,7 @@ namespace Geometry.Transforms
                     }
                 }
             }
-            catch (System.Net.WebException e)
+            catch (System.Net.WebException)
             {
                 Trace.WriteLine(stosURI.ToString() + " could not be loaded", "Geometry");
                 return null;
@@ -215,8 +215,8 @@ namespace Geometry.Transforms
             float pixelSpacing,
             int iFixedParameters,
             int iVariableParameters,
-            GridRectangle MappedBounds,
-            GridRectangle ControlBounds)
+            in GridRectangle MappedBounds,
+            in GridRectangle ControlBounds)
         {
 
             //Find the dimensions of the grid
@@ -272,8 +272,8 @@ namespace Geometry.Transforms
                                                                 float pixelSpacing,
                                                                 int iFixedParameters,
                                                                 int iVariableParameters,
-                                                                GridRectangle ControlBounds,
-                                                                GridRectangle MappedBounds)
+                                                                in GridRectangle ControlBounds,
+                                                                in GridRectangle MappedBounds)
         {
             //Find the dimensions of the grid
             MappingGridVector2[] mappings;
@@ -335,7 +335,7 @@ namespace Geometry.Transforms
         /// <param name="iVariableParameters"></param>
         /// <param name="MappedBounds"></param>
         /// <returns></returns>
-        public static List<MappingGridVector2> ParsePolyTransform(TransformParameters transform, float pixelSpacing, int iFixedParameters, int iVariableParameters, GridRectangle MappedBounds)
+        public static List<MappingGridVector2> ParsePolyTransform(TransformParameters transform, float pixelSpacing, int iFixedParameters, int iVariableParameters, in GridRectangle MappedBounds)
         {
             if (transform == null)
                 throw new ArgumentNullException();
@@ -434,7 +434,6 @@ namespace Geometry.Transforms
             if (mosaic == null || path == null)
                 throw new ArgumentNullException();
 
-            string[] parts;
             int numTiles = 0;
             //           double PixelSpacing; 
 
@@ -442,6 +441,7 @@ namespace Geometry.Transforms
             int iTileStart = 3;
             for (int i = 0; i < mosaic.Length; i++)
             {
+                string[] parts;
                 string line = mosaic[i];
                 if (line.StartsWith("format_version_number:"))
                 {
@@ -564,7 +564,7 @@ namespace Geometry.Transforms
             else
             {
                 Debug.Assert(false, "Unknown format version in mosaic file");
-                return new GridTransform[0];
+                return Array.Empty<GridTransform>();
             }
 
             /*
@@ -651,7 +651,7 @@ namespace Geometry.Transforms
         private static ITransform ParseTranslateTransform(TransformParameters transform, TransformInfo info)
         {
             if (transform == null)
-                throw new ArgumentNullException("transform");
+                throw new ArgumentNullException(nameof(transform));
 
             //string filename = System.IO.Path.GetFileName(parts[1]);
 
@@ -744,7 +744,7 @@ namespace Geometry.Transforms
                     GridVector2 mapPoint = GridTransform.CoordinateFromGridPos(x, y, gridWidth, gridHeight, ImageWidth, ImageHeight);
                     GridVector2 ctrlPoint = Points[i];
 
-                    mapList[i] = new MappingGridVector2(ctrlPoint, mapPoint); ;
+                    mapList[i] = new MappingGridVector2(ctrlPoint, mapPoint);
                 }
             }
 

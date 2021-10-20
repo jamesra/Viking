@@ -1,12 +1,12 @@
 using Grpc.Core;
-using GrpcAnnotationService.Protos;
+using gRPCAnnotationService.Protos;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading.Tasks;
 using Viking.DataModel.Annotation;
 using Viking.gRPC.AnnotationTypes.V1.Protos;
 
-namespace GrpcAnnotationService
+namespace gRPCAnnotationService
 {
     public class PermittedStructureLinksService : Viking.gRPC.AnnotationTypes.V1.Protos.PermittedStructureLinks.PermittedStructureLinksBase
     {

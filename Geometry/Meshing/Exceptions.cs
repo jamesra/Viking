@@ -10,15 +10,15 @@ namespace Geometry.Meshing
     /// </summary>
     public abstract class GeometryMeshExceptionBase : Exception
     {
-        public GeometryMeshExceptionBase()
+        protected GeometryMeshExceptionBase()
         {
         }
 
-        public GeometryMeshExceptionBase(string message) : base(message)
+        protected GeometryMeshExceptionBase(string message) : base(message)
         {
         }
 
-        public GeometryMeshExceptionBase(string message, Exception innerException) : base(message, innerException)
+        protected GeometryMeshExceptionBase(string message, Exception innerException) : base(message, innerException)
         {
         }
 

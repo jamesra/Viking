@@ -9,8 +9,10 @@ namespace Geometry
         {
             if (dict.ContainsKey(key) == false)
             {
-                var newset = new SortedSet<int>();
-                newset.Add(val);
+                var newset = new SortedSet<int>
+                {
+                    val
+                };
                 dict.Add(key, newset);
             }
             else

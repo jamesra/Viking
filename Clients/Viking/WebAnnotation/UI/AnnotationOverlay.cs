@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
 using Geometry;
 using Microsoft.Xna.Framework;

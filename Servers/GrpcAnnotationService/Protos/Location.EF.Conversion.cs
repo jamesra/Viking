@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using Viking.gRPC.AnnotationTypes.V1.Protos;
 
-namespace GrpcAnnotationService.Protos
+namespace gRPCAnnotationService.Protos
 {
     public static class LocationEFExtensions
     {

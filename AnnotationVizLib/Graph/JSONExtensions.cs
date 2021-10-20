@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 

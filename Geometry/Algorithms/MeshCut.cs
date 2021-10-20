@@ -22,7 +22,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Used for quick Contains tests
         /// </summary>
-        private HashSet<long> _AllVerts;
+        private readonly HashSet<long> _AllVerts;
 
         /// <summary>
         /// When set to true, the XSortedVerts with equal X values are sorted by ascending Y value, otherwise by descending Y value
@@ -429,7 +429,7 @@ namespace Geometry.Meshing
         {
             int v1;
             int v2;
-            int temp;
+            //int temp;
             GridVector2 p1;
             GridVector2 p2;
 

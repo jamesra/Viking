@@ -5,7 +5,7 @@ namespace Geometry
 {
     public class GridVectorComparer : IComparer<GridVector2>, IComparer<IPoint2D>
     {
-        public bool XYOrder = true;
+        public bool XYOrder;
 
         public GridVectorComparer(bool xyOrder=true)
         {
@@ -14,7 +14,7 @@ namespace Geometry
 
         public int Compare(IPoint2D A, IPoint2D B)
         {
-            return XYOrder ? GridVectorComparerXY.CompareXY(A, B) : GridVectorComparerYX.CompareYX(A, B);
+            return XYOrder ? GridVectorComparerXY.CompareXY(in A, in B) : GridVectorComparerYX.CompareYX(in A, in B);
         }
 
         public int Compare(GridVector2 A, GridVector2 B)
@@ -56,9 +56,9 @@ namespace Geometry
             return diffY > 0 ? 1 : -1;
         }
 
-        public int Compare(IPoint2D A, IPoint2D B)
+        public int Compare( IPoint2D A, IPoint2D B)
         {
-            return GridVectorComparerYX.CompareYX(A, B);
+            return GridVectorComparerYX.CompareYX(in A, in B);
         }
 
         public int Compare(GridVector2 x, GridVector2 y)
@@ -118,7 +118,7 @@ namespace Geometry
 
         public int Compare(IPoint2D A, IPoint2D B)
         {
-            return GridVectorComparerXY.CompareXY(A, B);
+            return GridVectorComparerXY.CompareXY(in A, in B);
         }
 
         public int Compare(GridVector2 x, GridVector2 y)
@@ -131,11 +131,11 @@ namespace Geometry
     [Serializable]
     public struct GridVector2 : IShape2D, IPoint, ICloneable, IComparable,
                                 IComparable<GridVector2>, IEquatable<GridVector2>,
-                                IComparable<IPoint2D>, IEquatable<IPoint2D>, IEquatable<IShape2D>
+                                IComparable<IPoint2D>, IEquatable<IPoint2D>
     {
-        public readonly static GridVector2 UnitX = new GridVector2(1, 0);
-        public readonly static GridVector2 UnitY = new GridVector2(0, 1);
-        public readonly static GridVector2 Zero = new GridVector2(0, 0);
+        public static readonly GridVector2 UnitX = new GridVector2(1, 0);
+        public static readonly GridVector2 UnitY = new GridVector2(0, 1);
+        public static readonly GridVector2 Zero = new GridVector2(0, 0);
 
         public double X;
         public double Y;
@@ -173,9 +173,9 @@ namespace Geometry
         }
         */
 
-        public GridVector3 ToGridVector3(double Z)
+        public GridVector3 ToGridVector3(double z)
         {
-            return new GridVector3(this.X, this.Y, Z);
+            return new GridVector3(this.X, this.Y, z);
         }
 
         /// <summary>
@@ -242,51 +242,25 @@ namespace Geometry
             //return DistanceSquared((IPoint2D)this, B) <= Global.EpsilonSquared;
         }
 
+        public bool Equals(IPoint other)
+        {
+            return false;
+        }
+
         public override bool Equals(object obj)
         {
             if (object.ReferenceEquals(obj, null))
                 return false;
 
-            GridVector2 B = (GridVector2)obj;
+            if (obj is GridVector2 other)
+                return Equals(other);
+            if (obj is IPoint2D point2D)
+                return Equals(point2D);
+            if (obj is IPoint point3D)
+                return Equals(point3D);
 
-            return this.Equals(B);
-        }
-
-        /*
-        
-        public int Compare(GridVector2 A, GridVector2 B)
-        {
-            return this.Compare((IPoint2D)A, (IPoint2D)B);
-        }
-        public int Compare(IPoint2D A, IPoint2D B)
-        {
-            //We need to use the same equality test as our epsilon value
-            double diffX = A.X - B.X;
-            double diffY = A.Y - B.Y;
-            if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
-                return 0;
-
-            if (Math.Abs(diffX) < Global.Epsilon)
-            {
-                if (Math.Abs(diffY) < Global.Epsilon)
-                {
-                    //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
-                    if (diffX == 0)
-                    {
-                        return diffY > 0 ? 1 : -1;
-                    }
-                    else
-                    {
-                        return diffX > 0 ? 1 : -1;
-                    }
-                }
-
-                return diffY > 0 ? 1 : -1;
-            }
-
-            return diffX > 0 ? 1 : -1;
-        }
-        */
+            return false;
+        } 
 
         public int CompareTo(Object Obj)
         {
@@ -347,7 +321,7 @@ namespace Geometry
         public static string ToMatlab(GridVector2[] array)
         {
             if (array == null)
-                throw new ArgumentNullException("array"); 
+                throw new ArgumentNullException(nameof(array)); 
 
             string s = "[";
             for (int i = 0; i < array.Length; i++)
@@ -359,7 +333,7 @@ namespace Geometry
             return s;
         }
 
-        static public double Magnitude(in GridVector2 A)
+        public static double Magnitude(in GridVector2 A)
         {
             return Math.Sqrt((A.X * A.X) + (A.Y * A.Y));
         }
@@ -371,31 +345,31 @@ namespace Geometry
             Y = Y / mag; 
         }
 
-        static public GridVector2 Rotate90(in GridVector2 A)
+        public static GridVector2 Rotate90(in GridVector2 A)
         {
             return new GridVector2(-A.Y, A.X);
         }
 
-        static public GridVector2 Normalize(in GridVector2 A)
+        public static GridVector2 Normalize(in GridVector2 A)
         {
             double mag = Magnitude(A);
             return new GridVector2(A.X / mag, A.Y / mag); 
         }
 
-        static public double Distance(in GridVector2 A, in GridVector2 B)
+        public static double Distance(in GridVector2 A, in GridVector2 B)
         {
-            double dX = A.X - B.X; 
-            double dY = A.Y - B.Y;
+            var dX = A.X - B.X; 
+            var dY = A.Y - B.Y;
 
             return Math.Sqrt((dX*dX)+(dY*dY));
         }
 
-        static public double Distance(in IPoint A, in IPoint B)
+        public static double Distance(in IPoint A, in IPoint B)
         {
             if(A == null)
-                throw new ArgumentNullException("A"); 
+                throw new ArgumentNullException(nameof(A)); 
             if(B == null)
-                throw new ArgumentNullException("B"); 
+                throw new ArgumentNullException(nameof(B)); 
 
             double dX = A.X - B.X;
             double dY = A.Y - B.Y;
@@ -403,20 +377,33 @@ namespace Geometry
             return Math.Sqrt((dX * dX) + (dY * dY));
         }
 
-        static public double DistanceSquared(in GridVector2 A, in GridVector2 B)
+        public static double Distance(in IPoint2D A, in IPoint2D B)
+        {
+            if (A == null)
+                throw new ArgumentNullException(nameof(A));
+            if (B == null)
+                throw new ArgumentNullException(nameof(B));
+
+            double dX = A.X - B.X;
+            double dY = A.Y - B.Y;
+
+            return Math.Sqrt((dX * dX) + (dY * dY));
+        }
+
+        public static double DistanceSquared(in GridVector2 A, in GridVector2 B)
         {
             double dX = A.X - B.X;
             double dY = A.Y - B.Y;
 
             return (dX * dX) + (dY * dY);
         }
-          
-        static public double DistanceSquared(in IPoint2D A, in IPoint2D B)
+
+        public static double DistanceSquared(in IPoint2D A, in IPoint2D B)
         {
             if (A == null)
-                throw new ArgumentNullException("A");
+                throw new ArgumentNullException(nameof(A));
             if (B == null)
-                throw new ArgumentNullException("B"); 
+                throw new ArgumentNullException(nameof(B)); 
 
             double dX = A.X - B.X;
             double dY = A.Y - B.Y;
@@ -440,7 +427,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public double Dot(GridVector2 A, GridVector2 B)
+        public static double Dot(in GridVector2 A, in GridVector2 B)
         {
             /*
             double AX = Math.Round(A.X, 3);
@@ -465,12 +452,12 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public double ArcAngle(in GridVector2 Origin, GridVector2 A, GridVector2 B, bool Clockwise = false)
+        public static double ArcAngle(in GridVector2 Origin, in GridVector2 A, in GridVector2 B, bool Clockwise = false)
         {
-            A = A - Origin;
-            B = B - Origin;
-            double AngleA = Math.Atan2(A.Y, A.X);
-            double AngleB = Math.Atan2(B.Y, B.X); 
+            var U = A - Origin;
+            var V = B - Origin;
+            double AngleA = Math.Atan2(U.Y, U.X);
+            double AngleB = Math.Atan2(V.Y, V.X); 
             double Angle = Clockwise ? AngleB - AngleA : AngleA - AngleB;
 
             if (Angle <= -Math.PI)
@@ -488,7 +475,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public double ArcAngle(in IPoint2D Origin, IPoint2D A, IPoint2D B, bool Clockwise = false)
+        public static double ArcAngle(in IPoint2D Origin, IPoint2D A, IPoint2D B, bool Clockwise = false)
         {
             A = new GridVector2(A.X - Origin.X, A.Y - Origin.Y);
             B = new GridVector2(B.X - Origin.X, B.Y - Origin.Y);
@@ -511,7 +498,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public double AbsArcAngle(in GridVector2 Origin, GridVector2 A, GridVector2 B, bool Clockwise = false)
+        public static double AbsArcAngle(in GridVector2 Origin, GridVector2 A, GridVector2 B, bool Clockwise = false)
         {
             A = new GridVector2(A.X - Origin.X, A.Y - Origin.Y);
             B = new GridVector2(B.X - Origin.X, B.Y - Origin.Y);
@@ -534,7 +521,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public double AbsArcAngle(in GridLine BaseLine, GridVector2 P, bool Clockwise=false)
+        public static double AbsArcAngle(in GridLine BaseLine, GridVector2 P, bool Clockwise=false)
         {
             GridVector2 A = new GridVector2(P.X - BaseLine.Origin.X, P.Y - BaseLine.Origin.Y);
             GridVector2 B = BaseLine.Direction;
@@ -557,7 +544,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public double AbsArcAngle(in IPoint2D Origin, IPoint2D A, IPoint2D B, bool Clockwise = false)
+        public static double AbsArcAngle(in IPoint2D Origin, IPoint2D A, IPoint2D B, bool Clockwise = false)
         {
             A = new GridVector2(A.X - Origin.X, A.Y - Origin.Y);
             B = new GridVector2(B.X - Origin.X, B.Y - Origin.Y);
@@ -579,73 +566,73 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public double Angle(in GridVector2 A, in GridVector2 B)
+        public static double Angle(in GridVector2 A, in GridVector2 B)
         {
             GridVector2 delta = B - A;
             return Math.Atan2(delta.Y, delta.X);
         }
-        
-        static public GridVector2 operator -(in GridVector2 A)
+
+        public static GridVector2 operator -(in GridVector2 A)
         {
             return new GridVector2(-A.X, -A.Y); 
         }
 
-        static public GridVector2 operator -(in GridVector2 A, in GridVector2 B)
+        public static GridVector2 operator -(in GridVector2 A, in GridVector2 B)
         {
             return new GridVector2(A.X - B.X, A.Y - B.Y); 
         }
 
-        static public GridVector2 operator +(in GridVector2 A, in GridVector2 B)
+        public static GridVector2 operator +(in GridVector2 A, in GridVector2 B)
         {
             return new GridVector2(A.X + B.X, A.Y + B.Y); 
         }
 
-        static public GridVector2 operator -(in GridVector2 A, in IPoint2D B)
+        public static GridVector2 operator -(in GridVector2 A, in IPoint2D B)
         {
             return new GridVector2(A.X - B.X, A.Y - B.Y);
         }
 
-        static public GridVector2 operator +(in GridVector2 A, in IPoint2D B)
+        public static GridVector2 operator +(in GridVector2 A, in IPoint2D B)
         {
             return new GridVector2(A.X + B.X, A.Y + B.Y);
         }
 
-        static public GridVector2 operator *(in GridVector2 A, double scalar)
+        public static GridVector2 operator *(in GridVector2 A, double scalar)
         {
             return new GridVector2(A.X * scalar, A.Y * scalar);
         }
 
-        static public GridVector2 operator *(in GridVector2 A, in GridVector2 B)
+        public static GridVector2 operator *(in GridVector2 A, in GridVector2 B)
         {
             return new GridVector2(A.X * B.X, A.Y * B.Y);
         }
 
-        static public GridVector2 operator /(in GridVector2 A, double scalar)
+        public static GridVector2 operator /(in GridVector2 A, double scalar)
         {
             return new GridVector2(A.X / scalar, A.Y / scalar);
         }
 
-        static public GridVector2 operator /(in GridVector2 A, in GridVector2 B)
+        public static GridVector2 operator /(in GridVector2 A, in GridVector2 B)
         {
             return new GridVector2(A.X / B.X, A.Y / B.Y);
         }
 
-        static public bool operator ==(in GridVector2 A, in GridVector2 B)
+        public static bool operator ==(in GridVector2 A, in GridVector2 B)
         {
             return GridVector2.Equals(A, B); 
         }
 
-        static public bool operator !=(in GridVector2 A, in GridVector2 B)
+        public static bool operator !=(in GridVector2 A, in GridVector2 B)
         {
             return !GridVector2.Equals(A, B); 
         }
 
-        static public bool operator ==(in GridVector2 A, in IPoint2D B)
+        public static bool operator ==(in GridVector2 A, in IPoint2D B)
         {
             return GridVector2.Equals(A, B);
         }
 
-        static public bool operator !=(in GridVector2 A, in IPoint2D B)
+        public static bool operator !=(in GridVector2 A, in IPoint2D B)
         {
             return !GridVector2.Equals(A, B);
         }
@@ -680,14 +667,14 @@ namespace Geometry
             }
         }
 
-        static public GridVector2 FromBarycentric(GridVector2 v1, GridVector2 v2, GridVector2 v3, double u, double v)
+        public static GridVector2 FromBarycentric(in GridVector2 v1, in GridVector2 v2, in GridVector2 v3, in double u, in double v)
         {
             double x = (v1.X * (1 - u - v)) + (v2.X * u) + (v3.X * v);
             double y = (v1.Y * (1 - u - v)) + (v2.Y * u) + (v3.Y * v);
             return new GridVector2(x, y); 
         }
 
-        public static GridVector2 Scale(in GridVector2 A, double scalar)
+        public static GridVector2 Scale(in GridVector2 A, in double scalar)
         {
             return new GridVector2(A.X * scalar, A.Y * scalar);
         }
@@ -698,20 +685,20 @@ namespace Geometry
             Y = Y * scalar; 
         }
 */
-        public static GridRectangle Border(GridVector2[] points)
+        public static GridRectangle Border(in GridVector2[] points)
         {
             return points.BoundingBox();
         }
 
-        public static GridRectangle Border(IPoint[] points)
+        public static GridRectangle Border(in IPoint[] points)
         {
             if (points == null)
             {
-                throw new ArgumentNullException("GridRectangle Border");
+                throw new ArgumentNullException(nameof(points));
             }
 
             if (points.Length == 0)
-                throw new ArgumentException("GridRectangle Border"); 
+                throw new ArgumentException(nameof(points)); 
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -729,17 +716,17 @@ namespace Geometry
             return new GridRectangle(minX, maxX, minY, maxY);
         }
 
-        bool IShape2D.Contains(IPoint2D p)
+        bool IShape2D.Contains(in IPoint2D p)
         {
             return p.X == this.X && p.Y == this.Y;
         }
 
-        bool IShape2D.Intersects(IShape2D shape)
+        bool IShape2D.Intersects(in IShape2D shape)
         {
             return shape.Contains(this);
         }
 
-        IShape2D IShape2D.Translate(IPoint2D offset)
+        IShape2D IShape2D.Translate(in IPoint2D offset)
         {
             return this + offset.Convert();
         }
@@ -824,67 +811,33 @@ namespace Geometry
 
         double IPoint2D.X
         {
-            get
-            {
-                return X; 
-            }
-            set
-            {
-                X = value; 
-            }
+            get => X;
+            set => X = value;
         }
 
         double IPoint2D.Y
         {
-            get
-            {
-                return Y; 
-            }
-            set
-            {
-                Y = value; 
-            }
+            get => Y;
+            set => Y = value;
         }
 
         double IPoint.Z
         {
-            get
-            {
-                return 0;
-            }
+            get => 0;
             set
             {
 
             }
         }
 
-        GridRectangle IShape2D.BoundingBox
-        {
-            get
-            {
-                return new GridRectangle(this, 0, 0);
-            }
-        }
+        GridRectangle IShape2D.BoundingBox => new GridRectangle(this, 0, 0);
 
-        double IShape2D.Area
-        {
-            get
-            {
-                return 0;
-            }
-        }
+        double IShape2D.Area => 0;
 
-        ShapeType2D IShape2D.ShapeType
-        {
-            get
-            {
-                return ShapeType2D.POINT;
-            }
-        }
+        ShapeType2D IShape2D.ShapeType => ShapeType2D.POINT;
 
 
         #endregion
-
-
+        IPoint2D ICentroid.Centroid => this;
     }
 }

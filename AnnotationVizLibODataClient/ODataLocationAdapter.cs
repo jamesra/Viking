@@ -1,4 +1,4 @@
-﻿using Annotation.Interfaces;
+﻿using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
 using Microsoft.SqlServer.Types;
 using ODataClient.ConnectomeDataModel;

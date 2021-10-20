@@ -1,0 +1,20 @@
+syntax = "proto3"; 
+
+option csharp_namespace = "Viking.AnnotationServiceTypes.gRPC.V1.Protos";
+
+package Viking.AnnotationServiceTypes.gRPC.V1;
+
+import "Protos/AnnotationTypes.proto";
+
+service AnnotateMetaData
+{
+	rpc Scale (ScaleRequest) returns (ScaleResponse);
+}
+
+message ScaleRequest {
+	
+}
+
+message ScaleResponse {
+	Scale scale = 1;
+}

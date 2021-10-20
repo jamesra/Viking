@@ -21,9 +21,9 @@ namespace Geometry
     {
         long position = -1;
 
-        private long StartIndex;
-        private long Count;
-        private bool _Reversed;
+        private readonly long StartIndex;
+        private readonly long Count;
+        private readonly bool _Reversed;
 
         public ContinuousIndexSetEnumerator(long startIndex, long count, bool reverse = false)
         {
@@ -93,9 +93,9 @@ namespace Geometry
     /// </summary>
     public class ContinuousIndexSet : IIndexSet
     {
-        private long StartIndex;
-        private long _Count;
-        private bool _Reversed;
+        private readonly long StartIndex;
+        private readonly long _Count;
+        private readonly bool _Reversed;
 
         public int Count
         {
@@ -214,7 +214,7 @@ namespace Geometry
     /// </summary>
     public class IndexSet : IIndexSet
     {
-        private long[] Indicies;
+        private readonly long[] Indicies;
 
         public IndexSet(long[] indicies)
         {
@@ -276,7 +276,7 @@ namespace Geometry
     public class IndexSetEnumerator : IEnumerator<long>
     {
         long position = -1;
-        IIndexSet set;
+        readonly IIndexSet set;
 
         public IndexSetEnumerator(IIndexSet set)
         {
@@ -327,11 +327,11 @@ namespace Geometry
     {
         long position = -1;
 
-        private long MinIndex;
-        private long MaxIndex;
-        private long StartIndex;
-        private long _Count;
-        private bool _Reverse;
+        private readonly long MinIndex;
+        private readonly long MaxIndex;
+        private readonly long StartIndex;
+        private readonly long _Count;
+        private readonly bool _Reverse;
 
         public ContinuousWrappedIndexSetEnumerator(long minIndex, long maxIndex, long startIndex, bool reverse)
         {
@@ -643,7 +643,7 @@ namespace Geometry
             {
                 if (index < 0 || index >= _Count)
                 {
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(index));
                 }
 
                 long value;

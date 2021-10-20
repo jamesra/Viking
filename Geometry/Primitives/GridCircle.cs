@@ -6,11 +6,12 @@ using System.Linq;
 namespace Geometry
 {
     [Serializable]
-    public struct GridCircle : IShape2D, ICircle2D
+    public readonly struct GridCircle : IShape2D, ICircle2D, IEquatable<ICircle2D>
     {
-        public GridVector2 Center;
-        public double Radius;
-        public double RadiusSquared;
+        public readonly GridVector2 Center;
+        public readonly double Radius;
+        public readonly double RadiusSquared;
+        private readonly int _HashCode;
 
         public GridCircle(double X, double Y, double radius) : this(new GridVector2(X, Y), radius)
         { }
@@ -24,7 +25,7 @@ namespace Geometry
                 throw new ArgumentException("Radius cannot be infinite or NaN");
 
             this.RadiusSquared = radius * radius;
-            _HashCode = new int?();
+            _HashCode = center.GetHashCode();
         }
 
         public GridCircle(IPoint2D center, double radius) : this(new GridVector2(center.X, center.Y), radius)
@@ -40,7 +41,7 @@ namespace Geometry
         {
             if (points == null)
             {
-                throw new ArgumentNullException("points");
+                throw new ArgumentNullException(nameof(points));
 
             }
 
@@ -77,13 +78,15 @@ namespace Geometry
                 throw new ArgumentException("Circle from three points with three points on a line");
             }
 
-            GridVector2 Center = new GridVector2();
-            Center.X = (D * E - B * F) / G;
-            Center.Y = (A * F - C * E) / G;
+            GridVector2 Center = new GridVector2(
+                x: (D * E - B * F) / G,
+                y: (A * F - C * E) / G
+            );
 
-            return new GridCircle(Center, GridVector2.Distance(Center, One));
+            return new GridCircle(Center, GridVector2.Distance(in Center, in One));
         }
 
+        /*
         /// <summary>
         /// This exists because the Delaunay algorithm creates a ton of circles.  Allocating memory for them
         /// means taking the allocation lock twice instead of one (Circle is created by triangle object)
@@ -106,7 +109,9 @@ namespace Geometry
 
             GridCircle.CircleFromThreePoints(points[0], points[1], points[2], ref circle);
         }
+        */
 
+        /*
         /// <summary>
         /// This exists because the Delaunay algorithm creates a ton of circles.  Allocating memory for them
         /// means taking the allocation lock twice instead of one (Circle is created by triangle object)
@@ -137,15 +142,15 @@ namespace Geometry
                 throw new ArgumentException("Circle from three points with three points on a line");
             }
 
-            GridVector2 Center = new GridVector2();
-            Center.X = (D * E - B * F) / G;
-            Center.Y = (A * F - C * E) / G;
+            GridVector2 Center = new GridVector2(
+                    x:(D * E - B * F) / G,
+                    y: (A * F - C * E) / G);
 
             circle.Center = Center;
             circle.Radius = GridVector2.Distance(Center, One);
             circle.RadiusSquared = circle.Radius * circle.Radius;
             //return new GridCircle(Center, GridVector2.Distance(Center, One));
-        }
+        }*/
 
         private static double[] CreateDeterminateMatrixRow(GridVector2 p)
         {
@@ -200,7 +205,7 @@ namespace Geometry
 
             int numPoints = points.Count();
             if (numPoints == 0)
-                return new OverlapType[0];
+                return Array.Empty<OverlapType>();
 
             OverlapType[] results = new OverlapType[numPoints];
 
@@ -274,7 +279,7 @@ namespace Geometry
             }
         }
 
-        public bool Contains(IPoint2D p)
+        public bool Contains(in IPoint2D p)
         {
             //return GridVector2.Distance(p, this.Center) <= this.Radius;
 
@@ -284,15 +289,15 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
         }
 
-        public bool Contains(GridVector2 p)
-        {
+        public bool Contains(in GridVector2 p)
+        {                  
             double XDist = p.X - this.Center.X;
             double YDist = p.Y - this.Center.Y;
 
             return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
         }
 
-        public OverlapType ContainsExt(IPoint2D p)
+        public OverlapType ContainsExt(in IPoint2D p)
         {
             //return GridVector2.Distance(p, this.Center) <= this.Radius;
 
@@ -308,7 +313,7 @@ namespace Geometry
             return OverlapType.NONE;
         }
 
-        public OverlapType ContainsExt(GridVector2 p)
+        public OverlapType ContainsExt(in GridVector2 p)
         {
             double XDist = p.X - this.Center.X;
             double YDist = p.Y - this.Center.Y;
@@ -322,7 +327,7 @@ namespace Geometry
             return OverlapType.NONE;
         }
 
-        public bool Contains(GridPolygon poly)
+        public bool Contains(in GridPolygon poly)
         {
             //if (this.BoundingBox.ContainsExt(poly.BoundingBox) == OverlapType.CONTAINED)
             //    return true;
@@ -336,7 +341,7 @@ namespace Geometry
             return false;
         }
 
-        public bool Contains(GridLineSegment line)
+        public bool Contains(in GridLineSegment line)
         {
             if (!this.Contains(line.A))
                 return false;
@@ -348,7 +353,7 @@ namespace Geometry
             return false;
         }
 
-        public OverlapType ContainsExt(GridLineSegment line)
+        public OverlapType ContainsExt(in GridLineSegment line)
         {
             OverlapType oA = this.ContainsExt(line.A);
             OverlapType oB = this.ContainsExt(line.B);
@@ -397,7 +402,7 @@ namespace Geometry
         /// </summary>
         /// <param name="shape"></param>
         /// <returns></returns>
-        public bool Contains(IShape2D shape)
+        public bool Contains(in IShape2D shape)
         {
             throw new NotImplementedException();
         }
@@ -408,7 +413,7 @@ namespace Geometry
         /// <param name="c"></param>
         /// <param name="radius"></param>
         /// <returns></returns>
-        public bool Intersects(GridVector2 p, double radius)
+        public bool Intersects(in GridVector2 p, double radius)
         {
 
             double XDist = p.X - this.Center.X;
@@ -418,12 +423,12 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= CombinedRadiusSquared;
         }
 
-        public bool Intersects(ICircle2D c)
+        public bool Intersects(in ICircle2D c)
         {
             return this.Intersects(c.Convert());
         }
 
-        public bool Intersects(GridCircle c)
+        public bool Intersects(in GridCircle c)
         {
             double XDist = c.Center.X - this.Center.X;
             double YDist = c.Center.Y - this.Center.Y;
@@ -433,48 +438,34 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= CombinedRadiusSquared;
         }
 
-        public bool Intersects(ILineSegment2D l)
-        {
-            GridLineSegment line = l.Convert();
-            return this.Intersects(line);
-        }
+        public bool Intersects(in ILineSegment2D l) => Intersects(l.Convert());
 
-        public bool Intersects(GridLineSegment line)
-        {
-            return CircleIntersectionExtensions.Intersects(this, line);
-        }
+        public bool Intersects(in GridLineSegment line) => CircleIntersectionExtensions.Intersects(in this, in line);
 
-        public bool Intersects(ITriangle2D t)
-        {
-            GridTriangle tri = t.Convert();
-            return this.Intersects(tri);
-        }
+        public bool Intersects(in ITriangle2D t) => this.Intersects(t.Convert());
+        
+        public bool Intersects(in GridTriangle tri) => CircleIntersectionExtensions.Intersects(in this, in tri);
 
-        public bool Intersects(GridTriangle tri)
-        {
-            return CircleIntersectionExtensions.Intersects(this, tri);
-        }
-
-        public bool Intersects(IPolygon2D p)
+        public bool Intersects(in IPolygon2D p)
         {
             GridPolygon poly = p.Convert();
-            return this.Intersects(poly);
+            return this.Intersects(in poly);
         }
 
-        public bool Intersects(GridPolygon poly)
+        public bool Intersects(in GridPolygon poly)
         {
-            return CircleIntersectionExtensions.Intersects(this, poly);
+            return CircleIntersectionExtensions.Intersects(in this, in poly);
         }
 
-        public bool Intersects(IRectangle r)
+        public bool Intersects(in IRectangle r)
         {
             GridRectangle rect = r.Convert();
-            return this.Intersects(rect);
+            return this.Intersects(in rect);
         }
 
-        public bool Intersects(GridRectangle rect)
+        public bool Intersects(in GridRectangle rect)
         {
-            return CircleIntersectionExtensions.Intersects(this, rect);
+            return CircleIntersectionExtensions.Intersects(in this, in rect);
         }
 
         /// <summary>
@@ -482,9 +473,9 @@ namespace Geometry
         /// </summary>
         /// <param name="Position"></param>
         /// <returns></returns>
-        public double Distance(GridVector2 Position)
+        public double Distance(in GridVector2 position)
         {
-            double Distance = GridVector2.Distance(Position, this.Center) - Radius;
+            double Distance = GridVector2.Distance(position, this.Center) - Radius;
             Distance = Distance < 0 ? 0 : Distance;
             return Distance;
         }
@@ -492,44 +483,65 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            return (GridCircle)obj == this;
+            if (obj is GridCircle other)
+                return this == other;
+
+            if (obj is IShape2D otherShape)
+                return Equals(otherShape);
+
+            return false;
+        } 
+
+        public bool Equals(IShape2D other)
+        {
+            if (other is ICircle2D otherCircle)
+                return Equals(otherCircle);
+            
+            return false;
         }
 
-        int? _HashCode;
+        public bool Equals(ICircle2D other)
+        { 
+            return this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius); 
+        }
+
 
         public override int GetHashCode()
         {
+            return _HashCode;
+            /*
             if (!_HashCode.HasValue)
             {
                 _HashCode = Center.GetHashCode();
             }
 
             return _HashCode.Value;
+            */
         }
 
 
-        public bool Intersects(IShape2D shape)
+        public bool Intersects(in IShape2D shape)
         {
-            return ShapeExtensions.CircleIntersects(this, shape);
+            return ShapeExtensions.CircleIntersects(in this, in shape);
         }
 
-        public IShape2D Translate(IPoint2D offset)
+        public IShape2D Translate(in IPoint2D offset)
         {
             return this.Translate(offset.Convert());
         }
 
-        public GridCircle Translate(GridVector2 offset)
+        public GridCircle Translate(in GridVector2 offset)
         {
             return new GridCircle(this.Center + offset, this.Radius);
         }
 
-        public static bool operator ==(GridCircle A, GridCircle B)
+        public static bool operator ==(in GridCircle A, in GridCircle B)
         {
             return ((A.Center == B.Center) &&
                    (A.Radius == B.Radius));
         }
 
-        public static bool operator !=(GridCircle A, GridCircle B)
+        public static bool operator !=(in GridCircle A, in GridCircle B)
         {
             return !(A == B);
         }
@@ -545,5 +557,7 @@ namespace Geometry
             double width = Math.Cos(angle);
             return Math.Abs(width);
         }
+
+        public IPoint2D Centroid => Center;
     }
 }

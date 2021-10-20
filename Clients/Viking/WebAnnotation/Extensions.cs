@@ -155,39 +155,39 @@ namespace WebAnnotation
 
     public static class AnnotationExtensions
     {
-        private static Annotation.Interfaces.LocationType StringToLocationType(string annotationType)
+        private static Viking.AnnotationServiceTypes.Interfaces.LocationType StringToLocationType(string annotationType)
         {
             switch (annotationType)
             {
                 case "Circle":
-                    return Annotation.Interfaces.LocationType.CIRCLE;
+                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
                 case "ClosedCurve":
-                    return Annotation.Interfaces.LocationType.CLOSEDCURVE;
+                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CLOSEDCURVE;
                 case "OpenCurve":
-                    return Annotation.Interfaces.LocationType.OPENCURVE;
+                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE;
                 case "Polygon":
-                    return Annotation.Interfaces.LocationType.POLYGON;
+                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON;
                 case "Polyline":
-                    return Annotation.Interfaces.LocationType.POLYLINE;
+                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE;
                 case "Point":
-                    return Annotation.Interfaces.LocationType.POINT;
+                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.POINT;
                 case "Ellipse":
-                    return Annotation.Interfaces.LocationType.ELLIPSE;
+                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.ELLIPSE;
                 case "CurvePolygon":
-                    return Annotation.Interfaces.LocationType.CURVEPOLYGON;
+                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
                 default:
-                    return Annotation.Interfaces.LocationType.CIRCLE;
+                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
             }
 
             throw new ArgumentException("Unknown annotation type " + annotationType);
         }
 
-        public static Annotation.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
         {
             return StringToLocationType(command.AnnotationType);
         }
 
-        public static Annotation.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
         {
             return StringToLocationType(command.AnnotationType);
         }

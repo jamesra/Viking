@@ -6,7 +6,7 @@ using System.Text;
 namespace Geometry
 {
     [Serializable()]
-    public struct PolylineIndex : IComparable<PolylineIndex>, IEquatable<PolylineIndex>
+    public readonly struct PolylineIndex : IComparable<PolylineIndex>, IEquatable<PolylineIndex>
     {
         /// <summary>
         /// The index of the polygon 
@@ -86,15 +86,7 @@ namespace Geometry
         }
 
         public static bool operator ==(PolylineIndex A, PolylineIndex B)
-        {
-            bool ANull = object.ReferenceEquals(A, null);
-            bool BNull = object.ReferenceEquals(B, null);
-
-            if (ANull && BNull)
-                return true;
-            else if (ANull ^ BNull)
-                return false;
-
+        { 
             if (A.iLine != B.iLine)
             {
                 return false;

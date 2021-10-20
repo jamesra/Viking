@@ -15,17 +15,16 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            MappingGridTriangle TriObj = obj as MappingGridTriangle;
-            if (TriObj == null)
-                return base.Equals(obj);
+            if (obj is MappingGridTriangle TriObj)
+            {
+                if (TriObj.N1 == this.N1 &&
+                    TriObj.N2 == this.N2 &&
+                    TriObj.N3 == this.N3)
+                    return true;
+            }
 
-            if (TriObj.N1 == this.N1 &&
-               TriObj.N2 == this.N2 &&
-               TriObj.N3 == this.N3)
-                return true;
-            else
-                //We should test all the other index combos too I suppose...
-                return false;
+            //We should test all the other index combos too I suppose..
+            return false;
         }
 
         public override int GetHashCode()
