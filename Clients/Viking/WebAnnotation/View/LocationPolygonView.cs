@@ -181,7 +181,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                return SmoothedVolumePolygon.BoundingBox.Pad(this._ControlPointRadius);
+                return GridRectangle.Pad(SmoothedVolumePolygon.BoundingBox, this._ControlPointRadius);
             }
         }
 

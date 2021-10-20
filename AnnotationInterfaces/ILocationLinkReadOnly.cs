@@ -8,9 +8,8 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         ulong B { get; }
     }
 
-    public interface ILocationLink : IEquatable<ILocationLink>, IDataObjectWithKey<ILocationLinkReadOnly>
-    {
-        ulong A { get; set; }
-        ulong B { get; set; }
+    public interface ILocationLink : IEquatable<ILocationLink>{
+        ulong A { get; }
+        ulong B { get; }
     }
 }

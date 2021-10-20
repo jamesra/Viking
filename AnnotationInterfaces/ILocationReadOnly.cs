@@ -1,12 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
-using Geometry;
 
 namespace Viking.AnnotationServiceTypes.Interfaces
-{ 
-    public interface ILocationReadOnly : IEquatable<ILocationReadOnly>
+{
+    public enum LocationType
+    {
+        POINT = 0,
+        CIRCLE = 1,
+        ELLIPSE = 2,
+        POLYLINE = 3,
+        POLYGON = 4,     //Polygon, no smoothing of exterior verticies with curve fitting
+        OPENCURVE = 5,   //Line segments with a line width, additional control points created using curve fitting function
+        CURVEPOLYGON = 6, //Polygon whose outer and inner verticies are supplimented with a curve fitting function
+        CLOSEDCURVE = 7 //Ring of line segments with a line width
+    };
+
+    public interface ILocation : IEquatable<ILocation>
     {
         ulong ID { get; }
+
         ulong ParentID { get; }
 
         bool Terminal { get; }
@@ -18,9 +30,6 @@ namespace Viking.AnnotationServiceTypes.Interfaces
 
         IDictionary<string, string> Attributes { get; }
 
-        /// <summary>
-        /// Z as stored in the database, which is a section number
-        /// </summary>
         long UnscaledZ { get; }
 
         string TagsXml { get; }
@@ -35,63 +44,7 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         /// <summary>
         /// Volume space shape
         /// </summary>
-        string VolumeGeometryWKT {get;} 
-    }
+        Microsoft.SqlServer.Types.SqlGeometry Geometry { get; }
 
-    /// <summary>
-    /// The interface to our model object
-    /// </summary>
-    public interface ILocation : IDataObjectWithKey<Int64>, IEquatable<ILocation>, IChangeAction
-    {   
-        long? ParentID { get; set; }
-
-        bool Terminal { get; set; }
-        bool OffEdge { get; set; }
-
-        string Attributes { get; set; }
-        
-        /// <summary>
-        /// The section number the annotation was placed on (Unscaled Z)
-        /// </summary>
-        long SectionNumber { get; set; }
-
-        string TagsXml { get; set; }
-
-        bool Closed { get; set; }
-
-        string Username { get; set; }
-
-        /// <summary>
-        /// What type (geometric shape) of annotation is it?
-        /// </summary>
-        LocationType TypeCode { get; set; }
-          
-        GridVector3 VolumePosition { get; }
-
-        GridVector3 MosaicPosition { get; }
-         
-        DateTime LastModified { get; }
-
-        /// <summary>
-        /// Computed column, the radius of a circle with equal area to the annotations geometry.
-        /// </summary>
-        double Radius { get; }
-
-        /// <summary>
-        /// If this is a 1-D geometry, how wide is the line/curve?
-        /// </summary>
-        double? Width { get; set; }
-
-        /// <summary>
-        /// List of location IDs linked to this location
-        /// </summary>
-        IList<long> Links { get; }
-
-        string MosaicGeometryWKT { get; set; }
-
-        /// <summary>
-        /// Volume space shape
-        /// </summary>
-        string VolumeGeometryWKT { get; set; }
     }
 }

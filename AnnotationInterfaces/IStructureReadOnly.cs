@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Viking.AnnotationServiceTypes.Interfaces
 {
-    public interface IStructureReadOnly : IEquatable<IStructureReadOnly>
+    public interface IStructure : IEquatable<IStructure>
     {
         ulong ID { get; }
 
@@ -13,37 +13,16 @@ namespace Viking.AnnotationServiceTypes.Interfaces
 
         string Label { get; }
 
-        ICollection<IStructureLinkReadOnly> Links
+        ICollection<IStructureLink> Links
         {
             get;
         }
 
-        IStructureTypeReadOnly Type
+        IStructureType Type
         {
             get;
         }
 
         string TagsXML { get; }
-    }
-
-    public interface IStructure : IEquatable<IStructure>, IDataObjectWithParent<long>
-    {
-        long TypeID { get; set; }
-          
-        string Label { get; set; }
-
-        string Attributes { get; set; }
-
-        string Notes { get; set; }
-
-        double Confidence { get; set; }
-
-        string Username { get; }
-
-        long[] ChildIDs { get; }
-
-        bool Verified { get; }
-
-        IStructureLink[] Links { get; }
     }
 }

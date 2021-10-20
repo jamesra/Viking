@@ -213,12 +213,10 @@
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{b35b0c61-ec9c-425a-846d-f160d5b12158}</Project>
       <Name>Common</Name>
-      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj">
       <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
       <Name>VikingXNAGraphics</Name>
-      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
       <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>
@@ -228,7 +226,6 @@
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{aeb1b24b-c968-40f9-b9f5-5c1fce2efd6d}</Project>
       <Name>VikingCore</Name>
-      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
       <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>

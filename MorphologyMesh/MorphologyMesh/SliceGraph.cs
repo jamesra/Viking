@@ -842,7 +842,7 @@ namespace MorphologyMesh
         internal static void HandleCorrespondingFaceContainsVertex(GridPolygon[] Polygons, List<GridVector2> correspondingPoints)
         {
             GridRectangle bbox = Polygons.BoundingBox();
-            bbox.Scale(1.05); //Grow the box slightly so the QuadTree will never resize for a rounding error
+            bbox = GridRectangle.Scale(bbox, 1.05); //Grow the box slightly so the QuadTree will never resize for a rounding error
             QuadTree<List<PolygonIndex>> tree = new QuadTree<List<PolygonIndex>>(bbox);
 
             PolySetVertexEnum indexEnum = new PolySetVertexEnum(Polygons);

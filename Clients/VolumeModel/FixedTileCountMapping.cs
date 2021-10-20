@@ -254,9 +254,9 @@ namespace Viking.VolumeModel
             GridRectangle releaseBounds = VisibleBounds; //Tiles outside this quad will have textures released
             GridRectangle loadBounds = VisibleBounds;  //Tiles inside this quad will have textures loaded
             GridRectangle abortBounds = VisibleBounds; //Tiles outside this quad will have HTTP requests aborted
-            releaseBounds.Scale(1.25 * scaledDownsampleLevel);
-            loadBounds.Scale(1.1f);
-            abortBounds.Scale(1.20f * scaledDownsampleLevel);
+            releaseBounds = GridRectangle.Scale(releaseBounds, 1.25 * scaledDownsampleLevel);
+            loadBounds = GridRectangle.Scale(loadBounds, 1.1f);
+            abortBounds = GridRectangle.Scale(abortBounds, 1.20f * scaledDownsampleLevel);
 
             //Get ready by loading a smaller texture in case the user scrolls this direction 
             //Once we have smaller textures then increase the quality

@@ -172,7 +172,7 @@ namespace WebAnnotation.UI.Commands
                     }
                     else
                     {
-                        output.Union(control.BoundingBox);
+                        output = GridRectangle.Union(output, control.BoundingBox);
                     }
                 }
             }

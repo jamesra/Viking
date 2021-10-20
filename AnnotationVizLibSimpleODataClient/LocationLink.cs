@@ -12,8 +12,6 @@ namespace AnnotationVizLib.SimpleOData
             return ll;
         }
 
-
-
         public ulong A { get; private set; }
         public ulong B { get; private set; }
 

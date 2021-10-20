@@ -27,7 +27,7 @@ namespace Viking.UI.Commands
             }
             else if (e.Button.Left())
             {
-                this.rectangle.Union(WorldPosition);
+                this.rectangle = GridRectangle.Union(this.rectangle, WorldPosition);
             }
             //If the mouse was released we stop drawing rectangle
             else if (!e.Button.Left() && oldMouse.Button.Left())

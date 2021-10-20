@@ -37,7 +37,7 @@ namespace WebAnnotation.View
             get { return VolumeCircle.Radius; }
             set
             {
-                VolumeCircle.Radius = value;
+                VolumeCircle = new GridCircle(VolumeCircle.Center, value);
                 CreateLabelObjects();
             }
         }

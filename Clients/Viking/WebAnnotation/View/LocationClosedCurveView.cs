@@ -138,7 +138,7 @@ namespace WebAnnotation.View
             {
                 if (!_BoundingBox.HasValue)
                 {
-                    _BoundingBox = VolumeCurveControlPoints.BoundingBox().Pad(this.lineWidth / 2.0);
+                    _BoundingBox = GridRectangle.Pad(VolumeCurveControlPoints.BoundingBox(), this.lineWidth / 2.0);
                 }
 
                 return _BoundingBox.Value;

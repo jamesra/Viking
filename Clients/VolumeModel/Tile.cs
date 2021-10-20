@@ -85,7 +85,7 @@ namespace Viking.VolumeModel
                 {
                     foreach (PositionNormalTextureVertex v in Verticies)
                     {
-                        _Bounds.Union(new GridVector2(v.Position.X, v.Position.Y));
+                        _Bounds = GridRectangle.Union(_Bounds, new GridVector2(v.Position.X, v.Position.Y));
                     }
 
                 }

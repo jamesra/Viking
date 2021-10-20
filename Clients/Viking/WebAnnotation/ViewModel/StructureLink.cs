@@ -387,7 +387,7 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                return lineSegment.BoundingBox.Pad(this.LineWidth);
+                return GridRectangle.Pad(lineSegment.BoundingBox, this.LineWidth);
             }
         }
 
@@ -515,11 +515,11 @@ namespace WebAnnotation.ViewModel
                 GridRectangle bbox = lineSegments[0].BoundingBox;
                 foreach (GridLineSegment l in lineSegments)
                 {
-                    bbox.Union(l.BoundingBox);
+                    bbox = GridRectangle.Union(bbox, l.BoundingBox);
                 }
 
-                bbox.Union(bbox.LowerLeft - new GridVector2(this.Radius, this.Radius));
-                bbox.Union(bbox.UpperRight + new GridVector2(this.Radius, this.Radius));
+                bbox = GridRectangle.Union(bbox, bbox.LowerLeft - new GridVector2(this.Radius, this.Radius));
+                bbox = GridRectangle.Union(bbox, bbox.UpperRight + new GridVector2(this.Radius, this.Radius));
 
                 return bbox;
             }

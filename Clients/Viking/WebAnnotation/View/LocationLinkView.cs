@@ -136,7 +136,7 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                return LineSegment.BoundingBox.Pad(this.LineRadius);
+                return GridRectangle.Pad(LineSegment.BoundingBox, this.LineRadius);
             }
         }
 
