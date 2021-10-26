@@ -120,7 +120,7 @@ namespace Geometry.Transforms
 
             using (Stream transformStream = File.OpenRead(stosfile))
             {
-                ITransform transform = await ParseStos(transformStream, Info, pixelSpacing); 
+                ITransform transform = await ParseStos(transformStream, Info, pixelSpacing).ConfigureAwait(false);
                 return transform;
             }
 
@@ -168,7 +168,7 @@ namespace Geometry.Transforms
 
         public static async Task<ITransform> ParseStos(Stream stream, StosTransformInfo info, int pixelSpacing)
         {
-            string[] lines = await StreamUtil.StreamToLines(stream);
+            string[] lines = await StreamUtil.StreamToLines(stream).ConfigureAwait(false); ;
             string[] controlDims = lines[4].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
             string[] mappedDims = lines[5].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
               
