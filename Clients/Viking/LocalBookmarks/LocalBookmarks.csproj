@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>LocalBookmarks</RootNamespace>
     <AssemblyName>LocalBookmarks</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <XnaFrameworkVersion>v4.0</XnaFrameworkVersion>
     <XnaPlatform>Windows</XnaPlatform>
     <XnaCrossPlatformGroupID>5b34532b-0192-4f59-9d89-5a2a84e7db12</XnaCrossPlatformGroupID>
@@ -44,7 +44,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\Viking\bin\Debug\Modules\LocalBookmarks\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE;WINDOWS</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -53,11 +53,12 @@
     <PlatformTarget>x86</PlatformTarget>
     <XnaCompressContent>false</XnaCompressContent>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\Viking\bin\Release\Modules\LocalBookmarks\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE;WINDOWS</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -66,6 +67,7 @@
     <PlatformTarget>x86</PlatformTarget>
     <XnaCompressContent>True</XnaCompressContent>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithSymbols|x86'">
     <OutputPath>bin\x86\ReleaseWithSymbols\</OutputPath>
@@ -95,6 +97,7 @@
     <Reference Include="mscorlib">
       <Private>False</Private>
     </Reference>
+    <Reference Include="netstandard" />
     <Reference Include="System">
       <Private>False</Private>
     </Reference>
@@ -213,10 +216,12 @@
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{b35b0c61-ec9c-425a-846d-f160d5b12158}</Project>
       <Name>Common</Name>
+      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\MonogameXNAGraphicsShared\VikingXNAGraphics.csproj">
       <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
       <Name>VikingXNAGraphics</Name>
+      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
       <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>
@@ -226,6 +231,7 @@
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{aeb1b24b-c968-40f9-b9f5-5c1fce2efd6d}</Project>
       <Name>VikingCore</Name>
+      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
       <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
@@ -258,6 +264,8 @@
       <DependentUpon>FolderTreeControl.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -268,10 +276,10 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>mkdir $(SolutionDir)Viking\Viking\Modules\LocalBookmarks\$(ProjectName)
-copy $(TargetDir)* $(SolutionDir)Viking\Viking\Modules\$(ProjectName) /Y
+    <PostBuildEvent>mkdir $(SolutionDir)Clients\Viking\Viking\Modules\$(ProjectName)
+(robocopy $(TargetDir) $(SolutionDir)Clients\Viking\Viking\Modules\$(ProjectName)\ * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0
 
-mkdir $(SolutionDir)Viking\Content\$(ProjectName)
-(robocopy $(TargetDir)Content $(SolutionDir)Viking\Content\$(ProjectName) * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PostBuildEvent>
+mkdir $(ProjectDir)..\Viking\Content\$(ProjectName)
+(robocopy $(TargetDir)Content $(ProjectDir)..\Viking\Content\$(ProjectName) * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PostBuildEvent>
   </PropertyGroup>
 </Project>

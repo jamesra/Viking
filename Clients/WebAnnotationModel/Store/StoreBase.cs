@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.ServiceModel;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
@@ -123,12 +124,15 @@ namespace WebAnnotationModel
         where OBJECT : WCFObjBase<WCFOBJECT>, new()
     {
 
+        protected ChannelFactory<INTERFACE> channelFactory;
 
         //Perform any required initialization
         public abstract void Init();
 
-        protected abstract PROXY CreateProxy();
-
+        protected virtual IClientChannel CreateProxy()
+        {
+            return (IClientChannel)channelFactory.CreateChannel(State.EndpointAddress);
+        } 
 
         #region Public Creation/Removal methods
 

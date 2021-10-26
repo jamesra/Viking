@@ -243,7 +243,7 @@ namespace Viking.VolumeModel
         #endregion
 
         protected virtual TilePyramid VisibleTiles(GridRectangle VisibleBounds,
-                                                GridQuad SectionVisibleBounds,
+                                                GridQuad? SectionVisibleBounds,
                                                 double DownSample)
         {
             TilePyramid VisibleTiles = new TilePyramid(VisibleBounds);

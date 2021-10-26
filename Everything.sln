@@ -95,7 +95,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WCFTokenInjector", "Clients
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SIMeasurementTests", "SIMeasurementTests\SIMeasurementTests.csproj", "{55DD442E-21B5-434D-A20B-B401692951B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SIMeasurement", "SIMeasurement\SIMeasurement.csproj", "{0B489584-5D3E-4FB4-8A3D-77B7030E2994}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SIMeasurement", "SIMeasurement\SIMeasurement.csproj", "{0B489584-5D3E-4FB4-8A3D-77B7030E2994}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAnnotationTests", "Clients\Viking\WebAnnotationTests\WebAnnotationTests.csproj", "{1382A528-4784-42F0-982B-80A229079446}"
 EndProject
@@ -1824,8 +1824,8 @@ Global
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x64.ActiveCfg = Debug|x64
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x64.Build.0 = Debug|x64
-		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x86.ActiveCfg = Debug|x64
-		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x86.Build.0 = Debug|x64
+		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x86.ActiveCfg = Debug|x86
+		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Debug|x86.Build.0 = Debug|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|Any CPU.ActiveCfg = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|Mixed Platforms.ActiveCfg = Release|x86
 		{E46EB649-6221-482F-9FDF-1042CDD0AA5A}.Release|Mixed Platforms.Build.0 = Release|x86

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
+using System.ServiceModel;
 using WebAnnotationModel.Service;
 
 namespace WebAnnotationModel
@@ -13,8 +14,15 @@ namespace WebAnnotationModel
     {
         ConcurrentDictionary<long, ConcurrentDictionary<LocationLinkKey, LocationLinkObj>> SectionToLocationLinks = new ConcurrentDictionary<long, ConcurrentDictionary<LocationLinkKey, LocationLinkObj>>();
 
+        private readonly ChannelFactory<WebAnnotationModel.Service.IAnnotateLocations> channelFactory;
+
         public LocationLinkStore()
         {
+            channelFactory =
+                new ChannelFactory<IAnnotateLocations>("Annotation.Service.Interfaces.IAnnotateLocations-Binary");
+
+            channelFactory.Credentials.UserName.UserName = State.UserCredentials.UserName;
+            channelFactory.Credentials.UserName.Password = State.UserCredentials.Password;
         }
 
         public override void Init()
@@ -22,26 +30,17 @@ namespace WebAnnotationModel
             Store.Locations.OnCollectionChanged += new NotifyCollectionChangedEventHandler(OnLocationsStoreChanged);
         }
 
-        protected override LocationLink ProxyGetByID(AnnotateLocationsClient proxy, LocationLinkKey ID)
+        protected override LocationLink ProxyGetByID(IAnnotateLocations proxy, LocationLinkKey ID)
         {
             throw new NotImplementedException();
         }
 
-        protected override LocationLink[] ProxyGetByIDs(AnnotateLocationsClient proxy, LocationLinkKey[] IDs)
+        protected override LocationLink[] ProxyGetByIDs(IAnnotateLocations proxy, LocationLinkKey[] IDs)
         {
             throw new NotImplementedException();
-        }
+        } 
 
-        protected override AnnotateLocationsClient CreateProxy()
-        {
-            AnnotateLocationsClient proxy = new Service.AnnotateLocationsClient("Annotation.Service.Interfaces.IAnnotateLocations-Binary",
-                State.EndpointAddress);
-            proxy.ClientCredentials.UserName.UserName = State.UserCredentials.UserName;
-            proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password;
-            return proxy;
-        }
-
-        protected override LocationLinkKey[] ProxyUpdate(AnnotateLocationsClient proxy, LocationLink[] objects)
+        protected override LocationLinkKey[] ProxyUpdate(IAnnotateLocations proxy, LocationLink[] objects)
         {
             throw new NotImplementedException();
         }
@@ -50,12 +49,13 @@ namespace WebAnnotationModel
         {
             //lock (LockObject)
             {
-                using (AnnotateLocationsClient proxy = CreateProxy())
+                using (IClientChannel proxy = (IClientChannel)CreateProxy())
                 {
                     try
                     {
                         proxy.Open();
-                        proxy.CreateLocationLink(A, B);
+                        var client = (IAnnotateLocations)proxy;
+                        client.CreateLocationLink(A, B);
                     }
                     catch (Exception e)
                     {
@@ -78,30 +78,26 @@ namespace WebAnnotationModel
         public void DeleteLink(long A, long B)
         {
             //lock (LockObject)
-            {
-                AnnotateLocationsClient proxy = null;
+            { 
                 LocationLinkObj deletedLink = null;
 
                 //                LocationObj AObj = Store.Locations.GetObjectByID(A);
                 //                LocationObj BObj = Store.Locations.GetObjectByID(B);
 
-                try
+                using (IClientChannel proxy = CreateProxy())
                 {
-                    proxy = CreateProxy();
-                    proxy.Open();
-                    proxy.DeleteLocationLink(A, B);
+                    try
+                    { 
+                        var client = (IAnnotateLocations)proxy;
+                        client.DeleteLocationLink(A, B);
 
-                    deletedLink = InternalDelete(new LocationLinkKey(A, B));
-                }
-                catch (Exception e)
-                {
-                    //TODO: Better Error message
-                    Trace.WriteLine("Error deleting link between locations, link not created: " + e.Message);
-                }
-                finally
-                {
-                    if (proxy != null)
-                        proxy.Close();
+                        deletedLink = InternalDelete(new LocationLinkKey(A, B));
+                    }
+                    catch (Exception e)
+                    {
+                        //TODO: Better Error message
+                        Trace.WriteLine("Error deleting link between locations, link not created: " + e.Message);
+                    }
                 }
 
                 if (deletedLink != null)
@@ -137,7 +133,7 @@ namespace WebAnnotationModel
             return new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>();
         }
 
-        protected override LocationLink[] ProxyGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
+        protected override LocationLink[] ProxyGetBySection(IAnnotateLocations proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
             LocationLink[] deleted_links = null;
             LocationLink[] links = proxy.GetLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
@@ -154,7 +150,7 @@ namespace WebAnnotationModel
             return links;
         }
 
-        protected override LocationLink[] ProxyGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
+        protected override LocationLink[] ProxyGetBySectionRegion(IAnnotateLocations proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
             LocationLink[] deleted_links = null;
             LocationLink[] links = proxy.GetLocationLinksForSectionInMosaicRegion(out TicksAtQueryExecute, out deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
@@ -171,12 +167,12 @@ namespace WebAnnotationModel
             return links;
         }
 
-        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateLocations proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             return proxy.BeginGetLocationLinksForSectionInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
 
-        protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override IAsyncResult ProxyBeginGetBySection(IAnnotateLocations proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             return proxy.BeginGetLocationChanges(SectionNumber,
                                                  LastQuery.Ticks,
@@ -186,7 +182,7 @@ namespace WebAnnotationModel
 
         protected override LocationLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                     out LocationLinkKey[] DeletedLinkKeys,
-                                                                    GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationLinkObj> state,
+                                                                    GetObjectBySectionCallbackState<IAnnotateLocations, LocationLinkObj> state,
                                                                     IAsyncResult result)
         {
             LocationLink[] deleted_links;
@@ -205,7 +201,7 @@ namespace WebAnnotationModel
         /// <param name="DeletedLocations"></param>
         public override ChangeInventory<LocationLinkObj> ParseQuery(LocationLink[] newLinks,
                                            LocationLinkKey[] DeletedLocations,
-                                           GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationLinkObj> state)
+                                           GetObjectBySectionCallbackState<IAnnotateLocations, LocationLinkObj> state)
         {
             ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkObj>();
             SectionLocationLinks = SectionToLocationLinks.GetOrAdd(state.SectionNumber, SectionLocationLinks);
@@ -378,7 +374,7 @@ namespace WebAnnotationModel
             }
         }
 
-        protected override LocationLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationLinkObj> state, IAsyncResult result)
+        protected override LocationLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotateLocations, LocationLinkObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }

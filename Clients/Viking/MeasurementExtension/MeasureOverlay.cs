@@ -21,10 +21,8 @@ namespace MeasurementExtension
 
         public static GridVector2 CornerOffsetFractions = new GridVector2(0.01, 0.05);
 
-        private static double log5 = Math.Log(5);
-
-        
-
+        private static readonly double log5 = Math.Log(5);
+          
         public void Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue)
         {
             if (!Measurement.Properties.Settings.Default.ShowScaleBar)

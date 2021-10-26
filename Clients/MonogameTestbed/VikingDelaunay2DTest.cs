@@ -579,7 +579,7 @@ namespace MonogameTestbed
                     Points_X_View.LabelType = PointLabelType.INDEX;
 
                     GridRectangle rect = Points_X.BoundingBox();
-                    rect.Scale(1.05);
+                    rect = GridRectangle.Scale(rect, 1.05);
                     scene.Camera.LookAt = rect.Center.ToXNAVector2();
                     scene.Camera.Downsample = rect.Height / scene.Viewport.Height;
                 }

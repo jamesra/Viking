@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PipelineBuildEvent xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <SourceFile>C:/src/git/Viking/Clients/MonogameTestbed/Content/../../MonogameXNAGraphicsShared/MonogameContent/Arial.spritefont</SourceFile>
-  <SourceTime>2018-08-21T17:12:15.4613876-07:00</SourceTime>
-  <DestFile>C:/src/git/Viking/Clients/MonogameTestbed/Content/bin/Windows/../../MonogameXNAGraphicsShared/MonogameContent/Arial.xnb</DestFile>
-  <DestTime>2019-04-04T15:46:01.7148879-07:00</DestTime>
+  <SourceFile>C:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/../../MonogameXNAGraphicsShared/MonogameContent/Arial.spritefont</SourceFile>
+  <SourceTime>2021-10-20T12:43:06.4558863-07:00</SourceTime>
+  <DestFile>C:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/bin/Windows/../../MonogameXNAGraphicsShared/MonogameContent/Arial.xnb</DestFile>
+  <DestTime>2021-10-20T15:52:16.107778-07:00</DestTime>
   <Importer>FontDescriptionImporter</Importer>
   <ImporterTime>2016-03-29T23:36:08-07:00</ImporterTime>
   <Processor>FontDescriptionProcessor</Processor>

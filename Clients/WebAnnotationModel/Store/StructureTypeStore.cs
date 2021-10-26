@@ -1,6 +1,7 @@
 ﻿using AnnotationService.Types;
 using System;
 using System.Collections.Concurrent;
+using System.ServiceModel;
 using WebAnnotationModel.Service;
 
 namespace WebAnnotationModel
@@ -12,29 +13,17 @@ namespace WebAnnotationModel
                                         StructureTypeObj,
                                         StructureType>
     {
-        #region Proxy
-
-        protected override AnnotateStructureTypesClient CreateProxy()
+        public StructureTypeStore()
         {
-            AnnotateStructureTypesClient proxy = null;
-            try
-            {
-                proxy = new Service.AnnotateStructureTypesClient("Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary", State.EndpointAddress);
-                proxy.ClientCredentials.UserName.UserName = State.UserCredentials.UserName;
-                proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password;
-            }
-            catch
-            {
-                if (proxy != null)
-                {
-                    proxy.Close();
-                }
-                throw;
+            channelFactory =
+                new ChannelFactory<IAnnotateStructureTypes>("Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary");
 
-            }
-            return proxy;
+            channelFactory.Credentials.UserName.UserName = State.UserCredentials.UserName;
+            channelFactory.Credentials.UserName.Password = State.UserCredentials.Password;
         }
 
+        #region Proxy
+         
 
         /*
     public override StructureTypeObj Create()
@@ -79,17 +68,17 @@ namespace WebAnnotationModel
     }
 */
 
-        protected override long[] ProxyUpdate(AnnotateStructureTypesClient proxy, StructureType[] objects)
+        protected override long[] ProxyUpdate(IAnnotateStructureTypes proxy, StructureType[] objects)
         {
             return proxy.UpdateStructureTypes(objects);
         }
 
-        protected override StructureType ProxyGetByID(AnnotateStructureTypesClient proxy, long ID)
+        protected override StructureType ProxyGetByID(IAnnotateStructureTypes proxy, long ID)
         {
             return proxy.GetStructureTypeByID(ID);
         }
 
-        protected override StructureType[] ProxyGetByIDs(AnnotateStructureTypesClient proxy, long[] IDs)
+        protected override StructureType[] ProxyGetByIDs(IAnnotateStructureTypes proxy, long[] IDs)
         {
             return proxy.GetStructureTypesByIDs(IDs);
         }
@@ -98,13 +87,13 @@ namespace WebAnnotationModel
 
         protected override StructureType[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                                      out long[] DeletedLocations,
-                                                                     GetObjectBySectionCallbackState<AnnotateStructureTypesClient, StructureTypeObj> state,
+                                                                     GetObjectBySectionCallbackState<IAnnotateStructureTypes, StructureTypeObj> state,
                                                                      IAsyncResult result)
         {
             throw new NotImplementedException();
         }
 
-        protected override StructureType[] ProxyGetBySection(AnnotateStructureTypesClient proxy, long SectionNumber, DateTime LastQuery,
+        protected override StructureType[] ProxyGetBySection(IAnnotateStructureTypes proxy, long SectionNumber, DateTime LastQuery,
                                                                 out long TicksAtQueryExecute,
                                                                 out long[] deleted_objects)
         {
@@ -113,7 +102,7 @@ namespace WebAnnotationModel
             return proxy.GetStructureTypes();
         }
 
-        protected override StructureType[] ProxyGetBySectionRegion(AnnotateStructureTypesClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery,
+        protected override StructureType[] ProxyGetBySectionRegion(IAnnotateStructureTypes proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery,
                                                                 out long TicksAtQueryExecute,
                                                                 out long[] deleted_objects)
         {
@@ -122,7 +111,7 @@ namespace WebAnnotationModel
             return proxy.GetStructureTypes();
         }
 
-        protected override IAsyncResult ProxyBeginGetBySection(AnnotateStructureTypesClient proxy,
+        protected override IAsyncResult ProxyBeginGetBySection(IAnnotateStructureTypes proxy,
                                                              long SectionNumber,
                                                              DateTime LastQuery,
                                                              AsyncCallback callback,
@@ -131,7 +120,7 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
-        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateStructureTypesClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateStructureTypes proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             throw new NotImplementedException();
         }
@@ -151,12 +140,12 @@ namespace WebAnnotationModel
 
         public StructureTypeObj Create(StructureTypeObj new_type)
         {
-            AnnotateStructureTypesClient proxy = null;
+            IClientChannel proxy = null;
             StructureTypeObj created_structuretype = null;
             try
             {
                 proxy = CreateProxy();
-                StructureType created_db_structuretype = proxy.CreateStructureType(new_type.GetData());
+                StructureType created_db_structuretype = ((IAnnotateStructureTypes)proxy).CreateStructureType(new_type.GetData());
                 if (created_db_structuretype == null)
                     return null;
 
@@ -180,12 +169,12 @@ namespace WebAnnotationModel
         public void LoadStructureTypes()
         {
             StructureType[] types = new StructureType[0];
-            AnnotateStructureTypesClient proxy = null;
+            IClientChannel proxy = null;
             try
             {
                 proxy = CreateProxy();
                 proxy.Open();
-                types = proxy.GetStructureTypes();
+                types = ((IAnnotateStructureTypes)proxy).GetStructureTypes();
             }
             catch (Exception e)
             {
@@ -222,7 +211,7 @@ namespace WebAnnotationModel
              */
         }
 
-        protected override StructureType[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState<AnnotateStructureTypesClient, StructureTypeObj> state, IAsyncResult result)
+        protected override StructureType[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out long[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotateStructureTypes, StructureTypeObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }

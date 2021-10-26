@@ -1824,7 +1824,9 @@ namespace MorphologyMesh
         {
             double distance;
             GridVector2 p = vertex.Point(Polygons);
-            PolygonIndex NearestPoint = OppositeVertexTree.FindNearest(p, out distance);
+            if (OppositeVertexTree.TryFindNearest(p, out var NearestPoint, out distance) == false)
+                return default;
+
             SliceChordTestType failures;
 
             if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, NearestPoint, chordTree, TestsToRun, out failures))
@@ -1881,7 +1883,9 @@ namespace MorphologyMesh
         {
             double distance;
             GridVector2 p = vertex.Position.XY();
-            MorphMeshVertex NearestPoint = OppositeVertexTree.FindNearest(p, out distance);
+            if (false == OppositeVertexTree.TryFindNearest(p, out var NearestPoint, out distance))
+                return null;
+
             BajajGeneratorMesh bajajMesh = mesh as BajajGeneratorMesh;
             SliceChordOriginTestResultsCache KnownCandidateFailures = bajajMesh == null ? null : bajajMesh.SliceChordCandidateCache.GetFailuresForOrigin(vertex.Index);
             SliceChordTestType failures;
@@ -2176,7 +2180,7 @@ namespace MorphologyMesh
             GridPolygon[] PolysOnLevel = polyset.Select(iPoly => mesh.Polygons[iPoly]).ToArray();
 
             GridRectangle bbox = PolysOnLevel.BoundingBox();
-            bbox.Scale(1.05);
+            bbox = GridRectangle.Scale(bbox, 1.05);
             QuadTree<MorphMeshVertex> quadTree = new QuadTree<MorphMeshVertex>(bbox);
 
             var Verts = mesh.MorphVerticies.Where(v => v.Type == VertexOrigin.CONTOUR && v.PolyIndex.HasValue && polyset.Contains(v.PolyIndex.Value.iPoly));
@@ -2222,7 +2226,7 @@ namespace MorphologyMesh
         private static QuadTree<PolygonIndex> BuildQuadTreeForPolyGroup(GridPolygon[] PolysOnLevel, IReadOnlyList<int> iPolyLookup)
         {
             GridRectangle bbox = PolysOnLevel.BoundingBox();
-            bbox.Scale(1.05);
+            bbox = GridRectangle.Scale(bbox, 1.05);
             QuadTree<PolygonIndex> quadTree = new QuadTree<PolygonIndex>(bbox);
 
             for(int i = 0; i < PolysOnLevel.Length; i++)
@@ -2308,7 +2312,7 @@ namespace MorphologyMesh
         private static QuadTree<PolygonIndex> BuildQuadTreeForPolyGroup(IEnumerable<PolygonIndex> Candidates, IReadOnlyList<GridPolygon> PointIndexablePolygons,  GridPolygon[] PolysOnLevel)
         {
             GridRectangle bbox = PolysOnLevel.BoundingBox();
-            bbox.Scale(1.05);
+            bbox = GridRectangle.Scale(bbox, 1.05);
             QuadTree<PolygonIndex> quadTree = new QuadTree<PolygonIndex>(bbox);
 
             foreach (var VertGroup in Candidates.GroupBy(p => p.iPoly))

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.ServiceModel;
+using System.ServiceModel.Channels;
 using WebAnnotationModel.Service;
 
 namespace WebAnnotationModel
@@ -54,29 +55,21 @@ namespace WebAnnotationModel
         System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>>();
 
         internal LocationRTree SpatialSearch;
+         
 
-        #region Proxy
+        #region Proxy 
 
-        protected override AnnotateLocationsClient CreateProxy()
-        {
-            AnnotateLocationsClient proxy = new Service.AnnotateLocationsClient("Annotation.Service.Interfaces.IAnnotateLocations-Binary",
-                State.EndpointAddress);
-            proxy.ClientCredentials.UserName.UserName = State.UserCredentials.UserName;
-            proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password;
-            return proxy;
-        }
-
-        protected override long[] ProxyUpdate(AnnotateLocationsClient proxy, Location[] objects)
+        protected override long[] ProxyUpdate(IAnnotateLocations proxy, Location[] objects)
         {
             return proxy.Update(objects);
         }
 
-        protected override Location ProxyGetByID(AnnotateLocationsClient proxy, long ID)
+        protected override Location ProxyGetByID(IAnnotateLocations proxy, long ID)
         {
             return proxy.GetLocationByID(ID);
         }
 
-        protected override Location[] ProxyGetByIDs(AnnotateLocationsClient proxy, long[] IDs)
+        protected override Location[] ProxyGetByIDs(IAnnotateLocations proxy, long[] IDs)
         {
             return proxy.GetLocationsByID(IDs);
         }
@@ -98,12 +91,12 @@ namespace WebAnnotationModel
             return IDToObject.Values.Where(l => l.ParentID.HasValue && l.ParentID.Value == StructureID).ToArray();
         }
 
-        protected override Location[] ProxyGetBySection(AnnotateLocationsClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] deleted_objs)
+        protected override Location[] ProxyGetBySection(IAnnotateLocations proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out long[] deleted_objs)
         {
             return proxy.GetLocationChanges(out TicksAtQueryExecute, out deleted_objs, SectionNumber, LastQuery.Ticks);
         }
 
-        protected override IAsyncResult ProxyBeginGetBySection(AnnotateLocationsClient proxy,
+        protected override IAsyncResult ProxyBeginGetBySection(IAnnotateLocations proxy,
                                                         long SectionNumber,
                                                         DateTime LastQuery,
                                                         AsyncCallback callback,
@@ -113,7 +106,7 @@ namespace WebAnnotationModel
         }
 
 
-        protected override Location[] ProxyGetBySectionRegion(AnnotateLocationsClient proxy,
+        protected override Location[] ProxyGetBySectionRegion(IAnnotateLocations proxy,
                                                              long SectionNumber,
                                                              BoundingRectangle BBox,
                                                              double MinRadius,
@@ -124,14 +117,14 @@ namespace WebAnnotationModel
             return proxy.GetLocationChangesInMosaicRegion(out TicksAtQueryExecute, out deleted_objs, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
         }
 
-        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateLocationsClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateLocations proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             return proxy.BeginGetLocationChangesInMosaicRegion(SectionNumber, BBox, MinRadius, LastQuery.Ticks, callback, asynchState);
         }
 
         protected override Location[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute,
                                                                       out long[] DeletedLocations,
-                                                                      GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state,
+                                                                      GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> state,
                                                                       IAsyncResult result)
         {
             return state.Proxy.EndGetLocationChangesInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
@@ -139,7 +132,7 @@ namespace WebAnnotationModel
 
         protected override Location[] ProxyGetBySectionCallback(out long TicksAtQueryExecute,
                                                               out long[] DeletedLocations,
-                                                              GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state,
+                                                              GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> state,
                                                               IAsyncResult result)
         {
             return state.Proxy.EndGetLocationChanges(out TicksAtQueryExecute, out DeletedLocations, result);
@@ -152,6 +145,12 @@ namespace WebAnnotationModel
 
         public LocationStore()
         {
+            channelFactory =
+                new ChannelFactory<IAnnotateLocations>("Annotation.Service.Interfaces.IAnnotateLocations-Binary");
+
+            channelFactory.Credentials.UserName.UserName = State.UserCredentials.UserName;
+            channelFactory.Credentials.UserName.Password = State.UserCredentials.Password;
+
             SpatialSearch = new LocationRTree(this);
         }
 
@@ -163,9 +162,10 @@ namespace WebAnnotationModel
 
         public LocationObj GetLastModifiedLocation()
         {
-            using (AnnotateLocationsClient proxy = CreateProxy())
+            using (var proxy = CreateProxy())
             {
-                Location loc = proxy.GetLastModifiedLocation();
+                var client = (IAnnotateLocations)proxy;
+                Location loc = client.GetLastModifiedLocation();
                 if (loc != null)
                 {
                     LocationObj LastModifiedLoc = new LocationObj(loc);
@@ -185,13 +185,12 @@ namespace WebAnnotationModel
         /// <param name="linked_locations"></param>
         /// <returns></returns>
         public LocationObj Create(LocationObj new_location, long[] linked_locations = null)
-        {
-            AnnotateLocationsClient proxy = null;
+        { 
             LocationObj created_location = null;
-            try
+            using (var proxy = CreateProxy())
             {
-                proxy = CreateProxy();
-                Location created_db_location = proxy.CreateLocation(new_location.GetData(), linked_locations);
+                var client = (IAnnotateLocations)proxy;
+                Location created_db_location = client.CreateLocation(new_location.GetData(), linked_locations);
                 if (created_db_location == null)
                     return null;
 
@@ -210,12 +209,7 @@ namespace WebAnnotationModel
                 Store.LocationLinks.Add(listLinks); 
                 */
                 return created_location;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
-            }
+            } 
         }
 
         public override bool Remove(LocationObj obj)
@@ -323,13 +317,13 @@ namespace WebAnnotationModel
         public ICollection<LocationObj> GetLocationsForStructure(long StructureID)
         {
             Location[] data = null;
-            AnnotateLocationsClient proxy = null;
+            IClientChannel proxy = null;
             try
             {
                 proxy = CreateProxy();
                 proxy.Open();
 
-                data = proxy.GetLocationsForStructure(StructureID);
+                data = ((IAnnotateLocations)proxy).GetLocationsForStructure(StructureID);
             }
             catch (Exception e)
             {
@@ -386,12 +380,12 @@ namespace WebAnnotationModel
         }
 
         public List<LocationObj> GetStructureLocationChangeLog(long structureid)
-        {
-            AnnotateLocationsClient proxy = null;
+        { 
             List<LocationObj> listLocations = new List<LocationObj>();
-            using (proxy = CreateProxy())
+            using (var proxy = CreateProxy())
             {
-                LocationHistory[] history = proxy.GetLocationChangeLog(structureid, new DateTime?(), new DateTime?());
+                var client = (IAnnotateLocations)proxy;
+                LocationHistory[] history = client.GetLocationChangeLog(structureid, new DateTime?(), new DateTime?());
 
                 listLocations.Capacity = history.Length;
                 foreach (LocationHistory db_loc in history)
@@ -502,36 +496,29 @@ namespace WebAnnotationModel
 
             Location[] objects = new Location[0];
             long QueryExecutedTime;
-            long[] deleted_objects = new long[0];
-            AnnotateLocationsClient proxy = null;
+            long[] deleted_objects = new long[0]; 
             DateTime StartTime = DateTime.UtcNow;
             AnnotationSet serverAnnotations = null;
-            try
+            using (var proxy = CreateProxy())
             {
-                proxy = CreateProxy();
-                proxy.Open();
-
-                serverAnnotations = proxy.GetAnnotationsInMosaicRegion(out QueryExecutedTime,
-                                                                       out deleted_objects,
-                                                                       SectionNumber,
-                                                                       bounds.ToBoundingRectangle(),
-                                                                       MinRadius,
-                                                                       LastQueryUtc.HasValue ? LastQueryUtc.Value.Ticks : DateTime.MinValue.Ticks);
-            }
-            catch (EndpointNotFoundException e)
-            {
-                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-            }
-            finally
-            {
-                if (proxy != null)
+                try
                 {
-                    proxy.Close();
-                    proxy = null;
+                    var client = (IAnnotateLocations)proxy;
+
+                    serverAnnotations = client.GetAnnotationsInMosaicRegion(out QueryExecutedTime,
+                        out deleted_objects,
+                        SectionNumber,
+                        bounds.ToBoundingRectangle(),
+                        MinRadius,
+                        LastQueryUtc.HasValue ? LastQueryUtc.Value.Ticks : DateTime.MinValue.Ticks);
+                }
+                catch (EndpointNotFoundException e)
+                {
+                    Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
+                }
+                catch (Exception e)
+                {
+                    ShowStandardExceptionMessage(e);
                 }
             }
 
@@ -563,20 +550,20 @@ namespace WebAnnotationModel
                                                                                            double MinRadius,
                                                                                            DateTime? LastQueryUtc,
                                                                                            Action<ICollection<LocationObj>> OnLoadCompletedCallBack)
-        {
-            AnnotateLocationsClient proxy = null;
+        { 
 
             IAsyncResult result = null;
+            IClientChannel proxy = null;
             try
             {
                 proxy = CreateProxy();
-                proxy.Open();
+                var client = (IAnnotateLocations)proxy;
 
                 //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> newState = new GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>(proxy, SectionNumber, LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue, OnLoadCompletedCallBack);
+                GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> newState = new GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj>((IAnnotateLocations)proxy, SectionNumber, LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue, OnLoadCompletedCallBack);
 
                 //Build list of Locations to check
-                result = proxy.BeginGetAnnotationsInMosaicRegion(SectionNumber,
+                result = client.BeginGetAnnotationsInMosaicRegion(SectionNumber,
                                         bounds.ToBoundingRectangle(),
                                         MinRadius,
                                         newState.LastQueryExecutedTime.Ticks,
@@ -610,12 +597,12 @@ namespace WebAnnotationModel
         {
             //Remove the entry from outstanding queries so we can query again.  It also prevents the proxy from being aborted if too many 
             //queries are in-flight
-            GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state = result.AsyncState as GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>;
+            GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> state = result.AsyncState as GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj>;
 
-            AnnotateLocationsClient proxy = state.Proxy;
+            IClientChannel proxy = (IClientChannel)state.Proxy;
 
             //This happens if we called abort
-            if (IsProxyBroken(state.Proxy))
+            if (IsProxyBroken(proxy))
                 return;
 
             Debug.Assert(proxy != null);
@@ -626,7 +613,7 @@ namespace WebAnnotationModel
             AnnotationSet serverAnnotations = null;
             try
             {
-                serverAnnotations = proxy.EndGetAnnotationsInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
+                serverAnnotations = ((IAnnotateLocations)proxy).EndGetAnnotationsInMosaicRegion(out TicksAtQueryExecute, out DeletedLocations, result);
             }
             catch (TimeoutException)
             {
@@ -645,8 +632,8 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                if (proxy is IClientChannel channel)
+                    channel.Close();
             }
 
             ChangeInventory<LocationObj> location_inventory = ProcessAnnotationSet(serverAnnotations, DeletedLocations, state.StartTime, state.SectionNumber);

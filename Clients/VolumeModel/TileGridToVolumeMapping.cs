@@ -168,7 +168,7 @@ namespace Viking.VolumeModel
         private List<Tile> RecursiveVisibleTiles(
                                                  GridRectangle VolumeVisibleBounds,
                                                  GridRectangle SectionVisibleBounds,
-                                                 GridQuad VisibleQuad,
+                                                 GridQuad? VisibleQuad,
                                                  int roundedDownsample)
         {
 
@@ -204,14 +204,14 @@ namespace Viking.VolumeModel
                     GridRectangle tileBorder = TileBoundingBox(iX, iY, (int)roundedDownsample);
                     if (tileBorder.Intersects(SectionVisibleBounds) == false)
                         continue;
-
-
+                     
                     //If we have a visble quad see if the tile intersects that too
-                    if (VisibleQuad != null)
+                    if (VisibleQuad.HasValue)
                     {
-                        if (VisibleQuad.Contains(tileBorder) == false)
+                        if (VisibleQuad.Value.Contains(tileBorder) == false)
                             continue;
                     }
+
                     string UniqueID = Tile.CreateUniqueKey(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
 
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 

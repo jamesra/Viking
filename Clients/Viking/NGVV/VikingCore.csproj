@@ -561,6 +561,7 @@
     <ProjectReference Include="..\..\..\UnitsAndScale\UnitsAndScale.csproj">
       <Project>{54a855c6-e843-4079-85a9-57157662d7e6}</Project>
       <Name>UnitsAndScale</Name>
+      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\..\Utils\Utils.csproj">
       <Project>{ce81a8d8-0908-4eb3-9033-b7b149182f05}</Project>

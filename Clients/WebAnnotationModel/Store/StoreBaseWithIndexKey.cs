@@ -53,16 +53,14 @@ namespace WebAnnotationModel
                     changedDBObj.Add(dbObj.GetData());
                 }
 
-                PROXY proxy = null;
+                IClientChannel proxy = null;
 
                 KEY[] newIDs = new KEY[0];
                 try
                 {
                     proxy = CreateProxy();
-                    proxy.Open();
 
-
-                    newIDs = ProxyUpdate(proxy, changedDBObj.ToArray());
+                    newIDs = ProxyUpdate(proxy as INTERFACE, changedDBObj.ToArray());
                 }
                 catch (Exception e)
                 {

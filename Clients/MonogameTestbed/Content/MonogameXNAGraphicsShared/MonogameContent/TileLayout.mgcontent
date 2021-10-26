@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PipelineBuildEvent xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <SourceFile>C:/src/git/Viking/Clients/MonogameTestbed/Content/../../MonogameXNAGraphicsShared/MonogameContent/TileLayout.fx</SourceFile>
-  <SourceTime>2019-10-16T11:43:21.2310944-07:00</SourceTime>
-  <DestFile>C:/src/git/Viking/Clients/MonogameTestbed/Content/bin/Windows/../../MonogameXNAGraphicsShared/MonogameContent/TileLayout.xnb</DestFile>
-  <DestTime>2019-10-16T12:21:08.4215806-07:00</DestTime>
+  <SourceFile>C:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/../../MonogameXNAGraphicsShared/MonogameContent/TileLayout.fx</SourceFile>
+  <SourceTime>2021-10-20T12:43:06.4714755-07:00</SourceTime>
+  <DestFile>C:/src/git/VikingLegacy/Clients/MonogameTestbed/Content/bin/Windows/../../MonogameXNAGraphicsShared/MonogameContent/TileLayout.xnb</DestFile>
+  <DestTime>2021-10-20T15:52:22.0589183-07:00</DestTime>
   <Importer>EffectImporter</Importer>
   <ImporterTime>2016-03-29T23:36:08-07:00</ImporterTime>
   <Processor>EffectProcessor</Processor>

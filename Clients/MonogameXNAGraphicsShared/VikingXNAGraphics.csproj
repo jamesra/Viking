@@ -249,8 +249,8 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>mkdir $(SolutionDir)Viking\Content\$(ProjectName)
-(robocopy $(TargetDir)Content $(SolutionDir)Viking\Content\$(ProjectName) * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PostBuildEvent>
+    <PostBuildEvent>mkdir $(ProjectDir)..\Viking\Viking\Content\$(ProjectName)
+(robocopy $(TargetDir)Content $(ProjectDir)..\Viking\Viking\Content\$(ProjectName) * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

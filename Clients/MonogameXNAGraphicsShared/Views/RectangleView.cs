@@ -40,13 +40,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        public override IShape2D Shape
-        {
-            get
-            {
-                return BoundingRect;
-            }
-        }
+        public override IShape2D Shape => BoundingRect;
 
         public GridRectangle BoundingBox => BoundingRect;
 

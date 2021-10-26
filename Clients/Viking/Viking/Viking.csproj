@@ -15,11 +15,11 @@
     <FileAlignment>512</FileAlignment>
     <IsWebBootstrapper>true</IsWebBootstrapper>
     <ApplicationIcon>Viking.ico</ApplicationIcon>
-    <ManifestCertificateThumbprint>2BADCE24EC984EC73C686B32B12C48B543B4441C</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>2AA32CFAA1A0853BB33F258D4B9A5905AD36C32A</ManifestCertificateThumbprint>
     <ManifestKeyFile>
     </ManifestKeyFile>
     <GenerateManifests>true</GenerateManifests>
-    <SignManifests>false</SignManifests>
+    <SignManifests>true</SignManifests>
     <TargetZone>LocalIntranet</TargetZone>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
     <FileUpgradeFlags>
@@ -65,6 +65,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
+    <LargeAddressAware>true</LargeAddressAware>
     <CodeAnalysisRuleSet>Main.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <RunCodeAnalysis>false</RunCodeAnalysis>
@@ -79,6 +80,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
+    <LargeAddressAware>true</LargeAddressAware>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <UseVSHostingProcess>true</UseVSHostingProcess>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -109,7 +111,7 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestTimestampUrl>http://timestamp.verisign.com/scripts/timstamp.dll</ManifestTimestampUrl>
+    <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
@@ -136,9 +138,18 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
+    <Content Include="Content\AnnotationOverlayShader.fx" />
+    <Content Include="Content\ChannelOverlayShader.fx" />
+    <Content Include="Content\MergeHSVImages.fx" />
+    <Content Include="Content\RGBToHSV.fx" />
+    <Content Include="Content\RoundCurve.fx" />
+    <Content Include="Content\RoundCurveHSV.fx" />
+    <Content Include="Content\RoundLine.fx" />
+    <Content Include="Content\RoundLineHSV.fx" />
+    <Content Include="Content\TileLayout.fx" />
     <Content Include="Modules\WebAnnotation\AnnotationServiceTypes.dll" />
     <Content Include="Modules\WebAnnotation\protobuf-net.dll" />
-    <Content Include="Modules\WebAnnotation\SqlGeometryAnnotationExtensions.cs.dll" />
+    <Content Include="Modules\WebAnnotation\SqlGeometryAnnotationExtensions.dll" />
     <Content Include="x86\libiomp5md.dll" />
     <Content Include="x86\MathNet.Numerics.MKL.dll" />
     <Content Include="SqlServerTypes\x86\msvcr120.dll">
@@ -160,27 +171,32 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
-    <Content Include="Content\Arial.spritefont" />
-    <Content Include="Content\Arial.xnb" />
-    <Content Include="Content\Circle.xnb" />
-    <Content Include="Content\RoundLine.xnb" />
+    <Content Include="Content\Arrow.xnb" />
+    <Content Include="Content\Ring.xnb" />
     <Content Include="Content\Star.xnb" />
     <Content Include="Content\AnnotationOverlayShader.xnb" />
+    <Content Include="Content\Arial.spritefont" />
+    <Content Include="Content\Arial.xnb" />
+    <Content Include="Content\BillboardAnnotation.xnb" />
     <Content Include="Content\ChannelOverlayShader.xnb" />
-    <Content Include="Content\MergeHSVImages.xnb" />
-    <Content Include="Content\TileLayout.xnb" />
-    <Content Include="Content\UpArrowMask.xnb" />
-    <Content Include="Content\UpArrowV2.xnb" />
+    <Content Include="Content\Circle.xnb" />
+    <Content Include="Content\CircleChain.xnb" />
+    <Content Include="Content\CircleConnect.xnb" />
     <Content Include="Content\CircleMask.xnb" />
-    <Content Include="Content\RoundLineHSV.xnb" />
+    <Content Include="Content\CircleMinus.xnb" />
+    <Content Include="Content\CirclePlus.xnb" />
+    <Content Include="Content\CircleX.xnb" />
     <Content Include="Content\DownArrowV2.xnb" />
+    <Content Include="Content\MergeHSVImages.xnb" />
+    <Content Include="Content\PolygonOverlayShader.xnb" />
     <Content Include="Content\RGBToHSV.xnb" />
     <Content Include="Content\RoundCurve.xnb" />
     <Content Include="Content\RoundCurveHSV.xnb" />
-    <Content Include="Content\PolygonOverlayShader.xnb" />
-    <Content Include="Content\Arrow.xnb" />
-    <Content Include="Content\Ring.xnb" />
-    <Content Include="Content\CircleChain.xnb" />
+    <Content Include="Content\RoundLine.xnb" />
+    <Content Include="Content\RoundLineHSV.xnb" />
+    <Content Include="Content\TileLayout.xnb" />
+    <Content Include="Content\UpArrowMask.xnb" />
+    <Content Include="Content\UpArrowV2.xnb" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -361,6 +377,10 @@
       <Project>{0b489584-5d3e-4fb4-8a3d-77b7030e2994}</Project>
       <Name>SIMeasurement</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\UnitsAndScale\UnitsAndScale.csproj">
+      <Project>{54a855c6-e843-4079-85a9-57157662d7e6}</Project>
+      <Name>UnitsAndScale</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj">
       <Project>{61452f17-ca41-4bbe-8d20-3c6339cd4626}</Project>
       <Name>WCFTokenInjector</Name>
@@ -370,6 +390,7 @@
       <Name>VikingCore</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -380,11 +401,12 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>robocopy $(ProjectDir)Content $(TargetDir)Content *.* /PURGE
-robocopy $(ProjectDir)Modules $(TargetDir)Modules *.* /PURGE</PostBuildEvent>
+robocopy $(ProjectDir)Modules $(TargetDir)Modules *.* /MIR
+IF %25ERRORLEVEL%25 LEQ 8 exit 0</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <PreBuildEvent>del $(ProjectDir)Content\*.* /S /Q
-robocopy $(ProjectDir)..\Content\LocalBookmarks\ $(ProjectDir)Content\ *.*
-(robocopy $(ProjectDir)..\Content\VikingXNAGraphics\ $(ProjectDir)Content\ *.*) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PreBuildEvent>
+    <PreBuildEvent>del $(ProjectDir)Content\*.* /Q
+copy $(ProjectDir)Content\LocalBookmarks\* $(ProjectDir)Content\* 
+copy $(ProjectDir)Content\VikingXNAGraphics\* $(ProjectDir)Content\*</PreBuildEvent>
   </PropertyGroup>
 </Project>

@@ -849,8 +849,9 @@ namespace MorphologyMesh
             foreach(PolygonIndex index in indexEnum)
             {
                 GridVector2 p = index.Point(Polygons);
-                List<PolygonIndex> existing = tree.FindNearest(p, out GridVector2 foundPoint, out double distance);
-                if (foundPoint == p) //A corresponding point has already been added
+
+                tree.TryFindNearest(p, out var existing, out double distance);
+                if (distance < Global.Epsilon) //A corresponding point has already been added
                 {
                     existing.Add(index);
                 }

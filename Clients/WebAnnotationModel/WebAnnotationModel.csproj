@@ -111,6 +111,7 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="packages.config" />
     <None Include="Properties\DataSources\AnnotationService.Types.AnnotationSet.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.CreateStructureRetval.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.Location.datasource" />
@@ -152,7 +153,7 @@
     <ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
       <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
       <Name>SqlGeometryUtils</Name>
-      <Private>True</Private>
+      <Private>false</Private>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

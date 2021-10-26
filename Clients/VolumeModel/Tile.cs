@@ -1,5 +1,6 @@
 using Geometry;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Viking.VolumeModel
 {
@@ -83,11 +84,7 @@ namespace Viking.VolumeModel
             {
                 if (double.IsNaN(_Bounds.Width))
                 {
-                    foreach (PositionNormalTextureVertex v in Verticies)
-                    {
-                        _Bounds = GridRectangle.Union(_Bounds, new GridVector2(v.Position.X, v.Position.Y));
-                    }
-
+                    _Bounds = Verticies.Select(v => v.Position.XY()).ToArray().BoundingBox();
                 }
 
                 return _Bounds; 
