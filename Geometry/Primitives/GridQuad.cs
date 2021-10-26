@@ -8,10 +8,10 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public class GridQuad
+    public readonly struct GridQuad
     {
-        GridTriangle T0;
-        GridTriangle T1;
+        readonly GridTriangle T0;
+        readonly GridTriangle T1;
 
         public GridQuad(GridVector2 pos, double Width, double Height)
             : this(pos, new GridVector2(pos.X + Width, pos.Y), new GridVector2(pos.X, pos.Y + Height), new GridVector2(pos.X + Width, pos.Y + Height))
@@ -43,37 +43,38 @@ namespace Geometry
         public GridVector2 BottomLeft
         {
             get => T0.p1;
-            set {
+            /*set {
                 T0 = new GridTriangle(value, T0.p2, T0.p3); 
-            }
+            }*/
         }
 
         public GridVector2 BottomRight
         {
             get => T0.p2;
-            set {
+            /*set {
                 T0 = new GridTriangle(T0.p1, value, T0.p3);
                 T1 = new GridTriangle(value, T1.p2, T1.p3); 
-            }
+            }*/
         }
 
         public GridVector2 TopLeft
         {
             get => T0.p3;
-            set {
+            /*set {
                 T0 = new GridTriangle(T0.p1, T0.p3, value);
                 T1 = new GridTriangle(T1.p1, T1.p2, value); 
-            }
+            }*/
         }
 
         public GridVector2 TopRight
         {
             get => T1.p2;
-            set {
+            /*set {
                 T1 = new GridTriangle(T1.p1,  value, T1.p3); 
-            }
+            }*/
         }
 
+        /*
         public void Scale(double scalar)
         {
             //Have to cache center because it changes as we update points
@@ -90,6 +91,7 @@ namespace Geometry
             this.BottomRight = center - directionB;
             this.TopLeft = center + directionB;
         }
+        */
 
         public bool Contains(GridVector2 p)
         {
@@ -108,9 +110,6 @@ namespace Geometry
 
         public bool Contains(GridQuad R)
         {
-            if (R == null)
-                throw new ArgumentNullException(nameof(R));
-
             GridVector2 v1 = R.BottomLeft;
             GridVector2 v2 = R.BottomRight;
             GridVector2 v3 = R.TopRight;
