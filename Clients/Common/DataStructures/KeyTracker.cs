@@ -80,19 +80,15 @@ namespace Viking.Common
                 {
                     rwKnownLocationsLock.EnterWriteLock();
                     TrackedKeys.Add(ID);
-                    if (a != null)
+                    try
                     {
-                        try
-                        {
-                            a();
-                        }
-                        catch
-                        {
-                            TrackedKeys.Remove(ID);
-                            throw;
-                        }
+                        a?.Invoke();
                     }
-
+                    catch
+                    {
+                        TrackedKeys.Remove(ID);
+                        throw;
+                    }
                 }
                 finally
                 {
@@ -162,8 +158,7 @@ namespace Viking.Common
                 {
                     rwKnownLocationsLock.EnterWriteLock();
                     TrackedKeys.Remove(ID);
-                    if (a != null)
-                        a();
+                    a?.Invoke();
                 }
                 finally
                 {
@@ -260,11 +255,11 @@ namespace Viking.Common
                     TrackedKeys.Add(ID, 0);
                 }
 
-                if (RefCount == 0 && OnFirstReferenceAction != null)
+                if (RefCount == 0)
                 {
                     try
                     {
-                        OnFirstReferenceAction(ID);
+                        OnFirstReferenceAction?.Invoke(ID);
                     }
                     catch
                     {
@@ -304,11 +299,7 @@ namespace Viking.Common
 
                 if (RefCount == 0)
                 {
-                    if (OnLastReferenceReleasedAction != null)
-                    {
-                        OnLastReferenceReleasedAction(ID);
-                    }
-
+                    OnLastReferenceReleasedAction?.Invoke(ID);
                     TrackedKeys.Remove(ID);
                 }
                 else
