@@ -99,6 +99,30 @@ namespace Geometry
             _HashCode = Left.GetHashCode() ^ Bottom.GetHashCode();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="borders">[MinX, MaxX, MinY, MaxY]</param>
+        public GridRectangle(double[] borders)
+        {
+            Left = borders[0];
+            Right = borders[1];
+            Bottom = borders[2];
+            Top = borders[3];
+
+            Corners = CalculateCorners(Left, Bottom, Right, Top);
+            _HashCode = CalcHashCode(Left, Bottom, Right, Top);
+            Segments = CalculateSegments(Corners);
+
+            if (!double.IsNaN(Left))
+            {
+                Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectangle argument error");
+                if (Left > Right || Bottom > Top)
+                {
+                    throw new ArgumentException("Grid Rectangle must have non-negative width and height");
+                }
+            }
+        }
 
         public GridRectangle(double left, double right, double bottom, double top)
         {  

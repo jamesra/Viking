@@ -8,7 +8,7 @@ namespace Geometry
     {
         public static int[] Triangulate(GridVector2[] points)
         {
-            GridVector2[] BoundingPoints = GetBounds(points);
+            GridVector2[] BoundingPoints = GetCorners(points);
             return Delaunay2D.Triangulate(points, BoundingPoints);
         }
 
@@ -196,7 +196,12 @@ namespace Geometry
             return TriangleIndicies;
         }
 
-        static GridVector2[] GetBounds(GridVector2[] points)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns>[BotLeft, BotRight, TopLeft, TopRight]</returns>
+        static GridVector2[] GetCorners(GridVector2[] points)
         {
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -207,10 +212,10 @@ namespace Geometry
             //boundary
             for (int i = 0; i < points.Length; i++)
             {
-                minX = Math.Min(minX, points[i].X);
-                maxX = Math.Max(maxX, points[i].X);
-                minY = Math.Min(minY, points[i].Y);
-                maxY = Math.Max(maxY, points[i].Y);
+                minX = points[i].X < minX ? points[i].X : minX;
+                maxX = points[i].X > maxX ? points[i].X : maxX;
+                minY = points[i].Y < minY ? points[i].Y : minY;
+                maxY = points[i].Y > maxY ? points[i].Y : maxY;
             }
 
             double width = maxX - minX;

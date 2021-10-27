@@ -729,13 +729,40 @@ namespace Geometry
             return accumulator / 2.0;
         }
 
-        public static GridRectangle BoundingBox(this GridVector2[] points)
+        public static GridVector2 Min(this IEnumerable<GridVector2> points)
+        {
+            var minX = double.MaxValue;
+            var minY = double.MaxValue;
+            foreach (var p in points)
+            {
+                minX = p.X < minX ? p.X : minX;
+                minY = p.Y < minY ? p.Y : minY;
+            }
+
+            return new GridVector2(minX, minY);
+        }
+
+        public static GridVector2 Max(this IEnumerable<GridVector2> points)
+        {
+            var maxX = double.MinValue;
+            var maxY = double.MinValue;
+            foreach (var p in points)
+            {
+                maxX = p.X > maxX ? p.X : maxX;
+                maxY = p.Y > maxY ? p.Y : maxY;
+            }
+
+            return new GridVector2(maxX, maxY);
+        }
+
+        /// <returns>[MinX/Left, MaxX/Right, MinY/Bottom, MaxY/Top]</returns>
+        public static double[] GetBounds(this GridVector2[] points)
         {
             if (points == null)
                 throw new ArgumentNullException(nameof(points));
 
             if (points.Length == 0)
-                throw new ArgumentException("GridRectangle Border is empty", nameof(points));
+                throw new ArgumentException("Empty collection", nameof(points));
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -744,23 +771,22 @@ namespace Geometry
 
             for (int i = 0; i < points.Length; i++)
             {
-                minX = Math.Min(minX, points[i].X);
-                maxX = Math.Max(maxX, points[i].X);
-                minY = Math.Min(minY, points[i].Y);
-                maxY = Math.Max(maxY, points[i].Y);
+                minX = points[i].X < minX ? points[i].X : minX;
+                maxX = points[i].X > maxX ? points[i].X : maxX;
+                minY = points[i].Y < minY ? points[i].Y : minY;
+                maxY = points[i].Y > maxY ? points[i].Y : maxY;
             }
 
-            return new GridRectangle(minX, maxX, minY, maxY);
+            return new double[] { minX, maxX, minY, maxY };
         }
 
-        public static GridRectangle BoundingBox(this IEnumerable<GridVector2> points)
+        /// <returns>[MinX/Left, MaxX/Right, MinY/Bottom, MaxY/Top]</returns>
+        public static double[] GetBounds(this IEnumerable<GridVector2> points)
         {
             if (points == null)
                 throw new ArgumentNullException(nameof(points));
 
-            if (points.Any() == false)
-                throw new ArgumentException("GridRectangle Border is empty", nameof(points));
-
+            
             double minX = double.MaxValue;
             double minY = double.MaxValue;
             double maxX = double.MinValue;
@@ -768,15 +794,22 @@ namespace Geometry
 
             foreach (GridVector2 p in points)
             {
-                minX = Math.Min(minX, p.X);
-                maxX = Math.Max(maxX, p.X);
-                minY = Math.Min(minY, p.Y);
-                maxY = Math.Max(maxY, p.Y);
+                minX = p.X < minX ? p.X : minX;
+                maxX = p.X > maxX ? p.X : maxX;
+                minY = p.Y < minY ? p.Y : minY;
+                maxY = p.Y > maxY ? p.Y : maxY;
             }
 
-            return new GridRectangle(minX, maxX, minY, maxY);
+            if (minX == double.MinValue && points.Any() == false)
+                throw new ArgumentException("Empty collection", nameof(points));
+            
+            return new double[] { minX, maxX, minY, maxY };
         }
 
+        public static GridRectangle BoundingBox(this GridVector2[] points) => new GridRectangle(GetBounds(points));
+
+        public static GridRectangle BoundingBox(this IEnumerable<GridVector2> points) => new GridRectangle(GetBounds(points));
+          
         /// <summary>
         /// Given a set of points, return the closest distance between any two points
         /// </summary>

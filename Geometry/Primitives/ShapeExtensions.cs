@@ -549,6 +549,11 @@ namespace Geometry
             if (rect.Contains(tri.p1) || rect.Contains(tri.p2) || rect.Contains(tri.p3))
                 return true;
 
+            //If even one point of the rectangle is inside the triangle then the rectangle is entirely contained in the triangle
+            //or a line segment of the rectangle must intersect the triangle
+            if (tri.Contains(rect.Center))
+                return true;
+
             foreach (var tri_line in tri.Segments)
             {
                 if (rect.Intersects(tri_line))
