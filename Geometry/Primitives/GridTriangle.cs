@@ -240,7 +240,10 @@ namespace Geometry
         /// <param name="test"></param>
         /// <returns></returns>
         public bool Contains(in IPoint2D point)
-        {                
+        {
+            if (false == BoundingBox.Contains(point))
+                return false;
+
             GridVector2 uv = Barycentric(point);
 
             if (uv.X >= 0 && uv.Y >= 0)
@@ -304,6 +307,8 @@ namespace Geometry
         {
             return ShapeExtensions.TriangleIntersects(this, in shape);
         }
+
+        public bool Intersects(in GridRectangle r) => RectangleIntersectionExtensions.Intersects(r, this);
 
         public bool Intersects(in ICircle2D c) => Intersects(c.Convert());
 

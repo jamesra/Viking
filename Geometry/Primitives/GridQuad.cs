@@ -8,10 +8,10 @@ namespace Geometry
     /// </summary>
     /// 
     [Serializable]
-    public readonly struct GridQuad
+    public readonly struct GridQuad 
     {
         readonly GridTriangle T0;
-        readonly GridTriangle T1;
+        readonly GridTriangle T1;  
 
         public GridQuad(GridVector2 pos, double Width, double Height)
             : this(pos, new GridVector2(pos.X + Width, pos.Y), new GridVector2(pos.X, pos.Y + Height), new GridVector2(pos.X + Width, pos.Y + Height))
@@ -28,15 +28,15 @@ namespace Geometry
         public GridQuad(GridVector2 p1, GridVector2 p2, GridVector2 p3, GridVector2 p4)
         {
            T0 = new GridTriangle(p1,p2,p3); 
-           T1 = new GridTriangle(p2,p4,p3); 
+           T1 = new GridTriangle(p2,p4,p3);
         }
 
         public GridQuad(GridRectangle rect)
         {
             T0 = new GridTriangle(rect.LowerLeft, rect.LowerRight, rect.UpperLeft);
-            T1 = new GridTriangle(rect.LowerRight, rect.UpperRight, rect.UpperLeft); 
+            T1 = new GridTriangle(rect.LowerRight, rect.UpperRight, rect.UpperLeft);
         }
-        
+
 
         public GridVector2 Center => new GridLineSegment(T0.p2, T0.p3).Bisect();
          
@@ -93,7 +93,7 @@ namespace Geometry
         }
         */
 
-        public bool Contains(GridVector2 p)
+        public bool Contains(in GridVector2 p)
         {
             if(this.T0.Contains(p))
                 return true;
@@ -105,10 +105,13 @@ namespace Geometry
 
         public bool Contains(in GridRectangle R)
         {
+            if (false == (T0.Intersects(R) || T1.Intersects(R)))
+                return false;
+
             return Contains(new GridQuad(new GridVector2(R.Left, R.Bottom), R.Width, R.Height) ); 
         }
 
-        public bool Contains(GridQuad R)
+        public bool Contains(in GridQuad R)
         {
             GridVector2 v1 = R.BottomLeft;
             GridVector2 v2 = R.BottomRight;
