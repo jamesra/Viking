@@ -66,9 +66,9 @@ namespace Geometry
 
         public GridTriangle(in GridVector2 p1, in GridVector2 p2, in GridVector2 p3)
         {
-            if (GridVector2.Distance(p1, p2) <= Global.Epsilon ||
-                GridVector2.Distance(p2, p3) <= Global.Epsilon ||
-                GridVector2.Distance(p3, p1) <= Global.Epsilon)
+            if (GridVector2.DistanceSquared(p1, p2) <= Global.EpsilonSquared ||
+                GridVector2.DistanceSquared(p2, p3) <= Global.EpsilonSquared ||
+                GridVector2.DistanceSquared(p3, p1) <= Global.EpsilonSquared)
             {
                 throw new ArgumentException("This is not a triangle, it is a line");
             }
@@ -77,7 +77,7 @@ namespace Geometry
 
             BoundingBox = Points.BoundingBox();
 
-            _HashCode = p1.GetHashCode();
+            _HashCode = ((p1 + p2 + p3) / 3).GetHashCode();
 
             Segments = new GridLineSegment[] { new GridLineSegment(p1,p2),
                                                 new GridLineSegment(p2,p3),
