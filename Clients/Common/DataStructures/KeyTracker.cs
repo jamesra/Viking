@@ -11,16 +11,21 @@ namespace Viking.Common
     /// <typeparam name="T"></typeparam>
     public class KeyTracker<T> where T : IComparable<T>
     {
-        private System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new System.Threading.ReaderWriterLockSlim();
+        private readonly System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new System.Threading.ReaderWriterLockSlim();
 
-        private SortedSet<T> TrackedKeys = new SortedSet<T>();
+        private readonly SortedSet<T> TrackedKeys = new SortedSet<T>();
 
         public IEnumerable<T> ValuesCopy()
         {
             try
-            {
+            { 
                 rwKnownLocationsLock.EnterReadLock();
-                return new SortedSet<T>(TrackedKeys);
+                if (TrackedKeys.Count == 0)
+                    return Array.Empty<T>();
+
+                T[] copy = new T[TrackedKeys.Count];
+                TrackedKeys.CopyTo(copy);
+                return copy;
             }
             finally
             {
@@ -41,16 +46,19 @@ namespace Viking.Common
             }
         }
 
-        public int Count()
+        public int Count
         {
-            try
+            get
             {
-                rwKnownLocationsLock.EnterReadLock();
-                return TrackedKeys.Count();
-            }
-            finally
-            {
-                rwKnownLocationsLock.ExitReadLock();
+                try
+                {
+                    rwKnownLocationsLock.EnterReadLock();
+                    return TrackedKeys.Count;
+                }
+                finally
+                {
+                    rwKnownLocationsLock.ExitReadLock();
+                }
             }
         }
 
@@ -71,9 +79,6 @@ namespace Viking.Common
                 try
                 {
                     rwKnownLocationsLock.EnterWriteLock();
-                    if (TrackedKeys.Contains(ID))
-                        return false;
-
                     TrackedKeys.Add(ID);
                     if (a != null)
                     {
@@ -93,6 +98,7 @@ namespace Viking.Common
                 {
                     rwKnownLocationsLock.ExitWriteLock();
                 }
+
                 return TrackedKeys.Contains(ID);
             }
             finally
@@ -195,16 +201,19 @@ namespace Viking.Common
             }
         }
 
-        public int Count()
+        public int Count
         {
-            try
+            get
             {
-                rwKnownLocationsLock.EnterReadLock();
-                return TrackedKeys.Count();
-            }
-            finally
-            {
-                rwKnownLocationsLock.ExitReadLock();
+                try
+                {
+                    rwKnownLocationsLock.EnterReadLock();
+                    return TrackedKeys.Count;
+                }
+                finally
+                {
+                    rwKnownLocationsLock.ExitReadLock();
+                }
             }
         }
 
