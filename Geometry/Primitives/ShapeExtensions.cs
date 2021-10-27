@@ -228,7 +228,13 @@ namespace Geometry
                 case ShapeType2D.POLYGON:
                     return tri.Intersects(((IPolygon2D)other).Convert());
                 case ShapeType2D.RECTANGLE:
-                    return tri.Intersects(((GridRectangle)other).Convert());
+                    if(other is GridRectangle rect)
+                        return RectangleIntersectionExtensions.Intersects(rect, tri);
+                    else if(other is IRectangle r)
+                        return RectangleIntersectionExtensions.Intersects(r.Convert(), tri);
+
+                    throw new ArgumentException("Unexpected rectangle object");
+
                 case ShapeType2D.ELLIPSE:
                 default:
                     throw new NotImplementedException();
