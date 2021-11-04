@@ -134,8 +134,10 @@ namespace Viking.UI.Controls
             }
             set
             {
+                if(value.Round(0) != _StatusPosition.Round(0))
+                    tsPosition.Text = $"X: {value.X:F0} Y: {value.Y:F0}";
+
                 _StatusPosition = value;
-                tsPosition.Text = "X: " + value.X.ToString("F2") + " Y: " + value.Y.ToString("F2"); ;
             }
         }
 
@@ -1418,8 +1420,7 @@ namespace Viking.UI.Controls
                     }
                 }
 
-
-                DrawXNAControls(scene);
+                //DrawXNAControls(scene);
             }
 
 
@@ -1680,7 +1681,7 @@ namespace Viking.UI.Controls
                     if (!(t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttps) ||
                         t.TextureFullPath.StartsWith(System.Uri.UriSchemeHttp)))
                     {
-                        tileFileName = section.Path + System.IO.Path.DirectorySeparatorChar + tileFileName;
+                        tileFileName = $"{section.Path}{System.IO.Path.DirectorySeparatorChar}{tileFileName}";
                     }
                     //Create a TileViewModel if it doesn't exist and draw it
 
@@ -2207,10 +2208,10 @@ namespace Viking.UI.Controls
             {
                 GridVector2 worldPosition = this.ScreenToWorld(e.X, e.Y);
 
-                if (upSectionButton.Contains(worldPosition))
+                if (upSectionButton != null && upSectionButton.Contains(worldPosition))
                     upSectionButton.OnClick(upSectionButton, worldPosition, VikingXNAGraphics.Controls.InputDevice.Mouse, VikingXNAGraphics.Controls.MouseButton.LEFT);
 
-                if (downSectionButton.Contains(worldPosition))
+                if (downSectionButton != null && downSectionButton.Contains(worldPosition))
                     downSectionButton.OnClick(downSectionButton, worldPosition, VikingXNAGraphics.Controls.InputDevice.Mouse, VikingXNAGraphics.Controls.MouseButton.LEFT);
             }
         }

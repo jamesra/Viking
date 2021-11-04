@@ -41,10 +41,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Path to the section, including volume path 
         /// </summary>
-        public string Path
-        {
-            get { return volume.Host + '/' + _SectionSubPath; }
-        }
+        public string Path => $"{volume.Host}/{_SectionSubPath}";
 
         private ChannelInfo[] _ChannelInfo = new ChannelInfo[0];
 
