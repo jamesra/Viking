@@ -41,12 +41,12 @@ namespace RTree
         /**
          * array containing the minimum value for each dimension; ie { min(x), min(y) }
          */
-        internal double[] max;
+        internal readonly double[] max;
 
         /**
          * array containing the maximum value for each dimension; ie { max(x), max(y) }
          */
-        internal double[] min;
+        internal readonly double[] min;
 
         /**
          * Constructor.
@@ -116,7 +116,7 @@ namespace RTree
           * @param x2 coordinate of the opposite corner
           * @param y2 (see x2)
           */
-        internal void set(double x1, double y1, double x2, double y2, double z1, double z2)
+        private void set(double x1, double y1, double x2, double y2, double z1, double z2)
         {
             min[0] = Math.Min(x1, x2);
             min[1] = Math.Min(y1, y2);
