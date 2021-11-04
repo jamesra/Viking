@@ -105,7 +105,9 @@ namespace VikingXNAGraphics
         {
             if (listToDraw.Length == 0)
                 return;
-              
+
+            device.Indices = GlobalPrimitives.GetUnitSquareIndexBuffer(device);
+            device.SetVertexBuffer(GlobalPrimitives.GetUnitSquareVertexBuffer(device));
             BlendState originalState = device.BlendState;
             device.BlendState = BlendState.NonPremultiplied;
 
