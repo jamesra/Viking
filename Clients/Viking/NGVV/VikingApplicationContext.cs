@@ -27,7 +27,7 @@ namespace Viking
 
                 Splash.Close();
 
-                if (splashResult == DialogResult.Cancel)
+                if (splashResult == DialogResult.Cancel || Splash.TrackedTask.IsFaulted)
                 {
                     ExitThread();
                     return;
