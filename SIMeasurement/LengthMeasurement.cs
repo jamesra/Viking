@@ -24,7 +24,7 @@ namespace SIMeasurement
         [Description("yottametre")] Ym = 16
     }
 
-    public struct LengthMeasurement
+    public readonly struct LengthMeasurement
     {
         public readonly SILengthUnits Units;
         public readonly double Length;
