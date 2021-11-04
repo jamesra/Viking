@@ -19,7 +19,8 @@ namespace Viking.VolumeModel
 
         public static string CreateUniqueKey(int Section, string Transform, string Channel, int Downsample, string TextureName)
         {
-            return "S: " + Section.ToString("D4") + " T: " + Transform + " C: " + Channel + " DS: " + Downsample.ToString("D3") + " T: " + TextureName;
+            //return "S: " + Section.ToString("D4") + " T: " + Transform + " C: " + Channel + " DS: " + Downsample.ToString("D3") + " T: " + TextureName;
+            return $"S: {Section:D04} T: {Transform} C: {Channel} DS: {Downsample:D03} T: {TextureName}";
         }
         
         /// <summary>
