@@ -16,10 +16,14 @@ namespace WebAnnotation.UI.Commands
         GridPolygon OriginalMosaicPolygon;
         GridPolygon OriginalVolumePolygon;
 
+        private GridPolygon OutputVolumePolygon;
+
         PositionColorMeshModel polygonView;
 
         GridPolygon AdjustedPolygon = null; //The polygon we are adjusting.  This can be an interior polygon.
-        private int iAdjustedControlPoint = -1; //The index of the vertex in the exterior ring to adjust. 
+        private bool ControlPointSelected = false;
+        private PolygonIndex iOriginalVolumePolyControlPoint; 
+        private PolygonIndex iAdjustedControlPoint; //The index of the vertex in the exterior ring to adjust. 
 
         Color _color;
 
@@ -71,27 +75,26 @@ namespace WebAnnotation.UI.Commands
 
         protected void PopulateControlPointIndexIfNeeded(GridVector2 WorldPosition)
         {
-            if (iAdjustedControlPoint < 0)
+            if (ControlPointSelected == false)
             {
-                OriginalVolumePolygon.NearestVertex(WorldPosition, out PolygonIndex adjustedVertex);
-                if (adjustedVertex.IsInner)
-                {
-                    AdjustedPolygon = AdjustedPolygon.InteriorPolygons[adjustedVertex.iInnerPoly.Value];
-                }
-                else
-                {
-                    AdjustedPolygon = (GridPolygon)OriginalVolumePolygon.Clone();
-                }
+                ControlPointSelected = true;
+                OriginalVolumePolygon.NearestVertex(WorldPosition, out iOriginalVolumePolyControlPoint);
+                AdjustedPolygon = (GridPolygon)iOriginalVolumePolyControlPoint.Polygon(OriginalVolumePolygon).Clone();
 
-                this.iAdjustedControlPoint = adjustedVertex.iVertex;
+                this.iAdjustedControlPoint = iOriginalVolumePolyControlPoint.IsInner
+                    ? iOriginalVolumePolyControlPoint.ReindexToOuter()
+                    : iOriginalVolumePolyControlPoint;
             }
         }
 
         protected virtual void UpdatePosition(GridVector2 PositionDelta)
         {
+            AdjustedPolygon[iAdjustedControlPoint] = AdjustedPolygon[iAdjustedControlPoint] + PositionDelta;
+            /*
+                
             GridVector2[] newRing = AdjustedPolygon.ExteriorRing.Clone() as GridVector2[];
-            newRing[iAdjustedControlPoint] += PositionDelta;
-            if (iAdjustedControlPoint == 0)
+            newRing[iAdjustedControlPoint.Value.iVertex] += PositionDelta;
+            if (iAdjustedControlPoint.Value.FirstInRing() == 0)
             {
                 newRing[AdjustedPolygon.ExteriorRing.Length - 1] = newRing[iAdjustedControlPoint];
             }
@@ -101,6 +104,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             AdjustedPolygon.ExteriorRing = newRing;
+            */
 
             //if(polygonView == null)
             CreateView(AdjustedPolygon, _color);
@@ -141,6 +145,8 @@ namespace WebAnnotation.UI.Commands
 
                 if (this.AdjustedPolygon != null)
                 {
+                    OutputVolumePolygon = (GridPolygon)OriginalVolumePolygon.Clone();
+                    OutputVolumePolygon[iOriginalVolumePolyControlPoint] = AdjustedPolygon[iAdjustedControlPoint];
                     this.Execute();
                 }
                 else
@@ -164,7 +170,7 @@ namespace WebAnnotation.UI.Commands
             GridPolygon mosaic_polygon;
             try
             {
-                mosaic_polygon = mapping.TryMapShapeVolumeToSection(OriginalVolumePolygon);
+                mosaic_polygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon);
             }
             catch (ArgumentOutOfRangeException)
             {
@@ -172,7 +178,7 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            this.success_callback(mosaic_polygon, OriginalVolumePolygon);
+            this.success_callback(mosaic_polygon, OutputVolumePolygon);
 
             base.Execute();
         }
