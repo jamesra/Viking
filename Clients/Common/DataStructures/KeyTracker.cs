@@ -79,6 +79,9 @@ namespace Viking.Common
                 try
                 {
                     rwKnownLocationsLock.EnterWriteLock();
+                    if (TrackedKeys.Contains(ID))
+                        return false;
+
                     TrackedKeys.Add(ID);
                     if (a != null)
                     {
@@ -161,6 +164,9 @@ namespace Viking.Common
                 try
                 {
                     rwKnownLocationsLock.EnterWriteLock();
+                    if (!TrackedKeys.Contains(ID))
+                        return false;
+
                     TrackedKeys.Remove(ID);
                     if (a != null)
                         a();
