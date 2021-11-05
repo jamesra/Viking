@@ -144,25 +144,26 @@ namespace Viking.UI
         FifthButtonUp
     }
 
-    public struct PointerMessageFlags
+    public readonly struct PointerMessageFlags
     {
-        public bool New             { get { return (Flags & PointerFlags.New) > 0; } }
-        public bool InRange         { get { return (Flags & PointerFlags.InRange) > 0; } }
-        public bool InContact       { get { return (Flags & PointerFlags.InContact) > 0; } }
-        public bool FirstButton     { get { return (Flags & PointerFlags.FirstButton) > 0; } }
-        public bool SecondButton    { get { return (Flags & PointerFlags.SecondButton) > 0; } }
-        public bool ThirdButton     { get { return (Flags & PointerFlags.ThirdButton) > 0; } }
-        public bool FourthButton    { get { return (Flags & PointerFlags.FourthButton) > 0; } }
-        public bool FifthButton     { get { return (Flags & PointerFlags.FifthButton) > 0; } }
-        public bool Primary         { get { return (Flags & PointerFlags.Primary) > 0; } }
-        public bool Confidence      { get { return (Flags & PointerFlags.Confidence) > 0; } }
-        public bool Cancelled       { get { return (Flags & PointerFlags.Cancelled) > 0; } }
-        public bool Down            { get { return (Flags & PointerFlags.Down) > 0; } }
-        public bool Update          { get { return (Flags & PointerFlags.Update) > 0; } }
-        public bool Up              { get { return (Flags & PointerFlags.Up) > 0; } }
-        public bool Wheel           { get { return (Flags & PointerFlags.Wheel) > 0; } }
-        public bool HWheel          { get { return (Flags & PointerFlags.HWheel) > 0; } }
-        public bool CaptureChanged  { get { return (Flags & PointerFlags.CaptureChanged) > 0; } }
+        public bool New => (Flags & PointerFlags.New) > 0;
+
+        public bool InRange => (Flags & PointerFlags.InRange) > 0;
+        public bool InContact => (Flags & PointerFlags.InContact) > 0;
+        public bool FirstButton => (Flags & PointerFlags.FirstButton) > 0;
+        public bool SecondButton => (Flags & PointerFlags.SecondButton) > 0;
+        public bool ThirdButton => (Flags & PointerFlags.ThirdButton) > 0;
+        public bool FourthButton => (Flags & PointerFlags.FourthButton) > 0;
+        public bool FifthButton => (Flags & PointerFlags.FifthButton) > 0;
+        public bool Primary => (Flags & PointerFlags.Primary) > 0;
+        public bool Confidence => (Flags & PointerFlags.Confidence) > 0;
+        public bool Cancelled => (Flags & PointerFlags.Cancelled) > 0;
+        public bool Down => (Flags & PointerFlags.Down) > 0;
+        public bool Update => (Flags & PointerFlags.Update) > 0;
+        public bool Up => (Flags & PointerFlags.Up) > 0;
+        public bool Wheel => (Flags & PointerFlags.Wheel) > 0;
+        public bool HWheel => (Flags & PointerFlags.HWheel) > 0;
+        public bool CaptureChanged => (Flags & PointerFlags.CaptureChanged) > 0;
 
         public readonly PointerFlags Flags;
 
@@ -182,14 +183,14 @@ namespace Viking.UI
         }
     }
 
-    public struct PointerMessageData
+    public readonly struct PointerMessageData
     {
         public readonly PointerMessageFlags Flags;
 
-        public int X { get { return (int)msg.LParam.SignedLowWord(); } }
-        public int Y { get { return (int)msg.LParam.SignedHiWord(); } }
+        public int X => (int)msg.LParam.SignedLowWord();
+        public int Y => (int)msg.LParam.SignedHiWord();
 
-        public System.UInt32 PointerID { get { return msg.WParam.LowWord(); } }
+        public System.UInt32 PointerID => msg.WParam.LowWord();
 
         public readonly System.Windows.Forms.Message msg;
 
@@ -206,7 +207,7 @@ namespace Viking.UI
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct TouchPoint : IEquatable<TouchPoint> 
+    public readonly struct TouchPoint : IEquatable<TouchPoint> 
     {
         readonly System.Int32 x; //LONG in the C++ definition
         readonly System.Int32 y; //LONG in the C++ definition
@@ -239,7 +240,7 @@ namespace Viking.UI
     }
 
         [StructLayout(LayoutKind.Sequential)]
-    public struct PointerInfo
+    public readonly struct PointerInfo
     {
         public readonly PointerType pointerType;
         public readonly System.UInt32 pointerID;
@@ -260,7 +261,7 @@ namespace Viking.UI
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct PointerPenInfo
+    public readonly struct PointerPenInfo
     {
         public readonly PointerInfo pointerInfo;
         public readonly PenFlags flags;
@@ -365,7 +366,7 @@ namespace Viking.UI
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct WinMsgPoints
+    public readonly struct WinMsgPoints
     {
         public readonly short x;
         public readonly short y;
