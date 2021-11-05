@@ -511,8 +511,8 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>mkdir $(SolutionDir)Clients\Viking\Viking\Modules\WebAnnotation
-copy $(TargetDir)* $(SolutionDir)Clients\Viking\Viking\Modules\WebAnnotation /Y</PostBuildEvent>
+    <PostBuildEvent>mkdir $(SolutionDir)Viking\Viking\Modules\WebAnnotation
+copy $(TargetDir)* $(SolutionDir)Viking\Viking\Modules\WebAnnotation /Y</PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
