@@ -14,7 +14,7 @@ namespace IdentityServer
         internal const string Secret = "CorrectHorseBatteryStaple";
         public const string AdminRoleName = "Administrator";
 
-        public struct Policy
+        public readonly struct Policy
         {
             public const string GroupAccessManager = "Access Manager";
             public const string OrgUnitAdmin = "Administrator";
