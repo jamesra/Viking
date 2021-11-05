@@ -47,17 +47,17 @@ namespace Utils
         {
             //Remove the .xml file from the path
             int iRemove = path.OriginalString.LastIndexOf('/');
-            string VolumePath = path.OriginalString;
+            var volumePath = path.OriginalString;
             if (iRemove > 0)
             {
-                VolumePath = VolumePath.Remove(iRemove);
+                volumePath = volumePath.Remove(iRemove);
             }
 
-            HttpWebRequest request = WebRequest.Create(path) as HttpWebRequest;
+            HttpWebRequest request = WebRequest.Create(volumePath) as HttpWebRequest;
 
             request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
 
-            WebResponse response = null;
+            WebResponse response;
             try
             {
                 response = request.GetResponse();
