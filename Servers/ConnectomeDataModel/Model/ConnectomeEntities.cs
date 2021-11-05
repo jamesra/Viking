@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace ConnectomeDataModel
 {
-    public class NetworkDetails
+    public readonly class NetworkDetails
     {
         public readonly Structure[] Nodes;
         public readonly Structure[] ChildNodes;
@@ -24,7 +24,7 @@ namespace ConnectomeDataModel
         } 
     }
 
-    public struct AnnotationCollection
+    public readonly struct AnnotationCollection
     {
         public readonly IDictionary<long, Structure> Structures;
         public readonly IDictionary<long, Location> Locations;
