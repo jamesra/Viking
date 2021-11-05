@@ -27,7 +27,7 @@ namespace TriangleNet.Geometry
         /// <summary>
         /// Initializes a new instance of the <see cref="Vertex" /> class.
         /// </summary>
-        public Vertex()
+        protected Vertex()
             : this(0, 0, 0)
         {
         }
