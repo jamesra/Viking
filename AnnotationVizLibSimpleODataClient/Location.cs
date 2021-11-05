@@ -139,6 +139,18 @@ namespace AnnotationVizLib.SimpleOData
 
         string ILocationReadOnly.VolumeGeometryWKT => VolumeShape.WellKnownValue.WellKnownText;
 
+        IReadOnlyDictionary<string, string> ILocationReadOnly.Attributes => throw new NotImplementedException();
+
+        public double? Width
+        {
+            get; internal set;
+        }
+
+        public string MosaicGeometryWKT
+        {
+            get; internal set;
+        }
+
         public override string ToString()
         {
             return ID.ToString();

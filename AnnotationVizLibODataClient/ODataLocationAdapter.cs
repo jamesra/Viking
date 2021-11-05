@@ -5,6 +5,7 @@ using ODataClient.ConnectomeDataModel;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AnnotationVizLib.OData
 {
@@ -82,6 +83,15 @@ namespace AnnotationVizLib.OData
         }
 
         string ILocationReadOnly.VolumeGeometryWKT => loc.VolumeShape.Geometry.WellKnownText;
+
+        IReadOnlyDictionary<string, string> ILocationReadOnly.Attributes
+        {
+            get { return loc.Attributes().ToDictionary(a => a.Name, a=>a.Value); }
+        }
+
+        public double? Width => loc.Width;
+
+        public string MosaicGeometryWKT => loc.MosaicShape.Geometry.WellKnownText;
 
         public bool Equals(ILocationReadOnly other)
         {

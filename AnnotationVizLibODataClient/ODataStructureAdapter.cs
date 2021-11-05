@@ -80,6 +80,13 @@ namespace AnnotationVizLib.OData
             }
         }
 
+        public IReadOnlyDictionary<string, string> Attributes =>
+            ObjAttribute.Parse(structure.Tags).ToDictionary(a => a.Name, a => a.Value);
+
+        public double Confidence => structure.Confidence;
+
+        public string Notes => structure.Notes;
+
         public bool Equals(IStructureReadOnly other)
         {
             if (object.ReferenceEquals(other, null))

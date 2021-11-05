@@ -206,12 +206,10 @@ namespace Viking.VolumeModel
                         continue;
 
 
-                    //If we have a visble quad see if the tile intersects that too
-                    if (VisibleQuad != null)
-                    {
-                        if (VisibleQuad.Contains(tileBorder) == false)
-                            continue;
-                    }
+                    //If we have a visble quad see if the tile intersects that too 
+                    if (VisibleQuad.Contains(tileBorder) == false)
+                        continue; 
+
                     string UniqueID = Tile.CreateUniqueKey(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
 
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 

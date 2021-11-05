@@ -36,6 +36,19 @@ namespace AnnotationVizLib.OData
             }
         }
 
+        public int CompareTo(IStructureLinkKey other)
+        {
+            var result = SourceID.CompareTo(other.SourceID);
+            if (result == 0)
+            {
+                result = TargetID.CompareTo(other.TargetID);
+                if (result == 0)
+                    result = Directional.CompareTo(other.Directional);
+            }
+
+            return result;
+        }
+
         public bool Equals(IStructureLinkKey other)
         {
             if (object.ReferenceEquals(other, null))

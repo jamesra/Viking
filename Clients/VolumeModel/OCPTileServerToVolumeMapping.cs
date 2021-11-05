@@ -42,7 +42,7 @@ namespace Viking.VolumeModel
         public override async System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
         {
 
-            GridQuad VisibleQuad = null;
+            GridQuad VisibleQuad = default;
 
             //Add any corners of the VisibleBounds that we can transform to the list of points
             List<MappingGridVector2> VisiblePoints = VisibleBoundsCorners(in VisibleBounds);
@@ -141,11 +141,9 @@ namespace Viking.VolumeModel
 
 
                     //If we have a visble quad see if the tile intersects that too
-                    if (VisibleQuad != null)
-                    {
-                        if (VisibleQuad.Contains(tileBorder) == false)
-                            continue;
-                    }
+                    if (VisibleQuad.Contains(tileBorder) == false)
+                        continue;
+                    
                     string UniqueID = Tile.CreateUniqueKey(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
 
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 

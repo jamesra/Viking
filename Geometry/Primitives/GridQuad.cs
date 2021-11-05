@@ -11,7 +11,7 @@ namespace Geometry
     public readonly struct GridQuad 
     {
         readonly GridTriangle T0;
-        readonly GridTriangle T1;  
+        readonly GridTriangle T1;
 
         public GridQuad(GridVector2 pos, double Width, double Height)
             : this(pos, new GridVector2(pos.X + Width, pos.Y), new GridVector2(pos.X, pos.Y + Height), new GridVector2(pos.X + Width, pos.Y + Height))

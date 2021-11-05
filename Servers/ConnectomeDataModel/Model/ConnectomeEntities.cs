@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace ConnectomeDataModel
 {
-    public readonly class NetworkDetails
+    public readonly struct NetworkDetails
     {
         public readonly Structure[] Nodes;
         public readonly Structure[] ChildNodes;
@@ -390,7 +390,7 @@ namespace ConnectomeDataModel
                 IDs = udt_integer_list.Create(IDs)
             };
 
-            NetworkDetails retval = null;
+            NetworkDetails retval;
 
             if(this.Database.Connection.State != System.Data.ConnectionState.Open)
                 this.Database.Connection.Open();

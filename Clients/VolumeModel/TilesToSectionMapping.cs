@@ -316,13 +316,13 @@ namespace Viking.VolumeModel
 
         public override TilePyramid VisibleTiles(in GridRectangle VisibleBounds, double DownSample)
         {
-            return base.VisibleTiles(VisibleBounds, null, DownSample);
+            return base.VisibleTiles(VisibleBounds, default, DownSample);
         }
 
         public override System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
         {
             var vb = VisibleBounds;
-            return Task.Run(() => base.VisibleTiles(vb, null, DownSample));
+            return Task.Run(() => base.VisibleTiles(vb, default, DownSample));
         }
     }
 }

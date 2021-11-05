@@ -2,6 +2,7 @@
 using ODataClient.ConnectomeDataModel;
 using System;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace AnnotationVizLib.OData
 {
@@ -54,6 +55,17 @@ namespace AnnotationVizLib.OData
                 return ObjAttribute.Parse(type.Tags).Select(a => a.ToString()).ToArray();
             }
         }
+
+        public string Notes => type.Notes;
+
+        public IReadOnlyDictionary<string, string> Attributes =>
+            ObjAttribute.Parse(type.Tags).ToDictionary(a => a.Name, a => a.Value);
+
+        public bool Abstract => type.Abstract;
+
+        public uint Color => (uint)type.Color;
+
+        public int AllowedShapes => throw new NotImplementedException();
 
         public bool Equals(IStructureTypeReadOnly other)
         {

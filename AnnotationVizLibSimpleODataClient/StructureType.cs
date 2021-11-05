@@ -1,5 +1,6 @@
 ﻿using Viking.AnnotationServiceTypes.Interfaces;
 using System;
+using System.Collections.Generic;
 
 namespace AnnotationVizLib.SimpleOData
 {
@@ -31,6 +32,31 @@ namespace AnnotationVizLib.SimpleOData
         }
 
         public string[] Tags
+        {
+            get; private set;
+        }
+
+        public string Notes
+        {
+            get; private set;
+        }
+
+        public IReadOnlyDictionary<string, string> Attributes
+        {
+            get; private set;
+        }
+
+        public bool Abstract
+        {
+            get; private set;
+        }
+
+        public uint Color
+        {
+            get; private set;
+        }
+
+        public int AllowedShapes
         {
             get; private set;
         }

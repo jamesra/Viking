@@ -68,7 +68,7 @@ namespace AnnotationVizLib
             NodeAttribs.Add("Untraceable", node.Location.IsUntraceable ? "true" : "false");
             NodeAttribs.Add("Vericosity Cap", node.Location.IsVericosityCap ? "true" : "false");
             NodeAttribs.Add("StructureTags", ObjAttribute.AttributesToString(node.Graph.structure.TagsXML));
-            NodeAttribs.Add("Tags", ObjAttribute.AttributesToString(node.Location.TagsXml));
+            NodeAttribs.Add("Tags", string.Concat(node.Location.Attributes.Values.Select(v => v + ';')));
 
             NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Locations({1}L)", this.VolumeURL, node.Location.ID));
 

@@ -122,6 +122,21 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
+        public IReadOnlyDictionary<string, string> Attributes
+        {
+            get; internal set;
+        }
+
+        public double Confidence
+        {
+            get; internal set;
+        }
+
+        public string Notes
+        {
+            get; internal set;
+        }
+
         public override string ToString()
         {
             return ID.ToString();

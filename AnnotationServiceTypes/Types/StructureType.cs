@@ -123,6 +123,7 @@ namespace AnnotationService.Types
 
         long IDataObjectWithKey<long>.ID { get => this.ID; set => ID = value; }
         string IStructureType.Attributes { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public int AllowedShapes { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         public StructureType()
         {

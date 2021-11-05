@@ -78,7 +78,7 @@ namespace AnnotationViewModel
         {
             this.TileMapping = tileMapping;
             this.SectionNumber = SectionNumber;
-             
+
             WebAnnotationModel.Store.Locations.OnCollectionChanged += this.OnLocationCollectionChanged;
             ConcurrentDictionary<long, LocationObj> locsForSection = WebAnnotationModel.Store.Locations.GetObjectsForSection(1);
             UpdateCollectionWithLocations(locsForSection);
