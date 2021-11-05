@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.View;
 using WebAnnotationModel;
@@ -15,15 +16,15 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// The section that is visible
         /// </summary>
-        public SectionAnnotationsView PrimarySection;
+        public readonly SectionAnnotationsView PrimarySection;
 
-        private KeyTracker<StructureLinkKey> KnownStructureLinks = new KeyTracker<StructureLinkKey>();
+        private readonly KeyTracker<StructureLinkKey> KnownStructureLinks = new KeyTracker<StructureLinkKey>();
 
         /// <summary>
         /// Allows us to describe all the StructureLinks visible on a screen
         /// </summary>
-        private RTree.RTree<StructureLinkKey> StructureLinksSearch = new RTree.RTree<StructureLinkKey>();
-        private ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase> StructureLinks = new ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase>();
+        private readonly RTree.RTree<StructureLinkKey> StructureLinksSearch = new RTree.RTree<StructureLinkKey>();
+        private readonly ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase> StructureLinks = new ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase>();
 
         public SectionStructureLinkAnnotationsViewModel(SectionAnnotationsView primarySection)
         {
@@ -157,14 +158,12 @@ namespace WebAnnotation.ViewModel
                 return null;
             }
 
-            //The link may have been created to a structure on an adjacent section
-            KeyTracker<long> SourceLocationIDs = null;
-            bool Success = PrimarySection.GetLocationsForStructure(structLinkObj.SourceID, out SourceLocationIDs);
+            //The link may have been created to a structure on an adjacent section 
+            bool Success = PrimarySection.GetLocationsForStructure(structLinkObj.SourceID, out var SourceLocationIDs);
             if (Success == false)
                 return null;
-
-            KeyTracker<long> TargetLocationIDs = null;
-            Success = PrimarySection.GetLocationsForStructure(structLinkObj.TargetID, out TargetLocationIDs);
+             
+            Success = PrimarySection.GetLocationsForStructure(structLinkObj.TargetID, out var TargetLocationIDs);
             if (Success == false)
                 return null;
 
