@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Viking.Common;
 using Viking.ViewModels;
 using Viking.VolumeModel;
@@ -35,7 +36,7 @@ namespace Viking
 
         static protected string TileKey(string textureFileName, string TransformName)
         {
-            return textureFileName + " " + TransformName;
+            return $"{textureFileName} {TransformName}";
         }
 
         public TileViewModel GetTile(string textureFileName, string TransformName)
@@ -121,6 +122,11 @@ namespace Viking
         {
             TileViewModelCacheEntry entry = new TileViewModelCacheEntry(key, value);
             return entry;
+        }
+
+        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileViewModel value)
+        {
+            return Task.FromResult(CreateEntry(key, value));
         }
 
         /// <summary>

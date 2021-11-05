@@ -126,31 +126,87 @@ namespace Viking
         protected override LocalTextureCacheEntry CreateEntry(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
-            FileStream stream = null;
-            try
+            using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
             {
-                stream = new FileStream(filename, FileMode.Create, FileAccess.Write);
-                if (stream != null)
+                try
                 {
-                    stream.Write(textureBuffer, 0, textureBuffer.Length);
-                    stream.Dispose();
-                    stream = null;
+                    output.Write(textureBuffer, 0, textureBuffer.Length); 
 
                     LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
-                    return entry;
+                    return entry; 
                 }
-            }
-            catch (System.IO.IOException ioexception)
-            {
-                Trace.WriteLine(ioexception.Message);
-                Trace.WriteLine(ioexception.StackTrace);
+                catch (System.IO.IOException ioexception)
+                {
+                    Trace.WriteLine(ioexception.Message);
+                    Trace.WriteLine(ioexception.StackTrace);
 
-                return null;
+                    return null;
+                }
             }
 
             //     stream.Close();
             //An entry is created if the asynch write succeeds
             return null;
+        }
+
+        /// <summary>
+        /// Creates a file for the texture passed.
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="textureStream"></param>
+        protected override async Task<LocalTextureCacheEntry> CreateEntryAsync(string filename, byte[] textureBuffer)
+        {
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
+            using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
+            {
+                try
+                {
+                    await output.WriteAsync(textureBuffer, 0, textureBuffer.Length);
+
+                    LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
+                    return entry;
+                }
+                catch (System.IO.IOException ioexception)
+                {
+                    Trace.WriteLine(ioexception.Message);
+                    Trace.WriteLine(ioexception.StackTrace);
+
+                    return null;
+                }
+            }
+
+            //     stream.Close();
+            //An entry is created if the asynch write succeeds
+            return null;
+        }
+
+        /// <summary>
+        /// Creates a file for the texture passed.
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="textureStream"></param>
+        protected async Task<LocalTextureCacheEntry> CreateEntryAsync(string filename, Stream textureBuffer)
+        {
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
+            using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
+            {
+                try
+                {
+                    await textureBuffer.CopyToAsync(output);
+                    LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
+                    return entry; 
+                }
+                catch (System.IO.IOException ioexception)
+                {
+                    Trace.WriteLine(ioexception.Message);
+                    Trace.WriteLine(ioexception.StackTrace);
+
+                    return null;
+                }
+            }  
+
+            //     stream.Close();
+            //An entry is created if the asynch write succeeds 
         }
 
         /// <summary>
@@ -177,6 +233,21 @@ namespace Viking
             }
 
             return true;
+        }
+         
+
+        /// <summary>
+        /// Creates a file for the texture passed.
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="textureStream"></param>
+        public virtual async Task<bool> AddAsync(string key, Stream value)
+        {
+            var entry = await CreateEntryAsync(key,value);
+            if (entry == null)
+                return false;
+
+            return AddEntry(entry);
         }
     }
 }
