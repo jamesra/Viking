@@ -244,7 +244,16 @@ namespace Geometry
 
         public bool Equals(IPoint other)
         {
-            return false;
+            double XDelta = X - other.X;
+
+            if (XDelta < -Global.Epsilon || XDelta > Global.Epsilon)
+                return false;
+
+            double YDelta = Y - other.Y;
+            if (YDelta < -Global.Epsilon || YDelta > Global.Epsilon)
+                return false;
+
+            return ((XDelta * XDelta) + (YDelta * YDelta)) <= Global.EpsilonSquared;
         }
 
         public override bool Equals(object obj)
