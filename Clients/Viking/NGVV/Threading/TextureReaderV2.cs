@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,7 +18,7 @@ namespace Viking
         readonly string CacheFilename;
         GraphicsDevice graphicsDevice = null;
         private Texture2D _Result = null;
-        public ManualResetEvent DoneEvent = new ManualResetEvent(false);
+        private ManualResetEvent DoneEvent = new ManualResetEvent(false);
         public bool FinishedReading = false;
         //        public RefreshDelegate RefreshMethod; 
 
@@ -52,8 +53,8 @@ namespace Viking
         }
 
         static private bool TextureErrorReported = false;
-         
-        private int MipMapLevels = 1;
+
+        private readonly int MipMapLevels = 1;
 
         /// <summary>
         /// Returns true if a call to GetTexture will return a non-null value
@@ -70,7 +71,7 @@ namespace Viking
 
         //private Object thisLock = new Object();
 
-        private ReaderWriterLockSlim rwResultLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim rwResultLock = new ReaderWriterLockSlim();
 
         /// <summary>
         /// Returns the result.  This method can only be called once.
@@ -105,11 +106,11 @@ namespace Viking
             return retVal;
         }
 
-        private readonly CancellationToken CancelToken; 
-          
+        private readonly CancellationToken CancelToken;
+
         public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureUri, string cacheFilename, int mipMapLevels, Action OnCompletion, CancellationToken token)
             : this(graphicsDevice, textureUri, mipMapLevels, OnCompletion, token)
-        { 
+        {
             CacheFilename = cacheFilename;
         }
 
@@ -121,9 +122,9 @@ namespace Viking
         /// <param name="downsample"></param>
         public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureURI, int mipMapLevels, Action OnCompletion, CancellationToken token)
         {
-            CancelToken = token; 
+            CancelToken = token;
             this.OnCompletionCallback = OnCompletion;
-            this.ID = TextureReader.nextid++;
+            this.ID = TextureReaderV2.nextid++;
             if (graphicsDevice == null)
                 throw new ArgumentException("TextureReader: Graphics device cannot be null");
 
@@ -156,7 +157,7 @@ namespace Viking
 
         public void AbortRequest()
         {
-            
+
             {
                 /*
                 //Abort the request if we haven't already
@@ -204,16 +205,36 @@ namespace Viking
             if (textureUri == null)
                 return true;
 
-            if (!System.IO.File.Exists(CacheFilename))
+            System.IO.FileInfo fileinfo = new FileInfo(CacheFilename);
+
+            if (!fileinfo.Exists)
+                return false;
+
+            if (fileinfo.Length == 0)
                 return false;
 
             HttpWebRequest headerRequest = TextureReaderV2.CreateBasicRequest(textureUri);
             headerRequest.Method = "HEAD";
             headerRequest.CachePolicy = TextureReaderV2.HeaderCachePolicy;
-            using (HttpWebResponse headerResponse = await headerRequest.GetResponseAsync() as HttpWebResponse)
+            try
             {
-                bool valid = headerResponse.LastModified.ToUniversalTime() <= System.IO.File.GetLastWriteTimeUtc(CacheFilename);
-                return valid;
+                using (HttpWebResponse headerResponse =
+                    await headerRequest.GetResponseAsync().ConfigureAwait(false) as HttpWebResponse)
+                {
+                    if (headerResponse != null)
+                    {
+                        return headerResponse.LastModified.ToUniversalTime() <=
+                                     fileinfo.LastWriteTimeUtc;
+                    }
+                    
+                    return false;
+                }
+            }
+            catch (WebException e)
+            {
+                //No online resource found, use the cached version
+                Trace.WriteLine($"No online resource found at {textureUri}, using cache version {CacheFilename}.\nWeb Exception: {e.Status} - {e.Message}");
+                return true;
             }
         }
 
@@ -231,37 +252,37 @@ namespace Viking
         private static void HandleCachedFileException(Exception e, string CacheFilename)
         {
             //Trace.WriteLine(e.Message, "TextureUse");
-            DeleteFileFromCache(CacheFilename).Wait();
+            DeleteFileFromCache(CacheFilename);
         }
 
-        private static async Task DeleteFileFromCache(string CacheFilename)
-        {
-            //Trace.WriteLine("Deleting bad cache file: " + CacheFilename, "TextureUse");
-            if (!System.IO.File.Exists(CacheFilename))
-                return;
-
+        private static void DeleteFileFromCache(string CacheFilename)
+        { 
             try
             {
                 System.IO.File.Delete(CacheFilename);
             }
-            catch (System.IO.IOException)
+            catch (System.IO.FileNotFoundException)
             {
-                Trace.WriteLine("Failed To delete bad cache file: " + CacheFilename, "TextureUse");
+                Trace.WriteLine($"Failed To delete non-existent cache file (probably OK): {CacheFilename}", "TextureUse");
+            }
+            catch (System.IO.IOException e)
+            {
+                Trace.WriteLine("Failed To delete bad cache file: {CacheFilename}\n{e}", "TextureUse");
             }
         }
-         
-        internal static async Task<Stream> TryLoadingFromCache(Uri textureUri, string CacheFilename)
+
+        internal static async Task<FileStream> TryLoadingFromCache(Uri textureUri, string CacheFilename)
         {
-            System.IO.Stream TileStream = null;
+            System.IO.FileStream TileStream = null;
             try
             {
                 //First, check the cache to see if it is locally available
                 if (CacheFilename != null)
                 {
-                    if (false == await CachedResourceIsValidAsync(CacheFilename, textureUri))
+                    if (false == await CachedResourceIsValidAsync(CacheFilename, textureUri).ConfigureAwait(false))
                     {
                         //Trace.WriteLine("Deleting stale cache file: " + CacheFilename, "TextureUse");
-                        await DeleteFileFromCache(CacheFilename);
+                        await Task.Run(() => DeleteFileFromCache(CacheFilename)).ConfigureAwait(false);
                         return null;
                     }
                     else
@@ -298,7 +319,7 @@ namespace Viking
         }
 
         private async Task<Texture2D> TryLoadingFromServer(Uri textureUri)
-        { 
+        {
             {
                 if (Aborted || IsDisposed)
                     return null;
@@ -318,8 +339,8 @@ namespace Viking
 
                 try
                 {
-                    HttpWebResponse response = await bodyRequest.GetResponseAsync() as HttpWebResponse;
-                    return await HandleWebResponse(response);
+                    HttpWebResponse response = await bodyRequest.GetResponseAsync().ConfigureAwait(false) as HttpWebResponse;
+                    return await HandleWebResponse(response).ConfigureAwait(false);
                 }
                 catch (WebException e)
                 {
@@ -331,13 +352,13 @@ namespace Viking
                     //this.SetTexture(null);
                 }
 
-                return null; 
+                return null;
             }
         }
 
 
         private async Task<Texture2D> HandleWebResponse(HttpWebResponse response)
-        { 
+        {
             {
                 //Trace.WriteLine("HandleWebResponse on thread #" + Thread.CurrentThread.ManagedThreadId.ToString());
 
@@ -356,6 +377,10 @@ namespace Viking
                     return null;
                 }
                 else if (response.ContentLength < 0)
+                {
+                    return null;
+                }
+                else if (Aborted)
                 {
                     return null;
                 }
@@ -394,16 +419,20 @@ namespace Viking
                     //Byte[] data = state.databuffer;
 
 
-                    Byte[] data = new byte[response.ContentLength];
-
-                    using (Stream stream = response.GetResponseStream())
+                    //Byte[] data = new byte[response.ContentLength];
+                    Texture2D result = null;
+                    using (MemoryStream memStream = new MemoryStream())
                     {
-                        Debug.Assert(stream != null);
-                        if (stream == null)
+                        using (Stream stream = response.GetResponseStream())
                         {
-                            data = null;
-                            return null;
+                            if (Aborted)
+                                return null;
+
+                            stream.ReadTimeout = 60000;
+
+                            await stream.CopyToAsync(memStream);
                         }
+                        /*
 
                         int BytesRead = 0;
                         stream.ReadTimeout = 30000; //30 seconds to read a ~4Kx4K tile should be plenty of time.  The default was 300 seconds.
@@ -411,18 +440,30 @@ namespace Viking
                         {
                             BytesRead += await stream.ReadAsync(data, BytesRead, (data.Length - BytesRead)).ConfigureAwait(false);
                         }
+                        */
 
-                        if (CacheFilename != null)
+                        //state.Dispose();
+                        Debug.Assert(graphicsDevice != null);
+                        result = await GetTextureFromStreamAsync(graphicsDevice, memStream).ConfigureAwait(false);
+
+                        if (CacheFilename != null && result != null)
                         {
-                            Global.TextureCache.AddAsync(CacheFilename, data);
+                            memStream.Seek(0, SeekOrigin.Begin);
+                            await Global.TextureCache.AddAsync(CacheFilename, memStream);
                         }
                     }
 
-                    //state.Dispose();
-                    Debug.Assert(graphicsDevice != null);
-                    var result = await GetTextureFromStreamAsync(graphicsDevice, data);
-                    data = null;
-                    return result; 
+                    /*if (CacheFilename != null && result != null)
+                    {
+                        using(Stream stream = response.GetResponseStream())
+                        {
+                            //stream.Seek(0, SeekOrigin.Begin);
+                            await Global.TextureCache.AddAsync(CacheFilename, stream);
+                        }
+                    }*/
+
+                    //data = null;
+                    return result;
                 }
                 catch (WebException e)
                 {
@@ -435,7 +476,7 @@ namespace Viking
 
 
                     //Trace.WriteLine(e.Message, "TextureUse");
-                     
+
                 }
                 catch (ArgumentException e)
                 {
@@ -443,13 +484,13 @@ namespace Viking
                     Trace.WriteLine("Unanticipated Argument Exception loading texture: " + response.ResponseUri.ToString(), "TextureUse");
                     Trace.WriteLine(e.Message, "TextureUse");
 
-                    this.TextureNotFound = true; 
+                    this.TextureNotFound = true;
                 }
                 catch (Exception e)
                 {
                     Trace.WriteLine("Unanticipated Exception loading texture: " + response.ResponseUri.ToString(), "TextureUse");
                     Trace.WriteLine(e.Message, "TextureUse");
-                     
+
                     throw;
                 }
             }
@@ -489,7 +530,7 @@ namespace Viking
                         }
                     }
                 }
-            } 
+            }
         }
 
         private void TryDeleteFile(string filepath)
@@ -508,16 +549,16 @@ namespace Viking
             }
         }
 
-        private async Task<Byte[]> StreamToBytesAsync(Stream stream)
+        private async Task<byte[]> StreamToBytesAsync(Stream stream)
         {
             byte[] data = new byte[stream.Length];
             int bytesRead = 0;
             while (bytesRead < stream.Length)
             {
-                bytesRead += await stream.ReadAsync(data, bytesRead, (int)(stream.Length - bytesRead), CancelToken);
+                bytesRead += await stream.ReadAsync(data, bytesRead, (int)(stream.Length - bytesRead), CancelToken).ConfigureAwait(false);
 
                 if (CancelToken.IsCancellationRequested)
-                    return null; 
+                    return null;
                 //Trace.WriteLineIf(bytesRead < stream.Length, "Not all bytes read on first try when loading filestream: " + this.CacheFilename);
             }
 
@@ -532,8 +573,8 @@ namespace Viking
         {
             try
             {
-                await LoadTextureSemaphore.WaitAsync();
-                 
+                await LoadTextureSemaphore.WaitAsync(CancelToken).ConfigureAwait(false);
+
                 //Trace.WriteLine("ThreadPoolCallback for " + ID.ToString() + " " + this.Filename.ToString());
                 /*Nothing to do if we were aborted already*/
                 if (Aborted || IsDisposed)
@@ -541,26 +582,28 @@ namespace Viking
                     //Trace.WriteLine("Ignoring threadcallback for: " + this.Filename.ToString());
                     return null;
                 }
-                 
+
                 Texture2D tex = null;
 
                 if (Filename.Scheme.ToLower() == "http" || Filename.Scheme.ToLower() == "https")
-                {  
-                    {  
-                        using (Stream texStream = await TextureReaderV2.TryLoadingFromCache(this.Filename, CacheFilename))
+                {
+                    {
+                        using (FileStream texStream = await TextureReaderV2
+                            .TryLoadingFromCache(this.Filename, CacheFilename).ConfigureAwait(false))
                         {
-                            if (texStream != null)
+                            if (texStream != null && texStream.Length > 0)
                             {
                                 //Trace.WriteLine("Found in cache: " + this.Filename.ToString());
                                 try
                                 {
                                     //TextureFromStream(texStream, this.MipMapLevels > 0);
-
-                                    byte[] data = await StreamToBytesAsync(texStream); 
+                                    /*
+                                    byte[] data = await StreamToBytesAsync(texStream).ConfigureAwait(false); 
                                     if (CancelToken.IsCancellationRequested)
                                         return null;
-
-                                    var texture = await GetTextureFromStreamAsync(graphicsDevice, data);
+                                    */
+                                    var texture = await GetTextureFromStreamAsync(graphicsDevice, texStream)
+                                        .ConfigureAwait(false);
                                     if (CancelToken.IsCancellationRequested)
                                         return null;
 
@@ -574,22 +617,32 @@ namespace Viking
                                 }
                                 catch (ArgumentException e)
                                 {
-                                    Trace.WriteLine("Problem loading cached tile, deleting and loading from server: " + CacheFilename);
+                                    Trace.WriteLine("Problem loading cached tile, deleting and loading from server: " +
+                                                    CacheFilename);
                                     TryDeleteFile(CacheFilename);
                                     //Continue and try to load from server
-                                } 
+                                }
+                                catch (Exception e)
+                                {
+                                    Trace.WriteLine($"Problem loading cached tile {CacheFilename}, deleting and loading from server.\n{e}");
+                                    TryDeleteFile(CacheFilename);
+                                    //Continue and try to load from server
+                                }
                             }
+                        }
 
-                            //If we didn't already load the tilestream from the cache 
-                            var server_texture = await TryLoadingFromServer(this.Filename);
+                        //If we didn't already load the tilestream from the cache 
+                        var server_texture = await TryLoadingFromServer(this.Filename).ConfigureAwait(false);
 
-                            SetTexture(server_texture); 
-                            return _Result;
-                        } 
+                        if (Aborted)
+                            return null;
+
+                        SetTexture(server_texture);
+                        return _Result;
                     }
                 }
                 else
-                { 
+                {
                     {
                         if (Aborted)
                             return null;
@@ -600,8 +653,8 @@ namespace Viking
                             {
                                 if (stream != null)
                                 {
-                                    byte[] data = await StreamToBytesAsync(stream);
-                                    var texture = await GetTextureFromStreamAsync(graphicsDevice, data);
+                                    //byte[] data = await StreamToBytesAsync(stream).ConfigureAwait(false);
+                                    var texture = await GetTextureFromStreamAsync(graphicsDevice, stream).ConfigureAwait(false);
                                     if (CancelToken.IsCancellationRequested)
                                         return null;
 
@@ -687,12 +740,11 @@ namespace Viking
             {
                 rwResultLock.ExitWriteLock();
             }
-
+             
             System.Threading.Tasks.Task.Run(() =>
             {
-                if (OnCompletionCallback != null)
-                    this.OnCompletionCallback();
-            } );
+                OnCompletionCallback?.Invoke();
+            });
         }
 
         public override bool Equals(object obj)
@@ -731,7 +783,19 @@ namespace Viking
         }
         */
 
-        protected async Task<Texture2D> GetTextureFromStreamAsync(GraphicsDevice device, Byte[] streamdata)
+        protected Task<Texture2D> GetTextureFromBytesAsync(GraphicsDevice device, byte[] streamdata)
+        {
+            Debug.Assert(device != null);
+            //Trace.WriteLine("TextureFromStreamAsync: " + this.Filename.ToString()); 
+
+            using (MemoryStream stream = new MemoryStream(streamdata))
+            {
+                return GetTextureFromTextureDataAsync(device, TextureDataFromStream(stream));
+            }
+        }
+
+
+        protected Task<Texture2D> GetTextureFromStreamAsync(GraphicsDevice device, Stream streamdata)
         {
             Debug.Assert(device != null);
             //Trace.WriteLine("TextureFromStreamAsync: " + this.Filename.ToString()); 
@@ -739,22 +803,27 @@ namespace Viking
                 return null;
 
             TextureData data = TextureReaderV2.TextureDataFromStream(streamdata);
-            if (data == null)
-            { 
+            if (data.IsEmpty)
+            {
                 return null;
             }
 
+            return GetTextureFromTextureDataAsync(device, data);
+        }
+
+
+        protected async Task<Texture2D> GetTextureFromTextureDataAsync(GraphicsDevice device, TextureData data)
+        {
             Func<Texture2D> a = new Func<Texture2D>(() =>
             {
                 try
                 {
-                    Texture2D texture = TextureReaderV2.TextureFromData(device, data, this.UseMipMaps);
-                    return texture; 
+                    return TextureReaderV2.TextureFromData(device, in data, this.UseMipMaps);
                     //this.SetTexture(texture);
                 }
                 catch (Exception e)
-                { 
-                    Trace.WriteLine(string.Format("Exception loading texture: {0}", this.Filename.ToString()));
+                {
+                    Trace.WriteLine($"Exception loading texture: {this.Filename.ToString()}");
                     throw;
                 }
             });
@@ -772,13 +841,6 @@ namespace Viking
             //return _Result;
         }
 
-        public static TextureData TextureDataFromStream(byte[] streamdata)
-        {
-            using (MemoryStream stream = new MemoryStream(streamdata))
-            {
-                return TextureDataFromStream(stream);
-            }
-        }
 
         public static TextureData TextureDataFromStream(Stream stream)
         {
@@ -799,43 +861,50 @@ namespace Viking
                     Height = image.Height;
 
                     System.Drawing.Rectangle rect = new System.Drawing.Rectangle(0, 0, image.Width, image.Height);
-                    data = image.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly, image.PixelFormat);
+                    try
+                    {
+                        data = image.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly, image.PixelFormat);
 
-                    PixelSize = data.Stride / data.Width;
-                    IntPtr ptr = data.Scan0;
-                    int TotalBytes = data.Stride * data.Height;
-                    rgbValues = new Byte[TotalBytes];
-                    if (data.Stride % data.Width == 0)
-                    {
-                        //The easy case...
-                        System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, TotalBytes);
-                    }
-                    else
-                    {
-                        //Copy one line at a time so the empty bytes at the end of each line don't show up in our array
-                        byte[] lineValues = new byte[TotalBytes];
-                        for (int iY = 0; iY < data.Height; iY++)
+                        PixelSize = data.Stride / data.Width;
+                        IntPtr ptr = data.Scan0;
+                        int TotalBytes = data.Stride * data.Height;
+                        rgbValues = new Byte[TotalBytes];
+                        if (data.Stride % data.Width == 0)
                         {
-                            //                            int yDataOffset = iY * data.Width;
+                            //The easy case...
+                            System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, TotalBytes);
+                        }
+                        else
+                        {
+                            //Copy one line at a time so the empty bytes at the end of each line don't show up in our array
+                            byte[] lineValues = new byte[data.Width * PixelSize];
+                            for (int iY = 0; iY < data.Height; iY++)
+                            {
+                                //                            int yDataOffset = iY * data.Width;
 
-                            //The documentation and tooltips for the Marshal.Copy function are just wrong...
-                            System.Runtime.InteropServices.Marshal.Copy(ptr + (iY * data.Stride), lineValues, 0, data.Width * PixelSize);
+                                //The documentation and tooltips for the Marshal.Copy function are just wrong...
+                                System.Runtime.InteropServices.Marshal.Copy(ptr + (iY * data.Stride), lineValues, 0,
+                                    data.Width * PixelSize);
 
-                            Array.Copy(lineValues, 0, rgbValues, iY * (data.Width * PixelSize), data.Width * PixelSize);
+                                Array.Copy(lineValues, 0, rgbValues, iY * (data.Width * PixelSize),
+                                    data.Width * PixelSize);
+                            }
+                        }
+
+                        //Grrr... have to remap every pixel using the palette.
+                        if (image.Palette.Entries.Length > 0)
+                        {
+                            for (int i = 0; i < rgbValues.Length; i++)
+                            {
+                                rgbValues[i] = image.Palette.Entries[rgbValues[i]].R;
+                            }
                         }
                     }
-
-                    //Grrr... have to remap every pixel using the palette
-                    if (image.Palette.Entries.Length > 0)
+                    finally
                     {
-                        for (int i = 0; i < rgbValues.Length; i++)
-                        {
-                            rgbValues[i] = image.Palette.Entries[rgbValues[i]].R;
-                        }
+                        image.UnlockBits(data);
+                        data = null;
                     }
-
-                    image.UnlockBits(data);
-                    data = null;
                 }
 
                 if (rgbValues != null)
@@ -854,10 +923,10 @@ namespace Viking
             catch (System.OutOfMemoryException e)
             {
                 Trace.WriteLine("Out of memory when allocating texture");
-                return null;
+                return default;
             }
 
-            return null;
+            return default;
         }
 
         public static Texture2D TextureFromStream(GraphicsDevice graphicsDevice, Stream texStream, bool mipmap)
@@ -866,7 +935,7 @@ namespace Viking
             return TextureFromData(graphicsDevice, texData, mipmap);
         }
 
-        public static Texture2D TextureFromData(GraphicsDevice graphicsDevice, TextureData texdata, bool mipmap)
+        public static Texture2D TextureFromData(GraphicsDevice graphicsDevice, in TextureData texdata, bool mipmap)
         {
             if (graphicsDevice == null)
                 return null;
@@ -874,7 +943,7 @@ namespace Viking
             if (graphicsDevice.IsDisposed)
                 return null;
 
-            if (texdata == null)
+            if (texdata.pixelBytes == null)
                 return null;
 
             //Trace.WriteLine("TextureFromData: " + this.Filename.ToString()); 
