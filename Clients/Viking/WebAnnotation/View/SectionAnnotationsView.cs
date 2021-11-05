@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Viking.Common;
 using Viking.ViewModels;
@@ -67,9 +68,9 @@ namespace WebAnnotation.ViewModel
 
         public abstract List<HitTestResult> GetAnnotations(GridRectangle line);
 
-        private KeyTracker<long> SubscribedLocations = new KeyTracker<long>();
+        private readonly KeyTracker<long> SubscribedLocations = new KeyTracker<long>();
 
-        private RefCountingKeyTracker<long> SubscribedStructures = new RefCountingKeyTracker<long>();
+        private readonly RefCountingKeyTracker<long> SubscribedStructures = new RefCountingKeyTracker<long>();
 
         protected bool IsSubscribed(LocationObj loc)
         {
@@ -124,9 +125,9 @@ namespace WebAnnotation.ViewModel
             return string.Format("Annotations on {0} seen from {1}", this.AdjacentSection.Number, this.SectionNumber);
         }
 
-        protected KeyTracker<long> KnownLocations = new KeyTracker<long>();
-        protected RTree.RTree<long> LocationsSearch = new RTree.RTree<long>();
-        protected ConcurrentDictionary<long, LocationCanvasView> LocationViews = new ConcurrentDictionary<long, LocationCanvasView>();
+        protected readonly KeyTracker<long> KnownLocations = new KeyTracker<long>();
+        protected readonly RTree.RTree<long> LocationsSearch = new RTree.RTree<long>();
+        protected readonly ConcurrentDictionary<long, LocationCanvasView> LocationViews = new ConcurrentDictionary<long, LocationCanvasView>();
 
         /// <summary>
         /// Mapping interface for moving geometry between volume and section space
@@ -204,11 +205,10 @@ namespace WebAnnotation.ViewModel
         }
 
         protected void AddLocationOnAdjacent(LocationObj loc, bool subscribe)
-        {
+        { 
             KnownLocations.TryAdd(loc.ID, () =>
             {
-                bool AnyOverlap = false;
-
+                bool AnyOverlap = false; 
                 if (!AnyOverlap)
                 {
                     AddNonOverlappedOrUnlinkedLocation(loc);
@@ -435,17 +435,17 @@ namespace WebAnnotation.ViewModel
 
         public readonly SectionStructureLinkAnnotationsViewModel SectionStructureLinks;
 
-        protected KeyTracker<long> KnownLocations = new KeyTracker<long>();
+        protected readonly KeyTracker<long> KnownLocations = new KeyTracker<long>();
         /// <summary>
         /// Locations on the section we are providing an overlay for
         /// </summary>
-        private RTree.RTree<long> LocationViewSearch = new RTree.RTree<long>();
-        protected ConcurrentDictionary<long, LocationCanvasView> LocationViews = new ConcurrentDictionary<long, LocationCanvasView>();
+        private readonly RTree.RTree<long> LocationViewSearch = new RTree.RTree<long>();
+        protected readonly ConcurrentDictionary<long, LocationCanvasView> LocationViews = new ConcurrentDictionary<long, LocationCanvasView>();
 
         /// <summary>
         /// Maps a structureID to all the locations for that structure on the visible section
         /// </summary>
-        private ConcurrentDictionary<long, KeyTracker<long>> LocationsForStructure = new ConcurrentDictionary<long, KeyTracker<long>>();
+        private readonly ConcurrentDictionary<long, KeyTracker<long>> LocationsForStructure = new ConcurrentDictionary<long, KeyTracker<long>>();
 
 
         public ICollection<LocationLinkView> NonOverlappedLocationLinks
@@ -850,10 +850,9 @@ namespace WebAnnotation.ViewModel
         }
 
         private void AddLocationsForStructure(long structureID, LocationCanvasView locView)
-        {
-            KeyTracker<long> KnownLocationsForStructure;
-            KnownLocationsForStructure = LocationsForStructure.GetOrAdd(structureID, (key) => { return new KeyTracker<long>(); });
-            KnownLocationsForStructure.TryAdd(locView.ID);
+        { 
+            var knownLocationsForStructure = LocationsForStructure.GetOrAdd(structureID, (key) => new KeyTracker<long>());
+            knownLocationsForStructure.TryAdd(locView.ID);
             return;
         }
 

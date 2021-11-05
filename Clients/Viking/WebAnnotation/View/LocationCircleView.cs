@@ -22,10 +22,7 @@ namespace WebAnnotation.View
         {
         }
 
-        public virtual double Radius
-        {
-            get { return MosaicCircle.Radius; }
-        }
+        public virtual double Radius => MosaicCircle.Radius;
 
         private SqlGeometry _VolumeShape = null;
         public override SqlGeometry VolumeShapeAsRendered
@@ -44,13 +41,7 @@ namespace WebAnnotation.View
 
         public abstract GridCircle VolumeCircle { get; }
 
-        public override GridRectangle BoundingBox
-        {
-            get
-            {
-                return VolumeCircle.BoundingBox;
-            }
-        }
+        public override GridRectangle BoundingBox => VolumeCircle.BoundingBox;
 
         /// <summary>
         /// True if the point is on or inside the circle
@@ -125,21 +116,9 @@ namespace WebAnnotation.View
         protected readonly GridCircle _VolumeCircle;
         protected readonly GridCircle _MosaicCircle;
 
-        public override GridCircle MosaicCircle
-        {
-            get
-            {
-                return _MosaicCircle;
-            }
-        }
+        public override GridCircle MosaicCircle => _MosaicCircle;
 
-        public override GridCircle VolumeCircle
-        {
-            get
-            {
-                return _VolumeCircle;
-            }
-        }
+        public override GridCircle VolumeCircle => _VolumeCircle;
 
         private ICollection<long> _OverlappedLinks;
         public override ICollection<long> OverlappedLinks
@@ -185,17 +164,11 @@ namespace WebAnnotation.View
         /// <summary>
         /// We scale down the radius when the location is on an adjacent section
         /// </summary>
-        public override double Radius
-        {
-            get { return this.VolumeCircle.Radius; }
-        }
+        public override double Radius => this.VolumeCircle.Radius;
 
         public Color Color
         {
-            get
-            {
-                return this.upCircleView.Color;
-            }
+            get => this.upCircleView.Color;
 
             set
             {
@@ -206,10 +179,7 @@ namespace WebAnnotation.View
 
         public float Alpha
         {
-            get
-            {
-                return this.upCircleView.Alpha;
-            }
+            get => this.upCircleView.Alpha;
 
             set
             {
@@ -352,28 +322,13 @@ namespace WebAnnotation.View
         protected readonly GridCircle _VolumeCircle;
         protected readonly GridCircle _MosaicCircle;
 
-        public override GridCircle MosaicCircle
-        {
-            get
-            {
-                return _MosaicCircle;
-            }
-        }
+        public override GridCircle MosaicCircle => _MosaicCircle;
 
-        public override GridCircle VolumeCircle
-        {
-            get
-            {
-                return _VolumeCircle;
-            }
-        }
+        public override GridCircle VolumeCircle => _VolumeCircle;
 
         public Color Color
         {
-            get
-            {
-                return circleView.Color;
-            }
+            get => circleView.Color;
 
             set
             {
@@ -385,10 +340,7 @@ namespace WebAnnotation.View
 
         public float Alpha
         {
-            get
-            {
-                return circleView.Alpha;
-            }
+            get => circleView.Alpha;
 
             set
             {
@@ -573,21 +525,12 @@ namespace WebAnnotation.View
 
         #endregion
 
-        public override double Radius
-        {
-            get
-            {
-                return VolumeCircle.Radius;
-            }
-        }
+        public override double Radius => VolumeCircle.Radius;
 
         private bool _Selected = false;
         public bool Selected
         {
-            get
-            {
-                return _Selected;
-            }
+            get => _Selected;
 
             set
             {

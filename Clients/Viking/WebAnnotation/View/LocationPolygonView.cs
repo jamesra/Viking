@@ -160,19 +160,7 @@ namespace WebAnnotation.View
         }
 
         private SqlGeometry _RenderedVolumeShape;
-        public override SqlGeometry VolumeShapeAsRendered
-        {
-            get
-            {
-                if (_RenderedVolumeShape == null)
-                {
-
-                    _RenderedVolumeShape = modelObj.VolumeShape;// this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.Width / 2.0);                    
-                }
-
-                return _RenderedVolumeShape;
-            }
-        }
+        public override SqlGeometry VolumeShapeAsRendered => _RenderedVolumeShape ?? (_RenderedVolumeShape = VolumePolygon.ToSqlGeometry());
 
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves
