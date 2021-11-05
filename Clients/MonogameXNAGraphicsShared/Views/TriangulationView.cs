@@ -20,7 +20,7 @@ namespace VikingXNAGraphics
         private SortedList<IEdgeKey, LabelView> EdgeLineLabelsViews = new SortedList<IEdgeKey, LabelView>();
         private SortedList<IFace, LabelView> TriFaceLabels = new SortedList<IFace, LabelView>();
 
-        double LineRadius = 1.5;
+        //double LineRadius = 1.5;
         Color LineColor = Color.Beige;
 
         bool ShowMeshFaces = false;
@@ -217,7 +217,7 @@ namespace VikingXNAGraphics
 
                 
             }
-            catch (System.ApplicationException e)
+            catch (System.ApplicationException)
             {
                 return;
             }
@@ -249,7 +249,7 @@ namespace VikingXNAGraphics
 
 
             }
-            catch (System.ApplicationException e)
+            catch (System.ApplicationException)
             {
                 return;
             }
