@@ -542,14 +542,14 @@ namespace Geometry
             //this._SegmentRTree = null; //Reset our RTree since yanking a polygon and changing the indicies are a pain
             return true;
         }
-
+          
         /// <summary>
         /// Set the specified vertex to the new position.
         /// If the new position results in an invalid polygon the polygon is restored to the original state and an ArgumentException is thrown.
         /// </summary>
         /// <param name="iVertex"></param>
         /// <param name="value"></param>
-        public void SetVertex(PolygonIndex iVertex, GridVector2 value)
+        private void SetVertex(PolygonIndex iVertex, GridVector2 value)
         {
             if (iVertex.iPoly != 0)
                 iVertex = iVertex.Reindex(0);
@@ -583,7 +583,15 @@ namespace Geometry
             else
             {
                 GridVector2 old_point = this.ExteriorRing[iVertex.iVertex];
-                this.ExteriorRing[iVertex.iVertex] = value;
+                if (iVertex.IsFirstIndexInRing())
+                {
+                    this.ExteriorRing[0] = value;
+                    this.ExteriorRing[ExteriorRing.Length-1] = value;
+                }
+                else
+                {
+                    this.ExteriorRing[iVertex.iVertex] = value;
+                }
 
                 if (_ExteriorRingArea < 0)
                 {
