@@ -27,15 +27,26 @@ namespace Viking
 
                 Splash.Close();
 
-                if (splashResult == DialogResult.Cancel || Splash.TrackedTask.IsFaulted)
+                if (splashResult == DialogResult.Cancel)
                 {
+                    Trace.WriteLine($"Viking launch cancelled by user");
+                    ExitThread();
+                    return;
+                }
+
+                if (Splash.TrackedTask.IsFaulted)
+                {
+                    Trace.WriteLine($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
+                    MessageBox.Show($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
                     ExitThread();
                     return;
                 }
             }
 
+            Trace.WriteLine($"Showing VikingMain window");
             UI.State.Appwindow = new VikingMain();
             this.MainForm = UI.State.Appwindow;
+            this.MainForm.Show();
         }
 
         private async Task BackgroundLoading(string VolumeURL, Viking.Common.IProgressReporter progressReporter)

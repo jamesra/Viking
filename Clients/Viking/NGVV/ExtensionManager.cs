@@ -355,8 +355,39 @@ namespace Viking.Common
                 if (interfaceType == null)
                     continue;
 
-                Viking.Common.IInitExtensions InitObj = Activator.CreateInstance(type, new object[0]) as IInitExtensions;
-                OKToLoad = InitObj.Initialize();
+                try
+                {
+                    Viking.Common.IInitExtensions InitObj = Activator.CreateInstance(type, new object[0]) as IInitExtensions;
+                    OKToLoad = InitObj.Initialize();
+                }
+                catch (System.MissingMethodException except)
+                {
+                    VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
+                    DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nIn the past this exception suggests there are duplicate .dll files accidentally shipped in both the Viking and Modules folders.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
+
+                    if (result == DialogResult.OK)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+                catch (System.Exception except)
+                {
+                    VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
+                    DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
+
+                    if (result == DialogResult.OK)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
 
                 if (OKToLoad == false)
                     return false;
