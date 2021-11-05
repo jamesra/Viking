@@ -6,16 +6,20 @@ namespace UnitsAndScale
     /// Describes scale along an axis
     /// </summary>
     [Serializable]
-    public class AxisUnits : IAxisUnits
+    public readonly struct AxisUnits : IAxisUnits
     {
-        public double Value { get; private set; }
-        public string Units { get; private set; }
+        public readonly double Value;
+        public readonly string Units;
 
         public AxisUnits(double value, string units)
         {
             Value = value;
             Units = units;
         }
+
+        double IAxisUnits.Value => Value;
+
+        string IAxisUnits.Units => Units;
     }
 
     /// <summary>
