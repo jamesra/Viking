@@ -1,0 +1,6 @@
+[submodule "Servers/Libs/NetTopologySuite.IO.SqlServerBytes"]
+	path = Servers/Libs/NetTopologySuite.IO.SqlServerBytes
+	url = ../../NetTopologySuite/NetTopologySuite.IO.SqlServerBytes
+[submodule "Servers/Libs/NetTopologySuite.Curved"]
+	path = Servers/Libs/NetTopologySuite.Curved
+	url = ../NetTopologySuite.Curved
