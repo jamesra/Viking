@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Viking.Common;
 
 namespace Viking.VolumeModel
@@ -33,6 +34,12 @@ namespace Viking.VolumeModel
         {
             SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entry);
             return cacheEntry;
+        }
+
+        protected override Task<SectionMappingsCacheEntry> CreateEntryAsync(int key, SectionTransformsDictionary entry)
+        {
+            SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entry);
+            return Task.FromResult(cacheEntry);
         }
     }
 
