@@ -117,7 +117,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        protected double AdjustDownsampleForScale(double input)
+        protected override double AdjustDownsampleForScale(double input)
         {
             if (this.CurrentPyramid.XYScale == null)
                 return input;

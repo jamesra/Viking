@@ -169,7 +169,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        protected double AdjustDownsampleForScale(double input)
+        protected virtual double AdjustDownsampleForScale(double input)
         {
             if (this.XYScale == null)
                 return input;
