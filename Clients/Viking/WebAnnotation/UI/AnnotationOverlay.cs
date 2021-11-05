@@ -563,30 +563,41 @@ namespace WebAnnotation
                     return;
                 }
 
-                double distance;
-                object obj = ObjectAtPosition(WorldPosition, out distance);
-                //Figure out if it is resizing a location circle
-                //If the loc is on this section we check if we are close to the edge and we are resizing.  Everyone else gets standard location command
-                Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
-
-                /*If we select a link, find the location off the section and assume we have selected that*/
-                IMouseActionSupport actionSupportedObj = obj as IMouseActionSupport;
-
-                if (actionSupportedObj != null)
+                if (Viking.UI.State.SelectedObject is StructureType st)
                 {
-                    long LocationID;
-                    LocationAction action = actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber, Control.ModifierKeys, out LocationID);
-
-                    Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
-                    if (command != null)
-                    {
-                        _Parent.CurrentCommand = command;
-                    }
+                    var action = LocationAction.CREATESTRUCTURE;
+                    OnCreateStructure(st.ID, Array.Empty<string>(), LocationType.OPENCURVE);
                 }
-                else if (CanContinueLastTrace)
-                {
-                    //Check if we can continue another annotation, if not, check if we are in pen mode.  If we are start a new place polygon command.
-                    OnContinueLastTrace(LastMouseDownCoords);
+                else
+                { 
+                    double distance;
+                    object obj = ObjectAtPosition(WorldPosition, out distance);
+                    //Figure out if it is resizing a location circle
+                    //If the loc is on this section we check if we are close to the edge and we are resizing.  Everyone else gets standard location command
+                    Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
+
+                    /*If we select a link, find the location off the section and assume we have selected that*/
+                    IMouseActionSupport actionSupportedObj = obj as IMouseActionSupport;
+
+                    if (actionSupportedObj != null)
+                    {
+                        long LocationID;
+                        LocationAction action =
+                            actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition,
+                                this.CurrentSectionNumber, Control.ModifierKeys, out LocationID);
+
+                        Viking.UI.Commands.Command command = action.CreateCommand(Parent,
+                            Store.Locations.GetObjectByID(LocationID), WorldPosition);
+                        if (command != null)
+                        {
+                            _Parent.CurrentCommand = command;
+                        }
+                    }
+                    else if (CanContinueLastTrace)
+                    {
+                        //Check if we can continue another annotation, if not, check if we are in pen mode.  If we are start a new place polygon command.
+                        OnContinueLastTrace(LastMouseDownCoords);
+                    }
                 }
             }
         }
