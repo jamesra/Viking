@@ -24,7 +24,7 @@ namespace WebAnnotation.UI.ActionViews
         {
             LineView view = new LineView(model.A.VolumePosition, model.B.VolumePosition, Math.Min(model.A.Radius, model.B.Radius), Color.White.SetAlpha(0.5f), LineStyle.Standard);
             Passive = view;
-            Active = new LineView(model.A.VolumePosition, model.B.VolumePosition, Math.Min(model.A.Radius, model.B.Radius), Color.White.SetAlpha(1f), LineStyle.Standard); ;
+            Active = new LineView(model.A.VolumePosition, model.B.VolumePosition, Math.Min(model.A.Radius, model.B.Radius), Color.White.SetAlpha(1f), LineStyle.Standard);
         }
     }
 }

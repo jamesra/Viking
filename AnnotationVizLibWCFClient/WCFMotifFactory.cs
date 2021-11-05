@@ -34,7 +34,7 @@ namespace AnnotationVizLib.WCFClient
 
                 //Find the parents of the linked structures, if they exist
                 Structure[] linkedStructures = Queries.GetStructuresByIDs(proxy, StructIDToLinks.Keys.ToArray());
-                List<long> ParentIDs = new List<long>(linkedStructures.Count());
+                List<long> ParentIDs = new List<long>(linkedStructures.Count);
                 foreach (Structure s in linkedStructures)
                 {
                     if (s.ParentID.HasValue)

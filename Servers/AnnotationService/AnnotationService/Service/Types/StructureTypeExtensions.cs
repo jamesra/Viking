@@ -50,7 +50,7 @@ namespace AnnotationService.Types
                 st.StructureTags = type.StructureTags.Split(';');
 
             st.Abstract = type.Abstract;
-            st.Color = type.Color;
+            st.Color = (uint)type.Color;
             st.Code = type.Code;
             st.HotKey = type.HotKey.Length > 0 ? type.HotKey[0] : '\0';
             st.PermittedLinks = PopulateLinks(type);
@@ -82,7 +82,7 @@ namespace AnnotationService.Types
 
             type.StructureTags = structuretags;
             type.Abstract = st.Abstract;
-            type.Color = st.Color;
+            type.Color = (int)st.Color;
             type.Code = st.Code;
             type.HotKey = st.HotKey.ToString();
             type.Username = Annotation.ServiceModelUtil.GetUserForCall();

@@ -13,6 +13,7 @@ using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {
@@ -169,7 +170,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                return SmoothedVolumePolygon.BoundingBox.Pad(this._ControlPointRadius);
+                return GridRectangle.Pad(SmoothedVolumePolygon.BoundingBox, this._ControlPointRadius);
             }
         }
 
@@ -286,7 +287,7 @@ namespace WebAnnotation.View
             protected get
             {
                 if (this.OverlappedLinkView == null)
-                    return new long[0];
+                    return Array.Empty<long>();
 
                 return this.OverlappedLinkView.OverlappedLinks;
             }

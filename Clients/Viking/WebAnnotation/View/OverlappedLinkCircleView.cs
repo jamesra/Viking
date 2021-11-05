@@ -7,6 +7,7 @@ using System.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {
@@ -129,7 +130,7 @@ namespace WebAnnotation.View
 
         public ICanvasView GetAnnotationAtPosition(GridVector2 position)
         {
-            ICanvasView annotation = linkViews.Where(l => l.Contains(position) == true).FirstOrDefault() as ICanvasGeometryView;
+            ICanvasView annotation = linkViews.FirstOrDefault(l => l.Contains(position) == true) as ICanvasGeometryView;
             if (annotation == null)
                 return null;
 

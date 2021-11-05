@@ -212,7 +212,7 @@ namespace MonogameTestbed
             };
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[Endpoint.TEST]);
 
-            GridVector2[] centers = graph.Nodes.Values.Select(n => n.Geometry.Centroid()).ToArray();
+            GridVector2[] centers = graph.Nodes.Values.Select(n => n.Geometry.Centroid).ToArray();
 
             foreach(AnnotationVizLib.MorphologyNode node in graph.Nodes.Values)
             {
@@ -227,7 +227,7 @@ namespace MonogameTestbed
                 NodeIDtoArrayID.Add(nodes[i].ID, (ulong)i);
             }
 
-            GridPolygon[] Polygons = nodes.Select(n => n.Geometry.ToPolygon()).ToArray();
+            GridPolygon[] Polygons = nodes.Select(n => n.Geometry as GridPolygon).Where(p => p != null).ToArray();
             Z = nodes.Select(n => n.Z).ToArray();
             edges = mGraph.Edges.Values.Select(e => new MeshEdge(NodeIDtoArrayID[e.SourceNodeKey],
                                                                  NodeIDtoArrayID[e.TargetNodeKey],

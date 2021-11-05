@@ -72,7 +72,7 @@ namespace AnnotationVizLib
             string ToolTipStr = node.Structures.Count.ToString() + " " + node.Key + " instances: ";
 
             bool firstentry = true;
-            foreach (IStructure s in node.Structures)
+            foreach (IStructureReadOnly s in node.Structures)
             {
                 if (!firstentry)
                     ToolTipStr = ToolTipStr + ", ";

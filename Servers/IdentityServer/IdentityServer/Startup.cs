@@ -18,6 +18,8 @@ using Serilog;
 using System;
 using System.Linq;
 using System.Reflection;
+using IdentityServer4.Extensions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace IdentityServer
 {
@@ -80,7 +82,8 @@ namespace IdentityServer
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")).EnableDetailedErrors().EnableSensitiveDataLogging());
 
-
+            services.AddAntiforgery();
+            
             IConfigurationSection identityServerConfig = Configuration.GetSection("IdentityServer");
 
             services.AddAuthentication(options =>
@@ -247,22 +250,31 @@ namespace IdentityServer
         public void ConfigureSSL(IIdentityServerBuilder builder, IConfigurationSection config)
         {
             string serialNumber = config["SerialNumber"];
-            //var certs = X509.LocalMachine.My.SubjectDistinguishedName.Find(serialNumber).ToList();
+            if (serialNumber.IsNullOrEmpty())
+            {
 
-            var cert = X509.LocalMachine.My.SerialNumber.Find(serialNumber, false)
-                .Where(o => DateTime.UtcNow >= o.NotBefore)
-                .OrderByDescending(o => o.NotAfter)
-                .FirstOrDefault();
-            if (cert == null) throw new Exception("No valid certificates could be found.");
+                builder.AddDeveloperSigningCredential();
+            }
+            else
+            { 
+                //var certs = X509.LocalMachine.My.SubjectDistinguishedName.Find(serialNumber).ToList();
 
-            var signingCredentials = new SigningCredentials(new X509SecurityKey(cert), "RS256");
+                var cert = X509.LocalMachine.My.SerialNumber.Find(serialNumber, false)
+                    .Where(o => DateTime.UtcNow >= o.NotBefore)
+                    .OrderByDescending(o => o.NotAfter)
+                    .FirstOrDefault();
+                if (cert == null) throw new Exception("No valid certificates could be found.");
 
-            builder.AddSigningCredential(signingCredentials);
+                var signingCredentials = new SigningCredentials(new X509SecurityKey(cert), "RS256");
+
+                builder.AddSigningCredential(signingCredentials);
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IWebHostEnvironment env)
         {
+            
             // this will do the initial DB population
             InitializeDatabase(app);
 
@@ -276,6 +288,8 @@ namespace IdentityServer
             {
                 app.UseExceptionHandler("/Home/Error"); 
             }
+
+            app.UseSerilogRequestLogging();
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();           

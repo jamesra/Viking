@@ -54,7 +54,7 @@ namespace WebAnnotation.UI.Forms
                 Trace.WriteLine(string.Format("Clicked {0}", ctrl.DataContext));
             }
 
-            var StructureType = ctrl.DataContext as IStructureType;
+            var StructureType = ctrl.DataContext as IStructureTypeReadOnly;
             if(StructureType == null)
             {
                 throw new ArgumentException(string.Format("Expected an IStructureType in Data Context"));
@@ -78,7 +78,7 @@ namespace WebAnnotation.UI.Forms
                 Trace.WriteLine(string.Format("Clicked {0}", ctrl.DataContext));
             }
 
-            var StructureType = ctrl.DataContext as IStructureType;
+            var StructureType = ctrl.DataContext as IStructureTypeReadOnly;
             if (StructureType == null)
             {
                 throw new ArgumentException(string.Format("Expected an IStructureType in Data Context"));

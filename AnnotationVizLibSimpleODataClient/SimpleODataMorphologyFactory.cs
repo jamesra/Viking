@@ -80,7 +80,7 @@ namespace AnnotationVizLib.SimpleOData
             /////////////////////////////////////////////////////////////////////////////////////
             //Check if any work was actually requested, if not return empty graph with scale data
             MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
-            if (LocationIDs == null || LocationIDs.Count() == 0)
+            if (LocationIDs == null || LocationIDs.Count == 0)
             {
                 //TODO: Retrieve the full network if no structureID's are passed
                 return rootGraph;

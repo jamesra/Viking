@@ -10,6 +10,7 @@ using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -305,7 +306,7 @@ namespace WebAnnotation.UI.Commands
                 if (listCurves.Count == 0)
                     return;
 
-                listCurves.OrderBy(c => c.Distance);
+                listCurves = listCurves.OrderBy(c => c.Distance).ToList();
 
                 LocationOpenCurveView curveToCopy = listCurves.First().obj as LocationOpenCurveView;
                 this.OriginalVolumeControlPoints = curveToCopy.VolumeControlPoints;

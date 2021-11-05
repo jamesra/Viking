@@ -515,9 +515,9 @@ namespace Annotation
                     //IQueryable<ConnectomeDataModel.Structure> queryStructures = from s in db.ConnectomeDataModel.Structures select s;
                     List<ConnectomeDataModel.Structure> listStructs = db.Structures.AsNoTracking().ToList();
 
-                    AnnotationService.Types.Structure[] retList = new AnnotationService.Types.Structure[listStructs.Count()];
+                    AnnotationService.Types.Structure[] retList = new AnnotationService.Types.Structure[listStructs.Count];
 
-                    for (int iStruct = 0; iStruct < listStructs.Count(); iStruct++)
+                    for (int iStruct = 0; iStruct < listStructs.Count; iStruct++)
                     {
                         //Get structures does not include children because 
                         //if you have all the structures you can create the
@@ -2943,7 +2943,7 @@ namespace Annotation
             AnnotationService.Types.Structure[] synapses = GetStructuresByIDs(mainStructure.ChildIDs, false);
             SortedDictionary<long, long> temp = new SortedDictionary<long, long>();
 
-            temp[1] = synapses.Count();
+            temp[1] = synapses.Length;
 
             foreach (AnnotationService.Types.Structure child in synapses)
             {

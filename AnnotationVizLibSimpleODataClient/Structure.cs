@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace AnnotationVizLib.SimpleOData
 {
-    class Structure : IStructure, IEquatable<Structure>
+    class Structure : IStructureReadOnly, IEquatable<Structure>
     {
         public static Structure FromDictionary(IDictionary<string, object> dict)
         {
@@ -62,7 +62,7 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
-        public ICollection<IStructureLink> Links
+        public ICollection<IStructureLinkKey> Links
         {
             get
             {
@@ -73,7 +73,7 @@ namespace AnnotationVizLib.SimpleOData
                 if (TargetOfLinks != null)
                     links.AddRange(TargetOfLinks);
 
-                return links.Select(ll => ll as IStructureLink).ToList();
+                return links.Select(ll => ll as IStructureLinkKey).ToList();
             }
         }
 
@@ -92,7 +92,7 @@ namespace AnnotationVizLib.SimpleOData
 
         private string Tags { get; set; }
 
-        IStructureType IStructure.Type
+        IStructureTypeReadOnly IStructureReadOnly.Type
         {
             get { return this.Type; }
         }
@@ -127,7 +127,7 @@ namespace AnnotationVizLib.SimpleOData
             return ID.ToString();
         }
 
-        public bool Equals(IStructure other)
+        public bool Equals(IStructureReadOnly other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -140,7 +140,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Equals(Structure other)
         {
-            return this.Equals((IStructure)other);
+            return this.Equals((IStructureReadOnly)other);
         }
     }
 }

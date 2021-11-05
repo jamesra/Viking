@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Controls
 {
@@ -13,15 +14,15 @@ namespace WebAnnotation.UI.Controls
     /// </summary>
     public partial class StructureTypeTree : UserControl
     {
-        public System.Collections.ObjectModel.ObservableCollection<IStructureType> RootStructureTypes
+        public System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly> RootStructureTypes
         {
-            get { return (System.Collections.ObjectModel.ObservableCollection<IStructureType>)GetValue( RootStructureTypesProperty); }
+            get { return (System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly>)GetValue( RootStructureTypesProperty); }
             set { SetValue( RootStructureTypesProperty, value); }
         }
 
         // Using a DependencyProperty as the backing store for  RootStructureTypes.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty  RootStructureTypesProperty =
-            DependencyProperty.Register("RootStructureTypes", typeof(ObservableCollection<IStructureType>), 
+            DependencyProperty.Register("RootStructureTypes", typeof(ObservableCollection<IStructureTypeReadOnly>), 
                 typeof(StructureTypeTree), new PropertyMetadata());
          
 
@@ -34,7 +35,7 @@ namespace WebAnnotation.UI.Controls
                 // Load design-time books.
                 WebAnnotationModel.State.Endpoint = new Uri("https://websvc1.connectomes.utah.edu/RABBIT/Annotation/Service.svc");
                 WebAnnotationModel.State.UserCredentials = new System.Net.NetworkCredential("jamesan", "4%w%o06");
-                RootStructureTypes = new System.Collections.ObjectModel.ObservableCollection<IStructureType>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true));
+                RootStructureTypes = new System.Collections.ObjectModel.ObservableCollection<IStructureTypeReadOnly>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true));
                 tree_view.ItemsSource = RootStructureTypes;
             }
         }

@@ -8,6 +8,31 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos 
 {
+    public static class StructureTypeExtensions
+    {
+        public static StructureType ToStructureType(this IStructureType src)
+        {
+            var output = new StructureType
+            {
+                Id = src.ID,
+                Attributes = src.Attributes,
+                Abstract = src.Abstract,
+                Color = src.Color,
+                Name = src.Name,
+                Notes = src.Notes, 
+                AllowedShapes = src.AllowedShapes,
+                Code = src.Code
+            };
+
+            if (src.ParentID.HasValue)
+                output.ParentId = src.ParentID.Value;
+
+            output.PermittedStructureLinks.AddRange(src.PermittedLinks.Cast<PermittedStructureLink>());
+
+            return output;
+        }
+    }
+
     public partial class StructureType : IStructureType, IChangeAction
     {
         
@@ -16,7 +41,7 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
         long IDataObjectWithKey<long>.ID { get => Id; set => Id = value; }
         long? IDataObjectWithParent<long>.ParentID
         {
-            get { return HasParentId ? this.ParentId : new long?(); }
+            get => HasParentId ? this.ParentId : new long?();
             set
             {
                 if (value.HasValue)
@@ -33,7 +58,16 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
         //string IStructureType.MarkupType { get => this.throw new NotImplementedException(); set => throw new NotImplementedException(); }
         //string[] IStructureType.Tags { get => this.Tags }
         string IStructureType.Attributes { get => this.Attributes; set => this.Attributes = value; }
-        IPermittedStructureLink[] IStructureType.PermittedLinks { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+        IPermittedStructureLink[] IStructureType.PermittedLinks
+        {
+            get => this.permittedStructureLinks_.Cast<IPermittedStructureLink>().ToArray();
+            set
+            {
+                permittedStructureLinks_.Clear();
+                permittedStructureLinks_.AddRange(value.Cast<PermittedStructureLink>());
+            }
+        }
 
         //string[] IStructureType.StructureTags { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
@@ -44,10 +78,31 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
             if (ReferenceEquals(this, other))
                 return true;
 
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.Id == (long)other.ID;
         }
+
+        public static explicit operator StructureTypeChangeRequest(StructureType src)
+        {
+            var value = new StructureTypeChangeRequest();
+            switch (src._DBAction)
+            {
+                case DBACTION.NONE:
+                    return null;
+                case DBACTION.INSERT:
+                    value.Create = src;
+                    break;
+                case DBACTION.UPDATE:
+                    value.Update = src;
+                    break;
+                case DBACTION.DELETE:
+                    value.Delete = src.Id;
+                    break;
+            }
+            return value;
+        }
+         
     }
 }

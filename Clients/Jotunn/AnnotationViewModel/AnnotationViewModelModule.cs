@@ -77,14 +77,14 @@ namespace Viking.VolumeView
                 {
                     case "Volume":
                         IEnumerable<XElement> SettingsElements = elem.Elements().Where(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings");
-                        if (SettingsElements.Count() > 0)
+                        if (SettingsElements.Any())
                         {
                             //UserSettingsElement = SettingsElements.First();
                         }
 
                         IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
 
-                        if (MappingElements.Count() == 0)
+                        if (!MappingElements.Any())
                             break;
 
                         XElement MappingElement = MappingElements.First();

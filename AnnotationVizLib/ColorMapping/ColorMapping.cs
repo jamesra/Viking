@@ -11,12 +11,12 @@ using UnitsAndScale;
 
 namespace AnnotationVizLib
 {
-    public class ColorScalars
+    public readonly struct ColorScalars
     {
-        public double alpha = 1.0;
-        public double red = 1.0;
-        public double green = 1.0;
-        public double blue = 1.0;
+        public readonly double alpha;
+        public readonly double red;
+        public readonly double green;
+        public readonly double blue;
 
         public ColorScalars(double a, double r, double g, double b)
         {
@@ -30,10 +30,10 @@ namespace AnnotationVizLib
     /// <summary>
     /// Used to store offsets into color map images
     /// </summary>
-    public class ColorImageOffset
+    public readonly struct ColorImageOffset
     {
-        public double X = 0.0;
-        public double Y = 0.0;
+        public readonly double X;
+        public readonly double Y;
 
         public ColorImageOffset(double x, double y)
         {
@@ -231,10 +231,12 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="locations"></param>
         /// <returns></returns>
-        public Color GetColor(ICollection<ILocation> locations)
+        public Color GetColor(ICollection<ILocationReadOnly> locations)
         {
             //Remove locations with Z values not in our lookup list to save a lot of time
-            List<GridVector3> listPoints = locations.Where(l => ColorMapTable.ContainsKey((int)l.UnscaledZ)).ToList().ConvertAll(loc => loc.Geometry.Centroid().ToGridVector3(loc.UnscaledZ));
+            List<GridVector3> listPoints = locations
+                .Where(l => ColorMapTable.ContainsKey((int)l.UnscaledZ)).ToList()
+                .ConvertAll(loc => loc.VolumeGeometryWKT.ParseWKT().BoundingBox.Center.ToGridVector3(loc.UnscaledZ));
 
             return GetColor(listPoints);
         }
@@ -250,7 +252,7 @@ namespace AnnotationVizLib
                 return Color.Empty;
 
             IEnumerable<GridVector3> filteredPoints = points.Where(p => ColorMapTable.ContainsKey((int)p.Z));
-            IList<Color> colors = filteredPoints.Select<GridVector3, Color>(p => GetColor(p.X, p.Y, (int)p.Z)).ToList();
+            IList<Color> colors = filteredPoints.Select(p => GetColor(p.X, p.Y, (int)p.Z)).ToList();
             return AverageColors(colors);
         }
 
@@ -309,11 +311,11 @@ namespace AnnotationVizLib
                     ColorMapImageData colormapimagedata = ParseConfigLine(line, ImageDir);
                     mapping.AddColorMapImage(colormapimagedata.SectionNumber, colormapimagedata);
                 }
-                catch (System.FormatException)
+                catch (FormatException)
                 {
                     System.Diagnostics.Trace.WriteLine("Unable to parse Color Map Config line: " + line);
                 }
-                catch (System.ArgumentException e)
+                catch (ArgumentException e)
                 {
                     Trace.WriteLine(e.Message);
                     continue;
@@ -434,7 +436,7 @@ namespace AnnotationVizLib
             foreach (string line in lines)
             {
                 string trim_line = line.Trim();
-                if (trim_line.Count() == 0)
+                if (!trim_line.Any())
                     continue;
 
                 try
@@ -446,11 +448,11 @@ namespace AnnotationVizLib
                         mapping.Add(Key, color);
 
                 }
-                catch (System.FormatException)
+                catch (FormatException)
                 {
                     System.Diagnostics.Trace.WriteLine("Unable to parse Color Map Config line: " + line);
                 }
-                catch (System.ArgumentException e)
+                catch (ArgumentException e)
                 {
                     Trace.WriteLine(e.Message);
                     continue;

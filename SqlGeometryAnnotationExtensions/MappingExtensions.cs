@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using WebAnnotationModel.Objects;
 
 namespace Viking.VolumeModel
 {
@@ -15,7 +16,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="loc"></param>
         /// <returns></returns>
-        private static bool MapLocationCentroidToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, WebAnnotationModel.LocationObj loc)
+        private static bool MapLocationCentroidToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, LocationObj loc)
         {
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == mapper.ID)

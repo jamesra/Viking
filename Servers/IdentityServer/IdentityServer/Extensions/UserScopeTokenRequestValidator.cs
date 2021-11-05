@@ -50,7 +50,7 @@ namespace IdentityServer.Extensions
                     context.Result.IsError = true;
                     context.Result.Error = $"{user.UserName} does not have access to scope {s.Name}";
                     context.Result.ErrorDescription = "Most likely the user is lacking a permission on the resource that was requested";
-                    return; 
+                    return;
                 }
             }
         }

@@ -63,7 +63,7 @@ namespace Geometry.Meshing
 
         public void Translate(GridVector3 translate)
         {
-            foreach (IVertex3D v in _Verticies)
+            foreach (VERTEX v in _Verticies)
             {
                 v.Position += translate;
             }

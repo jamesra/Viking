@@ -1,6 +1,7 @@
 ﻿using System;
 
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
 {

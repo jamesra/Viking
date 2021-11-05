@@ -117,7 +117,7 @@ namespace Viking.VolumeModel
         }
 
 
-        public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
+        public override TilePyramid VisibleTiles(in GridRectangle VisibleBounds, double DownSample)
         {
             //double AdjustedDownSample = AdjustDownsampleForScale(DownSample);
             TilePyramid TilesToDraw = new TilePyramid(VisibleBounds);
@@ -166,8 +166,8 @@ namespace Viking.VolumeModel
 
 
         private List<Tile> RecursiveVisibleTiles(
-                                                 GridRectangle VolumeVisibleBounds,
-                                                 GridRectangle SectionVisibleBounds,
+                                                 in GridRectangle VolumeVisibleBounds,
+                                                 in GridRectangle SectionVisibleBounds,
                                                  GridQuad VisibleQuad,
                                                  int roundedDownsample)
         {
@@ -375,8 +375,8 @@ namespace Viking.VolumeModel
 
             if (MappedPoints.Count + TileCornerMappedPoints.Count < 3)
             {
-                TriangleEdges = new int[0];
-                return new PositionNormalTextureVertex[0];
+                TriangleEdges = Array.Empty<int>();
+                return Array.Empty<PositionNormalTextureVertex>();
             }
 
             /*            if (TileCornerMappedPoints.Count < 3)
@@ -430,8 +430,8 @@ namespace Viking.VolumeModel
             catch (ArgumentException)
             {
                 //This can occur if all the points are on a straight line
-                TriangleEdges = new int[0];
-                return new PositionNormalTextureVertex[0];
+                TriangleEdges = Array.Empty<int>();
+                return Array.Empty<PositionNormalTextureVertex>();
             }
 
             //Ok, create all the verticies

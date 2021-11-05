@@ -1,4 +1,5 @@
-﻿using Geometry;
+﻿using System;
+using Geometry;
 using Geometry.Meshing;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,12 +44,12 @@ namespace MorphologyMesh
             if (internalVerticies != null)
                 InternalVerticies = new IndexSet(internalVerticies);
             else
-                InternalVerticies = new IndexSet(new long[0]);
+                InternalVerticies = new IndexSet(Array.Empty<long>());
 
             if (InternalBorders != null)
                 InternalBorders = interiorRings.Select(ir => new IndexSet(ir)).ToArray();
             else
-                InternalBorders = new IIndexSet[0];
+                InternalBorders = Array.Empty<IIndexSet>();
         }
 
         public ConnectionVerticies(IIndexSet exteriorRing, IIndexSet internalVerticies, IIndexSet[] interiorRings)
@@ -60,20 +61,20 @@ namespace MorphologyMesh
             if (internalVerticies != null)
                 InternalVerticies = internalVerticies;
             else
-                InternalVerticies = new IndexSet(new long[0]);
+                InternalVerticies = new IndexSet(Array.Empty<long>());
 
             if (interiorRings != null)
                 InternalBorders = interiorRings;
             else
-                InternalBorders = new IIndexSet[0];
+                InternalBorders = Array.Empty<IIndexSet>();
         }
 
         public ConnectionVerticies(IIndexSet lineVerticies)
         {
             this.Type = ConnectionPortType.OPEN; //Cannot have internal verticies in an open port
             ExternalBorder = lineVerticies;
-            InternalVerticies = new IndexSet(new long[0]);
-            InternalBorders = new IIndexSet[0];
+            InternalVerticies = new IndexSet(Array.Empty<long>());
+            InternalBorders = Array.Empty<IIndexSet>();
         }
 
         /// <summary>
@@ -87,8 +88,10 @@ namespace MorphologyMesh
             IIndexSet internalVerts = InternalVerticies.IncrementStartingIndex(value);
             IIndexSet[] internalSets = InternalBorders.Select(ib => ib.IncrementStartingIndex(value)).ToArray();
 
-            ConnectionVerticies port = new ConnectionVerticies(external, internalVerts, internalSets);
-            port.Type = this.Type;
+            ConnectionVerticies port = new ConnectionVerticies(external, internalVerts, internalSets)
+            {
+                Type = this.Type
+            };
             return port;
         }
 

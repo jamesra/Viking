@@ -3,6 +3,7 @@ using System;
 using System.Globalization;
 using System.Windows.Data;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.WPF.Converters
 {
@@ -10,7 +11,7 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            IPermittedStructureLink link = value as IPermittedStructureLink;
+            IPermittedStructureLinkKey link = value as IPermittedStructureLinkKey;
             if (link == null)
                 throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
@@ -27,7 +28,7 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            IPermittedStructureLink link = value as IPermittedStructureLink;
+            IPermittedStructureLinkKey link = value as IPermittedStructureLinkKey;
             if (link == null)
                 throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 
@@ -44,7 +45,7 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            IPermittedStructureLink link = value as IPermittedStructureLink;
+            IPermittedStructureLinkKey link = value as IPermittedStructureLinkKey;
             if (link == null)
                 throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
 

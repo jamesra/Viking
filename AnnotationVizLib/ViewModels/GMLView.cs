@@ -202,22 +202,22 @@ namespace AnnotationVizLib
             this.Label = label;
         }
 
-        public void AddNode(ulong ID)
+        public void AddNode(ulong id)
         {
-            Debug.Assert(!NodeIDs.Contains(ID));
-            NodeIDs.Add(ID);
+            Debug.Assert(!NodeIDs.Contains(id));
+            NodeIDs.Add(id);
         }
 
-        public void AddEdge(ulong ID)
+        public void AddEdge(ulong id)
         {
-            Debug.Assert(!EdgeIDs.Contains(ID));
-            EdgeIDs.Add(ID);
+            Debug.Assert(!EdgeIDs.Contains(id));
+            EdgeIDs.Add(id);
         }
 
-        public void AddSubgraph(ulong ID, GMLViewSubgraph subgraph)
+        public void AddSubgraph(ulong id, GMLViewSubgraph subgraph)
         {
-            Debug.Assert(!SubGraphs.ContainsKey(ID));
-            SubGraphs.Add(ID, subgraph);
+            Debug.Assert(!SubGraphs.ContainsKey(id));
+            SubGraphs.Add(id, subgraph);
         }
 
         public System.Drawing.Color Color
@@ -233,7 +233,7 @@ namespace AnnotationVizLib
 
         private string NodesString(IEnumerable<ulong> node_ids)
         {
-            if (node_ids.Count() == 0)
+            if (!node_ids.Any())
                 return "";
 
             using (StringWriter sw = new StringWriter())
@@ -241,7 +241,7 @@ namespace AnnotationVizLib
                 sw.Write("(nodes ");
                 foreach (long id in node_ids)
                 {
-                    sw.Write(string.Format("{0} ", id));
+                    sw.Write($"{id} ");
                 }
                 sw.WriteLine(GMLFile.GenericFooter);
 
@@ -251,7 +251,7 @@ namespace AnnotationVizLib
 
         private string EdgesString(IEnumerable<ulong> edge_ids)
         {
-            if (edge_ids.Count() == 0)
+            if (!edge_ids.Any())
                 return "";
 
             using (StringWriter sw = new StringWriter())
@@ -259,7 +259,7 @@ namespace AnnotationVizLib
                 sw.Write("(edges ");
                 foreach (long id in edge_ids)
                 {
-                    sw.Write(string.Format("{0} ", id));
+                    sw.Write($"{id} ");
                 }
                 sw.WriteLine(GMLFile.GenericFooter);
 

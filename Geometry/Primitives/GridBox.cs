@@ -241,8 +241,8 @@ namespace Geometry
             Debug.Assert(scalars.Length == this.dimensions.Length, "Scalar dimension and shape dimension do not match");
             //Have to cache center because it changes as we update points
             double[] center = this.Center;
-            double[] dimensions = this.dimensions;
-            double[] new_corner_distance = dimensions.Select((dist, i) => ((dist / 2.0) * scalars[i])).ToArray();
+            double[] dim = this.dimensions;
+            double[] new_corner_distance = dim.Select((dist, i) => ((dist / 2.0) * scalars[i])).ToArray();
 
             double[] new_mins = center.Select((c, i) => c - new_corner_distance[i]).ToArray();
             double[] new_maxs = center.Select((c, i) => c + new_corner_distance[i]).ToArray();

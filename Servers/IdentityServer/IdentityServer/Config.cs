@@ -173,7 +173,7 @@ namespace IdentityServer
                     ClientId = "mvc",
                     ClientName = "MVC Client",
                     //AllowedGrantTypes = GrantTypes.HybridAndClientCredentials,
-                    AllowedGrantTypes = GrantTypes.Implicit,
+                    AllowedGrantTypes = GrantTypes.Code,
 
                     RequireConsent = false,
 

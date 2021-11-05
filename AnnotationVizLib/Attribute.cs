@@ -47,13 +47,13 @@ namespace AnnotationVizLib
 
         public static string ToXml(IEnumerable<ObjAttribute> attributes)
         {
-            if (attributes.Count() == 0)
+            if (!attributes.Any())
             {
                 return null;
             }
 
             StringBuilder sbuilder = new StringBuilder();
-            using (System.Xml.XmlWriter xwriter = XmlWriter.Create(sbuilder))
+            using (XmlWriter xwriter = XmlWriter.Create(sbuilder))
             {
                 xwriter.WriteStartElement("Structure");
 
@@ -102,7 +102,7 @@ namespace AnnotationVizLib
 
         private static List<ObjAttribute> FromXml(string XMLString)
         {
-            System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Load(new StringReader(XMLString));
+            XDocument doc = System.Xml.Linq.XDocument.Load(new StringReader(XMLString));
 
             XElement structureElem = doc.Element("Structure");
             if (structureElem == null)

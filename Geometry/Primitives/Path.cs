@@ -615,6 +615,8 @@ namespace Geometry
 
         public double Area => throw new ArgumentException("No area for Polyline");
 
+        GridVector2 IShape2D.Centroid => GridVector2.Average(Segments.Select(s => s.PointAlongLine(0.5)));
+
         bool IShape2D.Contains(in IPoint2D p)
         {
             IPoint2D pnt = p;

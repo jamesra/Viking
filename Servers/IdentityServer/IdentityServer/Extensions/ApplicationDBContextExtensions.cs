@@ -340,19 +340,20 @@ namespace IdentityServer.Extensions
                 .Include(o => o.Children)
                 .FirstOrDefaultAsync(o => o.Id == Id);
 
+            List<Resource> output = new List<Resource>();
             List<Resource> children = new List<Resource>();
 
             if (ou == null || ou.Children == null)
-                return new List<Resource>();
+                return Array.Empty<Resource>();
             else
-                children.AddRange(ou.Children);
+                output.AddRange(ou.Children);
 
-            foreach(var child in children.Where(c => c.ResourceTypeId == nameof(OrganizationalUnit)))
+            foreach(var child in ou.Children.Where(c => c.ResourceTypeId == nameof(OrganizationalUnit)))
             {
-                children.AddRange(await context.RecursiveChildrenOfOrg(child.Id));
+                output.AddRange(await context.RecursiveChildrenOfOrg(child.Id));
             }
 
-            return children.Distinct();
+            return output.Distinct();
         }
 
         /// <summary>

@@ -77,10 +77,8 @@ namespace MeasurementExtension
 
         private double? GetMosaicDistance()
         {
-            GridVector2 mosaic_origin;
-            GridVector2 mosaic_target;
-            bool transformed_origin = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(Origin, out mosaic_origin);
-            bool transformed_current = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(this.oldWorldPosition, out mosaic_target);
+            bool transformed_origin = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(Origin, out GridVector2 mosaic_origin);
+            bool transformed_current = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(this.oldWorldPosition, out GridVector2 mosaic_target);
 
             if (transformed_origin && transformed_current)
             {

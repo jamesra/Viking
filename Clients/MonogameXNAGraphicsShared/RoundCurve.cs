@@ -485,7 +485,7 @@ namespace RoundCurve
                        
             int SegmentsAlreadyDrawn = 0;
             int numSegmentsThisDraw = 0;
-            int numSegmentsToDraw = roundLine.ControlPoints.Count();
+            int numSegmentsToDraw = roundLine.ControlPoints.Length;
 
             while (SegmentsAlreadyDrawn < numSegmentsToDraw)
             {

@@ -404,7 +404,7 @@ namespace WebAnnotation.UI.Commands
                     this.PathView.Add(this.PenInput.Peek());
                     break;
                 case NotifyCollectionChangedAction.Reset:
-                    this.PathView.ControlPoints = new GridVector2[0];
+                    this.PathView.ControlPoints = Array.Empty<GridVector2>();
                     break;
                 default:
                     this.PathView.ControlPoints = this.PenInput.Points;

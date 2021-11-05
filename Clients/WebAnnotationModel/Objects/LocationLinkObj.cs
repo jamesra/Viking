@@ -1,114 +1,17 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
-using AnnotationService.Types;
-using System;
+﻿using System;
+using Viking.AnnotationServiceTypes.Interfaces; 
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using WebAnnotationModel.Objects;
+using Viking.AnnotationServiceTypes;
 
-namespace WebAnnotationModel
+namespace WebAnnotationModel.Objects
 {
-    public struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, ILocationLink
+
+    public class LocationLinkObj : AnnotationModelObjBaseWithKey<LocationLinkKey, ILocationLink>, IEquatable<LocationLinkObj>, ILocationLinkKey, ILocationLink
     {
-        public readonly long A;
-        public readonly long B;
-
-        ulong ILocationLink.A => (ulong)A;
-
-        ulong ILocationLink.B => (ulong)B;
-
-        public LocationLinkKey(long a, long b)
-        {
-            Debug.Assert(a != b);
-            A = a < b ? a : b;
-            B = b < a ? a : b;
-        }
-
-        public LocationLinkKey(LocationLinkObj obj)
-        {
-            this.A = obj.A;
-            this.B = obj.B;
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (System.Object.ReferenceEquals(this, obj))
-                return true;
-            if ((object)obj == null)
-                return false;
-            if (!typeof(LocationLinkKey).IsInstanceOfType(obj))
-                return false;
-
-            LocationLinkKey other = (LocationLinkKey)obj;
-
-            return (A == other.A) && (B == other.B);
-        }
-
-        public override string ToString()
-        {
-            return A.ToString() + " - " + B.ToString();
-        }
-
-        public override int GetHashCode()
-        {
-            return (int)(A % int.MaxValue);
-        }
-
-        public static bool operator ==(LocationLinkKey A, LocationLinkKey B)
-        {
-            if (System.Object.ReferenceEquals(A, B))
-            {
-                return true;
-            }
-
-            if ((object)A != null)
-                return A.Equals(B);
-
-            return false;
-        }
-
-        public static bool operator !=(LocationLinkKey A, LocationLinkKey B)
-        {
-            if (System.Object.ReferenceEquals(A, B))
-            {
-                return false;
-            }
-
-            if ((object)A != null)
-                return !A.Equals(B);
-
-            return true;
-        }
-
-        public int CompareTo(LocationLinkKey other)
-        {
-            if (A != other.A)
-                return (int)(other.A - A);
-            else
-                return (int)(other.B - B);
-        }
-
-        public bool Equals(LocationLinkKey other)
-        {
-            if ((object)other == null)
-                return false;
-
-            return (this.A == other.A && this.B == other.B);
-        }
-
-        bool IEquatable<ILocationLink>.Equals(ILocationLink other)
-        {
-            if ((object)other == null)
-                return false;
-
-            return ((ulong)this.A == other.A && (ulong)this.B == other.B) || ((ulong)this.B == other.A && (ulong)this.A == other.B);
-        }
-    }
-
-    public class LocationLinkObj : WCFObjBaseWithKey<LocationLinkKey, LocationLink>
-    {
-        public override LocationLinkKey ID
-        {
-            get { return new LocationLinkKey(this); }
-        }
+        public override LocationLinkKey ID => new LocationLinkKey(this.A, this.B);
 
         public override string ToString()
         {
@@ -117,13 +20,23 @@ namespace WebAnnotationModel
 
         public override bool Equals(object obj)
         {
-            if (obj == null)
-                return false;
-            if (!this.GetType().IsInstanceOfType(obj))
+            if (obj is null)
                 return false;
 
-            LocationLinkObj other = (LocationLinkObj)obj;
+            if (obj is LocationLinkObj other)
+                return Equals(other);
 
+            if (obj is ILocationLinkKey key)
+                return Equals(key);
+
+            return base.Equals(obj);
+        }
+
+        public bool Equals(LocationLinkObj other)
+        {
+            if (other is null)
+                return false;
+            
             return (A == other.A) && (B == other.B);
         }
 
@@ -171,35 +84,94 @@ namespace WebAnnotationModel
                 return (int)(other.B - B);
         }
 
-        public long A
+        internal Task<LocationLinkObj> CreateFromServer(ILocationLink newdata)
         {
-            get { return Data.SourceID < Data.TargetID ? Data.SourceID : Data.TargetID; }
+            LocationLinkObj obj = new LocationLinkObj((long)newdata.A, (long)newdata.B);
+            return Task.FromResult(obj);
         }
 
-        public long B
+        internal override Task Update(ILocationLink newdata)
         {
-            get { return Data.SourceID > Data.TargetID ? Data.SourceID : Data.TargetID; }
+            throw new System.NotImplementedException();
         }
+
+        private long _A { get; }
+        private long _B { get; }
+
+        public long A => _A;
+
+        public long B => _B;
+
+        ulong ILocationLinkKey.A => (ulong)_A;
+
+        ulong ILocationLinkKey.B => (ulong)_B;
+
+        ulong ILocationLink.A => (ulong)_A;
+
+        ulong ILocationLink.B => (ulong)_B;
+
+        ILocationLinkKey IDataObjectWithKey<ILocationLinkKey>.ID { get => new LocationLinkKey(_A, _B); set => throw new NotImplementedException(); }
 
         public LocationLinkObj()
-        {
-            LocationLink link = new LocationLink();
-            this.Data = link;
+        {  
         }
 
         public LocationLinkObj(long IDA,
                                long IDB)
         {
-            Debug.Assert(IDA != IDB);
-            LocationLink link = new LocationLink();
-            link.SourceID = IDA < IDB ? IDA : IDB;
-            link.TargetID = IDA < IDB ? IDB : IDA;
-            this.Data = link;
+            Debug.Assert(IDA != IDB); 
+            _A = IDA < IDB ? IDA : IDB;
+            _B = IDA < IDB ? IDB : IDA; 
         }
 
-        public LocationLinkObj(LocationLink link)
+        /// <summary>
+        /// Returns the side of the link that doesn't match the passed key.
+        /// Throws an exception if the passed key does not match either A or B
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public long OtherKey(long key)
         {
-            this.Data = link;
+            if (A == key)
+                return B;
+            if (B == key)
+                return A;
+
+            throw new ArgumentException($"{key} is not part of location link {A}-{B}");
+        }
+
+        ulong ILocationLinkKey.OtherKey(ulong key)
+        {
+            return (ulong)OtherKey((long)key);
+        }
+
+        bool IEquatable<ILocationLinkKey>.Equals(ILocationLinkKey other)
+        {
+            if (other is null)
+                return false;
+
+            return ((ulong)_A == other.A) && ((ulong)_B == other.B);
+        }
+
+        int IComparable<ILocationLinkKey>.CompareTo(ILocationLinkKey other)
+        {
+            if ((ulong)_A != other.A)
+                return (int)(other.A - (ulong)_A);
+            else
+                return (int)(other.B - (ulong)_B);
+        }
+
+        ulong ILocationLink.OtherKey(ulong key)
+        {
+            return (ulong)OtherKey((long)key);
+        }
+
+        bool IEquatable<ILocationLink>.Equals(ILocationLink other)
+        {
+            if (other is null)
+                return false;
+
+            return ((ulong)_A == other.A) && ((ulong)_B == other.B);
         }
     }
 }

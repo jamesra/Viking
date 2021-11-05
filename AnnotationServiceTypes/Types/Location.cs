@@ -30,8 +30,6 @@ namespace AnnotationService.Types
             get { return _Radius; }
             set { _Radius = value; }
         }
-
-
     }
 
 

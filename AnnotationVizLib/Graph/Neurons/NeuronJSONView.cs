@@ -91,10 +91,8 @@ namespace AnnotationVizLib
             {
                 object value = attribs[key];
                 JToken token;
-                if (value as JToken != null)
-                {
-                    token = (JToken)value;
-                }
+                if (value is JToken jt)
+                    token = jt;
                 else
                 {
                     token = JToken.FromObject(value);

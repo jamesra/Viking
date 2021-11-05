@@ -5,6 +5,7 @@ using System;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Actions
 {
@@ -52,10 +53,10 @@ namespace WebAnnotation.UI.Actions
                 WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
                 : transform;
 
-            GridPolygon volumePoly = location.VolumeShape.ToPolygon();
+            GridPolygon volumePoly = location.VolumeShape as GridPolygon;
             VolumePolygonToRemove = volumePoly.InteriorPolygons[innerPoly];
 
-            UpdatedMosaicPolygon = location.MosaicShape.ToPolygon();
+            UpdatedMosaicPolygon = location.MosaicShape as GridPolygon; ;
             UpdatedMosaicPolygon.TryRemoveInteriorRing(innerPoly);
 
             CreateDefaultVisuals();

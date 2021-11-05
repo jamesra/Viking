@@ -702,5 +702,7 @@ namespace Geometry
         #endregion
 
         public IPoint2D Centroid => Center;
+
+        GridVector2 IShape2D.Centroid => Center;
     }
 }

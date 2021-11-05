@@ -716,7 +716,7 @@ namespace MonogameTestbed
 
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(TroubleIDS, DataSource.EndpointMap[Endpoint.TEST]);
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
-            GridPolygon[] Polygons = nodes.Select(n => n.Geometry.ToPolygon()).ToArray();
+            GridPolygon[] Polygons = nodes.Select(n => n.Geometry as GridPolygon).Where(n => n != null).ToArray();
 
             //GridPolygon[] Polygons = new GridPolygon[] { SimpleA, SimpleB };
             

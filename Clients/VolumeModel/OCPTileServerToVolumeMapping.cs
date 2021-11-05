@@ -45,7 +45,7 @@ namespace Viking.VolumeModel
             GridQuad VisibleQuad = null;
 
             //Add any corners of the VisibleBounds that we can transform to the list of points
-            List<MappingGridVector2> VisiblePoints = VisibleBoundsCorners(VisibleBounds);
+            List<MappingGridVector2> VisiblePoints = VisibleBoundsCorners(in VisibleBounds);
             if (VisiblePoints.Count != 4)
             {
                 //If we can't map all four corners then add all the points from the transform falling inside the visible rectangle or 
@@ -103,7 +103,7 @@ namespace Viking.VolumeModel
         }
 
 
-        private List<Tile> RecursiveVisibleTiles(GridRectangle SectionVisibleBounds,
+        private List<Tile> RecursiveVisibleTiles(in GridRectangle SectionVisibleBounds,
                                                  GridQuad VisibleQuad,
                                                  int roundedDownsample)
         {

@@ -12,19 +12,23 @@ namespace MorphologyMesh
     {
         public static MeshNode CreateNode(MorphologyNode node)
         {
-            MeshNode mNode = new MeshNode(node.Key); 
-            mNode.Mesh = CreateNodeMesh(node);
-            mNode.CapPort = CreatePort(node); //Create a port we can use to cap off the node if needed
-            mNode.CapPortZ = node.Z;
+            MeshNode mNode = new MeshNode(node.Key)
+            {
+                Mesh = CreateNodeMesh(node),
+                CapPort = CreatePort(node), //Create a port we can use to cap off the node if needed
+                CapPortZ = node.Z
+            };
             return mNode;
         }
 
         public static MeshNode CreateNode(ulong ID, IShape2D shape, double Z, bool AdjacentToPolygon)
         {
-            MeshNode mNode = new MorphologyMesh.MeshNode(ID);
-            mNode.Mesh = CreateNodeMesh(shape, Z, ID, AdjacentToPolygon);
-            mNode.CapPort = CreatePort(shape, AdjacentToPolygon);
-            mNode.CapPortZ = Z; 
+            MeshNode mNode = new MorphologyMesh.MeshNode(ID)
+            {
+                Mesh = CreateNodeMesh(shape, Z, ID, AdjacentToPolygon),
+                CapPort = CreatePort(shape, AdjacentToPolygon),
+                CapPortZ = Z
+            };
             return mNode; 
         }
 
@@ -41,7 +45,7 @@ namespace MorphologyMesh
         /// <param name="Z"></param>
         public static Mesh3D<IVertex3D<ulong>> CreateNodeMesh(MorphologyNode node)
         {
-            IShape2D shape = node.Geometry.ToShape2D();
+            IShape2D shape = node.Geometry;
             
             double Z = -node.Z;
 
@@ -87,7 +91,7 @@ namespace MorphologyMesh
 
         public static ConnectionVerticies CreatePort(MorphologyNode node)
         {
-            return CreatePort(node.Geometry.ToShape2D(), IsAdjacentToPolygon(node));
+            return CreatePort(node.Geometry, IsAdjacentToPolygon(node));
         }
 
         public static ConnectionVerticies CreatePort(IShape2D shape, bool AdjacentToPolygon = false)

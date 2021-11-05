@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace VikingXNAGraphics
 {
-    public interface IMeshModel<VERTEXTYPE>
+    public interface IMeshModel<out VERTEXTYPE>
          where VERTEXTYPE : struct, IVertexType
     {
         VERTEXTYPE[] Verticies { get; }

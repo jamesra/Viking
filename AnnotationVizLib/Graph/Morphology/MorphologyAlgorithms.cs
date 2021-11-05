@@ -181,7 +181,9 @@ namespace AnnotationVizLib
                 if (z_distance > min_distance)
                     continue;
 
-                double pair_distance = shape_to_check.Geometry.STDistance(compare_node.Geometry).Value;
+                throw new NotImplementedException("Need a way to test distance between IShape2Ds");
+                /*
+                /double pair_distance = shape_to_check.Geometry.STDistance(compare_node.Geometry).Value;
                 if (pair_distance > min_distance)
                     continue;
 
@@ -193,6 +195,7 @@ namespace AnnotationVizLib
                     min_distance = pair_distance_3D;
                     Nearest = compare_id;
                 }
+                */
             }
 
             return Nearest;
@@ -263,7 +266,7 @@ namespace AnnotationVizLib
 
             double TotalDistance = 0.0;
 
-            for (int iStart = 0; iStart < path.Count() - 1; iStart++)
+            for (int iStart = 0; iStart < path.Count - 1; iStart++)
             {
                 int iEnd = iStart + 1;
 
@@ -324,7 +327,7 @@ namespace AnnotationVizLib
             List<ulong> source_ids = cell_graph.Subgraphs.Where(sg => SourceTypeIDs.Contains(sg.Value.structureType.ID)).Select(sg => sg.Key).ToList();
             //Assert.IsTrue(desmosome_ids.Count > 0);
             if (source_ids.Count == 0)
-                return new PathData[0];
+                return Array.Empty<PathData>();
 
             var nodes_with_sourceType_subgraphs = source_ids.Select(id => new { Node = cell_graph.NearestNodeToSubgraph[id], StructureID = id }).ToList();
 

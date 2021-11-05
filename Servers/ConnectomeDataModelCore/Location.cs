@@ -73,10 +73,10 @@ namespace Viking.DataModel.Annotation
         public string Username { get; set; }
         [Required]
         [Column(TypeName = "geometry")]
-        public string MosaicShape { get; set; }
+        public Geometry MosaicShape { get; set; }
         [Required]
         [Column(TypeName = "geometry")]
-        public string VolumeShape { get; set; }
+        public Geometry VolumeShape { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
         public double VolumeX { get; set; }

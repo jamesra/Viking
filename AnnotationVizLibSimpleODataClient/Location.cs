@@ -8,7 +8,7 @@ using UnitsAndScale;
 
 namespace AnnotationVizLib.SimpleOData
 {
-    public class Location : ILocation, IEquatable<Location>
+    public class Location : ILocationReadOnly, IEquatable<Location>
     {
         public IScale scale { get; set; }
 
@@ -16,56 +16,46 @@ namespace AnnotationVizLib.SimpleOData
         {
         }
 
-        public IDictionary<string, string> Attributes
-        {
-            get
-            {
-                return null;
-            }
-        }
+        public IDictionary<string, string> Attributes => null;
 
         public System.Data.Entity.Spatial.DbGeometry VolumeShape { get; internal set; }
 
-        private SqlGeometry _VolumeShape = null;
-        public SqlGeometry Geometry
+        private IShape2D _VolumeShape = null;
+        public IShape2D VolumeGeometry
         {
             get
             {
                 if (_VolumeShape == null)
                 {
-                    _VolumeShape = this.VolumeShape.ToSqlGeometry();
-                    _VolumeShape = _VolumeShape.Scale(scale);
+                    _VolumeShape = this.VolumeShape.WellKnownValue.WellKnownText.ParseWKT();
+                    throw new NotImplementedException("IShape2D must be scaled to match units");
+                    //_VolumeShape = _VolumeShape.Scale(scale);
                 }
 
                 return _VolumeShape;
             }
 
-            set
-            {
-                _VolumeShape = value;
-            }
+            set => _VolumeShape = value;
         }
 
         public System.Data.Entity.Spatial.DbGeometry MosaicShape { get; internal set; }
 
-        private SqlGeometry _MosaicShape = null;
-        public SqlGeometry MosaicGeometry
+        private IShape2D _MosaicShape = null;
+        public IShape2D MosaicGeometry
         {
             get
             {
                 if (_MosaicShape == null)
                 {
-                    _MosaicShape = this.MosaicShape.ToSqlGeometry();
-                    _MosaicShape = _MosaicShape.Scale(scale);
+                    _MosaicShape = this.MosaicShape.WellKnownValue.WellKnownText.ParseWKT();
+                    throw new NotImplementedException("IShape2D must be scaled to match units");
+                    //_MosaicShape = _MosaicShape.Scale(scale);
                 }
 
                 return _MosaicShape;
             }
 
-            set
-            {
-                _MosaicShape = value;
-            }
+            set => _MosaicShape = value;
         }
 
 
@@ -99,28 +89,16 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
-        public long UnscaledZ
-        {
-            get
-            {
-                return (long)this.Z;
-            }
-        }
+        public long UnscaledZ => (long)this.Z;
 
         public double Z
         {
             get; internal set;
         }
 
-        double ILocation.Z
-        {
-            get { return (double)UnscaledZ * scale.Z.Value; }
-        }
+        double ILocationReadOnly.Z => (double)UnscaledZ * scale.Z.Value;
 
-        public string TagsXml
-        {
-            get { return this.Tags; }
-        }
+        public string TagsXml => this.Tags;
 
         public string Tags
         {
@@ -159,25 +137,27 @@ namespace AnnotationVizLib.SimpleOData
             }
         }
 
+        string ILocationReadOnly.VolumeGeometryWKT => VolumeShape.WellKnownValue.WellKnownText;
+
         public override string ToString()
         {
             return ID.ToString();
         }
 
-        public bool Equals(ILocation other)
+        public bool Equals(ILocationReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
-            if (other.ID == this.ID)
-                return true;
-
-            return false;
+            return other.ID.Equals(this.ID);
         }
 
         public bool Equals(Location other)
         {
-            return this.Equals((ILocation)other);
+            if (other is null)
+                return false;
+
+            return other.ID.Equals(ID);
         }
     }
 }

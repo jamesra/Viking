@@ -67,18 +67,15 @@ namespace Viking.Common
         /// <returns></returns>
         public virtual FETCHTYPE Fetch(KEY key)
         {
-            FETCHTYPE value = default(FETCHTYPE);
-            CACHEENTRY entry;
-
-            bool success = dictEntries.TryGetValue(key, out entry);
+            bool success = dictEntries.TryGetValue(key, out CACHEENTRY entry);
             if (success == false)
-                return default(FETCHTYPE);
+                return default;
 
             //Record the fact that someone asked for this tile
             entry.WasUsedSinceLastCheckpoint = true;
             entry.LastAccessed = DateTime.UtcNow;
 
-            value = Fetch(entry);
+            FETCHTYPE value = Fetch(entry);
             /*
             if(value != null)
             {
@@ -136,11 +133,9 @@ namespace Viking.Common
         /// <param name="value"></param>
         /// <returns></returns>
         public virtual FETCHTYPE GetOrAdd(KEY key, ADDTYPE value)
-        {
-            CACHEENTRY dictEntry = null;
-
+        { 
             //Check before we create an entry...
-            bool found = dictEntries.TryGetValue(key, out dictEntry);
+            bool found = dictEntries.TryGetValue(key, out CACHEENTRY dictEntry);
             if (found)
             {
                 return Fetch(dictEntry);
@@ -165,8 +160,7 @@ namespace Viking.Common
         /// <returns></returns>
         public bool Remove(KEY key)
         {
-            CACHEENTRY value;
-            bool removed = dictEntries.TryRemove(key, out value);
+            bool removed = dictEntries.TryRemove(key, out CACHEENTRY value);
             if (removed)
             {
                 long size = value.Size;
@@ -217,6 +211,11 @@ namespace Viking.Common
         /// </summary>
         public void ReduceCacheFootprint(object state)
         {
+            if (state is null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
             if (TotalCacheSize <= MaxCacheSize)
                 return;
 
@@ -319,7 +318,6 @@ namespace Viking.Common
                 if (success)
                 {
                     entry.Dispose();
-                    entry = null;
 
                     ChangeCacheSize(-size);
                     //TotalCacheSize -= size;

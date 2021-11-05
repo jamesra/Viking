@@ -173,15 +173,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj">
-      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
+      <Project>{660256d5-ae05-48cf-9821-4e5c00131410}</Project>
       <Name>AnnotationInterfaces</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
-      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
-      <Name>AnnotationServiceTypes.WCF</Name>
-    </ProjectReference>
     <ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj">
-      <Project>{709a3c16-7218-4ff0-9a2d-6bf015c243bf}</Project>
+      <Project>{8e5713fd-d55a-4abb-bffb-799df53ba313}</Project>
       <Name>WebAnnotationModel</Name>
     </ProjectReference>
     <ProjectReference Include="..\WebAnnotationViewModels\WebAnnotationViewModels.csproj">
@@ -194,7 +190,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Extended.Wpf.Toolkit">
-      <Version>4.0.1</Version>
+      <Version>4.1.0</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.SqlServer.Types">
       <Version>14.0.1016.290</Version>

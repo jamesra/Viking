@@ -76,7 +76,7 @@ namespace Viking.VolumeModel
             string TileGridPath = IO.GetAttributeCaseInsensitive(TilesetNode, "path").Value;
             string GridTileFormat = null;
 
-            XElement scale_elem = TilesetNode.Elements().Where(elem => elem.Name.LocalName == "Scale").FirstOrDefault();
+            XElement scale_elem = TilesetNode.Elements().FirstOrDefault(elem => elem.Name.LocalName == "Scale");
             UnitsAndScale.IAxisUnits XYScale = null;
             if (scale_elem != null)
                 XYScale = scale_elem.ParseScale();
@@ -93,7 +93,7 @@ namespace Viking.VolumeModel
             }
 
             //If the tileset node has no entries, then don't create a TileGridMapping
-            if (TilesetNode.Nodes().Count() == 0)
+            if (!TilesetNode.Nodes().Any())
                 return null;
 
             TileGridMapping mapping = new TileGridMapping(section, Name, TilePrefix, TilePostfix,
@@ -102,8 +102,7 @@ namespace Viking.VolumeModel
 
             foreach (XNode node in TilesetNode.Nodes())
             {
-                XElement elem = node as XElement;
-                if (elem == null)
+                if (!(node is XElement elem))
                     continue;
 
                 //Fetch the name if we know it

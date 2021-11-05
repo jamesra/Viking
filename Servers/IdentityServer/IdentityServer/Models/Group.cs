@@ -31,7 +31,7 @@ namespace IdentityServer.Models
         /// </summary>
         [NotMapped]
         [Display(Name = "Number of member groups")]
-        public virtual int NumMemberGroups { get { return MemberGroups.Count(); } }
+        public virtual int NumMemberGroups { get { return MemberGroups.Count; } }
 
         [NotMapped]
         [Display(Name = "Member Groups", Description = "Groups assigned to group")]
@@ -52,6 +52,6 @@ namespace IdentityServer.Models
           
         [NotMapped]
         [Display(Name = "Number of member users", Description = "Number of users assigned to group")]
-        public virtual int NumMemberUsers { get { return MemberUsers.Count(); } }
+        public virtual int NumMemberUsers { get { return MemberUsers.Count; } }
     }
 }

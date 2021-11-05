@@ -1,20 +1,22 @@
 ﻿using ProtoBuf;
 using System;
+using System.Linq;
 using System.Runtime.Serialization;
+using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace AnnotationService.Types
 {
     [DataContract]
     [ProtoContract]
-    public class StructureType : DataObjectWithParentOfLong
+    public class StructureType : DataObjectWithParentOfLong, Viking.AnnotationServiceTypes.Interfaces.IStructureType
     {
         private string _Name;
         private string _Notes;
         private string _MarkupType;
-        private string[] _Tags = new String[0];
-        private string[] _StructureTags = new String[0];
+        private string[] _Tags = Array.Empty<string>();
+        private string[] _StructureTags = Array.Empty<string>();
         private bool _Abstract;
-        private int _Color;
+        private uint _Color;
         private string _Code;
         private char _HotKey;
         private PermittedStructureLink[] _Links;
@@ -69,7 +71,7 @@ namespace AnnotationService.Types
 
         [DataMember]
         [ProtoMember(7)]
-        public int Color
+        public uint Color
         {
             get { return _Color; }
             set { _Color = value; }
@@ -99,9 +101,40 @@ namespace AnnotationService.Types
             set { _Links = value; }
         }
 
+        IPermittedStructureLink[] IStructureType.PermittedLinks
+        {
+            get { return PermittedLinks; }
+            set
+            {
+                _Links = value.Select(pl => new PermittedStructureLink()
+                {
+                    SourceTypeID = (long)pl.SourceTypeID,
+                    TargetTypeID = (long)pl.TargetTypeID,
+                    Bidirectional = !pl.Directional
+                }).ToArray();
+            }
+        }
+
+        long? IDataObjectWithParent<long>.ParentID
+        {
+            get { return ParentID.HasValue ? (long)this.ParentID.Value : new long?(); }
+            set { ParentID = value.HasValue ? (long)value.Value : new long?(); }
+        }
+
+        long IDataObjectWithKey<long>.ID { get => this.ID; set => ID = value; }
+        string IStructureType.Attributes { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
         public StructureType()
         {
             //       DBAction = DBACTION.INSERT; 
+        }
+
+        bool IEquatable<IStructureType>.Equals(IStructureType other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            return (long)this.ID == (long)other.ID;
         }
     }
 }

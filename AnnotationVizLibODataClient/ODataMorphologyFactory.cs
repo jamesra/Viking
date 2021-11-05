@@ -24,7 +24,7 @@ namespace AnnotationVizLib.OData
 
             foreach (long ID in StructureIDs)
             {
-                Structure result = container.Structures.Expand(s => s.Locations).Expand(s => s.Type).Expand(s => s.Children).Where(s => s.ID == ID).FirstOrDefault();
+                Structure result = container.Structures.Expand(s => s.Locations).Expand(s => s.Type).Expand(s => s.Children).FirstOrDefault(s => s.ID == ID);
 
                 if (result != null)
                 {

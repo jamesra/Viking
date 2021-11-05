@@ -373,9 +373,9 @@ namespace Geometry
 
             //CatmullRom will generate the curve between points B & C (1 & 2) accurately, needed control points will be inserted there
             int[] ProposedControlPointIndicies = new int[] {iStart - 1,
-                                                                iStart,
-                                                                iStart + 1,
-                                                                iStart + 2};
+                                                            iStart,
+                                                            iStart + 1,
+                                                            iStart + 2};
 
             GridVector2[] ProposedCurveControlPoints = new GridVector2[4];
             for (int iV = 0; iV < ProposedControlPointIndicies.Length; iV++)
@@ -486,14 +486,27 @@ namespace Geometry
             return new List<GridVector2>(new GridVector2[] { path.First(), path[firstTwo[0]], path[firstTwo[1]], path.Last() });
         }
 
+        public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<IPoint2D> input,
+            double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
+        { 
+            return IdentifyControlPoints(input.Select(p => p.ToGridVector2()).ToList(), MaxDistanceFromSimplifiedToIdeal,
+                 IsClosed,  NumInterpolations);
+        }
+
+        public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<GridVector2> input,
+            double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
+        { 
+            return IdentifyControlPoints(input.ToList(), MaxDistanceFromSimplifiedToIdeal,
+                 IsClosed, NumInterpolations);
+        }
+
         /// <summary>
         /// Take a high density path, fit a curve to it using catmull rom, and remove control points until we have a smaller number of control points where all points are within a minimum distance from the curve. 
         /// </summary>
         /// <param name="path"></param>
-        static public List<GridVector2> IdentifyControlPoints(this IReadOnlyList<GridVector2> input, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
+        static private List<GridVector2> IdentifyControlPoints(this List<GridVector2> path, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         {
             //Copy the path so we don't modify the input
-            var path = input.ToList();
 
             //We can't simplify the already simple...
             if (path == null || path.Count <= 2)
@@ -673,10 +686,30 @@ namespace Geometry
             return output;
         }
 
+        public static GridPolygon Simplify(this IPolygon2D polygon, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
+        {
+            List<GridVector2> simpleExterior = IdentifyControlPoints(polygon.ExteriorRing, MaxDistanceFromSimplifiedToIdeal, true, NumInterpolations);
+            GridPolygon output = new GridPolygon(simpleExterior.ToArray());
+            foreach (var innerPoly in polygon.InteriorPolygons)
+            {
+                GridPolygon outputInnerPoly = innerPoly.Simplify(MaxDistanceFromSimplifiedToIdeal, NumInterpolations);
+                output.AddInteriorRing(outputInnerPoly);
+            }
+
+            return output;
+        }
+
         public static GridPolyline Simplify(this GridPolyline polyline, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
         {
             List<GridVector2> simpleExterior = IdentifyControlPoints(polyline.Points.Select(p => new GridVector2(p)).ToList(), MaxDistanceFromSimplifiedToIdeal, true, NumInterpolations);
             GridPolyline output = new GridPolyline(simpleExterior); 
+            return output;
+        }
+
+        public static GridPolyline Simplify(this IPolyLine2D polyline, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
+        {
+            List<GridVector2> simpleExterior = IdentifyControlPoints(polyline.Points.Select(p => new GridVector2(p)).ToList(), MaxDistanceFromSimplifiedToIdeal, true, NumInterpolations);
+            GridPolyline output = new GridPolyline(simpleExterior);
             return output;
         }
 

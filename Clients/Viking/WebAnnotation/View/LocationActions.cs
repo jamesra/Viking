@@ -9,6 +9,7 @@ using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.UI.Commands;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation
 {

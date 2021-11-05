@@ -15,8 +15,8 @@ service AnnotateStructures {
   rpc CreateStructure (CreateStructureRequest) returns (CreateStructureResponse);
   rpc GetStructures (GetStructuresRequest) returns (GetStructuresResponse);
   rpc GetStructuresForSection (GetStructuresForSectionRequest) returns (GetStructuresForSectionResponse);
-  rpc GetStructuresForSectionInMosaicRegion (GetStructuresForSectionInMosaicRegionRequest) returns (GetStructuresForSectionInMosaicRegionResponse);
-  rpc GetStructuresForSectionInVolumeRegion (GetStructuresForSectionInVolumeRegionRequest) returns (GetStructuresForSectionInVolumeRegionResponse);
+  rpc GetStructuresInMosaicRegion (GetStructuresInMosaicRegionRequest) returns (GetStructuresInMosaicRegionResponse);
+  rpc GetStructuresInVolumeRegion (GetStructuresInVolumeRegionRequest) returns (GetStructuresInVolumeRegionResponse);
   rpc GetStructureByID (GetStructureByIDRequest) returns (GetStructureByIDResponse);
   rpc GetStructuresByID (GetStructuresByIDRequest) returns (GetStructuresByIDResponse);
   rpc CreateStructureLink (CreateStructureLinkRequest) returns (CreateStructureLinkResponse); 
@@ -24,8 +24,8 @@ service AnnotateStructures {
   rpc GetNetworkedStructures (GetNetworkedStructuresRequest) returns (GetNetworkedStructuresResponse); 
   rpc GetChildStructuresInNetwork (GetChildStructuresInNetworkRequest) returns (GetChildStructuresInNetworkResponse);
   rpc GetStructureLinksInNetwork (GetStructureLinksInNetworkRequest) returns (GetStructureLinksInNetworkResponse); 
-  rpc NumberOfLocationsForStructure (NumberOfLocationsForStructureRequest) returns (NumberOfLocationsForStructureResponse);
-  rpc Update (UpdateStructureRequest) returns (UpdateStructureResponse);
+  rpc NumberOfLocations (NumberOfLocationsRequest) returns (NumberOfLocationsResponse);
+  rpc Update (UpdateStructuresRequest) returns (UpdateStructuresResponse);
   rpc UpdateLinks (UpdateStructureLinksRequest) returns (UpdateStructureLinksResponse);
   rpc GetUnfinishedLocations (GetUnfinishedLocationsRequest) returns (GetUnfinishedLocationsResponse); 
   rpc GetUnfinishedLocationsWithPosition (GetUnfinishedLocationsWithPositionRequest) returns (GetUnfinishedLocationsWithPositionResponse);
@@ -33,22 +33,28 @@ service AnnotateStructures {
   rpc Merge (MergeRequest) returns (MergeResponse);
   rpc Split (SplitRequest) returns (SplitResponse);
   rpc SplitAtLocationLink (SplitAtLocationLinkRequest) returns (SplitAtLocationLinkResponse); 
-  rpc GetStructureChangeLog (GetStructureChangeLogRequest) returns (GetStructureChangeLogResponse); 
+  rpc GetStructureChangeLog (GetStructureChangeLogRequest) returns (GetStructureChangeLogResponse);
+  rpc GetChildStructures (GetChildStructuresRequest) returns (GetChildStructuresResponse);
 }
  
-message StructureChange {
-		DBAction action = 1;
-		Structure result = 2;
+message StructureChangeRequest {
+	oneof action {
+		Structure create = 1;
+		Structure update = 2;
+		int64 delete = 3;
+	}
 }
 
 message StructureChangeResponse {
-		DBAction action = 1; //The change that was performed
-		bool Sucess = 2;     //True if the change was applied
-		optional Structure result = 3; //The updated row from the database
+	bool success = 1;     //True if the change was applied
+	oneof Action {
+		Structure created = 2;
+		Structure updated = 3;
+		int64 deletedId = 4;
+	}
 }
 
 message CreateStructureRequest {
-
   Structure new_structure = 1;
   Location new_annotation = 2;
 }
@@ -70,8 +76,8 @@ message GetStructuresResponse {
 
 
 message GetStructuresForSectionRequest {
-	int64 Z = 1; 
-	optional google.protobuf.Timestamp modified_after_this_time = 2;	
+	int64 z = 1; 
+	optional google.protobuf.Timestamp modified_after_this_utc_time = 2;	
 }
 
 message GetStructuresForSectionResponse {
@@ -81,29 +87,29 @@ message GetStructuresForSectionResponse {
 }
 
 
-message GetStructuresForSectionInMosaicRegionRequest {
-	int64 Z = 1; 
-	optional google.protobuf.Timestamp modified_after_this_time = 2;	
+message GetStructuresInMosaicRegionRequest {
+	int64 z = 1; 
+	optional google.protobuf.Timestamp modified_after_this_utc_time = 2;	
 	Geometry region = 3;
 	double min_radius = 4;
 	
 }
 
-message GetStructuresForSectionInMosaicRegionResponse {
+message GetStructuresInMosaicRegionResponse {
   repeated Structure results = 1;
   repeated int64 deleted_ids = 2; 
   google.protobuf.Timestamp query_executed_time = 3;
 }
 
 
-message GetStructuresForSectionInVolumeRegionRequest {
-	int64 Z = 1; 
-	optional google.protobuf.Timestamp modified_after_this_time = 2;	
+message GetStructuresInVolumeRegionRequest {
+	int64 z = 1; 
+	optional google.protobuf.Timestamp modified_after_this_utc_time = 2;	
 	Geometry region = 3;
 	double min_radius = 4;
 }
 
-message GetStructuresForSectionInVolumeRegionResponse {
+message GetStructuresInVolumeRegionResponse {
   repeated Structure results = 1;
   repeated int64 deleted_ids = 2; 
   google.protobuf.Timestamp query_executed_time = 3;
@@ -192,22 +198,21 @@ message GetStructureLinksInNetworkResponse {
 }
 
 
-message NumberOfLocationsForStructureRequest {
+message NumberOfLocationsRequest {
 
   int64 id = 1;
 }
  
-message NumberOfLocationsForStructureResponse {
+message NumberOfLocationsResponse {
 
   int64 result = 1;
 } 
 
-message UpdateStructureRequest {
-
-  repeated StructureChange objs = 1;
+message UpdateStructuresRequest {
+  repeated StructureChangeRequest objs = 1;
 }
 
-message UpdateStructureResponse {
+message UpdateStructuresResponse {
 
   repeated StructureChangeResponse results = 1;
 }
@@ -282,4 +287,13 @@ message GetStructureChangeLogRequest {
 
 message GetStructureChangeLogResponse {
   repeated Structure results = 1;
-} 
+}
+
+message GetChildStructuresRequest {
+  int64 structure_id = 1;
+}
+
+message GetChildStructuresResponse {
+	repeated Structure results = 1;
+}
+

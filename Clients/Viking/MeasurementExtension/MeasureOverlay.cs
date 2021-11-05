@@ -69,10 +69,12 @@ namespace MeasurementExtension
             
             RectangleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, new RectangleView[] { scaleBarView });
 
-            LabelView label = new LabelView(LengthMeasurement.ConvertToReadableUnits(FinalBarWidth).ToString(), scaleBarRect.Center);
-            label.Color = Microsoft.Xna.Framework.Color.White;
-            label.FontSize = BarHeightInPixels * 0.9;
-            
+            LabelView label = new LabelView(LengthMeasurement.ConvertToReadableUnits(FinalBarWidth).ToString(), scaleBarRect.Center)
+            {
+                Color = Microsoft.Xna.Framework.Color.White,
+                FontSize = BarHeightInPixels * 0.9
+            };
+
             LabelView.Draw(Parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene,  new LabelView[] { label });
         }
 

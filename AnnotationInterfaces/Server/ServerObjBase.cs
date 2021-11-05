@@ -37,11 +37,7 @@ namespace Viking.AnnotationServiceTypes
         /// <param name="newdata"></param>
         internal virtual void Update(T newdata)
         {
-            bool ChangeEvent = false;
-            if (this.Data.Equals(newdata) == false)
-            {
-                ChangeEvent = true;
-            }
+            bool ChangeEvent = Data.Equals(newdata) == false; 
 
             if (ChangeEvent)
                 OnPropertyChanging("");
@@ -56,10 +52,7 @@ namespace Viking.AnnotationServiceTypes
 
         public DBACTION DBAction
         {
-            get
-            {
-                return Data.DBAction;
-            }
+            get =>  Data.DBAction;
             set
             {
                 if (Data.DBAction == DBACTION.INSERT && value == DBACTION.UPDATE)

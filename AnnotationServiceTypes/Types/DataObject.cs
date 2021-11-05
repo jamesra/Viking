@@ -1,7 +1,7 @@
 ﻿using ProtoBuf;
 using System;
 using System.Runtime.Serialization;
-
+using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace AnnotationService.Types
 {
@@ -15,7 +15,7 @@ namespace AnnotationService.Types
     [ProtoInclude(1, typeof(LocationLink))]
     [ProtoInclude(2, typeof(StructureLink))]
     [ProtoInclude(3, typeof(PermittedStructureLink))]
-    public abstract class DataObject
+    public abstract class DataObject : IChangeAction
     {
         private DBACTION _DBAction = DBACTION.NONE;
 
@@ -25,6 +25,12 @@ namespace AnnotationService.Types
         {
             get { return _DBAction; }
             set { _DBAction = value; }
+        }
+
+        Viking.AnnotationServiceTypes.Interfaces.DBACTION IChangeAction.DBAction 
+        {
+            get => (Viking.AnnotationServiceTypes.Interfaces.DBACTION)(int)this.DBAction; 
+            set => this.DBAction = (DBACTION)(int)value;
         }
     }
 
@@ -36,7 +42,7 @@ namespace AnnotationService.Types
     [ProtoInclude(1, typeof(DataObjectWithParentOfLong))]
     [ProtoInclude(2, typeof(Location))]
     [ProtoInclude(3, typeof(LocationPositionOnly))]
-    public class DataObjectWithKeyOfLong : DataObject
+    public class DataObjectWithKeyOfLong : DataObject, IEquatable<DataObjectWithKeyOfLong>, IDataObjectWithKey<Int64>
     {
         private Int64 _ID;
 
@@ -46,6 +52,17 @@ namespace AnnotationService.Types
         {
             get { return _ID; }
             set { _ID = value; }
+        }
+
+        public bool Equals(DataObjectWithKeyOfLong other)
+        {
+            if (object.ReferenceEquals(other, this))
+                return true;
+
+            if (object.ReferenceEquals(other, null))
+                return false;
+
+            return this.ID == other.ID;
         }
     }
 
@@ -57,7 +74,7 @@ namespace AnnotationService.Types
     [ProtoContract]
     [ProtoInclude(1, typeof(Structure))]
     [ProtoInclude(2, typeof(StructureType))]
-    public class DataObjectWithParentOfLong : DataObjectWithKeyOfLong
+    public class DataObjectWithParentOfLong : DataObjectWithKeyOfLong, IDataObjectWithParent<Int64>
     {
         private Int64? _ParentID;
 

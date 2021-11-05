@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
@@ -54,7 +55,7 @@ namespace WebAnnotation.ViewModel
 
                 if (parent.NumLinks > 0)
                 {
-                    AddStructureLinks(parent.LinksCopy);
+                    AddStructureLinks(parent.CopyLinksAsync);
                 }
             }
         }
@@ -64,7 +65,7 @@ namespace WebAnnotation.ViewModel
             foreach (StructureObj structObj in structures)
             {
                 if (structObj.NumLinks > 0)
-                    AddStructureLinks(structObj.LinksCopy);
+                    AddStructureLinks(structObj.CopyLinksAsync);
             }
         }
 
@@ -104,7 +105,7 @@ namespace WebAnnotation.ViewModel
                     continue;
 
                 if (parent.NumLinks > 0)
-                    RemoveStructureLinks(parent.LinksCopy);
+                    RemoveStructureLinks(parent.CopyLinksAsync);
             }
         }
 
@@ -113,7 +114,7 @@ namespace WebAnnotation.ViewModel
             foreach (StructureObj structObj in structures)
             {
                 if (structObj.NumLinks > 0)
-                    RemoveStructureLinks(structObj.LinksCopy);
+                    RemoveStructureLinks(structObj.CopyLinksAsync);
             }
         }
 

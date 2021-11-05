@@ -74,8 +74,8 @@ namespace Viking
 
             //Change to the executing assemblies directory so we can load modules correctly
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
-            SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            //System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
+            //SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
             try
             {
@@ -86,9 +86,7 @@ namespace Viking
                 Trace.WriteLine("Unable to load Native MKL library.  Exception text:\n" + e.Message);
             }
 
-            int workThreads;
-            int portThreads;
-            System.Threading.ThreadPool.GetMaxThreads(out workThreads, out portThreads);
+            System.Threading.ThreadPool.GetMaxThreads(out int workThreads, out int portThreads);
             System.Net.ServicePointManager.DefaultConnectionLimit = workThreads;
 
             Application.EnableVisualStyles();
@@ -242,7 +240,9 @@ namespace Viking
             }
             */
 
-            Application.Run(new VikingApplicationContext(website));
+            //Application.Run(new VikingApplicationContext(website));
+
+            
 
             if (SynchronizedDebugWriter != null)
                 SynchronizedDebugWriter.Close();

@@ -67,8 +67,7 @@ namespace Viking.VolumeModel
             foreach (int iSection in TList.Keys)
             {
                 Geometry.ITransform trans = TList[iSection];
-                Geometry.Transforms.StosTransformInfo info = ((Geometry.ITransformInfo)trans)?.Info as Geometry.Transforms.StosTransformInfo;
-                if (info == null)
+                if (!(((Geometry.ITransformInfo)trans)?.Info is Geometry.Transforms.StosTransformInfo info))
                     continue;
 
                 if (ValidSectionsLookup != null && !ValidSectionsLookup.Contains(info.MappedSection))

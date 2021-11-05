@@ -7,9 +7,9 @@ using System.Linq;
 
 namespace AnnotationVizLib
 {
-    public class StructureLinkComparer : Comparer<IStructureLink>
+    public class StructureLinkComparer : Comparer<IStructureLinkKey>
     {
-        public override int Compare(IStructureLink x, IStructureLink y)
+        public override int Compare(IStructureLinkKey x, IStructureLinkKey y)
         {
             if (object.ReferenceEquals(x, y))
                 return 0;
@@ -40,7 +40,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// List of child structures involved in the link
         /// </summary>
-        public SortedSet<IStructureLink> Links = new SortedSet<IStructureLink>(new StructureLinkComparer());
+        public SortedSet<IStructureLinkKey> Links = new SortedSet<IStructureLinkKey>(new StructureLinkComparer());
 
         public double TotalSourceArea
         {
@@ -114,7 +114,7 @@ namespace AnnotationVizLib
         {
             get
             {
-                return (double)Links.Count();
+                return (double)Links.Count;
             }
         }
 
@@ -134,14 +134,14 @@ namespace AnnotationVizLib
             }
         }
 
-        public NeuronEdge(long SourceKey, long TargetKey, IStructureLink Link, string SynapseType)
+        public NeuronEdge(long SourceKey, long TargetKey, IStructureLinkKey Link, string SynapseType)
             : base(SourceKey, TargetKey, Link.Directional)
         {
             this.Links.Add(Link);
             this.SynapseType = SynapseType;
         }
 
-        public void AddLink(IStructureLink link)
+        public void AddLink(IStructureLinkKey link)
         {
             Debug.Assert(!Links.Contains(link));
             Debug.Assert(this.Directional == link.Directional);
@@ -153,7 +153,7 @@ namespace AnnotationVizLib
         {
             string output = "";
             bool first = true;
-            foreach (IStructureLink link in Links)
+            foreach (IStructureLinkKey link in Links)
             {
                 if (!first)
                 {
@@ -216,12 +216,12 @@ namespace AnnotationVizLib
     public class NeuronNode : Node<long, NeuronEdge>
     {
         //Structure this node represents
-        public IStructure Structure;
+        public IStructureReadOnly Structure;
 
         public IEnumerable<ulong> EdgeSourceChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.SourceIDs)); } }
         public IEnumerable<ulong> EdgeTargetChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.TargetIDs)); } }
 
-        public NeuronNode(long key, IStructure value)
+        public NeuronNode(long key, IStructureReadOnly value)
             : base(key)
         {
             this.Structure = value;

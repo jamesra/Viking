@@ -1,11 +1,11 @@
 ﻿using System.Linq;
-using Viking.gRPC.AnnotationTypes.V1.Protos;
+using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 
 namespace gRPCAnnotationService.Protos
 {
     public static class LocationEFExtensions
     {
-        public static Viking.DataModel.Annotation.Location ToLocation(this global::Viking.gRPC.AnnotationTypes.V1.Protos.Location src)
+        public static Viking.DataModel.Annotation.Location ToLocation(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location src)
         {
             var converted = new Viking.DataModel.Annotation.Location
             {
@@ -14,12 +14,12 @@ namespace gRPCAnnotationService.Protos
                 Z = src.Section,
                 //VolumeShape = src.VolumeShape.ToNetTopologyGeometry(),
                 //MosaicShape = src.MosaicShape.ToNetTopologyGeometry(),
-                X = src.Position.X,
-                Y = src.Position.Y,
+                X = src.MosaicPosition.X,
+                Y = src.MosaicPosition.Y,
                 VolumeX = src.VolumePosition.X,
                 VolumeY = src.VolumePosition.Y,
                 Closed = src.Closed,
-                Tags = src.AttributesXml,
+                Tags = src.Attributes,
                 Terminal = src.Terminal,
                 OffEdge = src.OffEdge,
                 Radius = src.Radius,
@@ -40,22 +40,22 @@ namespace gRPCAnnotationService.Protos
         }
 
 
-        public static global::Viking.gRPC.AnnotationTypes.V1.Protos.Location ToProtobufMessage(this Viking.DataModel.Annotation.Location src)
+        public static global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location ToProtobufMessage(this Viking.DataModel.Annotation.Location src)
         {
             var compositeLinks = src.LocationLinkANavigations.ToList();
             compositeLinks.AddRange(src.LocationLinkBNavigations);
 
-            var value = new global::Viking.gRPC.AnnotationTypes.V1.Protos.Location
+            var value = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location
             {  
                 Id = src.Id,
                 ParentId = src.ParentId,
                 Section = src.Z,
-                Position = new global::Viking.gRPC.AnnotationTypes.AnnotationPoint { X = src.X, Y = src.Y, Z = src.Z },
-                VolumePosition = new global::Viking.gRPC.AnnotationTypes.AnnotationPoint { X = src.VolumeX, Y = src.VolumeY, Z = src.Z },
-                //MosaicShape = src.MosaicShape.ToProtobufMessage(),
+                MosaicPosition = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationPoint { X = src.X, Y = src.Y, Z = src.Z },
+                VolumePosition = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationPoint { X = src.VolumeX, Y = src.VolumeY, Z = src.Z },
+                //MosaicShape = src.MosaicShape.ToProtobufMessage(), 
                 //VolumeShape = src.VolumeShape.ToProtobufMessage(),
                 Closed = src.Closed,
-                AttributesXml = src.Tags,
+                Attributes = src.Tags,
                 Terminal = src.Terminal,
                 OffEdge = src.OffEdge,
                 Radius = src.Radius,

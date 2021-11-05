@@ -166,7 +166,7 @@ namespace MonogameTestbed
             this._PointRadius = PointRadius;
 
             _Polygons = polys.ToList();
-            PolyLineColors = polys.Select(p => Color.Black.Random()).ToArray();
+            PolyLineColors = _Polygons.Select(p => Color.Black.Random()).ToArray();
             PolyVertexColors = PolyLineColors.Select(c => c.SetAlpha(0.5f)).ToArray();
 
             UpdatePolyViews();
@@ -198,7 +198,8 @@ namespace MonogameTestbed
                 psv.UpdateViews();
                 listPointSetView.Add(psv);
 
-                polyRingViews.AddRange(p.AllSegments.Select(s => new LineView(s, 1, PolyLineColors[iPoly], LineStyle.Standard)));
+                var ip = iPoly;
+                polyRingViews.AddRange(p.AllSegments.Select(s => new LineView(s, 1, PolyLineColors[ip], LineStyle.Standard)));
             }
 
             PolyPointsView = listPointSetView.ToArray();

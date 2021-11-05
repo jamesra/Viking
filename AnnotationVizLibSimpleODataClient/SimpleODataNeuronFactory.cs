@@ -228,7 +228,7 @@ namespace AnnotationVizLib.SimpleOData
         /// <param name="structs"></param>
         private void AddStructuresAsNodes(ICollection<Structure> structs)
         {
-            foreach (IStructure s in structs)
+            foreach (IStructureReadOnly s in structs)
             {
                 NeuronNode node = new NeuronNode((long)s.ID, s);
                 graph.AddNode(node);
@@ -242,8 +242,8 @@ namespace AnnotationVizLib.SimpleOData
                 //After this point both nodes are already in the graph and we can create an edge
                 if (IDToStructure.ContainsKey(link.SourceID) && IDToStructure.ContainsKey(link.TargetID))
                 {
-                    IStructure LinkSource = IDToStructure[(ulong)link.SourceID];
-                    IStructure LinkTarget = IDToStructure[(ulong)link.TargetID];
+                    IStructureReadOnly LinkSource = IDToStructure[(ulong)link.SourceID];
+                    IStructureReadOnly LinkTarget = IDToStructure[(ulong)link.TargetID];
 
                     if (LinkTarget.ParentID.HasValue && LinkSource.ParentID.HasValue)
                     {

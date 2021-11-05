@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI
 {
@@ -14,7 +15,7 @@ namespace WebAnnotation.UI
     {
         Structure Obj;
 
-        BindingList<WebAnnotationModel.ObjAttribute> ListTags = null;
+        BindingList<ObjAttribute> ListTags = null;
 
         bool listLoaded = false;
 

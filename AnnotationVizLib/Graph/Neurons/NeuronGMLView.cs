@@ -28,7 +28,7 @@ namespace AnnotationVizLib
 
         public string LabelForNode(NeuronNode node)
         {
-            if (node.Structure.Label != null && node.Structure.Label.Length > 0)
+            if (!string.IsNullOrEmpty(node.Structure.Label))
                 return node.Structure.Label + "\n" + node.Key.ToString();
 
             return node.Key.ToString();
@@ -38,7 +38,7 @@ namespace AnnotationVizLib
         {
             StringBuilder sb = new StringBuilder();
             //sb.Append(edge.SynapseType);
-            foreach (IStructureLink link in edge.Links)
+            foreach (IStructureLinkKey link in edge.Links)
             {
                 sb.Append("\t" + LinkString(link));
             }
@@ -46,7 +46,7 @@ namespace AnnotationVizLib
             return sb.ToString();
         }
 
-        public static string LinkString(IStructureLink link)
+        public static string LinkString(IStructureLinkKey link)
         {
             return link.SourceID + " -> " + link.TargetID;
         }

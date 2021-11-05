@@ -9,7 +9,7 @@ using UnitsAndScale;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFLocationAdapter : ILocation
+    class WCFLocationAdapter : ILocationReadOnly
     {
         private readonly Location loc;
         public readonly IScale scale;
@@ -29,7 +29,7 @@ namespace AnnotationVizLib.WCFClient
         }
 
         private SqlGeometry _VolumeShape = null;
-        public SqlGeometry Geometry
+        public SqlGeometry VolumeGeometry
         {
             get
             {
@@ -167,7 +167,7 @@ namespace AnnotationVizLib.WCFClient
             {
                 if (_BoundingBox == null)
                 {
-                    GridRectangle bound_rect = Geometry.BoundingBox();
+                    GridRectangle bound_rect = VolumeGeometry.BoundingBox();
                     _BoundingBox = new GridBox(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);
                 }
 
@@ -175,7 +175,7 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
-        public bool Equals(ILocation other)
+        public bool Equals(ILocationReadOnly other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;

@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Viking.AnnotationServiceTypes.Interfaces
 {
-    public interface IStructureTypeReadOnly :IEquatable<IStructureTypeReadOnly>
+    public interface IStructureTypeReadOnly : IEquatable<IStructureTypeReadOnly>
     {
         ulong ID { get; }
         ulong? ParentID { get; }
@@ -13,8 +14,15 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         /// Shorthand name 
         /// </summary>
         string Code { get; }
+          
+        string Notes { get; }
+        IReadOnlyDictionary<string, string> Attributes { get; }
 
-        string[] Tags { get; }
+        bool Abstract { get; }
+
+        uint Color { get; }
+
+        int AllowedShapes { get; }
     }
 
     public interface IStructureType : IDataObjectWithParent<long>, IEquatable<IStructureType>
@@ -36,7 +44,9 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         /// </summary>
         bool Abstract { get; set; }
 
-        int Color { get; set; }
+        uint Color { get; set; }
+
+        int AllowedShapes { get; set; }
 
         IPermittedStructureLink[] PermittedLinks { get; set; }
     }

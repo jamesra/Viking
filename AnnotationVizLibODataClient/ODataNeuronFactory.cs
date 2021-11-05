@@ -9,7 +9,7 @@ namespace AnnotationVizLib.OData
     public class ODataNeuronFactory
     {
         static SortedDictionary<long, StructureType> IDToStructureType = null;
-        SortedDictionary<ulong, IStructure> IDToStructure = new SortedDictionary<ulong, IStructure>();
+        SortedDictionary<ulong, IStructureReadOnly> IDToStructure = new SortedDictionary<ulong, IStructureReadOnly>();
 
         NeuronGraph graph;
 
@@ -76,7 +76,7 @@ namespace AnnotationVizLib.OData
         /// <param name="structs"></param>
         private void AddStructuresAsNodes(ICollection<Structure> structs)
         {
-            foreach (IStructure s in structs.Select(s => new ODataStructureAdapter(s)))
+            foreach (IStructureReadOnly s in structs.Select(s => new ODataStructureAdapter(s)))
             {
                 NeuronNode node = new NeuronNode((long)s.ID, s);
                 graph.AddNode(node);
@@ -88,8 +88,8 @@ namespace AnnotationVizLib.OData
             foreach (StructureLink link in struct_links)
             {
                 //After this point both nodes are already in the graph and we can create an edge
-                IStructure LinkSource = IDToStructure[(ulong)link.SourceID];
-                IStructure LinkTarget = IDToStructure[(ulong)link.TargetID];
+                IStructureReadOnly LinkSource = IDToStructure[(ulong)link.SourceID];
+                IStructureReadOnly LinkTarget = IDToStructure[(ulong)link.TargetID];
 
                 if (LinkTarget.ParentID.HasValue && LinkSource.ParentID.HasValue)
                 {

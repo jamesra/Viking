@@ -120,6 +120,7 @@ namespace Geometry
     public interface IShape2D : IEquatable<IShape2D>
     {
         GridRectangle BoundingBox { get; }
+        GridVector2 Centroid { get; }
         double Area { get; }
         bool Contains(in IPoint2D p);
 

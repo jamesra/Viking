@@ -202,7 +202,7 @@ namespace Viking.UI
 
         public override string ToString()
         {
-            return string.Format("ID: {0} X: {1} Y: {2}", this.PointerID, this.X, this.Y); 
+            return $"ID: {this.PointerID} X: {this.X} Y: {this.Y}"; 
         }
     }
 

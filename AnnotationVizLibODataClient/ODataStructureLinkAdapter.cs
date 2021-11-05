@@ -3,7 +3,7 @@ using ODataClient.ConnectomeDataModel;
 
 namespace AnnotationVizLib.OData
 {
-    class ODataStructureLinkAdapter : IStructureLink
+    class ODataStructureLinkAdapter : IStructureLinkKey
     {
         private StructureLink structureLink;
 
@@ -36,7 +36,7 @@ namespace AnnotationVizLib.OData
             }
         }
 
-        public bool Equals(IStructureLink other)
+        public bool Equals(IStructureLinkKey other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -51,7 +51,7 @@ namespace AnnotationVizLib.OData
 
         public bool Equals(StructureLink other)
         {
-            return this.Equals((IStructureLink)other);
+            return this.Equals((IStructureLinkKey)other);
         }
     }
 }

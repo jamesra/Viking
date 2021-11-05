@@ -22,7 +22,7 @@ namespace AnnotationVizLib
         /// </summary>
         public readonly ulong StructureID = 0;
 
-        public IStructure structure = null;
+        public IStructureReadOnly structure = null;
 
         public readonly IScale scale = null;
 
@@ -31,7 +31,7 @@ namespace AnnotationVizLib
             get { return scale.Z.Value; }
         }
 
-        public IStructureType structureType
+        public IStructureTypeReadOnly structureType
         {
             get { return structure.Type; }
         }
@@ -66,7 +66,7 @@ namespace AnnotationVizLib
             this.scale = scale;
         }
 
-        public MorphologyGraph(ulong subgraph_id, IScale scale, IStructure structure)
+        public MorphologyGraph(ulong subgraph_id, IScale scale, IStructureReadOnly structure)
         {
             this.StructureID = subgraph_id;
             this.structure = structure;
@@ -92,15 +92,11 @@ namespace AnnotationVizLib
             }
         }
 
-        public void RemoveSubgraph(ulong StructureID)
+        public void RemoveSubgraph(ulong sid)
         {
-            MorphologyGraph value;
-            Subgraphs.TryRemove(StructureID, out value);
-            ulong nearest_node_id;
-            if (NearestNodeToSubgraph.TryRemove(StructureID, out nearest_node_id))
-            {
-                Nodes[nearest_node_id].RemoveSubgraph(StructureID);
-            }
+            Subgraphs.TryRemove(sid, out MorphologyGraph value);
+            if (NearestNodeToSubgraph.TryRemove(sid, out ulong nearest_node_id)) 
+                Nodes[nearest_node_id].RemoveSubgraph(sid); 
         }
 
         internal static RTree<ulong> CreateRTree(MorphologyGraph graph)
@@ -143,10 +139,10 @@ namespace AnnotationVizLib
 
             other_nodes.Remove(nearest_id); //Do not link nearest_node to itself
 
-            SortedSet<MorphologyEdge> new_edges = new SortedSet<AnnotationVizLib.MorphologyEdge>();
+            SortedSet<MorphologyEdge> new_edges = new SortedSet<MorphologyEdge>();
             foreach (ulong relink_id in other_nodes)
             {
-                MorphologyEdge new_edge = new AnnotationVizLib.MorphologyEdge(this, nearest_id, relink_id);
+                MorphologyEdge new_edge = new MorphologyEdge(this, nearest_id, relink_id);
                 new_edges.Add(new_edge);
             }
 
@@ -167,7 +163,7 @@ namespace AnnotationVizLib
         }
 
         private GridBox _BoundingBox = null;
-        public Geometry.GridBox BoundingBox
+        public GridBox BoundingBox
         {
             get
             {

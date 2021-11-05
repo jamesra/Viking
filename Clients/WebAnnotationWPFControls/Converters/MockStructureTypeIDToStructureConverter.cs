@@ -48,7 +48,7 @@ namespace WebAnnotation.WPF.MockData
                 return null;
 
             
-            var structType = value as IStructureType;
+            var structType = value as IStructureTypeReadOnly;
             if(structType == null)
             {
                 throw new ArgumentException(string.Format("Expected object implementing IStructureType, got {0}", value));

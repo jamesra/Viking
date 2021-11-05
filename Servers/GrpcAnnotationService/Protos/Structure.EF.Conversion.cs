@@ -2,7 +2,7 @@
 {
     public static class StructureEFExtensions
     {
-        public static Viking.DataModel.Annotation.Structure ToStructure(this global::Viking.gRPC.AnnotationTypes.V1.Protos.Structure src)
+        public static Viking.DataModel.Annotation.Structure ToStructure(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Structure src)
         {
             var converted = new Viking.DataModel.Annotation.Structure
             {
@@ -30,12 +30,12 @@
         }
 
 
-        public static global::Viking.gRPC.AnnotationTypes.V1.Protos.Structure ToProtobufMessage(this Viking.DataModel.Annotation.Structure src)
+        public static global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Structure ToProtobufMessage(this Viking.DataModel.Annotation.Structure src)
         {
             //var compositeLinks = src.LocationLinkANavigations.ToList();
             //compositeLinks.AddRange(src.LocationLinkBNavigations);
 
-            var value = new global::Viking.gRPC.AnnotationTypes.V1.Protos.Structure
+            var value = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Structure
             {  
                 Id = src.Id,
                 ParentId = src.ParentId.HasValue ? src.ParentId.Value : 0,

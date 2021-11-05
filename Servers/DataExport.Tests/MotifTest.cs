@@ -20,10 +20,10 @@ namespace DataExport.Tests
         {
             MotifGraph graph = new MotifGraph();
 
-            MotifNode BC_node = new MotifNode("BC", new IStructure[0]);
-            MotifNode ACII_node = new MotifNode("ACII", new IStructure[0]);
-            MotifNode ACI_node = new MotifNode("ACI", new IStructure[0]);
-            MotifNode GC_node = new MotifNode("GC", new IStructure[0]);
+            MotifNode BC_node = new MotifNode("BC", new IStructureReadOnly[0]);
+            MotifNode ACII_node = new MotifNode("ACII", new IStructureReadOnly[0]);
+            MotifNode ACI_node = new MotifNode("ACI", new IStructureReadOnly[0]);
+            MotifNode GC_node = new MotifNode("GC", new IStructureReadOnly[0]);
 
             MotifEdge BC_GC_edge = new MotifEdge("BC", "GC", "RIBBON SYNAPSE");
             MotifEdge BC_AC_edge = new MotifEdge("BC", "ACII", "RIBBON SYNAPSE");

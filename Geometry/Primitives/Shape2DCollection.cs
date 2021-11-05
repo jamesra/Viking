@@ -46,6 +46,8 @@ namespace Geometry
 
         public virtual ShapeType2D ShapeType => ShapeType2D.COLLECTION;
 
+        GridVector2 IShape2D.Centroid => GridVector2.Average(Shapes.Select(s => s.Centroid));
+
         public bool Contains(in IPoint2D p)
         {
             IPoint2D pnt = p;
@@ -78,7 +80,10 @@ namespace Geometry
         }
 
         public bool Equals(IShapeCollection2D other)
-        { 
+        {
+            if (other is null)
+                return false;
+
             if (this.Shapes.Count != other.Geometries.Count)
                 return false;
 

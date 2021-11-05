@@ -168,7 +168,7 @@ namespace MorphologyMesh
         {
             OTVTable OTVTable;
             //TODO: This appears to only select verts without faces... shouldn't we look for any vert without a chord?
-            List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
+            List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Any() == false).ToList();
 
             BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].PolyIndex.Value),
                                                               mesh.Polygons, mesh.IsUpperPolygon,
@@ -517,10 +517,7 @@ namespace MorphologyMesh
                 {
                     triangulation.RemoveEdge(key);
 
-                    if (OnProgress != null)
-                    {
-                        OnProgress(triangulation);
-                    }
+                    OnProgress?.Invoke(triangulation);
                 }
             }
 
@@ -542,10 +539,7 @@ namespace MorphologyMesh
                 {
                     triangulation.RemoveFace(f);
 
-                    if (OnProgress != null)
-                    {
-                        OnProgress(triangulation);
-                    }
+                    OnProgress?.Invoke(triangulation);
                 }
             }
 

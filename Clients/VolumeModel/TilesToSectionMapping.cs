@@ -15,12 +15,12 @@ namespace Viking.VolumeModel
     /// </summary>
     class TilesToSectionMapping : FixedTileCountMapping
     {
-        private SemaphoreSlim LoadTransformSemaphore = new SemaphoreSlim(1 , 1);
+        private readonly SemaphoreSlim LoadTransformSemaphore = new SemaphoreSlim(1 , 1);
         /// <summary>
         /// Starts as false since we don't load transforms from the disk by default.  Once we do this it is set to true. 
         /// </summary>
         protected bool HasBeenLoaded = false;
-        private ReaderWriterLockSlim rwLockObj = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private readonly ReaderWriterLockSlim rwLockObj = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         public override ITransform[] GetLoadedTransformsOrNull()
         {
@@ -43,7 +43,7 @@ namespace Viking.VolumeModel
                 rwLockObj.EnterReadLock();
 
                 if (_TileTransforms == null)
-                    return new ITransform[0];
+                    return Array.Empty<ITransform>();
 
                 return _TileTransforms;
             }
@@ -314,14 +314,15 @@ namespace Viking.VolumeModel
             return null;
         }
 
-        public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
+        public override TilePyramid VisibleTiles(in GridRectangle VisibleBounds, double DownSample)
         {
             return base.VisibleTiles(VisibleBounds, null, DownSample);
         }
 
         public override System.Threading.Tasks.Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
         {
-            return Task.Run(() => base.VisibleTiles(VisibleBounds, null, DownSample));
+            var vb = VisibleBounds;
+            return Task.Run(() => base.VisibleTiles(vb, null, DownSample));
         }
     }
 }

@@ -11,7 +11,7 @@ namespace Viking.VolumeModel
     /// </summary>
     public abstract class TileGridMappingBase : MappingBase
     {
-        protected struct GridInfo
+        protected readonly struct GridInfo
         {
             public readonly int GridXDim;
             public readonly int GridYDim;
@@ -279,11 +279,11 @@ namespace Viking.VolumeModel
         }
 
         public override Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
-        {
+        { 
             return Task.Run(() => VisibleTiles(VisibleBounds, DownSample));
         }
 
-        public override TilePyramid VisibleTiles(GridRectangle VisibleBounds, double DownSample)
+        public override TilePyramid VisibleTiles(in GridRectangle VisibleBounds, double DownSample)
         {
             TilePyramid VisibleTiles = new TilePyramid(VisibleBounds);
 
@@ -324,7 +324,7 @@ namespace Viking.VolumeModel
         }
 
 
-        private List<Tile> RecursiveVisibleTiles(GridRectangle VisibleBounds, int roundedDownsample)
+        private List<Tile> RecursiveVisibleTiles(in GridRectangle VisibleBounds, int roundedDownsample)
         {
             GridInfo gridInfo = LevelToGridInfo[roundedDownsample];
 

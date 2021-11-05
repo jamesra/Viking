@@ -131,7 +131,7 @@ namespace MorphologyMesh
 
                 Edges.ExceptWith(MeshGroupEdges);
 
-                iNextKey = iNextKey + 1; 
+                iNextKey++; 
             }
 
             //Create edges between sections in the new graph to indicate how sections need to anneal in the final merged mesh
@@ -387,27 +387,18 @@ namespace MorphologyMesh
                 if (node.Geometry == null)
                     continue;
 
-                SupportedGeometryType nodeType = node.Geometry.GeometryType();
-                switch (nodeType)
+                if (node.Geometry is IPolygon2D poly)
                 {
-                    case SupportedGeometryType.POINT:
-                        continue;
-                    case SupportedGeometryType.CURVEPOLYGON:
-                    case SupportedGeometryType.POLYGON:
-                        {
-                            //Start a task to simplify the polygon
-                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Translate(translationToCenter).Simplify(tolerance), node);
-                            t.Start();
-                            tasks.Add(t);
-                        }
-                            break;
-                    case SupportedGeometryType.POLYLINE:
-                        {
-                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolyLine().Translate(translationToCenter).Simplify(tolerance), node);
-                            t.Start();
-                            tasks.Add(t);
-                        }
-                        break;
+                    Task<IShape2D> t = new Task<IShape2D>((node_) => ((IPolygon2D)poly.Translate(translationToCenter)).Simplify(tolerance), node);
+                    t.Start();
+                    tasks.Add(t);
+                }
+
+                if (node.Geometry is IPolyLine2D polyline)
+                {
+                    Task<IShape2D> t = new Task<IShape2D>((node_) => ((IPolyLine2D)polyline.Translate(translationToCenter)).Simplify(tolerance), node);
+                    t.Start();
+                    tasks.Add(t); 
                 } 
             }
 
@@ -487,13 +478,13 @@ namespace MorphologyMesh
 
             if (polyLookup != null)
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
-                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
+                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry));
+                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry));
             }
             else
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToShape2D()));
-                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToShape2D()));
+                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry));
+                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry));
             }
 
 
@@ -624,7 +615,7 @@ namespace MorphologyMesh
     /// <summary>
     /// Describes the shapes and relationships for a given slice
     /// </summary>
-    public struct SliceTopology
+    public readonly struct SliceTopology
     {
         //TODO: Document limitations for shapes we know should not link to each other in the final model by using LocationLink entries.
 
@@ -697,7 +688,7 @@ namespace MorphologyMesh
             IsUpper = isUpper.ToArray();
             PolyZ = polyZ.ToArray();
 
-            PolyIndexToMorphNodeIndex = polyIndexToMorphNodeIndex == null ? null : polyIndexToMorphNodeIndex.ToArray();
+            PolyIndexToMorphNodeIndex = polyIndexToMorphNodeIndex?.ToArray();
 
             //Assign polys to sets for convienience later
             CalculateUpperAndLowerPolygons(IsUpper, Polygons, out UpperPolygons, out UpperPolyIndicies, out LowerPolygons, out LowerPolyIndicies);
@@ -729,8 +720,10 @@ namespace MorphologyMesh
                     }
                     else
                     {
-                        List<PolygonIndex> listPI = new List<PolygonIndex>();
-                        listPI.Add(pi.Reindex(iPoly));
+                        List<PolygonIndex> listPI = new List<PolygonIndex>
+                        {
+                            pi.Reindex(iPoly)
+                        };
                         pointToIndexList.Add(cp, listPI);
                     }
                 }
@@ -842,22 +835,23 @@ namespace MorphologyMesh
         internal static void HandleCorrespondingFaceContainsVertex(GridPolygon[] Polygons, List<GridVector2> correspondingPoints)
         {
             GridRectangle bbox = Polygons.BoundingBox();
-            bbox.Scale(1.05); //Grow the box slightly so the QuadTree will never resize for a rounding error
+            bbox *= 1.05; //Grow the box slightly so the QuadTree will never resize for a rounding error
             QuadTree<List<PolygonIndex>> tree = new QuadTree<List<PolygonIndex>>(bbox);
 
             PolySetVertexEnum indexEnum = new PolySetVertexEnum(Polygons);
             foreach(PolygonIndex index in indexEnum)
             {
                 GridVector2 p = index.Point(Polygons);
-                List<PolygonIndex> existing = tree.FindNearest(p, out GridVector2 foundPoint, out double distance);
-                if (foundPoint == p) //A corresponding point has already been added
+                if(tree.TryFindNearest(p, out GridVector2 foundPoint, out var existing, out double distance) && foundPoint == p)
                 {
                     existing.Add(index);
                 }
                 else
                 {
-                    existing = new List<PolygonIndex>(2);
-                    existing.Add(index);
+                    existing = new List<PolygonIndex>(2)
+                    {
+                        index
+                    };
                     tree.Add(p, existing);
                 }
             }
@@ -1066,16 +1060,16 @@ namespace MorphologyMesh
     /// </summary>
     internal class ConcurrentTopologyInitializer
     {
-        SliceGraph Graph;
+        readonly SliceGraph Graph;
 
-        SortedSet<ulong> UnprocessedSlices = null;
-        SortedSet<ulong> SlicesWithActiveTasks = new SortedSet<ulong>();
-        SortedSet<ulong> CompletedSlices = new SortedSet<ulong>();
+        readonly SortedSet<ulong> UnprocessedSlices = null;
+        readonly SortedSet<ulong> SlicesWithActiveTasks = new SortedSet<ulong>();
+        readonly SortedSet<ulong> CompletedSlices = new SortedSet<ulong>();
 
-        System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
-        System.Threading.ManualResetEventSlim AllDoneEvent = new System.Threading.ManualResetEventSlim();
+        readonly System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
+        readonly System.Threading.ManualResetEventSlim AllDoneEvent = new System.Threading.ManualResetEventSlim();
 
-        Dictionary<ulong, SliceTopology> SliceToTopology;
+        readonly Dictionary<ulong, SliceTopology> SliceToTopology;
 
         public ConcurrentTopologyInitializer(SliceGraph graph)
         {

@@ -8,7 +8,7 @@ namespace Viking.VolumeModel
 {
     public static class RectangleMappingExtensions
     {
-        public static GridRectangle? ApproximateVisibleMosaicBounds(this GridRectangle VisibleWorldBounds, IVolumeToSectionTransform mapper)
+        public static GridRectangle? ApproximateVisibleMosaicBounds(this in GridRectangle VisibleWorldBounds, IVolumeToSectionTransform mapper)
         {
             GridVector2[] VolumeRectCorners = new GridVector2[] { VisibleWorldBounds.LowerLeft, VisibleWorldBounds.LowerRight, VisibleWorldBounds.UpperLeft, VisibleWorldBounds.UpperRight };
             GridVector2[] MosaicRectCorners;
@@ -29,7 +29,7 @@ namespace Viking.VolumeModel
             else if (MappedMosaicCorners.Length > 0)
             {
                 //We mapped one or two points but not opposite corners.  Guesstimate the region by using the width/height in volume space since we know the mappings have minimal distortion.
-                return EstimateMosaicRectangle(mapped, MosaicRectCorners, VisibleWorldBounds);
+                return EstimateMosaicRectangle(in mapped, in MosaicRectCorners, in VisibleWorldBounds);
             }
             else
             {
@@ -58,10 +58,11 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="mappedCorners"></param>
         /// <returns></returns>
-        private static GridRectangle? EstimateMosaicRectangle(bool[] IsMapped, GridVector2[] points, GridRectangle VisibleWorldBounds)
+        private static GridRectangle? EstimateMosaicRectangle(in bool[] IsMapped, in GridVector2[] points, in GridRectangle VisibleWorldBounds)
         {
             //If we map at least three corners we know we can construct a reasonable approximation of the correct rectangle in mosaic space
-            GridVector2[] ValidPoints = points.Where((p, i) => IsMapped[i]).ToArray();
+            bool[] tempMapped = IsMapped;
+            GridVector2[] ValidPoints = points.Where((p, i) => tempMapped[i]).ToArray();
             double MinX = ValidPoints.Min(p => p.X);
             double MaxX = ValidPoints.Max(p => p.X);
             double MaxY = ValidPoints.Max(p => p.Y);

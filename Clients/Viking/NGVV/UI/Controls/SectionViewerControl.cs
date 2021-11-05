@@ -698,7 +698,7 @@ namespace Viking.UI.Controls
             if (this.listOverlays == null)
                 return new string[0];
 
-            List<string> names = new List<string>(this.listOverlays.Count());
+            List<string> names = new List<string>(this.listOverlays.Length);
 
             foreach (ISectionOverlayExtension IOverlay in this.listOverlays)
             {

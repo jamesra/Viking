@@ -19,23 +19,18 @@ namespace Viking.AnnotationServiceTypes
 
         public override bool Equals(object obj)
         {
-            ServerObjBaseWithKey<KEY, T> locObj = obj as ServerObjBaseWithKey<KEY, T>;
-            if (locObj != null)
-            {
-                return this.Equals(locObj);
-            }
-            else
-                return base.Equals(obj);
+            if (obj is ServerObjBaseWithKey<KEY, T> locObj) 
+                return this.Equals(locObj); 
+            
+            return base.Equals(obj);
         }
 
         public static bool operator ==(ServerObjBaseWithKey<KEY, T> A, ServerObjBaseWithKey<KEY, T> B)
         {
-            if (System.Object.ReferenceEquals(A, B))
-            {
-                return true;
-            }
+            if (ReferenceEquals(A, B)) 
+                return true; 
 
-            if ((object)A != null)
+            if (A is object)
                 return A.Equals(B);
 
             return false;
@@ -48,7 +43,7 @@ namespace Viking.AnnotationServiceTypes
                 return false;
             }
 
-            if ((object)A != null)
+            if (A is object)
                 return !A.Equals(B);
 
             return true;
@@ -76,7 +71,7 @@ namespace Viking.AnnotationServiceTypes
 
         public bool Equals(ServerObjBaseWithKey<KEY, T> other)
         {
-            if ((object)other == null)
+            if (other is null)
                 return false;
 
             return this.ID.Equals(other.ID);

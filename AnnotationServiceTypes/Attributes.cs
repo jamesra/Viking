@@ -12,7 +12,7 @@ namespace Annotation
         /// <summary>
         /// Object types that the command is active for
         /// </summary>
-        public string Name;
+        public readonly string Name;
 
         public ColumnAttribute(string name)
         {

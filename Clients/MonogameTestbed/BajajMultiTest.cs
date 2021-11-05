@@ -594,7 +594,7 @@ namespace MonogameTestbed
             if (window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
             {
                 window.Scene.Camera.LookAt = graph.BoundingBox.CenterPoint.XY().ToXNAVector2();
-                window.Scene.Camera.Downsample = graph.BoundingBox.Width / window.GraphicsDevice.Viewport.Width;
+                window.Scene.Camera.Downsample = graph.BoundingBox.Width / (double)window.GraphicsDevice.Viewport.Width;
             }
             
             GridBox bbox = graph.BoundingBox;//new GridBox(wrapView.Polygons.BoundingBox(), nodes.Min(n => n.Z), nodes.Max(n => n.Z));

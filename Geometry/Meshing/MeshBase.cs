@@ -340,7 +340,7 @@ namespace Geometry.Meshing
 
             int iStart = _Verticies.Count;
             int Offset = 0;
-            foreach (IVertex v in verts)
+            foreach (VERTEX v in verts)
             {
                 v.Index = iStart + Offset;
                 Offset += 1;

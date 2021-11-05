@@ -33,8 +33,7 @@ namespace Viking.VolumeModel
 
         public override bool Equals(object obj)
         {
-            Tile t = obj as Tile;
-            if (t == null)
+            if (!(obj is Tile t))
                 return false;
 
             //This is faster than a full string test
@@ -86,7 +85,7 @@ namespace Viking.VolumeModel
                 {
                     foreach (PositionNormalTextureVertex v in Verticies)
                     {
-                        _Bounds.Union(new GridVector2(v.Position.X, v.Position.Y));
+                        _Bounds += new GridVector2(v.Position.X, v.Position.Y);
                     }
 
                 }

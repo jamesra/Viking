@@ -180,8 +180,10 @@ namespace GraphLib
 
             testedNodes.Add(Origin);
 
-            List<KEY> path = new List<KEY>();
-            path.Add(Origin);
+            List<KEY> path = new List<KEY>
+            {
+                Origin
+            };
             if (IsMatch(graph.Nodes[Origin]))
                 return path;
 
@@ -235,7 +237,7 @@ namespace GraphLib
 
                 //Otherwise, select the shortest path
                 int MinDistance = listPotentialPaths.Select(L => L.Count).Min();
-                IList<KEY> shortestPath = listPotentialPaths.Where(L => L.Count == MinDistance).First();
+                IList<KEY> shortestPath = listPotentialPaths.First(L => L.Count == MinDistance);
                 path.AddRange(shortestPath);
                 return path;
             }

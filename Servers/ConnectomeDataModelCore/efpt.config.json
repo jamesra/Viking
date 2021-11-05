@@ -4,11 +4,10 @@
    "ContextNamespace": null,
    "DefaultDacpacSchema": null,
    "FilterSchemas": false,
-   "IncludeConnectionString": true,
+   "IncludeConnectionString": false,
    "ModelNamespace": null,
    "OutputContextPath": null,
    "OutputPath": "",
-   "ProceduresReturnList": false,
    "ProjectRootNamespace": "Viking.DataModel.Annotation",
    "Schemas": null,
    "SelectedHandlebarsLanguage": 0,
@@ -271,6 +270,146 @@
          "ObjectType": 1
       },
       {
+         "Name": "[dbo].[LocationHasTag]",
+         "ObjectType": 2
+      }, 
+      {
+         "Name": "[dbo].[NetworkChildStructureIDs]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[NetworkStructureIDs]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[SectionLocationLinks]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[SectionLocationLinksModifiedAfterDate]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[SectionLocations]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[SectionLocationsModifiedAfterDate]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[StructureHasTag]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[StructureLocationLinks]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[TypeIDToName]",
+         "ObjectType": 2
+      }, 
+      {
+         "Name": "[dbo].[ufnCenterToCenterIntersectionPoint]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnCreateCircle]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnDistance3D]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnIntersectingCurveForCircles]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnLastNetworkModification]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnLastStructureMorphologyModification]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnLastStructureMorphologyModificationRecursive]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnLineFromAngleAndDistance]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnLineFromLinkedShapes]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnLineFromPoints]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnLineFromThreePoints]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnLineThroughCircle]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnLinkedToLocations]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnParallelLineForLinkedShapes]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnParallelLineThroughCircle]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnPerpendicularLineForLinkedShapes]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnPerpendicularLineThroughCircle]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnPerpendicularLineToIntersectionPointOfCircles]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnShapeDistance3D]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnStructureArea]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnStructureVolume]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnTranslatePoint]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnTriangleArea]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnVector]",
+         "ObjectType": 2
+      },
+      {
+         "Name": "[dbo].[ufnWeightedMidpointBetweenCircles]",
+         "ObjectType": 2
+      },
+      {
          "Name": "[dbo].[XYScale]",
          "ObjectType": 2
       },
@@ -287,7 +426,7 @@
          "ObjectType": 2
       }
    ],
-   "UiHint": "opr-marc-db2.Test.dbo",
+   "UiHint": "OPR-MARC-DB2.Test",
    "UseBoolPropertiesWithoutDefaultSql": false,
    "UseDatabaseNames": false,
    "UseDbContextSplitting": false,
@@ -296,9 +435,11 @@
    "UseInflector": true,
    "UseLegacyPluralizer": false,
    "UseNoConstructor": false,
+   "UseNoDefaultConstructor": false,
    "UseNoNavigations": false,
    "UseNoObjectFilter": false,
    "UseNodaTime": false,
    "UseNullableReferences": false,
+   "UseSchemaFolders": false,
    "UseSpatial": true
 }

@@ -1,0 +1,8 @@
+{
+  "Endpoint": "https://webdev.connectomes.utah.edu/Test/",
+  "GrpcChannelOptions" : {
+  },
+  "GrpcRepositorySettings": {
+    "Endpoint": "https://webdev.connectomes.utah.edu/Test"
+  }
+}

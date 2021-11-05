@@ -140,12 +140,11 @@ namespace Viking.VolumeModel
             ITransform[] transforms = GetLoadedTransformsOrNull();
             if (transforms == null)
                 return null;
+            
+            if (((ITransformInfo)transforms[number]).Info is TileTransformInfo info)
+                return info.TileFileName; ;
 
-            Geometry.Transforms.TileTransformInfo info = ((ITransformInfo)transforms[number]).Info as TileTransformInfo;
-            if (info == null)
-                return null;
-
-            return info.TileFileName;
+            return null;
         }
 
         internal string TileFileName(string filename, int DownsampleLevel)
@@ -242,7 +241,7 @@ namespace Viking.VolumeModel
 
         #endregion
 
-        protected virtual TilePyramid VisibleTiles(GridRectangle VisibleBounds,
+        protected virtual TilePyramid VisibleTiles(in GridRectangle VisibleBounds,
                                                 GridQuad SectionVisibleBounds,
                                                 double DownSample)
         {
@@ -254,9 +253,9 @@ namespace Viking.VolumeModel
             GridRectangle releaseBounds = VisibleBounds; //Tiles outside this quad will have textures released
             GridRectangle loadBounds = VisibleBounds;  //Tiles inside this quad will have textures loaded
             GridRectangle abortBounds = VisibleBounds; //Tiles outside this quad will have HTTP requests aborted
-            releaseBounds.Scale(1.25 * scaledDownsampleLevel);
-            loadBounds.Scale(1.1f);
-            abortBounds.Scale(1.20f * scaledDownsampleLevel);
+            releaseBounds *= 1.25 * scaledDownsampleLevel;
+            loadBounds *= 1.1f;
+            abortBounds *= 1.20f * scaledDownsampleLevel;
 
             //Get ready by loading a smaller texture in case the user scrolls this direction 
             //Once we have smaller textures then increase the quality

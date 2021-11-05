@@ -43,7 +43,7 @@ namespace GraphLib
                 PartnerKey = Link.TargetNodeKey;
             }
 
-            SortedSet<EDGETYPE> edgeList = null;
+            SortedSet<EDGETYPE> edgeList;
             if (Edges.ContainsKey(PartnerKey))
             {
                 edgeList = Edges[PartnerKey];
@@ -77,7 +77,7 @@ namespace GraphLib
                 PartnerKey = Link.TargetNodeKey;
             }
 
-            SortedSet<EDGETYPE> edgeList = null;
+            SortedSet<EDGETYPE> edgeList;
             if (Edges.ContainsKey(PartnerKey))
             {
                 edgeList = Edges[PartnerKey];
@@ -112,7 +112,7 @@ namespace GraphLib
             if (object.ReferenceEquals(this, other))
                 return true;
 
-            if ((object)other == null)
+            if (other is null)
                 return false;
 
             return this.Key.Equals(other.Key);
@@ -131,7 +131,7 @@ namespace GraphLib
                 return true;
             }
 
-            if ((object)A != null)
+            if (A is object)
                 return A.Equals(B);
 
             return false;
@@ -144,7 +144,7 @@ namespace GraphLib
                 return false;
             }
 
-            if ((object)A != null)
+            if (A is object)
                 return !A.Equals(B);
 
             return true;

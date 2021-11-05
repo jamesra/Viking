@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureAdapter : IStructure
+    class WCFStructureAdapter : IStructureReadOnly
     {
         private Structure structure;
 
@@ -30,12 +30,12 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
-        public ICollection<IStructureLink> Links
+        public ICollection<IStructureLinkReadOnly> Links
         {
             get
             {
                 if (structure.Links == null)
-                    return new IStructureLink[0];
+                    return new IStructureLinkReadOnly[0];
 
                 return structure.Links.Select(l => new WCFStructureLinkAdapter(l)).ToArray();
             }
@@ -60,7 +60,7 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
-        public IStructureType Type
+        public IStructureTypeReadOnly Type
         {
             get
             {
@@ -76,7 +76,7 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
-        public bool Equals(IStructure other)
+        public bool Equals(IStructureReadOnly other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;

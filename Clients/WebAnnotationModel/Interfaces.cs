@@ -1,7 +1,0 @@
-﻿namespace WebAnnotationModel
-{
-    interface IStore
-    {
-
-    }
-}

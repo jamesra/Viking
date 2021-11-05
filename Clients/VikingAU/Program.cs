@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Viking.VolumeModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace Viking.AU
 {

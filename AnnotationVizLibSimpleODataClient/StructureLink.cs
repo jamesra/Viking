@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace AnnotationVizLib.SimpleOData
 {
-    class StructureLink : IStructureLink, IEquatable<StructureLink>
+    class StructureLink : IStructureLinkKey
     {
         public static StructureLink FromDictionary(IDictionary<string, object> dict)
         {
@@ -51,7 +51,7 @@ namespace AnnotationVizLib.SimpleOData
                 return string.Format("{0}  -> {1}", SourceID, TargetID);
         }
 
-        public bool Equals(IStructureLink other)
+        public bool Equals(IStructureLinkKey other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -66,7 +66,42 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Equals(StructureLink other)
         {
-            return this.Equals((IStructureLink)other);
+            return this.Equals((IStructureLinkKey)other);
+        }
+
+        public int CompareTo(IStructureLinkKey other)
+        {
+            if (other is null)
+                return -1;
+
+            if (Bidirectional.Equals(!other.Directional) && Bidirectional)
+            {
+                var A_Low = Math.Min(SourceID, TargetID);
+                var A_High = Math.Max(SourceID, TargetID);
+
+                var B_Low = Math.Min(other.SourceID, other.TargetID);
+                var B_High = Math.Max(other.SourceID, other.TargetID);
+
+                int lowCompare = A_Low.CompareTo(B_Low);
+                if (lowCompare != 0)
+                    return lowCompare;
+
+                int highCompare = B_High.CompareTo(B_High);
+                if (highCompare != 0)
+                    return highCompare;
+            }
+            else
+            {
+                int sourceCompare = this.SourceID.CompareTo(other.SourceID);
+                if (sourceCompare != 0)
+                    return sourceCompare;
+
+                int targetCompare = this.TargetID.CompareTo(other.TargetID);
+                if (targetCompare != 0)
+                    return targetCompare;
+            }
+
+            return this.Bidirectional.CompareTo(!other.Directional);
         }
     }
 }

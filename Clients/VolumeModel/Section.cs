@@ -32,7 +32,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The path that needs to appended to the volume path to reach the section
         /// </summary>
-        private string _SectionSubPath;
+        private readonly string _SectionSubPath;
         public string SectionSubPath
         {
             get { return _SectionSubPath; }
@@ -147,19 +147,18 @@ namespace Viking.VolumeModel
         /// of being used in the near future
         /// </summary>
         /// <param name="transform"></param>
-        public void PrepareTransform(string transform)
+        public async System.Threading.Tasks.Task PrepareTransform(string transform)
         {
             if (WarpedTo.ContainsKey(transform) == false)
                 return;
 
-            SectionToVolumeMapping map = WarpedTo[transform] as SectionToVolumeMapping;
-            if (map == null)
+            if (!(WarpedTo[transform] is SectionToVolumeMapping map))
                 return;
 
             //Launch a separate thread to begin warping
 
             //System.Threading.ThreadStart threadDelegate = new System.Threading.ThreadStart(map.Warp);
-            System.Threading.ThreadPool.QueueUserWorkItem(map.Warp);
+            await map.Warp();
             //System.Threading.Thread newThread = new System.Threading.Thread(threadDelegate);
             //newThread.Start();
         }
@@ -186,8 +185,7 @@ namespace Viking.VolumeModel
 
             foreach (XNode node in sectionElement.Nodes())
             {
-                XElement elem = node as XElement;
-                if (elem == null)
+                if (!(node is XElement elem))
                     continue;
 
                 switch (elem.Name.LocalName.ToLower())
@@ -246,7 +244,7 @@ namespace Viking.VolumeModel
                             Debug.WriteLine(string.Format("Duplicate Image Pyramid Level {0}-{1}", this.Number, pyramid.Path));
                         }
 
-                        if (DefaultPyramid == null || DefaultPyramid.Length == 0)
+                        if (string.IsNullOrWhiteSpace(DefaultPyramid))
                             DefaultPyramid = pyramid.Name;
                         else
                         {
@@ -460,24 +458,24 @@ namespace Viking.VolumeModel
             Debug.Assert(mapBase != null);
 
             MappingBase SectionToVolumeMap = null;
-            if (mapBase is FixedTileCountMapping)
+            if (mapBase is FixedTileCountMapping ftcm)
             {
                 SectionToVolumeMap = new SectionToVolumeMapping(this,
                     UniqueName,
-                    (FixedTileCountMapping)mapBase,
+                    ftcm,
                     transform);
             }
-            else if (mapBase is TileGridMapping)
+            else if (mapBase is TileGridMapping tgm)
             {
                 //Mapbase is the new tilegrid system
                 SectionToVolumeMap = new TileGridToVolumeMapping(this,
                     UniqueName,
-                    (TileGridMapping)mapBase,
+                    tgm,
                     transform);
             }
-            else if (mapBase is OCPTileServerMapping)
+            else if (mapBase is OCPTileServerMapping ocptsm)
             {
-                SectionToVolumeMap = new OCPTileServerToVolumeMapping(this, UniqueName, (OCPTileServerMapping)mapBase, transform);
+                SectionToVolumeMap = new OCPTileServerToVolumeMapping(this, UniqueName, ocptsm, transform);
             }
             else
             {

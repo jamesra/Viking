@@ -27,7 +27,7 @@ namespace MorphologyMesh
 
             foreach (MorphologyNode node in graph.Nodes.Values.Where(n => n.Location.TypeCode == LocationType.CIRCLE || n.Location.TypeCode == LocationType.CLOSEDCURVE || n.Location.TypeCode == LocationType.POLYGON))
             {
-                IShape2D shape = node.Geometry.ToShape2D();
+                IShape2D shape = node.Geometry;
 
                 switch (shape.ShapeType)
                 {

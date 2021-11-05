@@ -64,8 +64,10 @@ namespace AnnotationVizLib.WCFClient
                 }
                 else
                 {
-                    List<Structure> listIDs = new List<Structure>();
-                    listIDs.Add(structure);
+                    List<Structure> listIDs = new List<Structure>
+                    {
+                        structure
+                    };
                     dictLabels.Add(Label, listIDs);
                 }
             }
@@ -248,8 +250,7 @@ namespace AnnotationVizLib.WCFClient
             SortedDictionary<long, List<StructureLink>> StructIDToLinks = new SortedDictionary<long, List<StructureLink>>();
             foreach (StructureLink link in LinkedStructures)
             {
-                List<StructureLink> SourceIDList = null;
-                if (!StructIDToLinks.TryGetValue(link.SourceID, out SourceIDList))
+                if (!StructIDToLinks.TryGetValue(link.SourceID, out var SourceIDList))
                 {
                     SourceIDList = new List<StructureLink>();
                 }
@@ -257,8 +258,7 @@ namespace AnnotationVizLib.WCFClient
                 SourceIDList.Add(link);
                 StructIDToLinks[link.SourceID] = SourceIDList;
 
-                List<StructureLink> TargetIDList = null;
-                if (!StructIDToLinks.TryGetValue(link.TargetID, out TargetIDList))
+                if (!StructIDToLinks.TryGetValue(link.TargetID, out var TargetIDList))
                 {
                     TargetIDList = new List<StructureLink>();
                 }

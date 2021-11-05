@@ -13,10 +13,8 @@ namespace AnnotationVizLib
             {
                 object value = attribs[key];
                 JToken token;
-                if (value as JToken != null)
-                {
-                    token = (JToken)value;
-                }
+                if (value is JToken jt)
+                    token = jt;
                 else
                 {
                     token = JToken.FromObject(value);
@@ -26,10 +24,10 @@ namespace AnnotationVizLib
             }
         }
 
-        public static JArray ToJArray(this IEnumerable<IStructure> structs)
+        public static JArray ToJArray(this IEnumerable<IStructureReadOnly> structs)
         {
             JArray arr = new JArray();
-            foreach (IStructure s in structs)
+            foreach (IStructureReadOnly s in structs)
             {
                 JObject obj = s.ToJObject();
                 arr.Add(obj);
@@ -38,7 +36,7 @@ namespace AnnotationVizLib
             return arr;
         }
 
-        public static JObject ToJObject(this IStructure s)
+        public static JObject ToJObject(this IStructureReadOnly s)
         {
             dynamic obj = new JObject();
             obj.ID = s.ID;

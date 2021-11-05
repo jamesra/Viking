@@ -47,7 +47,7 @@ namespace WebAnnotation.WPF.MockData
     public class MockPermittedStructureLinks : ObservableCollection<MockPermittedStructureLink>
     { }
 
-    public class MockPermittedStructureLink : IPermittedStructureLink
+    public class MockPermittedStructureLink : IPermittedStructureLinkKey
     {
         public ulong SourceTypeID { get; set; }
 
@@ -55,7 +55,7 @@ namespace WebAnnotation.WPF.MockData
 
         public bool Directional { get; set; }
 
-        public bool Equals(IPermittedStructureLink other)
+        public bool Equals(IPermittedStructureLinkKey other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -72,7 +72,7 @@ namespace WebAnnotation.WPF.MockData
     { }
 
 
-    public class MockStructureType : IStructureType
+    public class MockStructureType : IStructureTypeReadOnly
     {
         private static ulong nextID = 0; 
 
@@ -113,7 +113,7 @@ namespace WebAnnotation.WPF.MockData
 
         public string[] Tags { get; set; }
 
-        public bool Equals(IStructureType other)
+        public bool Equals(IStructureTypeReadOnly other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -121,7 +121,7 @@ namespace WebAnnotation.WPF.MockData
             return this.ID == other.ID;
         }
 
-        public IStructureType[] Children
+        public IStructureTypeReadOnly[] Children
         {
             get
             {
@@ -150,7 +150,7 @@ namespace WebAnnotation.WPF.MockData
             }
         }
 
-        public IPermittedStructureLink[] Permitted { get; internal set; }
+        public IPermittedStructureLinkKey[] Permitted { get; internal set; }
 
         public ulong[] AllowedInputLinks
         {
@@ -182,7 +182,7 @@ namespace WebAnnotation.WPF.MockData
         public string Notes { get; set; }
     }
 
-    public class MockStructure : IStructure
+    public class MockStructure : IStructureReadOnly
     {
         public ulong ID {get; internal set;}
 
@@ -192,13 +192,13 @@ namespace WebAnnotation.WPF.MockData
 
         public string Label {get; internal set;}
 
-        public ICollection<IStructureLink> Links {get; internal set;}
+        public ICollection<IStructureLinkKey> Links {get; internal set;}
 
-        public IStructureType Type {get; internal set;}
+        public IStructureTypeReadOnly Type {get; internal set;}
 
         public string TagsXML {get; internal set;}
 
-        public bool Equals(IStructure other)
+        public bool Equals(IStructureReadOnly other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -207,7 +207,7 @@ namespace WebAnnotation.WPF.MockData
         }
     }
 
-    public class MockStructureLink : IStructureLink
+    public class MockStructureLink : IStructureLinkKey
     {
         public ulong SourceID { get; internal set; }
 
@@ -215,7 +215,7 @@ namespace WebAnnotation.WPF.MockData
 
         public bool Directional { get; internal set; }
 
-        public bool Equals(IStructureLink other)
+        public bool Equals(IStructureLinkKey other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -224,7 +224,7 @@ namespace WebAnnotation.WPF.MockData
         }
     }
 
-    public class MockLocation : ILocation
+    public class MockLocation : ILocationReadOnly
     {
         public ulong ID { get; internal set; }
 
@@ -248,9 +248,9 @@ namespace WebAnnotation.WPF.MockData
 
         public double Z { get; internal set; }
 
-        public SqlGeometry Geometry { get; internal set; }
+        public SqlGeometry VolumeGeometry { get; internal set; }
 
-        public bool Equals(ILocation other)
+        public bool Equals(ILocationReadOnly other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -259,13 +259,13 @@ namespace WebAnnotation.WPF.MockData
         }
     }
 
-    public class MockLocationLink : ILocationLink
+    public class MockLocationLink : ILocationLinkKey
     {
         public ulong A { get; internal set; }
 
         public ulong B { get; internal set; }
 
-        public bool Equals(ILocationLink other)
+        public bool Equals(ILocationLinkKey other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;

@@ -282,7 +282,7 @@ namespace Viking
                     if (false == await CachedResourceIsValidAsync(CacheFilename, textureUri).ConfigureAwait(false))
                     {
                         //Trace.WriteLine("Deleting stale cache file: " + CacheFilename, "TextureUse");
-                        await Task.Run(() => DeleteFileFromCache(CacheFilename)).ConfigureAwait(false);
+                        DeleteFileFromCache(CacheFilename);
                         return null;
                     }
                     else
@@ -432,15 +432,6 @@ namespace Viking
 
                             await stream.CopyToAsync(memStream);
                         }
-                        /*
-
-                        int BytesRead = 0;
-                        stream.ReadTimeout = 30000; //30 seconds to read a ~4Kx4K tile should be plenty of time.  The default was 300 seconds.
-                        while (BytesRead < response.ContentLength)
-                        {
-                            BytesRead += await stream.ReadAsync(data, BytesRead, (data.Length - BytesRead)).ConfigureAwait(false);
-                        }
-                        */
 
                         //state.Dispose();
                         Debug.Assert(graphicsDevice != null);
@@ -453,16 +444,7 @@ namespace Viking
                         }
                     }
 
-                    /*if (CacheFilename != null && result != null)
-                    {
-                        using(Stream stream = response.GetResponseStream())
-                        {
-                            //stream.Seek(0, SeekOrigin.Begin);
-                            await Global.TextureCache.AddAsync(CacheFilename, stream);
-                        }
-                    }*/
 
-                    //data = null;
                     return result;
                 }
                 catch (WebException e)

@@ -13,7 +13,7 @@ namespace Viking.DataModel.Annotation
         {
             modelBuilder.Entity<Location>(entity =>
             {
-                var geometry_converter = new CurvePolygonConverter<Geometry, string>();
+                var geometry_converter = new CurvePolygonConverter<Geometry, Geometry>();
 
                 entity.Property(e => e.VolumeShape)
                     .HasConversion(geometry_converter);

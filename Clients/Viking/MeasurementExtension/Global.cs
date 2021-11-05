@@ -102,7 +102,7 @@ namespace MeasurementExtension
                 case "Volume":
                     IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "Scale");
 
-                    if (MappingElements.Count() == 0)
+                    if (!MappingElements.Any())
                         break;
 
                     XElement MappingElement = MappingElements.First();
@@ -128,12 +128,12 @@ namespace MeasurementExtension
                     }
                     catch (ArgumentException)
                     {
-                        Trace.WriteLine(string.Format("Non SI unit of measure {0}, disabling WebAnnotations.", EndpointAttribute.Value), "Measurement");
+                        Trace.WriteLine($"Non SI unit of measure {EndpointAttribute.Value}, disabling WebAnnotations.", "Measurement");
                         return false;
                     }
                     catch (OverflowException)
                     {
-                        Trace.WriteLine(string.Format("{0} is outside the range of the underlying type of SI Length Units", EndpointAttribute.Value), "Measurement");
+                        Trace.WriteLine($"{EndpointAttribute.Value} is outside the range of the underlying type of SI Length Units", "Measurement");
                         return false;
                     }
 

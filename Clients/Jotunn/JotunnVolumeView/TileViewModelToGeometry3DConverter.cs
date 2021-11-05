@@ -19,7 +19,7 @@ namespace Viking.VolumeView
             if (tiles == null)
                 return new Model3DCollection();
 
-            if (tiles.Count<TileViewModel>() == 0)
+            if (!tiles.Any())
                 return new Model3DCollection(); 
 
             Model3DCollection ModelCollection = new Model3DCollection(tiles.Count<TileViewModel>());
@@ -52,7 +52,7 @@ namespace Viking.VolumeView
             if (tileMappingViewModel.Tiles.Count == 0)
                 return new Model3DCollection(); 
 
-            Model3DCollection ModelCollection = new Model3DCollection(tileMappingViewModel.Tiles.Count<TileViewModel>());
+            Model3DCollection ModelCollection = new Model3DCollection(tileMappingViewModel.Tiles.Count);
             foreach (TileViewModel t in tileMappingViewModel.Tiles)
             {
                 ModelCollection.Add(t.Model);
@@ -76,7 +76,7 @@ namespace Viking.VolumeView
             if (tileViewModels == null)
                 return new Model3DCollection();
 
-            Model3DCollection ModelCollection = new Model3DCollection(tileViewModels.Count<TileViewModel>());
+            Model3DCollection ModelCollection = new Model3DCollection(tileViewModels.Count);
             foreach (TileViewModel t in tileViewModels)
             {
                 ModelCollection.Add(t.Model);

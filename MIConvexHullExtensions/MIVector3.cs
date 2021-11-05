@@ -3,7 +3,7 @@ using MIConvexHull;
 
 namespace MIConvexHullExtensions
 {
-    public struct MIVector3 :  MIConvexHull.IVertex
+    public readonly struct MIVector3 :  MIConvexHull.IVertex
     {
         public readonly Geometry.GridVector3 P;
         public readonly PolygonIndex PolyIndex;

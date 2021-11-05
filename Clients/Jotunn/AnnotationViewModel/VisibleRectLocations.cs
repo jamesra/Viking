@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.Windows;
 using Viking.VolumeViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 
 namespace AnnotationViewModel
@@ -79,22 +80,22 @@ namespace AnnotationViewModel
             this.SectionNumber = SectionNumber;
              
             WebAnnotationModel.Store.Locations.OnCollectionChanged += this.OnLocationCollectionChanged;
-            ConcurrentDictionary<long, WebAnnotationModel.LocationObj> locsForSection = WebAnnotationModel.Store.Locations.GetObjectsForSection(1);
+            ConcurrentDictionary<long, LocationObj> locsForSection = WebAnnotationModel.Store.Locations.GetObjectsForSection(1);
             UpdateCollectionWithLocations(locsForSection);
         }
 
         private void OnLocationCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         { 
-            ConcurrentDictionary<long, WebAnnotationModel.LocationObj> locsForSection = WebAnnotationModel.Store.Locations.GetLocalObjectsForSection(1);
+            ConcurrentDictionary<long, LocationObj> locsForSection = WebAnnotationModel.Store.Locations.GetLocalObjectsForSection(1);
             WebAnnotationModel.Store.Locations.OnCollectionChanged -= this.OnLocationCollectionChanged;
 
             UpdateCollectionWithLocationsCaller d = new UpdateCollectionWithLocationsCaller(this.UpdateCollectionWithLocations);
             Dispatcher.BeginInvoke(d, locsForSection);            
         }
 
-        private delegate void UpdateCollectionWithLocationsCaller(ConcurrentDictionary<long, WebAnnotationModel.LocationObj> locsForSection);
+        private delegate void UpdateCollectionWithLocationsCaller(ConcurrentDictionary<long, LocationObj> locsForSection);
 
-        private void UpdateCollectionWithLocations(ConcurrentDictionary<long, WebAnnotationModel.LocationObj> locsForSection)
+        private void UpdateCollectionWithLocations(ConcurrentDictionary<long, LocationObj> locsForSection)
         {
             this.Locations.Clear();
             List<LocationViewModel> listLocViewModels = new List<LocationViewModel>(locsForSection.Count);

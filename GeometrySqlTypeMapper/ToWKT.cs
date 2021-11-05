@@ -120,7 +120,7 @@ namespace Geometry
         /// <summary>
         /// A unit circle with points along the East, NorthEast, North, compass points...
         /// </summary>
-        static public GridVector2[] circleEightCardinalPoints = new GridVector2[]
+        public static readonly GridVector2[] circleEightCardinalPoints = new GridVector2[]
         {
             new GridVector2(1, 0),
             new GridVector2(Math.Cos(1.0/8.0 * tau), Math.Sin(1.0/8.0 * tau)),
@@ -135,7 +135,7 @@ namespace Geometry
         /// <summary>
         /// A unit circle with points on the East, North, West, South 
         /// </summary>
-        static public GridVector2[] circleFourCardinalPoints = new GridVector2[]
+        public static readonly GridVector2[] circleFourCardinalPoints = new GridVector2[]
         {
             new GridVector2(1, 0),
             new GridVector2(0, 1),

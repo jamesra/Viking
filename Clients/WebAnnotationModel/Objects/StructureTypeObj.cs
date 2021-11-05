@@ -1,25 +1,41 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
-using AnnotationService.Types;
+﻿using Viking.AnnotationServiceTypes;
+using Viking.AnnotationServiceTypes.Interfaces; 
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Geometry;
 using WebAnnotationModel.Objects;
 
-namespace WebAnnotationModel
+
+namespace WebAnnotationModel.Objects
 {
-    public class StructureTypeObj : WCFObjBaseWithParent<long, StructureType, StructureTypeObj>, IStructureType
+    public class StructureTypeObj : AnnotationModelObjBaseWithParent<long, IStructureType, StructureTypeObj>, IEquatable<StructureTypeObj>, IStructureTypeReadOnly
     {
-        public override long ID
+        private readonly long _ID;
+        public override long ID => _ID;
+
+        private long? _ParentID;
+        public override long? ParentID
         {
-            get { return Data.ID; }
-        }
+            get => _ParentID; 
+            set
+            {
+                if (_ParentID != value)
+                {
+                    OnPropertyChanging(nameof(ParentID));
 
-        ulong IStructureType.ID => (ulong)this.ID;
-        ulong? IStructureType.ParentID => this.ParentID.HasValue ? new ulong?((ulong)ParentID.Value) : new ulong?();
+                    _ParentID = value;
+                    Parent = null;
 
-        string[] IStructureType.Tags => this.Data.Tags;
+                    SetDBActionForChange();
+                    OnPropertyChanged(nameof(ParentID));
+                }
+            }
+        } 
 
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.
@@ -31,91 +47,127 @@ namespace WebAnnotationModel
             return (int)(ID % int.MaxValue);
         }
 
-        public override long? ParentID
-        {
-            get { return Data.ParentID; }
-            set { 
-                Data.ParentID = value; 
-            }
-        }
-
         public override string ToString()
         {
             return this.Name;
         }
 
+        private string _Name;
         public string Name
         {
-            get { return Data.Name; }
+            get => _Name;
             set
             {
-                OnPropertyChanging("Name");
-                Data.Name = value;
+                OnPropertyChanging(nameof(Name));
+                _Name = value;
                 SetDBActionForChange();
-                OnPropertyChanged("Name");
+                OnPropertyChanged(nameof(Name));
             }
         }
 
+        private string _Notes;
         public string Notes
         {
-            get { return Data.Notes; }
+            get => _Notes;
             set
             {
-                OnPropertyChanging("Notes");
-                Data.Notes = value;
+                OnPropertyChanging(nameof(Notes));
+                _Notes = value;
                 SetDBActionForChange();
-                OnPropertyChanged("Notes");
+                OnPropertyChanged(nameof(Notes));
             }
         }
 
+        private uint _Color = 0;
         public uint Color
         {
-            get { return (uint)Data.Color; }
+            get => (uint)_Color;
             set
             {
-                if (Data.Color == value)
+                if (_Color == value)
                     return;
-                OnPropertyChanging("Color");
-                Data.Color = (int)value;
+
+                OnPropertyChanging(nameof(Color));
+                _Color = value;
                 SetDBActionForChange();
-                OnPropertyChanged("Color");
+                OnPropertyChanged(nameof(Color));
             }
         }
 
+        private string _Code;
         public string Code
         {
-            get { return Data.Code; }
+            get => _Code;
             set
             {
-                OnPropertyChanging("Code");
-                Data.Code = value;
+                OnPropertyChanging(nameof(Code));
+                _Code = value;
                 SetDBActionForChange();
-                OnPropertyChanged("Code");
+                OnPropertyChanged(nameof(Code));
             }
+        }
+
+        private bool _Abstract;
+        public bool Abstract
+        {
+            get => _Abstract;
+            set
+            {
+                OnPropertyChanging(nameof(Abstract));
+                _Abstract = value;
+                SetDBActionForChange();
+                OnPropertyChanged(nameof(Abstract));
+            }
+        }
+
+        private int _AllowedShapes;
+        public int AllowedShapes
+        {
+            get => AllowedShapes;
+            set
+            {
+                OnPropertyChanging(nameof(AllowedShapes));
+                _AllowedShapes = value;
+                SetDBActionForChange();
+                OnPropertyChanged(nameof(AllowedShapes));
+            }
+        }
+
+        private readonly ConcurrentObservableAttributeSet _Attributes = new ConcurrentObservableAttributeSet();
+        public ReadOnlyObservableCollection<ObjAttribute> Attributes => _Attributes.ReadOnlyObservable;
+        public Task<ObjAttribute[]> CopyAttributesAsync()
+        {
+            return _Attributes.CreateCopyAsync();
+        }
+
+        public Task SetAttributes(IEnumerable<ObjAttribute> attribs)
+        {
+            return _Attributes.SetAttributes(attribs);
+        }
+
+        public StructureTypeObj(long id)
+        {
+            //this.MarkupType = "Point";
+            this._ID = id;
         }
 
         public StructureTypeObj()
         {
-            if (this.Data == null)
-                this.Data = new StructureType();
-
-            this.Data.DBAction = AnnotationService.Types.DBACTION.INSERT;
-            this.Data.Name = "New Structure Type";
-            this.Data.MarkupType = "Point";
-            this.Data.ID = Store.StructureTypes.GetTempKey();
-            this.Data.Tags = new String[0];
-            this.Data.StructureTags = new String[0];
-            this.Data.Code = "NoCode";
+            this.DBAction = DBACTION.INSERT;
+            this.Name = "New Structure Type";
+            //this.MarkupType = "Point";
+            //this._ID = Store.StructureTypes.NextKey(); 
+            this.Code = "NoCode";
         }
 
-        public StructureTypeObj(StructureType data)
+        /*
+        public StructureTypeObj(IStructureType newdata)
         {
-            this.Data = data;
-            this.Data.Code = this.Data.Code.Trim();
+            newdata.Code = newdata.Code.Trim();
 
-            if (data.PermittedLinks != null)
+            if (newdata.PermittedLinks != null)
             {
-                foreach (PermittedStructureLink link in data.PermittedLinks)
+                foreach (var link in newdata.PermittedLinks)
                 {
                     Store.PermittedStructureLinks.GetOrAdd(new PermittedStructureLinkKey(link),
                                                   new Func<PermittedStructureLinkKey, PermittedStructureLinkObj>(l => { return new PermittedStructureLinkObj(link); }),
@@ -123,26 +175,23 @@ namespace WebAnnotationModel
                 }
             }
         }
+        */
 
         public StructureTypeObj(StructureTypeObj parent) : this()
-        {
-            if (this.Data == null)
-                this.Data = new StructureType();
-
+        {  
             if (parent != null)
             {
-                this.Data.ParentID = parent.ID;
+                this.ParentID = parent.ID;
             }
         }
+         
 
-        protected override StructureTypeObj OnMissingParent()
-        {
-            return Store.StructureTypes.GetObjectByID(this.ParentID.Value, true);
-        }
+        private ConcurrentObservablePermittedStructureLinkSet _PermittedLinks;
+        private SemaphoreSlim LinkLock = new SemaphoreSlim(1);
 
-        private object LinksLock = new object();
-        private ObservableCollection<PermittedStructureLinkObj> _PermittedLinks = null;
-        public ObservableCollection<PermittedStructureLinkObj> PermittedLinks
+        public ReadOnlyObservableCollection<PermittedStructureLinkObj> PermittedLinks =>
+            _PermittedLinks.ReadOnlyObservable;
+        /*
         {
             get
             {
@@ -182,6 +231,7 @@ namespace WebAnnotationModel
                 }
             }
         }
+        */
 
         public long[] PermittedLinkSourceTypes
         {
@@ -207,12 +257,23 @@ namespace WebAnnotationModel
             }
         }
 
+        ulong IStructureTypeReadOnly.ID => (ulong)ID;
 
+        ulong? IStructureTypeReadOnly.ParentID => (ulong?)ParentID ?? new ulong?();
+
+        IReadOnlyDictionary<string, string> IStructureTypeReadOnly.Attributes =>
+            Attributes.ToDictionary(o => o.Name, o => o.Value);
+
+        bool IStructureTypeReadOnly.Abstract => Abstract;
+
+        int IStructureTypeReadOnly.AllowedShapes => AllowedShapes;
+
+        /*
         private void OnPermittedLinksChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             lock (LinksLock)
             {
-                //Update the underlying object we will send to the server]
+                //UpdateFromServer the underlying object we will send to the server]
                 Data.PermittedLinks = _PermittedLinks.Select(l => l.GetData()).ToArray();
             }
 
@@ -222,21 +283,27 @@ namespace WebAnnotationModel
             OnPropertyChanged("PermittedLinkTargetTypes");
             OnPropertyChanged("PermittedLinkBidirectionalTypes");
         }
+        */
 
         /// <summary>
         /// Allows LocationLinkStore to adjust the client after a link is created.
         /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
-        internal bool TryAddPermittedLink(PermittedStructureLinkObj ID)
+        internal async Task<bool> TryAddPermittedLink(PermittedStructureLinkObj ID)
         {
-            lock (LinksLock)
+            try
             {
+                await LinkLock.WaitAsync();
                 if (PermittedLinks.Contains(ID))
                     return false;
 
-                PermittedLinks.Add(ID);
+                await _PermittedLinks.AddAsync(ID);
                 return false;
+            }
+            finally
+            {
+                LinkLock.Release();
             }
         }
 
@@ -245,7 +312,7 @@ namespace WebAnnotationModel
         /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
-        internal bool TryRemovePermittedLink(PermittedStructureLinkObj link)
+        internal Task<bool> TryRemovePermittedLink(PermittedStructureLinkObj link)
         {
             return TryRemovePermittedLink(link.ID);
         }
@@ -255,48 +322,41 @@ namespace WebAnnotationModel
         /// Because Links is an observable collection all modifications must be syncronized
         /// </summary>
         /// <param name="ID"></param>
-        internal bool TryRemovePermittedLink(PermittedStructureLinkKey key)
+        internal async Task<bool> TryRemovePermittedLink(PermittedStructureLinkKey key)
         {
-            lock (LinksLock)
+            try
             {
-                PermittedStructureLinkObj LinkToRemove = PermittedLinks.FirstOrDefault(link => link.SourceTypeID == key.SourceTypeID && link.TargetTypeID == key.TargetTypeID);
+                await LinkLock.WaitAsync();
+                PermittedStructureLinkObj LinkToRemove = PermittedLinks.FirstOrDefault(link =>
+                    link.SourceTypeID == key.SourceTypeID && link.TargetTypeID == key.TargetTypeID);
                 if (LinkToRemove == null)
                     return false;
 
-                PermittedLinks.Remove(LinkToRemove);
+                await _PermittedLinks.RemoveAsync(LinkToRemove);
                 return true;
+            }
+            finally
+            {
+                LinkLock.Release();
             }
         }
 
-        public bool Equals(IStructureType other)
+        public bool Equals(IStructureTypeReadOnly other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return other.ID == (ulong)this.ID;
         }
 
-        /*
-        public override void Delete()
+        public bool Equals(StructureTypeObj other)
         {
-            StructureTypeObj OriginalParent = this.Parent;
-            this.Parent = null;
-
-            DBACTION originalAction = this.DBAction;
-            this.DBAction = DBACTION.DELETE;
-
-            bool success = Store.StructureTypes.Save();
-            if (!success)
+            if (other is StructureTypeObj o)
             {
-                //Write straight to data since we have an assert to check whether an object is being deleted, but
-                //in this case we know it is ok
-                this.Data.DBAction = originalAction;
-                this.Parent = OriginalParent;
+                return o.ID.Equals(ID);
             }
-            
-            Viking.UI.State.SelectedObject = null;             
-        }
-         */
 
+            return false;
+        }
     }
 }

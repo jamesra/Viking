@@ -48,7 +48,7 @@ message GetStructureTypeByIDResponse {
 
 
 message GetStructureTypesByIDsRequest { 
-	repeated int64 id = 1;
+	repeated int64 ids = 1;
 }
 
 
@@ -57,19 +57,25 @@ message GetStructureTypesByIDsResponse {
 }
 
 
-message StructureTypeChange {
-		DBAction action = 1;
-		StructureType result = 2;
+message StructureTypeChangeRequest {
+	oneof action {
+		StructureType create = 1;
+		StructureType update = 2;
+		int64 delete = 3;
+	}
 }
 
 message StructureTypeChangeResponse {
-		DBAction action = 1; //The change that was performed
-		bool Sucess = 2;     //True if the change was applied
-		optional StructureType result = 3; //The updated row from the database
+	bool success = 1;     //True if the change was applied
+	oneof Action {
+		StructureType created = 2;
+		StructureType updated = 3;
+		int64 deletedId = 4;
+	}
 }
 
 message UpdateStructureTypesRequest { 
-	repeated StructureTypeChange objs = 1;
+	repeated StructureTypeChangeRequest objs = 1;
 }
  
 message UpdateStructureTypesResponse { 

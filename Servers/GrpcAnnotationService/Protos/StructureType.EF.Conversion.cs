@@ -2,7 +2,7 @@
 {
     public static class StructureTypeEFExtensions
     {
-        public static Viking.DataModel.Annotation.StructureType ToStructureType(this global::Viking.gRPC.AnnotationTypes.V1.Protos.StructureType src)
+        public static Viking.DataModel.Annotation.StructureType ToStructureType(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureType src)
         {
             var converted = new Viking.DataModel.Annotation.StructureType
             {
@@ -12,12 +12,12 @@
                 LastModified = src.LastModified.ToDateTime(),
                 Notes = src.Notes,
                 Username = src.Username,
-                Tags = src.StructureTags,
+                Tags = src.Attributes,
                 Abstract = src.Abstract,
                 Code = src.Code,
-                Color = src.Color,
+                Color = (int)src.Color,
                 Name = src.Name,
-                StructureTags = src.StructureTags,
+                StructureTags = src.StructureAttributes,
                 //MarkupType = src.M
             }; 
 
@@ -32,7 +32,7 @@
             return converted;
         }
 
-        public static void Sync(this global::Viking.gRPC.AnnotationTypes.V1.Protos.StructureType src,
+        public static void Sync(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureType src,
           ref Viking.DataModel.Annotation.StructureType converted)
         {
                 converted.Id = src.Id;
@@ -41,22 +41,22 @@
                 converted.LastModified = src.LastModified.ToDateTime();
                 converted.Notes = src.Notes;
                 converted.Username = src.Username;
-                converted.Tags = src.StructureTags;
+                converted.Tags = src.Attributes;
                 converted.Abstract = src.Abstract;
                 converted.Code = src.Code;
-                converted.Color = src.Color;
+                converted.Color = (int)src.Color;
                 converted.Name = src.Name;
-                converted.StructureTags = src.StructureTags;
+                converted.StructureTags = src.StructureAttributes;
                 //MarkupType = src.M 
         }
 
 
-        public static global::Viking.gRPC.AnnotationTypes.V1.Protos.StructureType ToProtobufMessage(this Viking.DataModel.Annotation.StructureType src)
+        public static global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureType ToProtobufMessage(this Viking.DataModel.Annotation.StructureType src)
         {
             //var compositeLinks = src.LocationLinkANavigations.ToList();
             //compositeLinks.AddRange(src.LocationLinkBNavigations);
 
-            var value = new global::Viking.gRPC.AnnotationTypes.V1.Protos.StructureType
+            var value = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureType
             {  
                 Id = src.Id,
                 ParentId = src.ParentId.HasValue ? src.ParentId.Value : 0,
@@ -64,12 +64,12 @@
                 LastModified = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(src.LastModified),
                 Notes = src.Notes,
                 Username = src.Username,
-                Tags = src.Tags,
+                Attributes = src.Tags,
                 Abstract = src.Abstract,
                 Code = src.Code,
-                Color = src.Color,
+                Color = (uint)src.Color,
                 Name = src.Name,
-                StructureTags = src.StructureTags,
+                StructureAttributes = src.StructureTags,
                 //Markuptype = src.MarkupType
             };
 

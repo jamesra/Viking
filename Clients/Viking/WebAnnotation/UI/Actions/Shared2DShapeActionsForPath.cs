@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using Viking.VolumeModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Actions
 {

@@ -17,7 +17,7 @@ namespace MorphologyMesh
         /// <param name="source"></param>
         /// <param name="structure"></param>
         /// <returns></returns>
-        public static string CreateKey(COLORSOURCE source, IStructure structure)
+        public static string CreateKey(COLORSOURCE source, IStructureReadOnly structure)
         {
             switch (source)
             {
@@ -70,7 +70,7 @@ namespace MorphologyMesh
             Reflective = color;
         }
 
-        public MaterialLighting(COLORSOURCE source, IStructure structure, Color color)
+        public MaterialLighting(COLORSOURCE source, IStructureReadOnly structure, Color color)
         {
             Key = CreateKey(source, structure);
             Diffuse = color;
@@ -171,8 +171,10 @@ namespace MorphologyMesh
         /// <returns></returns>
         public List<StructureModel> ModelsInTree()
         {
-            List<StructureModel> listModel = new List<MorphologyMesh.StructureModel>();
-            listModel.Add(this);
+            List<StructureModel> listModel = new List<MorphologyMesh.StructureModel>
+            {
+                this
+            };
 
             listModel.AddRange(this.ChildStructures.Values.SelectMany(cs => cs.ModelsInTree()));
             return listModel; 
@@ -250,7 +252,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        private StructureModel AddModel(IStructure structure, IReadOnlyMesh3D<IVertex3D> structureMesh)
+        private StructureModel AddModel(IStructureReadOnly structure, IReadOnlyMesh3D<IVertex3D> structureMesh)
         {
             COLORSOURCE source = COLORSOURCE.STRUCTURE;
             System.Drawing.Color color = Colormap.GetColor(structure, out source);
@@ -307,7 +309,7 @@ namespace MorphologyMesh
         /// <param name="source"></param>
         /// <param name="structure"></param>
         /// <returns></returns>
-        private MaterialLighting GetOrAddMaterial(COLORSOURCE source, IStructure structure, Color color)
+        private MaterialLighting GetOrAddMaterial(COLORSOURCE source, IStructureReadOnly structure, Color color)
         {
             MaterialLighting matLighting = new MorphologyMesh.MaterialLighting(source, structure, color);
             if (!Materials.ContainsKey(matLighting.Key))
@@ -417,7 +419,7 @@ namespace MorphologyMesh
         /// <param name="source"></param>
         /// <param name="structure"></param>
         /// <returns></returns>
-        private MaterialLighting GetOrAddMaterial(COLORSOURCE source, IStructure structure, Color color)
+        private MaterialLighting GetOrAddMaterial(COLORSOURCE source, IStructureReadOnly structure, Color color)
         {
             MaterialLighting matLighting = new MorphologyMesh.MaterialLighting(source, structure, color);
             if(!Materials.ContainsKey(matLighting.Key))

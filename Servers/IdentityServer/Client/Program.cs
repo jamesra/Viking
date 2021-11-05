@@ -96,11 +96,10 @@ namespace Client
             {
                 Console.WriteLine(claim.ToString()); 
             }
-            Console.ForegroundColor = ConsoleColor.White;
-             
+            Console.ForegroundColor = ConsoleColor.White; 
 
             Console.WriteLine("\n\n");
-            await GetUserPermissions( tokenResponse, "RC1");
+            await GetUserPermissions(IdentityServerEndpoint, tokenResponse, "RC1");
             Console.WriteLine("\n\n");
 
             await CheckClaims(disco, tokenResponse, Client, "RC1.Read");
@@ -129,7 +128,7 @@ namespace Client
             */
         }
 
-        private static async Task<bool> GetUserPermissions(TokenResponse tokenResponse, string VolumeName)
+        private static async Task<bool> GetUserPermissions(string identityServerEndpoint, TokenResponse tokenResponse, string VolumeName)
         {
 
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -142,7 +141,7 @@ namespace Client
 
                 //client.SetBasicAuthentication("jamesan", "Wat>com3");
   
-                string address = $"{IdentityServerEndpoint}Resources/UserPermissions?id={VolumeName}";
+                string address = $"{identityServerEndpoint}Resources/UserPermissions?id={VolumeName}";
 
                  var response = await client.GetStringAsync(address); 
 

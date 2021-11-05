@@ -39,7 +39,7 @@
                         <dt>
                             <label asp-for="AlreadyMemberOf" class="control-label"></label>
                         </dt>
-                        @for (int i = 0; i < Model.AlreadyMemberOf.Count(); i++)
+                        @for (int i = 0; i < Model.AlreadyMemberOf.Count; i++)
                         {
                         <dd>
                             @Model.AlreadyMemberOf[i]

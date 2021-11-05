@@ -33,7 +33,7 @@ namespace GeometryTests.Algorithms
         /// <returns></returns>
         public static bool AreTriangulatedFacesCCW(this IReadOnlyMesh2D<IVertex2D> mesh)
         {
-            foreach (Face f in mesh.Faces)
+            foreach (var f in mesh.Faces)
             {
                 bool IsClockwise = mesh.IsClockwise(f);
                 //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
@@ -53,7 +53,7 @@ namespace GeometryTests.Algorithms
         /// <returns></returns>
         public static bool AreTriangulatedFacesColinear(this IReadOnlyMesh2D<IVertex2D> mesh)
         {
-            foreach (Face f in mesh.Faces)
+            foreach (var f in mesh.Faces)
             {
                 RotationDirection winding = mesh.Winding(f);
                 //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
@@ -82,11 +82,11 @@ namespace GeometryTests.Algorithms
         {
             foreach (IFace f in mesh.Faces)
             {
-                bool IsTriangle = f.iVerts.Length == 3;
+                bool isTriangle = f.iVerts.Length == 3;
                 //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
                 //Assert.IsFalse(IsClockwise, string.Format("{0} is clockwise, incorrect winding.", f));
 
-                if (!IsTriangle)
+                if (!isTriangle)
                     return false;
             }
 
@@ -103,11 +103,11 @@ namespace GeometryTests.Algorithms
             result = true;
             foreach (Face f in mesh.Faces)
             {
-                bool IsDelaunay = mesh.IsTriangleDelaunay(f);
+                bool isDelaunay = mesh.IsTriangleDelaunay(f);
                 //Assert.IsTrue(IsDelaunay, string.Format("{0} is not a delaunay triangle", f));
                 //Assert.IsFalse(IsClockwise, string.Format("{0} is clockwise, incorrect winding.", f));
 
-                if (!IsDelaunay)
+                if (!isDelaunay)
                 {
                     result = false;
                     return false.Label(string.Format("Face {0} is not delaunay", f));

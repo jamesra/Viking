@@ -1,14 +1,14 @@
 {
   "iisSettings": {
-    "windowsAuthentication": true,
+    "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iis": {
-      "applicationUrl": "https://identity.connectomes.utah.edu/",
+      "applicationUrl": "http://localhost/IdentityServer",
       "sslPort": 0
     },
     "iisExpress": {
-      "applicationUrl": "http://localhost:65184/",
-      "sslPort": 44322
+      "applicationUrl": "http://localhost:54383/",
+      "sslPort": 44355
     }
   },
   "profiles": {
@@ -21,16 +21,13 @@
       }
     },
     "IdentityServer": {
-      "commandName": "Executable",
-      "executablePath": "dotnet",
-      "commandLineArgs": "ef migrations add Initial -c ApplicationDbContext --no-build",
+      "commandName": "Project",
       "workingDirectory": "C:\\src\\git\\Viking\\Servers\\IdentityServer\\IdentityServer",
-      "launchBrowser": true,
-      "launchUrl": "http://localhost:5000",
+      "launchUrl": "https://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "http://localhost:5000"
+      "applicationUrl": "https://localhost:5001"
     },
     "IdentityServerIISRemote": {
       "commandName": "IIS",

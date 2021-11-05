@@ -69,7 +69,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj">
-      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
+      <Project>{660256d5-ae05-48cf-9821-4e5c00131410}</Project>
       <Name>AnnotationInterfaces</Name>
     </ProjectReference>
     <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">

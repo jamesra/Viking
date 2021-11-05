@@ -402,7 +402,7 @@ namespace MonogameTestbed
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
 
-            GridPolygon[] polygons = nodes.Select(n => n.Geometry.ToPolygon()).ToArray();
+            GridPolygon[] polygons = nodes.Select(n => n.Geometry as GridPolygon).Where(p => p != null).ToArray();
             double[] polyZ = nodes.Select(n => n.Z).ToArray();
             polygons.AddPointsAtAllIntersections();
 

@@ -3,7 +3,7 @@ using System;
 
 namespace AnnotationVizLib.SimpleOData
 {
-    class StructureType : IStructureType, IEquatable<StructureType>
+    class StructureType : IStructureTypeReadOnly, IEquatable<StructureType>
     {
         public StructureType()
         {
@@ -35,7 +35,7 @@ namespace AnnotationVizLib.SimpleOData
             get; private set;
         }
 
-        public bool Equals(IStructureType other)
+        public bool Equals(IStructureTypeReadOnly other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -48,7 +48,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Equals(StructureType other)
         {
-            return this.Equals((IStructureType)other);
+            return this.Equals((IStructureTypeReadOnly)other);
         }
     }
 }

@@ -16,7 +16,7 @@ namespace IdentityServer.Data.Migrations.Application
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
-                .HasAnnotation("ProductVersion", "5.0.4")
+                .HasAnnotation("ProductVersion", "5.0.11")
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
             modelBuilder.Entity("IdentityServer.Models.ApplicationUser", b =>
@@ -461,8 +461,8 @@ namespace IdentityServer.Data.Migrations.Application
                     b.HasData(
                         new
                         {
-                            Id = "8fc96f07-55a6-4392-bb31-a692d6327673",
-                            ConcurrencyStamp = "e7ff244b-a4cb-420e-8382-5a4320e4eceb",
+                            Id = "cdf2b676-7edc-4d96-9ebb-8d1968734482",
+                            ConcurrencyStamp = "b1443916-eb30-40a7-8ef0-668f4e42adf3",
                             Name = "Administrator",
                             NormalizedName = "Administrator"
                         });

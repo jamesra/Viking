@@ -99,7 +99,7 @@ namespace MonogameTestbed
             //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(mesh, Shapes);
 
             if (mesh == null)
-                DelaunayView.UpdateViews(new GridVector2[0]);
+                DelaunayView.UpdateViews(Array.Empty<GridVector2>());
             else
                 DelaunayView.UpdateViews(mesh.ToLines());
 

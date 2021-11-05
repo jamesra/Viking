@@ -3,6 +3,8 @@ using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebAnnotationModel.Objects;
+using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace WebAnnotation
 {
@@ -155,62 +157,62 @@ namespace WebAnnotation
 
     public static class AnnotationExtensions
     {
-        private static Viking.AnnotationServiceTypes.Interfaces.LocationType StringToLocationType(string annotationType)
+        private static LocationType StringToLocationType(string annotationType)
         {
             switch (annotationType)
             {
                 case "Circle":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+                    return LocationType.CIRCLE;
                 case "ClosedCurve":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CLOSEDCURVE;
+                    return LocationType.CLOSEDCURVE;
                 case "OpenCurve":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE;
+                    return LocationType.OPENCURVE;
                 case "Polygon":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON;
+                    return LocationType.POLYGON;
                 case "Polyline":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE;
+                    return LocationType.POLYLINE;
                 case "Point":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.POINT;
+                    return LocationType.POINT;
                 case "Ellipse":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.ELLIPSE;
+                    return LocationType.ELLIPSE;
                 case "CurvePolygon":
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
+                    return LocationType.CURVEPOLYGON;
                 default:
-                    return Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+                    return LocationType.CIRCLE;
             }
 
             throw new ArgumentException("Unknown annotation type " + annotationType);
         }
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
+        public static LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
         {
             return StringToLocationType(command.AnnotationType);
         }
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
+        public static LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
         {
             return StringToLocationType(command.AnnotationType);
         }
 
-        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.LocationObj loc, System.Windows.IWeakEventListener listener)
+        public static void SubscribeToPropertyChangeEvents(this LocationObj loc, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.AddListener(loc, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.AddListener(loc, listener);
         }
 
-        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.LocationObj loc, System.Windows.IWeakEventListener listener)
+        public static void UnsubscribeToPropertyChangeEvents(this LocationObj loc, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(loc, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(loc, listener);
         }
 
-        public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.StructureObj s, System.Windows.IWeakEventListener listener)
+        public static void SubscribeToPropertyChangeEvents(this StructureObj s, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.AddListener(s, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.AddListener(s, listener);
         }
 
-        public static void UnsubscribeToPropertyChangeEvents(this WebAnnotationModel.StructureObj s, System.Windows.IWeakEventListener listener)
+        public static void UnsubscribeToPropertyChangeEvents(this StructureObj s, System.Windows.IWeakEventListener listener)
         {
             WebAnnotation.ViewModel.NotifyPropertyChangingEventManager.RemoveListener(s, listener);
             WebAnnotation.ViewModel.NotifyPropertyChangedEventManager.RemoveListener(s, listener);
@@ -219,7 +221,7 @@ namespace WebAnnotation
 
     internal static class LocationObjExtensions
     {
-        public static double DistanceToPoint3D(this WebAnnotationModel.LocationObj l, GridVector3 origin)
+        public static double DistanceToPoint3D(this LocationObj l, GridVector3 origin)
         {
             Viking.VolumeModel.IVolumeToSectionTransform mapper = Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z);
             if (mapper == null)
@@ -242,7 +244,7 @@ namespace WebAnnotation
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void TrySetShapeFromGeometryInSectionShowErrorDialog(this WebAnnotationModel.LocationObj location, System.Windows.Window parent, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
+        public static void TrySetShapeFromGeometryInSectionShowErrorDialog(this LocationObj location, System.Windows.Window parent, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             try
             {
@@ -254,7 +256,7 @@ namespace WebAnnotation
             }
         }
 
-        public static bool IsLastEditedAnnotation(this WebAnnotationModel.LocationObj loc)
+        public static bool IsLastEditedAnnotation(this LocationObj loc)
         {
             if (!Global.LastEditedAnnotationID.HasValue)
             {

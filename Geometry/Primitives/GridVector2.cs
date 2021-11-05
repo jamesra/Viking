@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Geometry
 {
@@ -142,13 +143,13 @@ namespace Geometry
 
         public double[] coords { get { return new double[] { X,Y }; } }
 
-        public GridVector2(double x, double y)
+        public GridVector2(in double x, in double y)
         {
             this.X = x;
             this.Y = y;
         }
 
-        public GridVector2(IPoint2D p)
+        public GridVector2(in IPoint2D p)
         {
             this.X = p.X;
             this.Y = p.Y;
@@ -699,6 +700,29 @@ namespace Geometry
             return points.BoundingBox();
         }
 
+        public static GridVector2 Average(in GridVector2[] points)
+        {
+            double X = 0;
+            double Y = 0;
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                X += points[i].X;
+                Y += points[i].Y;
+            }
+
+            return new GridVector2(X / points.Length, Y / points.Length);
+        }
+
+        public static GridVector2 Average(in IEnumerable<GridVector2> points)
+        {
+            int nPoints = points.Count();
+            double X = points.Sum(p => p.X);
+            double Y = points.Sum(p => p.Y);
+            
+            return new GridVector2(X / nPoints, Y / nPoints);
+        }
+
         public static GridRectangle Border(in IPoint[] points)
         {
             if (points == null)
@@ -848,5 +872,7 @@ namespace Geometry
 
         #endregion
         IPoint2D ICentroid.Centroid => this;
+
+        GridVector2 IShape2D.Centroid => this;
     }
 }

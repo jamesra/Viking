@@ -3,28 +3,31 @@ using System.Collections.Generic;
 using Geometry;
 
 namespace Viking.AnnotationServiceTypes.Interfaces
-{ 
+{
+    public interface ISectionIndex
+    {
+        long Section { get; }
+    }
+
     public interface ILocationReadOnly : IEquatable<ILocationReadOnly>
     {
         ulong ID { get; }
         ulong ParentID { get; }
 
         bool Terminal { get; }
-        bool OffEdge { get; }
+        bool OffEdge { get; } 
 
         bool IsVericosityCap { get; }
 
         bool IsUntraceable { get; }
 
-        IDictionary<string, string> Attributes { get; }
+        IReadOnlyDictionary<string, string> Attributes { get; }
 
         /// <summary>
         /// Z as stored in the database, which is a section number
         /// </summary>
         long UnscaledZ { get; }
-
-        string TagsXml { get; }
-
+          
         LocationType TypeCode { get; }
 
         /// <summary>
@@ -32,6 +35,10 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         /// </summary>
         double Z { get; }
 
+        double? Width { get; }
+
+
+        string MosaicGeometryWKT { get; }
         /// <summary>
         /// Volume space shape
         /// </summary>
@@ -57,9 +64,9 @@ namespace Viking.AnnotationServiceTypes.Interfaces
 
         string TagsXml { get; set; }
 
-        bool Closed { get; set; }
+        bool Closed { get; }
 
-        string Username { get; set; }
+        string Username { get; }
 
         /// <summary>
         /// What type (geometric shape) of annotation is it?
@@ -71,6 +78,8 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         GridVector3 MosaicPosition { get; }
          
         DateTime LastModified { get; }
+
+        DateTime Created { get; }
 
         /// <summary>
         /// Computed column, the radius of a circle with equal area to the annotations geometry.

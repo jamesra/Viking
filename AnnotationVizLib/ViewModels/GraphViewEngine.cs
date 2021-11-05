@@ -22,7 +22,7 @@ namespace AnnotationVizLib
         /// <param name="node"></param>
         /// <param name="attribs"></param>
         /// <returns></returns>
-        public void AddStandardizedAttributes(System.Collections.Generic.IDictionary<string, string> attribs)
+        public void AddStandardizedAttributes(IDictionary<string, string> attribs)
         {
             if (attribs == null)
                 return;
@@ -109,10 +109,10 @@ namespace AnnotationVizLib
             return tempNode;
         }
 
-        public virtual void removeNode(KEY label)
+        public virtual void removeNode(KEY k)
         {
-            if (nodes.ContainsKey(label))
-                nodes.Remove(label);
+            if (nodes.ContainsKey(k))
+                nodes.Remove(k);
         }
 
         public virtual void addEdge(GraphViewEdge<KEY> edge)

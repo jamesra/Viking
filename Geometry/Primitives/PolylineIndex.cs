@@ -234,15 +234,15 @@ namespace Geometry
         { 
             return new GridVector2(lines[iLine].Points[iVertex]);
         }
-         
+
         /// <summary>
         /// Return a copy of this PointIndex with iPoly value changed to point at a different polygon index
         /// </summary>
-        /// <param name="old"></param>
+        /// <param name="line"></param>
         /// <returns></returns>
-        public PolygonIndex Reindex(int iLine)
+        public PolygonIndex Reindex(int line)
         {
-            return new PolygonIndex(iLine, this.iVertex, this.NumUnique);
+            return new PolygonIndex(line, this.iVertex, this.NumUnique);
         }
 
         /// <summary>

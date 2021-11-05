@@ -3,6 +3,7 @@ using SqlGeometryUtils;
 using System;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {

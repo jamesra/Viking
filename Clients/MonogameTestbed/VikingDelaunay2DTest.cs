@@ -234,7 +234,7 @@ namespace MonogameTestbed
                 //listPoints = listPoints.Select(p => p - avg).ToList();
                 scene.Camera.LookAt = listPoints.Average().ToXNAVector2();
                 rect = listPoints.BoundingBox();
-                scene.Camera.Downsample = rect.Height / scene.Viewport.Height;
+                scene.Camera.Downsample = rect.Height / (double)scene.Viewport.Height;
 
                 TestTask = new Task<TriangulationMesh<IVertex2D>>(() => GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(listPoints.Select(p => new TriangulationVertex(p)).ToArray(), OnTriangulationProgress));
             }
@@ -249,7 +249,7 @@ namespace MonogameTestbed
                 //scene.Camera.LookAt = listPoints[567].ToXNAVector2();//listPoints.Average().ToXNAVector2();
                 scene.Camera.LookAt = listPoints.Average().ToXNAVector2();
                 rect = listPoints.BoundingBox();
-                scene.Camera.Downsample = rect.Height / scene.Viewport.Height;
+                scene.Camera.Downsample = rect.Height / (double)scene.Viewport.Height;
             }
             else if(testData == DelaunayTestDataType.JSON_POLYGON_CONSTRAINED)
             {
@@ -365,7 +365,7 @@ namespace MonogameTestbed
                     listPoints = points.ToList();
 
                     scene.Camera.LookAt = Vector2.Zero;
-                    scene.Camera.Downsample = rect.Height / scene.Viewport.Height;
+                    scene.Camera.Downsample = rect.Height / (double)scene.Viewport.Height;
                 }
             }
 
@@ -579,9 +579,9 @@ namespace MonogameTestbed
                     Points_X_View.LabelType = PointLabelType.INDEX;
 
                     GridRectangle rect = Points_X.BoundingBox();
-                    rect.Scale(1.05);
+                    rect *= 1.05;
                     scene.Camera.LookAt = rect.Center.ToXNAVector2();
-                    scene.Camera.Downsample = rect.Height / scene.Viewport.Height;
+                    scene.Camera.Downsample = rect.Height / (double)scene.Viewport.Height;
                 }
 
                 var lineViews = new LineView[mesh.Edges.Count];
@@ -628,8 +628,8 @@ namespace MonogameTestbed
                 TriangulatedEdgeLabels = lineLabels;
 
                 meshView = new MeshView<VertexPositionNormalColor>();
-                MeshModel<VertexPositionNormalColor> model = CreateMeshModel(mesh);
-                meshView.models.Add(model);
+                MeshModel<VertexPositionNormalColor> m = CreateMeshModel(mesh);
+                meshView.models.Add(m);
 
             }
             finally

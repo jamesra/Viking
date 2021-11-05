@@ -730,6 +730,8 @@ namespace Geometry
 
         public ShapeType2D ShapeType => ShapeType2D.LINE;
 
+        GridVector2 IShape2D.Centroid => PointAlongLine(0.5);
+
         public GridLine ToLine()
         {
             return new GridLine(this.A, this.Direction);

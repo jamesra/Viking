@@ -297,7 +297,7 @@ namespace MorphologyMesh
                 {
                     //First find the vertex that is not part of the corresponding pair that created this face.  Note that corresponding verts can be adjacent within a polygon,
                     //so if the vertex is corresponding it could stil be the extra vertex of the triangle if its corresponding vertex is not part of the face.
-                    MorphMeshVertex noncorresponding = verts.Where(v => v.Corresponding.HasValue == false || f.iVerts.Contains(v.Corresponding.Value) == false).First();
+                    MorphMeshVertex noncorresponding = verts.First(v => v.Corresponding.HasValue == false || f.iVerts.Contains(v.Corresponding.Value) == false);
                     int iNonCorresponding = Array.IndexOf(verts, noncorresponding);
                     bool NonCorrespondingIsUpper = IsUpperPolygon[noncorresponding.PolyIndex.Value.iPoly];
 

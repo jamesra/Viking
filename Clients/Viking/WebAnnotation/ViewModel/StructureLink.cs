@@ -11,6 +11,7 @@ using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
@@ -80,7 +81,7 @@ namespace WebAnnotation.ViewModel
 
     abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasGeometryView, IViewStructureLink
     {
-        WebAnnotationModel.StructureLinkObj modelObj;
+        StructureLinkObj modelObj;
 
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
@@ -221,12 +222,12 @@ namespace WebAnnotation.ViewModel
         private static bool IsExistingLink(StructureObj TargetObj, StructureObj OriginObj)
         {
             //Do not recreate existing link
-            if (TargetObj.LinksCopy.Any(link => (link.SourceID == TargetObj.ID && link.TargetID == OriginObj.ID) ||
+            if (TargetObj.CopyLinksAsync.Any(link => (link.SourceID == TargetObj.ID && link.TargetID == OriginObj.ID) ||
                                                 (link.SourceID == OriginObj.ID && link.TargetID == TargetObj.ID)))
                 return true;
 
             //Do not recreate existing link
-            if (OriginObj.LinksCopy.Any(link => (link.SourceID == TargetObj.ID && link.TargetID == OriginObj.ID) ||
+            if (OriginObj.CopyLinksAsync.Any(link => (link.SourceID == TargetObj.ID && link.TargetID == OriginObj.ID) ||
                                                 (link.SourceID == OriginObj.ID && link.TargetID == TargetObj.ID)))
                 return true;
 
@@ -387,7 +388,7 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                return lineSegment.BoundingBox.Pad(this.LineWidth);
+                return GridRectangle.Pad(lineSegment.BoundingBox, this.LineWidth);
             }
         }
 
@@ -515,11 +516,11 @@ namespace WebAnnotation.ViewModel
                 GridRectangle bbox = lineSegments[0].BoundingBox;
                 foreach (GridLineSegment l in lineSegments)
                 {
-                    bbox.Union(l.BoundingBox);
+                    bbox += l.BoundingBox;
                 }
 
-                bbox.Union(bbox.LowerLeft - new GridVector2(this.Radius, this.Radius));
-                bbox.Union(bbox.UpperRight + new GridVector2(this.Radius, this.Radius));
+                bbox = GridRectangle.Union(bbox, bbox.LowerLeft - new GridVector2(this.Radius, this.Radius));
+                bbox = GridRectangle.Union(bbox, bbox.UpperRight + new GridVector2(this.Radius, this.Radius));
 
                 return bbox;
             }

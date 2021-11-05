@@ -10,6 +10,7 @@ using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
@@ -38,11 +39,9 @@ namespace WebAnnotation.ViewModel
             if ((object)obj_link != null)
                 return this.Key.Equals(obj_link.Key);
 
-            if (typeof(LocationLinkKey).IsInstanceOfType(obj))
-            {
-                LocationLinkKey obj_key = (LocationLinkKey)obj;
+            if (obj is LocationLinkKey obj_key)
                 return this.Key.Equals(obj_key);
-            }
+            
 
             return false;
         }
@@ -136,7 +135,7 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                return LineSegment.BoundingBox.Pad(this.LineRadius);
+                return GridRectangle.Pad(LineSegment.BoundingBox, this.LineRadius);
             }
         }
 
@@ -367,7 +366,7 @@ namespace WebAnnotation.ViewModel
             if (target.Z == OriginObj.Z)
                 return false;
 
-            if (OriginObj.LinksCopy.Contains(target.ID))
+            if (OriginObj.CopyLinksAsync.Contains(target.ID))
                 return false;
 
             return true;

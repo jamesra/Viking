@@ -65,7 +65,7 @@ namespace VikingWebAppSettings
         {
             string setting = GetApplicationSetting(name);
             if (setting == null)
-                return new string[0];
+                return Array.Empty<string>();
 
             return setting.Split(';').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray();
         }

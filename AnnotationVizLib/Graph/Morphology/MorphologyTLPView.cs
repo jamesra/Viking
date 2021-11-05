@@ -80,9 +80,9 @@ namespace AnnotationVizLib
                 NodeAttribs.Add("viewShape", NodeShape(node));
             }
 
-            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count() > 0)
+            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Any())
             {
-                NodeAttribs.Add("NumLinkedStructures", node.Graph.structure.Links.Count().ToString());
+                NodeAttribs.Add("NumLinkedStructures", node.Graph.structure.Links.Count.ToString());
             }
 
             tlpnode.AddStandardizedAttributes(NodeAttribs);
@@ -92,7 +92,7 @@ namespace AnnotationVizLib
 
         public static string NodeShape(MorphologyNode node)
         {
-            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Count() > 0)
+            if (node.Graph != null && node.Graph.structure.Links != null && node.Graph.structure.Links.Any())
                 return TLPAttributes.IntForShape(TLPAttributes.NodeShapes.GlowSphere);
 
             return null;
@@ -101,19 +101,19 @@ namespace AnnotationVizLib
 
         public static string NodeVikingLocation(MorphologyNode node)
         {
-            GridVector2 pos = node.Location.Geometry.Centroid();
+            GridVector2 pos = node.Geometry.Centroid;
             return string.Format("X:{0} Y:{1} Z:{2}", pos.X / node.Graph.scale.X.Value, pos.Y / node.Graph.scale.Y.Value, node.UnscaledZ);
         }
 
         public static string NodeLayout(MorphologyNode node)
         {
-            GridVector2 pos = node.Location.Geometry.Centroid();
+            GridVector2 pos = node.Geometry.Centroid;
             return string.Format("({0},{1},{2})", pos.X, pos.Y, node.Z);
         }
 
-        public static string NodeSize(MorphologyNode node, UnitsAndScale.IScale scale)
+        public static string NodeSize(MorphologyNode node, IScale scale)
         {
-            GridRectangle bbox = node.Geometry.BoundingBox();
+            GridRectangle bbox = node.Geometry.BoundingBox;
             //OK, tulip treats the location property as the center of the shape.  The size is centered on the origin.  So if a cell is centered on 0, and the radius is 50.  We need to use the diamater to ensure the size is correct.
             return string.Format("({0},{1},{2})", bbox.Width, bbox.Height, 1 * scale.Z.Value);
         }
@@ -123,21 +123,21 @@ namespace AnnotationVizLib
             return node.Key.ToString();
         }
 
-        public string LabelForStructure(IStructure s)
+        public string LabelForStructure(IStructureReadOnly s)
         {
             if (s == null)
                 return "";
 
-            if (s.Label == null || s.Label.Length == 0)
+            if (string.IsNullOrWhiteSpace(s.Label))
             {
                 //TODO: Return StructureTypeID
-                return string.Format("{0} #{1}", s.TypeID, s.ID);
+                return $"{s.TypeID} #{s.ID}";
             }
 
-            return string.Format("{0} #{1}", s.ID, s.Label);
+            return $"{s.ID} #{s.Label}";
         }
 
-        public static string LinkString(IStructureLink link)
+        public static string LinkString(IStructureLinkKey link)
         {
             return link.SourceID + " -> " + link.TargetID;
         }
@@ -210,7 +210,7 @@ namespace AnnotationVizLib
             return colorMap.GetColor(graph);
         }
 
-        public static MorphologyTLPView ToTLP(MorphologyGraph graph, UnitsAndScale.IScale scale, StructureMorphologyColorMap colorMap, string VolumeURL)
+        public static MorphologyTLPView ToTLP(MorphologyGraph graph, IScale scale, StructureMorphologyColorMap colorMap, string VolumeURL)
         {
             MorphologyTLPView view = new MorphologyTLPView(scale, GetStructureColor(graph, colorMap), VolumeURL);
 

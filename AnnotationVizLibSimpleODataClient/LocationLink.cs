@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace AnnotationVizLib.SimpleOData
 {
-    public class LocationLink : ILocationLink, IEquatable<LocationLink>
+    public class LocationLink : ILocationLinkKey, IEquatable<LocationLink>
     {
         public static LocationLink FromDictionary(IDictionary<string, object> dict)
         {
@@ -12,12 +12,10 @@ namespace AnnotationVizLib.SimpleOData
             return ll;
         }
 
-
-
         public ulong A { get; private set; }
         public ulong B { get; private set; }
 
-        public bool Equals(ILocationLink other)
+        public bool Equals(ILocationLinkKey other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -33,7 +31,25 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Equals(LocationLink other)
         {
-            return this.Equals((ILocationLink)other);
+            return this.Equals((ILocationLinkKey)other);
+        }
+
+        int IComparable<ILocationLinkKey>.CompareTo(ILocationLinkKey other)
+        {
+            int aa = A.CompareTo(other.A);
+            if (aa != 0)
+                return aa;
+
+            int bb = B.CompareTo(other.B);
+            return bb;
+        }
+
+        public ulong OtherKey(ulong key)
+        {
+            if (key == A) return B;
+            if (key == B) return A;
+
+            throw new ArgumentException($"{key} is not found in location link {this}");
         }
     }
 }

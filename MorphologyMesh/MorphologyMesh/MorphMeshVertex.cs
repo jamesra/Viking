@@ -69,8 +69,7 @@ namespace MorphologyMesh
 
         public static MorphMeshVertex Duplicate(MorphMeshVertex old)
         {
-            MorphMeshVertex vert = old as MorphMeshVertex;
-            if (vert != null)
+            if (old is MorphMeshVertex vert)
             {
                 switch (vert.Type)
                 {
@@ -94,8 +93,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static MorphMeshVertex Reindex(MorphMeshVertex old, int iPoly)
         {
-            MorphMeshVertex vert = old as MorphMeshVertex;
-            if (vert != null)
+            if (old is MorphMeshVertex vert)
             {
                 switch (vert.Type)
                 {

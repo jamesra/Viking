@@ -48,10 +48,6 @@
     <Compile Include="ShapeSmoothingExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj">
-      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
-      <Name>AnnotationInterfaces</Name>
-    </ProjectReference>
     <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
       <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
       <Name>AnnotationServiceTypes.WCF</Name>
@@ -61,7 +57,7 @@
       <Name>VolumeModel</Name>
     </ProjectReference>
     <ProjectReference Include="..\Clients\WebAnnotationModel\WebAnnotationModel.csproj">
-      <Project>{709a3c16-7218-4ff0-9a2d-6bf015c243bf}</Project>
+      <Project>{8e5713fd-d55a-4abb-bffb-799df53ba313}</Project>
       <Name>WebAnnotationModel</Name>
     </ProjectReference>
     <ProjectReference Include="..\Geometry\Geometry.csproj">
@@ -78,7 +74,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework">
-      <Version>6.2.0</Version>
+      <Version>6.4.4</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.SqlServer.Types">
       <Version>14.0.1016.290</Version>

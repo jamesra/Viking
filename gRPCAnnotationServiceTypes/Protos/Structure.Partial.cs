@@ -9,8 +9,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 {
     public partial class Structure : IStructure, IChangeAction
-    {
-
+    { 
         DBACTION _DBAction = DBACTION.NONE;
         DBACTION IChangeAction.DBAction { get => _DBAction; set => _DBAction = value; }
 
@@ -47,10 +46,30 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
             if (ReferenceEquals(this, other))
                 return true;
 
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.Id == (long)other.ID;
+        }
+
+        public static explicit operator StructureChangeRequest(Structure src)
+        {
+            var value = new StructureChangeRequest();
+            switch (src._DBAction)
+            {
+                case DBACTION.NONE:
+                    return null;
+                case DBACTION.INSERT:
+                    value.Create = src;
+                    break;
+                case DBACTION.UPDATE:
+                    value.Update = src;
+                    break;
+                case DBACTION.DELETE:
+                    value.Delete = src.Id;
+                    break;
+            }
+            return value;
         }
     }
 }

@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using Viking.Tokens;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 
 namespace WebAnnotationModelTest

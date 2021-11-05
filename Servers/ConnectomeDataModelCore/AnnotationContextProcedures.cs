@@ -42,7 +42,7 @@ namespace Viking.DataModel.Annotation
             _context = context;
         }
 
-        public virtual async Task<ApproximateStructureLocationResult[]> ApproximateStructureLocationAsync(int? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<ApproximateStructureLocationResult>> ApproximateStructureLocationAsync(int? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -68,7 +68,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<ApproximateStructureLocationsResult[]> ApproximateStructureLocationsAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<ApproximateStructureLocationsResult>> ApproximateStructureLocationsAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -88,7 +88,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<CountChildStructuresByTypeResult[]> CountChildStructuresByTypeAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<CountChildStructuresByTypeResult>> CountChildStructuresByTypeAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -114,7 +114,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<DeepDeleteStructureResult[]> DeepDeleteStructureAsync(long? DeleteID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<DeepDeleteStructureResult>> DeepDeleteStructureAsync(long? DeleteID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -140,7 +140,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<MergeStructuresResult[]> MergeStructuresAsync(long? KeepStructureID, long? MergeStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<MergeStructuresResult>> MergeStructuresAsync(long? KeepStructureID, long? MergeStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -172,7 +172,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<RecursiveSelectChildStructureIDsResult[]> RecursiveSelectChildStructureIDsAsync(DataTable IDs, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<RecursiveSelectChildStructureIDsResult>> RecursiveSelectChildStructureIDsAsync(DataTable IDs, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -199,7 +199,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectAllStructureLocationLinksResult[]> SelectAllStructureLocationLinksAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectAllStructureLocationLinksResult>> SelectAllStructureLocationLinksAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -219,7 +219,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectAllStructureLocationsResult[]> SelectAllStructureLocationsAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectAllStructureLocationsResult>> SelectAllStructureLocationsAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -239,7 +239,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectAllStructuresResult[]> SelectAllStructuresAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectAllStructuresResult>> SelectAllStructuresAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -259,7 +259,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectChildrenStructureLinksResult[]> SelectChildrenStructureLinksAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectChildrenStructureLinksResult>> SelectChildrenStructureLinksAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -285,7 +285,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectChildStructureCenters3DResult[]> SelectChildStructureCenters3DAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectChildStructureCenters3DResult>> SelectChildStructureCenters3DAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -305,7 +305,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectLastModifiedLocationByUsersResult[]> SelectLastModifiedLocationByUsersAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectLastModifiedLocationByUsersResult>> SelectLastModifiedLocationByUsersAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -325,7 +325,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNearestChildAttachLocationCandidatesResult[]> SelectNearestChildAttachLocationCandidatesAsync(DataTable ParentStructureIDs, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNearestChildAttachLocationCandidatesResult>> SelectNearestChildAttachLocationCandidatesAsync(DataTable ParentStructureIDs, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -352,7 +352,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNearestParentAttachCandidatesForLocationsResult[]> SelectNearestParentAttachCandidatesForLocationsAsync(DataTable ChildLocIDs, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNearestParentAttachCandidatesForLocationsResult>> SelectNearestParentAttachCandidatesForLocationsAsync(DataTable ChildLocIDs, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -379,7 +379,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNearestParentAttachLocationCandidatesResult[]> SelectNearestParentAttachLocationCandidatesAsync(DataTable ChildStructureIDs, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNearestParentAttachLocationCandidatesResult>> SelectNearestParentAttachLocationCandidatesAsync(DataTable ChildStructureIDs, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -406,7 +406,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNetworkChildStructureIDsResult[]> SelectNetworkChildStructureIDsAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNetworkChildStructureIDsResult>> SelectNetworkChildStructureIDsAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -439,7 +439,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNetworkChildStructuresResult[]> SelectNetworkChildStructuresAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNetworkChildStructuresResult>> SelectNetworkChildStructuresAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -472,7 +472,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNetworkChildStructureSpatialDataResult[]> SelectNetworkChildStructureSpatialDataAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNetworkChildStructureSpatialDataResult>> SelectNetworkChildStructureSpatialDataAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -505,7 +505,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNetworkDetailsResult[]> SelectNetworkDetailsAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNetworkDetailsResult>> SelectNetworkDetailsAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -538,7 +538,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNetworkStructureIDsResult[]> SelectNetworkStructureIDsAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNetworkStructureIDsResult>> SelectNetworkStructureIDsAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -571,7 +571,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNetworkStructureLinksResult[]> SelectNetworkStructureLinksAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNetworkStructureLinksResult>> SelectNetworkStructureLinksAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -604,7 +604,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNetworkStructuresResult[]> SelectNetworkStructuresAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNetworkStructuresResult>> SelectNetworkStructuresAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -637,7 +637,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNetworkStructureSpatialDataResult[]> SelectNetworkStructureSpatialDataAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNetworkStructureSpatialDataResult>> SelectNetworkStructureSpatialDataAsync(DataTable IDs, int? Hops, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -670,7 +670,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectNumConnectionsPerStructureResult[]> SelectNumConnectionsPerStructureAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectNumConnectionsPerStructureResult>> SelectNumConnectionsPerStructureAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -690,7 +690,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectRootStructuresResult[]> SelectRootStructuresAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectRootStructuresResult>> SelectRootStructuresAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -710,7 +710,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionAnnotationsInMosaicBoundsResult[]> SelectSectionAnnotationsInMosaicBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionAnnotationsInMosaicBoundsResult>> SelectSectionAnnotationsInMosaicBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -754,7 +754,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionAnnotationsInVolumeBoundsResult[]> SelectSectionAnnotationsInVolumeBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionAnnotationsInVolumeBoundsResult>> SelectSectionAnnotationsInVolumeBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -798,7 +798,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionLocationLinksResult[]> SelectSectionLocationLinksAsync(double? Z, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionLocationLinksResult>> SelectSectionLocationLinksAsync(double? Z, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -830,7 +830,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionLocationLinksInMosaicBoundsResult[]> SelectSectionLocationLinksInMosaicBoundsAsync(double? Z, object bbox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionLocationLinksInMosaicBoundsResult>> SelectSectionLocationLinksInMosaicBoundsAsync(double? Z, object bbox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -874,7 +874,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionLocationLinksInVolumeBoundsResult[]> SelectSectionLocationLinksInVolumeBoundsAsync(double? Z, object bbox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionLocationLinksInVolumeBoundsResult>> SelectSectionLocationLinksInVolumeBoundsAsync(double? Z, object bbox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -918,7 +918,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionLocationsAndLinksResult[]> SelectSectionLocationsAndLinksAsync(double? Z, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionLocationsAndLinksResult>> SelectSectionLocationsAndLinksAsync(double? Z, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -950,7 +950,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionLocationsAndLinksInMosaicBoundsResult[]> SelectSectionLocationsAndLinksInMosaicBoundsAsync(double? Z, object BBox, double? Radius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionLocationsAndLinksInMosaicBoundsResult>> SelectSectionLocationsAndLinksInMosaicBoundsAsync(double? Z, object BBox, double? Radius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -994,7 +994,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionLocationsAndLinksInVolumeBoundsResult[]> SelectSectionLocationsAndLinksInVolumeBoundsAsync(double? Z, object BBox, double? Radius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionLocationsAndLinksInVolumeBoundsResult>> SelectSectionLocationsAndLinksInVolumeBoundsAsync(double? Z, object BBox, double? Radius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1038,7 +1038,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionStructuresResult[]> SelectSectionStructuresAsync(double? Z, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionStructuresResult>> SelectSectionStructuresAsync(double? Z, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1070,7 +1070,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionStructuresAndLinksResult[]> SelectSectionStructuresAndLinksAsync(double? Z, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionStructuresAndLinksResult>> SelectSectionStructuresAndLinksAsync(double? Z, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1102,7 +1102,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionStructuresAndLinksInMosaicBoundsResult[]> SelectSectionStructuresAndLinksInMosaicBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionStructuresAndLinksInMosaicBoundsResult>> SelectSectionStructuresAndLinksInMosaicBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1146,7 +1146,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionStructuresAndLinksInVolumeBoundsResult[]> SelectSectionStructuresAndLinksInVolumeBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionStructuresAndLinksInVolumeBoundsResult>> SelectSectionStructuresAndLinksInVolumeBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1190,7 +1190,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionStructuresInMosaicBoundsResult[]> SelectSectionStructuresInMosaicBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionStructuresInMosaicBoundsResult>> SelectSectionStructuresInMosaicBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1234,7 +1234,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectSectionStructuresInVolumeBoundsResult[]> SelectSectionStructuresInVolumeBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectSectionStructuresInVolumeBoundsResult>> SelectSectionStructuresInVolumeBoundsAsync(double? Z, object BBox, double? MinRadius, DateTime? QueryDate, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1278,7 +1278,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructureResult[]> SelectStructureAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructureResult>> SelectStructureAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1304,7 +1304,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructureChangeLogResult[]> SelectStructureChangeLogAsync(long? structure_ID, DateTime? begin_time, DateTime? end_time, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructureChangeLogResult>> SelectStructureChangeLogAsync(long? structure_ID, DateTime? begin_time, DateTime? end_time, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1342,7 +1342,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructureLabelsResult[]> SelectStructureLabelsAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructureLabelsResult>> SelectStructureLabelsAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1362,7 +1362,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructureLocationChangeLogResult[]> SelectStructureLocationChangeLogAsync(long? structure_ID, DateTime? begin_time, DateTime? end_time, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructureLocationChangeLogResult>> SelectStructureLocationChangeLogAsync(long? structure_ID, DateTime? begin_time, DateTime? end_time, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1400,7 +1400,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructureLocationLinksResult[]> SelectStructureLocationLinksAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructureLocationLinksResult>> SelectStructureLocationLinksAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1426,7 +1426,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructureLocationLinksNoChildrenResult[]> SelectStructureLocationLinksNoChildrenAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructureLocationLinksNoChildrenResult>> SelectStructureLocationLinksNoChildrenAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1452,7 +1452,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructureLocationsResult[]> SelectStructureLocationsAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructureLocationsResult>> SelectStructureLocationsAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1478,7 +1478,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructureLocationsAndLinksResult[]> SelectStructureLocationsAndLinksAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructureLocationsAndLinksResult>> SelectStructureLocationsAndLinksAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1504,7 +1504,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructuresAndLinksResult[]> SelectStructuresAndLinksAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructuresAndLinksResult>> SelectStructuresAndLinksAsync(OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1524,7 +1524,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectStructuresLinkedViaChildrenResult[]> SelectStructuresLinkedViaChildrenAsync(long? ID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectStructuresLinkedViaChildrenResult>> SelectStructuresLinkedViaChildrenAsync(long? ID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1550,7 +1550,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectUnfinishedStructureBranchesResult[]> SelectUnfinishedStructureBranchesAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectUnfinishedStructureBranchesResult>> SelectUnfinishedStructureBranchesAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1576,7 +1576,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SelectUnfinishedStructureBranchesWithPositionResult[]> SelectUnfinishedStructureBranchesWithPositionAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SelectUnfinishedStructureBranchesWithPositionResult>> SelectUnfinishedStructureBranchesWithPositionAsync(long? StructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterreturnValue = new SqlParameter
             {
@@ -1602,7 +1602,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SplitStructureResult[]> SplitStructureAsync(long? LocationIDOfSplitStructure, OutputParameter<long?> SplitStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SplitStructureResult>> SplitStructureAsync(long? LocationIDOfSplitStructure, OutputParameter<long?> SplitStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterSplitStructureID = new SqlParameter
             {
@@ -1636,7 +1636,7 @@ namespace Viking.DataModel.Annotation
             return _;
         }
 
-        public virtual async Task<SplitStructureAtLocationLinkResult[]> SplitStructureAtLocationLinkAsync(long? LocationIDOfKeepStructure, long? LocationIDOfSplitStructure, OutputParameter<long?> SplitStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+        public virtual async Task<List<SplitStructureAtLocationLinkResult>> SplitStructureAtLocationLinkAsync(long? LocationIDOfKeepStructure, long? LocationIDOfSplitStructure, OutputParameter<long?> SplitStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
         {
             var parameterSplitStructureID = new SqlParameter
             {

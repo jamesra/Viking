@@ -76,7 +76,7 @@ namespace Viking.VolumeModel
     /// </summary>
     public class MappingManager
     {
-        private VolumeModel.Volume volume;
+        private readonly VolumeModel.Volume volume;
 
         public SectionTransformsCache SectionMappingCache = new SectionTransformsCache();
 
@@ -196,8 +196,7 @@ namespace Viking.VolumeModel
                 map = section.WarpedTo[SectionMapKey];
                 map = transformsForSection.GetOrAdd(key, map);
 
-                FixedTileCountMapping fixedMapping = map as FixedTileCountMapping;
-                if (fixedMapping != null)
+                if (map is FixedTileCountMapping fixedMapping)
                 {
                     Pyramid ImagePyramid = section.ImagePyramids[ChannelName];
                     fixedMapping.CurrentPyramid = ImagePyramid;
@@ -226,10 +225,9 @@ namespace Viking.VolumeModel
                 }
 
                 map = section.CreateSectionToVolumeMapping(stosTransforms[section.Number], SectionMapKey, key);
-                FixedTileCountMapping fixedMapping = map as FixedTileCountMapping;
-                if (fixedMapping != null)
+                if (map is FixedTileCountMapping fixedMapping)
                 {
-                    Pyramid ImagePyramid = section.ImagePyramids[ChannelName];
+                    var ImagePyramid = section.ImagePyramids[ChannelName];
                     fixedMapping.CurrentPyramid = ImagePyramid;
                 }
 

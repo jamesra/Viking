@@ -1,8 +1,8 @@
 declare @ZA int 
 declare @ZB int 
 
-set @ZA = 877
-set @ZB = 878
+set @ZA = 1034
+set @ZB = 1032
 
 if OBJECT_ID('tempdb..#LocationsInZRange') is not null
 	DROP Table #LocationsInZRange
@@ -25,6 +25,11 @@ DELETE LocationLink WHERE
 
 DELETE LocationLink WHERE
 	A NOT IN (select ID from #LocationsInZRange )
+	AND 
+	B IN (select ID from #LocationsInZRange )
+
+DELETE LocationLink WHERE
+	A IN (select ID from #LocationsInZRange )
 	AND 
 	B IN (select ID from #LocationsInZRange )
 	

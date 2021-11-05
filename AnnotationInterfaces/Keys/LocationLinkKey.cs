@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Diagnostics;
 using Viking.AnnotationServiceTypes.Interfaces;
-
 namespace Viking.AnnotationServiceTypes
 {
-    public struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, IEquatable<ILocationLink>, ILocationLinkReadOnly,  IEquatable<ILocationLinkReadOnly>, IComparable<ILocationLinkReadOnly>
+    public readonly struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, IEquatable<ILocationLink>, ILocationLinkKey,  IEquatable<ILocationLinkKey>, IComparable<ILocationLinkKey>
     {
         public readonly long A;
         public readonly long B;
 
-        ulong ILocationLinkReadOnly.A => (ulong)A;
+        ulong ILocationLinkKey.A => (ulong)A;
 
-        ulong ILocationLinkReadOnly.B => (ulong)B;
+        ulong ILocationLinkKey.B => (ulong)B;
 
         public LocationLinkKey(long a, long b)
         {
@@ -20,29 +19,47 @@ namespace Viking.AnnotationServiceTypes
             B = b < a ? a : b;
         }
 
-        public LocationLinkKey(ILocationLinkReadOnly obj)
+        public LocationLinkKey(ILocationLinkKey obj)
         {
             this.A = (long)obj.A;
             this.B = (long)obj.B;
         }
 
-        public override bool Equals(object obj)
+        public ulong OtherKey(ulong key)
         {
-            if (System.Object.ReferenceEquals(this, obj))
-                return true;
-            if ((object)obj == null)
-                return false;
-            if (!typeof(LocationLinkKey).IsInstanceOfType(obj))
+            return (ulong)this.OtherKey((long)key);
+        }
+
+        /// <summary>
+        /// Returns the side of the link that doesn't match the passed key.
+        /// Throws an exception if the passed key does not match either A or B
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public long OtherKey(long key)
+        {
+            if (A == key)
+                return B;
+            if (B == key)
+                return A;
+
+            throw new ArgumentException($"{key} is not part of location link {A}-{B}");
+        }
+
+        public override bool Equals(object obj)
+        { 
+            if (obj is null)
                 return false;
 
-            LocationLinkKey other = (LocationLinkKey)obj;
+            if(obj is LocationLinkKey other)
+                return (A == other.A) && (B == other.B);
 
-            return (A == other.A) && (B == other.B);
+            return false;
         }
 
         public override string ToString()
         {
-            return A.ToString() + " - " + B.ToString();
+            return $"{A} - {B}";
         }
 
         public override int GetHashCode()
@@ -51,29 +68,13 @@ namespace Viking.AnnotationServiceTypes
         }
 
         public static bool operator ==(LocationLinkKey A, LocationLinkKey B)
-        {
-            if (System.Object.ReferenceEquals(A, B))
-            {
-                return true;
-            }
-
-            if ((object)A != null)
-                return A.Equals(B);
-
-            return false;
+        { 
+            return A.Equals(B);
         }
 
         public static bool operator !=(LocationLinkKey A, LocationLinkKey B)
-        {
-            if (System.Object.ReferenceEquals(A, B))
-            {
-                return false;
-            }
-
-            if ((object)A != null)
-                return !A.Equals(B);
-
-            return true;
+        {  
+            return !A.Equals(B);
         }
 
         public int CompareTo(LocationLinkKey other)
@@ -85,30 +86,27 @@ namespace Viking.AnnotationServiceTypes
         }
 
         public bool Equals(LocationLinkKey other)
-        {
-            if ((object)other == null)
-                return false;
-
+        {  
             return (this.A == other.A && this.B == other.B);
         }
 
         bool IEquatable<ILocationLink>.Equals(ILocationLink other)
         {
-            if ((object)other == null)
+            if (other is null)
                 return false;
 
             return ((ulong)this.A == other.A && (ulong)this.B == other.B) || ((ulong)this.B == other.A && (ulong)this.A == other.B);
         }
 
-        bool IEquatable<ILocationLinkReadOnly>.Equals(ILocationLinkReadOnly other)
+        bool IEquatable<ILocationLinkKey>.Equals(ILocationLinkKey other)
         {
-            if ((object)other == null)
+            if (other is null)
                 return false;
 
             return ((ulong)this.A == other.A && (ulong)this.B == other.B) || ((ulong)this.B == other.A && (ulong)this.A == other.B);
         }
 
-        public int CompareTo(ILocationLinkReadOnly other)
+        public int CompareTo(ILocationLinkKey other)
         {
             if (A != (long)other.A)
                 return (int)((long)other.A - A);

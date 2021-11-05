@@ -322,9 +322,9 @@ namespace Viking.ViewModels
             Viking.UI.Forms.PropertySheetForm.Show(this);
         }
 
-        public void PrepareTransform(string transform)
+        public async System.Threading.Tasks.Task PrepareTransform(string transform)
         {
-            this.section.PrepareTransform(transform);
+            await this.section.PrepareTransform(transform);
         }
 
         public IVolumeToSectionTransform ActiveSectionToVolumeTransform

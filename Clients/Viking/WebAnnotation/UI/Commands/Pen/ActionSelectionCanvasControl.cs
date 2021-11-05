@@ -57,7 +57,7 @@ namespace WebAnnotation.UI.Commands
     }
     */
 
-        CircularButton[] _Buttons = new CircularButton[0];
+        CircularButton[] _Buttons = Array.Empty<CircularButton>();
 
         CircularButton[] Buttons { get => _Buttons; }
 
@@ -172,7 +172,7 @@ namespace WebAnnotation.UI.Commands
                     }
                     else
                     {
-                        output.Union(control.BoundingBox);
+                        output += control.BoundingBox;
                     }
                 }
             }

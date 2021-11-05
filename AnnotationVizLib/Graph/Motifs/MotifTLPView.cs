@@ -160,7 +160,7 @@ namespace AnnotationVizLib
             StringBuilder sb = new StringBuilder();
 
             bool first = false;
-            foreach (IStructure s in node.Structures)
+            foreach (IStructureReadOnly s in node.Structures)
             {
                 if (!first)
                     first = true;

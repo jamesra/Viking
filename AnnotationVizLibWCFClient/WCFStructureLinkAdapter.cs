@@ -3,7 +3,7 @@ using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureLinkAdapter : IStructureLink
+    class WCFStructureLinkAdapter : IStructureLinkReadOnly
     {
         private StructureLink structureLink;
 
@@ -36,7 +36,7 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
-        public bool Equals(IStructureLink other)
+        public bool Equals(IStructureLinkReadOnly other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;

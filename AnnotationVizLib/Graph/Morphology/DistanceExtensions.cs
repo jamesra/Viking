@@ -7,7 +7,7 @@ namespace AnnotationVizLib
     {
         internal static bool NodeContainsStructureOfType(this MorphologyNode node, SortedSet<ulong> TypeIDs)
         {
-            return node.Subgraphs.Where(n => TypeIDs.Contains(n.structureType.ID)).Any();
+            return node.Subgraphs.Any(n => TypeIDs.Contains(n.structureType.ID));
         }
     }
 }

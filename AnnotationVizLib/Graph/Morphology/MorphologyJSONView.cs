@@ -43,7 +43,7 @@ namespace AnnotationVizLib
                 JSONView.Nodes.Add(new
                 {
                     ID = node.Key,
-                    Shape = node.Location.Geometry.STAsText().ToString()
+                    Shape = node.Location.VolumeGeometryWKT
                 });
             }
 
@@ -73,7 +73,7 @@ namespace AnnotationVizLib
 
             using (StringWriter fs = new StringWriter(sb))
             {
-                System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer();
+                JavaScriptSerializer oSerializer = new JavaScriptSerializer();
                 oSerializer.MaxJsonLength = 268435456;
                 fs.Write(oSerializer.Serialize(new { Morphology = this.StructureMorphologies }));
                 fs.Close();

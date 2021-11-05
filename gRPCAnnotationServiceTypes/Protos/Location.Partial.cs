@@ -16,7 +16,7 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
                 else
                     this.ClearParentId();
             }
-        }
+        } 
 
         string ILocation.Attributes { get => this.Attributes; set => this.Attributes = value; }
 
@@ -27,6 +27,8 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
         GridVector3 ILocation.VolumePosition { get => this.VolumePosition; }
 
         GridVector3 ILocation.MosaicPosition { get => this.MosaicPosition; }
+
+        DateTime ILocation.Created { get => Created.ToDateTime(); }
 
         DateTime ILocation.LastModified { get => LastModified.ToDateTime(); }
 
@@ -44,10 +46,30 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
             if (ReferenceEquals(this, other))
                 return true;
 
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.Id == other.ID;
+        }
+
+        public static explicit operator LocationChangeRequest(Location src)
+        {
+            var value = new LocationChangeRequest();
+            switch (src._DBAction)
+            {
+                case DBACTION.NONE:
+                    return null;
+                case DBACTION.INSERT:
+                    value.Create = src;
+                    break;
+                case DBACTION.UPDATE:
+                    value.Update = src;
+                    break;
+                case DBACTION.DELETE:
+                    value.Delete = src.Id;
+                    break;
+            }
+            return value;
         }
     }
 }

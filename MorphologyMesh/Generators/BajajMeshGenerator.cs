@@ -132,7 +132,7 @@ namespace MorphologyMesh
     /// </summary>
     public class SliceChordOriginTestResultsCache
     {
-        Dictionary<int, SliceChordTestType> KnownCandidateFailures = new Dictionary<int, SliceChordTestType>();
+        readonly Dictionary<int, SliceChordTestType> KnownCandidateFailures = new Dictionary<int, SliceChordTestType>();
 
         public SliceChordOriginTestResultsCache()
         {
@@ -187,7 +187,7 @@ namespace MorphologyMesh
         /// <summary>
         /// Record failures.  First level is the origin, then the targets for that origin.
         /// </summary>
-        private Dictionary<int, SliceChordOriginTestResultsCache> Failures;
+        readonly private Dictionary<int, SliceChordOriginTestResultsCache> Failures;
         
         public SliceChordsTestResultsCache()
         {
@@ -344,17 +344,11 @@ namespace MorphologyMesh
                        try
                        {
                            GenerateFaces(BajajGeneratorMeshArray[(int)i]);
-                           if (OnMeshGenerated != null)
-                           {
-                               OnMeshGenerated(BajajGeneratorMeshArray[(int)i], true);
-                           }
+                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], true);
                        }
                        catch
                        {
-                           if (OnMeshGenerated != null)
-                           {
-                               OnMeshGenerated(BajajGeneratorMeshArray[(int)i], false);
-                           }
+                           OnMeshGenerated?.Invoke(BajajGeneratorMeshArray[(int)i], false);
                        }
                    }, iMesh));
                    
@@ -678,8 +672,10 @@ namespace MorphologyMesh
                 {
                     //We have a CORRESPONDING pair on two sections
                     //We need to add these later or they mess up our indexing for faces
-                    List<int> meshIndicies = new List<int>();
-                    meshIndicies.Add(meshVertex.Index);
+                    List<int> meshIndicies = new List<int>
+                    {
+                        meshVertex.Index
+                    };
                     for (int i = 1; i < listPointIndicies.Count; i++)
                     {
                         PolygonIndex pOtherIndex = listPointIndicies[i];
@@ -1020,7 +1016,7 @@ namespace MorphologyMesh
             catch(ArgumentException)
             {
                 //A zero size triangle means it cannot contain verticies
-                contained_verts = new MorphMeshVertex[0];
+                contained_verts = Array.Empty<MorphMeshVertex>();
                 return false;
             }
 
@@ -1129,7 +1125,7 @@ namespace MorphologyMesh
             if (BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc), mesh.GetAdjacentLevelPolygons(sc), sc.Target, ChordRTree, Tests, out SliceChordTestType failures))
             {
                 
-                var edge = new MorphMeshEdge(EdgeTypeExtensions.GetEdgeType(sc.Line, mesh.Polygons[sc.Origin.iPoly], mesh.Polygons[sc.Target.iPoly]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
+                var edge = new MorphMeshEdge(EdgeTypeExtensions.GetEdgeType(in sc.Line, mesh.Polygons[sc.Origin.iPoly], mesh.Polygons[sc.Target.iPoly]), mesh[sc.Origin].Index, mesh[sc.Target].Index);
                 if (mesh.Contains(edge))
                     return false;
 
@@ -1447,7 +1443,7 @@ namespace MorphologyMesh
                     CandidateChords = CandidateChords.OrderBy(sc => sc.Line.Length).ToList();
                     break;
                 case SliceChordPriority.Orientation:
-                    CandidateChords = CandidateChords.OrderBy(sc => EdgeTypeExtensions.Orientation(sc.Origin, sc.Target, mesh.Polygons)).ToList();
+                    CandidateChords = CandidateChords.OrderBy(sc => EdgeTypeExtensions.Orientation(in sc.Origin, in sc.Target, mesh.Polygons)).ToList();
                     break;
                 default:
                     throw new ArgumentException("Unexpected slice chord priority");
@@ -1514,7 +1510,7 @@ namespace MorphologyMesh
         /// <param name="NearestContour">Nearest vertex on projection slice</param>
         /// <param name="p">Point projected</param>
         /// <returns></returns>
-        public static bool Theorem2(IReadOnlyList<GridPolygon> Polygons, PolygonIndex vertex, PolygonIndex NearestContour)
+        public static bool Theorem2(IReadOnlyList<GridPolygon> Polygons, in PolygonIndex vertex, in PolygonIndex NearestContour)
         {
             //return EdgeTypeExtensions.OrientationsAreMatched(vertex, NearestContour, Polygons);
             
@@ -1565,7 +1561,7 @@ namespace MorphologyMesh
             
         }
 
-        public static bool Theorem4(IReadOnlyList<GridPolygon> slicePolygons, PolygonIndex NearestContour, GridVector2 p1)
+        public static bool Theorem4(IReadOnlyList<GridPolygon> slicePolygons, in PolygonIndex NearestContour, GridVector2 p1)
         {
             GridVector2 p2 = NearestContour.Point(slicePolygons);
 
@@ -1573,7 +1569,7 @@ namespace MorphologyMesh
 
             foreach(GridPolygon poly in slicePolygons)
             {
-                if (!Theorem4(poly, ContourLine))
+                if (!Theorem4(poly, in ContourLine))
                     return false;
             }
 
@@ -1587,11 +1583,11 @@ namespace MorphologyMesh
         /// <param name="poly"></param>
         /// <param name="line"></param>
         /// <returns></returns>
-        public static bool Theorem4(IReadOnlyList<GridPolygon> polygons, GridLineSegment line)
+        public static bool Theorem4(IReadOnlyList<GridPolygon> polygons, in GridLineSegment line)
         {  
             foreach (GridPolygon poly in polygons)
             {
-                if (!Theorem4(poly, line))
+                if (!Theorem4(poly, in line))
                     return false;
             }
 
@@ -1605,11 +1601,11 @@ namespace MorphologyMesh
         /// <param name="poly"></param>
         /// <param name="line"></param>
         /// <returns></returns>
-        public static bool Theorem4(GridPolygon poly, GridLineSegment line)
+        public static bool Theorem4(GridPolygon poly, in GridLineSegment line)
         {
             List<GridVector2> intersections;
 
-            return !LineIntersectionExtensions.Intersects(line, poly, true, out intersections);
+            return !LineIntersectionExtensions.Intersects(in line, poly, true, out intersections);
         }
 
 
@@ -1640,7 +1636,7 @@ namespace MorphologyMesh
             if ((TestsToRun & SliceChordTestType.ChordIntersection) > 0)
             {
                 //IEnumerable<ISliceChord> existingChords = chordTree.Intersects(ChordLine.BoundingBox.ToRTreeRect(0));
-                if (chordTree.IntersectionGenerator(ChordLine.BoundingBox.ToRTreeRect(0)).Any(c => c.Line.Intersects(ChordLine, true)))
+                if (chordTree.IntersectionGenerator(ChordLine.BoundingBox).Any(c => c.Line.Intersects(in ChordLine, true)))
                 {
                     results |= SliceChordTestType.ChordIntersection;
                     return false;
@@ -1649,7 +1645,7 @@ namespace MorphologyMesh
 
             if((TestsToRun & SliceChordTestType.EdgeType) > 0)
             {
-                EdgeType edgeType = EdgeTypeExtensions.GetEdgeType(vertex, candidate, Polygons, ChordLine.PointAlongLine(0.5));
+                EdgeType edgeType = EdgeTypeExtensions.GetEdgeType(in vertex, in candidate, Polygons, ChordLine.PointAlongLine(0.5));
                 if (!edgeType.IsValid())
                 {
                     results |= SliceChordTestType.EdgeType;
@@ -1665,7 +1661,7 @@ namespace MorphologyMesh
 
             if((TestsToRun & SliceChordTestType.LineOrientation) > 0)
             {
-                AngleOrientation = EdgeTypeExtensions.OrientationsAreMatched(vertex, candidate, Polygons);
+                AngleOrientation = EdgeTypeExtensions.OrientationsAreMatched(in vertex, in candidate, Polygons);
                 if (!AngleOrientation)
                 {
                     results |= SliceChordTestType.LineOrientation;
@@ -1675,7 +1671,7 @@ namespace MorphologyMesh
 
             if ((TestsToRun & SliceChordTestType.Theorem2) > 0)
             {
-                T2 = Theorem2(Polygons, vertex, candidate);
+                T2 = Theorem2(Polygons, in vertex, candidate);
                 if (!T2)
                 {
                     results |= SliceChordTestType.Theorem2;
@@ -1824,7 +1820,8 @@ namespace MorphologyMesh
         {
             double distance;
             GridVector2 p = vertex.Point(Polygons);
-            PolygonIndex NearestPoint = OppositeVertexTree.FindNearest(p, out distance);
+            bool found = OppositeVertexTree.TryFindNearest(p, out var NearestPoint, out distance);
+            Debug.Assert(found);
             SliceChordTestType failures;
 
             if (IsSliceChordValid(vertex, Polygons, SameLevelPolys, AdjacentLevelPolys, NearestPoint, chordTree, TestsToRun, out failures))
@@ -1881,9 +1878,10 @@ namespace MorphologyMesh
         {
             double distance;
             GridVector2 p = vertex.Position.XY();
-            MorphMeshVertex NearestPoint = OppositeVertexTree.FindNearest(p, out distance);
+            bool found = OppositeVertexTree.TryFindNearest(p, out var NearestPoint, out distance);
+            Debug.Assert(found);
             BajajGeneratorMesh bajajMesh = mesh as BajajGeneratorMesh;
-            SliceChordOriginTestResultsCache KnownCandidateFailures = bajajMesh == null ? null : bajajMesh.SliceChordCandidateCache.GetFailuresForOrigin(vertex.Index);
+            SliceChordOriginTestResultsCache KnownCandidateFailures = bajajMesh?.SliceChordCandidateCache.GetFailuresForOrigin(vertex.Index);
             SliceChordTestType failures;
 
             if (NearestPoint.FacesAreComplete == false) //An optimization from profiling. 
@@ -2176,7 +2174,7 @@ namespace MorphologyMesh
             GridPolygon[] PolysOnLevel = polyset.Select(iPoly => mesh.Polygons[iPoly]).ToArray();
 
             GridRectangle bbox = PolysOnLevel.BoundingBox();
-            bbox.Scale(1.05);
+            bbox *= 1.05;
             QuadTree<MorphMeshVertex> quadTree = new QuadTree<MorphMeshVertex>(bbox);
 
             var Verts = mesh.MorphVerticies.Where(v => v.Type == VertexOrigin.CONTOUR && v.PolyIndex.HasValue && polyset.Contains(v.PolyIndex.Value.iPoly));
@@ -2222,7 +2220,7 @@ namespace MorphologyMesh
         private static QuadTree<PolygonIndex> BuildQuadTreeForPolyGroup(GridPolygon[] PolysOnLevel, IReadOnlyList<int> iPolyLookup)
         {
             GridRectangle bbox = PolysOnLevel.BoundingBox();
-            bbox.Scale(1.05);
+            bbox *= 1.05;
             QuadTree<PolygonIndex> quadTree = new QuadTree<PolygonIndex>(bbox);
 
             for(int i = 0; i < PolysOnLevel.Length; i++)
@@ -2308,7 +2306,7 @@ namespace MorphologyMesh
         private static QuadTree<PolygonIndex> BuildQuadTreeForPolyGroup(IEnumerable<PolygonIndex> Candidates, IReadOnlyList<GridPolygon> PointIndexablePolygons,  GridPolygon[] PolysOnLevel)
         {
             GridRectangle bbox = PolysOnLevel.BoundingBox();
-            bbox.Scale(1.05);
+            bbox *= 1.05;
             QuadTree<PolygonIndex> quadTree = new QuadTree<PolygonIndex>(bbox);
 
             foreach (var VertGroup in Candidates.GroupBy(p => p.iPoly))
@@ -2335,8 +2333,10 @@ namespace MorphologyMesh
             other_nodes = edges.Select(e => graph.Nodes[e.SourceNodeKey == node.Key ? e.TargetNodeKey : e.SourceNodeKey]).ToArray();
 
             //Build a set of all polygons in the nodes
-            List<GridPolygon> Polygons = new List<GridPolygon>();
-            Polygons.Add(node.CapPort.ToPolygon(node.Mesh.Verticies));
+            List<GridPolygon> Polygons = new List<GridPolygon>
+            {
+                node.CapPort.ToPolygon(node.Mesh.Verticies)
+            };
 
             //Need a map of verticies to Polygon/Index number
             foreach (MeshNode branchNode in other_nodes)
@@ -2350,8 +2350,10 @@ namespace MorphologyMesh
                 SmootherMeshGenerator.MergeMeshes(node, other_node);
             }
 
-            List<MeshNode> AllNodes = new List<MorphologyMesh.MeshNode>();
-            AllNodes.Add(node);
+            List<MeshNode> AllNodes = new List<MorphologyMesh.MeshNode>
+            {
+                node
+            };
             AllNodes.AddRange(other_nodes);
 
             Dictionary<GridVector3, long> VertexToMeshIndex = CreateVertexToMeshIndexMap(node.Mesh, AllNodes.Select(n => n.CapPort));
@@ -2493,7 +2495,7 @@ namespace MorphologyMesh
                 GridVector2 v = node.Mesh.Verticies[(int)port.ExternalBorder[iVertex]].Position.XY();
                 if (!pointToConnectedPolys.ContainsKey(v))
                 {
-                    VertexInPort[iVertex] = iVertex > 0 ? VertexInPort[iVertex - 1] : false;
+                    VertexInPort[iVertex] = iVertex > 0 && VertexInPort[iVertex - 1];
                     continue;
                 }
 
@@ -2542,7 +2544,7 @@ namespace MorphologyMesh
                 GridVector2 v = node.Mesh.Verticies[(int)port.ExternalBorder[iVertex]].Position.XY();
                 if (!pointToConnectedPolys.ContainsKey(v))
                 {
-                    VertexInPort[iVertex] = iVertex > 0 ? VertexInPort[iVertex - 1] : false;
+                    VertexInPort[iVertex] = iVertex > 0 && VertexInPort[iVertex - 1];
                     continue;
                 }
 

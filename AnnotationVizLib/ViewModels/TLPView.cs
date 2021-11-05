@@ -186,7 +186,7 @@ namespace AnnotationVizLib
 
         private string NodesString(IEnumerable<ulong> node_ids)
         {
-            if (node_ids.Count() == 0)
+            if (!node_ids.Any())
                 return "";
 
             using (StringWriter sw = new StringWriter())
@@ -194,7 +194,7 @@ namespace AnnotationVizLib
                 sw.Write("(nodes ");
                 foreach (long id in node_ids)
                 {
-                    sw.Write(string.Format("{0} ", id));
+                    sw.Write($"{id} ");
                 }
                 sw.WriteLine(TLPFile.GenericFooter);
 
@@ -204,7 +204,7 @@ namespace AnnotationVizLib
 
         private string EdgesString(IEnumerable<ulong> edge_ids)
         {
-            if (edge_ids.Count() == 0)
+            if (!edge_ids.Any())
                 return "";
 
             using (StringWriter sw = new StringWriter())
@@ -212,7 +212,7 @@ namespace AnnotationVizLib
                 sw.Write("(edges ");
                 foreach (long id in edge_ids)
                 {
-                    sw.Write(string.Format("{0} ", id));
+                    sw.Write($"{id} ");
                 }
                 sw.WriteLine(TLPFile.GenericFooter);
 

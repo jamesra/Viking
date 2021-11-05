@@ -145,7 +145,7 @@ namespace WebAnnotation.UI.Commands
 
         protected int? IndexOfOverlappedVertex(GridVector2 position)
         {
-            for (int i = 0; i < this.Verticies.Count(); i++)
+            for (int i = 0; i < this.Verticies.Length; i++)
             {
                 bool overlaps = GridVector2.Distance(this.Verticies[i], position) <= ControlPointRadius;
                 if (overlaps)

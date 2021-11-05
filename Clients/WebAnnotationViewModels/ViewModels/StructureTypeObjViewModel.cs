@@ -182,8 +182,7 @@ namespace Annotation.ViewModels
         }
 
         private bool CanAssignParent(StructureTypeObj arg)
-        {
-            
+        { 
             if (arg == null)
                 return true;  //We can make it a root node
 

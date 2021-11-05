@@ -123,10 +123,6 @@
     <Compile Include="Views\MorphologyStickView.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\AnnotationInterfaces\AnnotationInterfaces.csproj">
-      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
-      <Name>AnnotationInterfaces</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\AnnotationVizLibSimpleODataClient\AnnotationVizLibSimpleODataClient.csproj">
       <Project>{b3a4f95d-a8ac-4094-9dda-22dc972d7e5d}</Project>
       <Name>AnnotationVizLibSimpleODataClient</Name>

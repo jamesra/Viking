@@ -8,6 +8,7 @@ using System.Linq;
 using System.Windows.Data;
 using WebAnnotation.WPF.MockData;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.WPF.Converters
 {
@@ -31,13 +32,13 @@ namespace WebAnnotation.WPF.Converters
                 return value; 
 
             List<long> IDs = new List<long>(); 
-            if(value is IStructureType s)
+            if(value is IStructureTypeReadOnly s)
             {
                 return s; 
             }
-            else if(value is IEnumerable<IStructureType>)
+            else if(value is IEnumerable<IStructureTypeReadOnly>)
             { 
-                return value as IEnumerable<IStructureType>;
+                return value as IEnumerable<IStructureTypeReadOnly>;
             }
             else if(value is IEnumerable<MockStructureType>)
             {
@@ -85,7 +86,7 @@ namespace WebAnnotation.WPF.Converters
             {
                 return Store.StructureTypes.GetObjectsByIDs(((IEnumerable<int>)IDs).Select(i=> (long)i).ToArray(), true);
             }
-            else if (value is IEnumerable<IStructureType>)
+            else if (value is IEnumerable<IStructureTypeReadOnly>)
             {
                 return value;
             }
@@ -139,10 +140,10 @@ namespace WebAnnotation.WPF.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is IStructureType == false || value is IEnumerable<IStructureType>)
+            if (value is IStructureTypeReadOnly == false || value is IEnumerable<IStructureTypeReadOnly>)
                 throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter ConvertBack back expects a StructureObj, but got {0}", value.ToString()));
 
-            if (value is IStructureType t)
+            if (value is IStructureTypeReadOnly t)
             { 
                 return t.ID;
             }
@@ -157,9 +158,9 @@ namespace WebAnnotation.WPF.Converters
 
                 return IDs;
             }
-            else if (value is IEnumerable<IStructureType>)
+            else if (value is IEnumerable<IStructureTypeReadOnly>)
             {
-                var values = (IEnumerable<IStructureType>)value;
+                var values = (IEnumerable<IStructureTypeReadOnly>)value;
                 List<ulong> IDs = new List<ulong>();
                 foreach (var obj in values)
                 {

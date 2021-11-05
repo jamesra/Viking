@@ -74,7 +74,7 @@ namespace VikingXNAGraphics
                     Points_X_View.LabelColor = Color.White;
 
                     GridRectangle rect = Points_X.BoundingBox();
-                    rect.Scale(1.05);
+                    rect *= 1.05;
                     BoundingBox = rect; 
                 }
 

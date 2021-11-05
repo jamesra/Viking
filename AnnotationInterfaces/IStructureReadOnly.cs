@@ -13,7 +13,7 @@ namespace Viking.AnnotationServiceTypes.Interfaces
 
         string Label { get; }
 
-        ICollection<IStructureLinkReadOnly> Links
+        ICollection<IStructureLinkKey> Links
         {
             get;
         }
@@ -24,6 +24,10 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         }
 
         string TagsXML { get; }
+
+        IReadOnlyDictionary<string, string> Attributes { get; }
+        double Confidence { get; }
+        string Notes { get; }
     }
 
     public interface IStructure : IEquatable<IStructure>, IDataObjectWithParent<long>

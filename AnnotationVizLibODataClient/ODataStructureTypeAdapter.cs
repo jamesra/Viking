@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace AnnotationVizLib.OData
 {
-    class ODataStructureTypeAdapter : IStructureType
+    class ODataStructureTypeAdapter : IStructureTypeReadOnly
     {
         private StructureType type;
         public ODataStructureTypeAdapter(StructureType t)
@@ -55,7 +55,7 @@ namespace AnnotationVizLib.OData
             }
         }
 
-        public bool Equals(IStructureType other)
+        public bool Equals(IStructureTypeReadOnly other)
         {
             if (object.ReferenceEquals(other, null))
                 return false;
@@ -68,7 +68,7 @@ namespace AnnotationVizLib.OData
 
         public bool Equals(StructureType other)
         {
-            return this.Equals((IStructureType)other);
+            return this.Equals((IStructureTypeReadOnly)other);
         }
     }
 }

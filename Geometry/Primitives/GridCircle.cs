@@ -559,5 +559,7 @@ namespace Geometry
         }
 
         public IPoint2D Centroid => Center;
+
+        GridVector2 IShape2D.Centroid => ((IShape2D)Center).Centroid;
     }
 }

@@ -36,7 +36,7 @@ namespace MorphologyMesh
     /// <summary>
     /// Represents where in an medial axis graph the vertex originated
     /// </summary>
-    public struct MedialAxisIndex
+    public readonly struct MedialAxisIndex
     {
         public readonly MedialAxisGraph MedialAxisGraph;
         public readonly MedialAxisVertex Vertex; 
@@ -143,8 +143,10 @@ namespace MorphologyMesh
                     //Populate the correspoinding field, and ensure the positions are 100% identical
                     int corresponding_vertex = PositionToIndex[v.Position.XY()];
                     MorphMeshVertex corresponding = mesh[corresponding_vertex];
-                    v = new MorphMeshVertex(i1, corresponding.Position.XY().ToGridVector3(v.Position.Z)); //Ensure the position is identical
-                    v.Corresponding = corresponding_vertex;
+                    v = new MorphMeshVertex(i1, corresponding.Position.XY().ToGridVector3(v.Position.Z))
+                    {
+                        Corresponding = corresponding_vertex
+                    }; //Ensure the position is identical
 
                     //Add new vert to mesh with matching position and create corresponding edge
                     iV = mesh.AddVertex(v);
@@ -271,7 +273,7 @@ namespace MorphologyMesh
             return (MorphMeshVertex)Verticies[key];
         }
 
-        public int AddVertex(MorphMeshVertex v)
+        public new int AddVertex(MorphMeshVertex v)
         {
             int iVert = base.AddVertex(v);
             if(v.PolyIndex.HasValue)
@@ -341,7 +343,7 @@ namespace MorphologyMesh
         {
             get
             {
-                foreach (IVertex v in this.Verticies)
+                foreach (MorphMeshVertex v in this.Verticies)
                 {
                     yield return (MorphMeshVertex)v;
                 }
@@ -513,9 +515,11 @@ namespace MorphologyMesh
                         int iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
                         int iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
 
-                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2);
-                        listFaces.Add(new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }));
-                        listFaces.Add(new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] }));
+                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2)
+                        {
+                            new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }),
+                            new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] })
+                        };
                         return listFaces;
                     }
                     else
@@ -525,9 +529,11 @@ namespace MorphologyMesh
                         int iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
                         int iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
 
-                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2);
-                        listFaces.Add(new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }));
-                        listFaces.Add(new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] }));
+                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2)
+                        {
+                            new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }),
+                            new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] })
+                        };
                         return listFaces;
                     }
                 }
@@ -720,7 +726,7 @@ namespace MorphologyMesh
                 return Face;
             }
 
-            MorphMeshVertex corresponding = mesh[Face].Where(v => v.Corresponding.HasValue).First();
+            MorphMeshVertex corresponding = mesh[Face].First(v => v.Corresponding.HasValue);
 
 #if DEBUG
             throw new NotImplementedException(string.Format("Corresponding points in region {0}", corresponding.PolyIndex));
@@ -1080,8 +1086,10 @@ namespace MorphologyMesh
         /// <returns></returns>
         private SortedSet<MorphMeshFace> FloodFillRegionRecurse(MorphMeshFace f, FaceMeetsCriteriaFunction faceMeetsCriteriaFunc, EdgeMeetsCriteriaFunc EdgeMeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
         {
-            SortedSet<MorphMeshFace> region = new SortedSet<MorphMeshFace>();
-            region.Add(f);
+            SortedSet<MorphMeshFace> region = new SortedSet<MorphMeshFace>
+            {
+                f
+            };
             CheckedFaces.Add(f);
 
             foreach (MorphMeshFace adjacent in f.AdjacentFaces(this, EdgeMeetsCriteriaFunc))

@@ -387,11 +387,9 @@ namespace ServiceTest
             AddPrincipalToThread();
 
             AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
-
-            Structure[] structures;
             long[] deletedStructures;
             long StructureQueryTime;
-            structures = target.GetStructuresForSection(250, 0, out StructureQueryTime, out deletedStructures);
+            Structure[] structures = target.GetStructuresForSection(250, 0, out StructureQueryTime, out deletedStructures);
 
             Assert.IsTrue(structures.Length > 0);
             

@@ -14,7 +14,7 @@ namespace Viking.VolumeModel
     /// 
     public class SectionToVolumeMapping : FixedTileCountMapping
     {
-        private object LockObj = new object();
+        private readonly object LockObj = new object();
 
         /// <summary>
         /// If this section is in a volume ReferencedTo indicates which section
@@ -94,13 +94,8 @@ namespace Viking.VolumeModel
                 SourceMapping.FreeMemory();
             }
         }
-
-        public void Warp(Object state)
-        {
-            Warp();
-        }
-
-        private SemaphoreSlim LoadTransformSemaphore = new SemaphoreSlim(1, 1);
+          
+        private readonly SemaphoreSlim LoadTransformSemaphore = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// If this section has not yet been warped, then do so.
@@ -288,7 +283,7 @@ namespace Viking.VolumeModel
             return this.VolumeTransform.TryTransform(P, out transformedP);
         }
 
-        public override TilePyramid  VisibleTiles(GridRectangle VisibleBounds, double DownSample)
+        public override TilePyramid VisibleTiles(in GridRectangle VisibleBounds, double DownSample)
         {
             if (VolumeTransform != null)
             {

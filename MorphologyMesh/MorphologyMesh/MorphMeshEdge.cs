@@ -30,7 +30,7 @@ namespace MorphologyMesh
             return new MorphMeshEdge(EdgeType.UNKNOWN, A, B);
         }
 
-        public ImmutableSortedSet<MorphMeshFace> Faces
+        public new ImmutableSortedSet<MorphMeshFace> Faces
         {
             get
             {
@@ -55,7 +55,7 @@ namespace MorphologyMesh
             }
         }
 
-        public static new IEdge Duplicate(IEdge old, int A, int B)
+        public static IEdge Duplicate(IEdge old, int A, int B)
         {
             MorphMeshEdge edge = old as MorphMeshEdge;
             if (edge != null)

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Viking.Common;
 using Viking.ViewModels;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
@@ -59,7 +60,7 @@ namespace WebAnnotation.ViewModel
 
         protected void AddLocationLinks(LocationObj loc, bool subscribe)
         {
-            foreach (long linkedID in loc.LinksCopy)
+            foreach (long linkedID in loc.CopyLinksAsync)
             {
                 LocationLinkKey linkKey = new LocationLinkKey(loc.ID, linkedID);
                 AddLocationLink(linkKey, subscribe);
@@ -68,7 +69,7 @@ namespace WebAnnotation.ViewModel
 
         protected void RemoveLocationLinks(LocationObj loc, bool unsubscribe)
         {
-            foreach (long linkedID in loc.LinksCopy)
+            foreach (long linkedID in loc.CopyLinksAsync)
             {
                 LocationLinkKey linkKey = new LocationLinkKey(loc.ID, linkedID);
                 RemoveLocationLink(linkKey, unsubscribe);

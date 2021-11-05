@@ -168,7 +168,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj">
-      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
+      <Project>{660256d5-ae05-48cf-9821-4e5c00131410}</Project>
       <Name>AnnotationInterfaces</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\AnnotationVizLibSimpleODataClient\AnnotationVizLibSimpleODataClient.csproj">
@@ -246,13 +246,13 @@
       <Version>2.8.0</Version>
     </PackageReference>
     <PackageReference Include="EntityFramework">
-      <Version>6.2.0</Version>
+      <Version>6.4.4</Version>
     </PackageReference>
     <PackageReference Include="FsCheck">
-      <Version>2.15.2</Version>
+      <Version>2.16.3</Version>
     </PackageReference>
     <PackageReference Include="FSharp.Core">
-      <Version>4.7.2</Version>
+      <Version>6.0.0</Version>
     </PackageReference>
     <PackageReference Include="MathNet.Numerics">
       <Version>4.15.0</Version>

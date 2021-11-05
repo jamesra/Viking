@@ -33,7 +33,7 @@ namespace MorphologyMesh
          
         public bool Equals(MeshChord other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.iOrigin == other.iOrigin && this.iTarget == other.iTarget;
@@ -41,7 +41,7 @@ namespace MorphologyMesh
 
         public bool Equals(ISliceChord other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.Line.Equals(other.Line);
@@ -71,7 +71,7 @@ namespace MorphologyMesh
 
         public bool Equals(SliceChord other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.Origin == this.Origin &&
@@ -83,7 +83,7 @@ namespace MorphologyMesh
 
         public override bool Equals(object obj)
         {
-            if (object.ReferenceEquals(obj, null))
+            if (obj is null)
                 return false;
 
             SliceChord other = obj as SliceChord;
@@ -110,7 +110,7 @@ namespace MorphologyMesh
 
         public bool Equals(ISliceChord other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.Line.Equals(other.Line);
@@ -118,11 +118,8 @@ namespace MorphologyMesh
 
         bool IEquatable<ISliceChord>.Equals(ISliceChord other)
         {
-            SliceChord cast_other = other as SliceChord;
-            if(cast_other != null)
-            {
-                return this.Equals(cast_other);
-            }
+            if (other is SliceChord cast_other)
+                return Equals(cast_other);
 
             return this.Line.Equals(other.Line);
         }

@@ -252,7 +252,7 @@ namespace Viking.VolumeModel
         /// <param name="transform"></param>
         /// <param name="VisibleBounds"></param>
         /// <returns></returns>
-        protected List<MappingGridVector2> VisibleBoundsCorners(GridRectangle VisibleBounds)
+        protected List<MappingGridVector2> VisibleBoundsCorners(in GridRectangle VisibleBounds)
         {
             GridVector2[] VolumeRectCorners = new GridVector2[] {   VisibleBounds.LowerLeft,
                                                                     VisibleBounds.LowerRight,
@@ -270,7 +270,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="VisibleBounds">Visible region of the section</param>
         /// <returns></returns>
-        public abstract TilePyramid VisibleTiles(GridRectangle VisibleBounds,
+        public abstract TilePyramid VisibleTiles(in GridRectangle VisibleBounds,
                                                  double DownSample
                                                  );
 
@@ -283,7 +283,8 @@ namespace Viking.VolumeModel
                                                  double DownSample
                                                  )
         {
-            return System.Threading.Tasks.Task<TilePyramid>.Run(() => VisibleTiles(VisibleBounds, DownSample));
+            var vb = VisibleBounds;
+            return System.Threading.Tasks.Task<TilePyramid>.Run(() => VisibleTiles(in vb, DownSample));
         }
 
 

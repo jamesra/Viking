@@ -103,17 +103,17 @@ namespace AnnotationVizLib
     public class MotifNode : Node<string, MotifEdge>
     {
         //Structures that belong to this node
-        public List<IStructure> Structures;
+        public List<IStructureReadOnly> Structures;
 
         public int StructureCount
         {
             get { return Structures.Count; }
         }
 
-        public MotifNode(string key, IEnumerable<IStructure> value)
+        public MotifNode(string key, IEnumerable<IStructureReadOnly> value)
             : base(key)
         {
-            this.Structures = new List<IStructure>();
+            this.Structures = new List<IStructureReadOnly>();
             this.Structures.AddRange(value);
         }
 
@@ -151,7 +151,7 @@ namespace AnnotationVizLib
         {
             string Label = this.Key;
 
-            foreach (IStructure s in Structures)
+            foreach (IStructureReadOnly s in Structures)
             {
                 Label = Label + ", " + s.ID.ToString();
             }

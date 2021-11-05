@@ -15,4 +15,15 @@ namespace Viking.AnnotationServiceTypes.Interfaces
     {
         T ID { get; set; }
     }
+
+    /// <summary>
+    /// A data object that can be linked to other data objects 
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public interface IDataObjectLinks<LINK_KEY, LINK_OBJECT>
+    {  
+        Task<bool> AddLinkAsync(LINK_OBJECT ID);
+
+        Task<bool> RemoveLinkAsync(LINK_KEY key);
+    }
 }

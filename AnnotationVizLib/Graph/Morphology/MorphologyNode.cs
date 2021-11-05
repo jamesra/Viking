@@ -12,36 +12,32 @@ namespace AnnotationVizLib
     [Serializable]
     public class MorphologyNode : Node<ulong, MorphologyEdge>, IGeometry
     {
-        public ILocation Location = null;
+        public ILocationReadOnly Location = null;
 
         public ulong ID { get { return this.Location.ID; } }
 
         //Structure this node represents 
         public MorphologyGraph Graph;
 
-        public MorphologyNode(ulong key, ILocation Location, MorphologyGraph parent)
+        public MorphologyNode(ulong key, ILocationReadOnly Location, MorphologyGraph parent)
             : base(key)
         {
             this.Graph = parent;
             this.Location = Location;
         }
 
-        private SqlGeometry _geometry = null;
-        public SqlGeometry Geometry
+        private IShape2D _geometry = null;
+        public IShape2D Geometry
         {
             get
             {
-                if (_geometry == null)
-                {
-                    _geometry = Location.Geometry;
-                }
+                if (_geometry != null)
+                    return _geometry;
+
+                _geometry = Location.VolumeGeometryWKT.ParseWKT();
                 return _geometry;
             }
-            set
-            {
-                _geometry = value;
-            }
-
+            set => _geometry = value; 
         }
 
         public double Z { get { return Location.Z; } }
@@ -57,7 +53,7 @@ namespace AnnotationVizLib
         {
             get
             {
-                GridRectangle rect = Geometry.BoundingBox();
+                GridRectangle rect = Geometry.BoundingBox;
                 GridVector3 botleft = new GridVector3(rect.Left, rect.Bottom, Z - Graph.SectionThickness / 2.0);
                 GridVector3 topright = new GridVector3(rect.Right, rect.Top, Z + Graph.SectionThickness / 2.0);
 
@@ -70,7 +66,7 @@ namespace AnnotationVizLib
         {
             get
             {
-                GridVector2 c = Geometry.Centroid();
+                GridVector2 c = Geometry.Centroid;
                 return new GridVector3(c.X, c.Y, Z);
             }
         }

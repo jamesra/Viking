@@ -17,6 +17,7 @@ using Viking.ViewModels;
 using Viking.VolumeModel;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
@@ -561,8 +562,8 @@ namespace WebAnnotation.ViewModel
             //Update if a position or everything has changed
             if (LocationObj.IsGeometryProperty(e.PropertyName))
             {
-                SectionAbove?.RemoveLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionAbove.SectionNumber));
-                SectionBelow?.RemoveLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionBelow.SectionNumber));
+                SectionAbove?.RemoveLocations(Store.Locations.GetObjectsByIDs(loc.CopyLinksAsync, false).Where(l => l.Z == SectionAbove.SectionNumber));
+                SectionBelow?.RemoveLocations(Store.Locations.GetObjectsByIDs(loc.CopyLinksAsync, false).Where(l => l.Z == SectionBelow.SectionNumber));
                 //                Location locView = new Location(loc);
                 LocationObj[] locs = new LocationObj[] { loc };
                 RemoveOverlappedLocations(locs);
@@ -596,8 +597,8 @@ namespace WebAnnotation.ViewModel
                 LocationObj[] locs = new LocationObj[] { loc };
                 AddLocationBatch(locs);
 
-                SectionAbove?.AddLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionAbove.SectionNumber));
-                SectionBelow?.AddLocations(Store.Locations.GetObjectsByIDs(loc.LinksCopy, false).Where(l => l.Z == SectionBelow.SectionNumber));
+                SectionAbove?.AddLocations(Store.Locations.GetObjectsByIDs(loc.CopyLinksAsync, false).Where(l => l.Z == SectionAbove.SectionNumber));
+                SectionBelow?.AddLocations(Store.Locations.GetObjectsByIDs(loc.CopyLinksAsync, false).Where(l => l.Z == SectionBelow.SectionNumber));
             }
             else
             {
@@ -616,7 +617,7 @@ namespace WebAnnotation.ViewModel
 
         private List<LocationObj> LocationsOnOurSectionLinkedFromSet(IEnumerable<LocationObj> locations)
         {
-            List<long> LocationIDs = locations.SelectMany(l => l.LinksCopy).Where(id => this.KnownLocations.Contains(id)).Distinct().ToList();
+            List<long> LocationIDs = locations.SelectMany(l => l.CopyLinksAsync).Where(id => this.KnownLocations.Contains(id)).Distinct().ToList();
             return Store.Locations.GetObjectsByIDs(LocationIDs, false);
         }
 
@@ -955,7 +956,7 @@ namespace WebAnnotation.ViewModel
             {
                 ICollection<LocationLinkKey> overlapped_links = loc.Links.Select(l => new LocationLinkKey(l, loc.ID)).Where(linkKey => SectionLocationLinks.OverlappedLinkKeys.Contains(linkKey)).ToList();
 
-                //long[] overlapped_links = loc.LinksCopy.Where(id => SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(id)).ToArray();
+                //long[] overlapped_links = loc.CreateCopyAsync.Where(id => SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(id)).ToArray();
                 if (overlapped_links.Count > 0)
                 {
                     if (LocationViews.ContainsKey(loc.ID))

@@ -120,7 +120,7 @@ namespace MonogameTestbed
 
             GridPolygon[] UseableShapes = Shapes.Where(s => s != null).ToArray();
 
-            if (UseableShapes.Count() == 0)
+            if (UseableShapes.Length == 0)
                 return;
              
             GridRectangle BranchPortBoundingRect = BranchShape.BoundingBox;

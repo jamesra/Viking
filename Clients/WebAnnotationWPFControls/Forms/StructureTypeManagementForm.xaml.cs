@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.WPF.Forms
 {
@@ -53,7 +54,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 FrameworkElement element = sender as FrameworkElement;
                 DataObject data = new DataObject(element.DataContext);
-                data.SetData(typeof(IStructureType), element.DataContext);
+                data.SetData(typeof(IStructureTypeReadOnly), element.DataContext);
                 DragDrop.DoDragDrop(element, data, DragDropEffects.Link);
                 e.Handled = true;
             }
