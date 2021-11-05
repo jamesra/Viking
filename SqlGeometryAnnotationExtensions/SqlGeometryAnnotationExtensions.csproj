@@ -78,10 +78,13 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework">
-      <Version>6.2.0</Version>
+      <Version>6.4.4</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.SqlServer.Types">
       <Version>14.0.1016.290</Version>
+    </PackageReference>
+    <PackageReference Include="System.Security.Cryptography.X509Certificates">
+      <Version>4.3.2</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

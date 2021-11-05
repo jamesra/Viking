@@ -1,37 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <StartArguments>
-    </StartArguments>
-    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
-    <EnableSQLServerDebugging>false</EnableSQLServerDebugging>
-    <StartAction>Project</StartAction>
-    <StartURL>http://connectomes.utah.edu/softwaretest/viking.application?http://155.100.104.153/Cornea/Volume.VikingXML</StartURL>
-    <RemoteDebugEnabled>false</RemoteDebugEnabled>
-    <RemoteDebugMachine>Opr-marc-JAL2</RemoteDebugMachine>
-    <StartProgram>\\OPR-MARC-JANUC\Viking\Debug\Viking.exe</StartProgram>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <StartArguments>http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXml</StartArguments>
-    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
-    <StartAction>Project</StartAction>
-    <StartProgram>\\OPR-MARC-JANUC\Viking\Debug\Viking.exe</StartProgram>
-    <StartWorkingDirectory>
-    </StartWorkingDirectory>
-    <RemoteDebugEnabled>false</RemoteDebugEnabled>
-    <RemoteDebugMachine>OpR-Marc-JAL2</RemoteDebugMachine>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PublishUrlHistory>C:\Src\git\VikingLegacy\Publish\</PublishUrlHistory>
+    <InstallUrlHistory>https://internal.connectomes.utah.edu/Software/Viking/</InstallUrlHistory>
+    <SupportUrlHistory>http://connectomes.utah.edu/</SupportUrlHistory>
+    <UpdateUrlHistory />
+    <BootstrapperUrlHistory />
+    <ErrorReportUrlHistory>http://connectomes.utah.edu/client/installationerror.html</ErrorReportUrlHistory>
+    <FallbackCulture>en-US</FallbackCulture>
+    <VerifyUploadedFiles>false</VerifyUploadedFiles>
   </PropertyGroup>
   <PropertyGroup>
-    <PublishUrlHistory>C:\Src\git\Viking\Publish\|Z:\Volumes\Software\Viking4Test\|X:\Volumes\Software\Viking4Test\|X:\Volumes\Software\Viking4\|C:\Src\Viking\Publish\</PublishUrlHistory>
-    <InstallUrlHistory>https://connectomes.utah.edu/Software/Viking4/|http://connectomes.utah.edu/Software/Viking4/|http://connectomes.utah.edu/Software/Viking4Test/|http://connectomes.utah.edu/SoftwareTest/|http://connectomes.utah.edu/Software/</InstallUrlHistory>
-    <SupportUrlHistory>http://connectomes.utah.edu/</SupportUrlHistory>
-    <UpdateUrlHistory>https://connectomes.utah.edu/Software/Viking4/</UpdateUrlHistory>
-    <BootstrapperUrlHistory>
-    </BootstrapperUrlHistory>
-    <ErrorReportUrlHistory>http://connectomes.utah.edu/client/versionhistory.html|http://connectomes.utah.edu/</ErrorReportUrlHistory>
-    <FallbackCulture>en-US</FallbackCulture>
-    <VerifyUploadedFiles>true</VerifyUploadedFiles>
-    <ProjectView>ShowAllFiles</ProjectView>
     <EnableSecurityDebugging>false</EnableSecurityDebugging>
   </PropertyGroup>
 </Project>

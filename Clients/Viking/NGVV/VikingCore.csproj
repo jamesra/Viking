@@ -163,6 +163,7 @@
     <Compile Include="Threading\DisposeTextureThreadingObj.cs" />
     <Compile Include="ExtensionManager.cs" />
     <Compile Include="Threading\StreamToTexture.cs" />
+    <Compile Include="Threading\TextureData.cs" />
     <Compile Include="Threading\TextureReaderV2.cs" />
     <Compile Include="Threading\TextureRequestQueue.cs" />
     <Compile Include="TileViewModelCache.cs" />
@@ -496,7 +497,6 @@
     <Compile Include="UI\Command\ROIRectCommand.cs" />
     <Compile Include="TextureCache.cs">
     </Compile>
-    <Compile Include="Threading\TextureReader.cs" />
     <Compile Include="UI\TouchSupport.cs" />
     <Compile Include="Util\BmpWriter.cs" />
     <Compile Include="Util\OpenConnectomeProject.cs" />

@@ -173,7 +173,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework">
-      <Version>6.2.0</Version>
+      <Version>6.4.4</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Net.Http">
       <Version>2.2.29</Version>
@@ -183,6 +183,9 @@
     </PackageReference>
     <PackageReference Include="protobuf-net">
       <Version>2.0.0.668</Version>
+    </PackageReference>
+    <PackageReference Include="System.Security.Cryptography.X509Certificates">
+      <Version>4.3.2</Version>
     </PackageReference>
     <PackageReference Include="System.Spatial">
       <Version>5.8.4</Version>
