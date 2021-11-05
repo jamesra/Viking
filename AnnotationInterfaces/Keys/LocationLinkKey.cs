@@ -4,7 +4,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes
 {
-    public struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, IEquatable<ILocationLink>, ILocationLinkReadOnly,  IEquatable<ILocationLinkReadOnly>, IComparable<ILocationLinkReadOnly>
+    public readonly struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, IEquatable<ILocationLink>, ILocationLinkReadOnly,  IEquatable<ILocationLinkReadOnly>, IComparable<ILocationLinkReadOnly>
     {
         public readonly long A;
         public readonly long B;
