@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Viking.Common;
 using WebAnnotation.ViewModel;
 
@@ -42,6 +43,11 @@ namespace WebAnnotation
         protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, SectionAnnotationsView value)
         {
             return new SectionAnnotationsViewCacheEntry(key, value);
+        }
+
+        protected override Task<SectionAnnotationsViewCacheEntry> CreateEntryAsync(int key, SectionAnnotationsView value)
+        {
+            return Task.FromResult(CreateEntry(key, value));
         }
 
         public bool RemoveEntry(int key)
