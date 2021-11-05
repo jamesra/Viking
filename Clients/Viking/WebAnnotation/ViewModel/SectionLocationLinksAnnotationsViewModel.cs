@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Viking.Common;
 using Viking.ViewModels;
 using WebAnnotationModel;
@@ -14,22 +15,22 @@ namespace WebAnnotation.ViewModel
     /// </summary>
     class SectionLocationLinkAnnotationsViewModel
     {
-        protected KeyTracker<LocationLinkKey> KnownLinks = new KeyTracker<LocationLinkKey>();
+        protected readonly KeyTracker<LocationLinkKey> KnownLinks = new KeyTracker<LocationLinkKey>();
 
         /// <summary>
         /// The ID's of locations on the adjacent section which we know are linked and overlapped.
         /// </summary>
-        public RefCountingKeyTracker<long> OverlappedAdjacentLocationIDs = new RefCountingKeyTracker<long>();
+        public readonly RefCountingKeyTracker<long> OverlappedAdjacentLocationIDs = new RefCountingKeyTracker<long>();
 
-        protected ConcurrentDictionary<LocationLinkKey, LocationLinkView> LocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkView>();
+        protected readonly ConcurrentDictionary<LocationLinkKey, LocationLinkView> LocationLinks = new ConcurrentDictionary<LocationLinkKey, LocationLinkView>();
 
-        public SortedSet<LocationLinkKey> OverlappedLinkKeys = new SortedSet<LocationLinkKey>();
-        public RTree.RTree<LocationLinkKey> NonOverlappedLinksSearch = new RTree.RTree<LocationLinkKey>();
+        public readonly KeyTracker<LocationLinkKey> OverlappedLinkKeys = new KeyTracker<LocationLinkKey>();
+        public readonly RTree.RTree<LocationLinkKey> NonOverlappedLinksSearch = new RTree.RTree<LocationLinkKey>();
 
         /// <summary>
         /// The section that we represent links on the canvas for
         /// </summary>
-        public SectionViewModel Section;
+        public readonly SectionViewModel Section;
 
         public SectionLocationLinkAnnotationsViewModel(SectionViewModel section)
         {
@@ -100,9 +101,11 @@ namespace WebAnnotation.ViewModel
 
                     if (lv.LinksOverlap())
                     {
-                        OverlappedLinkKeys.Add(key);
-                        OverlappedAdjacentLocationIDs.AddRef(key.A);
-                        OverlappedAdjacentLocationIDs.AddRef(key.B);
+                        OverlappedLinkKeys.TryAdd(key, () =>
+                        {
+                            OverlappedAdjacentLocationIDs.AddRef(key.A);
+                            OverlappedAdjacentLocationIDs.AddRef(key.B);
+                        });
                     }
                     else
                     {
@@ -129,9 +132,11 @@ namespace WebAnnotation.ViewModel
 
                 if (OverlappedLinkKeys.Contains(key))
                 {
-                    OverlappedLinkKeys.Remove(key);
-                    OverlappedAdjacentLocationIDs.ReleaseRef(key.A);
-                    OverlappedAdjacentLocationIDs.ReleaseRef(key.B);
+                    OverlappedLinkKeys.TryRemove(key, () =>
+                    {
+                        OverlappedAdjacentLocationIDs.ReleaseRef(key.A);
+                        OverlappedAdjacentLocationIDs.ReleaseRef(key.B);
+                    });
                 }
 
                 if (NonOverlappedLinksSearch.Contains(key))
