@@ -5,19 +5,25 @@ namespace WebAnnotationModel
 {
     public class State
     {
-        static public System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
+        public static System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
-        static public bool UseAsynchEvents = true;
+        public static bool UseAsynchEvents = true;
 
-        static public Uri Endpoint
+        public static Uri Endpoint
         {
             get { return EndpointAddress != null ? EndpointAddress.Uri : null; }
             set { EndpointAddress = new EndpointAddress(value); }
         }
 
-        static internal EndpointAddress EndpointAddress
+        internal static EndpointAddress EndpointAddress
         {
             get; private set;
         }
+
+        /// <summary>
+        /// Record the program start time so we do not send queries that request every update since the start of time,
+        /// only every update since our first possible query.
+        /// </summary>
+        public readonly static DateTime ProgramStartTime = DateTime.UtcNow;
     }
 }

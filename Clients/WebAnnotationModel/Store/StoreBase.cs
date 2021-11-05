@@ -189,6 +189,7 @@ namespace WebAnnotationModel
             //    {
             CallOnCollectionChangedForDelete(inventory.DeletedObjects);
             CallOnCollectionChangedForReplace(inventory.OldObjectsReplaced, inventory.NewObjectReplacements);
+            //CallOnCollectionChangedForReplace(inventory.UpdatedObjects, inventory.UpdatedObjects);                
             CallOnCollectionChangedForAdd(inventory.AddedObjects);
             //    });
             //InvokeEventAction(a); 

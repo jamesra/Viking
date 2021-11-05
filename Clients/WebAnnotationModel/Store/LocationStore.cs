@@ -510,7 +510,7 @@ namespace WebAnnotationModel
                         SectionNumber,
                         bounds.ToBoundingRectangle(),
                         MinRadius,
-                        LastQueryUtc.HasValue ? LastQueryUtc.Value.Ticks : DateTime.MinValue.Ticks);
+                        LastQueryUtc.HasValue ? LastQueryUtc.Value.Ticks : 0);
                 }
                 catch (EndpointNotFoundException e)
                 {
@@ -607,7 +607,7 @@ namespace WebAnnotationModel
 
             Debug.Assert(proxy != null);
 
-            long[] DeletedLocations = new long[0];
+            long[] DeletedLocations = Array.Empty<long>();
             long TicksAtQueryExecute = 0;
 
             AnnotationSet serverAnnotations = null;

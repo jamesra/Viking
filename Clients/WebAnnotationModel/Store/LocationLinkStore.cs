@@ -13,9 +13,7 @@ namespace WebAnnotationModel
     public class LocationLinkStore : StoreBaseWithKey<AnnotateLocationsClient, IAnnotateLocations, LocationLinkKey, LocationLinkObj, LocationLink>
     {
         ConcurrentDictionary<long, ConcurrentDictionary<LocationLinkKey, LocationLinkObj>> SectionToLocationLinks = new ConcurrentDictionary<long, ConcurrentDictionary<LocationLinkKey, LocationLinkObj>>();
-
-        private readonly ChannelFactory<WebAnnotationModel.Service.IAnnotateLocations> channelFactory;
-
+          
         public LocationLinkStore()
         {
             channelFactory =
@@ -353,15 +351,15 @@ namespace WebAnnotationModel
                     ChangeInventory<LocationLinkObj> inventory = InternalAdd(e.NewItems.Cast<LocationObj>());
                     CallOnCollectionChanged(inventory);
                     break;
-                /*
-                case NotifyCollectionChangedAction.Replace:
+                
+                case NotifyCollectionChangedAction.Replace: 
                     // Debug.Assert(false, "Locations links are created or deleted, but never replaced...");
                     //TODO: We don't care about updates, but since links come with locations this means we will miss new links from the server
                     //unless we query for them directly,
                     InternalDelete(e.OldItems.Cast<LocationObj>());
                     InternalAdd(e.NewItems.Cast<LocationObj>());
                     break;
-                 */
+                 
 
                 case NotifyCollectionChangedAction.Remove:
                     List<LocationLinkObj> listDeleted = InternalDelete(e.OldItems.Cast<LocationObj>());

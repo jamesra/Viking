@@ -895,11 +895,7 @@ namespace WebAnnotationModel
 
         public DateTime GetLastQueryTimeForSection(long SectionNumber)
         {
-            DateTime LastQuery = DateTime.MinValue;
-            if (LastQueryForSection.ContainsKey(SectionNumber))
-                LastQuery = LastQueryForSection[SectionNumber];
-
-            return LastQuery;
+            return LastQueryForSection.GetOrAdd(SectionNumber, DateTime.MinValue);
         }
 
         private bool TrySetLastQueryTimeForSection(long SectionNumber, long TicksAtQueryExecute, DateTime OldQueryExecuteTime)
@@ -1075,6 +1071,7 @@ namespace WebAnnotationModel
                 }
 
                 List<OBJECT> addObjList = new List<OBJECT>(changedDBObj.Count);
+                List<OBJECT> updateObjList = new List<OBJECT>(changedDBObj.Count);
                 List<KEY> delObjList = new List<KEY>(changedDBObj.Count);
 
                 //Reset DBAction of each object, fire events
@@ -1097,6 +1094,7 @@ namespace WebAnnotationModel
                             addObjList.Add(obj);
                             break;
                         case DBACTION.UPDATE:
+                            updateObjList.Add(obj);
                             //keyObj.FireAfterSaveEvent();
                             break;
                         case DBACTION.DELETE:
@@ -1109,6 +1107,9 @@ namespace WebAnnotationModel
 
                 ChangeInventory<OBJECT> inventory = InternalAdd(addObjList.ToArray());
                 inventory.DeletedObjects.AddRange(InternalDelete(delObjList.ToArray()));
+                inventory.OldObjectsReplaced = updateObjList;
+                inventory.NewObjectReplacements = updateObjList;
+                inventory.UpdatedObjects = updateObjList;
                 CallOnCollectionChanged(inventory);
             }
             catch (FaultException e)

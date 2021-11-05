@@ -865,6 +865,10 @@ namespace WebAnnotationModel
             this.Data.LastModified = newdata.LastModified;
             this.Data.Links = newdata.Links;
             this._Attributes = null;
+            this._VolumeShape = null;
+            this._MosaicShape = null;
+            this._VolumePosition = default;
+            this._MosaicPosition = default;
             this.Data.VolumeShapeWKB = newdata.VolumeShapeWKB;
             this.Data.MosaicShapeWKB = newdata.MosaicShapeWKB;
         }
