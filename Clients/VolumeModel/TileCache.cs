@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Viking.Common;
 
 namespace Viking.VolumeModel
@@ -85,6 +86,11 @@ namespace Viking.VolumeModel
         {
             TileCacheEntry entry = new TileCacheEntry(key, value);
             return entry;
+        }
+
+        protected override Task<TileCacheEntry> CreateEntryAsync(string key, Tile value)
+        {
+            return Task.FromResult(CreateEntry(key, value));
         }
 
         /*

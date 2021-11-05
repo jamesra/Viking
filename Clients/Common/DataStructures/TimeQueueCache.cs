@@ -23,6 +23,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Viking.Common
 {
@@ -56,6 +57,8 @@ namespace Viking.Common
         /// <param name="value"></param>
         /// <returns></returns>
         abstract protected CACHEENTRY CreateEntry(KEY key, ADDTYPE value);
+
+        abstract protected Task<CACHEENTRY> CreateEntryAsync(KEY key, ADDTYPE value);
 
         /// <summary>
         /// Retrieve an entry from the cache
@@ -117,12 +120,13 @@ namespace Viking.Common
         /// </summary>
         /// <param name="filename"></param>
         /// <param name="textureStream"></param>
-        public virtual void AddAsync(KEY key, ADDTYPE value)
+        public virtual async Task<bool> AddAsync(KEY key, ADDTYPE value)
         {
-            System.Threading.Tasks.Task.Run(() =>
-            {
-                Add(key, value);
-            });
+            var entry = await CreateEntryAsync(key, value);
+            if (entry == null)
+                return false;
+
+            return AddEntry(entry);
         }
 
         /// <summary>
