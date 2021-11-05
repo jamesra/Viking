@@ -235,12 +235,12 @@ namespace Geometry
 
         public void SetPoint(IReadOnlyList<GridPolygon> Polygons, GridVector2 value)
         {
-            Polygons[iPoly].SetVertex(this, value);
+            Polygons[iPoly][this] = value;
         }
 
         public void SetPoint(IReadOnlyDictionary<int, GridPolygon> Polygons, GridVector2 value)
         {
-            Polygons[iPoly].SetVertex(this, value);
+            Polygons[iPoly][this] = value;
         }
 
 
@@ -269,16 +269,9 @@ namespace Geometry
         /// </summary>
         /// <param name="poly"></param>
         /// <returns></returns>
-        internal GridPolygon Polygon(GridPolygon poly)
+        public GridPolygon Polygon(GridPolygon poly)
         {
-            if (this.IsInner)
-            {
-                return poly.InteriorPolygons[iInnerPoly.Value];
-            }
-            else
-            {
-                return poly;
-            }
+            return this.IsInner ? poly.InteriorPolygons[iInnerPoly.Value] : poly;
         }
 
         /// <summary>
