@@ -166,6 +166,8 @@ namespace WebAnnotationModel.gRPC.Tests
             var client = clientFactory.GetOrCreate();
             var loc = await client.GetLastModifiedLocation();
 
+            var mwkt = loc.MosaicGeometryWKT;
+            Assert.NotNull(mwkt);
             Assert.NotNull(loc);
             
             Assert.Pass();

@@ -25,8 +25,12 @@ namespace gRPCAnnotationService.Protos
         }
 
 
-        public static global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry ToProtobufMessage(this NetTopologySuite.Geometries.Geometry src)
+        public static global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry ToProtobufMessage(
+            this NetTopologySuite.Geometries.Geometry src)
         {
+            if (src is null)
+                return new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry();
+
             var value = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
             { 
                 Binary = Google.Protobuf.ByteString.CopyFrom(src.ToBinary())
