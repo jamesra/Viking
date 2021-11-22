@@ -6,7 +6,7 @@ namespace Geometry
 {
     public static class StreamUtil
     {
-        public static async Task<string[]> StreamToLines(System.IO.Stream stream)
+        public static async Task<string[]> ToLinesAsync(this System.IO.Stream stream)
         {
             if (stream == null)
                 throw new ArgumentNullException(nameof(stream));
@@ -19,18 +19,23 @@ namespace Geometry
             using (System.IO.StreamReader MosaicStream = new System.IO.StreamReader(stream))
             {
                 string streamData = await MosaicStream.ReadToEndAsync().ConfigureAwait(false);
-
-                var lines = Regex.Split(streamData, "\r\n|\r|\n");
-                 
-                //List<string> output = new List<string>(lines.Length);
-
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    lines[i] = lines[i].Trim();
-                }
-
-                return lines;  
+                return streamData.ToLines();
             }
+        }
+
+        public static string[] ToLines(this string input)
+        {
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+               
+            var lines = Regex.Split(input, "\r\n|\r|\n");
+             
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i] = lines[i].Trim();
+            }
+
+            return lines; 
         }
     }
 }
