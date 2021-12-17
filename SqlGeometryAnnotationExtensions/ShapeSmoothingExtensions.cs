@@ -14,9 +14,7 @@ namespace Viking.VolumeModel
         public static uint NumClosedCurveInterpolationPoints = 10;
 
         public static Microsoft.SqlServer.Types.SqlGeometry GetShape(this LocationType shapeType, GridVector2[] points, ICollection<GridVector2[]> innerRingPoints = null)
-        {
-            Microsoft.SqlServer.Types.SqlGeometry shape = null;
-
+        {  
             switch (shapeType)
             {
                 case LocationType.POINT:
@@ -63,9 +61,7 @@ namespace Viking.VolumeModel
         }
 
         public static Microsoft.SqlServer.Types.SqlGeometry GetSmoothedShape(this LocationType shapeType, GridVector2[] points, ICollection<GridVector2[]> innerRingPoints = null)
-        {
-            Microsoft.SqlServer.Types.SqlGeometry shape = null;
-
+        { 
             switch (shapeType)
             {
                 case LocationType.POINT:

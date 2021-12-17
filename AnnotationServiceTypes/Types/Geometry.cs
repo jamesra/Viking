@@ -176,15 +176,9 @@ namespace AnnotationService.Types
             set { _ZMax = value; }
         }
 
-        public double Width
-        {
-            get { return _XMax - _XMin; }
-        }
+        public double Width => _XMax - _XMin;
 
-        public double Height
-        {
-            get { return _YMax - _YMin; }
-        }
+        public double Height => _YMax - _YMin;
 
         public double Depth
         {
