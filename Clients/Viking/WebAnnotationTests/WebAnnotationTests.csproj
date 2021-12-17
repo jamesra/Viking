@@ -67,14 +67,6 @@
       <Project>{7ede0b00-89f9-4ef5-a629-2ed66cee273b}</Project>
       <Name>VikingXNAGraphics</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
-      <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>
-      <Name>VolumeModel</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj">
-      <Project>{709a3c16-7218-4ff0-9a2d-6bf015c243bf}</Project>
-      <Name>WebAnnotationModel</Name>
-    </ProjectReference>
     <ProjectReference Include="..\NGVV\VikingCore.csproj">
       <Project>{aeb1b24b-c968-40f9-b9f5-5c1fce2efd6d}</Project>
       <Name>VikingCore</Name>

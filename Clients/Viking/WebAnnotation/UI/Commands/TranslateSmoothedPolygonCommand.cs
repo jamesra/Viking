@@ -1,4 +1,5 @@
-﻿using Geometry;
+﻿using System;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using Viking.VolumeModel;
@@ -10,6 +11,8 @@ namespace WebAnnotation.UI.Commands
     {
         public delegate void OnCommandSuccess(GridPolygon MosaicPolygon);
         protected OnCommandSuccess success_callback;
+
+        public override double AnnotationRadius => Math.Sqrt(OriginalMosaicPolygon.Area / Math.PI);
 
         public override string[] HelpStrings
         {
@@ -88,10 +91,22 @@ namespace WebAnnotation.UI.Commands
 
         protected GridPolygon CalculateTransformedPolygon()
         {
-            GridPolygon poly;
-            poly = OriginalMosaicPolygon.Rotate(this.Angle);
-            poly = poly.Scale(this.SizeScale);
-            poly = poly.Translate(this.MosaicPositionDeltaSum);
+            GridPolygon poly = OriginalMosaicPolygon.Clone() as GridPolygon;
+            if (Angle != 0)
+            {
+                poly = OriginalMosaicPolygon.Rotate(this.Angle);
+            }
+
+            if (SizeScale != 1.0)
+            {
+                poly = poly.Scale(this.SizeScale);
+            }
+
+            if (MosaicPositionDeltaSum != GridVector2.Zero)
+            {
+                poly = poly.Translate(this.MosaicPositionDeltaSum);
+            }
+
             return poly;
         }
 

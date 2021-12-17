@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.UI;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.View;
@@ -15,26 +16,11 @@ namespace WebAnnotation.UI.Commands
 {
     class TranslateClosedCurveCommand : TranslateCurveLocationCommand
     {
-        private double _sizeScale = 1.0;
-        protected override double SizeScale
-        {
-            get
-            {
-                return _sizeScale;
-            }
-            set
-            {
-                _sizeScale = value;
-            }
-        }
+        protected override double SizeScale { get; set; } = 1.0;
 
-        protected double LineWidth
-        {
-            get
-            {
-                return curveView.ControlPoints.ToPolygon().CalculateInscribedCircle(curveView.ControlPoints).Radius;
-            }
-        }
+        public override double AnnotationRadius => LineWidth;
+
+        protected double LineWidth => curveView.ControlPoints.ToPolygon().CalculateInscribedCircle(curveView.ControlPoints).Radius;
 
 
         protected override void OnAngleChanged()
@@ -111,10 +97,7 @@ namespace WebAnnotation.UI.Commands
         private double _lineWidthScale = 1.0;
         protected double LineWidthScale
         {
-            get
-            {
-                return _lineWidthScale;
-            }
+            get => _lineWidthScale;
             set
             {
                 _lineWidthScale = value;
@@ -122,6 +105,8 @@ namespace WebAnnotation.UI.Commands
                 curveView.LineWidth = CalculateFinalLineWidth();
             }
         }
+
+        public override double AnnotationRadius => OriginalLineWidth;
 
         protected override void OnAngleChanged()
         {
@@ -248,13 +233,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public new ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public new ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(this.HelpStrings);
 
         public new static string[] DefaultMouseHelpStrings = new string[]
         {
@@ -265,13 +244,7 @@ namespace WebAnnotation.UI.Commands
             "SHIFT + Scroll wheel: Scale annotation size slowly"
         };
 
-        protected override GridVector2 VolumeRotationOrigin
-        {
-            get
-            {
-                return curveView.ControlPoints.Average();
-            }
-        }
+        protected override GridVector2 VolumeRotationOrigin => curveView.ControlPoints.Average();
 
         public TranslateCurveLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2 VolumePosition,
@@ -333,13 +306,9 @@ namespace WebAnnotation.UI.Commands
         CircleView circleView;
         GridCircle OriginalCircle;
 
-        public ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public override double AnnotationRadius => OriginalCircle.Radius;
+
+        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(this.HelpStrings);
 
         public string[] HelpStrings
         {
@@ -354,13 +323,7 @@ namespace WebAnnotation.UI.Commands
         public delegate void OnCommandSuccess(GridVector2 VolumePosition, GridVector2 MosaicPosition, double NewRadius);
         OnCommandSuccess success_callback;
 
-        protected double RadiusScale
-        {
-            get
-            {
-                return base.SizeScale * OriginalCircle.Radius < 1.0f ? 1 / OriginalCircle.Radius : base.SizeScale;
-            }
-        }
+        protected double RadiusScale => base.SizeScale * OriginalCircle.Radius < 1.0f ? 1 / OriginalCircle.Radius : base.SizeScale;
 
         protected override void OnSizeScaleChanged()
         {
@@ -375,6 +338,15 @@ namespace WebAnnotation.UI.Commands
             OriginalCircle = new GridCircle(this.OriginalVolumePosition, volume_circle.Radius);
             CreateView(this.OriginalVolumePosition, volume_circle.Radius, color);
             this.success_callback = success_callback;
+        }
+
+        public TranslateCircleLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
+            GridCircle volume_circle,
+            GridVector2 annotation_start_position,
+            Microsoft.Xna.Framework.Color color,
+            OnCommandSuccess success_callback) : this(parent, volume_circle, color, success_callback)
+        {
+            this.ScaleOrigin = annotation_start_position;
         }
 
         private void CreateView(GridVector2 Position, double Radius, Microsoft.Xna.Framework.Color color)
@@ -411,6 +383,7 @@ namespace WebAnnotation.UI.Commands
             UpdateView();
         }
 
+        
         protected void UpdateView()
         {
             circleView.Circle = new GridCircle(this.TranslatedVolumePosition, this.circleView.Radius);

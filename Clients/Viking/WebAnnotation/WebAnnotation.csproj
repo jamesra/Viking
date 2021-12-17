@@ -481,6 +481,15 @@
       <Name>VikingXNAGraphics</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
+      <Project>{41a5edbc-312a-4553-b1ca-d1eb8bb19481}</Project>
+      <Name>VolumeModel</Name>
+      <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj">
+      <Project>{709a3c16-7218-4ff0-9a2d-6bf015c243bf}</Project>
+      <Name>WebAnnotationModel</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\WebAnnotationViewModels\WebAnnotationViewModels.csproj">
       <Project>{c4401c6e-e354-420e-8373-36a71b9b6290}</Project>
       <Name>WebAnnotationViewModels</Name>
@@ -493,16 +502,6 @@
       <Project>{AEB1B24B-C968-40F9-B9F5-5C1FCE2EFD6D}</Project>
       <Name>VikingCore</Name>
       <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
-      <Project>{2EBA2A77-F7F0-4EFC-AC06-A12FE249388F}</Project>
-      <Name>VolumeModel</Name>
-      <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj">
-      <Project>{709A3C16-7218-4FF0-9A2D-6BF015C243BF}</Project>
-      <Name>WebAnnotationModel</Name>
-      <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj">
       <Project>{8e2f9eac-3b70-46fe-b8d6-7a04b9d183b9}</Project>
