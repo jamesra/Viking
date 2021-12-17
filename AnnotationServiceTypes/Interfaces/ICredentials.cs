@@ -13,5 +13,8 @@ namespace AnnotationService.Interfaces
 
         [OperationContract]
         bool CanAdmin();
+
+        [OperationContract]
+        string Roles();
     }
 }

@@ -5,7 +5,7 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    public struct StructureLinkKey : IEquatable<StructureLinkKey>, IComparable<StructureLinkKey>, IStructureLink
+    public readonly struct StructureLinkKey : IEquatable<StructureLinkKey>, IComparable<StructureLinkKey>, IStructureLink
     {
         readonly long _SourceID;
         readonly long _TargetID;

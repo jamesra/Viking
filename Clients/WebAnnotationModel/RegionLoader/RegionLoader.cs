@@ -150,7 +150,7 @@ namespace WebAnnotationModel
         readonly GridCellDimensions CellDimensions;
         readonly double PowerScale;
         static double RegionUpdateInterval = 180;
-        IRegionQuery<KEY, OBJECT> objectStore;
+        readonly IRegionQuery<KEY, OBJECT> objectStore;
 
         ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new ConcurrentDictionary<int, RegionPyramid<OBJECT>>();
 
@@ -248,8 +248,7 @@ namespace WebAnnotationModel
                             {
                                 GridRectangle cellBounds = level.CellBounds(iCell.X, iCell.Y);
                                 ICollection<OBJECT> local_objects_in_region = this.objectStore.GetLocalObjectsInRegion(SectionNumber, cellBounds, level.MinRadius);
-                                if (FoundCachedLocalObjectsCallback != null)
-                                    FoundCachedLocalObjectsCallback(local_objects_in_region);
+                                FoundCachedLocalObjectsCallback?.Invoke(local_objects_in_region);
                             });
                         }
                     }

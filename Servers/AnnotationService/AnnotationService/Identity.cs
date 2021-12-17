@@ -179,26 +179,26 @@ namespace Annotation.Identity
                 }
 
                 //Todo: Use dependency injection to get a connection to the Identity database and pull the name of the volume endpoint from the URL?
-                string[] Roles;
+                string[] roles;
                 string[] AllowedOrgs = VikingWebAppSettings.AppSettings.GetAllowedOrganizations();
                 if (AllowedOrgs.Length == 0)
                 {
                     //If the organizations are not specified then use the default role assigned to the user
-                    Roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
+                    roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
                 }
                 else if (IsUserInAllowedOrganization(AllowedOrgs, validation.Claims))
                 {
                     //Users have the normal permissions if they are in an allowed organization
-                    Roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
+                    roles = validation.Claims.Where(c => c.Type == "role").Select(r => r.Value).ToArray();
                 }
                 else
                 {
                     //Users not in an allowed organization can only read
-                    Roles = new string[] { "Reader" };
+                    roles = new string[] { nameof(Roles.Read) };
                 }
 
                 GenericIdentity genericIdentity = new GenericIdentity(userNameClaim);
-                GenericPrincipal principal = new GenericPrincipal(genericIdentity, Roles);
+                GenericPrincipal principal = new GenericPrincipal(genericIdentity, roles);
                 message.Properties["Principal"] = principal;
                 //     Thread.CurrentPrincipal = principal;
             }
@@ -213,7 +213,7 @@ namespace Annotation.Identity
         private static GenericPrincipal CreateAnonymousUser()
         {
             GenericIdentity genericIdentity = new GenericIdentity("anonymous");
-            GenericPrincipal principal = new GenericPrincipal(genericIdentity, new string[] { "Reader" });
+            GenericPrincipal principal = new GenericPrincipal(genericIdentity, new string[] { nameof(Roles.Read) });
             return principal;
         }
 
@@ -227,7 +227,7 @@ namespace Annotation.Identity
             }
 
             return false;
-        } 
+        }
     }
      
     public class RoleAuthorizationManager : ServiceAuthorizationManager

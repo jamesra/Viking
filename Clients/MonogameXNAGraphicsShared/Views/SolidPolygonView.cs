@@ -164,7 +164,7 @@ namespace VikingXNAGraphics
         /// <param name="LazyInit">If Lazy init is set to true, we do not start a task to triangulate the polygon until Draw is called.  At that point triangulation is performed in parallel. </param>
         public SolidPolygonView(GridPolygon poly, Color color, bool LazyInit=true)
         {
-            Debug.Assert(poly.TotalUniqueVerticies < 1000, "This is a huge polygon, why?");
+           //Debug.Assert(poly.TotalUniqueVerticies < 1000, "This is a huge polygon, why?");
 
             InputPolygon = poly;
             InputColor = color; 

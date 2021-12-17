@@ -6,7 +6,7 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    public struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, ILocationLink
+    public readonly struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, ILocationLink
     {
         public readonly long A;
         public readonly long B;
@@ -191,9 +191,11 @@ namespace WebAnnotationModel
                                long IDB)
         {
             Debug.Assert(IDA != IDB);
-            LocationLink link = new LocationLink();
-            link.SourceID = IDA < IDB ? IDA : IDB;
-            link.TargetID = IDA < IDB ? IDB : IDA;
+            LocationLink link = new LocationLink
+            {
+                SourceID = IDA < IDB ? IDA : IDB,
+                TargetID = IDA < IDB ? IDB : IDA
+            };
             this.Data = link;
         }
 

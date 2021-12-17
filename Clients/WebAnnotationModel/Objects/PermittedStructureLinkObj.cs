@@ -4,7 +4,7 @@ using System;
 
 namespace WebAnnotationModel.Objects
 {
-    public struct PermittedStructureLinkKey : IEquatable<PermittedStructureLinkKey>, IComparable<PermittedStructureLinkKey>, IPermittedStructureLink
+    public readonly struct PermittedStructureLinkKey : IEquatable<PermittedStructureLinkKey>, IComparable<PermittedStructureLinkKey>, IPermittedStructureLink
     {
         readonly long _SourceTypeID;
         readonly long _TargetTypeID;
@@ -69,9 +69,6 @@ namespace WebAnnotationModel.Objects
 
         public bool Equals(PermittedStructureLinkKey other)
         {
-            if ((object)other == null)
-                return false;
-
             if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
             {
                 if (SourceTypeID == other.SourceTypeID &&
@@ -88,10 +85,7 @@ namespace WebAnnotationModel.Objects
         }
 
         public int CompareTo(PermittedStructureLinkKey other)
-        {
-            if ((object)other == null)
-                return -1;
-
+        {  
             if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
             {
                 var A_Low = Math.Min(SourceTypeID, TargetTypeID);

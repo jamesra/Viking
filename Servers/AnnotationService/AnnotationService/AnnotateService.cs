@@ -10,9 +10,17 @@ using System.Security.Permissions;
 using System.ServiceModel;
 using System.ServiceModel.Activation;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace Annotation
 {
+    public static class Roles
+    {
+        public static string Read = nameof(Roles.Read);
+        public static string Write = nameof(Roles.Write);
+        public static string Admin = nameof(Roles.Admin);
+    }
+
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single, ConcurrencyMode = ConcurrencyMode.Multiple)]
     [AspNetCompatibilityRequirements(RequirementsMode = AspNetCompatibilityRequirementsMode.Required)]
     public class AnnotateService : IAnnotateStructureTypes,
@@ -60,23 +68,43 @@ namespace Annotation
         {
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         bool ICredentials.CanRead()
         {
             return true;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         bool ICredentials.CanWrite()
         {
             return true;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reviewer")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
         bool ICredentials.CanAdmin()
         {
             return true;
         }
+
+        string ICredentials.Roles()
+        {
+            if (false == ServiceSecurityContext.Current.PrimaryIdentity.IsAuthenticated)
+                return "";
+
+            var user = HttpContext.Current.User;
+            string roles = "";
+            if (user.IsInRole(nameof(Roles.Read)))
+                roles += nameof(Roles.Read) + ' ';
+
+            if (user.IsInRole(nameof(Roles.Write)))
+                roles += nameof(Roles.Write) + ' ';
+
+            if (user.IsInRole(nameof(Roles.Admin)))
+                roles += nameof(Roles.Admin) + ' ';
+             
+            return roles.Trim();
+        }
+
 
         public static void ConfigureContextAsReadOnly(ConnectomeEntities db)
         {
@@ -153,7 +181,7 @@ namespace Annotation
 
         #region IVolumeMeta Members
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public Scale GetScale()
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -173,7 +201,7 @@ namespace Annotation
 
         #region IAnnotateStructureTypes Members
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public AnnotationService.Types.StructureType CreateStructureType(AnnotationService.Types.StructureType new_structureType)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -192,7 +220,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.StructureType[] GetStructureTypes()
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContextWithLazyLoading())
@@ -202,7 +230,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.PermittedStructureLink[] GetPermittedStructureLinks()
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -235,7 +263,7 @@ namespace Annotation
         }
          */
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.StructureType GetStructureTypeByID(long ID)
         {
             using (var db = GetOrCreateReadOnlyContextWithLazyLoading())
@@ -264,14 +292,14 @@ namespace Annotation
             return null;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructuresForType(long TypeID)
         {
             return GetStructuresOfType(TypeID);
         }
 
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructuresOfType(long TypeID)
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -296,7 +324,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.StructureType[] GetStructureTypesByIDs(long[] IDs)
         {
 
@@ -354,7 +382,7 @@ namespace Annotation
             return new AnnotationService.Types.StructureType[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] UpdateStructureTypes(AnnotationService.Types.StructureType[] structTypes)
         {
             return Update(structTypes);
@@ -365,7 +393,7 @@ namespace Annotation
         /// </summary>
         protected void DemandAdminPermissions()
         {
-            PrincipalPermission permission = new PrincipalPermission(null, "Reviewer");
+            PrincipalPermission permission = new PrincipalPermission(null, nameof(Roles.Admin));
 
             permission.Demand();
         }
@@ -398,7 +426,7 @@ namespace Annotation
         /// </summary>
         /// <param name="structTypes"></param>
         /// <returns>Returns ID's of each object in the order they were passed. Used to recover ID's of inserted rows</returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] Update(AnnotationService.Types.StructureType[] structTypes)
         {
             Dictionary<ConnectomeDataModel.StructureType, int> mapNewTypeToIndex = new Dictionary<ConnectomeDataModel.StructureType, int>(structTypes.Length);
@@ -474,7 +502,7 @@ namespace Annotation
                 catch (Exception e)
                 {
                     Debug.WriteLine(e.ToString());
-                    throw e;
+                    throw;
 
                 }
 
@@ -491,7 +519,7 @@ namespace Annotation
             return listID;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public string TestMethod()
         {
             return "Test OK";
@@ -505,7 +533,7 @@ namespace Annotation
         /// 
         /// </summary>
         /// <returns></returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructures()
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -537,7 +565,7 @@ namespace Annotation
             return new AnnotationService.Types.Structure[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructuresForSection(long SectionNumber, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
             DeletedIDs = new long[0];
@@ -570,7 +598,7 @@ namespace Annotation
             return new AnnotationService.Types.Structure[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructuresForSectionInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
             DateTime start = DateTime.UtcNow;
@@ -614,7 +642,7 @@ namespace Annotation
             return new AnnotationService.Types.Structure[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructuresForSectionInVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
             DateTime start = DateTime.UtcNow;
@@ -658,7 +686,7 @@ namespace Annotation
             return new AnnotationService.Types.Structure[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure GetStructureByID(long ID, bool IncludeChildren)
         {
             using (var db = GetOrCreateReadOnlyContextWithLazyLoading())
@@ -767,7 +795,7 @@ namespace Annotation
         }
 
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructuresByIDs(long[] IDs, bool IncludeChildren)
         {
 
@@ -800,7 +828,7 @@ namespace Annotation
             return ListStructures.ToArray();
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public void ApproximateStructureLocation(long ID)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -809,7 +837,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reviewer")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
         public AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link)
         {
             ConnectomeDataModel.PermittedStructureLink newRow = new ConnectomeDataModel.PermittedStructureLink();
@@ -824,7 +852,7 @@ namespace Annotation
             return newLink;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reviewer")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
         public void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] links)
         {
             //Stores the ID of each object manipulated for the return value
@@ -900,7 +928,7 @@ namespace Annotation
                 catch (Exception e)
                 {
                     Debug.WriteLine(e.ToString());
-                    throw e;
+                    throw;
                 }
             }
 
@@ -908,7 +936,7 @@ namespace Annotation
             return;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public AnnotationService.Types.StructureLink CreateStructureLink(AnnotationService.Types.StructureLink link)
         {
             ConnectomeDataModel.StructureLink newRow = new ConnectomeDataModel.StructureLink();
@@ -923,7 +951,7 @@ namespace Annotation
             return newLink;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public void UpdateStructureLinks(AnnotationService.Types.StructureLink[] links)
         {
             //Stores the ID of each object manipulated for the return value
@@ -999,7 +1027,7 @@ namespace Annotation
                 catch (Exception e)
                 {
                     Debug.WriteLine(e.ToString());
-                    throw e;
+                    throw;
                 }
             }
 
@@ -1007,7 +1035,7 @@ namespace Annotation
             return;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public long[] GetUnfinishedLocations(long structureID)
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -1016,7 +1044,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public LocationPositionOnly[] GetUnfinishedLocationsWithPosition(long structureID)
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -1025,7 +1053,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.StructureLink[] GetLinkedStructures()
         {
             using (var db = GetOrCreateDatabaseContext())
@@ -1055,7 +1083,7 @@ namespace Annotation
             return new AnnotationService.Types.StructureLink[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.StructureLink[] GetLinkedStructuresByID(long ID)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -1114,7 +1142,7 @@ namespace Annotation
         }
 
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location[] GetLocationsForStructure(long structureID)
         {
             using (var db = GetOrCreateReadOnlyContext())
@@ -1139,7 +1167,7 @@ namespace Annotation
             return new AnnotationService.Types.Location[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public long NumberOfLocationsForStructure(long structureID)
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -1166,13 +1194,13 @@ namespace Annotation
 
 
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] UpdateStructures(AnnotationService.Types.Structure[] structures)
         {
             return Update(structures);
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] Update(AnnotationService.Types.Structure[] structures)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -1254,7 +1282,7 @@ namespace Annotation
                 catch (Exception e)
                 {
                     Debug.WriteLine(e.ToString());
-                    throw e;
+                    throw;
 
                 }
 
@@ -1271,7 +1299,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public CreateStructureRetval CreateStructure(AnnotationService.Types.Structure structure, AnnotationService.Types.Location location)
         {
             using (var db = GetOrCreateDatabaseContext())
@@ -1308,7 +1336,7 @@ namespace Annotation
         }
 
         /*
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] CreateStructure(Structure structure, Location location)
         {
             ConnectomeDataModel.Structure DBStruct = new ConnectomeDataModel.Structure();
@@ -1335,7 +1363,7 @@ namespace Annotation
         /// <param name="StructureA"></param>
         /// <param name="StructureB"></param>
         /// <returns>ID of new structure</returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reviewer")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
         public long Merge(long KeepID, long MergeID)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -1353,7 +1381,7 @@ namespace Annotation
         /// <param name="StructureA">Structure to split</param>
         /// <param name="locLink">Location Link to split structure at</param>
         /// <returns>ID of new structure</returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reviewer")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
         public long Split(long KeepStructureID, long LocationIDInSplitStructure)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -1371,7 +1399,7 @@ namespace Annotation
         /// <param name="StructureA">Structure to split</param>
         /// <param name="locLink">Location Link to split structure at</param>
         /// <returns>ID of new structure</returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reviewer")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
         public long SplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -1381,7 +1409,7 @@ namespace Annotation
             }
         }
         
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructureChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time)
         {
             /*
@@ -1404,7 +1432,7 @@ namespace Annotation
 
         #region IAnnotateLocations Members
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location GetLocationByID(long ID)
         {
             try
@@ -1560,7 +1588,7 @@ namespace Annotation
             return ListLocations;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location[] GetLocationsByID(long[] IDs)
         {
 
@@ -1605,7 +1633,7 @@ namespace Annotation
             */
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location GetLastModifiedLocation()
         {
             using (var db = GetOrCreateReadOnlyContext())
@@ -1624,7 +1652,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location[] GetLocationsForSection(long section, out long QueryExecutedTime)
         {
             QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
@@ -1677,7 +1705,7 @@ namespace Annotation
 
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location[] GetLocationsForSectionMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, out long QueryExecutedTime)
         {
             QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
@@ -1714,7 +1742,7 @@ namespace Annotation
             return new AnnotationService.Types.Location[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location[] GetLocationsForSectionVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, out long QueryExecutedTime)
         {
             QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
@@ -1760,7 +1788,7 @@ namespace Annotation
         /// <param name="time">UTC Datetime object passed using "ticks"</param>
         /// <param name="?"></param>
         /// <returns></returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location[] GetLocationChangesInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
             using (var db = GetOrCreateReadOnlyContext())
@@ -1816,7 +1844,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationSet GetAnnotationsInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
             if (bbox.Width == 0 || bbox.Height == 0)
@@ -1881,7 +1909,7 @@ namespace Annotation
         /// <param name="time">UTC Datetime object passed using "ticks"</param>
         /// <param name="?"></param>
         /// <returns></returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location[] GetLocationChangesInVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
             using (var db = GetOrCreateReadOnlyContext())
@@ -1944,7 +1972,7 @@ namespace Annotation
         /// <param name="time">UTC Datetime object passed using "ticks"</param>
         /// <param name="?"></param>
         /// <returns></returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Location[] GetLocationChanges(long section, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
             using (var db = GetOrCreateReadOnlyContext())
@@ -2021,7 +2049,7 @@ namespace Annotation
         /// </summary>
         /// <param name="DeletedAfterThisTime"></param>
         /// <returns>An array, may be zero length if no locations were deleted</returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public long[] GetDeletedLocations(DateTime? DeletedAfterThisTime)
         {
             //Try to find if any rows were deleted from the passed list of IDs
@@ -2074,7 +2102,7 @@ namespace Annotation
             return new long[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public AnnotationService.Types.Location CreateLocation(AnnotationService.Types.Location new_location, long[] links)
         {
 
@@ -2108,7 +2136,7 @@ namespace Annotation
                     catch (Exception e)
                     {
                         //transaction.Rollback();
-                        throw e;
+                        throw;
                     }
                 }
 
@@ -2119,7 +2147,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] Update(AnnotationService.Types.Location[] locations)
         {
             Dictionary<ConnectomeDataModel.Location, int> mapNewTypeToIndex = new Dictionary<ConnectomeDataModel.Location, int>(locations.Length);
@@ -2301,7 +2329,7 @@ namespace Annotation
             return newLink;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public void CreateLocationLink(long SourceID, long TargetID)
         {
             using (ConnectomeEntities db = new ConnectomeDataModel.ConnectomeEntities())
@@ -2314,7 +2342,7 @@ namespace Annotation
             return;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Annotator")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public void DeleteLocationLink(long SourceID, long TargetID)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -2361,7 +2389,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.LocationLink[] GetLocationLinksForSection(long section, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks)
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -2410,7 +2438,7 @@ namespace Annotation
             return new AnnotationService.Types.LocationLink[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.LocationLink[] GetLocationLinksForSectionInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks)
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -2455,7 +2483,7 @@ namespace Annotation
             return new AnnotationService.Types.LocationLink[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.LocationLink[] GetLocationLinksForSectionInVolumeRegion(long section, BoundingRectangle bbox, double MinRadius, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out AnnotationService.Types.LocationLink[] DeletedLinks)
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -2500,7 +2528,7 @@ namespace Annotation
             return new AnnotationService.Types.LocationLink[0];
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public long[] GetLinkedLocations(long ID)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -2510,7 +2538,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public LocationHistory[] GetLocationChangeLog(long? structure_id, DateTime? begin_time, DateTime? end_time)
         {
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -2530,7 +2558,7 @@ namespace Annotation
 
         public SortedDictionary<long, AnnotationService.Types.StructureType> StructureTypesDictionary = new SortedDictionary<long, AnnotationService.Types.StructureType>();
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public Graphx getGraph(int cellID, int numHops)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -2729,7 +2757,7 @@ namespace Annotation
             return ListAbsentParents;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public long[] getStructuresByTypeID(int typeID)
         {
             long[] structuresList;
@@ -2747,7 +2775,7 @@ namespace Annotation
 
         // num=1 structures
         // num=0 locations
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public string[] getTopConnectedStructures(int num)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -2803,7 +2831,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public string[] getTopConnectedCells()
         {
             List<string> result = new List<string>();
@@ -2874,7 +2902,7 @@ namespace Annotation
             return labelDictionary;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public SynapseObject getSynapseStats()
         {
             SortedDictionary<long, long> topConnections = new SortedDictionary<long, long>();
@@ -2931,7 +2959,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = "Reader")]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public string[] getSynapses(int cellID)
         {
             AnnotationService.Types.Structure mainStructure = GetStructureByID(cellID, true);
@@ -2973,9 +3001,6 @@ namespace Annotation
             return ans.ToArray();
 
         }
-
-
-
         #endregion
     }
 }
