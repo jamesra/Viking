@@ -13,8 +13,7 @@ namespace WebAnnotation.UI.Actions
         /// ID of location on adjacent section we expect to link to
         /// </summary>
         public long ExistingLocID;
-
-        IVolumeToSectionTransform Transform;
+        readonly IVolumeToSectionTransform Transform;
 
         /// <summary>
         /// The mosaic space polygon we want to commit to the database

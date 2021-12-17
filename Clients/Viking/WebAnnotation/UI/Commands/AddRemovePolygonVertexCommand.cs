@@ -85,8 +85,7 @@ namespace WebAnnotation.UI.Commands
 
         public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
         OnCommandSuccess success_callback;
-
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         public RemovePolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridPolygon mosaic_polygon,

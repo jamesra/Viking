@@ -209,8 +209,7 @@ namespace WebAnnotation.UI.Commands
             //If the objects changed that means we intersected the boundary of the object.  If we are in pen mode and the intersected object qualifies we should start a retrace and replace command... 
             if (IntersectedObject != null)
             {
-                LocationPolygonView intersectedPolyView = IntersectedObject as LocationPolygonView; //TODO: Needs to check for lines as well
-                if (intersectedPolyView != null)
+                if (IntersectedObject is LocationPolygonView intersectedPolyView)
                 {
 
                     //intersectedPolyView.

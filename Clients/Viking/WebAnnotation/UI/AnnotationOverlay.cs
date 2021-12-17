@@ -629,7 +629,7 @@ namespace WebAnnotation
             }
 
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
-            /*
+
             if (this.PenPath == null)
             {
                 double distance;
@@ -639,21 +639,30 @@ namespace WebAnnotation
                 Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
 
                 /*If we select a link, find the location off the section and assume we have selected that*/
-            /*
+
                 IPenActionSupport actionSupportedObj = obj as IPenActionSupport;
 
                 if (actionSupportedObj != null)
                 {
                     long LocationID;
-                    LocationAction action = actionSupportedObj.GetPenContactActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber, Control.ModifierKeys, out LocationID);
+                    LocationAction action = actionSupportedObj.GetPenContactActionForPositionOnAnnotation(WorldPosition,
+                        this.CurrentSectionNumber, Control.ModifierKeys, out LocationID);
 
-                    var viewObj = actionSupportedObj as LocationCanvasView;
-                    if (viewObj == null)
-                        return;
-
-                    var command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
+                    if (actionSupportedObj is LocationCanvasView viewObj)
+                    {
+                        var command =
+                            action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
+                        if (command != null)
+                        {
+                            _Parent.CurrentCommand = command;
+                            return;
+                        }
+                    }
                     //var command = new AnnotationPenFreeDrawCommand(Parent, viewObj, Color.Green, Global.DefaultClosedLineWidth * Parent.Downsample, null);
-                    /*Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);*/
+                    //Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
+                }
+            }
+
             /*
                 if (command != null)
                 {
