@@ -74,6 +74,6 @@ namespace Geometry
 
         //TODO: Choose number of points based on distance between control points
         static public readonly uint NumOpenCurveInterpolationPoints = 3;
-        static public readonly uint NumClosedCurveInterpolationPoints = 8;
+        static public readonly uint NumClosedCurveInterpolationPoints = 5;
     }
 }
