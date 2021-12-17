@@ -157,7 +157,7 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        private static GridRectangle CalculateBoundingBox(Dictionary<IAction, List<IHitTesting>> ActionInteractables)
+        private GridRectangle CalculateBoundingBox(Dictionary<IAction, List<IHitTesting>> ActionInteractables)
         {
             GridRectangle output = new GridRectangle();
 
@@ -177,6 +177,33 @@ namespace WebAnnotation.UI.Commands
                 }
             }
 
+            //Check that the bounding box is not too large
+            var renderTargetBounds = this.Parent.RenderTargetBounds();
+            if (output.Width > renderTargetBounds.Width)
+            {
+                output = new GridRectangle(renderTargetBounds.Left, renderTargetBounds.Right, output.Bottom,
+                    output.Top);
+            }
+             
+            if (output.Height > renderTargetBounds.Height)
+            {
+                output = new GridRectangle(output.Left, output.Right, renderTargetBounds.Bottom,
+                    renderTargetBounds.Top);
+            }
+
+            //Check that the bounding box is not too small
+            if (output.Width < renderTargetBounds.Width / 5)
+            {
+                output = new GridRectangle(output.Left, output.Left + renderTargetBounds.Width / 5, output.Bottom,
+                    output.Top);
+            }
+
+            if (output.Height < renderTargetBounds.Height / 5)
+            {
+                output = new GridRectangle(output.Left, output.Right, output.Bottom,
+                    output.Bottom + renderTargetBounds.Height / 5);
+            }
+
             return output;
         }
 
@@ -189,7 +216,6 @@ namespace WebAnnotation.UI.Commands
             //TODO: Ensure buttons are visible on the screen
 
             double Radius = GetButtonRadius(BoundingBox, CircleAreaScalar);
-
 
             GridVector2 Origin = bbox.UpperLeft;
             Origin = bbox.UpperLeft - new GridVector2(Radius, Radius);
