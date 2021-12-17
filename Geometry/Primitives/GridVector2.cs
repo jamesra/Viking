@@ -341,15 +341,12 @@ namespace Geometry
 
             return s;
         }
-
-        public static double Magnitude(in GridVector2 A)
-        {
-            return Math.Sqrt((A.X * A.X) + (A.Y * A.Y));
-        }
+         
+        public double Magnitude => Math.Sqrt(Math.Pow(X, 2) + Math.Pow(Y,2));
 
         public void Normalize()
         {
-            double mag = Magnitude(this);
+            double mag = this.Magnitude;
             X = X / mag;
             Y = Y / mag; 
         }
@@ -361,7 +358,7 @@ namespace Geometry
 
         public static GridVector2 Normalize(in GridVector2 A)
         {
-            double mag = Magnitude(A);
+            double mag = A.Magnitude;
             return new GridVector2(A.X / mag, A.Y / mag); 
         }
 

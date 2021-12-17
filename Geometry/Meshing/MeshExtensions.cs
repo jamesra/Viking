@@ -304,7 +304,7 @@ namespace Geometry.Meshing
 
             GridVector2 faceCenter = verts.Select(v => v.Position).ToArray().Average();
 
-            if (GridVector2.Magnitude(faceCenter) < 100)
+            if (faceCenter.Magnitude < 100)
             {
                 faceCenter = GridVector2.Zero; //Don't nudge if we are close to origin, prevents errors in our tests.
             }
