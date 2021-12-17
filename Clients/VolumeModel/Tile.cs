@@ -61,13 +61,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Size the texture will require
         /// </summary>
-        public int TextureSize
-        {
-            get
-            {
-                return (int)((Bounds.Width / this.Downsample) * (Bounds.Height / this.Downsample)); //This is a rough estimate, not exact
-            }
-        }
+        public int TextureSize => (int)(Bounds.Width / this.Downsample * (Bounds.Height / this.Downsample)); //This is a rough estimate, not exact
 
         /// <summary>
         /// The amount the tile has been downsampled by
@@ -78,31 +72,19 @@ namespace Viking.VolumeModel
         public readonly string TextureCacheFilePath;
 
         //Need to initialize or union operator of bounds property won't work
-        private GridRectangle _Bounds = new GridRectangle(double.NaN, double.NaN, double.NaN, double.NaN);
-        public GridRectangle Bounds
-        {
-            get
-            {
-                if (double.IsNaN(_Bounds.Width))
-                {
-                    _Bounds = Verticies.Select(v => v.Position.XY()).ToArray().BoundingBox();
-                }
+        public readonly GridRectangle Bounds;
 
-                return _Bounds; 
-            }
-        }
-        
         //PORT: public readonly string TextureCachedFileName;
 
         //PORT: This is a viewModel concept
         //private int MipMapLevels = 1;
 
-        public Tile(string UniqueKey, 
-                                PositionNormalTextureVertex[] verticies,
-                                int[] TriangleIndicies,
-                                string TextureFullPath,
-                                string cachePath,
-                                int downsample)
+        public Tile(in string UniqueKey, 
+                                in PositionNormalTextureVertex[] verticies,
+                                in int[] TriangleIndicies,
+                                in string TextureFullPath,
+                                in string cachePath,
+                                in int downsample)
         {
             this.UniqueKey = UniqueKey;
             this._UniqueKeyHashcode = UniqueKey.GetHashCode();
@@ -112,15 +94,15 @@ namespace Viking.VolumeModel
             this.Downsample = downsample;
             this.TextureFullPath = TextureFullPath.Replace('\\','/');
             this.TextureCacheFilePath = cachePath.Replace('/','\\');
+
+            Bounds = verticies.Select(v => v.Position.XY()).BoundingBox();
             //PORT: this.TextureCachedFileName = cachedTextureFileName;
             //PORT: this.MipMapLevels = mipMapLevels;
 
             this.Verticies = verticies;
             Debug.Assert(verticies != null);
             Debug.Assert(verticies.Length > 0, "Tile must have verticies");
-            this.TriangleIndicies = TriangleIndicies;
-
-            
+            this.TriangleIndicies = TriangleIndicies; 
         }
 
         public static PositionNormalTextureVertex[] CalculateVerticies(ITransformControlPoints transform, Geometry.Transforms.TileTransformInfo info)
@@ -131,12 +113,15 @@ namespace Viking.VolumeModel
             {
                 GridVector2 CtrlP = transform.MapPoints[i].ControlPoint;
                 GridVector2 MapP = transform.MapPoints[i].MappedPoint;
-                verticies[i].Position = new GridVector3(CtrlP.X, CtrlP.Y, 0);
-                verticies[i].Texture = new GridVector2(MapP.X / info.ImageWidth, MapP.Y / info.ImageHeight);
+
+                var pos = new GridVector3(CtrlP.X, CtrlP.Y, 0);
+                var tex = new GridVector2(MapP.X / info.ImageWidth, MapP.Y / info.ImageHeight);
+                var norm = GridVector3.UnitZ;
+
+                verticies[i] = new PositionNormalTextureVertex(pos, norm, tex);
 
                 Debug.Assert(verticies[i].Texture.X >= 0 && verticies[i].Texture.X <= 1, "Texture X coordinate out of bounds 0,1");
                 Debug.Assert(verticies[i].Texture.Y >= 0 && verticies[i].Texture.Y <= 1, "Texture Y coordinate out of bounds 0,1");
-                verticies[i].Normal = GridVector3.UnitZ; 
 
                 //verticies[i] = new PositionNormalTextureVertex(position, GridVector3.UnitZ, textureCoord);
             }

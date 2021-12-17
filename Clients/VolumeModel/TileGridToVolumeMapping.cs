@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
@@ -106,14 +107,14 @@ namespace Viking.VolumeModel
             return this.VolumeTransform.Transform(P);
         }
 
-        public override void FreeMemory()
+        public override Task FreeMemory()
         {
-            if (VolumeTransform as IMemoryMinimization != null)
+            if (VolumeTransform is IMemoryMinimization memMin)
             {
-                ((IMemoryMinimization)VolumeTransform).MinimizeMemory();
+                memMin.MinimizeMemory();
             }
 
-            base.FreeMemory();
+            return base.FreeMemory();
         }
 
 

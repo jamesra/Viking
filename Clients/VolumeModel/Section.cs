@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Utils;
 using Viking.Common.UI;
@@ -32,16 +34,12 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The path that needs to appended to the volume path to reach the section
         /// </summary>
-        private string _SectionSubPath;
-        public string SectionSubPath
-        {
-            get { return _SectionSubPath; }
-        }
+        public readonly string SectionSubPath; 
 
         /// <summary>
         /// Path to the section, including volume path 
         /// </summary>
-        public string Path => $"{volume.Host}/{_SectionSubPath}";
+        public readonly string Path;
 
         private ChannelInfo[] _ChannelInfo = new ChannelInfo[0];
 
@@ -142,24 +140,34 @@ namespace Viking.VolumeModel
         }
 
 
+        private SemaphoreSlim _PrepareTransformSemaphore = new SemaphoreSlim(1);
         /// <summary>
         /// This can be called to inform the section to do the math to warp the section on a separate thread in anticipation
         /// of being used in the near future
         /// </summary>
         /// <param name="transform"></param>
-        public void PrepareTransform(string transform)
+        public async Task PrepareTransform(string transform)
         {
-            if (WarpedTo.ContainsKey(transform) == false)
-                return;
+            try
+            {
+                await _PrepareTransformSemaphore.WaitAsync();
+                if (WarpedTo.ContainsKey(transform) == false)
+                    return;
 
-            SectionToVolumeMapping map = WarpedTo[transform] as SectionToVolumeMapping;
-            if (map == null)
-                return;
+                if (WarpedTo[transform] is SectionToVolumeMapping map)
+                {
+                    await map.Initialize(CancellationToken.None);
+                }
+            }
+            finally
+            {
+                _PrepareTransformSemaphore.Release();
+            }
 
             //Launch a separate thread to begin warping
 
             //System.Threading.ThreadStart threadDelegate = new System.Threading.ThreadStart(map.Warp);
-            System.Threading.ThreadPool.QueueUserWorkItem(map.Warp);
+            //System.Threading.ThreadPool.QueueUserWorkItem(map.Warp);
             //System.Threading.Thread newThread = new System.Threading.Thread(threadDelegate);
             //newThread.Start();
         }
@@ -173,17 +181,24 @@ namespace Viking.VolumeModel
         public Section(Volume vol, string path, XElement sectionElement)
             : this(vol)
         {
-            this._SectionSubPath = path;
+            this.SectionSubPath = path;
+            Path = $"{volume.Host}/{SectionSubPath}";
+
 
             //reader.Read();
             //XElement sectionElement = XDocument.ReadFrom(reader) as XElement;
             Debug.Assert(sectionElement != null);
 
-            this.Name = sectionElement.HasAttributeCaseInsensitive("name") ? sectionElement.GetAttributeCaseInsensitive("name").Value : null;
+            this.Name = sectionElement.HasAttributeCaseInsensitive("name")
+                ? sectionElement.GetAttributeCaseInsensitive("name").Value
+                : null;
             this.Number = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(sectionElement, "number").Value);
             if (this.Name == null)
                 this.Name = this.Number.ToString("D4");
+        }
 
+        public async Task<Section> InitializeFromXML(XElement sectionElement, CancellationToken token)
+        { 
             foreach (XNode node in sectionElement.Nodes())
             {
                 XElement elem = node as XElement;
@@ -208,6 +223,9 @@ namespace Viking.VolumeModel
                                                                                 mosaicTransformPath,
                                                                                 TilePrefix,
                                                                                 TilePostfix);
+
+                        //startedTasks.Add(mapping.Initialize(token));
+                        //await mapping.Initialize();
 
                         PyramidTransformNames.Add(Name);
 
@@ -300,17 +318,23 @@ namespace Viking.VolumeModel
                              */
                         }
 
-                        break;
-
-
+                        break; 
                 }
             }
+             
+             
+            Trace.WriteLine($"Initialized section {this.Number:D4}");
+            
+            return this;
         }
 
+        /*
         public Section(Volume vol, string path)
             : this(vol)
         {
-            this._SectionSubPath = path;
+            this.SectionSubPath = path;
+            Path = $"{volume.Host}/{SectionSubPath}";
+
             string filename = System.IO.Path.GetFileNameWithoutExtension(path);
 
             //We expect the first part of the filename to be a section #:
@@ -339,13 +363,13 @@ namespace Viking.VolumeModel
                                                      "This directory did not have a section number: " + path);
                  */
 
-
+        /*
             }
 
             LoadLocal(path);
         }
-
-
+*/
+         
         protected void AddTileset(TileGridMapping mapping)
         {
             WarpedTo.Add(mapping.Name, mapping);
@@ -367,6 +391,8 @@ namespace Viking.VolumeModel
                                                                   info.FilePrefix, info.FilePostfix,
                                                                   info.TileXDim, info.TileYDim,
                                                                   info.Host, info.CoordSpaceName);
+
+                mapping.Initialize(CancellationToken.None);
 
                 mapping.PopulateLevels(info.MaxLevel, info.GridXDim, info.GridYDim);
 

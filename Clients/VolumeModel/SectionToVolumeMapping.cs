@@ -3,6 +3,7 @@ using Geometry.Transforms;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,20 +14,17 @@ namespace Viking.VolumeModel
     /// </summary>
     /// 
     public class SectionToVolumeMapping : FixedTileCountMapping
-    {
-        private object LockObj = new object();
-
-        /// <summary>
-        /// If this section is in a volume ReferencedTo indicates which section
-        /// was used as a control during slice-to-slice registration.
-        /// Returns -1 if the section is not in a volume
-        /// </summary>
-        public int ReferencedTo
-        {
-            get { return -1; }
-        }
-
+    {  
         protected ITransform[] _TileTransforms = null;
+
+        private GridRectangle _VolumeBounds;
+        public override GridRectangle ControlBounds { get => _VolumeBounds; }
+
+        private GridRectangle _SectionBounds;
+        public override GridRectangle? SectionBounds { get => _SectionBounds; }
+
+        public override GridRectangle? VolumeBounds => _VolumeBounds;
+
 
         public override ITransform[] GetLoadedTransformsOrNull()
         {
@@ -36,12 +34,36 @@ namespace Viking.VolumeModel
             return null;
         }
 
-        public async override  Task<ITransform[]> GetOrCreateTransforms()
+        public async override  Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
         {
-            if (HasBeenWarped == false)
-                await Warp().ConfigureAwait(false);
+            //if (HasBeenWarped == false)
+                //throw new InvalidOperationException($"Mapping is not initialized");
 
-            return _TileTransforms;
+            //return _TileTransforms;
+
+            if (Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) == null)
+            {
+                await Initialize(token);
+            }
+
+            var _transforms = Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null);
+            if (_transforms is null)
+                _transforms = Array.Empty<ITransform>();
+
+            return _transforms;
+            /*
+            try
+            { 
+                if (_TileTransforms == null || token.IsCancellationRequested)
+                    return Array.Empty<ITransform>();
+
+                return _TileTransforms;
+            }
+            finally
+            {
+                //rwLockObj.ExitReadLock();
+            }
+            */
         }
         /*
         public override ITransform[] TileTransforms
@@ -55,16 +77,52 @@ namespace Viking.VolumeModel
             }
         }*/
 
+        private int _HasBeenWarped = 0;
         /// <summary>
         /// .mosaic files load as being warped.  Volume sections have to passed through a volume transform first, which we do in a lazy fashion
         /// </summary>
-        protected bool HasBeenWarped = false;
+        private bool HasBeenWarped => Interlocked.CompareExchange(ref _HasBeenWarped, 1, 1) > 0;
+
+        private int _Initialized = 0;
+        public override bool Initialized => Interlocked.CompareExchange(ref _HasBeenWarped, 1, 1) > 0;
+
+        private readonly SemaphoreSlim _InitializeSemaphore = new SemaphoreSlim(1);
+
+
+        public override async Task Initialize(CancellationToken token)
+        {
+            if (Interlocked.CompareExchange(ref _Initialized, 0, 0) > 0)
+                return;
+
+            try
+            {
+                await _InitializeSemaphore.WaitAsync(token);
+                if (Interlocked.CompareExchange(ref _Initialized, 0, 0) > 0)
+                    return;
+
+                _TileTransforms = await WarpTransforms(token).ConfigureAwait(false);
+
+                if (_TileTransforms != null)
+                {
+                    var transformControlPoints = _TileTransforms.Cast<ITransformControlPoints>().ToArray();
+                    _VolumeBounds =
+                        Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(transformControlPoints);
+                    _SectionBounds =
+                        Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(transformControlPoints);
+                    Interlocked.CompareExchange(ref _Initialized, 1, 0);
+                }
+            }
+            finally
+            {
+                _InitializeSemaphore.Release();
+            } 
+        }
 
         /// <summary>
         /// The transforms applied to each tile for this section, used to generate verticies. 
         /// If the HasBeenWarped is == false these transforms are in section space and not volume space
         /// </summary>
-        public FixedTileCountMapping SourceMapping;
+        private readonly FixedTileCountMapping SourceMapping;
 
         /// <summary>
         /// The transformation which will/has converted the tiles from section space into volume space.
@@ -79,85 +137,64 @@ namespace Viking.VolumeModel
 
         public SectionToVolumeMapping(Section section, string name, FixedTileCountMapping sourceMapping, ITransform volumeTransform)
             : base(section, name, sourceMapping.TilePrefix, sourceMapping.TilePostfix)
-        {
-            HasBeenWarped = false;
+        { 
             SourceMapping = sourceMapping;
             VolumeTransform = volumeTransform;
         }
 
-        public override void FreeMemory()
+        public override async Task FreeMemory()
         {
-            lock (LockObj)
+            try
             {
-                HasBeenWarped = false;
-                _TileTransforms = null;
-                SourceMapping.FreeMemory();
+                await _InitializeSemaphore.WaitAsync();
+                if (Interlocked.CompareExchange(ref _HasBeenWarped, 0, 1) > 0)
+                {
+                    _TileTransforms = null;
+                    await SourceMapping.FreeMemory();
+                }
             }
+            finally
+            {
+                _InitializeSemaphore.Release();
+            }
+
+            return;
         }
-
-        public void Warp(Object state)
-        {
-            Warp();
-        }
-
-        private SemaphoreSlim LoadTransformSemaphore = new SemaphoreSlim(1, 1);
-
+            
         /// <summary>
         /// If this section has not yet been warped, then do so.
         /// This method is invoked by threads.  
         /// </summary>
-        public async Task Warp()
-        {
-            if (HasBeenWarped)
-                return;
-
-            try { 
-                await LoadTransformSemaphore.WaitAsync();
-                if (HasBeenWarped)
-                    return;
-
-                if (VolumeTransform != null)
+        public async Task<ITransform[]> WarpTransforms(CancellationToken token)
+        {   
+            if (VolumeTransform != null)
                     Trace.WriteLine("Warping section " + VolumeTransform.ToString() +/*.Info.MappedSection + */  " to volume space", "VolumeModel");
 
-                Debug.Assert(this.VolumeTransform != null);
+            Debug.Assert(this.VolumeTransform != null);
 
-                TransformInfo VolumeTransformInfo = ((ITransformInfo)VolumeTransform).Info;
+            if(SourceMapping.Initialized == false)
+                await SourceMapping.Initialize(token);
 
-                bool LoadedFromCache = false;
-                if (System.IO.File.Exists(this.CachedTransformsFileName))
+            var VolumeTransformInfo = ((ITransformInfo)VolumeTransform).Info;
+
+            bool LoadedFromCache = false;
+            var cacheFileInfo = new System.IO.FileInfo(CachedTransformsFileName);
+            if (cacheFileInfo.Exists)
+            {
+                /*Check to make sure cache file is older than both .stos modified time and mapping modified time*/  
+                if (cacheFileInfo.LastWriteTimeUtc >= VolumeTransformInfo.LastModified &&
+                    cacheFileInfo.LastWriteTimeUtc >= SourceMapping.LastModified)
                 {
-                    /*Check to make sure cache file is older than both .stos modified time and mapping modified time*/
-                    DateTime CacheCreationTime = System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName);
-
-                    if (CacheCreationTime >= VolumeTransformInfo.LastModified &&
-                        CacheCreationTime >= SourceMapping.LastModified)
+                    try
                     {
-                        try
-                        {
-                            this._TileTransforms = LoadFromCache();
-                        }
-                        catch (Exception)
-                        {
-                            //On any error, use the traditional path
-                            this._TileTransforms = null;
-                            LoadedFromCache = false;
-                            Trace.WriteLine("Deleting invalid cache file: " + this.CachedTransformsFileName);
-                            try
-                            {
-                                System.IO.File.Delete(this.CachedTransformsFileName);
-                            }
-                            catch (System.IO.IOException except)
-                            {
-                                Trace.WriteLine("Could not delete invalid cache file: " + this.CachedTransformsFileName);
-                            }
-                        }
-
-                        LoadedFromCache = this._TileTransforms != null;
+                        return LoadFromCache();
                     }
-                    else
+                    catch (Exception)
                     {
-                        //Remove the cache file, it is stale
-                        Trace.WriteLine("Deleting stale cache file: " + this.CachedTransformsFileName);
+                        //On any error, use the traditional path
+                        this._TileTransforms = null;
+                        LoadedFromCache = false;
+                        Trace.WriteLine("Deleting invalid cache file: " + this.CachedTransformsFileName);
                         try
                         {
                             System.IO.File.Delete(this.CachedTransformsFileName);
@@ -166,78 +203,81 @@ namespace Viking.VolumeModel
                         {
                             Trace.WriteLine("Could not delete invalid cache file: " + this.CachedTransformsFileName);
                         }
-                    }
+                    } 
                 }
-
-                if (LoadedFromCache)
+                else
                 {
-                    this.HasBeenWarped = true;
-                    return;
-                }
-
-                // Get the transform tiles from the source mapping, which loads the .mosaic if it hasn't alredy been loaded
-                ITransform[] volTransforms = await SourceMapping.GetOrCreateTransforms();
-
-                // We add transforms which surivive addition with at least three points to this list
-                List<ITransform> listTiles = new List<ITransform>(volTransforms.Length);
-
-                for (int i = 0; i < volTransforms.Length; i++)
-                {
-                    IControlPointTriangulation T = volTransforms[i] as IControlPointTriangulation;
-                    //TriangulationTransform copy = (TriangulationTransform)T.Copy();
-                    ITransform newTransform = null; // = (TriangulationTransform)T.Copy();
-
-
-                    if (VolumeTransform != null && T != null)
+                    //Remove the cache file, it is stale
+                    Trace.WriteLine("Deleting stale cache file: " + this.CachedTransformsFileName);
+                    try
                     {
-
-                        TileTransformInfo originalInfo = ((ITransformInfo)T).Info as TileTransformInfo;
-                        TileTransformInfo info = new TileTransformInfo(originalInfo.TileFileName,
-                                                                       originalInfo.TileNumber,
-                                                                       originalInfo.LastModified < VolumeTransformInfo.LastModified ? originalInfo.LastModified : VolumeTransformInfo.LastModified,
-                                                                       originalInfo.ImageWidth,
-                                                                       originalInfo.ImageHeight);
-                        //FIXME
-                        newTransform = TriangulationTransform.Transform(this.VolumeTransform, T, info);
+                        System.IO.File.Delete(this.CachedTransformsFileName);
                     }
-
-                    if (newTransform == null)
-                        continue;
-
-                    //Don't include the tile if the mapped version doesn't have any triangles
-                    if (newTransform as IControlPointTriangulation != null)
+                    catch (System.IO.IOException except)
                     {
-                        if (((IControlPointTriangulation)newTransform).MapPoints.Length > 2)
-                            listTiles.Add(newTransform);
-                    }
-
-                    if (T as TriangulationTransform != null)
-                    {
-                        ((TriangulationTransform)T).MinimizeMemory();
-                    }
-
-                    if (newTransform as TriangulationTransform != null)
-                    {
-                        ((TriangulationTransform)newTransform).MinimizeMemory();
+                        Trace.WriteLine("Could not delete invalid cache file: " + this.CachedTransformsFileName);
                     }
                 }
-
-                //OK, overwrite the tiles in our class
-                this._TileTransforms = listTiles.ToArray();
-                this.HasBeenWarped = true;
-
-                //Try to save the transform to our cache
-                SaveToCache(CachedTransformsFileName, listTiles.ToArray());
             }
-            finally
+              
+            // Get the transform tiles from the source mapping, which loads the .mosaic if it hasn't alredy been loaded
+            ITransform[] volTransforms = await SourceMapping.GetOrCreateTransforms(token);
+            if (token.IsCancellationRequested)
+                return null;
+
+            // We add transforms which surivive addition with at least three points to this list
+            List<ITransform> listTiles = new List<ITransform>(volTransforms.Length);
+
+            for (int i = 0; i < volTransforms.Length; i++)
             {
-                LoadTransformSemaphore.Release();
+                IControlPointTriangulation T = volTransforms[i] as IControlPointTriangulation;
+                //TriangulationTransform copy = (TriangulationTransform)T.Copy();
+                ITransform newTransform = null; // = (TriangulationTransform)T.Copy();
+
+
+                if (VolumeTransform != null && T != null)
+                {
+
+                    TileTransformInfo originalInfo = ((ITransformInfo)T).Info as TileTransformInfo;
+                    TileTransformInfo info = new TileTransformInfo(originalInfo.TileFileName,
+                                                                   originalInfo.TileNumber,
+                                                                   originalInfo.LastModified < VolumeTransformInfo.LastModified ? originalInfo.LastModified : VolumeTransformInfo.LastModified,
+                                                                   originalInfo.ImageWidth,
+                                                                   originalInfo.ImageHeight);
+                    //FIXME
+                    newTransform = TriangulationTransform.Transform(this.VolumeTransform, T, info);
+                }
+
+                if (newTransform == null)
+                    continue;
+
+                //Don't include the tile if the mapped version doesn't have any triangles
+                if (newTransform is IControlPointTriangulation cpt)
+                {
+                    if (cpt.MapPoints.Length > 2)
+                        listTiles.Add(newTransform);
+                }
+
+                if (T is IMemoryMinimization mmt)
+                {
+                    mmt.MinimizeMemory();
+                }
+
+                if (newTransform is IMemoryMinimization nmmt)
+                {
+                    nmmt.MinimizeMemory();
+                }
             }
+
+            var result = listTiles.ToArray();
+            //Try to save the transform to our cache
+            Task.Run(() => SaveToCache(CachedTransformsFileName, listTiles.ToArray()));
+
+            //OK, overwrite the tiles in our class
+            return result;  
         }
 
-
-
-
+         
         /// <summary>
         /// Maps a point from volume space into the section space
         /// </summary>

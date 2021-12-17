@@ -1,5 +1,7 @@
 ﻿using Geometry;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Utils;
 
@@ -65,6 +67,13 @@ namespace Viking.VolumeModel
         {
         }
 
+        public override bool Initialized => true;
+
+        public override Task Initialize(CancellationToken token)
+        {
+            return Task.CompletedTask;
+        }
+
         public static TileGridMapping CreateFromTilesetElement(XElement TilesetNode, Section section)
         {
             string Name = IO.GetAttributeCaseInsensitive(TilesetNode, "name").Value;
@@ -93,7 +102,7 @@ namespace Viking.VolumeModel
             }
 
             //If the tileset node has no entries, then don't create a TileGridMapping
-            if (TilesetNode.Nodes().Count() == 0)
+            if (TilesetNode.Nodes().Any() == false)
                 return null;
 
             TileGridMapping mapping = new TileGridMapping(section, Name, TilePrefix, TilePostfix,

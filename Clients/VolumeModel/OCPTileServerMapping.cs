@@ -1,6 +1,8 @@
 ﻿using Geometry;
 using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
@@ -59,6 +61,13 @@ namespace Viking.VolumeModel
         {
             this.Host = TileServerHost;
             this.ChannelName = channelName;
+        }
+
+        public override bool Initialized => true;
+
+        public override Task Initialize(CancellationToken token)
+        {
+            return Task.CompletedTask;
         }
 
         public void PopulateLevels(int MaxLevel, int GridDimX, int GridDimY)
