@@ -226,7 +226,7 @@ namespace Geometry.Transforms
             }
         }
 
-        public GridTransform(MappingGridVector2[] points, GridRectangle mappedBounds, int gridSizeX, int gridSizeY, TransformInfo info)
+        public GridTransform(MappingGridVector2[] points, GridRectangle mappedBounds, int gridSizeX, int gridSizeY, TransformBasicInfo info)
             : base(points, mappedBounds, info)
         {
             GridSizeX = gridSizeX;

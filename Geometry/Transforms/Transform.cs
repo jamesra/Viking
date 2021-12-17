@@ -77,7 +77,7 @@ namespace Geometry.Transforms
     [Serializable]
     abstract public class TransformBase : ISerializable, IMemoryMinimization, ITransformInfo
     {
-        public TransformInfo Info { get; set; }
+        public TransformBasicInfo Info { get; set; }
 
         public override string ToString()
         {
@@ -105,7 +105,7 @@ namespace Geometry.Transforms
         /// <param name="vector"></param>
         abstract public void Translate(GridVector2 vector);
 
-        protected TransformBase(TransformInfo info)
+        protected TransformBase(TransformBasicInfo info)
         {
             Info = info;
         }
@@ -117,7 +117,7 @@ namespace Geometry.Transforms
             if (info == null)
                 throw new ArgumentNullException();
 
-            this.Info = info.GetValue("Info", typeof(TransformInfo)) as TransformInfo;
+            this.Info = info.GetValue("Info", typeof(TransformBasicInfo)) as TransformBasicInfo;
         }
 
         public virtual void GetObjectData(SerializationInfo info, StreamingContext context)

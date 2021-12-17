@@ -11,7 +11,7 @@ namespace Geometry.Transforms
     [Serializable]
     public abstract class ReferencePointBasedTransform : IITKSerialization, ITransformInfo, ITransformControlPoints, ISerializable, IMemoryMinimization
     {
-        public TransformInfo Info { get; set; }
+        public TransformBasicInfo Info { get; set; }
 
         public override string ToString()
         {
@@ -83,15 +83,17 @@ namespace Geometry.Transforms
 
         private static void DebugVerifyPointsAreUnique(MappingGridVector2[] listPoints)
         {
+#if DEBUG
             //Check for duplicate points
             for (int i = 1; i < listPoints.Length; i++)
             {
                 Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
                 Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
             }
+#endif
         }
 
-        protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformInfo info)
+        protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformBasicInfo info)
         {
             //List<MappingGridVector2> listPoints = new List<MappingGridVector2>(points);
             //MappingGridVector2.RemoveDuplicates(listPoints);
@@ -101,13 +103,13 @@ namespace Geometry.Transforms
             this.Info = info;
         }
 
-        protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, TransformInfo info)
+        protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, TransformBasicInfo info)
             : this(points, info)
         {
             this.MappedBounds = mappedBounds;
         }
 
-        protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, GridRectangle controlBounds, TransformInfo info)
+        protected ReferencePointBasedTransform(MappingGridVector2[] points, GridRectangle mappedBounds, GridRectangle controlBounds, TransformBasicInfo info)
         {
             this.MapPoints = points;
             this.MappedBounds = mappedBounds;
@@ -121,7 +123,7 @@ namespace Geometry.Transforms
                 throw new ArgumentNullException();
 
             _mapPoints = info.GetValue("_mapPoints", typeof(MappingGridVector2[])) as MappingGridVector2[];
-            this.Info = info.GetValue("Info", typeof(TransformInfo)) as TransformInfo;
+            this.Info = info.GetValue("Info", typeof(TransformBasicInfo)) as TransformBasicInfo;
             MappedBounds = (GridRectangle)info.GetValue("MappedBounds", typeof(GridRectangle));
             ControlBounds = (GridRectangle)info.GetValue("ControlBounds", typeof(GridRectangle));
         }

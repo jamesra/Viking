@@ -8,13 +8,13 @@ using System.Runtime.Serialization;
 namespace Geometry.Transforms
 {
     [Serializable]
-    class RBFTransformComponents
+    public readonly struct RBFTransformComponents
     {
-        public readonly TransformInfo Info;
+        public readonly TransformBasicInfo Info;
         public readonly float[] ControlToMappedSpaceWeights;
         public readonly float[] MappedToControlSpaceWeights;
 
-        public RBFTransformComponents(TransformInfo info, float[] CtoM, float[] MtoC)
+        public RBFTransformComponents(TransformBasicInfo info, float[] CtoM, float[] MtoC)
         {
             Info = info;
             ControlToMappedSpaceWeights = CtoM;
@@ -84,7 +84,7 @@ namespace Geometry.Transforms
             return distance * distance * Math.Log(distance);
         }
 
-        public RBFTransform(MappingGridVector2[] points, TransformInfo info)
+        public RBFTransform(MappingGridVector2[] points, TransformBasicInfo info)
             : base(points, info)
         {
         }
@@ -443,46 +443,50 @@ namespace Geometry.Transforms
         /// <returns></returns>
         private bool TryLoadSerializedTransformComponents()
         {
-            if (!(Info is ITransformCacheInfo cacheInfo))
-                return false;
+            if (Info is ITransformCacheInfo cacheInfo)
+            { 
+                if (!System.IO.File.Exists(cacheInfo.CacheFullPath))
+                    return false;
 
-            if (!System.IO.File.Exists(cacheInfo.CacheFullPath))
-                return false;
-
-            bool CacheInvalid = false;
-            try
-            {
-
-                using (Stream binFile = System.IO.File.OpenRead(cacheInfo.CacheFullPath))
+                bool CacheInvalid = false;
+                try
                 {
-                    var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                    RBFTransformComponents components = binaryFormatter.Deserialize(binFile) as RBFTransformComponents;
 
-                    CacheInvalid = components.Info.LastModified < this.Info.LastModified;
-                    if (!CacheInvalid)
+                    using (Stream binFile = System.IO.File.OpenRead(cacheInfo.CacheFullPath))
                     {
-                        this._MappedToControlSpaceWeights = components.MappedToControlSpaceWeights;
-                        this._ControlToMappedSpaceWeights = components.ControlToMappedSpaceWeights;
+                        var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+                        RBFTransformComponents components =
+                            (RBFTransformComponents)binaryFormatter.Deserialize(binFile);
+
+                        CacheInvalid = components.Info.LastModified < this.Info.LastModified;
+                        if (!CacheInvalid)
+                        {
+                            this._MappedToControlSpaceWeights = components.MappedToControlSpaceWeights;
+                            this._ControlToMappedSpaceWeights = components.ControlToMappedSpaceWeights;
+                        }
+
                     }
-
                 }
+                catch (System.Runtime.Serialization.SerializationException e)
+                {
+                    Trace.WriteLine(string.Format("Remove file with Serialization exception {0}\n{1}", e.Message,
+                        cacheInfo.CacheFullPath));
+
+                    System.IO.File.Delete(cacheInfo.CacheFullPath);
+
+                    return false;
+                }
+
+                if (CacheInvalid)
+                {
+                    System.IO.File.Delete(cacheInfo.CacheFullPath);
+                    return false;
+                }
+
+                return true;
             }
-            catch (System.Runtime.Serialization.SerializationException e)
-            {
-                Trace.WriteLine(string.Format("Remove file with Serialization exception {0}\n{1}", e.Message, cacheInfo.CacheFullPath));
 
-                System.IO.File.Delete(cacheInfo.CacheFullPath);
-
-                return false;
-            }
-
-            if (CacheInvalid)
-            {
-                System.IO.File.Delete(cacheInfo.CacheFullPath);
-                return false;
-            }
-
-            return true;
+            return false;
         }
     }
 }
