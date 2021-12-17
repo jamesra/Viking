@@ -3,14 +3,14 @@ using System.IO;
 
 namespace Viking.VolumeModel
 {
-    public class Global
+    public static class Global
     {
         /// <summary>
         /// Caches tiles, should call ReduceMemoryFootprint occasionally if memory use is a concern
         /// </summary>
         static public TileCache TileCache = new TileCache();
 
-        static public Byte[] ReadToBuffer(Stream stream, long BytesToRead)
+        static public Byte[] ReadToBuffer(this Stream stream, long BytesToRead)
         {
             Byte[] streamBuffer = new Byte[BytesToRead];
 
