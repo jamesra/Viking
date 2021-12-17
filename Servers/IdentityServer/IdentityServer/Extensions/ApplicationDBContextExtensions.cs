@@ -69,26 +69,70 @@ namespace IdentityServer.Extensions
         /// </summary>
         /// <param name="context"></param>
         /// <param name="ResourceId"></param>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        public static async Task<Dictionary<long, string[]>> UserResourcePermissions(this ApplicationDbContext context, string userId, string[] resourceTypeIds = null)
+        {
+            var user_permissions = from gup in context.GrantedUserPermissions.Include(nameof(GrantedGroupPermission.Resource))
+                where gup.UserId == userId
+                select new { gup.ResourceId, gup.Resource.Name, gup.PermissionId, gup.Resource.ResourceTypeId};
+            
+            var group_memberships = (await context.RecursiveMemberOfGroups(userId)).Select(g => g.Id);
+             
+            var group_permissions = from ggp in await context.GrantedGroupPermissions.Include(nameof(GrantedGroupPermission.Resource)).ToListAsync()
+                join groupMembership in group_memberships on ggp.GroupId equals groupMembership 
+                select new { ggp.ResourceId, ggp.Resource.Name, ggp.PermissionId, ggp.Resource.ResourceTypeId };
+
+            var upl = await user_permissions.ToListAsync();
+            var gpl = group_permissions.ToList();
+
+            var permissions = upl.Union(gpl);
+
+            if (resourceTypeIds != null && resourceTypeIds.Length > 0)
+            {
+                permissions = permissions.Where(p => resourceTypeIds.Contains(p.ResourceTypeId));
+            }
+
+            var result = permissions.GroupBy(p => p.ResourceId, p => p.PermissionId).ToDictionary(d => d.Key, d => d.ToArray());
+
+                //var result = new SortedSet<string>(user_permissions);
+//            result.UnionWith(group_permissions);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Returns all PermissionIds the user has for the specified resource
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="ResourceId"></param>
         /// <param name="UserId"></param>
         /// <returns></returns>
-        public static async Task<IEnumerable<string>> UserResourcePermissions(this ApplicationDbContext context, long ResourceId, string UserId)
+        public static async Task<IEnumerable<string>> UserResourcePermissions(this ApplicationDbContext context, long ResourceId, string UserId, string[] resourceTypeIds = null)
         {
             var user_permissions = from gup in context.GrantedUserPermissions
                                    where gup.ResourceId == ResourceId && gup.UserId == UserId
-                                   select gup.PermissionId;
-
+                                   select new { gup.ResourceId, gup.Resource.Name, gup.PermissionId, gup.Resource.ResourceTypeId };
+             
             var group_memberships = (await context.RecursiveMemberOfGroups(UserId)).Select(g => g.Id);
 
             var resource_group_permissions = (from ggp in context.GrantedGroupPermissions
                                              where ggp.ResourceId == ResourceId
                                              select ggp);
 
-            var group_permissions = resource_group_permissions.Where(rgp => rgp.ResourceId == ResourceId && group_memberships.Contains(rgp.GroupId)).Select(rgp => rgp.PermissionId);
+            var group_permissions = resource_group_permissions.Where(rgp => rgp.ResourceId == ResourceId && group_memberships.Contains(rgp.GroupId)).Select(rgp => new { rgp.ResourceId, rgp.Resource.Name, rgp.PermissionId, rgp.Resource.ResourceTypeId});
 
-            var result = new SortedSet<string>(user_permissions);
-            result.UnionWith(group_permissions);
+            var upl = await user_permissions.ToListAsync();
+            var gpl = await group_permissions.ToListAsync();
 
-            return result;
+            var permissions = upl.Union(gpl);
+             
+            if (resourceTypeIds != null && resourceTypeIds.Length > 0)
+            {
+                permissions = permissions.Where(p => resourceTypeIds.Contains(p.ResourceTypeId));
+            }
+            
+            return permissions.Select(p => p.PermissionId);
         }
 
         public static IQueryable<ApplicationUser> GetPermittedUsers(this ApplicationDbContext context, long ResourceId, string PermissionId)

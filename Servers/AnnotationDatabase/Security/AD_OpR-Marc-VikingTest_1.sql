@@ -1,0 +1,3 @@
+﻿CREATE LOGIN [AD\OpR-Marc-VikingTest]
+    FROM WINDOWS WITH DEFAULT_LANGUAGE = [us_english];
+

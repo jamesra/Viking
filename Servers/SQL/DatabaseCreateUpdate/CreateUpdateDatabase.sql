@@ -1,11 +1,11 @@
 /**** You need to replace the following templates to use this script ****/
-/**** NeitzNM = Name of the database  */
-/**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Database\
+/**** Test = Name of the database  */
+/**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Databases\
 */
-DECLARE @DATABASE_NAME VARCHAR(50)
-SET @DATABASE_NAME = 'NeitzNM'
-DECLARE @DATABASE_DIRECTORY VARCHAR(50)
-SET @DATABASE_DIRECTORY = 'C:\Database\'
+DECLARE @DATABASE_NAME VARCHAR(100)
+SET @DATABASE_NAME = 'Test'
+DECLARE @DATABASE_DIRECTORY VARCHAR(100)
+SET @DATABASE_DIRECTORY = 'C:\Databases\'
 
 USE [master]
 
@@ -23,13 +23,22 @@ END
 
 /* Create the database in its initial conifiguration if it doesn't exist */
 
+IF OBJECT_ID(N'tempdb..#UpdateVariables', N'U') IS NOT NULL 
+BEGIN
+	DROP TABLE #UpdateVariables;
+END
+	
+CREATE TABLE #UpdateVariables ([Name] VARCHAR(100), [Value] VARCHAR(4000));
+INSERT INTO #UpdateVariables Values ('DatabaseName', @DATABASE_NAME);
+INSERT INTO #UpdateVariables Values ('DatabasePath', @DATABASE_DIRECTORY);
+
 IF OBJECT_ID(N'tempdb..#UpdateVars', N'U') IS NOT NULL 
 BEGIN
 	DROP TABLE #UpdateVars;
 END
 	
 CREATE TABLE #UpdateVars ([Version] VARCHAR(100));
-INSERT INTO #UpdateVars Values (N'NeitzNM');
+INSERT INTO #UpdateVars Values (@DATABASE_NAME);
 
 DECLARE @db_id VARCHAR(100);
 SET @db_id = db_id(@DATABASE_NAME)
@@ -41,59 +50,60 @@ IF @db_id IS NULL
 BEGIN
 	print N'Database does not exist, creating...' 
 	
-	declare @Path varchar(100)
-	set @Path = N'C:\Database\NeitzNM\'
+	declare @Path varchar(512)
+	set @Path = @DATABASE_DIRECTORY + @DATABASE_NAME + N'\'
+
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [NeitzNM]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [NeitzNM] ON  PRIMARY 
-		( NAME = N'NeitzNM', FILENAME = N'C:\Database\NeitzNM\NeitzNM.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [Test]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [Test] ON  PRIMARY 
+		( NAME = N'Test', FILENAME = N'C:\Databases\Test\Test.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'NeitzNM_log', FILENAME = N'C:\Database\NeitzNM\NeitzNM_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'Test_log', FILENAME = N'C:\Databases\Test\Test_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [NeitzNM] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [NeitzNM].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [Test].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [NeitzNM] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [NeitzNM] SET ANSI_NULLS OFF
-	ALTER DATABASE [NeitzNM] SET ANSI_PADDING ON
-	ALTER DATABASE [NeitzNM] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [NeitzNM] SET ARITHABORT OFF
-	ALTER DATABASE [NeitzNM] SET AUTO_CLOSE OFF
-	ALTER DATABASE [NeitzNM] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [NeitzNM] SET AUTO_SHRINK OFF
-	ALTER DATABASE [NeitzNM] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [NeitzNM] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [NeitzNM] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [NeitzNM] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [NeitzNM] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [NeitzNM] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [NeitzNM] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [NeitzNM] SET  DISABLE_BROKER
-	ALTER DATABASE [NeitzNM] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [NeitzNM] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [NeitzNM] SET TRUSTWORTHY OFF
-	ALTER DATABASE [NeitzNM] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [NeitzNM] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [NeitzNM] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [NeitzNM] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [NeitzNM] SET  READ_WRITE
-	ALTER DATABASE [NeitzNM] SET RECOVERY SIMPLE
-	ALTER DATABASE [NeitzNM] SET  MULTI_USER
-	ALTER DATABASE [NeitzNM] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [NeitzNM] SET DB_CHAINING OFF
+	ALTER DATABASE [Test] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [Test] SET ANSI_NULLS OFF
+	ALTER DATABASE [Test] SET ANSI_PADDING ON
+	ALTER DATABASE [Test] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [Test] SET ARITHABORT OFF
+	ALTER DATABASE [Test] SET AUTO_CLOSE OFF
+	ALTER DATABASE [Test] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [Test] SET AUTO_SHRINK OFF
+	ALTER DATABASE [Test] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [Test] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [Test] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [Test] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [Test] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [Test] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [Test] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [Test] SET  DISABLE_BROKER
+	ALTER DATABASE [Test] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [Test] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [Test] SET TRUSTWORTHY OFF
+	ALTER DATABASE [Test] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [Test] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [Test] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [Test] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [Test] SET  READ_WRITE
+	ALTER DATABASE [Test] SET RECOVERY SIMPLE
+	ALTER DATABASE [Test] SET  MULTI_USER
+	ALTER DATABASE [Test] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [Test] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
 END
 
-GO
+GO 
 
-USE [NeitzNM]
+USE [Test]
 GO
 
 --Need to specify database owner before enabling change tracking
@@ -1106,15 +1116,15 @@ END
 */  
 GO
 
-Use [NeitzNM]
+Use [Test]
 GO
   
 DECLARE @compat_level int
-SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'NeitzNM')
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'Test')
 IF(@compat_level < 120)
 BEGIN
 	print N'Setting the database compatability level to SQL 2014'
-	ALTER DATABASE [NeitzNM] SET COMPATIBILITY_LEVEL = 120  
+	ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 120  
 END
 GO
 
@@ -2529,7 +2539,7 @@ end
  					Select * from LocationLink
 						 WHERE (A in 
 						(SELECT L.ID
-						  FROM [NeitzNM].[dbo].[Location] L
+						  FROM [Test].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -2538,7 +2548,7 @@ end
 						  OR
 						  (B in 
 						(SELECT L.ID
-						  FROM [NeitzNM].[dbo].[Location] L
+						  FROM [Test].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -3706,7 +3716,7 @@ end
 		      N'Add procedure for selecting network structure IDs',getDate(),User_ID())
 	 COMMIT TRANSACTION fortytwo
 	end
-
+	 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 43)))
 	begin
      print  N'Update spatial queries to use mosaic or volume coordinates'
@@ -5686,6 +5696,7 @@ end
      BEGIN TRANSACTION fiftyeight
 	  
 	   EXEC('
+	 
 	 ALTER TABLE [dbo].[PermittedStructureLink] ADD  CONSTRAINT [PermittedStructureLink_source_target_unique] UNIQUE NONCLUSTERED 
 	 (
 		[SourceTypeID] ASC,
@@ -7390,6 +7401,150 @@ end
 	INSERT INTO DBVersion values (77, 
 		      N'Remove temporary tables from stored procedures to facilitate EF Core migration tools ' ,getDate(),User_ID())
 	 COMMIT TRANSACTION seventyseven
+	end
+	 
+	if(not(exists(select (1) from DBVersion where DBVersionID = 78)))
+	begin
+		print N'Add filegroup and file for memory optimized tables Part one'
+		BEGIN TRANSACTION seventyeight 
+	  
+		DECLARE @DATABASE_NAME VARCHAR(100) 
+		DECLARE @QUERY nvarchar(4000)
+
+		SELECT @DATABASE_NAME = UV.Value from #UpdateVariables UV where UV.Name = 'DatabaseName' 
+	 
+		SET @QUERY =
+		'ALTER DATABASE [' + @DATABASE_NAME + '] ' +
+			'ADD FILEGROUP MemOptimizedData CONTAINS MEMORY_OPTIMIZED_DATA'
+		  
+		Print @QUERY
+		EXEC(@QUERY)
+
+		if(@@error <> 0)
+			begin
+			ROLLBACK TRANSACTION 
+			RETURN
+			end 
+	INSERT INTO DBVersion values (78, 
+		      N'Add filegroup and file for memory optimized tables Part one' ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventyeight
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 79)))
+	begin
+     print N'Switch to Memory Optimized Tables for UDTs Part two'
+	 BEGIN TRANSACTION seventynine
+
+		DECLARE @DATABASE_NAME VARCHAR(100)
+		DECLARE @DATABASE_DIRECTORY VARCHAR(512)
+		DECLARE @QUERY nvarchar(4000)
+
+		SELECT @DATABASE_NAME = UV.Value from #UpdateVariables UV where UV.Name = 'DatabaseName'
+		SELECT @DATABASE_DIRECTORY = UV.Value from #UpdateVariables UV where UV.Name = 'DatabasePath'
+
+		SET @QUERY =
+		   'ALTER DATABASE [' + @DATABASE_NAME + '] ' +
+			   'ADD FILE (name=' + @DATABASE_NAME + '_MemOptimizedData, filename=''' + @DATABASE_DIRECTORY + @DATABASE_NAME + '_MemOptimizedData'') TO FILEGROUP MemOptimizedData'
+	  
+		Print @QUERY
+		EXEC(@QUERY)
+	
+		if(@@error <> 0)
+		begin
+			ROLLBACK TRANSACTION 
+			RETURN
+		end  
+		
+	 INSERT INTO DBVersion values (79, 
+		      N'Switch to Memory Optimized Tables for UDTs Part two' ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventynine
+	end
+		   
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 80)))
+	begin
+     print N'Switch to Memory Optimized Tables for UDTs'
+	 BEGIN TRANSACTION eighty
+	  
+	 DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap] 
+
+	 DECLARE @QUERY nvarchar(4000)
+	 SET @QUERY =
+	   ' CREATE TYPE [dbo].[udtParentChildIDMap] AS TABLE(
+			[ID] [bigint] NOT NULL,
+			[ParentID] [bigint] NOT NULL,
+			INDEX [udtParentChildIDMap_idx1] NONCLUSTERED 
+			(
+				[ID] ASC
+			),
+			INDEX [udtParentChildIDMap_ParentID_idx] NONCLUSTERED 
+			(
+				[ParentID] ASC
+			)
+		)
+		WITH (MEMORY_OPTIMIZED=ON)'
+		  
+	Print @QUERY
+	EXEC(@QUERY)
+
+	if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end  
+
+	SET @QUERY =
+	   'ALTER TYPE [dbo].[integer_list] AS TABLE(
+			[ID] [bigint] NOT NULL,
+			PRIMARY KEY CLUSTERED 
+			(
+				[ID] ASC
+			)WITH (IGNORE_DUP_KEY = OFF)
+		)
+		WITH(MEMORY_OPTIMIZED=ON)'
+	  
+	Print @QUERY
+	EXEC(@QUERY)
+	
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end  
+	
+	DROP TYPE IF EXISTS [dbo].[udtLinks]
+
+	SET @QUERY = 'CREATE TYPE [dbo].[udtLinks] AS TABLE(
+					[SourceID] [bigint] NOT NULL,
+					[TargetID] [bigint] NOT NULL,
+					PRIMARY KEY CLUSTERED 
+					(
+						[SourceID] ASC,
+						[TargetID] ASC
+					)WITH (IGNORE_DUP_KEY = OFF),
+					INDEX [SourceID_idx] NONCLUSTERED 
+					(
+						[SourceID] ASC
+					),
+					INDEX [TargetID_idx] NONCLUSTERED 
+					(
+						[TargetID] ASC
+					)
+				)
+				WITH(MEMORY_OPTIMIZED=ON)'
+
+	Print @QUERY
+	EXEC(@QUERY)
+	
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end  
+		   
+	INSERT INTO DBVersion values (80, 
+		      N'Add filegroup and file for memory optimized tables' ,getDate(),User_ID())
+	 COMMIT TRANSACTION eighty
 	end
 
 --from here on, continually add steps in the previous manner as needed.

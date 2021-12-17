@@ -8,6 +8,14 @@ namespace IdentityServer
     {
         public static void Main(string[] args)
         {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.FromLogContext()
+#if DEBUG
+                .WriteTo.Console()
+#endif
+                .WriteTo.File("IDServerLogs.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
+                .CreateLogger();
+
             BuildWebHost(args).Run();
         }
 

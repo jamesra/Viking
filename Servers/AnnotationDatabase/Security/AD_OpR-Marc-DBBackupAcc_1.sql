@@ -1,0 +1,3 @@
+﻿CREATE LOGIN [AD\OpR-Marc-DBBackupAcc]
+    FROM WINDOWS WITH DEFAULT_LANGUAGE = [us_english];
+

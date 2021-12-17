@@ -7,9 +7,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrpcAnnotationService", "Gr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConnectomeDataModelCore", "ConnectomeDataModelCore\ConnectomeDataModelCore.csproj", "{AC62BC3F-CDA3-4EE9-B9B0-E903D6ED816A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConnectomeDataModelCoreTests", "ConnectomeDataModelCoreTests\ConnectomeDataModelCoreTests.csproj", "{8BE14D62-16D9-4EAD-9CF3-883933E27A97}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnnotationServiceTypes.gRPC", "..\gRPCAnnotationServiceTypes\AnnotationServiceTypes.gRPC.csproj", "{6FA0EB90-8C27-4200-9254-C61F453530C1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConnectomeDataModelCoreTest", "ConnectomeDataModelCoreTest\ConnectomeDataModelCoreTest.csproj", "{0D1EC85F-F3A9-40EF-9C03-16C281D89960}"
+EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "AnnotationDatabase", "AnnotationDatabase\AnnotationDatabase.sqlproj", "{27F8C0DC-2F73-4E99-BD95-D1CE00F35690}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,14 +27,20 @@ Global
 		{AC62BC3F-CDA3-4EE9-B9B0-E903D6ED816A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AC62BC3F-CDA3-4EE9-B9B0-E903D6ED816A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AC62BC3F-CDA3-4EE9-B9B0-E903D6ED816A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8BE14D62-16D9-4EAD-9CF3-883933E27A97}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8BE14D62-16D9-4EAD-9CF3-883933E27A97}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8BE14D62-16D9-4EAD-9CF3-883933E27A97}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8BE14D62-16D9-4EAD-9CF3-883933E27A97}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6FA0EB90-8C27-4200-9254-C61F453530C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6FA0EB90-8C27-4200-9254-C61F453530C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6FA0EB90-8C27-4200-9254-C61F453530C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6FA0EB90-8C27-4200-9254-C61F453530C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D1EC85F-F3A9-40EF-9C03-16C281D89960}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D1EC85F-F3A9-40EF-9C03-16C281D89960}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D1EC85F-F3A9-40EF-9C03-16C281D89960}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D1EC85F-F3A9-40EF-9C03-16C281D89960}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27F8C0DC-2F73-4E99-BD95-D1CE00F35690}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27F8C0DC-2F73-4E99-BD95-D1CE00F35690}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27F8C0DC-2F73-4E99-BD95-D1CE00F35690}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{27F8C0DC-2F73-4E99-BD95-D1CE00F35690}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27F8C0DC-2F73-4E99-BD95-D1CE00F35690}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27F8C0DC-2F73-4E99-BD95-D1CE00F35690}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

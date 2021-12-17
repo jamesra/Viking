@@ -30,15 +30,35 @@ namespace WebAnnotationModel.gRPC.Tests
         {
             builder
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("Config.json")
+                .AddJsonFile("appsettings.json")
+                .AddUserSecrets<UserIdentity>()
                 .AddEnvironmentVariables();
             return builder;
         }
     }
 
+    public class IdentityClientSettings
+    {
+        public string ClientId { get; set; }
+        public string Scope { get; set; }
+        public string ClientSecret { get; set; }
+    }
+
+    public class UserIdentity
+    {
+        public string UserName { get; set; }
+        public string Password { get; set; } 
+    }
+
     public class Tests
     {
         private IHost host;
+
+        private string IdentityServerURL;
+        private string GrpcServerURL;
+
+        private IdentityClientSettings IdentityClient;
+        private UserIdentity UserIdentity;
 
         [SetUp]
         public void Setup()
@@ -46,16 +66,21 @@ namespace WebAnnotationModel.gRPC.Tests
             host = CreateHostBuilder().Build();
         }
 
-        static IHostBuilder CreateHostBuilder()
+        IHostBuilder CreateHostBuilder()
         { 
             var endpoint = new Uri("http://webdev.connectomes.utah.edu/Test/");
             return Host.CreateDefaultBuilder() 
-                .ConfigureAppConfiguration((appContext) => appContext.UseTestConfigurationBuilder().AddJsonFile("Config.json"))
+                .ConfigureAppConfiguration((appContext) => appContext.UseTestConfigurationBuilder())
                 .ConfigureServices((context, services) =>
                     { 
                         var config = context.Configuration;
                         services.AddOptions<GrpcChannelOptions>()
                             .Bind(config.GetSection(nameof(GrpcChannelOptions)));
+
+                        IdentityServerURL = config.GetValue<string>("IdentityServer:Endpoint");
+                        GrpcServerURL = config.GetValue<string>("GrpcServer:Endpoint");
+                        IdentityClient = config.GetValue<IdentityClientSettings>("IdentityClient");
+                        UserIdentity = config.GetValue<UserIdentity>("TestIdentity");
 
                         services.AddGrpcChannelManager();
 
@@ -85,16 +110,14 @@ namespace WebAnnotationModel.gRPC.Tests
         }
           
         [Test]
-        public async Task TestGetAllStructureTypes()
-        {
-            var IdentityEndpoint = "https://localhost:5001/";
-            var GrpcEndpoint = "https://localhost:5000/";
+        public async Task TestGetLastModifiedLocation()
+        { 
             HttpClient c = new HttpClient() { 
-                BaseAddress = new Uri(IdentityEndpoint), 
+                BaseAddress = new Uri(IdentityServerURL), 
                 DefaultRequestVersion = new Version(2,0)
             };
             
-            var disco_response = await c.GetDiscoveryDocumentAsync(IdentityEndpoint);
+            var disco_response = await c.GetDiscoveryDocumentAsync(IdentityServerURL);
             Assert.False(disco_response.IsError);
 
             PasswordTokenRequest request = new PasswordTokenRequest()
@@ -135,7 +158,7 @@ namespace WebAnnotationModel.gRPC.Tests
 
             HttpClient grpcClient = new HttpClient()
             {
-                BaseAddress = new Uri(GrpcEndpoint),
+                BaseAddress = new Uri(GrpcServerURL),
                 DefaultRequestVersion = new Version(2, 0)
             };
 
@@ -162,7 +185,7 @@ namespace WebAnnotationModel.gRPC.Tests
             IObjectConverter<ILocation, Location> locConverter = new LocationToLocationServerConverter();
 
             LocationsClientFactory clientFactory = new LocationsClientFactory(channelManager,  locConverter,
-                Options.Create<gRPC.GrpcRepositorySettings>(new GrpcRepositorySettings {Endpoint = new Uri(GrpcEndpoint) }));
+                Options.Create<gRPC.GrpcRepositorySettings>(new GrpcRepositorySettings {Endpoint = new Uri(GrpcServerURL) }));
             var client = clientFactory.GetOrCreate();
             var loc = await client.GetLastModifiedLocation();
 

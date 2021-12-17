@@ -18,24 +18,68 @@ using Serilog;
 using System;
 using System.Linq;
 using System.Reflection;
+using IdentityModel.AspNetCore.OAuth2Introspection;
+using IdentityModel.Client;
+using IdentityServer4;
 using IdentityServer4.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace IdentityServer
 {
+    public static class PolicySchemeSelector
+    {
+        public static string SchemeSelector(HttpContext context)
+        {
+            var (scheme, token) = GetSchemeAndCredential(context);
+
+            if (!string.Equals(scheme, "Bearer", StringComparison.OrdinalIgnoreCase))
+            {
+                return "";
+            }
+
+            if (token.Contains("."))
+            {
+                return "Bearer";
+            }
+            else
+            {
+                return "Introspection";
+            }
+        }
+
+        /// <summary>
+        /// Extracts scheme and credential from Authorization header (if present)
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static (string, string) GetSchemeAndCredential(HttpContext context)
+        {
+            var header = context.Request.Headers["Authorization"].FirstOrDefault();
+
+            if (string.IsNullOrEmpty(header))
+            {
+                return ("", "");
+            }
+
+            var parts = header.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length != 2)
+            {
+                return ("", "");
+            }
+
+            return (parts[0], parts[1]);
+        }
+    }
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
         {
-            Configuration = configuration;
-              
-            Log.Logger = new LoggerConfiguration()
-              .Enrich.FromLogContext()
-              .WriteTo.File("IDServerLogs.json", Serilog.Events.LogEventLevel.Verbose)
-              .CreateLogger();
+            Configuration = configuration; 
         }
 
-        public IConfiguration Configuration { get; }
+        private IConfiguration Configuration { get; }
          
         /*
         private string ForwardReferenceToken(HttpContext context)
@@ -85,9 +129,18 @@ namespace IdentityServer
             services.AddAntiforgery();
             
             IConfigurationSection identityServerConfig = Configuration.GetSection("IdentityServer");
+            var OAuth2ConfigurationSection = Configuration.GetSection(nameof(OAuth2IntrospectionOptions));
+            if (OAuth2ConfigurationSection is null)
+                throw new ArgumentException(
+                    $"{nameof(OAuth2IntrospectionOptions)} section missing from appsettings.json configuration");
+
+            OAuth2IntrospectionOptions OAuth2Options = OAuth2ConfigurationSection.Get<OAuth2IntrospectionOptions>();
 
             services.AddAuthentication(options =>
-            { 
+            {
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             })
                 .AddCookie()
             //.AddApplicationCookie()
@@ -106,25 +159,34 @@ namespace IdentityServer
              * The end result is any Web API style calls that require a token must be decorated with
              * [Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)]
              * */
-            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+                .AddOAuth2Introspection("Introspection", options =>
+                {
+                    OAuth2ConfigurationSection.Bind(options);
+                })
+                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidateAudience = false,
+                    ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuer = true,
                     ValidateTokenReplay = true,
-
+                    ValidateIssuerSigningKey = true, 
                 };
-                options.RequireHttpsMetadata = true;
+
+                options.RequireHttpsMetadata = false;
                 options.Authority = identityServerConfig["Endpoint"];
                 options.SaveToken = true;
 
                 options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
-                //options.MapInboundClaims = false; 
+                options.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
 
-                // if token does not contain a dot, it is a reference token
-                //options.ForwardDefaultSelector = ForwardReferenceToken;//Selector.ForwardReferenceToken("introspection");
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    NameClaimType = "name",
+                    ValidAudience = "Viking.Annotation"
+                    //RoleClaimType = "role",
+                };
             })
             //.AddApplicationCookie()
              
@@ -141,15 +203,6 @@ namespace IdentityServer
             }) */
             ;
 
-            services.AddAuthorization(options =>
-            {
-                var builder = new AuthorizationPolicyBuilder();
-                builder.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
-                builder.RequireAuthenticatedUser();
-                options.AddPolicy(Config.Policy.BearerToken, builder.Build());
-                options.AddPolicy(Config.Policy.GroupAccessManager, policy => policy.Requirements.Add(Authorization.Operations.GroupAccessManager));
-                options.AddPolicy(Config.Policy.OrgUnitAdmin, policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
-            });
 
             //services.AddHttpContextAccessor();
             //services.AddTransient<System.Security.Claims.ClaimsPrincipal>(provider => provider.GetService<IHttpContextAccessor>().HttpContext.User);
@@ -243,16 +296,59 @@ namespace IdentityServer
             ConfigureSSL(builder, sslConfig);
 
             services.AddTransient<IdentityServer4.Services.IProfileService, IdentityServer.Extensions.IdentityWithExtendedClaimsProfileService>();
-             
-            services.Configure<SMTPOptions>(Configuration.GetSection("SMTP")); 
+              
+            services.AddAuthorizationPolicyEvaluator();
+
+            services.AddAuthorization(options =>
+            {
+                var builder = new AuthorizationPolicyBuilder();
+                builder.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+                //builder.AddAuthenticationSchemes("Introspection");
+                //builder.AddAuthenticationSchemes("Cookies");
+                builder.RequireAuthenticatedUser();
+                options.AddPolicy("protectedScope", policy => policy.RequireClaim("scope", "Viking.Annotation"));
+                options.AddPolicy(Config.Policy.BearerToken, builder.Build());
+                options.AddPolicy(Config.Policy.GroupAccessManager, policy => policy.Requirements.Add(Authorization.Operations.GroupAccessManager));
+                options.AddPolicy(Config.Policy.OrgUnitAdmin, policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
+            });
+
+
+            services.Configure<SMTPOptions>(Configuration.GetSection("SMTP"));
+
+            
+            services.AddAccessTokenManagement(options =>
+            {
+                // client config is inferred from OpenID Connect settings
+                // if you want to specify scopes explicitly, do it here, otherwise the scope parameter will not be sent
+                //options.Client.Scope = "Viking.Annotation";
+                options.Client.Clients.Add("identityserver", new ClientCredentialsTokenRequest
+                {
+                    Address = identityServerConfig["Endpoint"],
+                    ClientId = "mvc",
+                    ClientSecret = "CorrectHorseBatteryStaple",
+                    Scope = "openid profile Viking.Annotation"
+                });
+            });
+            /*
+            services.AddUserAccessTokenHttpClient("user_client", null, (client) =>
+            {
+                client.BaseAddress = new Uri(identityServerConfig["Endpoint"] + "/api/");
+            });
+
+            // registers HTTP client that uses the managed client access token
+            services.AddClientAccessTokenHttpClient("client", configureClient: client =>
+            {
+                client.BaseAddress = new Uri(identityServerConfig["Endpoint"] + "/api/");
+            });
+            */
+            services.AddMvcCore().AddAuthorization();
         }
 
         public void ConfigureSSL(IIdentityServerBuilder builder, IConfigurationSection config)
         {
             string serialNumber = config["SerialNumber"];
             if (serialNumber.IsNullOrEmpty())
-            {
-
+            { 
                 builder.AddDeveloperSigningCredential();
             }
             else
@@ -295,9 +391,13 @@ namespace IdentityServer
             app.UseStaticFiles();           
             app.UseIdentityServer();
             app.UseRouting(); 
-            //app.UseAuthentication();
+            app.UseAuthentication();
             app.UseAuthorization();
-            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+            app.UseEndpoints(endpoints =>
+            {
+                //We cannot require authorization on all routes or users are unable to login
+                endpoints.MapDefaultControllerRoute(); //.RequireAuthorization(Config.Policy.BearerToken); 
+            });
 
             /*
             app.UseMvc(routes =>

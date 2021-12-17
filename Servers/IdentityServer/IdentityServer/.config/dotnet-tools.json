@@ -7,6 +7,12 @@
       "commands": [
         "dotnet-ef"
       ]
+    },
+    "microsoft.dotnet-msidentity": {
+      "version": "1.0.0-preview.2.21302.1",
+      "commands": [
+        "dotnet-msidentity"
+      ]
     }
   }
 }

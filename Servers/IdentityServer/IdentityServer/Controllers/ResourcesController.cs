@@ -9,11 +9,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace IdentityServer.Controllers
 {
-    [Authorize]
     public class ResourcesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -46,51 +46,7 @@ namespace IdentityServer.Controllers
             var applicationDbContext = _context.Resource.Include(r => r.Parent).Include(r => r.ResourceType);
             return View(await applicationDbContext.ToListAsync());
         }
-
-        /// <summary>
-        /// Return the permissions the specfied user has on the resource
-        /// </summary>
-        /// <returns></returns>
-        /// <param name="id"></param>
-        // GET: Resources/UserPermissions/5/jamesan
-
-        [Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> UserPermissions(string id)
-        {
-            if (id == null)
-                return NotFound();
-
-            var username = User.Identity.GetUsername();
-            if (username == null)
-                return Unauthorized();
-
-            Resource resourceObj = null;
-            try
-            {
-                long ResourceId = System.Convert.ToInt64(id);
-                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Id == ResourceId);
-            }
-            catch(FormatException e)
-            {
-                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Name == id);
-            }
-
-            if (resourceObj == null)
-            {
-                return NotFound();
-            }
-
-            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
-            if (appUser == null)
-            {
-                return NotFound();
-            }
-
-            var result = await _context.UserResourcePermissions(resourceObj.Id, appUser.Id);
-
-            return Json(result);
-        }
-
+         
         // GET: Resources/Details/5
         public async Task<IActionResult> Details(long? id)
         {

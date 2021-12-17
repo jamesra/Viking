@@ -1,4 +1,5 @@
-﻿using IdentityServer.Authorization;
+﻿using System;
+using IdentityServer.Authorization;
 using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer.Models.UserViewModels;
@@ -8,10 +9,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
+using IdentityServer.Extensions;
 
 namespace IdentityServer.Controllers
-{
-    [Authorize]
+{ 
     public class VolumesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -199,6 +200,6 @@ namespace IdentityServer.Controllers
         private bool VolumeExists(long id)
         {
             return _context.Volume.Any(e => e.Id == id);
-        }
+        } 
     }
 }
