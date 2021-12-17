@@ -186,6 +186,10 @@ namespace WebAnnotationModel
                     proxy.Close();
             }
 
+            if (types == null)
+                return;
+
+
             //Populate our cache
             StructureTypeObj[] objList = new StructureTypeObj[types.Length];
             //Dictionary<long, StructureType> TypesTable = new Dictionary<long, StructureType>(types.Length);
