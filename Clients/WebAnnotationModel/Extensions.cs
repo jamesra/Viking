@@ -49,14 +49,13 @@ namespace WebAnnotationModel
 
             foreach (Delegate d in theEvent.GetInvocationList())
             {
-                ISynchronizeInvoke syncer = d.Target as ISynchronizeInvoke;
-                if (syncer == null)
+                if (d.Target is ISynchronizeInvoke syncer)
                 {
-                    d.DynamicInvoke(args);
+                    syncer.BeginInvoke(d, args);  // cleanup omitted
                 }
                 else
                 {
-                    syncer.BeginInvoke(d, args);  // cleanup omitted
+                    d.DynamicInvoke(args);
                 }
             }
         }
