@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Viking.Common;
 using Viking.Common.UI;
 using Viking.VolumeModel;
@@ -322,9 +323,9 @@ namespace Viking.ViewModels
             Viking.UI.Forms.PropertySheetForm.Show(this);
         }
 
-        public void PrepareTransform(string transform)
+        public async Task PrepareTransform(string transform)
         {
-            this.section.PrepareTransform(transform);
+            await this.section.PrepareTransform(transform);
         }
 
         public IVolumeToSectionTransform ActiveSectionToVolumeTransform

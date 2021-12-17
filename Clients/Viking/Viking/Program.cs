@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.UI.Forms;
 
@@ -242,7 +243,9 @@ namespace Viking
             }
             */
 
-            Application.Run(new VikingApplicationContext(website));
+            VikingApplicationContext context = new VikingApplicationContext(website);
+            context.Initialize(website);
+            Application.Run(context);
 
             if (SynchronizedDebugWriter != null)
                 SynchronizedDebugWriter.Close();

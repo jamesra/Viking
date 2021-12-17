@@ -368,15 +368,7 @@ namespace Viking.UI.Forms
         {
             this.textUsername.SelectAll();
         }
-
-    
-       
-
-     
-
-    
-         
-
+          
         #endregion
 
         private System.Windows.Forms.PictureBox pictureBox1;

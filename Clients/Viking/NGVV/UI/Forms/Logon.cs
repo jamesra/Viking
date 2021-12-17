@@ -18,7 +18,7 @@ namespace Viking.UI.Forms
 {
     public partial class Logon : Form
     {
-        public const string IdentityServerUri = "https://identity.connectomes.utah.edu/";
+        public string IdentityServerUri = "https://identity.connectomes.utah.edu/";
         private string _AuthenticationServiceURL = null;
         public string AuthenticationServiceURL
         {
@@ -136,7 +136,11 @@ namespace Viking.UI.Forms
             }
         }
 
-        private string VolumeName => VolumeDocument.Root.Attribute("Name")?.Value;
+        private string VolumeName
+        { 
+                get;
+                set; 
+        }
 
         private string userName = UI.State.AnonymousCredentials.UserName;
         private string password = UI.State.AnonymousCredentials.Password;
@@ -284,7 +288,7 @@ namespace Viking.UI.Forms
 
         async Task login_handle()
         {
-            SetUpdateText("Authenticating...");
+            SetUpdateText($"Authenticating to {this.AuthenticationServiceURL}...");
 
             userName = this.textUsername.Text;
 
@@ -310,6 +314,12 @@ namespace Viking.UI.Forms
             };
 
             var id_token_response = await TokenHelper.RetrieveBearerToken(userName, password);
+            if (id_token_response == null)
+            {
+                SetUpdateText($"No token returned");
+                return;
+            }
+
             if(id_token_response.IsError)
             {
                 SetUpdateText($"{id_token_response.Error}\n{id_token_response.HttpErrorReason}");
@@ -790,9 +800,21 @@ namespace Viking.UI.Forms
                 XElement volElem = VolumeModel.Volume.GetVolumeElement(volume);
                 if (volElem != null)
                 {
+                    VolumeName = volElem.Attributes().FirstOrDefault(a => string.Compare(a.Name.LocalName, "name", StringComparison.OrdinalIgnoreCase) == 0)?.Value;
+
                     //We managed to load our URL so add it to our list of defaults
                     AddToDefaultVolumeURLs(this.VolumeURL);
-                    this.AuthenticationServiceURL = "https://identity.connectomes.utah.edu/";
+
+                    var endpointElement = volElem.Elements().FirstOrDefault(d => d.Name == "VolumeToEndpoint");
+                    if (endpointElement is null)
+                    {
+                        AuthenticationServiceURL = null;
+                        return;
+                    }
+
+                    AuthenticationServiceURL = endpointElement.Attributes().FirstOrDefault(a => a.Name.LocalName == "Authentication")?.Value;
+                    
+                    //this.AuthenticationServiceURL = "https://identity.connectomes.utah.edu/";
                     //TODO: Place authentication URL back in the xml file
                     //this.AuthenticationServiceURL = AuthenticationURLForVolume(volElem);
                 }

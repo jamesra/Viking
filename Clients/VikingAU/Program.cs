@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Viking.VolumeModel;
 using WebAnnotationModel;
@@ -155,7 +156,7 @@ namespace Viking.AU
     {
         static CommandLineOptions options = new CommandLineOptions();
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             if (!CommandLine.Parser.Default.ParseArguments(args, Program.options))
             {
@@ -170,7 +171,8 @@ namespace Viking.AU
 
             State.Volume = new Volume(Program.options.VolumeURL, State.CachePath, progressReporter);
 
-            State.Volume.Initialize(progressReporter).Wait();
+            var cancellationTokenSource = new CancellationTokenSource();
+            await State.Volume.Initialize(cancellationTokenSource.Token, progressReporter);
 
             State.MappingsManager = new MappingManager(State.Volume);
 
@@ -195,12 +197,13 @@ namespace Viking.AU
             }
 
             //OK.  Figure out which command we are executing.
-            UpdateVolumePositionsAsync(SectionsToProcess).Wait();
+            await UpdateVolumePositionsAsync(SectionsToProcess, CancellationToken.None);
             //UpdateVolumePositions(SectionsToProcess);
 
             System.GC.Collect();
         }
 
+        /*
         static async Task UpdateVolumePositions(IList<long> SectionNumbers)
         {
             SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
@@ -211,8 +214,9 @@ namespace Viking.AU
                 State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
             }
         }
+        */
 
-        static async Task UpdateVolumePositionsAsync(IList<long> SectionNumbers)
+        static async Task UpdateVolumePositionsAsync(IList<long> SectionNumbers, CancellationToken token)
         {
             //SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
             object LockConsole = new object();
@@ -221,19 +225,20 @@ namespace Viking.AU
             {
                 List<Task<string>> tasks = new List<Task<string>>(SectionNumbers.Count);
                 List<long> taskSectionNumbers = new List<long>(SectionNumbers.Count);
-
-                TaskFactory taskFactory = new TaskFactory(TaskCreationOptions.LongRunning, TaskContinuationOptions.None);
+                 
                 foreach (long sectionNumber in SectionNumbers)
                 {
                     //    UpdateVolumePositions(sectionNumber);
-                    await concurrencySemaphore.WaitAsync();
+                    await concurrencySemaphore.WaitAsync(token);
+                    if (token.IsCancellationRequested)
+                        return;
 
                     taskSectionNumbers.Add(sectionNumber);
-                    var task = taskFactory.StartNew(() =>
+                    var task = Task.Run(async () =>
                     {
                         try
                         {
-                            string result =  UpdateVolumePositions(sectionNumber);
+                            string result =  await UpdateSectionPositions(sectionNumber, token);
                             
                             lock (LockConsole)
                             {
@@ -260,7 +265,7 @@ namespace Viking.AU
                     }*/ 
                 }
 
-                Task<string>[] taskArray = tasks.ToArray();
+                Task[] taskArray = tasks.Cast<Task>().ToArray();
                 Task.WaitAll(taskArray);
 
                 /*
@@ -319,7 +324,7 @@ namespace Viking.AU
             }
         }
 
-        static string UpdateVolumePositions(long SectionNumber)
+        static async Task<string> UpdateSectionPositions(long SectionNumber, CancellationToken token)
         {
             LocationStore threadLocationStore = new LocationStore();
             int NumUpdated = 0;
@@ -335,6 +340,8 @@ namespace Viking.AU
                 {
                     throw new Exception("No mapping found for section " + SectionNumber.ToString());
                 }
+
+                await mapper.Initialize(token);
 
                 foreach (LocationObj loc in LocDict.Values)
                 {

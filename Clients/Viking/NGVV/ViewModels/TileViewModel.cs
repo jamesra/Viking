@@ -61,108 +61,51 @@ namespace Viking.ViewModels
         Microsoft.Xna.Framework.Graphics.Texture2D texture
         {
             get
-            {
-                try
-                {
-                    rwTextureLock.EnterUpgradeableReadLock();
+            { 
+                if (ServerTextureNotFound)
+                    return null;
 
-                    if (ServerTextureNotFound)
-                        return null;
-
-                    if (_texture != null)
+                var texture = _texture;
+                if (texture != null)
+                { 
+                    //Ensure the texture is valid
+                    if (texture.IsDisposed || texture.GraphicsDevice.IsDisposed)
                     {
-                        try
-                        {
-                            rwTextureLock.EnterWriteLock();
-
-                            if (_texture.IsDisposed)
-                                _texture = null;
-
-                            if (_texture.GraphicsDevice.IsDisposed)
-                                _texture = null;
-                        }
-                        finally
-                        {
-                            rwTextureLock.ExitWriteLock();
-                        }
+                        
+                        Interlocked.CompareExchange(ref _texture, null, texture);
                     }
+                }
 
-                    return _texture;
-                }
-                finally
-                {
-                    rwTextureLock.ExitUpgradeableReadLock();
-                }
+                return _texture; 
             }
             set
-            {
-                try
-                {
-                    rwTextureLock.EnterWriteLock();
-                    if (value == _texture)
-                        return;
+            { 
+                var originalTexture = Interlocked.CompareExchange(ref _texture, value, null);
 
-                    if (_texture != null)
-                    {
-                        DisposeTextureThreadingObj.DisposeTexture(_texture);
-                        //DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_texture);
-                        //ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
-                        //Global.RemoveTexture(_texture);  //Texture removed from global records within the thread
-                    }
-
-                    _texture = value;
-                }
-                finally
+                if (originalTexture != null)
                 {
-                    rwTextureLock.ExitWriteLock();
-                }
+                    originalTexture.DisposeAsync();
+                    //DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_texture);
+                    //ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
+                    //Global.RemoveTexture(_texture);  //Texture removed from global records within the thread
+                }  
             }
         }
 
-        internal bool HasTexture
-        {
-            get { return this._texture != null; }
-        }
+        internal bool HasTexture => _texture != null;
 
         internal bool TextureReadComplete
         {
-            get { return (this._texture != null || this.ServerTextureNotFound) && this.TexReader == null; }
+            get { return (this._texture != null || this.ServerTextureNotFound) && this.TextureLoadCancellationTokenSource is null; }
         }
 
         internal bool TextureNeedsLoading
         {
-            get { return this.ServerTextureNotFound == false && this.texture == null && this.TexReader == null; }
+            get { return this.ServerTextureNotFound == false && this.texture is null && this.TextureLoadCancellationTokenSource is null; }
         }
 
-        internal bool TextureIsLoading
-        {
-            get { return TexReader != null; }
-        }
-
-        private TextureReaderV2 _TexReader;
-        private TextureReaderV2 TexReader
-        {
-            get { return _TexReader; }
-            set
-            {
-                try
-                {
-                    rwTextureLock.EnterWriteLock();
-                    if (_TexReader != null && _TexReader != value)
-                    {
-                        _TexReader.Dispose();
-                        _TexReader = null;
-                    }
-
-                    _TexReader = value;
-                }
-                finally
-                {
-                    rwTextureLock.ExitWriteLock();
-                }
-            }
-        }
-
+        internal bool TextureIsLoading => TextureLoadCancellationTokenSource != null;
+          
         public int TileID;
 
         public readonly string TextureFileName;
@@ -198,7 +141,20 @@ namespace Viking.ViewModels
 
             this.TileColor = new Color((float)(r.NextDouble() * 0.5) + 0.5f, (float)(r.NextDouble() * 0.5) + 0.5f, (float)(r.NextDouble() * 0.5) + 0.5f, 0.5f);
 
+            //TryCreateCacheDirectory(System.IO.Path.GetDirectoryName(cachedTextureFileName));
         }
+        /*
+        private static void TryCreateCacheDirectory(string path)
+        {
+            try
+            {
+                System.IO.Directory.CreateDirectory(path);
+            }
+            catch
+            {
+                return;
+            }
+        }*/
 
         /// <summary>
         /// Create a vertex buffer for our verticies
@@ -253,17 +209,12 @@ namespace Viking.ViewModels
         {
             try
             {
-                //rwTextureLock.EnterWriteLock();
-
-                //Stop trying to load textures if we have a request out
-                if (TextureLoadCancellationTokenSource != null)
-                {
-                    TextureLoadCancellationTokenSource.Cancel();
-                    TextureLoadCancellationTokenSource = null;
-                }
+                AbortRequest();
 
                 //This disposes of the texture
                 this.texture = null;
+
+                rwTextureLock.EnterWriteLock();  
 
                 if (VertBuffer != null)
                 {
@@ -278,281 +229,100 @@ namespace Viking.ViewModels
                 }
             }
             finally
-            {
-               // rwTextureLock.ExitWriteLock();
-            }
+            { 
+                rwTextureLock.ExitWriteLock();
+            } 
 
         }
 
         public void AbortRequest()
-        { 
-            //Other methods may be counting on TexReader not being set to null, so take a lock
-            try
-            {
-                rwTextureLock.EnterWriteLock();
-                if (TextureLoadCancellationTokenSource != null)
-                {
-                    TextureLoadCancellationTokenSource.Cancel();
-                    TextureLoadCancellationTokenSource = null;
-                }
-
-                if (this.TexReader != null)
-                {
-                    if (this.TexReader.FinishedReading)
-                        HandleTextureReaderResult();
-                    else
-                    {
-                        this.TexReader.AbortRequest();
-                    }
-                }
-            }
-            finally
-            {
-                rwTextureLock.ExitWriteLock();
-            }
-        }
-
-        /// <summary>
-        /// Takes a completd TextureReader and returns true if a texture was loaded
-        /// </summary>
-        /// <param name="texReader"></param>
-        /// <returns></returns>
-        private bool HandleTextureReaderResult()
         {
-            try
+            var tokenSource = Interlocked.CompareExchange(ref TextureLoadCancellationTokenSource, TextureLoadCancellationTokenSource,
+                TextureLoadCancellationTokenSource);
+
+            if (tokenSource != null)
             {
-
-                GetTextureSemaphore.Wait();
-                var tex_reader = this.TexReader;
-
-                if (tex_reader == null)
-                {
-                    Trace.WriteLine("Missing texture reader in TextureReaderResult");
-                    return false;
-                }
-
-                //If reading the texture failed don't change our state. 
-                if (tex_reader.FinishedReading)
-                {
-                    try
-                    {
-                        //rwTextureLock.EnterWriteLock();
-
-                        if (tex_reader.HasTexture)
-                        {
-                            this.texture = tex_reader.GetTexture();
-                        }
-                        else
-                        {
-                            //We should stop asking if the server just doesn't have it. 
-                            this.ServerTextureNotFound = tex_reader.TextureNotFound;
-                        }
-
-                        this.TexReader.Dispose();
-                        this.TexReader = null;
-
-                        return this.texture != null;
-                    }
-                    finally
-                    {
-                        //rwTextureLock.ExitWriteLock();
-                    }
-                }
+                Trace.WriteLine($"Aborting {this.TextureFileName}");
+                tokenSource.Cancel();
             }
-            finally
-            {
-                GetTextureSemaphore.Release();
-            }
-
-            return false;
-
         }
-
-        private void OnTextureReaderCompleted()
-        {
-            HandleTextureReaderResult();
-        }
-
-        SemaphoreSlim GetTextureSemaphore = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// Returns a texture if it is loaded, otherwise begins a request to get the texture
         /// </summary>
         /// <param name="graphicsDevice"></param>
         /// <returns></returns>
-        public Texture2D GetOrRequestTexture(GraphicsDevice graphicsDevice)
+        public async Task<Texture2D> GetOrLoadTextureAsync(GraphicsDevice graphicsDevice, CancellationToken token)
         {
-
             //Check if the texture's graphics device has been disposed, in which case load a new texture
-            if (texture != null)
-            {
-                if (texture.GraphicsDevice.IsDisposed)
-                {
-                    texture = null;
-                }
-            }
 
             //Don't bother asking if we've already tried
             if (this.ServerTextureNotFound)
             {
 #if DEBUG
-                /*lock (thisLock)
                 {
                     //Don't know how this could happen, but we should not have a texture if the server does not.  This indicates the code will leak resources
-                    Debug.Assert(TexReader == null);
+                    //Debug.Assert(TexReader == null);
                     Debug.Assert(texture == null);
-                }*/
+                }
 #endif
 
                 return null;
             }
 
-            //If we have a texture that is what we want or better then return it and kill any requests
-            if (texture != null)
+            var currentTexture = texture;
+            if (currentTexture != null)
+                return currentTexture;
+        
+
+
+        //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
+        if (ServerTextureNotFound == false && Interlocked.CompareExchange(ref this.TextureLoadCancellationTokenSource,
+                new CancellationTokenSource(), null) is null)
             {
-                //Drop any outstanding requests since we have a texture that works
-                AbortRequest();
-
-                return this.texture;
-            }
-            else
-            {
-                try
-                {
-                    GetTextureSemaphore.Wait();
-                    if (texture != null)
-                        return texture; 
-
-                    //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
-                    if (this.TexReader == null)
-                    {
-                        if (TextureLoadCancellationTokenSource != null)
-                            TextureLoadCancellationTokenSource.Cancel();
-
-                        TextureLoadCancellationTokenSource = new CancellationTokenSource();
-                        //If the section is read over a network provide a cache path too
-                        if (State.volume.IsLocal == false)
-                        {
-                            this.TexReader = new TextureReaderV2(graphicsDevice,
-                                                                new Uri(this.TextureFileName),
-                                                                this.TextureCachedFileName,
-                                                                this.MipMapLevels,
-                                                                () => this.OnTextureReaderCompleted(),
-                                                                TextureLoadCancellationTokenSource.Token);
-                        }
-                        else
-                        {
-                            this.TexReader = new TextureReaderV2(graphicsDevice,
-                                                                new Uri(this.TextureFileName),
-                                                                this.MipMapLevels,
-                                                                () => this.OnTextureReaderCompleted(),
-                                                                TextureLoadCancellationTokenSource.Token);
-                        }
-
-                        this.TexReader.LoadTexture();
-                    }
-                }
-                finally
-                {
-                    GetTextureSemaphore.Release();
-                }
-
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Returns a texture if it is loaded, otherwise begins a request to get the texture
-        /// </summary>
-        /// <param name="graphicsDevice"></param>
-        /// <returns></returns>
-        public async Task<Texture2D> GetOrLoadTextureAsync(GraphicsDevice graphicsDevice)
-        {
-            try
-            {
-                //rwTextureLock.EnterReadLock();
-                //Check if the texture's graphics device has been disposed, in which case load a new texture
-                var currentTexture = texture; 
-                if (currentTexture != null)
-                {
-                    if (currentTexture.GraphicsDevice.IsDisposed)
-                    {
-                        texture = null;
-                        return null; 
-                    }
-                }
-
-                //Don't bother asking if we've already tried
-                if (this.ServerTextureNotFound)
-                {
-#if DEBUG
-                    {
-                        //Don't know how this could happen, but we should not have a texture if the server does not.  This indicates the code will leak resources
-                        Debug.Assert(TexReader == null);
-                        Debug.Assert(texture == null);
-                    }
-#endif
-
-                    return null;
-                }
-
-                if (currentTexture != null)
-                    return currentTexture;
-            }
-            finally
-            {
-                //rwTextureLock.ExitReadLock();
-            }
-
-          
-            try
-            {
-                await GetTextureSemaphore.WaitAsync();
-
-                if (texture != null)
-                    return this.texture;
-
                 TextureReaderV2 texReader = null;
 
-                //In this path we either have no texture, or a low-res texture.  Ask for a new one if we haven't already
-                if (texReader == null)
+                //If the section is read over a network provide a cache path too
+                if (State.volume.IsLocal == false)
                 {
-                    if (TextureLoadCancellationTokenSource != null)
-                        TextureLoadCancellationTokenSource.Cancel();
-
-                    TextureLoadCancellationTokenSource = new CancellationTokenSource();
-                    //If the section is read over a network provide a cache path too
-                    if (State.volume.IsLocal == false)
-                    {
-                        texReader = new TextureReaderV2(graphicsDevice,
-                                                            new Uri(this.TextureFileName),
-                                                            this.TextureCachedFileName,
-                                                            this.MipMapLevels,
-                                                            null,
-                                                            TextureLoadCancellationTokenSource.Token);
-                    }
-                    else
-                    {
-                        texReader = new TextureReaderV2(graphicsDevice,
-                                                            new Uri(this.TextureFileName),
-                                                            this.MipMapLevels,
-                                                            null,
-                                                            TextureLoadCancellationTokenSource.Token);
-                    }
-
-                    var result = await texReader.LoadTexture();
-                    this.texture = texReader.GetTexture();
-                    this.ServerTextureNotFound = texReader.TextureNotFound;
-
-                    return result; 
+                    texReader = new TextureReaderV2(graphicsDevice,
+                                                        new Uri(this.TextureFileName),
+                                                        this.TextureCachedFileName,
+                                                        this.MipMapLevels,
+                                                        null,
+                                                        TextureLoadCancellationTokenSource);
                 }
-            }
-            finally
-            {
-                GetTextureSemaphore.Release();
+                else
+                {
+                    texReader = new TextureReaderV2(graphicsDevice,
+                                                        new Uri(this.TextureFileName),
+                                                        this.MipMapLevels,
+                                                        null,
+                                                        TextureLoadCancellationTokenSource);
+                }
+
+                var loadTextureTask = texReader.LoadTexture();
+
+                await loadTextureTask.ContinueWith(task => CompleteTextureReadTask(texReader, loadTextureTask), TextureLoadCancellationTokenSource.Token).ConfigureAwait(false); 
+
+                return texture;
             }
 
             return null;
+        }
+
+        private void CompleteTextureReadTask(TextureReaderV2 texReader, Task<Texture2D> texTask)
+        {
+            var tokenSource = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
+            if (tokenSource == null || tokenSource.IsCancellationRequested)
+                return;
+
+            this.ServerTextureNotFound = texReader.TextureNotFound;
+
+            if (texTask.IsFaulted == false && texTask.IsCanceled == false && texReader.HasTexture)
+            { 
+                this.texture = texTask.Result;
+            }
         }
 
 
@@ -592,19 +362,13 @@ namespace Viking.ViewModels
             {
                 //rwTextureLock.EnterReadLock();
 
-                //Texture2D currentTexture = GetOrRequestTexture(graphicsDevice);
+                //Texture2D currentTexture = GetOrRequestTexture(graphicsDevice);  
                 currentTexture = this.texture;
 
                 //Do not draw if we don't have a texture
-                if (currentTexture == null)
+                if (currentTexture is null)
                     return;
-
-                currentTexture = this.texture;
-
-                //Do not draw if we don't have a texture
-                if (currentTexture == null)
-                    return;
-
+                  
                 if (currentTexture.IsDisposed)
                     return;
 
@@ -854,6 +618,8 @@ namespace Viking.ViewModels
         {
             if (disposing)
             {
+                AbortRequest();
+
                 try
                 {
                     rwTextureLock.EnterWriteLock();
@@ -868,14 +634,7 @@ namespace Viking.ViewModels
                             this._texture = null;
                         }
                     }
-
-                    if (_TexReader != null)
-                    {
-                        _TexReader.AbortRequest();
-                        _TexReader.Dispose();
-                        _TexReader = null;
-                    }
-
+                
                     if (vbMesh != null)
                     {
                         vbMesh.Dispose();

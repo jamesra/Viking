@@ -128,7 +128,7 @@
       <Name>Common</Name>
     </ProjectReference>
     <ProjectReference Include="..\VolumeModel\VolumeModel.csproj">
-      <Project>{2eba2a77-f7f0-4efc-ac06-a12fe249388f}</Project>
+      <Project>{41a5edbc-312a-4553-b1ca-d1eb8bb19481}</Project>
       <Name>VolumeModel</Name>
     </ProjectReference>
     <ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj">

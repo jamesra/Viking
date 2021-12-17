@@ -580,7 +580,7 @@
       <Name>VikingWPFUserControls</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj">
-      <Project>{2EBA2A77-F7F0-4EFC-AC06-A12FE249388F}</Project>
+      <Project>{41a5edbc-312a-4553-b1ca-d1eb8bb19481}</Project>
       <Name>VolumeModel</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj">
