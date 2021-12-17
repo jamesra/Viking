@@ -281,6 +281,17 @@ namespace Viking.UI.Commands
             this.Parent = parent; 
         }
 
+        /// <summary>
+        /// Allows refreshing the parent regardless of thread
+        /// </summary>
+        protected void ThreadSafeParentInvalidate()
+        {
+            if (Parent.InvokeRequired)
+                Parent.BeginInvoke(new Action(() => Parent.Invalidate()));
+            else
+                Parent.Invalidate();
+        }
+
         public void SubscribeToInterfaceEvents()
         {
             MyMouseClick = new MouseEventHandler(this.OnMouseClick);
@@ -318,6 +329,8 @@ namespace Viking.UI.Commands
             Parent.OnPenContact += OnPenContact;
             Parent.OnPenLeaveContact += OnPenLeaveContact;
             Parent.OnPenMove += OnPenMove;
+            Parent.OnPenButtonDown += OnPenButtonDown;
+            Parent.OnPenButtonUp += OnPenButtonUp;
 
             Parent.OnGestureBegin += OnGestureBegin;
             Parent.OnGestureZoom += OnGestureZoom;
@@ -326,7 +339,15 @@ namespace Viking.UI.Commands
             Parent.Camera.PropertyChanged += MyCameraChanged;
         }
 
-        
+        protected virtual void OnPenButtonUp(object sender, PenEventArgs e)
+        {
+            return;
+        }
+
+        protected virtual void OnPenButtonDown(object sender, PenEventArgs e)
+        {
+            return;
+        }
 
         public void UnsubscribeToInterfaceEvents()
         {
