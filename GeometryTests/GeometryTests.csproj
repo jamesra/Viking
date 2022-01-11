@@ -178,7 +178,7 @@
       <Version>2.16.3</Version>
     </PackageReference>
     <PackageReference Include="FSharp.Core">
-      <Version>6.0.0</Version>
+      <Version>6.0.1</Version>
     </PackageReference>
     <PackageReference Include="MathNet.Numerics">
       <Version>4.15.0</Version>

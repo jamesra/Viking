@@ -1,19 +1,19 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
-using AnnotationService.Types;
+﻿using Viking.AnnotationServiceTypes.Interfaces; 
 using System;
 using System.Diagnostics;
+using Viking.AnnotationServiceTypes;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    public struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, ILocationLinkReadOnly
+    public struct readonly LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, ILocationLinkKey
     {
         public readonly long A;
         public readonly long B;
 
-        ulong ILocationLinkReadOnly.A => (ulong)A;
+        ulong ILocationLinkKey.A => (ulong)A;
 
-        ulong ILocationLinkReadOnly.B => (ulong)B;
+        ulong ILocationLinkKey.B => (ulong)B;
 
         public LocationLinkKey(long a, long b)
         {
@@ -94,7 +94,7 @@ namespace WebAnnotationModel
             return (this.A == other.A && this.B == other.B);
         }
 
-        bool IEquatable<ILocationLinkReadOnly>.Equals(ILocationLinkReadOnly other)
+        bool IEquatable<ILocationLinkKey>.Equals(ILocationLinkKey other)
         {
             if ((object)other == null)
                 return false;

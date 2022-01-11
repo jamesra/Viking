@@ -474,7 +474,7 @@ namespace Annotation
                 catch (Exception e)
                 {
                     Debug.WriteLine(e.ToString());
-                    throw e;
+                    throw;
 
                 }
 
@@ -900,7 +900,7 @@ namespace Annotation
                 catch (Exception e)
                 {
                     Debug.WriteLine(e.ToString());
-                    throw e;
+                    throw;
                 }
             }
 
@@ -999,7 +999,7 @@ namespace Annotation
                 catch (Exception e)
                 {
                     Debug.WriteLine(e.ToString());
-                    throw e;
+                    throw;
                 }
             }
 
@@ -1254,7 +1254,7 @@ namespace Annotation
                 catch (Exception e)
                 {
                     Debug.WriteLine(e.ToString());
-                    throw e;
+                    throw;
 
                 }
 
@@ -2108,7 +2108,7 @@ namespace Annotation
                     catch (Exception e)
                     {
                         //transaction.Rollback();
-                        throw e;
+                        throw;
                     }
                 }
 

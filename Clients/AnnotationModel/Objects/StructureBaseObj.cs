@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics; 
-
-using WebAnnotation.WCFService.Annotation;
+ 
 using System.Drawing;
-using System.Windows.Forms;
-
-using Viking.Common; 
+using System.Net.Mime; 
+using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.Common;
+using Viking.Common.UI;
+using WebAnnotationModel;
 
 namespace WebAnnotation.Objects
 {
@@ -238,7 +239,7 @@ namespace WebAnnotation.Objects
             }
         }
 
-        Image IUIObject.SmallThumbnail
+        MediaTypeNames.Image IUIObject.SmallThumbnail
         {
             get { throw new NotImplementedException(); }
         }

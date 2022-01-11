@@ -38,8 +38,39 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 
         DBACTION _DBAction = DBACTION.NONE;
         DBACTION IChangeAction.DBAction { get => _DBAction; set => _DBAction = value; }
-        string ILocation.MosaicGeometryWKT { get => this.MosaicShape.Text; set => this.MosaicShape.Text = value; }
-        string ILocation.VolumeGeometryWKT { get => this.VolumeShape.Text; set => this.VolumeShape.Text = value; }
+
+        string ILocation.MosaicGeometryWKT
+        {
+            get => ToWKT(MosaicShape) ?? this.ToMosaicCircleWKT();
+            set => this.MosaicShape.Text = value;
+        }
+
+        string ILocation.VolumeGeometryWKT { get => ToWKT(VolumeShape) ?? this.ToVolumeCircleWKT(); set => this.VolumeShape.Text = value; }
+
+        private string ToWKT(Geometry g)
+        {
+            switch (g.EncodingCase)
+            {
+                case Geometry.EncodingOneofCase.None:
+                    return null;
+                case Geometry.EncodingOneofCase.Text:
+                    return g.Text;
+                case Geometry.EncodingOneofCase.Binary:
+                {
+                    var r = new NetTopologySuite.IO.WKBReader();
+                    var rdr = new NetTopologySuite.IO.WKBReader
+                    {
+                        HandleOrdinates = NetTopologySuite.Geometries.Ordinates.AllOrdinates,
+                        HandleSRID = false
+                    };
+
+                    var ptAUR = rdr.Read(g.Binary.ToByteArray());
+                    return ptAUR.ToText();
+                }
+            }
+
+            throw new NotImplementedException("Unexpected geometry encoding");
+        }
 
         bool IEquatable<ILocation>.Equals(ILocation other)
         {
