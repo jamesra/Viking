@@ -217,6 +217,9 @@
     <PackageReference Include="Microsoft.SqlServer.Types">
       <Version>14.0.1016.290</Version>
     </PackageReference>
+    <PackageReference Include="System.Security.Cryptography.X509Certificates">
+      <Version>4.3.2</Version>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Libs\EntityFrameworkExtras\EntityFrameworkExtras.EF6\EntityFrameworkExtras.EF6.csproj">

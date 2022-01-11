@@ -2,7 +2,9 @@ using Microsoft.Xna.Framework;
 using System;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using Viking.Common;
 using Viking.UI;
 using Viking.UI.Forms;
@@ -200,6 +202,10 @@ namespace Viking
                     float Downsample = System.Convert.ToSingle(strDownsample);
                     SectionViewer.CameraDownsample = Downsample;
                 }
+                else
+                {
+                    SectionViewer.CameraDownsample = 32;
+                }
             }
             catch (Exception)
             {
@@ -208,14 +214,27 @@ namespace Viking
 
             if (UseDefaultPosition)
             {
-                //default to centering the viewer on startup 
-                MappingBase map = Viking.UI.State.volume.GetTileMapping(Viking.UI.State.volume.DefaultVolumeTransform, DefaultSection.Number, null, null);
-                if (map != null)
-                {
-                    Geometry.GridVector2 Center = map.ControlBounds.Center;
-                    SectionViewer.GoToLocation(new Vector2((float)Center.X, (float)Center.Y), DefaultSection.Number, true);
-                    SectionViewer.CameraDownsample = Math.Max(map.ControlBounds.Width / SectionViewer.Width, map.ControlBounds.Height / SectionViewer.Height);
-                }
+                Task.Run(async () =>
+                    {
+                        //default to centering the viewer on startup 
+                        MappingBase map = Viking.UI.State.volume.GetTileMapping(
+                            Viking.UI.State.volume.DefaultVolumeTransform, DefaultSection.Number, null, null);
+                        if (map.Initialized == false)
+                            await map.Initialize(CancellationToken.None);
+
+                        if (map != null)
+                        {
+                            Geometry.GridVector2 Center = map.ControlBounds.Center;
+                            await State.MainThreadDispatcher.BeginInvoke(new Action(() =>
+                            {
+                                var CameraDownsample = Math.Max(map.ControlBounds.Width / SectionViewer.Width,
+                                    map.ControlBounds.Height / SectionViewer.Height);
+                                SectionViewer.GoToLocation(new Vector2((float)Center.X, (float)Center.Y),
+                                    DefaultSection.Number, true, CameraDownsample);
+                            }));
+                        }
+                    }
+                );
             }
         }
 

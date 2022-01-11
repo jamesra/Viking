@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -108,17 +110,49 @@ namespace WebAnnotation.View
             this.Color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.33f);
             //polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);
             //polygonMesh = SmoothedVolumePolygon.CreateMeshForPolygon2D(this.HSLColor);
-            polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, this.HSLColor);
-            CreateLabelObjects();
-            this.ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
-
-            InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];
+            //polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, this.HSLColor);
+            
+             
+            /*InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];
             for (int iInner = 0; iInner < VolumePolygon.InteriorPolygons.Count; iInner++)
             {
                 InteriorHoleViews[iInner] = new LocationInteriorHoleView(obj.ID, iInner,
                     VolumePolygon.InteriorPolygons[iInner],
                     SmoothedVolumePolygon.InteriorPolygons[iInner]);
             }
+            */
+        }
+
+        private int _Initializing = 0;
+        private int _Initialized = 0;
+        private bool Initialized => _Initialized > 0;
+        public async Task Initialize()
+        {
+            //If initialized move on
+            if (Interlocked.CompareExchange(ref _Initialized, _Initialized, 1) > 0)
+                return;
+
+            //If another thread is initializing, move on
+            if (Interlocked.CompareExchange(ref _Initializing, 1, 0) > 0)
+                return;
+
+            this.ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
+
+            SmoothedVolumePolygon = VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay);
+            polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, this.HSLColor);
+            CreateLabelObjects();
+
+            InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];
+            for (int iInner = 0; iInner < VolumePolygon.InteriorPolygons.Count; iInner++)
+            {
+                InteriorHoleViews[iInner] = new LocationInteriorHoleView(modelObj.ID, iInner,
+                    VolumePolygon.InteriorPolygons[iInner],
+                    SmoothedVolumePolygon.InteriorPolygons[iInner]);
+            }
+
+
+            Interlocked.Exchange(ref _Initialized, 1);
+            Interlocked.Exchange(ref _Initializing, 0);
         }
 
         public static double GetRadiusFromPolygonArea(GridPolygon poly, double percentage)
@@ -166,13 +200,7 @@ namespace WebAnnotation.View
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves
         /// </summary> 
-        public override GridRectangle BoundingBox
-        {
-            get
-            {
-                return GridRectangle.Pad(SmoothedVolumePolygon.BoundingBox, this._ControlPointRadius);
-            }
-        }
+        public override GridRectangle BoundingBox => GridRectangle.Pad(SmoothedVolumePolygon.BoundingBox, this._ControlPointRadius);
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -181,6 +209,7 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           LocationPolygonView[] listToDraw)
         {
+            listToDraw = listToDraw.Where(l => l.Initialized).ToArray();
             OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
 #if DEBUG
@@ -199,7 +228,7 @@ namespace WebAnnotation.View
         }
 
         public override bool Contains(GridVector2 Position)
-        {
+        { 
             if (!this.BoundingBox.Contains(Position))
                 return false;
 
@@ -258,6 +287,9 @@ namespace WebAnnotation.View
 
         public ICanvasView GetAnnotationAtPosition(GridVector2 position)
         {
+            if (Initialized == false)
+                return null;
+
             if (OverlappedLinkView != null)
             {
                 ICanvasView containedAnnotation = OverlappedLinkView.GetAnnotationAtPosition(position);
@@ -426,6 +458,7 @@ namespace WebAnnotation.View
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
+
             if (Global.PenMode)
             {
                 return GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, ModifierKeys, out LocationID);
@@ -462,11 +495,17 @@ namespace WebAnnotation.View
 
         public bool IsLabelVisible(Scene scene)
         {
+            if (Initialized == false)
+                return false;
+
             return curveLabels.IsLabelVisible(scene);
         }
 
         public override bool IsVisible(Scene scene)
         {
+            if (Initialized == false)
+                return false;
+
             if (Math.Min(this.BoundingBox.Width, this.BoundingBox.Height) / scene.DevicePixelWidth < 2.0)
                 return false;
 
@@ -483,6 +522,9 @@ namespace WebAnnotation.View
 
         public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
         {
+            if (Initialized == false)
+                return new List<IAction>();
+
             List<IAction> listActions = new List<IAction>();
             if (path.HasSelfIntersection)
             {

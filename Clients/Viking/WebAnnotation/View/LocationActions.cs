@@ -31,6 +31,10 @@ namespace WebAnnotation
         /// </summary>
         SCALE,
         /// <summary>
+        /// Scale and translate the annotation
+        /// </summary>
+        SCALETRANSLATE,
+        /// <summary>
         /// Adjust a specific control point
         /// </summary>
         ADJUST,
@@ -85,6 +89,7 @@ namespace WebAnnotation
             {
                 case LocationAction.NONE:
                     return Cursors.Default;
+                case LocationAction.SCALETRANSLATE:
                 case LocationAction.TRANSLATE:
                     return Cursors.Hand;
                 case LocationAction.SCALE:
@@ -160,10 +165,12 @@ namespace WebAnnotation
             {
                 case LocationAction.NONE:
                     return null;
+                case LocationAction.SCALETRANSLATE:
                 case LocationAction.TRANSLATE:
                     VolumeCircleCenter = section_mapper.SectionToVolume(loc.Position);
                     return new TranslateCircleLocationCommand(Parent,
                                                               new GridCircle(VolumeCircleCenter, loc.Radius),
+                                                              volumePosition,
                                                               loc.Parent.Type.Color.ToXNAColor(1f),
                                                               (NewVolumePosition, NewMosaicPosition, NewRadius) => UpdateCircleLocationCallback(loc, NewVolumePosition, NewMosaicPosition, NewRadius));
                 case LocationAction.SCALE:
@@ -174,7 +181,7 @@ namespace WebAnnotation
                             (radius) =>
                             {
                                 WebAnnotation.LocationActions.UpdateCircleLocationCallback(loc, loc.VolumePosition, loc.Position, radius);
-                            });
+                            }); 
                 case LocationAction.ADJUST:
                     return null;
                 case LocationAction.CREATESTRUCTURE:
@@ -671,6 +678,9 @@ namespace WebAnnotation
 
         public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition, double NewRadius)
         {
+            if (NewRadius < WebAnnotation.Global.MinRadius)
+                NewRadius = WebAnnotation.Global.MinRadius;
+
             loc.MosaicShape = SqlGeometryUtils.Extensions.ToCircle(MosaicPosition.X,
                                            MosaicPosition.Y,
                                            loc.Z,

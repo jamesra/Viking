@@ -6,9 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Viking.UI.Controls;
 using VikingXNAGraphics;
-
-
-
+ 
 namespace LocalBookmarks
 {
 

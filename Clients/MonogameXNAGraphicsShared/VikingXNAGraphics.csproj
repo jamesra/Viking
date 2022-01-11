@@ -96,7 +96,7 @@
     <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86">
       <Private>False</Private>
     </Reference>
-    <Reference Include="Microsoft.Xna.Framework.Input.Touch, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=MSIL">
+    <Reference Include="Microsoft.Xna.Framework.Input.Touch, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86">
       <Private>False</Private>
     </Reference>
     <Reference Include="netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51" />
@@ -249,8 +249,8 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>mkdir $(SolutionDir)Viking\Content\$(ProjectName)
-(robocopy $(TargetDir)Content $(SolutionDir)Viking\Content\$(ProjectName) * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PostBuildEvent>
+    <PostBuildEvent>mkdir $(ProjectDir)..\Viking\Viking\Content\$(ProjectName)
+(robocopy $(TargetDir)Content $(ProjectDir)..\Viking\Viking\Content\$(ProjectName) * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

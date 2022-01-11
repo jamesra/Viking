@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
@@ -68,9 +70,9 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        private void CreateView(GridPolygon poly, Color color)
+        private static async Task<PositionColorMeshModel> CreateView(GridPolygon poly, Color color, CancellationToken token)
         {
-            polygonView = TriangleNetExtensions.CreateMeshForPolygon2D(poly.Smooth(Global.NumClosedCurveInterpolationPoints), color);
+            return await Task.Run(() => TriangleNetExtensions.CreateMeshForPolygon2D(poly.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay), color), token);
         }
 
         protected void PopulateControlPointIndexIfNeeded(GridVector2 WorldPosition)
@@ -87,36 +89,29 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        protected virtual void UpdatePosition(GridVector2 PositionDelta)
+        private CancellationTokenSource UpdatePositionCancellationTokenSource = null;
+
+        protected virtual async Task UpdatePosition(GridVector2 PositionDelta)
         {
             AdjustedPolygon[iAdjustedControlPoint] = AdjustedPolygon[iAdjustedControlPoint] + PositionDelta;
-            /*
-                
-            GridVector2[] newRing = AdjustedPolygon.ExteriorRing.Clone() as GridVector2[];
-            newRing[iAdjustedControlPoint.Value.iVertex] += PositionDelta;
-            if (iAdjustedControlPoint.Value.FirstInRing() == 0)
+
+            //If we haven't moved a significant distance, don't update the view
+            if (PositionDelta.Round(0) == GridVector2.Zero)
+                return;
+
+            var newTokenSource = new CancellationTokenSource();
+            var existingToken = Interlocked.Exchange(ref UpdatePositionCancellationTokenSource, newTokenSource);
+            if(existingToken != null)
+                existingToken.Cancel();
+
+            var result = await CreateView(AdjustedPolygon, _color, newTokenSource.Token);
+            if (newTokenSource.IsCancellationRequested == false)
             {
-                newRing[AdjustedPolygon.ExteriorRing.Length - 1] = newRing[iAdjustedControlPoint];
+                Interlocked.Exchange(ref polygonView, result); 
+                ThreadSafeParentInvalidate();
             }
-            else if (iAdjustedControlPoint == AdjustedPolygon.ExteriorRing.Length - 1)
-            {
-                newRing[0] = newRing[iAdjustedControlPoint];
-            }
-
-            AdjustedPolygon.ExteriorRing = newRing;
-            */
-
-            //if(polygonView == null)
-            CreateView(AdjustedPolygon, _color);
-
-            /*else
-            {
-                polygonView.Verticies[iAdjustedControlPoint].Position = newRing[iAdjustedControlPoint].ToXNAVector3();
-                
-
-            }*/
         }
-
+         
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
@@ -129,7 +124,6 @@ namespace WebAnnotation.UI.Commands
                 {
                     GridVector2 LastWorldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
                     UpdatePosition(NewPosition - LastWorldPosition);
-                    Parent.Invalidate();
                 }
             }
 
@@ -181,7 +175,6 @@ namespace WebAnnotation.UI.Commands
             this.success_callback(mosaic_polygon, OutputVolumePolygon);
 
             base.Execute();
-        }
-
+        } 
     }
 }

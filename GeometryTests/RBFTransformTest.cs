@@ -37,7 +37,7 @@ namespace GeometryTests
                 Points[i] = new MappingGridVector2(ControlPoints[i], MappedPoints[i]);
             }
 
-            RBFTransform transform = new RBFTransform(Points, new TransformInfo());
+            RBFTransform transform = new RBFTransform(Points, new TransformBasicInfo());
 
             for (int i = 0; i < ControlPoints.Length; i++)
             {

@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
@@ -96,7 +97,7 @@ namespace Viking.UI.Controls
         //A friendlier way of setting camera distance
         public override double Downsample
         {
-            get { return base.Downsample; }
+            get => base.Downsample;
             set
             {
                 if (value < 0.01)
@@ -536,7 +537,7 @@ namespace Viking.UI.Controls
         /// </summary>
         public event ReferenceSectionChangedEventHandler OnReferenceSectionChanged;
 
-        #region IPenEvents
+        #region IPenEvents 
         public event PenEventHandler OnPenEnterRange { add { penEventManager.OnPenEnterRange += value; } remove { penEventManager.OnPenEnterRange -= value; } }
         public event PenEventHandler OnPenLeaveRange { add { penEventManager.OnPenLeaveRange += value; } remove { penEventManager.OnPenLeaveRange -= value; } }
         public event PenEventHandler OnPenContact { add { penEventManager.OnPenContact += value; } remove { penEventManager.OnPenContact -= value; } }
@@ -844,7 +845,7 @@ namespace Viking.UI.Controls
 
                         if (!System.IO.File.Exists(tile_filename))
                         {
-                            listTasks.Enqueue(ExportScene(TileScene, (float)X, (float)Y, Z, tile_filename));
+                            listTasks.Enqueue(ExportScene(TileScene, (float)X, (float)Y, Z, tile_filename, CancellationToken.None));
                         }
 
                         while (listTasks.Count > 0 && (listTasks.Count > MaxActiveExports || listTasks.Peek().IsCompleted))
@@ -867,7 +868,7 @@ namespace Viking.UI.Controls
         }
 
 
-        private void ExportTiles(string ExportPath, int FirstSection, int LastSection, int Downsample = 1)
+        private async Task ExportTiles(string ExportPath, int FirstSection, int LastSection, int Downsample, CancellationToken token)
         {
             //Make sure sections are in order
             if (FirstSection > LastSection)
@@ -957,18 +958,19 @@ namespace Viking.UI.Controls
                         {
                             if (LoopCounter % ExistingTileUpdateInterval == 0)
                             {
+                                //Todo: Switch this to use IProgressReporter
                                 progressForm.ShowProgress("Section " + S.Name + "\nFrame ID: " + Filename, (double)iTile / (double)numTiles);
-                                Application.DoEvents();
+                                //Application.DoEvents();
                             }
 
                             continue;
                         }
 
                         TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
-                        if (!SceneHasTextures(TileScene, S.Number))
+                        if (false == await SceneHasTextures(TileScene, S.Number, token))
                             continue;
 
-                        Task T = ExportScene(TileScene, (float)X, (float)Y, S.Number, Filename);
+                        Task T = ExportScene(TileScene, (float)X, (float)Y, S.Number, Filename, token);
                         listTasks.Enqueue(T);
 
                         //Throttle tile creation so we don't exceed our memory limits
@@ -1053,15 +1055,17 @@ namespace Viking.UI.Controls
             this.ShowOverlays = OriginalOverlay;
         }
 
-        private Task ExportScene(VikingXNA.Scene TileScene, float CenterX, float CenterY, int Z, string Filename)
+        private async Task ExportScene(VikingXNA.Scene TileScene, float CenterX, float CenterY, int Z, string Filename, CancellationToken token)
         {
-            Task preloadTask = PreloadSceneTexturesAsync(TileScene, Z, false);
+            await PreloadSceneTexturesAsync(TileScene, Z, false, token);
+            /*
+            Task preloadTask = await PreloadSceneTexturesAsync(TileScene, Z, false);
             do
             { 
                 Application.DoEvents();
             }
             while (preloadTask.IsCompleted == false && preloadTask.IsFaulted == false && preloadTask.IsCanceled == false);
-             
+             */
             Task T = null;
             Scene originalScene = this.Scene;
             bool OriginalOverlays = this.ShowOverlays;
@@ -1072,8 +1076,7 @@ namespace Viking.UI.Controls
 
             GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
             TileScene.Camera.LookAt = new Vector2(CenterX, CenterY);
-
-            
+             
             this.Scene = TileScene;
             RenderTarget2D renderTargetTile = new RenderTarget2D(graphicsDevice, TileScene.Viewport.Width, TileScene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
 
@@ -1094,7 +1097,7 @@ namespace Viking.UI.Controls
             this.Scene = originalScene;
             this.Section = originalSection;
 
-            return T;
+            return;
         }
 
         protected void InitGraphicsDeviceForDraw(GraphicsDevice graphicsDevice)
@@ -1481,7 +1484,7 @@ namespace Viking.UI.Controls
         /// <param name="scene"></param>
         /// <param name="Z"></param>
         /// <returns></returns>
-        protected bool SceneHasTextures(Scene scene, int Z)
+        protected async Task<bool> SceneHasTextures(Scene scene, int Z, CancellationToken token)
         {
             if (false == Volume.SectionViewModels.ContainsKey(Z))
                 return false;
@@ -1495,12 +1498,16 @@ namespace Viking.UI.Controls
             {
                 Section section = visibleSection.GetSectionToDrawForChannel(channel);
                 MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
+                await Mapping.Initialize(token);
+                if (token.IsCancellationRequested)
+                    return false;
+
                 int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
                 DownsamplesToRender = new int[] { DownsamplesToRender.Last() };
 
                 //Get all of the visible tiles
-                TilePyramid visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
+                TilePyramid visibleTiles = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
                 for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
                 {
                     int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
@@ -1513,7 +1520,15 @@ namespace Viking.UI.Controls
             return false;
         }
 
-        protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool AsyncTextureLoad = true)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="scene"></param>
+        /// <param name="Z"></param>
+        /// <param name="AsyncTextureLoad">If this is false we only load the high resolution textures because the scene won't be drawn until all textures are loaded</param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool AsyncTextureLoad, CancellationToken token)
         {
             List<Task<Texture2D>> listGetTextureTasks = new List<Task<Texture2D>>();
             List<TileViewModel> listTileViewModels = new List<ViewModels.TileViewModel>();
@@ -1530,9 +1545,12 @@ namespace Viking.UI.Controls
             {
                 Section section = visibleSection.GetSectionToDrawForChannel(channel);
                 MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
-
                 if (Mapping == null)
                     continue;
+
+                await Mapping.Initialize(token);
+                if (token.IsCancellationRequested)
+                    return;
 
                 int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
@@ -1541,14 +1559,15 @@ namespace Viking.UI.Controls
                     DownsamplesToRender = new int[] { DownsamplesToRender.Last() };
 
                 //Get all of the visible tiles
-                var tilePyramidTask = Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
-                while ((tilePyramidTask.IsCompleted || tilePyramidTask.IsFaulted || tilePyramidTask.IsCanceled) == false)
+                //var tilePyramidTask = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
+                /*while ((tilePyramidTask.IsCompleted || tilePyramidTask.IsFaulted || tilePyramidTask.IsCanceled) == false)
                 {
                     Application.DoEvents();
                  //   TilePyramid visibleTiles = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
-                }
+                }*/
 
-                var visibleTiles = tilePyramidTask.Result;
+                //var visibleTiles = tilePyramidTask.Result;
+                var visibleTiles = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
 
                 for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
                 {
@@ -1581,7 +1600,7 @@ namespace Viking.UI.Controls
                             continue;
 
                         if (tileViewModel.TextureNeedsLoading)
-                            listGetTextureTasks.Add(tileViewModel.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice));
+                            listGetTextureTasks.Add(Task.Run(() => tileViewModel.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice, token)));
                             //listGetTextureTasks.Add(Task<Texture2D>.Run(() => { return tileViewModel.GetOrRequestTexture(this.graphicsDeviceService.GraphicsDevice); }));
 
                         listTileViewModels.Add(tileViewModel);
@@ -1627,10 +1646,15 @@ namespace Viking.UI.Controls
             //                                             new Microsoft.Xna.Framework.Color(0,1f,0),
             //                                          new Microsoft.Xna.Framework.Color(0,0,1f)};
 
-            MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel, this.CurrentTransform);
-
+            MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel, this.CurrentTransform); 
             if (Mapping == null)
                 return null;
+
+            if (Mapping.Initialized == false)
+            {
+                Mapping.Initialize(CancellationToken.None);
+                return null;
+            }
 
             int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
@@ -1698,7 +1722,7 @@ namespace Viking.UI.Controls
                     //Request a texture if we need one
                     if (tileViewModel.TextureNeedsLoading && !tileViewModel.TextureIsLoading)
                         //listGetTextureTasks.Add(Task<Texture2D>.Run(() => tileViewModel.GetOrRequestTexture(graphicsDevice)));
-                        tileViewModel.GetOrLoadTextureAsync(graphicsDevice);
+                        Task.Run(() => tileViewModel.GetOrLoadTextureAsync(graphicsDevice, CancellationToken.None));
                     else if (tileViewModel.TextureReadComplete)
                         tileViewsToDraw.Add(tileViewModel);
                 }
@@ -1809,8 +1833,7 @@ namespace Viking.UI.Controls
                 return renderedTargets[0].RenderTarget;
 
 
-            return null;
-
+            return null; 
         }
 
 
@@ -1917,6 +1940,12 @@ namespace Viking.UI.Controls
 
                 if (mapping == null)
                     continue;
+
+                if (mapping.Initialized == false)
+                {
+                    Task.Run(() => mapping.Initialize(CancellationToken.None));
+                    continue;
+                }
 
                 //Change the transform if we need to, but restore it when we are done
 
@@ -2640,7 +2669,7 @@ namespace Viking.UI.Controls
                     LastExportSection = exportProperties.LastSectionInExport;
                 }
 
-                ExportTiles(exportProperties.ExportPath, FirstExportSection, LastExportSection, exportProperties.Downsample);
+                Task.Run(() => ExportTiles(exportProperties.ExportPath, FirstExportSection, LastExportSection, exportProperties.Downsample, CancellationToken.None));
             }
         }
 

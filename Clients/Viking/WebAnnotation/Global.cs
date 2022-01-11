@@ -36,18 +36,10 @@ namespace WebAnnotation
         }
 
         //TODO: Choose number of points based on distance between control points
-        static public uint NumOpenCurveInterpolationPoints
-        {
-            get
-            {
-                return Geometry.Global.NumOpenCurveInterpolationPoints;
-            }
-        }
-        static public uint NumClosedCurveInterpolationPoints {
-            get {
-                return Geometry.Global.NumClosedCurveInterpolationPoints;
-            }
-        }
+        static public uint NumOpenCurveInterpolationPoints => Geometry.Global.NumOpenCurveInterpolationPoints;
+        static public uint NumClosedCurveInterpolationPoints => Geometry.Global.NumClosedCurveInterpolationPoints;
+
+        static public uint NumClosedCurveInterpolationPointsForDisplay = 4;
 
         static public int PenSimplifyThreshold = 15;
 
@@ -316,7 +308,7 @@ namespace WebAnnotation
         private static XDocument GetAboutXML(Uri AboutURI)
         {
             //See if we can load the WebAnnotationMapping file
-            HttpWebRequest request = WebRequest.Create(AboutURI) as HttpWebRequest;
+            HttpWebRequest request = WebRequest.CreateHttp(AboutURI);
             if (AboutURI.Scheme.ToLower() == "https")
                 request.Credentials = Viking.UI.State.UserCredentials;
 
@@ -460,7 +452,7 @@ namespace WebAnnotation
             if (!System.IO.File.Exists(CacheFilename))
                 return false;
 
-            HttpWebRequest headerRequest = HttpWebRequest.Create(uri) as HttpWebRequest;
+            HttpWebRequest headerRequest = HttpWebRequest.CreateHttp(uri);
             headerRequest.Method = "HEAD";
             headerRequest.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore); 
             using (HttpWebResponse headerResponse = headerRequest.GetResponse() as HttpWebResponse)
@@ -483,7 +475,7 @@ namespace WebAnnotation
 
                 try
                 {
-                    request = HttpWebRequest.Create(uri);
+                    request = HttpWebRequest.CreateHttp(uri);
                     response = request.GetResponse();
                     stream = response.GetResponseStream();
                     byte[] data = new Byte[response.ContentLength];

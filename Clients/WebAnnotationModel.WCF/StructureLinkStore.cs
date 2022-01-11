@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.ServiceModel;
 using WebAnnotationModel.Service;
 using WebAnnotationModel.Objects;
 
@@ -12,7 +13,11 @@ namespace WebAnnotationModel
     {
         public StructureLinkStore()
         {
+            channelFactory =
+                new ChannelFactory<IAnnotateStructures>("Annotation.Service.Interfaces.IAnnotateStructures-Binary");
 
+            channelFactory.Credentials.UserName.UserName = State.UserCredentials.UserName;
+            channelFactory.Credentials.UserName.Password = State.UserCredentials.Password;
         }
 
         public override void Init()
@@ -20,26 +25,18 @@ namespace WebAnnotationModel
             return;
         }
 
-        protected override AnnotateStructuresClient CreateProxy()
-        {
-            AnnotateStructuresClient proxy = new Service.AnnotateStructuresClient("Annotation.Service.Interfaces.IAnnotateStructures-Binary", State.EndpointAddress);
-            proxy.ClientCredentials.UserName.UserName = State.UserCredentials.UserName;
-            proxy.ClientCredentials.UserName.Password = State.UserCredentials.Password;
-            return proxy;
-        }
-
-        protected override StructureLinkKey[] ProxyUpdate(AnnotateStructuresClient proxy, StructureLink[] linkObjs)
+        protected override StructureLinkKey[] ProxyUpdate(IAnnotateStructures proxy, StructureLink[] linkObjs)
         {
             proxy.UpdateStructureLinks(linkObjs);
             return new StructureLinkKey[0];
         }
 
-        protected override StructureLink ProxyGetByID(AnnotateStructuresClient proxy, StructureLinkKey ID)
+        protected override StructureLink ProxyGetByID(IAnnotateStructures proxy, StructureLinkKey ID)
         {
             throw new NotImplementedException();
         }
 
-        protected override StructureLink[] ProxyGetByIDs(AnnotateStructuresClient proxy, StructureLinkKey[] IDs)
+        protected override StructureLink[] ProxyGetByIDs(IAnnotateStructures proxy, StructureLinkKey[] IDs)
         {
             throw new NotImplementedException();
         }
@@ -49,22 +46,22 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
-        protected override StructureLink[] ProxyGetBySection(AnnotateStructuresClient proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations)
+        protected override StructureLink[] ProxyGetBySection(IAnnotateStructures proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations)
         {
             throw new NotImplementedException();
         }
 
-        protected override IAsyncResult ProxyBeginGetBySectionRegion(AnnotateStructuresClient proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override IAsyncResult ProxyBeginGetBySectionRegion(IAnnotateStructures proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             throw new NotImplementedException();
         }
 
-        protected override StructureLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<AnnotateStructuresClient, StructureLinkObj> state, IAsyncResult result)
+        protected override StructureLink[] ProxyGetBySectionRegionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotateStructures, StructureLinkObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }
 
-        protected override StructureLink[] ProxyGetBySectionRegion(AnnotateStructuresClient proxy,
+        protected override StructureLink[] ProxyGetBySectionRegion(IAnnotateStructures proxy,
                                                              long SectionNumber,
                                                              BoundingRectangle BBox,
                                                              double MinRadius,
@@ -76,23 +73,23 @@ namespace WebAnnotationModel
         }
 
 
-        protected override IAsyncResult ProxyBeginGetBySection(AnnotateStructuresClient proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
+        protected override IAsyncResult ProxyBeginGetBySection(IAnnotateStructures proxy, long SectionNumber, DateTime LastQuery, AsyncCallback callback, object asynchState)
         {
             throw new NotImplementedException();
         }
 
-        protected override StructureLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<AnnotateStructuresClient, StructureLinkObj> state, IAsyncResult result)
+        protected override StructureLink[] ProxyGetBySectionCallback(out long TicksAtQueryExecute, out StructureLinkKey[] DeletedLocations, GetObjectBySectionCallbackState<IAnnotateStructures, StructureLinkObj> state, IAsyncResult result)
         {
             throw new NotImplementedException();
         }
 
         public StructureLinkObj Create(StructureLinkObj link)
         {
-            AnnotateStructuresClient proxy = null;
+            IClientChannel proxy = null;
             try
             {
                 proxy = CreateProxy();
-                StructureLink dblink = proxy.CreateStructureLink(link.GetData());
+                StructureLink dblink = ((IAnnotateStructures)proxy).CreateStructureLink(link.GetData());
                 StructureLinkObj created_link = new StructureLinkObj(dblink);
                 Add(created_link);
                 return created_link;

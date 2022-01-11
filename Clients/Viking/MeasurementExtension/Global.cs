@@ -52,7 +52,7 @@ namespace MeasurementExtension
             //CreateXML updates from 11/1/10
 
             Uri MappingURI = new Uri(volume.Host + "/About.xml");
-            HttpWebRequest request = WebRequest.Create(MappingURI) as HttpWebRequest;
+            HttpWebRequest request = WebRequest.CreateHttp(MappingURI);
 
             //Attach credentials if using security
             if (MappingURI.Scheme.ToLower() == "https")

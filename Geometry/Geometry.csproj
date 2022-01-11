@@ -25,7 +25,9 @@
   <ItemGroup>
     <ProjectReference Include="..\Clients\Common\Common.csproj" />
     <ProjectReference Include="..\RTree\RTree.csproj" />
-    <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj" />
+    <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj">
+      <Private>false</Private>
+    </ProjectReference>
     <ProjectReference Include="..\Utils\Utils.csproj" />
   </ItemGroup>
 

@@ -71,12 +71,12 @@ namespace Geometry.Transforms
         /// <param name="info"></param>
         public abstract List<int>[] Edges { get; protected set; }
 
-        protected TriangulationTransform(MappingGridVector2[] mapPoints, TransformInfo info) : base(mapPoints, info)
+        protected TriangulationTransform(MappingGridVector2[] mapPoints, TransformBasicInfo info) : base(mapPoints, info)
         {
             Debug.Assert(mapPoints.Length >= 3, "Triangulation transform requires at least 3 points");
         }
 
-        protected TriangulationTransform(MappingGridVector2[] mapPoints, GridRectangle mappedBounds, TransformInfo info)
+        protected TriangulationTransform(MappingGridVector2[] mapPoints, GridRectangle mappedBounds, TransformBasicInfo info)
             : base(mapPoints, mappedBounds, info)
         {
             Debug.Assert(mapPoints.Length >= 3, "Triangulation transform requires at least 3 points");
@@ -658,7 +658,7 @@ namespace Geometry.Transforms
         /// Takes two transforms and transforms the control grid of this section into the control grid space of the passed transfrom. Requires control section
         /// of this transform to match mapped section of adding transform
         /// </summary>
-        public static TriangulationTransform Transform(ITransform BtoC, IControlPointTriangulation AtoB, TransformInfo info)
+        public static TriangulationTransform Transform(ITransform BtoC, IControlPointTriangulation AtoB, TransformBasicInfo info)
         {
             if (BtoC is null)
                 throw new ArgumentNullException(nameof(BtoC),"TriangulationTransform Transform");
@@ -779,7 +779,8 @@ namespace Geometry.Transforms
             }
 
             //Wait for the threads to finish processing.  There is a 64 handle limit for WaitAll so we wait on one at a time
-            ManualResetEvent.WaitAll(doneEvents.ToArray());
+            if(doneEvents.Count > 0)
+                ManualResetEvent.WaitAll(doneEvents.ToArray());
 
             newPoints.Clear();
 

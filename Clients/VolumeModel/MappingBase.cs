@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
@@ -99,10 +101,7 @@ namespace Viking.VolumeModel
         /// </summary>
         public DateTime LastModified
         {
-            get
-            {
-                return _LastModified;
-            }
+            get => _LastModified;
         }
 
         protected DateTime _LastModified = DateTime.MinValue;
@@ -124,13 +123,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Contains the URI or directory which all tiles in the mapping base reside in
         /// </summary>
-        public string TilePath
-        {
-            get
-            {
-                return this.Section.Path;
-            }
-        }
+        public string TilePath => this.Section.Path;
 
         /// <summary>
         /// Prefix to prepend to all tile file names
@@ -228,15 +221,15 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Called when there is a need to free the memory used by the object, but keep the object alive
         /// </summary>
-        public virtual void FreeMemory()
+        public virtual Task FreeMemory()
         {
-
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// The section to which the mapping applies
         /// </summary>
-        protected Section Section;
+        protected readonly Section Section;
 
         public MappingBase(Section section, string name, string Prefix, string Postfix)
         {
@@ -245,6 +238,10 @@ namespace Viking.VolumeModel
             this.TilePrefix = Prefix;
             this.TilePostfix = Postfix;
         }
+
+        public abstract Task Initialize(CancellationToken token);
+
+        public abstract bool Initialized { get; }
 
         /// <summary>
         /// Maps the provided visible bounds in volume space back to section space with the provided transform.

@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
@@ -156,7 +157,8 @@ namespace Viking.VolumeModel
 
         protected virtual string TileTextureCacheFileName(int downsample, int iX, int iY)
         {
-            return this.Name + System.IO.Path.DirectorySeparatorChar + downsample.ToString("D3") + System.IO.Path.DirectorySeparatorChar + TileTextureFileName(iX, iY);
+            char sep = System.IO.Path.DirectorySeparatorChar;
+            return $"{Name}{sep}{downsample:D3}{sep}{TileTextureFileName(iX, iY)}"; 
         }
 
         /// <summary>
@@ -167,7 +169,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         protected virtual string TileTextureFileName(int iX, int iY)
         {
-            return this.TilePrefix + "X" + iX.ToString("D3") + "_Y" + iY.ToString("D3") + this.TilePostfix;
+            return $"{this.TilePrefix}X{iX.ToString("D3")}_Y{iY.ToString("D3")}{this.TilePostfix}";
         }
 
         #endregion
@@ -248,7 +250,7 @@ namespace Viking.VolumeModel
             }
             else
             {
-                System.Diagnostics.Trace.WriteLine(string.Format("Duplicate Tileset Level {0}-{1}", this.Section.Number, LevelPath));
+                System.Diagnostics.Trace.WriteLine($"Duplicate Tileset Level {Section.Number}-{LevelPath}");
             }
             this._AvailableLevels = null;
         }
@@ -273,10 +275,7 @@ namespace Viking.VolumeModel
             return verticies;
         }
 
-        protected virtual int[] TriangleEdges
-        {
-            get { return new int[] { 0, 1, 2, 1, 3, 2 }; }
-        }
+        protected static readonly int[] TriangleEdges = new int[] { 0, 1, 2, 1, 3, 2 }; 
 
         public override Task<TilePyramid> VisibleTilesAsync(GridRectangle VisibleBounds, double DownSample)
         { 
@@ -339,8 +338,8 @@ namespace Viking.VolumeModel
 
             iMinX = iMinX < 0 ? 0 : iMinX;
             iMinY = iMinY < 0 ? 0 : iMinY;
-            iMaxX = iMaxX >= gridInfo.GridXDim ? gridInfo.GridXDim : iMaxX;
-            iMaxY = iMaxY >= gridInfo.GridYDim ? gridInfo.GridYDim : iMaxY;
+            iMaxX = iMaxX >= gridInfo.GridXDim-1 ? gridInfo.GridXDim-1 : iMaxX;
+            iMaxY = iMaxY >= gridInfo.GridYDim-1 ? gridInfo.GridYDim-1 : iMaxY;
 
             if (iMaxX < 0)
                 iMaxX = 0;
@@ -353,52 +352,66 @@ namespace Viking.VolumeModel
 
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
             List<Tile> TilesToDraw = new List<Tile>(ExpectedTileCount);
+            List<Task<Tile>> tileTasks = new List<Task<Tile>>(ExpectedTileCount);
 
-            for (int iX = iMinX; iX < iMaxX; iX++)
+            for (int iX = iMinX; iX <= iMaxX; iX++)
             {
-                for (int iY = iMinY; iY < iMaxY; iY++)
+                for (int iY = iMinY; iY <= iMaxY; iY++)
                 {
                     string UniqueID = Tile.CreateUniqueKey(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
                     string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
                     Tile tile = Global.TileCache.Fetch(UniqueID);
                     if (tile == null && Global.TileCache.ContainsKey(UniqueID) == false)
                     {
-                        //First create a new tile
-                        //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
-                        PositionNormalTextureVertex[] verticies = CalculateVerticies(iX, iY, roundedDownsample);
-                        int MipMapLevels = 1; //No mip maps
-
-                        if (roundedDownsample == this.AvailableLevels[AvailableLevels.Length - 1])
-                            MipMapLevels = 0; //Generate mipmaps for lowest res texture
-
-
-                        tile = Global.TileCache.ConstructTile(UniqueID,
-                                                            verticies,
-                                                            this.TriangleEdges,
-                                                            TextureFileName,
-                                                            TileTextureCacheFileName(roundedDownsample, iX, iY),
-                                                            //PORT TextureCacheFileName,
-                                                            this.Name,
-                                                            roundedDownsample,
-                                                            MipMapLevels);
-
-                        //Check for tiles at higher resolution
-                        //                        int iTempX = iX / 2;
-                        //                        int iTempY = iY / 2;
-                        //                        int iTempDownsample = roundedDownsample * 2;
-
-
-
+                        //Func<string, int, int, int, string, string,Tile> a = CreateTile;
+                        int ixc = iX;
+                        int iyc = iY;
+                        int rd = roundedDownsample;
+                        var T = Task.Run(() => CreateTile(UniqueID, ixc,  iyc, rd, TextureFileName, Name));
+                        tileTasks.Add(T);
+                        //TilesToDraw.Add(CreateTile(UniqueID, ixc, iyc, rd, TextureFileName, Name));
                     }
 
-                    if (tile != null)
+                    else if (tile != null)
                     {
                         TilesToDraw.Add(tile);
                     }
                 }
             }
 
+            Task[] tileTaskArray = tileTasks.Cast<Task>().ToArray();
+            Task.WaitAll(tileTaskArray);
+            TilesToDraw.AddRange(tileTasks.Select(t => t.Result));
             return TilesToDraw;
         }
+
+        private Tile CreateTile(string uniqueID, int iX,  int iY, int roundedDownsample, string textureFilename, string name)
+        {
+            //TODO: Make this a task
+
+            //First create a new tile
+            //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
+            PositionNormalTextureVertex[] verticies = CalculateVerticies(iX, iY, roundedDownsample);
+            int MipMapLevels = roundedDownsample == this.AvailableLevels[AvailableLevels.Length - 1] ? 0 : 1; //0 = Generate mipmaps for lowest res texture, 1 == no MipMaps for higher res textures in the pyramid
+
+            var tile = Global.TileCache.ConstructTile(uniqueID,
+                verticies,
+                TriangleEdges,
+                textureFilename,
+                TileTextureCacheFileName(roundedDownsample, iX, iY),
+                //PORT TextureCacheFileName,
+                name,
+                roundedDownsample,
+                MipMapLevels);
+
+            //Check for tiles at higher resolution
+            //                        int iTempX = iX / 2;
+            //                        int iTempY = iY / 2;
+            //                        int iTempDownsample = roundedDownsample * 2;
+            return tile;
+
+        }
     }
+
+    
 }

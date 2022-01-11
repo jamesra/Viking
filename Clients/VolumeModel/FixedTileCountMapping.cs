@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
@@ -15,52 +17,7 @@ namespace Viking.VolumeModel
     /// fixed at each resolution and the size varies
     /// </summary>
     public abstract class FixedTileCountMapping : MappingBase
-    {
-        private GridRectangle? _VolumeBounds;
-        public override GridRectangle ControlBounds
-        {
-            get
-            {
-                if (_VolumeBounds.HasValue == false)
-                {
-                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(GetOrCreateTransforms().Result.Cast<ITransformControlPoints>().ToArray());
-                    _VolumeBounds = new GridRectangle?(bounds);
-                }
-
-                return _VolumeBounds.Value;
-            }
-        }
-
-        private GridRectangle? _SectionBounds;
-
-        public override GridRectangle? SectionBounds
-        {
-            get
-            {
-                if (_SectionBounds.HasValue == false)
-                {
-                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(GetOrCreateTransforms().Result.Cast<ITransformControlPoints>().ToArray());
-                    _SectionBounds = new GridRectangle?(bounds);
-                }
-
-                return _SectionBounds.Value;
-            }
-        }
-
-        public override GridRectangle? VolumeBounds
-        {
-            get
-            {
-                if (_VolumeBounds.HasValue == false)
-                {
-                    GridRectangle bounds = Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(GetOrCreateTransforms().Result.Cast<ITransformControlPoints>().ToArray());
-                    _VolumeBounds = new GridRectangle?(bounds);
-                }
-
-                return _VolumeBounds.Value;
-            }
-        }
-
+    { 
         public override UnitsAndScale.IAxisUnits XYScale
         {
             get
@@ -69,46 +26,27 @@ namespace Viking.VolumeModel
             }
         }
 
-        public abstract Task<ITransform[]> GetOrCreateTransforms();
+        public abstract Task<ITransform[]> GetOrCreateTransforms(CancellationToken token);
 
         /// <summary>
         /// Returns NULL if transforms are not loaded
         /// </summary>
         /// <returns></returns>
         public abstract ITransform[] GetLoadedTransformsOrNull();
-        //{
-        //    return _TileTransforms;
-        //}
-
-        //protected ITransform[] _TileTransforms = null;
-
-        /*
-        public virtual ITransform[] TileTransforms
-        {
-            get { return _TileTransforms; }
-        }
-        */
-
-        //PORT: Only used for mipmaps so we don't need to know anymore
-        private Pyramid _CurrentPyramid = null;
 
         /// <summary>
         /// We need to know which pyramid we are working against so we know how many levels are available
         /// </summary>
-        public Pyramid CurrentPyramid
-        {
-            get { return _CurrentPyramid; }
-            set { _CurrentPyramid = value; }
-        }
+        public Pyramid CurrentPyramid { get; set; } = null;
 
         public override int[] AvailableLevels
         {
             get
             {
-                if (_CurrentPyramid == null)
+                if (CurrentPyramid == null)
                     throw new InvalidOperationException("No image pyramid set in FixedTileCountMapping, not using mapping manager?");
 
-                return _CurrentPyramid.GetLevels().ToArray();
+                return CurrentPyramid.GetLevels().ToArray();
             }
         }
 
@@ -130,7 +68,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Filename of local cache of transforms
         /// </summary>
-        abstract public string CachedTransformsFileName
+        public abstract string CachedTransformsFileName
         {
             get;
         }
@@ -148,68 +86,66 @@ namespace Viking.VolumeModel
         }
 
         internal string TileFileName(string filename, int DownsampleLevel)
-        {
-
-            //      string filename = this._TileTransforms[number].TileFileName;
-            /*
-            string filename = "";
-            
-            if (this.TilePrefix != null)
-            {
-                if(this.TilePrefix != "")                
-                    filename = this.TilePrefix + '.';
-            }
-
-            //TEMP: Hack for Korenberg/Iris output.  Remove and make better
-            if (this.TilePrefix != null)
-                filename += number.ToString("D3");
-            else
-                filename += number.ToString("D4"); 
-
-            if (TilePostfix != null)
-            {
-                filename += this.TilePostfix;
-            }
-            */
-
-            /* PORT: The viewModel should handle current mode and path
-             string tileFileName = this.Section.Path +
-                                 System.IO.Path.DirectorySeparatorChar + CurrentPyramid +
-                                 System.IO.Path.DirectorySeparatorChar + DownsampleLevel.ToString("D3") +
-                                 System.IO.Path.DirectorySeparatorChar + filename;
-
-             */
-            string tileFileName = CurrentPyramid.Path +
-                                System.IO.Path.DirectorySeparatorChar + DownsampleLevel.ToString("D3") +
-                                System.IO.Path.DirectorySeparatorChar + filename;
-
-            /*  string tileFileName = DownsampleLevel.ToString("D3") +
-                                    System.IO.Path.DirectorySeparatorChar + filename;
-              */
-            return tileFileName;
-
+        { 
+            return $"{CurrentPyramid.Path}{System.IO.Path.DirectorySeparatorChar}{DownsampleLevel:D3}{System.IO.Path.DirectorySeparatorChar}{filename}";  
         }
 
-        public FixedTileCountMapping(Section section, string name, string Prefix, string Postfix) :
+        protected FixedTileCountMapping(Section section, string name, string Prefix, string Postfix) :
             base(section, name, Prefix, Postfix)
         {
         }
 
+        /*
+        private int _Initialized = 0;
+
+        public override bool Initialized => Interlocked.CompareExchange(ref _Initialized, 1, 1) > 0;
+
+        private SemaphoreSlim _InitializeSemaphore = new SemaphoreSlim(1);
+        
+        public override async Task Initialize(CancellationToken token)
+        {
+            if (Interlocked.CompareExchange(ref _Initialized, 0, 0) > 0)
+                return;
+
+            try
+            {
+                await _InitializeSemaphore.WaitAsync();
+                if (Interlocked.CompareExchange(ref _Initialized, 0, 0) > 0)
+                    return;
+
+                var transforms = await GetOrCreateTransforms(token);
+                if (token.IsCancellationRequested)
+                    return;
+
+                var transformControlPoints = transforms.Cast<ITransformControlPoints>().ToArray();
+                _VolumeBounds =
+                    Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(transformControlPoints);
+                _SectionBounds =
+                    Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(transformControlPoints);
+            }
+            finally
+            {
+                _InitializeSemaphore.Release();
+            }  
+        }*/
+
         #region CacheIO
 
-        protected static async Task SaveToCache(string CachedTransformsFileName, ITransform[] transforms)
+        protected static Task SaveToCache(in string CachedTransformsFileName, in ITransform[] transforms)
         {
             //The corrupted memory error disappeared when I stopped using the cache.  There are also 
             //memory leak issues documented on MSDN regarding BinaryFormatters
             //return;
+            if (transforms == null)
+                return Task.CompletedTask;
 
             using (FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
             {
                 BinaryFormatter binFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                  
-                if (transforms != null)
-                    binFormatter.Serialize(fstream, transforms);
+                binFormatter.Serialize(fstream, transforms);
             }
+
+            return Task.CompletedTask;
         }
 
         protected virtual ITransform[] LoadFromCache()
@@ -242,7 +178,7 @@ namespace Viking.VolumeModel
         #endregion
 
         protected virtual TilePyramid VisibleTiles(in GridRectangle VisibleBounds,
-                                                GridQuad SectionVisibleBounds,
+                                                GridQuad? SectionVisibleBounds,
                                                 double DownSample)
         {
             TilePyramid VisibleTiles = new TilePyramid(VisibleBounds);
@@ -253,9 +189,9 @@ namespace Viking.VolumeModel
             GridRectangle releaseBounds = VisibleBounds; //Tiles outside this quad will have textures released
             GridRectangle loadBounds = VisibleBounds;  //Tiles inside this quad will have textures loaded
             GridRectangle abortBounds = VisibleBounds; //Tiles outside this quad will have HTTP requests aborted
-            releaseBounds *= 1.25 * scaledDownsampleLevel;
-            loadBounds *= 1.1f;
-            abortBounds *= 1.20f * scaledDownsampleLevel;
+            releaseBounds = GridRectangle.Scale(releaseBounds, 1.25 * scaledDownsampleLevel);
+            loadBounds = GridRectangle.Scale(loadBounds, 1.1f);
+            abortBounds = GridRectangle.Scale(abortBounds, 1.20f * scaledDownsampleLevel);
 
             //Get ready by loading a smaller texture in case the user scrolls this direction 
             //Once we have smaller textures then increase the quality
@@ -263,6 +199,10 @@ namespace Viking.VolumeModel
 
             int roundedDownsample = NearestAvailableLevel(DownSample);
             int roundedScaledDownsample = NearestAvailableLevel(scaledDownsampleLevel);
+
+            //Find the starting level of our rendering
+            int iLowestResLevel = AvailableLevels.Length - 1;
+            int lowestResLevel = AvailableLevels[iLowestResLevel];
 
             if (roundedDownsample == int.MaxValue || roundedScaledDownsample == int.MaxValue)
                 return VisibleTiles;
@@ -273,69 +213,101 @@ namespace Viking.VolumeModel
                 return VisibleTiles;
 
             int ExpectedTileCount = Tranforms.Length;
+#if DEBUG
             List<Tile> TilesToDraw = new List<Tile>(ExpectedTileCount);
+#endif
             //            List<Tile> TilesToLoad = new List<Tile>(ExpectedTileCount);
+            List<Task<Tile>> tileTasks = new List<Task<Tile>>();
 
             foreach (ITransform T in Tranforms)
             {
-                IControlPointTriangulation T_Triangulation = T as IControlPointTriangulation;
-                //If this tile has been transformed out of existence then skip it
-                if (T_Triangulation.MapPoints.Length < 3)
-                    continue;
-
-                ITransformControlPoints T_ControlPoints = T as ITransformControlPoints;
-                if (VisibleBounds.Intersects(T_ControlPoints.ControlBounds))
+                if (T is IControlPointTriangulation T_Triangulation)
                 {
-                    //   bool LoadOnly = false; 
-                    ITransformInfo T_Info = T as ITransformInfo;
-                    TileTransformInfo info = T_Info.Info as TileTransformInfo;
-                    string name = TileFileName(info.TileFileName, roundedScaledDownsample);
-                    /*
-                    if (SectionVisibleBounds != null)
+                    //If this tile has been transformed out of existence then skip it
+                    if (T_Triangulation.MapPoints.Length < 3)
+                        continue;
+
+                    if (T_Triangulation.TriangleIndicies == null)
+                        continue;
+
+                    if (T is ITransformControlPoints T_ControlPoints)
                     {
-                        GridRectangle MosaicPosition = new GridRectangle(T.mapPoints[0].ControlPoint, T.ImageWidth, T.ImageHeight);
-                        if (SectionVisibleBounds.Contains(MosaicPosition) == false)
+                        if (VisibleBounds.Intersects(T_ControlPoints.ControlBounds) && T is ITransformInfo T_Info)
                         {
-                            name = TileFileName(T.Number,predictiveDownsample);
-                            LoadOnly = true; 
-                            continue;
+                            if (T_Info.Info is TileTransformInfo info)
+                            {
+                                int level = lowestResLevel;
+                                int iLevel = iLowestResLevel;
+                                while (level >= roundedDownsample)
+                                {
+                                    string uniqueID = Tile.CreateUniqueKey(Section.Number, Name, CurrentPyramid.Name,
+                                        level, info.TileFileName);
+                                    Tile tile = Global.TileCache.Fetch(uniqueID);
+                                    if (tile == null && Global.TileCache.ContainsKey(uniqueID) == false)
+                                    {
+                                        tileTasks.Add(Task.Run(() => CreateTile(uniqueID, level,
+                                            T_Triangulation, T_ControlPoints, info)));
+                                    }
+
+                                    if (tile != null)
+                                    {
+                                        VisibleTiles.AddTile(level, tile);
+                                    }
+#if DEBUG
+                                    TilesToDraw.Add(tile);
+#endif
+
+                                    iLevel--;
+                                    if (iLevel < 0)
+                                        break;
+
+                                    level = AvailableLevels[iLevel];
+                                }
+                            }
                         }
                     }
-                     */
-                    string UniqueID = Tile.CreateUniqueKey(Section.Number, Name, CurrentPyramid.Name, roundedScaledDownsample, info.TileFileName);
-                    Tile tile = Global.TileCache.Fetch(UniqueID);
-                    if (tile == null && Global.TileCache.ContainsKey(UniqueID) == false)
-                    {
-                        int MipMapLevels = 1; //No mip maps
-                        if (roundedScaledDownsample == this.AvailableLevels[AvailableLevels.Length - 1])
-                            MipMapLevels = 0; //Generate mipmaps for lowest res texture
-
-                        //First create a new tile
-                        PositionNormalTextureVertex[] verticies = Tile.CalculateVerticies(T_ControlPoints, info);
-
-                        if (T_Triangulation != null && T_Triangulation.TriangleIndicies != null)
-                        {
-
-                            tile = Global.TileCache.ConstructTile(UniqueID,
-                                                                 verticies,
-                                                                 T_Triangulation.TriangleIndicies,
-                                                                 this.TilePath + '/' + name,
-                                                                 name,
-                                                                 //PORT: TileCacheName(T.Number, roundedDownsample),
-                                                                 this.Name,
-                                                                 roundedScaledDownsample,
-                                                                 MipMapLevels);//T.ImageHeight * T.ImageWidth / roundedDownsample);
-                        }
-                    }
-
-                    if (tile != null)
-                        VisibleTiles.AddTile(roundedDownsample, tile);
-
-                    TilesToDraw.Add(tile);
                 }
+            }
+            
+            Task[] tileTaskArray = tileTasks.Cast<Task>().ToArray();
+            Task.WaitAll(tileTaskArray);
+#if DEBUG
+            TilesToDraw.AddRange(tileTasks.Select(t => t.Result));
+#endif
+
+            foreach (var task in tileTasks)
+            {
+                var tile = task.Result;
+                VisibleTiles.AddTile(tile.Downsample, tile);
             }
 
             return VisibleTiles;
+        }
+
+        private Tile CreateTile(string uniqueID, int roundedScaledDownsample, in IControlPointTriangulation ctrlTriangulation, in ITransformControlPoints ctrlPoints, in TileTransformInfo info)
+        {
+            string name = TileFileName(info.TileFileName, roundedScaledDownsample); 
+            //First create a new tile
+            //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
+            PositionNormalTextureVertex[] verticies = Tile.CalculateVerticies(ctrlPoints, info);
+            int MipMapLevels = roundedScaledDownsample == this.AvailableLevels[AvailableLevels.Length - 1] ? 0 : 1; //0 = Generate mipmaps for lowest res texture, 1 == no MipMaps for higher res textures in the pyramid
+
+            var tile = Global.TileCache.ConstructTile(uniqueID,
+                verticies,
+                ctrlTriangulation.TriangleIndicies,
+                $"{TilePath}/{name}",
+                name,
+                //PORT TextureCacheFileName,
+                this.Name,
+                roundedScaledDownsample,
+                MipMapLevels);
+
+            //Check for tiles at higher resolution
+            //                        int iTempX = iX / 2;
+            //                        int iTempY = iY / 2;
+            //                        int iTempDownsample = roundedDownsample * 2;
+            return tile;
+
         }
     }
 }

@@ -80,6 +80,9 @@
     <PackageReference Include="Microsoft.SqlServer.Types">
       <Version>14.0.1016.290</Version>
     </PackageReference>
+    <PackageReference Include="System.Security.Cryptography.X509Certificates">
+      <Version>4.3.2</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

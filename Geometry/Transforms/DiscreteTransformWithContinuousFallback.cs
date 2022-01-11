@@ -19,7 +19,7 @@ namespace Geometry.Transforms
             return this.Info.ToString();
         }
 
-        public TransformInfo Info
+        public TransformBasicInfo Info
         {
             get; set;
         }
@@ -74,7 +74,9 @@ namespace Geometry.Transforms
             }
         }
 
-        public DiscreteTransformWithContinuousFallback(IDiscreteTransform discreteTransform, IContinuousTransform continuousTransform, TransformInfo info)
+        public DateTime LastModified => Info.LastModified;
+
+        public DiscreteTransformWithContinuousFallback(IDiscreteTransform discreteTransform, IContinuousTransform continuousTransform, TransformBasicInfo info)
         {
             this.DiscreteTransform = discreteTransform;
             this.ContinuousTransform = continuousTransform;

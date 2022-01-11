@@ -160,7 +160,6 @@
     <ProjectReference Include="..\..\..\SIMeasurement\SIMeasurement.csproj">
       <Project>{0b489584-5d3e-4fb4-8a3d-77b7030e2994}</Project>
       <Name>SIMeasurement</Name>
-      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{b35b0c61-ec9c-425a-846d-f160d5b12158}</Project>
@@ -195,6 +194,11 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NETStandard.Library">
+      <Version>2.0.3</Version>
+    </PackageReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -204,8 +208,8 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>mkdir $(SolutionDir)Viking\Viking\Modules\Measurement
-copy $(TargetDir)* $(SolutionDir)Viking\Viking\Modules\Measurement /Y</PostBuildEvent>
+    <PostBuildEvent>mkdir $(SolutionDir)Clients\Viking\Viking\Modules\Measurement
+copy $(TargetDir)* $(SolutionDir)Clients\Viking\Viking\Modules\Measurement /Y</PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

@@ -60,7 +60,7 @@ namespace Geometry.Transforms
 
         #endregion
 
-        public MeshTransform(MappingGridVector2[] points, TransformInfo info) : base(points, info)
+        public MeshTransform(MappingGridVector2[] points, TransformBasicInfo info) : base(points, info)
         {
 
         }

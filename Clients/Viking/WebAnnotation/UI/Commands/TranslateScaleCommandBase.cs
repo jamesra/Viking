@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.Windows.Forms;
+using Viking.UI;
 using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
@@ -20,7 +21,7 @@ namespace WebAnnotation.UI.Commands
         private double _SizeScale = 1.0;
         protected virtual double SizeScale
         {
-            get { return _SizeScale; }
+            get => _SizeScale;
             set
             {
                 if (value != _SizeScale)
@@ -35,6 +36,8 @@ namespace WebAnnotation.UI.Commands
 
         protected GridVector2 OriginalVolumePosition;
         protected GridVector2 VolumePositionDeltaSum = new GridVector2(0, 0);
+
+        public abstract double AnnotationRadius { get; }
 
         /// <summary>
         /// Position of volume origin after applying this translation command
@@ -96,6 +99,7 @@ namespace WebAnnotation.UI.Commands
             parent.OnSectionChanged += this.OnSectionChanged;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             ResetCommandVolumeOrigin(OriginalVolumePosition);
+            ScaleOrigin = GridVector2.Zero;
         }
 
         protected void OnSectionChanged(object sender, Viking.Common.SectionChangedEventArgs e)
@@ -178,6 +182,78 @@ namespace WebAnnotation.UI.Commands
             }
 
             base.OnMouseMove(sender, e);
+        }
+
+        protected GridVector2 ScaleOrigin = GridVector2.Zero;
+        private double LastSavedScalarValue = 1.0;
+
+        protected override void OnPenContact(object sender, PenEventArgs e)
+        {
+            base.OnPenContact(sender, e);
+            if (e.Erase == false)
+            {
+                ScaleOrigin = Parent.ScreenToWorld(e.X, e.Y); 
+            }
+        }
+
+        protected override void OnPenLeaveContact(object sender, PenEventArgs e)
+        {
+            base.OnPenLeaveContact(sender, e);
+            if (e.Erase)
+                return;
+            
+            //Write down that scalar value so if we scale again we are not using the original scale
+            LastSavedScalarValue = this.SizeScale;
+        }
+
+        protected override void OnPenMove(object sender, PenEventArgs e)
+        {
+            //Redraw if we are dragging a location
+            if(this.oldPen != null & e.Erase == false)
+            {
+                if (e.InContact == false)
+                {
+                    //Need to use last saved mouse position, because if a rotation or other non-translate command
+                    //we don't want the mouse to jump
+                    GridVector2 LastVolumePosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
+                    GridVector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
+
+                    VolumePositionDeltaSum += NewVolumePosition - LastVolumePosition;
+
+                    GridVector2 NewMosaicPosition =
+                        mapping.VolumeToSection(OriginalVolumePosition + VolumePositionDeltaSum);
+
+                    MosaicPositionDeltaSum = NewMosaicPosition - this.OriginalMosaicPosition;
+
+                    TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
+                    TranslatedMosaicPosition = NewMosaicPosition; 
+                }
+                else
+                { 
+                    //Need to use last saved mouse position, because if a rotation or other non-translate command
+                    //we don't want the mouse to jump
+                    GridVector2 LastVolumePosition = ScaleOrigin;
+                    GridVector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
+                     
+
+                    var delta = NewVolumePosition - LastVolumePosition;
+
+                    double BlockDistance = delta.X + delta.Y;  
+                    double scale = BlockDistance / AnnotationRadius;
+                    this.SizeScale = scale + LastSavedScalarValue;
+                }
+
+                OnTranslationChanged();
+                Parent.Invalidate();
+            }
+
+            base.OnPenMove(sender, e);
+        }
+
+        protected override void OnPenLeaveRange(object sender, PenEventArgs e)
+        {
+            base.OnPenLeaveRange(sender, e);
+            this.Execute();
         }
 
 

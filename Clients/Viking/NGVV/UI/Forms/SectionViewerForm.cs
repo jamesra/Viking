@@ -12,8 +12,8 @@ namespace Viking.UI.Forms
         /// </summary>
         public SectionViewModel Section
         {
-            get { return SectionControl.Section; }
-            set { SectionControl.Section = value; }
+            get => SectionControl.Section;
+            set => SectionControl.Section = value;
         }
 
         public SectionViewerForm(SectionViewModel section)
@@ -64,8 +64,8 @@ namespace Viking.UI.Forms
 
         public double CameraDownsample
         {
-            get { return this.SectionControl.Downsample; }
-            set { this.SectionControl.Downsample = value; }
+            set => this.SectionControl.Downsample = value;
+            get => this.SectionControl.Downsample;
         }
 
         /// <summary>

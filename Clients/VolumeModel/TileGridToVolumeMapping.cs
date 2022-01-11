@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Viking.VolumeModel
 {
@@ -106,14 +107,14 @@ namespace Viking.VolumeModel
             return this.VolumeTransform.Transform(P);
         }
 
-        public override void FreeMemory()
+        public override Task FreeMemory()
         {
-            if (VolumeTransform as IMemoryMinimization != null)
+            if (VolumeTransform is IMemoryMinimization memMin)
             {
-                ((IMemoryMinimization)VolumeTransform).MinimizeMemory();
+                memMin.MinimizeMemory();
             }
 
-            base.FreeMemory();
+            return base.FreeMemory();
         }
 
 
@@ -168,7 +169,7 @@ namespace Viking.VolumeModel
         private List<Tile> RecursiveVisibleTiles(
                                                  in GridRectangle VolumeVisibleBounds,
                                                  in GridRectangle SectionVisibleBounds,
-                                                 GridQuad VisibleQuad,
+                                                 GridQuad? VisibleQuad,
                                                  int roundedDownsample)
         {
 
@@ -204,11 +205,13 @@ namespace Viking.VolumeModel
                     GridRectangle tileBorder = TileBoundingBox(iX, iY, (int)roundedDownsample);
                     if (tileBorder.Intersects(SectionVisibleBounds) == false)
                         continue;
-
-
-                    //If we have a visble quad see if the tile intersects that too 
-                    if (VisibleQuad.Contains(tileBorder) == false)
-                        continue; 
+                     
+                    //If we have a visble quad see if the tile intersects that too
+                    if (VisibleQuad.HasValue)
+                    {
+                        if (VisibleQuad.Value.Contains(tileBorder) == false)
+                            continue;
+                    }
 
                     string UniqueID = Tile.CreateUniqueKey(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
 

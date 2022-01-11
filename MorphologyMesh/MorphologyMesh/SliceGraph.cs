@@ -387,18 +387,27 @@ namespace MorphologyMesh
                 if (node.Geometry == null)
                     continue;
 
-                if (node.Geometry is IPolygon2D poly)
+                SupportedGeometryType nodeType = node.Geometry.GeometryType();
+                switch (nodeType)
                 {
-                    Task<IShape2D> t = new Task<IShape2D>((node_) => ((IPolygon2D)poly.Translate(translationToCenter)).Simplify(tolerance), node);
-                    t.Start();
-                    tasks.Add(t);
-                }
-
-                if (node.Geometry is IPolyLine2D polyline)
-                {
-                    Task<IShape2D> t = new Task<IShape2D>((node_) => ((IPolyLine2D)polyline.Translate(translationToCenter)).Simplify(tolerance), node);
-                    t.Start();
-                    tasks.Add(t); 
+                    case SupportedGeometryType.POINT:
+                        continue;
+                    case SupportedGeometryType.CURVEPOLYGON:
+                    case SupportedGeometryType.POLYGON:
+                        {
+                            //Start a task to simplify the polygon
+                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Translate(translationToCenter).Simplify(tolerance), node);
+                            t.Start();
+                            tasks.Add(t);
+                        }
+                            break;
+                    case SupportedGeometryType.POLYLINE:
+                        {
+                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolyLine().Translate(translationToCenter).Simplify(tolerance), node);
+                            t.Start();
+                            tasks.Add(t);
+                        }
+                        break;
                 } 
             }
 
@@ -478,13 +487,13 @@ namespace MorphologyMesh
 
             if (polyLookup != null)
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry));
-                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry));
+                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
+                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
             }
             else
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry));
-                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry));
+                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToShape2D()));
+                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToShape2D()));
             }
 
 
@@ -835,7 +844,7 @@ namespace MorphologyMesh
         internal static void HandleCorrespondingFaceContainsVertex(GridPolygon[] Polygons, List<GridVector2> correspondingPoints)
         {
             GridRectangle bbox = Polygons.BoundingBox();
-            bbox *= 1.05; //Grow the box slightly so the QuadTree will never resize for a rounding error
+            bbox = GridRectangle.Scale(bbox, 1.05); //Grow the box slightly so the QuadTree will never resize for a rounding error
             QuadTree<List<PolygonIndex>> tree = new QuadTree<List<PolygonIndex>>(bbox);
 
             PolySetVertexEnum indexEnum = new PolySetVertexEnum(Polygons);

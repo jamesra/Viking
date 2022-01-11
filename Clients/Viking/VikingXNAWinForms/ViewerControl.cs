@@ -222,6 +222,10 @@ namespace VikingXNAWinForms
             }
         }
 
+        /// <summary>
+        /// Boundaries of the render target in world space
+        /// </summary>
+        /// <returns></returns>
         public Geometry.GridRectangle RenderTargetBounds()
         {
             if (Device == null)

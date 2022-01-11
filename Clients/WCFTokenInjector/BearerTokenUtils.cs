@@ -43,7 +43,7 @@ namespace Viking.Tokens
         }
 
         
-        public async Task<ProtocolResponse> GetDiscoveryDocumentAsync()
+        public async Task<DiscoveryDocumentResponse> GetDiscoveryDocumentAsync()
         {
             if (_disco == null)
             {
@@ -61,8 +61,11 @@ namespace Viking.Tokens
             {
                 return false;
             }
+             
+            var disco = disco_response;
 
-            var disco = disco_response as DiscoveryDocumentResponse;
+            if (disco.IntrospectionEndpoint == null)
+                throw new ArgumentException($"No discovery endpoint found at {IdentityServerURL}");
 
             using (var client = new System.Net.Http.HttpClient())
             {
@@ -106,7 +109,7 @@ namespace Viking.Tokens
         public async Task<ProtocolResponse> RetrieveBearerToken(string username, string password, string[] scopes = null)
         {
             if (scopes == null)
-                scopes = new string[] { "openid Viking.Annotation" };
+                scopes = new string[] { "openid profile Viking.Annotation" };
 
             string scopes_string = "";
             foreach (string s in scopes)
@@ -149,11 +152,11 @@ namespace Viking.Tokens
             {
                 client.SetBearerToken(user_token.AccessToken);
 
-                var address_uri = IdentityServerURL.UriCombine($"Resources/UserPermissions?id={VolumeName}");
+                var address_uri = IdentityServerURL.UriCombine($"Api/UserPermissions?id={VolumeName}");
                 string address = address_uri.ToString();
 
                 var response = await client.GetStringAsync(address);
-
+                
                 JArray joResponse = JArray.Parse(response);
 
                 System.Diagnostics.Trace.WriteLine(joResponse);

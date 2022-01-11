@@ -1,6 +1,7 @@
 ﻿using Viking.AnnotationServiceTypes.Interfaces;
 using SqlGeometryUtils;
 using System;
+using System.Threading.Tasks;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -44,7 +45,11 @@ namespace WebAnnotation.View
                     return new LocationOpenCurveView(obj, mapping);
                 case LocationType.CURVEPOLYGON:
                 case LocationType.POLYGON:
-                    return new LocationPolygonView(obj, mapping);
+                {
+                    var polyview = new LocationPolygonView(obj, mapping);
+                    Task.Run(() => polyview.Initialize());
+                    return polyview;
+                } 
                 case LocationType.CLOSEDCURVE:
                     return new LocationClosedCurveView(obj, mapping);
                 case LocationType.POLYLINE:

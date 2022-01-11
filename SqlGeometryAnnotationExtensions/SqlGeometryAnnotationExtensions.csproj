@@ -48,6 +48,10 @@
     <Compile Include="ShapeSmoothingExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj">
+      <Project>{660256d5-ae05-48cf-9821-4e5c00131410}</Project>
+      <Name>AnnotationInterfaces</Name>
+    </ProjectReference>
     <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
       <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
       <Name>AnnotationServiceTypes.WCF</Name>
@@ -78,6 +82,9 @@
     </PackageReference>
     <PackageReference Include="Microsoft.SqlServer.Types">
       <Version>14.0.1016.290</Version>
+    </PackageReference>
+    <PackageReference Include="System.Security.Cryptography.X509Certificates">
+      <Version>4.3.2</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

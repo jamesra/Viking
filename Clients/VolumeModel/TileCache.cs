@@ -6,7 +6,7 @@ namespace Viking.VolumeModel
 {
     public class TileCacheEntry : CacheEntry<string>
     {
-        public Tile Tile;
+        public readonly Tile Tile;
 
         public TileCacheEntry(string Key, Tile T) : base(Key)
         {

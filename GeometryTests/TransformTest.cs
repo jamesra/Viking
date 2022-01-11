@@ -98,8 +98,8 @@ namespace GeometryTests
                                                                          new MappingGridVector2(movingV2, movingV2),
                                                                          new MappingGridVector2(movingV3, movingV3)};
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
             TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
@@ -140,8 +140,8 @@ namespace GeometryTests
                                                                          new MappingGridVector2(movingV3, movingV3),
                                                                          new MappingGridVector2(movingV4, movingV4)};
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
             TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
@@ -186,8 +186,8 @@ namespace GeometryTests
 
 
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
             TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
@@ -229,8 +229,8 @@ namespace GeometryTests
                                                                          new MappingGridVector2(movingV3, GridVector2.Scale(movingV3,10)),
                                                                          new MappingGridVector2(movingV4, GridVector2.Scale(movingV4,10))};
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
             TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
@@ -307,8 +307,8 @@ namespace GeometryTests
                 movingPoints.Add(new MappingGridVector2(movingCtrlPoints[iMapped], movingMapPoints[iMapped]));
             }
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints.ToArray(), new TransformInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints.ToArray(), new TransformInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new MeshTransform(fixedPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new MeshTransform(movingPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
 
             TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
@@ -377,8 +377,8 @@ namespace GeometryTests
                 movingPoints.Add(new MappingGridVector2(movingCtrlPoints[iMapped], movingMapPoints[iMapped]));
             }
 
-            MeshTransform fixedTransform = new MeshTransform(fixedPoints.ToArray(), new TransformInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints.ToArray(), new TransformInfo(DateTime.UtcNow));
+            MeshTransform fixedTransform = new MeshTransform(fixedPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new MeshTransform(movingPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
 
             TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
@@ -411,8 +411,8 @@ namespace GeometryTests
                                                                          new MappingGridVector2(movingV2, movingV2),
                                                                          new MappingGridVector2(movingV3, movingV3)};
 
-            GridTransform fixedTransform = new GridTransform(fixedPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformInfo(DateTime.UtcNow));
+            GridTransform fixedTransform = new GridTransform(fixedPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
 
 
@@ -452,8 +452,8 @@ namespace GeometryTests
                                                                          new MappingGridVector2(movingV3, movingV3),
                                                                          new MappingGridVector2(movingV4, movingV4)};
 
-            GridTransform fixedTransform = new GridTransform(fixedPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformInfo(DateTime.UtcNow));
-            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformInfo(DateTime.UtcNow));
+            GridTransform fixedTransform = new GridTransform(fixedPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
+            MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
 
 
@@ -489,7 +489,7 @@ namespace GeometryTests
                                                                          new MappingGridVector2(fixedV3, movingV3),
                                                                          new MappingGridVector2(fixedV4, movingV4)};
 
-            GridTransform fixedTransform = new GridTransform(transformPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformInfo(DateTime.UtcNow));
+            GridTransform fixedTransform = new GridTransform(transformPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
 
             GridVector2[] PointsToTransform = new GridVector2[] { new GridVector2(2.5, 2.5),
                                                                 new GridVector2(2.5, 7.5),

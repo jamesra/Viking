@@ -142,9 +142,9 @@ namespace WebAnnotation
 
     public static class GridRectangleExtensions
     {
-        public static GridRectangle ToMosaicSpace(this GridRectangle VolumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
+        public static GridRectangle ToMosaicSpace(this in GridRectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
         {
-            GridVector2[] MosaicCorners = mapper.VolumeToSection(new GridVector2[] { VolumeRect.LowerLeft, VolumeRect.LowerRight, VolumeRect.UpperLeft, VolumeRect.UpperRight });
+            GridVector2[] MosaicCorners = mapper.VolumeToSection(new GridVector2[] { volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight });
 
             double MinX = MosaicCorners.Min(p => p.X);
             double MaxX = MosaicCorners.Max(p => p.X);

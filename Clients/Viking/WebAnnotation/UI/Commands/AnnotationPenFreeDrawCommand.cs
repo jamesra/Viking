@@ -39,7 +39,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        LocationCanvasView Annotation;
+        readonly LocationCanvasView Annotation;
 
         public AnnotationPenFreeDrawCommand(SectionViewerControl parent, LocationCanvasView annotation, Color color, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, LineWidth, success_callback)
         {

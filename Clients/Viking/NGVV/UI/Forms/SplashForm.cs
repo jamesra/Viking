@@ -23,7 +23,9 @@ namespace Viking.UI.Forms
         /// <summary>
         /// The task we are reporting on until it finishes
         /// </summary>
-        public Task TrackedTask { get { return _Task; }
+        public Task TrackedTask
+        {
+            get => _Task;
             set
             {
                 _Task = value;
@@ -33,7 +35,7 @@ namespace Viking.UI.Forms
                 }
             } }
 
-        public readonly BackgroundThreadProgressReporter progressReporter;
+        public readonly BackgroundThreadProgressReporter ProgressReporter;
 
         /// <summary>
         /// Using the built-in Dialog result always seems to return DialogResult.Cancel
@@ -43,9 +45,8 @@ namespace Viking.UI.Forms
         public SplashForm()
         {
             InitializeComponent();
-
-            
-            progressReporter = new BackgroundThreadProgressReporter(this.LoadVolumeWorker);
+             
+            ProgressReporter = new BackgroundThreadProgressReporter(this.LoadVolumeWorker);
         }
 
         private void SplashForm_Load(object sender, EventArgs e)
@@ -92,14 +93,14 @@ namespace Viking.UI.Forms
         }
 
         private void backgroundWorker_DoWork(object sender, DoWorkEventArgs e)
-        {
+        { 
             //Wait for the volume to initialize
             if(TrackedTask != null)
                 TrackedTask.Wait();
             else
             {
                 throw new ArgumentException("Running background worker without a task to wait on");
-            }
+            } 
         }
 
         private void backgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)

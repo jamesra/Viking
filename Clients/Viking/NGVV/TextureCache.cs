@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Web.UI;
 using Viking.Common;
 using Viking.UI;
 
@@ -41,9 +43,9 @@ namespace Viking
             this.MaxCacheSize <<= 30;
         }
 
-        public async Task PopulateCache(string Path)
+        public async Task PopulateCache(string Path, CancellationToken token)
         {
-            await _PopulateCacheThreadStart(Path);
+            await _PopulateCacheThreadStart(Path, token);
             //Action<string> checkAction = new Action<string>(_PopulateCacheThreadStart);
             //checkAction.BeginInvoke(Path, null, null); 
         }
@@ -52,28 +54,41 @@ namespace Viking
         /// Add all textures found under the specified directory to the cache
         /// </summary>
         /// <param name="path"></param>
-        private async System.Threading.Tasks.Task _PopulateCacheThreadStart(string path)
+        private async System.Threading.Tasks.Task _PopulateCacheThreadStart(string path, CancellationToken token)
         {
             DateTime Start = DateTime.Now;
             Trace.WriteLine("Populating cache", "TextureUse");
 
-            await CheckDirectory(path);
-
-            TimeSpan elapsed = new TimeSpan(DateTime.Now.Ticks - Start.Ticks);
-            Trace.WriteLine("Finish cache populate: " + elapsed.ToString(), "TextureUse");
+            try
+            {
+                await CheckDirectory(path, token);
+                Trace.WriteLine("Cache population completed!");
+            }
+            catch (TaskCanceledException)
+            {
+                Trace.WriteLine("Cache population task cancelled!");
+            }
+            finally
+            {
+                TimeSpan elapsed = new TimeSpan(DateTime.Now.Ticks - Start.Ticks);
+                Trace.WriteLine("Cache population task runtime: " + elapsed.ToString(), "TextureUse");
+            }
         }
 
         /// <summary>
         /// Recursively check the supplied directory and all subdirectories, adding files to cache lists
         /// </summary>
         /// <param name="path"></param>
-        private async Task CheckDirectory(string path)
+        private async Task CheckDirectory(string path, CancellationToken token)
         {
             string[] dirs = System.IO.Directory.GetDirectories(path);
             System.Collections.Generic.List<Task> listTasks = new System.Collections.Generic.List<Task>(dirs.Length);
             foreach (string dir in dirs)
             {
-                listTasks.Add(CheckDirectory(dir));
+                if (token.IsCancellationRequested)
+                    return;
+
+                listTasks.Add(CheckDirectory(dir, token));
             }
 
             string[] files = System.IO.Directory.GetFiles(path); 
@@ -88,10 +103,13 @@ namespace Viking
                     entry.Dispose();
                     entry = null;
                 }
+
+                if (token.IsCancellationRequested)
+                    return;
             }
 
             if(listTasks.Count > 0)
-                Task.WaitAll(listTasks.ToArray());
+                Task.WaitAll(listTasks.ToArray(), token);
 
             return;
         }
@@ -187,14 +205,33 @@ namespace Viking
         /// <param name="textureStream"></param>
         protected async Task<LocalTextureCacheEntry> CreateEntryAsync(string filename, Stream textureBuffer)
         {
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
+            if (filename is null)
+                throw new ArgumentNullException($"{nameof(LocalTextureCache)} create entry passed null filename");
+
+            try
+            {
+                return await CreateEntryAssumeDirectoryExistsAsync(filename, textureBuffer);
+            }
+            catch (System.IO.DirectoryNotFoundException)
+            {
+                //If the directory does not exist then create it and try again
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
+                return await CreateEntryAssumeDirectoryExistsAsync(filename, textureBuffer); 
+            }
+
+            return null; 
+        }
+
+        private async Task<LocalTextureCacheEntry> CreateEntryAssumeDirectoryExistsAsync(string filename,
+            Stream textureBuffer)
+        {
             using (var output = new FileStream(filename, FileMode.Create, FileAccess.Write))
             {
                 try
                 {
                     await textureBuffer.CopyToAsync(output);
-                    LocalTextureCacheEntry entry = new LocalTextureCacheEntry(filename);
-                    return entry; 
+
+                    return new LocalTextureCacheEntry(filename);
                 }
                 catch (System.IO.IOException ioexception)
                 {
@@ -203,10 +240,7 @@ namespace Viking
 
                     return null;
                 }
-            }  
-
-            //     stream.Close();
-            //An entry is created if the asynch write succeeds 
+            }
         }
 
         /// <summary>

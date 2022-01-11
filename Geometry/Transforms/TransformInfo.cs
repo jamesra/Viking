@@ -2,27 +2,54 @@
 
 namespace Geometry.Transforms
 {
+    public interface ITransformBasicInfo
+    {
+        DateTime LastModified { get; }
+    }
+
+    public interface IStosTransformInfo : ITransformBasicInfo
+    {
+        int ControlSection { get; }
+        int MappedSection { get; }
+
+        string GetCacheFilename(string extension);
+    }
+
+    public interface ITileTransformInfo : ITransformBasicInfo
+    {
+        int TileNumber { get; }
+        string TileFileName { get; }
+
+        //We record these values because as tiles are transformed the dimensions of the mapped space can change and no longer match the image size
+        double ImageWidth { get; }
+        double ImageHeight { get; }
+    }
+
+
 
     [Serializable]
-    public class TransformInfo
+    public class TransformBasicInfo : ITransformBasicInfo
     {
         /// <summary>
         /// This records the modified date of the file the transform was loaded from
         /// </summary>
-        public readonly DateTime LastModified = DateTime.MinValue;
+        public readonly DateTime LastModified;
 
-        public TransformInfo()
+        public TransformBasicInfo()
         {
+            this.LastModified = DateTime.MinValue;
         }
 
-        public TransformInfo(DateTime lastModified)
+        public TransformBasicInfo(DateTime lastModified)
         {
             this.LastModified = lastModified;
         }
+
+        DateTime ITransformBasicInfo.LastModified => LastModified;
     }
 
     [Serializable]
-    public class StosTransformInfo : TransformInfo
+    public class StosTransformInfo : TransformBasicInfo, IStosTransformInfo
     {
         /// <summary>
         /// Space the transform maps to
@@ -34,7 +61,16 @@ namespace Geometry.Transforms
         /// </summary>
         public readonly int MappedSection;
 
-        public StosTransformInfo(int cSection, int mSection)
+        /// <summary>
+        /// This records the modified date of the file the transform was loaded from
+        /// </summary>
+        public readonly DateTime LastModified;
+
+        int IStosTransformInfo.ControlSection => ControlSection;
+
+        int IStosTransformInfo.MappedSection => MappedSection;
+            
+        public StosTransformInfo(int cSection, int mSection) : base(DateTime.MinValue)
         {
             this.ControlSection = cSection;
             this.MappedSection = mSection;
@@ -63,18 +99,24 @@ namespace Geometry.Transforms
                                          AtoB.MappedSection,
                                          BtoC.LastModified > AtoB.LastModified ? AtoB.LastModified : BtoC.LastModified);
         }
+
+        public static StosTransformInfo Merge(IStosTransformInfo AtoB, IStosTransformInfo BtoC)
+        {
+            return new StosTransformInfo(BtoC.ControlSection,
+                AtoB.MappedSection,
+                BtoC.LastModified > AtoB.LastModified ? AtoB.LastModified : BtoC.LastModified);
+        }
     }
 
     [Serializable]
-    public class TileTransformInfo : TransformInfo
+    public class TileTransformInfo : TransformBasicInfo, ITileTransformInfo
     {
         public readonly int TileNumber;
-        public string TileFileName;
+        public readonly string TileFileName;
 
         //We record these values because as tiles are transformed the dimensions of the mapped space can change and no longer match the image size
-        public double ImageWidth;
-        public double ImageHeight;
-
+        public readonly double ImageWidth;
+        public readonly double ImageHeight;
 
         public TileTransformInfo(string TileFileName, int tileNumber, DateTime lastModified, double Width, double Height)
             : base(lastModified)
@@ -86,6 +128,14 @@ namespace Geometry.Transforms
             this.ImageHeight = Height;
         }
 
+        int ITileTransformInfo.TileNumber => TileNumber;
+
+        string ITileTransformInfo.TileFileName => TileFileName;
+
+        double ITileTransformInfo.ImageWidth => ImageWidth;
+
+        double ITileTransformInfo.ImageHeight => ImageHeight;
+          
         public override string ToString()
         {
             return TileFileName;
@@ -96,56 +146,27 @@ namespace Geometry.Transforms
     /// Transforms can expose this interface for to provide storage location info for serializing transforms
     /// </summary>
     [Serializable]
-    public class TransformCacheInfo : ITransformCacheInfo
+    public readonly struct TransformCacheInfo : ITransformCacheInfo
     {
         private readonly string cacheDirectory;
-        private readonly string _FilenameBase = null;
-        private string _Extension = null;
+        private readonly string _FilenameBase;
+        private readonly string _Extension;
 
-        public TransformCacheInfo(string CacheDirectory, string Filename)
+        public TransformCacheInfo(string CacheDirectory, string Filename, string extension=".stos_bin")
         {
-            _Extension = ".stos_bin";
+            _Extension = extension;
             _FilenameBase = System.IO.Path.GetFileNameWithoutExtension(Filename);
             _Extension = System.IO.Path.GetExtension(Filename);
             cacheDirectory = CacheDirectory;
         }
 
-        public string CacheDirectory
-        {
-            get
-            {
-                return cacheDirectory;
-            }
-        }
+        public string CacheDirectory => cacheDirectory;
 
-        public string CacheFilename
-        {
-            get
-            {
-                return _FilenameBase + _Extension;
-            }
-        }
+        public string CacheFilename => _FilenameBase + _Extension;
 
-        public string CacheFullPath
-        {
-            get
-            {
-                return System.IO.Path.Combine(this.CacheDirectory, this.CacheFilename);
-            }
-        }
+        public string CacheFullPath => System.IO.Path.Combine(this.CacheDirectory, this.CacheFilename);
 
-        public string Extension
-        {
-            get
-            {
-                return _Extension;
-            }
-
-            set
-            {
-                _Extension = value;
-            }
-        }
+        public string Extension => _Extension;
     }
 
 }

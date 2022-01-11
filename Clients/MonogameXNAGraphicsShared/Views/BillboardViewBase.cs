@@ -25,7 +25,8 @@ namespace VikingXNAGraphics
 
         public BillboardViewBase(Color color)
         { 
-            this.Color = color; 
+            _Color = color;
+            _HSLColor = color.ConvertToHSL();
         }
 
         public virtual float Alpha

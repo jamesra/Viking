@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Utils;
@@ -10,19 +12,26 @@ using Utils;
 namespace Geometry.Transforms
 {
 
-    public class TransformParameters
+    public readonly struct TransformParameters
     {
-        public string transform_name;
-        public double[] fixedParameters = Array.Empty<double>();
-        public double[] variableParameters = Array.Empty<double>();
+        public readonly string TransformName;
+        public readonly double[] FixedParameters;
+        public readonly double[] VariableParameters;
 
+        private TransformParameters(string name, double[] fixedParams, double[] variableParams)
+        {
+            TransformName = name;
+            FixedParameters = fixedParams;
+            VariableParameters = variableParams;
+        }
+         
         /// <summary>
         /// Read parameters from an enumerator of strings and return an array of numbers.  First value is number of values.  Remaining strings are values themselves.
         /// </summary>
         /// <param name="NumParameters">Space delimited string, first value is number of parameters.</param>
         /// <param name="parts"></param>
         /// <returns></returns>
-        static private double[] ReadParameterValues(string[] parts, long iStart)
+        private static double[] ReadParameterValues(string[] parts, long iStart)
         {
             if (parts.Length < iStart)
             {
@@ -39,7 +48,7 @@ namespace Geometry.Transforms
 
             double[] parameter_values = new double[number_of_params];
 
-            Parallel.For(iStart, iStart + number_of_params, i =>
+            for (long i = iStart; i < iStart + number_of_params; i++)
             {
                 double val = Convert.ToDouble(parts[i]);
                 parameter_values[i - iStart] = val;
@@ -47,18 +56,18 @@ namespace Geometry.Transforms
                 Debug.Assert(!(double.IsInfinity(val) || double.IsNaN(val)));
                 if (double.IsInfinity(val) || double.IsNaN(val))
                     throw new ArgumentException("Infinite or NaN found in transform parameters file");
-            });
+            }
 
             return parameter_values;
         }
 
-        static public TransformParameters Parse(string transform)
+        public static TransformParameters Parse(string transform)
         {
-            TransformParameters parameters = new TransformParameters();
-
             string[] transform_parts = transform.Split(new Char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-            parameters.transform_name = transform_parts[0];
+            var transform_name = transform_parts[0];
+            double[] variableParameters = Array.Empty<double>();
+            double[] fixedParameters = Array.Empty<double>();
 
             long iWord = 1;
 
@@ -67,14 +76,14 @@ namespace Geometry.Transforms
                 if (transform_parts[iWord].ToLower() == "vp")
                 {
                     ++iWord;
-                    parameters.variableParameters = ReadParameterValues(transform_parts, iWord);
-                    iWord += parameters.variableParameters.Length + 1;
+                    variableParameters = ReadParameterValues(transform_parts, iWord);
+                    iWord += variableParameters.Length + 1;
                 }
                 else if (transform_parts[iWord].ToLower() == "fp")
                 {
                     ++iWord;
-                    parameters.fixedParameters = ReadParameterValues(transform_parts, iWord);
-                    iWord += parameters.fixedParameters.Length + 1;
+                    fixedParameters = ReadParameterValues(transform_parts, iWord);
+                    iWord += fixedParameters.Length + 1;
                 }
                 else
                 {
@@ -82,7 +91,7 @@ namespace Geometry.Transforms
                 }
             }
 
-            return parameters;
+            return new TransformParameters(transform_name, fixedParameters, variableParameters);
         }
     }
 
@@ -131,44 +140,37 @@ namespace Geometry.Transforms
             if (elem == null || stosURI == null)
                 throw new ArgumentNullException();
 
-            int pixelSpacing = System.Convert.ToInt32(Utils.IO.GetAttributeCaseInsensitive(elem, "pixelSpacing").Value);
+            int pixelSpacing = System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("pixelSpacing").Value);
 
-            int MappedSection = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(elem, "mappedSection").Value);
-            int ControlSection = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(elem, "controlSection").Value);
-
-            System.Net.HttpWebRequest request = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.CreateDefault(stosURI);
-            if (stosURI.Scheme.ToLower() == "https")
-                request.Credentials = UserCredentials;
-
-            request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
-            request.AutomaticDecompression = System.Net.DecompressionMethods.Deflate | System.Net.DecompressionMethods.GZip;
-
-            try
+            int MappedSection = System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("mappedSection").Value);
+            int ControlSection = System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("controlSection").Value);
+             
+            using (var client = new HttpClient())
             {
-                using (System.Net.HttpWebResponse response = (System.Net.HttpWebResponse)(await request.GetResponseAsync()))
+                var response = await client.GetAsync(stosURI, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                if (false == response.IsSuccessStatusCode)
                 {
-                    StosTransformInfo info = null;
-                    info = new StosTransformInfo(ControlSection, MappedSection, response.LastModified.ToUniversalTime());
+                    Trace.WriteLine($"Failure loading .stos from server: {response.StatusCode}");
+                    return null;
+                }
+
+                var lm = response.Content.Headers.LastModified ?? DateTime.MaxValue;
+                var lastModified = lm.UtcDateTime;
+                var info = new StosTransformInfo(ControlSection, MappedSection, lastModified);
 
 #if DEBUG
-                    //Trace.WriteLine(stosURI.ToString() + " From Cache: " + response.IsFromCache.ToString() + " Modified: " + info.LastModified.ToString(), "Geometry");
-#endif 
-                    using (Stream stream = response.GetResponseStream())
-                    {
-                        return await ParseStos(stream, info, pixelSpacing);
-                    }
+                Trace.WriteLine($"{stosURI} Modified: {lastModified}");
+#endif
+                using (var memStream = new MemoryStream(await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false)))
+                {
+                    return await ParseStos(memStream, info, pixelSpacing).ConfigureAwait(false);
                 }
-            }
-            catch (System.Net.WebException)
-            {
-                Trace.WriteLine(stosURI.ToString() + " could not be loaded", "Geometry");
-                return null;
             }
         }
 
         public static async Task<ITransform> ParseStos(Stream stream, StosTransformInfo info, int pixelSpacing)
         {
-            string[] lines = await StreamUtil.StreamToLines(stream).ConfigureAwait(false); ;
+            string[] lines = await stream.ToLinesAsync().ConfigureAwait(false);
             string[] controlDims = lines[4].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
             string[] mappedDims = lines[5].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
               
@@ -188,10 +190,10 @@ namespace Geometry.Transforms
             //Check the parts to make sure they are actually numbers
             TransformParameters transform_parts = TransformParameters.Parse(lines[6]);
 
-            Debug.Assert(transform_parts.fixedParameters.Length > 0 && transform_parts.variableParameters.Length > 0, "StosGridTransform::ParseGridTransform");
+            Debug.Assert(transform_parts.FixedParameters.Length > 0 && transform_parts.VariableParameters.Length > 0, "StosGridTransform::ParseGridTransform");
 
 
-            switch (transform_parts.transform_name.ToLower())
+            switch (transform_parts.TransformName.ToLower())
             {
                 case "gridtransform_double_2_2":
                     //return ParseGridTransform(parts, info, (float)pixelSpacing, iFixedParameters, iVariableParameters, ControlBounds, MappedBounds);
@@ -281,8 +283,8 @@ namespace Geometry.Transforms
             float MappedWidth = (float)MappedBounds.Width;
             float MappedHeight = (float)MappedBounds.Height;
 
-            int gridWidth = System.Convert.ToInt32(transform.fixedParameters[2] + 1.0);
-            int gridHeight = System.Convert.ToInt32(transform.fixedParameters[1] + 1.0);
+            int gridWidth = System.Convert.ToInt32(transform.FixedParameters[2] + 1.0);
+            int gridHeight = System.Convert.ToInt32(transform.FixedParameters[1] + 1.0);
             double NumPts = gridHeight * gridWidth;
 
             mappings = new MappingGridVector2[gridWidth * gridHeight];
@@ -292,8 +294,8 @@ namespace Geometry.Transforms
 
             for (int i = 0; i < NumPts; i++)
             {
-                Points[i].X = transform.variableParameters[i * 2] * pixelSpacing;
-                Points[i].Y = transform.variableParameters[(i * 2) + 1] * pixelSpacing;
+                Points[i].X = transform.VariableParameters[i * 2] * pixelSpacing;
+                Points[i].Y = transform.VariableParameters[(i * 2) + 1] * pixelSpacing;
             }
 
             for (int y = 0; y < gridHeight; y++)
@@ -336,21 +338,18 @@ namespace Geometry.Transforms
         /// <param name="MappedBounds"></param>
         /// <returns></returns>
         public static List<MappingGridVector2> ParsePolyTransform(TransformParameters transform, float pixelSpacing, int iFixedParameters, int iVariableParameters, in GridRectangle MappedBounds)
-        {
-            if (transform == null)
-                throw new ArgumentNullException();
-
+        { 
             List<MappingGridVector2> mappings = new List<MappingGridVector2>();
 
             float MappedWidth = (float)MappedBounds.Width;
             float MappedHeight = (float)MappedBounds.Height;
 
-            int numParams = transform.variableParameters.Length;
+            int numParams = transform.VariableParameters.Length;
 
-            double uc = transform.fixedParameters[0];
-            double vc = transform.fixedParameters[1];
-            double xmax = transform.fixedParameters[2];
-            double ymax = transform.fixedParameters[3];
+            double uc = transform.FixedParameters[0];
+            double vc = transform.FixedParameters[1];
+            double xmax = transform.FixedParameters[2];
+            double ymax = transform.FixedParameters[3];
 
             uc = xmax / 2.0;
             vc = ymax / 2.0;
@@ -394,8 +393,8 @@ namespace Geometry.Transforms
                         {
                             int k = i - j;
                             double PjQk = P[j] * Q[k];
-                            Sa += transform.variableParameters[index_a(j, k)] * PjQk;
-                            Sb += transform.variableParameters[index_b(j, k)] * PjQk;
+                            Sa += transform.VariableParameters[index_a(j, k)] * PjQk;
+                            Sb += transform.VariableParameters[index_b(j, k)] * PjQk;
                         }
                     }
 
@@ -424,6 +423,7 @@ namespace Geometry.Transforms
 
         #region .mosaic Parsing code
 
+        private static Regex TileNumberRegex = new Regex(@"[^\d]*(?<number>\d+)[^\.]*(?<ext>\..+)?", RegexOptions.Compiled);
         /// <summary>
         /// Load mosaic from specified file and add it to transforms list using specified key
         /// </summary>
@@ -465,17 +465,19 @@ namespace Geometry.Transforms
                 }
             }
 
-            Trace.WriteLine("Loading " + numTiles.ToString() + " tiles", "Geometry");
+            //Trace.WriteLine("Loading " + numTiles.ToString() + " tiles", "Geometry");
             ITransform[] tileTransforms = new ITransform[numTiles];
 
             int iTile = 0;
 
             if (formatVersion == 0)
-            {
-
+            { 
                 for (int i = iTileStart; i < mosaic.Length; i++)
                 {
                     string Transform = mosaic[i];
+                    if (string.IsNullOrWhiteSpace(Transform))
+                        continue;
+
                     //Trace.WriteLine(line, "Geometry");
 
                     //Get the second entry which is the file name
@@ -496,21 +498,16 @@ namespace Geometry.Transforms
                     else
                     {
                         iTileNumber = System.Convert.ToInt32(TileNameParts[0]);
-                    }
-
-
+                    } 
 
                     //Crop the tile file name fron the Transform string
                     int iFileName = Transform.IndexOf(TileFileName);
                     Transform = Transform.Remove(0, iFileName + TileFileName.Length);
-
-
+                     
                     ITransformControlPoints newTGT = ParseMosaicTileEntry(Transform, null) as ITransformControlPoints;
                     TileTransformInfo info = new TileTransformInfo(TileFileName, iTileNumber, lastModified, newTGT.MappedBounds.Width, newTGT.MappedBounds.Height);
                     ((ITransformInfo)newTGT).Info = info;
-
-
-
+                     
                     //GridTransform newTGT = new GridTransform(path, Transform, new TileTransformInfo(TileFileName, iTileNumber, lastModified));
 
                     tileTransforms[iTile++] = (ITransform)newTGT;
@@ -527,6 +524,23 @@ namespace Geometry.Transforms
 
                     //Make sure we don't pull in the full path
                     TileFileName = System.IO.Path.GetFileName(TileFileName);
+
+                    var m = TileNumberRegex.Match(TileFileName);
+                    if (false == m.Success)
+                        throw new FormatException($"Unable to parse tile file name {TileFileName}");
+
+                    string tilenumber = m.Groups["number"].Value;
+                    int iTileNumber = 0;
+                    try
+                    {
+                        iTileNumber = System.Convert.ToInt32(tilenumber);
+                    }
+                    catch (System.FormatException)
+                    {
+                        iTileNumber = i;
+                    }
+
+                    /*
                     string[] TileNameParts = TileFileName.Split(new char[] { '.' }, 3, StringSplitOptions.RemoveEmptyEntries);
                     int iTileNumber = 0;
 
@@ -545,7 +559,7 @@ namespace Geometry.Transforms
                     catch (System.FormatException)
                     {
                         iTileNumber = i;
-                    }
+                    }*/
 
 
                     //Get the second entry which is the transform 
@@ -584,11 +598,11 @@ namespace Geometry.Transforms
         }
 
 
-        private static ITransform ParseMosaicTileEntry(string transformString, TransformInfo info)
+        private static ITransform ParseMosaicTileEntry(string transformString, TransformBasicInfo info)
         {
             TransformParameters transform = TransformParameters.Parse(transformString);
 
-            switch (transform.transform_name)
+            switch (transform.TransformName)
             {
                 case "GridTransform_double_2_2":
                     return ParseGridTransform(transform, info);
@@ -606,7 +620,7 @@ namespace Geometry.Transforms
                     return ParseMeshTransform(transform, info);
 
                 default:
-                    Debug.Assert(false, "Unexpected transform type: " + transform.transform_name);
+                    Debug.Assert(false, "Unexpected transform type: " + transform.TransformName);
                     break;
             }
 
@@ -614,19 +628,19 @@ namespace Geometry.Transforms
         }
 
 
-        private static ITransform ParsePolyTransform(TransformParameters transform, TransformInfo info)
+        private static ITransform ParsePolyTransform(TransformParameters transform, TransformBasicInfo info)
         {
             //            string filename = System.IO.Path.GetFileName(parts[1]);
             //            string[] fileparts = filename.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
             //            this.Number = System.Convert.ToInt32(fileparts[1]); 
 
             //Figure out tile size
-            int ImageWidth = System.Convert.ToInt32(transform.fixedParameters[2]) * 2;
-            int ImageHeight = System.Convert.ToInt32(transform.fixedParameters[3]) * 2;
+            int ImageWidth = System.Convert.ToInt32(transform.FixedParameters[2]) * 2;
+            int ImageHeight = System.Convert.ToInt32(transform.FixedParameters[3]) * 2;
 
             //The poly transform parameters dictate the center of the image
-            double x = transform.fixedParameters[0] - (ImageWidth / 2.0);
-            double y = transform.fixedParameters[1] - (ImageHeight / 2.0);
+            double x = transform.FixedParameters[0] - (ImageWidth / 2.0);
+            double y = transform.FixedParameters[1] - (ImageHeight / 2.0);
 
             GridVector2 ctrlBotLeft = new GridVector2(x, y);
             GridVector2 ctrlBotRight = new GridVector2(x + ImageWidth, y);
@@ -648,19 +662,16 @@ namespace Geometry.Transforms
             return new GridTransform(MapPoints, new GridRectangle(0, ImageWidth, 0, ImageHeight), 2, 2, info);
         }
 
-        private static ITransform ParseTranslateTransform(TransformParameters transform, TransformInfo info)
-        {
-            if (transform == null)
-                throw new ArgumentNullException(nameof(transform));
-
+        private static ITransform ParseTranslateTransform(TransformParameters transform, TransformBasicInfo info)
+        {  
             //string filename = System.IO.Path.GetFileName(parts[1]);
 
             //Figure out tile size if we haven't already
-            int ImageWidth = System.Convert.ToInt32(transform.fixedParameters[2]) * 2;
-            int ImageHeight = System.Convert.ToInt32(transform.fixedParameters[3]) * 2;
+            int ImageWidth = System.Convert.ToInt32(transform.FixedParameters[2]) * 2;
+            int ImageHeight = System.Convert.ToInt32(transform.FixedParameters[3]) * 2;
 
-            double x = transform.variableParameters[0];
-            double y = transform.variableParameters[1];
+            double x = transform.VariableParameters[0];
+            double y = transform.VariableParameters[1];
 
             GridVector2 ctrlBotLeft = new GridVector2(x, y);
             GridVector2 ctrlBotRight = new GridVector2(x + ImageWidth, y);
@@ -682,26 +693,26 @@ namespace Geometry.Transforms
             return new GridTransform(mapPoints, new GridRectangle(0, ImageWidth, 0, ImageHeight), 2, 2, info);
         }
 
-        private static GridTransform ParseGridTransform(TransformParameters transform, TransformInfo info)
+        private static GridTransform ParseGridTransform(TransformParameters transform, TransformBasicInfo info)
         {
             return ParseGridTransform(transform, 1, info);
         }
 
-        private static GridTransform ParseGridTransform(TransformParameters transform, double PixelSpacing, TransformInfo info)
+        private static GridTransform ParseGridTransform(TransformParameters transform, double PixelSpacing, TransformBasicInfo info)
         {
             //string filename = System.IO.Path.GetFileName(parts[1]);
             //string[] fileparts = filename.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
             //this.Number = System.Convert.ToInt32(fileparts[1]); 
 
-            int gridWidth = System.Convert.ToInt32(transform.fixedParameters[2] + 1.0);
-            int gridHeight = System.Convert.ToInt32(transform.fixedParameters[1] + 1.0);
+            int gridWidth = System.Convert.ToInt32(transform.FixedParameters[2] + 1.0);
+            int gridHeight = System.Convert.ToInt32(transform.FixedParameters[1] + 1.0);
 
-            int ImageWidth = System.Convert.ToInt32(transform.fixedParameters[5] * PixelSpacing);
-            int ImageHeight = System.Convert.ToInt32(transform.fixedParameters[6] * PixelSpacing);
+            int ImageWidth = System.Convert.ToInt32(transform.FixedParameters[5] * PixelSpacing);
+            int ImageHeight = System.Convert.ToInt32(transform.FixedParameters[6] * PixelSpacing);
 
             GridRectangle MappedBounds = new GridRectangle(0, ImageWidth, 0, ImageHeight);
 
-            int NumPts = transform.variableParameters.Length / 2;
+            int NumPts = transform.VariableParameters.Length / 2;
             GridVector2[] Points = new GridVector2[NumPts];
 
             //           verticies = new VertexPositionNormalTexture[numPts];
@@ -715,8 +726,8 @@ namespace Geometry.Transforms
             for (int i = 0; i < NumPts; i++)
             {
                 int iPoint = (i * 2);
-                Double x = transform.variableParameters[iPoint] * PixelSpacing;
-                Double y = transform.variableParameters[iPoint + 1] * PixelSpacing;
+                Double x = transform.VariableParameters[iPoint] * PixelSpacing;
+                Double y = transform.VariableParameters[iPoint + 1] * PixelSpacing;
 
                 Points[i] = new GridVector2(x, y);
 
@@ -773,26 +784,26 @@ namespace Geometry.Transforms
             return new GridTransform(mapList, MappedBounds, gridWidth, gridHeight, info);
         }
 
-        private static DiscreteTransformWithContinuousFallback ParseMeshTransform(TransformParameters transform, TransformInfo info, double PixelSpacing = 1.0)
+        private static DiscreteTransformWithContinuousFallback ParseMeshTransform(TransformParameters transform, TransformBasicInfo info, double PixelSpacing = 1.0)
         {
-            int NumVariableParameters = transform.variableParameters.Length;
+            int NumVariableParameters = transform.VariableParameters.Length;
             Debug.Assert(NumVariableParameters % 4 == 0);
             int NumPoints = NumVariableParameters / 4;
 
-            double Left = transform.fixedParameters[3] * PixelSpacing;
-            double Bottom = transform.fixedParameters[4] * PixelSpacing;
-            double ImageWidth = transform.fixedParameters[5] * PixelSpacing;
-            double ImageHeight = transform.fixedParameters[6] * PixelSpacing;
+            double Left = transform.FixedParameters[3] * PixelSpacing;
+            double Bottom = transform.FixedParameters[4] * PixelSpacing;
+            double ImageWidth = transform.FixedParameters[5] * PixelSpacing;
+            double ImageHeight = transform.FixedParameters[6] * PixelSpacing;
 
             MappingGridVector2[] Points = new MappingGridVector2[NumPoints];
 
             for (int iP = 0; iP < NumPoints; iP++)
             {
                 int iOffset = (iP * 4);
-                GridVector2 Mapped = new GridVector2((transform.variableParameters[iOffset] * ImageWidth) + Left,
-                                                     (transform.variableParameters[iOffset + 1] * ImageHeight) + Bottom);
-                GridVector2 Control = new GridVector2(transform.variableParameters[iOffset + 2] * PixelSpacing,
-                                                     transform.variableParameters[iOffset + 3] * PixelSpacing);
+                GridVector2 Mapped = new GridVector2((transform.VariableParameters[iOffset] * ImageWidth) + Left,
+                                                     (transform.VariableParameters[iOffset + 1] * ImageHeight) + Bottom);
+                GridVector2 Control = new GridVector2(transform.VariableParameters[iOffset + 2] * PixelSpacing,
+                                                     transform.VariableParameters[iOffset + 3] * PixelSpacing);
 
                 Points[iP] = new MappingGridVector2(Control, Mapped);
             }

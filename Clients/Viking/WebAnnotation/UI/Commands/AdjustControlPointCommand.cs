@@ -14,13 +14,12 @@ namespace WebAnnotation.UI.Commands
     {
         //LocationObj Loc;
         CurveView curveView;
-        GridVector2[] OriginalControlPoints;
+        readonly GridVector2[] OriginalControlPoints;
         private int iAdjustedControlPoint = -1;
 
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
         OnCommandSuccess success_callback;
-
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         public string[] HelpStrings
         {

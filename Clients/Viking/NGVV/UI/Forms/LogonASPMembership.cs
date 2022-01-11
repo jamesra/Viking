@@ -506,10 +506,15 @@ namespace Viking.UI.Forms
 
         string createConnection()
         {
+            if (string.IsNullOrWhiteSpace(Credentials.UserName))
+            {
+                return "Read";
+            }
+
             string postdata = string.Format("userName={0}&password={1}",
                 this.Credentials.UserName,
                 this.Credentials.Password);
-
+            
             Uri AuthenticationURI;
             try
             {
@@ -557,6 +562,13 @@ namespace Viking.UI.Forms
             catch (WebException e)
             {
                 SetUpdateText("Failure communicating with authentication server.\n" + e.Message);
+                
+                if(MessageBox.Show("There is a known issue with contacting the authentication server via SSL.  A migration to a new server is being worked on.  Checking your credentials to the authentication server is not required to annotate, but any errors in your credentials will not be detected.  Would you like to continue with the provided credentials?", "Web Exception",
+                    MessageBoxButtons.YesNo) == DialogResult.Yes)
+                {
+                    return "Write";
+                }
+
                 return "Exit";
             }
 
@@ -768,7 +780,7 @@ namespace Viking.UI.Forms
         private void EnableLogins()
         {
             groupCredentials.Enabled = true;
-            BeginInvoke(new Action(() => createConnection()));
+            //BeginInvoke(new Action(() => createConnection()));
         }
 
         /// <summary>

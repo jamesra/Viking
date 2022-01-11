@@ -16,8 +16,7 @@ namespace WebAnnotation.UI.Actions
     class ChangeToPolygonAction : IAction, IActionView, IEquatable<ChangeToPolygonAction>
     {
         public readonly LocationObj Location;
-
-        IVolumeToSectionTransform Transform;
+        readonly IVolumeToSectionTransform Transform;
 
         /// <summary>
         /// The volume space polygon we want to add to the location

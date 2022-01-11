@@ -516,7 +516,7 @@ namespace WebAnnotation.ViewModel
                 GridRectangle bbox = lineSegments[0].BoundingBox;
                 foreach (GridLineSegment l in lineSegments)
                 {
-                    bbox += l.BoundingBox;
+                    bbox = GridRectangle.Union(bbox, l.BoundingBox);
                 }
 
                 bbox = GridRectangle.Union(bbox, bbox.LowerLeft - new GridVector2(this.Radius, this.Radius));

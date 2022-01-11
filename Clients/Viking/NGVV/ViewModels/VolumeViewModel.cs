@@ -9,10 +9,10 @@ namespace Viking.ViewModels
 
     public class VolumeViewModel : IVolumeTransformProvider
     {
-        private Volume _Volume;
-        private MappingManager _MappingManager;
+        private readonly Volume _Volume;
+        private readonly MappingManager _MappingManager;
 
-        public SortedList<int, SectionViewModel> SectionViewModels;
+        public readonly SortedList<int, SectionViewModel> SectionViewModels;
 
         public string Name { get { return _Volume.Name; } }
 

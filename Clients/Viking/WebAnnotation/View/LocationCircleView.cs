@@ -215,7 +215,7 @@ namespace WebAnnotation.View
         public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
             LocationID = this.ID;
-            return LocationAction.NONE;
+            return LocationAction.CREATELINKEDLOCATION;
         }
 
 
@@ -360,6 +360,7 @@ namespace WebAnnotation.View
         public StructureCircleLabels structureLabels;
 
         static float RadiusToResizeCircle = 7.0f / 8.0f;
+        static float RadiusToPenResizeCircle = 1.0f / 8.0f;
         static float RadiusToLinkCircle = 1.75f / 4.0f;
         static double BeginFadeCutoff = 0.1;
         static double InvisibleCutoff = 1f;
@@ -431,6 +432,13 @@ namespace WebAnnotation.View
 
             if (ModifierKeys.ShiftOrCtrlPressed())
                 return LocationAction.NONE;
+
+            if (VisibleSectionNumber == (int)this.modelObj.Z)
+            {
+                double distance = this.DistanceToCenter(WorldPosition);
+                if (distance <= (this.Radius * RadiusToPenResizeCircle))
+                    return LocationAction.SCALETRANSLATE;
+            }
 
             return LocationAction.NONE;
         }

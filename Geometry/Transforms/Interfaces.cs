@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Geometry.Transforms;
 
 namespace Geometry
 {
@@ -85,7 +86,7 @@ namespace Geometry
 
     public interface ITransformInfo
     {
-        Geometry.Transforms.TransformInfo Info { get; set; }
+        TransformBasicInfo Info { get; set; }
     }
 
     public interface IStosTransformInfo
@@ -105,7 +106,7 @@ namespace Geometry
 
     public interface ITransformCacheInfo
     {
-        string Extension { get; set; }
+        string Extension { get; }
         string CacheDirectory { get; }
         string CacheFilename { get; }
         string CacheFullPath { get; }

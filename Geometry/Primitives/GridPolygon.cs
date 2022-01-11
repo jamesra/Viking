@@ -215,7 +215,7 @@ namespace Geometry
 
         public GridPolygon(GridVector2[] exteriorRing)
         {
-            Debug.Assert(exteriorRing.Length < 1000, "This is a huge polygon, why?");
+            //Debug.Assert(exteriorRing.Length < 1000, "This is a huge polygon, why?");
 
             if (!exteriorRing.IsValidClosedRing())
             {
@@ -570,7 +570,8 @@ namespace Geometry
                     if (this.IsInnerValid(iVertex.iInnerPoly.Value, CheckForIntersectionWithOtherInnerPolygons: true) == false)
                     {
                         //this.ExteriorRing = original_verts;
-                        throw new ArgumentException(string.Format("Changing vertex {0} to {1} resulted in an invalid state.", iVertex, value));
+                        throw new ArgumentException(
+                            $"Changing vertex {iVertex} to {value} resulted in an invalid state.");
                     }
                 }
                 catch (ArgumentException)
@@ -600,7 +601,7 @@ namespace Geometry
                     this.ExteriorRing[iVertex.iVertex] = old_point;
 
                     //We could help the caller by reversing the winding... should we?
-                    throw new ArgumentException(string.Format("Changing vertex {0} to {1} changed polygon winding order.", iVertex, value));
+                    throw new ArgumentException($"Changing vertex {iVertex} to {value} changed polygon winding order.");
                 }
 
                 //Update our data structures, then check that we are still valid:
@@ -623,7 +624,7 @@ namespace Geometry
                     //Restore our RTree
                     UpdateSegmentRTreeForUpdate(iVertex);
 
-                    throw new ArgumentException(string.Format("Changing vertex {0} to {1} resulted in an invalid state.", iVertex, value));
+                    throw new ArgumentException($"Changing vertex {iVertex} to {value} resulted in an invalid state.");
                 }
             }
         }
@@ -692,7 +693,7 @@ namespace Geometry
                 {
                     //An easy case we can catch before adjusting any data structures. 
                     //We could help the caller by reversing the winding... should we?
-                    throw new ArgumentException(string.Format("Removing vertex {0} changed polygon winding order.", iVertex));
+                    throw new ArgumentException($"Removing vertex {iVertex} changed polygon winding order.");
                 }
 
                 this._ExteriorRingArea = updated_area;
@@ -714,7 +715,8 @@ namespace Geometry
 
                     //Restore our state to a known good state before throwing the exception
                     UpdateSegmentRTreeForInsert(iVertex);
-                    throw new ArgumentException(string.Format("Removing vertex {0} of {1} from polygon resulted in an invalid state", iVertex, this.ExteriorRing.Length - 1));
+                    throw new ArgumentException(
+                        $"Removing vertex {iVertex} of {this.ExteriorRing.Length - 1} from polygon resulted in an invalid state");
                 }
             }
 
@@ -2385,7 +2387,7 @@ namespace Geometry
                 smoothed_poly.AddInteriorRing(smoother_inner_poly);
             }
 
-            Trace.WriteLine(string.Format("Smooth Polygon {0} into {1}", poly, smoothed_poly));
+            Trace.WriteLine($"Smooth Polygon {poly} into {smoothed_poly}");
 
             return smoothed_poly;
         }
@@ -2539,11 +2541,11 @@ namespace Geometry
         {
             if (this.HasInteriorRings)
             {
-                return string.Format("Poly with {0} verts, {1} interior rings", this.TotalUniqueVerticies, this.InteriorRings.Count);
+                return $"Poly with {this.TotalUniqueVerticies} verts, {this.InteriorRings.Count} interior rings";
             }
             else
             {
-                return string.Format("Poly with {0} verts", this.TotalUniqueVerticies);
+                return $"Poly with {this.TotalUniqueVerticies} verts";
             }
         }
 
@@ -2963,7 +2965,7 @@ namespace Geometry
 
                     if (pointToPoly.ContainsKey(p))
                     {
-                        throw new ArgumentException(string.Format("Duplicate vertex {0}", p));
+                        throw new ArgumentException($"Duplicate vertex {p}");
                     }
 
                     pointToPoly.Add(p, value);
@@ -2982,7 +2984,7 @@ namespace Geometry
                         PolygonIndex value = new PolygonIndex(iPoly, iInnerPoly, iVertex, Polygons);
                         if (pointToPoly.ContainsKey(p))
                         {
-                            throw new ArgumentException(string.Format("Duplicate inner polygon vertex {0}", p));
+                            throw new ArgumentException($"Duplicate inner polygon vertex {p}");
                         }
 
                         //List<PolygonIndex> indexList = new List<Geometry.PolygonIndex>();
@@ -3146,7 +3148,8 @@ namespace Geometry
 
             if (FirstIntersection == LastIntersection)
             {
-                throw new ArgumentException(string.Format("Start and End index must be different to cut polygon. Both are {0}", FirstIntersection));
+                throw new ArgumentException(
+                    $"Start and End index must be different to cut polygon. Both are {FirstIntersection}");
             }
 
             //Drop the first cut intersection because it will be on the wrong side of the polygon border
@@ -3179,7 +3182,8 @@ namespace Geometry
 
             if (start_index == end_index)
             {
-                throw new ArgumentException(string.Format("Start and End index must be different to cut polygon. Both are {0}", start_index));
+                throw new ArgumentException(
+                    $"Start and End index must be different to cut polygon. Both are {start_index}");
             }
 
             //Walk the ring using Next to find perimeter on one side, the walk using prev to find perimeter on the other
