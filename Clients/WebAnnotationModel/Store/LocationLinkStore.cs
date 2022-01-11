@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.ServiceModel;
+using Viking.AnnotationServiceTypes;
 using WebAnnotationModel.Service;
 
 namespace WebAnnotationModel
@@ -222,7 +223,7 @@ namespace WebAnnotationModel
                 System.Threading.Tasks.Parallel.For(0, newLinks.Length, (iLink) =>
                 {
                     listNewObj[iLink] = new LocationLinkObj(newLinks[iLink]);
-                    SectionLocationLinks.TryAdd(new LocationLinkKey(listNewObj[iLink]), listNewObj[iLink]);
+                    SectionLocationLinks.TryAdd(new LocationLinkKey(listNewObj[iLink].A, listNewObj[iLink].B), listNewObj[iLink]);
                 });
 
                 change_inventory = InternalAdd(listNewObj);

@@ -47,7 +47,7 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
             if (ReferenceEquals(other, null))
                 return false;
 
-            return this.Id == other.ID;
+            return (ulong)this.Id == other.ID;
         }
     }
 }

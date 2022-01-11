@@ -141,49 +141,13 @@ namespace Viking
         public override string ToString()
         {
             return "TR: " + this.ID.ToString();
-        }
-
-        private static HttpWebRequest CreateBasicRequest(Uri textureURI)
-        {
-            HttpWebRequest request = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(textureURI);
-            if (textureURI.Scheme.ToLower() == "https")
-                request.Credentials = UI.State.UserCredentials;
-
-            request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
-            request.Timeout = 60001;
-
-            return request;
-        }*/
+        } 
 
         public void AbortRequest()
-        {
-
-            {
-                /*
-                //Abort the request if we haven't already
-                if (BodyRequestState != null)
-                {
-                    if (BodyRequestState.request != null)
-                    {
-                        try
-                        {
-                            BodyRequestState.request.Abort();
-                            BodyRequestState = null;
-                        }
-                        catch (WebException)
-                        {
-                            //Trace.WriteLine(e.Message, "TextureReader.Dispose");
-                        }
-                    }
-                }
-                */
-
-                //In case we have finished loading the texture, but the texture has not been assigned to the tile, 
-                //dispose of the texture
-                CancelToken.Cancel();
-                //var result = Interlocked.CompareExchange(ref _Result, null, _Result);
-                //result?.DisposeAsync(); 
-            }
+        { 
+            //In case we have finished loading the texture, but the texture has not been assigned to the tile, 
+            //dispose of the texture
+            CancelToken.Cancel(); 
         } 
 
         private static void HandleCachedFileException(Exception e, string CacheFilename)

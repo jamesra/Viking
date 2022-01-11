@@ -6,11 +6,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes;
 using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
@@ -80,7 +82,7 @@ namespace WebAnnotation.ViewModel
 
     abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasGeometryView, IViewStructureLink
     {
-        WebAnnotationModel.StructureLinkObj modelObj;
+        StructureLinkObj modelObj;
 
         /// <summary>
         /// LocationOnSection is the location on the section being viewed

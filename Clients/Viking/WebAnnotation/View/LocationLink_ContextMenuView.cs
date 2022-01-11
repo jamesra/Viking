@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes;
 using Viking.Common;
 using WebAnnotationModel;
 

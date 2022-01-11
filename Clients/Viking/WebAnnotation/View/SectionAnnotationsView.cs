@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Viking.AnnotationServiceTypes;
 using Viking.Common;
 using Viking.ViewModels;
 using Viking.VolumeModel;

@@ -4,7 +4,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes
 {
-    public readonly struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, IEquatable<ILocationLink>, ILocationLinkReadOnly,  IEquatable<ILocationLinkReadOnly>, IComparable<ILocationLinkReadOnly>
+    public readonly struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, IEquatable<ILocationLink>, ILocationLinkReadOnly,  IEquatable<ILocationLinkReadOnly>, IComparable<ILocationLinkReadOnly>, ILocationLink
     {
         public readonly long A;
         public readonly long B;
@@ -12,6 +12,10 @@ namespace Viking.AnnotationServiceTypes
         ulong ILocationLinkReadOnly.A => (ulong)A;
 
         ulong ILocationLinkReadOnly.B => (ulong)B;
+
+        ulong ILocationLink.A => (ulong)A;
+
+        ulong ILocationLink.B => (ulong)B;
 
         public LocationLinkKey(long a, long b)
         {
@@ -26,18 +30,18 @@ namespace Viking.AnnotationServiceTypes
             this.B = (long)obj.B;
         }
 
-        public override bool Equals(object obj)
+        public LocationLinkKey(ILocationLink obj)
         {
-            if (System.Object.ReferenceEquals(this, obj))
-                return true;
-            if ((object)obj == null)
-                return false;
-            if (!typeof(LocationLinkKey).IsInstanceOfType(obj))
-                return false;
+            this.A = (long)obj.A;
+            this.B = (long)obj.B;
+        }
 
-            LocationLinkKey other = (LocationLinkKey)obj;
-
-            return (A == other.A) && (B == other.B);
+        public int CompareTo(LocationLinkKey other)
+        {
+            if (A != other.A)
+                return (int)(other.A - A);
+            else
+                return (int)(other.B - B);
         }
 
         public override string ToString()
@@ -75,20 +79,25 @@ namespace Viking.AnnotationServiceTypes
 
             return true;
         }
-
-        public int CompareTo(LocationLinkKey other)
+         
+        public override bool Equals(object obj)
         {
-            if (A != other.A)
-                return (int)(other.A - A);
-            else
-                return (int)(other.B - B);
+            if (System.Object.ReferenceEquals(this, obj))
+                return true;
+            if ((object)obj == null)
+                return false;
+            if (obj is LocationLinkKey otherKey)
+                return Equals(otherKey);
+            if (obj is ILocationLink otherLocLinkInterface)
+                return Equals(otherLocLinkInterface);
+            if (obj is ILocationLinkReadOnly otherReadonlyLocLinkInterface)
+                return Equals(otherReadonlyLocLinkInterface);
+
+            return false;
         }
 
         public bool Equals(LocationLinkKey other)
         {
-            if ((object)other == null)
-                return false;
-
             return (this.A == other.A && this.B == other.B);
         }
 

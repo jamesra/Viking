@@ -3,6 +3,9 @@ using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using VikingXNA;
 using WebAnnotation.UI;
+using WebAnnotationModel;
+using WebAnnotationModel.Objects;
+using LocationLinkKey = Viking.AnnotationServiceTypes.LocationLinkKey;
 
 namespace WebAnnotation
 {
@@ -66,7 +69,7 @@ namespace WebAnnotation
 
     public interface IViewLocationLink
     {
-        WebAnnotationModel.LocationLinkKey Key { get; }
+        LocationLinkKey Key { get; }
     }
 
     public interface IViewStructure
@@ -76,7 +79,7 @@ namespace WebAnnotation
 
     public interface IViewStructureLink
     {
-        WebAnnotationModel.StructureLinkKey Key { get; }
+        StructureLinkKey Key { get; }
     }
 
     public interface IViewStructureType

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.UI;

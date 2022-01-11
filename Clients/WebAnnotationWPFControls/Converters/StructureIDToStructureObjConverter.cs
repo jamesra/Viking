@@ -8,6 +8,7 @@ using System.Linq;
 using System.Windows.Data;
 using WebAnnotation.WPF.MockData;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.WPF.Converters
 {
@@ -169,7 +170,7 @@ namespace WebAnnotation.WPF.Converters
                 return IDs;
             }
 
-            throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter ConvertBack expects a StructureObj, but got {0}", value.ToString()));
+            throw new NotImplementedException($"StructureIDToStructureObjConverter ConvertBack expects a StructureObj, but got {value}");
         }
     }
 }

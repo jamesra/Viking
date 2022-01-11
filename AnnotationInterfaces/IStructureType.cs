@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Viking.AnnotationServiceTypes.Interfaces
-{
+{ 
+
     public interface IStructureType : IEquatable<IStructureType>
     {
         ulong ID { get; }
