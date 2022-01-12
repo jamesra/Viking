@@ -76,13 +76,13 @@ namespace Viking.VolumeModel
 
         public static TileGridMapping CreateFromTilesetElement(XElement TilesetNode, Section section)
         {
-            string Name = IO.GetAttributeCaseInsensitive(TilesetNode, "name").Value;
-            string mosaicTransformPath = IO.GetAttributeCaseInsensitive(TilesetNode, "path").Value;
-            int TileSizeX = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(TilesetNode, "TileXDim").Value);
-            int TileSizeY = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(TilesetNode, "TileYDim").Value);
-            string TilePrefix = IO.GetAttributeCaseInsensitive(TilesetNode, "FilePrefix").Value;
-            string TilePostfix = IO.GetAttributeCaseInsensitive(TilesetNode, "FilePostfix").Value;
-            string TileGridPath = IO.GetAttributeCaseInsensitive(TilesetNode, "path").Value;
+            string Name = TilesetNode.GetAttributeCaseInsensitive("name").Value;
+            string mosaicTransformPath = TilesetNode.GetAttributeCaseInsensitive("path").Value;
+            int TileSizeX = System.Convert.ToInt32(TilesetNode.GetAttributeCaseInsensitive("TileXDim").Value);
+            int TileSizeY = System.Convert.ToInt32(TilesetNode.GetAttributeCaseInsensitive("TileYDim").Value);
+            string TilePrefix = TilesetNode.GetAttributeCaseInsensitive("FilePrefix").Value;
+            string TilePostfix = TilesetNode.GetAttributeCaseInsensitive("FilePostfix").Value;
+            string TileGridPath = TilesetNode.GetAttributeCaseInsensitive("path").Value;
             string GridTileFormat = null;
 
             XElement scale_elem = TilesetNode.Elements().FirstOrDefault(elem => elem.Name.LocalName == "Scale");
@@ -118,10 +118,10 @@ namespace Viking.VolumeModel
                 switch (elem.Name.LocalName)
                 {
                     case "Level":
-                        mapping.AddLevel(System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(elem, "Downsample").Value),
-                                       System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(elem, "GridDimX").Value),
-                                       System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(elem, "GridDimY").Value),
-                                       IO.GetAttributeCaseInsensitive(elem, "path").Value);
+                        mapping.AddLevel(System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("Downsample").Value),
+                                       System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("GridDimX").Value),
+                                       System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("GridDimY").Value),
+                                       elem.GetAttributeCaseInsensitive("path").Value);
                         break;
                 }
             }

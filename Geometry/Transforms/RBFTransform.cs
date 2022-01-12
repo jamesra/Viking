@@ -138,7 +138,7 @@ namespace Geometry.Transforms
             double X = WeightSumX + (Point.Y * Weights[nPoints]) + (Point.X * Weights[nPoints + 1]) + Weights[nPoints + 2];
             double Y = WeightSumY + (Point.Y * Weights[nPoints + 3 + nPoints]) + (Point.X * Weights[nPoints + nPoints + 3 + 1]) + Weights[nPoints + nPoints + 3 + 2];
 
-            return new GridVector2(X, Y);
+            return new GridVector2(X, Y).Round(Global.TransformSignificantDigits);
         }
 
         public GridVector2 Transform(GridVector2 Point)

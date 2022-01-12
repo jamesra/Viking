@@ -234,10 +234,9 @@ namespace Geometry
         {
             GridVector2 uv = Mapped.Barycentric(Point);
             Debug.Assert(uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0));
-
-
+             
             GridVector2 translated = GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, uv.Y, uv.X);
-            return translated;
+            return translated.Round(Global.TransformSignificantDigits);
 
         }
 
@@ -247,7 +246,7 @@ namespace Geometry
             //          Debug.Assert(uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0));
 
             GridVector2 translated = GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, uv.Y, uv.X);
-            return translated;
+            return translated.Round(Global.TransformSignificantDigits);
         }
 
         public GridVector2[] Transform(GridVector2[] Points)
@@ -255,7 +254,7 @@ namespace Geometry
             var uv_points = Points.Select(Point => Mapped.Barycentric(Point));
             Debug.Assert(uv_points.All(uv => uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0)));
 
-            return uv_points.Select(uv => GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, uv.Y, uv.X)).ToArray();
+            return uv_points.Select(uv => GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, uv.Y, uv.X).Round(Global.TransformSignificantDigits)).ToArray();
         }
 
         public GridVector2[] InverseTransform(GridVector2[] Points)
@@ -263,7 +262,7 @@ namespace Geometry
             var uv_points = Points.Select(Point => Control.Barycentric(Point));
             //  Debug.Assert(uv_points.All(uv => uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0)));
 
-            return uv_points.Select(uv => GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, uv.Y, uv.X)).ToArray();
+            return uv_points.Select(uv => GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, uv.Y, uv.X).Round(Global.TransformSignificantDigits)).ToArray();
         }
 
         public bool Equals(MappingGridTriangle other)

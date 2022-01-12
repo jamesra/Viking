@@ -716,22 +716,23 @@ namespace Geometry.Transforms
             GridVector2[] Points = new GridVector2[NumPts];
 
             //           verticies = new VertexPositionNormalTexture[numPts];
-
+            /*
             Double minX = Double.MaxValue;
             Double minY = Double.MaxValue;
             Double maxX = Double.MinValue;
             Double maxY = Double.MinValue;
-
+            */
             //Every number in the array is separated by an empty space in the array
             for (int i = 0; i < NumPts; i++)
             {
                 int iPoint = (i * 2);
-                Double x = transform.VariableParameters[iPoint] * PixelSpacing;
-                Double y = transform.VariableParameters[iPoint + 1] * PixelSpacing;
+                double x = transform.VariableParameters[iPoint] * PixelSpacing;
+                double y = transform.VariableParameters[iPoint + 1] * PixelSpacing;
 
                 Points[i] = new GridVector2(x, y);
 
                 //Trace.WriteLine(x.ToString() + ", " + y.ToString(), "Geometry");
+                /*
                 if (x < minX)
                     minX = x;
                 if (x > maxX)
@@ -740,6 +741,7 @@ namespace Geometry.Transforms
                     minY = y;
                 if (y > maxY)
                     maxY = y;
+                */
             }
 
             //            List<int> indicies = new List<int>();
@@ -755,7 +757,7 @@ namespace Geometry.Transforms
                     GridVector2 mapPoint = GridTransform.CoordinateFromGridPos(x, y, gridWidth, gridHeight, ImageWidth, ImageHeight);
                     GridVector2 ctrlPoint = Points[i];
 
-                    mapList[i] = new MappingGridVector2(ctrlPoint, mapPoint);
+                    mapList[i] = new MappingGridVector2(ctrlPoint.Round(Global.TransformSignificantDigits), mapPoint.Round(Global.TransformSignificantDigits));
                 }
             }
 
@@ -805,7 +807,7 @@ namespace Geometry.Transforms
                 GridVector2 Control = new GridVector2(transform.VariableParameters[iOffset + 2] * PixelSpacing,
                                                      transform.VariableParameters[iOffset + 3] * PixelSpacing);
 
-                Points[iP] = new MappingGridVector2(Control, Mapped);
+                Points[iP] = new MappingGridVector2(Control.Round(Global.TransformSignificantDigits), Mapped.Round(Global.TransformSignificantDigits));
             }
 
             MeshTransform discreteTransform = new MeshTransform(Points, info);

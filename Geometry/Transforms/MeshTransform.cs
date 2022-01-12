@@ -146,8 +146,7 @@ namespace Geometry.Transforms
 
             if (triangles == null)
                 return null;
-
-
+             
             foreach (MappingGridTriangle t in triangles)
             {
                 if (!t.MappedBoundingBox.Contains(Point))

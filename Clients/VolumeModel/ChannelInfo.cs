@@ -114,8 +114,8 @@ namespace Viking.VolumeModel
                     case "Channel":
                         bool CreateChannel = true;
                         string Section = "Selected";
-                        if (Utils.IO.GetAttributeCaseInsensitive(elem, "Section") != null)
-                            Section = IO.GetAttributeCaseInsensitive(elem, "Section").Value;
+                        if (elem.GetAttributeCaseInsensitive("Section") != null)
+                            Section = elem.GetAttributeCaseInsensitive("Section").Value;
 
                         int? SectionNumber = new int?();
                         ChannelInfo.SectionInfo refSectionInfo = SectionInfo.FIXED;
@@ -147,16 +147,16 @@ namespace Viking.VolumeModel
 
 
                         string Channel = "";
-                        if (IO.GetAttributeCaseInsensitive(elem, "Channel") != null)
+                        if (elem.GetAttributeCaseInsensitive("Channel") != null)
                         {
-                            Channel = IO.GetAttributeCaseInsensitive(elem, "Channel").Value;
+                            Channel = elem.GetAttributeCaseInsensitive("Channel").Value;
                             if (Channel == "Selected")
                                 Channel = "";
                         }
 
                         string Color = "#FFFFFF";
-                        if (IO.GetAttributeCaseInsensitive(elem, "Color") != null)
-                            Color = IO.GetAttributeCaseInsensitive(elem, "Color").Value;
+                        if (elem.GetAttributeCaseInsensitive("Color") != null)
+                            Color = elem.GetAttributeCaseInsensitive("Color").Value;
 
                         //Convert the color to a valid value
                         Geometry.Graphics.Color ChannelColor;
