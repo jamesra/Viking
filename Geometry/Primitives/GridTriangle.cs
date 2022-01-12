@@ -242,7 +242,12 @@ namespace Geometry
         public bool Contains(in IPoint2D point)
         {
             if (false == BoundingBox.Contains(point))
+            {
+                //False positives can happen in cases where the points have floating point precision issues.
+                //Particularly in GridTransforms.  This should be handled by rounding the transform results. 
+                //However it may be worth the computation cost to do Barycentric calculation instead.
                 return false;
+            }
 
             GridVector2 uv = Barycentric(point);
 
