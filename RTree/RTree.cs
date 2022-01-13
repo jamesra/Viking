@@ -66,7 +66,7 @@ namespace RTree
         // [x] TODO eliminate this map - it should not be needed. Nodes
         // can be found by traversing the tree.
         //private TIntObjectHashMap nodeMap = new TIntObjectHashMap();
-        private Dictionary<int, Node<T>> nodeMap = new Dictionary<int, Node<T>>();
+        private readonly Dictionary<int, Node<T>> nodeMap = new Dictionary<int, Node<T>>();
 
         // internal consistency checking - set to true if debugging tree corruption
         private const bool INTERNAL_CONSISTENCY_CHECKING = false;
@@ -81,9 +81,9 @@ namespace RTree
         // from the root down to the leaf. Enables fast lookup
         // of nodes when a split is propagated up the tree.
         //private TIntStack parents = new TIntStack();
-        private Stack<int> parents = new Stack<int>();
+        private readonly Stack<int> parents = new Stack<int>();
         //private TIntStack parentsEntry = new TIntStack();
-        private Stack<int> parentsEntry = new Stack<int>();
+        private readonly Stack<int> parentsEntry = new Stack<int>();
 
         // initialisation
         private int treeHeight = 1; // leaves are always level 1
@@ -98,29 +98,29 @@ namespace RTree
         // so that they can be reused. Store the IDs of nodes
         // which can be reused.
         //private TIntStack deletedNodeIds = new TIntStack();
-        private Stack<int> deletedNodeIds = new Stack<int>();
+        private readonly Stack<int> deletedNodeIds = new Stack<int>();
 
         // List of nearest rectangles. Use a member variable to
         // avoid recreating the object each time nearest() is called.
         //private TIntArrayList nearestIds = new TIntArrayList();
-        List<int> nearestIds = new List<int>();
+        readonly List<int> nearestIds = new List<int>();
 
         //Added dictionaries to support generic objects..
         //possibility to change the code to support objects without dictionaries.
-        private Dictionary<int, T> IdsToItems = new Dictionary<int, T>();
-        private Dictionary<T, int> ItemsToIds = new Dictionary<T, int>();
+        private readonly Dictionary<int, T> IdsToItems = new Dictionary<int, T>();
+        private readonly Dictionary<T, int> ItemsToIds = new Dictionary<T, int>();
         private volatile int idcounter = int.MinValue;
 
         /// <summary>
         /// Map of object to rectangles stored for that object in the database
         /// </summary>
-        private Dictionary<T, Rectangle> ItemsToRects = new Dictionary<T, Rectangle>();
+        private readonly Dictionary<T, Rectangle> ItemsToRects = new Dictionary<T, Rectangle>();
 
         //the recursion methods require a delegate to retrieve data
         private delegate void intproc(int x);
 
         [NonSerialized]
-        System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
+        readonly System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
 
         /// <summary>
         /// Initialize implementation dependent properties of the RTree.
@@ -339,7 +339,7 @@ namespace RTree
         {
             try
             {
-                removedItem = default(T);
+                removedItem = default;
 
                 rwLock.EnterUpgradeableReadLock();
 
@@ -353,7 +353,7 @@ namespace RTree
                     rwLock.EnterWriteLock();
 
                     int id = ItemsToIds[item];
-                    removedItem = default(T);
+                    removedItem = default;
 
                     bool success = delete(r, id);
                     if (success == true)
@@ -396,7 +396,7 @@ namespace RTree
         {
             try
             {
-                removedItem = default(T);
+                removedItem = default;
 
                 rwLock.EnterUpgradeableReadLock();
 
@@ -408,7 +408,7 @@ namespace RTree
                     rwLock.EnterWriteLock();
 
                     int id = ItemsToIds[item];
-                    removedItem = default(T);
+                    removedItem = default;
 
                     bool success = delete(r, id);
                     if (success == true)
@@ -1249,7 +1249,7 @@ namespace RTree
          * contain the nodeIds of all parents up to the root.
          */
 
-        private Rectangle oldRectangle = new Rectangle(0, 0, 0, 0, 0, 0);
+        private readonly Rectangle oldRectangle = new Rectangle(0, 0, 0, 0, 0, 0);
         private void condenseTree(Node<T> l)
         {
             // CT1 [Initialize] Set n=l. Set the list of eliminated
