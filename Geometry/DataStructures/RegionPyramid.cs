@@ -444,8 +444,7 @@ namespace Geometry
         /// Width & Height of a grid cell in the RegionPyramid
         /// </summary>
         public GridCellDimensions CellDimensions;
-
-        ConcurrentDictionary<int, RegionPyramidLevel<T>> Levels = new ConcurrentDictionary<int, RegionPyramidLevel<T>>();
+        readonly ConcurrentDictionary<int, RegionPyramidLevel<T>> Levels = new ConcurrentDictionary<int, RegionPyramidLevel<T>>();
 
         public GridRectangle RegionBounds;
 

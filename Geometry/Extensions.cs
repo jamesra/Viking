@@ -981,8 +981,7 @@ namespace Geometry
         /// <returns></returns>
         static public GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints)
         {
-            GridLineSegment? intersectedSegment;
-            return IntersectionPoint(segments, testSeg, IgnoreEndpoints, out intersectedSegment);
+            return IntersectionPoint(segments, testSeg, IgnoreEndpoints, out GridLineSegment? intersectedSegment);
         }
 
         /// <summary>
@@ -993,7 +992,6 @@ namespace Geometry
         /// <returns></returns>
         static public GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints, out GridLineSegment? intersectedSegment)
         {
-            GridVector2 intersection;
             intersectedSegment = new GridLineSegment?();
 
             if (IgnoreEndpoints)
@@ -1003,7 +1001,7 @@ namespace Geometry
 
             foreach (GridLineSegment existingLine in segments)
             {
-                if (existingLine.Intersects(in testSeg, out intersection))
+                if (existingLine.Intersects(in testSeg, out GridVector2 intersection))
                 {
                     intersectedSegment = existingLine;
                     return new GridVector2?(intersection);
@@ -1222,8 +1220,7 @@ namespace Geometry
                 }
             }
 
-            double MinDistance;
-            polygon.ExteriorSegments.NearestSegment(WorldPosition, out MinDistance);
+            polygon.ExteriorSegments.NearestSegment(WorldPosition, out double MinDistance);
             if (MinDistance < LineWidth / 2.0f)
             {
                 intersectingPoly = polygon;

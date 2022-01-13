@@ -18,15 +18,13 @@ namespace Geometry
             if (AllPoints.Length < 3)
                 return null;
 
-            int[] original_indicies;
-            GridVector2[] EntireSetConvexHull = AllPoints.ConvexHull(out original_indicies);
+            GridVector2[] EntireSetConvexHull = AllPoints.ConvexHull(out int[] original_indicies);
             return new GridPolygon(EntireSetConvexHull);
         }
 
         public static GridVector2[] ConvexHull(this IReadOnlyList<GridVector2> points)
         {
-            int[] original_indicies;
-            return ConvexHull(points, out original_indicies);
+            return ConvexHull(points, out int[] original_indicies);
         }
 
         /// <summary>

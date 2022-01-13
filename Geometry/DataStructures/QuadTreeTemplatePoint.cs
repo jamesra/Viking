@@ -81,7 +81,6 @@ namespace Geometry
 
         public TValue FindNearest(TPoint point, out double distance)
         {
-            TPoint nodePoint;
             distance = double.MaxValue;
             if (Root == null)
             {
@@ -92,7 +91,7 @@ namespace Geometry
                 return default;
             }
 
-            return Root.FindNearest(point, out nodePoint, ref distance);
+            return Root.FindNearest(point, out TPoint nodePoint, ref distance);
         }
 
         public TPoint FindPosition(TValue value)

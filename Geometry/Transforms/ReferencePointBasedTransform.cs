@@ -232,7 +232,7 @@ namespace Geometry.Transforms
         /// You need to take this lock when building or changing the QuadTrees managing the triangles of the mesh
         /// </summary>
         [NonSerialized]
-        ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim();
+        readonly ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim();
 
         private RTree.RTree<MappingGridVector2> _mappedPointsRTree = null;
 

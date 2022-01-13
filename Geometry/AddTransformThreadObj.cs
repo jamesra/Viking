@@ -66,12 +66,11 @@ namespace Geometry.Transforms
                         GridLineSegment ctrlLine = new GridLineSegment(UnmappedPoint.ControlPoint, this.warpingTransform.MapPoints[iEdgePoint].ControlPoint);
                         GridLineSegment mapLine = new GridLineSegment(UnmappedPoint.MappedPoint, this.warpingTransform.MapPoints[iEdgePoint].MappedPoint);
 
-                        GridLineSegment foundCtrlLine; //Control line found in nearest line call
-                        GridLineSegment foundMapLine; //Corresponding map line found in nearest line call
-                        GridVector2 intersect;
+                        //Control line found in nearest line call
+                        //Corresponding map line found in nearest line call
 
                         //Find out if there is a line in the fixed transform we intersect with. 
-                        double distance = discreteFixedTransform.ConvexHullIntersection(ctrlLine, UnmappedPoint.ControlPoint, out foundCtrlLine, out foundMapLine, out intersect);
+                        double distance = discreteFixedTransform.ConvexHullIntersection(ctrlLine, UnmappedPoint.ControlPoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersect);
                         if (distance == double.MaxValue)
                             continue;
 

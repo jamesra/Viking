@@ -125,7 +125,7 @@ namespace Geometry
 
         public bool Equals(ITriangle2D other)
         {
-            if (object.ReferenceEquals(other, null)) return false;
+            if (other is null) return false;
 
             for (int i = 0; i < Points.Length; i++)
             {

@@ -498,7 +498,7 @@ namespace Geometry
             if (object.ReferenceEquals(this, other))
                 return true;
 
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (this.PointCount != other.PointCount)

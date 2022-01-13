@@ -270,7 +270,7 @@ namespace Geometry
         */
         #endregion
 
-        GridRectangle Bounds;
+        readonly GridRectangle Bounds;
         readonly List<GridLineSegmentPair>[,] _LineGrid;
 
         readonly double GridWidth;

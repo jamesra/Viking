@@ -355,8 +355,7 @@ namespace Geometry
 
         public double DistanceToPoint(in GridVector2 point)
         {
-            GridVector2 temp;
-            return DistanceToPoint(point, out temp);
+            return DistanceToPoint(point, out GridVector2 temp);
         }
 
         /// <summary>
@@ -481,14 +480,12 @@ namespace Geometry
 
         public bool Intersects(in GridLineSegment seg)
         {
-            IShape2D intersection;
-            return this.Intersects(seg, out intersection);
+            return this.Intersects(seg, out IShape2D intersection);
         }
 
         public bool Intersects(in GridLineSegment seg, bool EndpointsOnRingDoNotIntersect)
         {
-            IShape2D intersection;
-            return this.Intersects(seg, EndpointsOnRingDoNotIntersect, out intersection);
+            return this.Intersects(seg, EndpointsOnRingDoNotIntersect, out IShape2D intersection);
         }
 
         public bool Intersects(in GridLineSegment seg, bool EndpointsOnRingDoNotIntersect, out IShape2D Intersection)
@@ -515,9 +512,8 @@ namespace Geometry
 
         public bool Intersects(in GridLineSegment seg, out GridVector2 Intersection)
         {
-            IShape2D shape;  
             Intersection = new GridVector2();
-            bool intersects = this.Intersects(seg, out shape);
+            bool intersects = this.Intersects(seg, out IShape2D shape);
             if(intersects)
             {
                 if (shape.ShapeType == ShapeType2D.POINT)
