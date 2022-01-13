@@ -43,7 +43,7 @@ namespace MonogameTestbed
     /// </summary>
     public class MonoTestbed : Game, IRenderInfo
     {
-        GraphicsDeviceManager graphics;
+        readonly GraphicsDeviceManager graphics;
         public SpriteBatch spriteBatch;
 
         public RoundLineManager lineManager = new RoundLineCode.RoundLineManager();
@@ -53,31 +53,29 @@ namespace MonogameTestbed
         public SpriteFont fontArial;
         public BasicEffect basicEffect;
         public OverlayShaderEffect overlayEffect;
-
-        CurveTest curveTest = new CurveTest();
-        CurveViewTest curveViewTest = new CurveViewTest();
-        LabelViewsTest labelTest = new LabelViewsTest();
-        LineViewStylesTest lineStyleTest = new LineViewStylesTest();
-        CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
-        CurveSimplificationTest curveSimplificationTest = new CurveSimplificationTest();
-        ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
-        Polygon2DTest polygon2DTest = new Polygon2DTest();
-        MeshTest meshTest = new MeshTest();
-        GeometryTest geometryTest = new GeometryTest();
-        MorphologyTest morphologyTest = new MorphologyTest();
-        TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
-        BranchPointTest branchTest = new BranchPointTest();
-        PolywrappingTest polyWrapTest = new PolywrappingTest();
-        BranchAssignmentTest brachAssignmentTest = new BranchAssignmentTest();
-        Delaunay2DTest delaunay2DTest = new Delaunay2DTest();
-        Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
-        BajajAssignmentTest bajajTest = new BajajAssignmentTest();
-        BajajMultiAssignmentTest bajajMultiTest = new BajajMultiAssignmentTest();
-        VikingDelaunay2DTest constrainedDelaunay2DTest = new VikingDelaunay2DTest();
-        PolygonIntersectionTest polygonIntersectionTest = new PolygonIntersectionTest();
-        LabeledRectangleTests labeledRectangleTests = new LabeledRectangleTests();
-
-        SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
+        readonly CurveTest curveTest = new CurveTest();
+        readonly CurveViewTest curveViewTest = new CurveViewTest();
+        readonly LabelViewsTest labelTest = new LabelViewsTest();
+        readonly LineViewStylesTest lineStyleTest = new LineViewStylesTest();
+        readonly CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
+        readonly CurveSimplificationTest curveSimplificationTest = new CurveSimplificationTest();
+        readonly ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
+        readonly Polygon2DTest polygon2DTest = new Polygon2DTest();
+        readonly MeshTest meshTest = new MeshTest();
+        readonly GeometryTest geometryTest = new GeometryTest();
+        readonly MorphologyTest morphologyTest = new MorphologyTest();
+        readonly TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
+        readonly BranchPointTest branchTest = new BranchPointTest();
+        readonly PolywrappingTest polyWrapTest = new PolywrappingTest();
+        readonly BranchAssignmentTest brachAssignmentTest = new BranchAssignmentTest();
+        readonly Delaunay2DTest delaunay2DTest = new Delaunay2DTest();
+        readonly Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
+        readonly BajajAssignmentTest bajajTest = new BajajAssignmentTest();
+        readonly BajajMultiAssignmentTest bajajMultiTest = new BajajMultiAssignmentTest();
+        readonly VikingDelaunay2DTest constrainedDelaunay2DTest = new VikingDelaunay2DTest();
+        readonly PolygonIntersectionTest polygonIntersectionTest = new PolygonIntersectionTest();
+        readonly LabeledRectangleTests labeledRectangleTests = new LabeledRectangleTests();
+        readonly SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
         /// <summary>
         /// Test to run at startup
@@ -157,8 +155,10 @@ namespace MonogameTestbed
             lineManager.Init(GraphicsDevice, Content);
             curveManager.Init(GraphicsDevice, Content);
 
-            RasterizerState state = new RasterizerState();
-            state.CullMode = CullMode.None;
+            RasterizerState state = new RasterizerState
+            {
+                CullMode = CullMode.None
+            };
             //state.FillMode = FillMode.WireFrame;
 
             GraphicsDevice.RasterizerState = state;
@@ -196,11 +196,13 @@ namespace MonogameTestbed
         /// </summary>
         private void InitializeEffects()
         {
-            basicEffect = new BasicEffect(this.GraphicsDevice);
-            //   basicEffect.DiffuseColor = new Vector3(0.1f, 0.1f, 0.1f);
-            //   basicEffect.SpecularColor = new Vector3(0.25f, 0.25f, 0.25f);
-            //   basicEffect.SpecularPower = 5.0f;
-            basicEffect.AmbientLightColor = new Vector3(1f, 1f, 1f);
+            basicEffect = new BasicEffect(this.GraphicsDevice)
+            {
+                //   basicEffect.DiffuseColor = new Vector3(0.1f, 0.1f, 0.1f);
+                //   basicEffect.SpecularColor = new Vector3(0.25f, 0.25f, 0.25f);
+                //   basicEffect.SpecularPower = 5.0f;
+                AmbientLightColor = new Vector3(1f, 1f, 1f)
+            };
             /*
             basicEffect.Projection = projectionMatrix;
             basicEffect.World = worldMatrix;
@@ -368,8 +370,10 @@ namespace MonogameTestbed
 
             // TODO: Add your drawing code here
 
-            RasterizerState state = new RasterizerState();
-            state.CullMode = CullMode.None;
+            RasterizerState state = new RasterizerState
+            {
+                CullMode = CullMode.None
+            };
 
             UpdateEffectMatricies(this.Scene);
 
@@ -694,8 +698,9 @@ namespace MonogameTestbed
     public class LineViewStylesTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
-        List<LineView> listLineViews = new List<LineView>();
-        List<LabelView> listLabelViews = new List<LabelView>();
+
+        readonly List<LineView> listLineViews = new List<LineView>();
+        readonly List<LabelView> listLabelViews = new List<LabelView>();
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
@@ -753,8 +758,9 @@ namespace MonogameTestbed
     public class CurveViewStylesTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
-        List<CurveView> listLineViews = new List<CurveView>();
-        List<LabelView> listLabelViews = new List<LabelView>();
+
+        readonly List<CurveView> listLineViews = new List<CurveView>();
+        readonly List<LabelView> listLabelViews = new List<LabelView>();
 
 
         bool _initialized = false;

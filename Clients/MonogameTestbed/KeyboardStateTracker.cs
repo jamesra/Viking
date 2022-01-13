@@ -9,7 +9,7 @@ namespace MonogameTestbed
         private KeyboardState LastState;
         public KeyboardState CurrentState;
 
-        private Dictionary<Keys, DateTime> KeyPressStart = new Dictionary<Keys, DateTime>();
+        private readonly Dictionary<Keys, DateTime> KeyPressStart = new Dictionary<Keys, DateTime>();
 
         public void Update(KeyboardState state)
         {

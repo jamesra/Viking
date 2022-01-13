@@ -16,9 +16,8 @@ namespace MonogameTestbed
         public string Title => this.GetType().Name;
         VikingXNAGraphics.MeshView<VertexPositionColor> meshView;
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshViewWithLighting;
-
-        Mesh3D tetraMesh = new Mesh3D();
-        Mesh3D cubeMesh =  new Mesh3D();
+        readonly Mesh3D tetraMesh = new Mesh3D();
+        readonly Mesh3D cubeMesh =  new Mesh3D();
 
         Scene3D Scene;
 
@@ -495,13 +494,15 @@ namespace MonogameTestbed
         public void Draw(MonoTestbed window)
         {
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
-         
-            DepthStencilState dstate = new DepthStencilState();
-            dstate.DepthBufferEnable = true;
-            dstate.StencilEnable = false;
-            dstate.DepthBufferWriteEnable = true;
-            dstate.DepthBufferFunction = CompareFunction.LessEqual;
-            
+
+            DepthStencilState dstate = new DepthStencilState
+            {
+                DepthBufferEnable = true,
+                StencilEnable = false,
+                DepthBufferWriteEnable = true,
+                DepthBufferFunction = CompareFunction.LessEqual
+            };
+
             /*
             RasterizerState rState = new RasterizerState();
             rState.CullMode = CullMode.CullClockwiseFace;

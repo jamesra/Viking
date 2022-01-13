@@ -238,13 +238,17 @@ namespace MonogameTestbed
 
         public static MeshGraph BuildMeshGraph(IShape2D[] shapes, double[] ZLevels, GraphLib.Edge<ulong>[] edges, double SectionThickness, GridVector3 translate)
         {
-            MeshGraph graph = new MeshGraph();
-            graph.SectionThickness = SectionThickness;
+            MeshGraph graph = new MeshGraph
+            {
+                SectionThickness = SectionThickness
+            };
 
             for (int i = 0; i < shapes.Length; i++)
             {
-                MorphologyMesh.MeshNode node = new MeshNode((ulong)i);
-                node.Mesh = SmoothMeshGraphGenerator.CreateNodeMesh(shapes[i].Translate(translate), ZLevels[i], (ulong)i);
+                MorphologyMesh.MeshNode node = new MeshNode((ulong)i)
+                {
+                    Mesh = SmoothMeshGraphGenerator.CreateNodeMesh(shapes[i].Translate(translate), ZLevels[i], (ulong)i)
+                };
                 graph.AddNode(node);
                 node.MeshGraph = graph;
                 node.CapPortZ = ZLevels[i];

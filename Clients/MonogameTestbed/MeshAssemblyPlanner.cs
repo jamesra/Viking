@@ -362,7 +362,7 @@ namespace MonogameTestbed
             }
         }
 
-        IAssemblyPlannerNode[] Children = new IAssemblyPlannerNode[2];
+        readonly IAssemblyPlannerNode[] Children = new IAssemblyPlannerNode[2];
          
 
         public IAssemblyPlannerNode Left { get => Children[0]; set { Children[0] = value; } }
@@ -462,7 +462,7 @@ namespace MonogameTestbed
         /// </summary>
         public SortedList<ulong, SliceGraphMeshModel> ReadyModels = new SortedList<ulong, SliceGraphMeshModel>();
 
-        private ReaderWriterLockSlim ReadyModelLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim ReadyModelLock = new ReaderWriterLockSlim();
 
         private MeshModel<VertexPositionNormalColor>[] _MeshModels = null;
         public MeshModel<VertexPositionNormalColor>[] MeshModels
@@ -549,8 +549,8 @@ namespace MonogameTestbed
         /// </summary>
         public Dictionary<ulong, GridBox> NodeBoundingBox = new Dictionary<ulong, GridBox>();
 
-        private ReaderWriterLockSlim ReadyModelLock = new ReaderWriterLockSlim(); 
-        private SortedSet<ulong> NodesThatFailedMeshing = new SortedSet<ulong>();
+        private readonly ReaderWriterLockSlim ReadyModelLock = new ReaderWriterLockSlim(); 
+        private readonly SortedSet<ulong> NodesThatFailedMeshing = new SortedSet<ulong>();
 
         private MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] _MeshModels = null;
         public MeshModel<Microsoft.Xna.Framework.Graphics.VertexPositionColor>[] MeshModels

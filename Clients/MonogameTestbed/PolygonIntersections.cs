@@ -21,12 +21,14 @@ namespace MonogameTestbed
 
     public class PolygonIntersectionView
     {
-        PolygonSetView PolygonsView = null;
+        readonly PolygonSetView PolygonsView = null;
 
         public PolygonIntersectionView(GridPolygon[] polygons)
         {
-            PolygonsView = new PolygonSetView(polygons);
-            PolygonsView.PointLabelType = IndexLabelType.POLYGON | IndexLabelType.POSITION;
+            PolygonsView = new PolygonSetView(polygons)
+            {
+                PointLabelType = IndexLabelType.POLYGON | IndexLabelType.POSITION
+            };
         }
 
         public void Draw(MonoTestbed window, Scene scene)
@@ -45,16 +47,15 @@ namespace MonogameTestbed
         public bool Initialized { get { return _initialized; } }
 
         Scene scene;
-        Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
-        GamePadStateTracker Gamepad = new GamePadStateTracker();
-
-        PolygonIntersectionTestDataType TestType = PolygonIntersectionTestDataType.FS_CHECK;
+        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly PolygonIntersectionTestDataType TestType = PolygonIntersectionTestDataType.FS_CHECK;
 
         Task TestTask = null;
 
         PolygonIntersectionView polygonSetView = null;
 
-        private static string[] PolygonIntersections1 = new string[]
+        private static readonly string[] PolygonIntersections1 = new string[]
         {
             "{  \"ExteriorRing\": [    {      \"X\": 84.0,      \"Y\": -87.0    },    {      \"X\": 86.352103764631451,      \"Y\": -5.1467889908256881    },   {      \"X\": 89.0,      \"Y\": 87.0    },    {      \"X\": 72.422599608099276,      \"Y\": 85.001306335728287    },    {      \"X\": -52.0,      \"Y\": 70.0    },    {      \"X\": 84.0,      \"Y\": -87.0    }  ],  \"InteriorRings\": []}",
             "{ \"ExteriorRing\": [    {      \"X\": 89.0,      \"Y\": -6.0    },    {      \"X\": 89.0,      \"Y\": 99.0    },    {      \"X\": 72.422599608099276,      \"Y\": 85.001306335728287    },    {      \"X\": -1.0,      \"Y\": 23.0    },    {      \"X\": 86.352103764631451,      \"Y\": -5.1467889908256881    },    {      \"X\": 89.0,      \"Y\": -6.0    }  ],  \"InteriorRings\": []    }"

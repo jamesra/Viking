@@ -49,9 +49,9 @@ namespace MonogameTestbed
         /// The position of this mesh in volume space. 
         /// </summary>
         public GridVector2 Position => Graph.BoundingBox.CenterPoint.XY();
-          
-        PolygonSetView PolyViews;
-        List<LineView> OTVTableView = null;
+
+        readonly PolygonSetView PolyViews;
+        readonly List<LineView> OTVTableView = null;
          
         //BajajGeneratorMesh FirstPassTriangulation = null;
 
@@ -83,8 +83,8 @@ namespace MonogameTestbed
         //LineView[] lineViews = null;
 
         public int? iShownRegion = null;
-        List<LineSetView> RegionPolygonViews;
-        List<LabelView> RegionLabelViews;
+        readonly List<LineSetView> RegionPolygonViews;
+        readonly List<LabelView> RegionLabelViews;
 
         public bool ShowFaces = false;
         public bool ShowPolygons = true;
@@ -149,9 +149,8 @@ namespace MonogameTestbed
         /// <summary>
         /// Used to lock the mesh views for individual slices
         /// </summary>
-        private object drawlock = new object();
-
-        System.Threading.Thread BuildCompositeThread = null;
+        private readonly object drawlock = new object();
+        readonly System.Threading.Thread BuildCompositeThread = null;
         //SliceGraph sliceGraph;
 
         public BajajMultiOTVAssignmentView(MorphologyGraph graph)
@@ -213,9 +212,11 @@ namespace MonogameTestbed
         /// </summary>
         internal void ResetMesh()
         {
-            SliceMeshView = new MeshView<VertexPositionColor>();
-            SliceMeshView.Name = "Slice Mesh";
-             
+            SliceMeshView = new MeshView<VertexPositionColor>
+            {
+                Name = "Slice Mesh"
+            };
+
             this.RegionViews.Clear();
             this.listLineViews.Clear();
             this.MeshViews.Clear();
@@ -225,8 +226,10 @@ namespace MonogameTestbed
                 MeshViews.Add(SliceMeshView);
             }
 
-            CompositeMeshView = new MeshView<VertexPositionNormalColor>();
-            CompositeMeshView.Name = "Composite Mesh";
+            CompositeMeshView = new MeshView<VertexPositionNormalColor>
+            {
+                Name = "Composite Mesh"
+            };
         }
 
         internal async Task GenerateMesh()
@@ -245,9 +248,10 @@ namespace MonogameTestbed
             meshAssemblyPlan = new MeshAssemblyPlanner(sliceGraph);
 
             meshIncompleteView = new MeshAssemblyPlannerIncompleteView(meshAssemblyPlan, sliceGraph);
-            meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan, graph.BoundingBox.CenterPoint);
-
-            meshCompletedView.Color = ColorExtensions.Random();
+            meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan, graph.BoundingBox.CenterPoint)
+            {
+                Color = ColorExtensions.Random()
+            };
 
             List<BajajGeneratorMesh> meshes = BajajMeshGenerator.ConvertToMesh(sliceGraph, OnSliceCompleted);
 
@@ -422,12 +426,14 @@ namespace MonogameTestbed
 
         public void Draw3D(MonoTestbed window, Scene3D scene)
         {
-            
-            DepthStencilState dstate = new DepthStencilState();
-            dstate.DepthBufferEnable = true;
-            dstate.StencilEnable = false;
-            dstate.DepthBufferWriteEnable = true;
-            dstate.DepthBufferFunction = CompareFunction.LessEqual;
+
+            DepthStencilState dstate = new DepthStencilState
+            {
+                DepthBufferEnable = true,
+                StencilEnable = false,
+                DepthBufferWriteEnable = true,
+                DepthBufferFunction = CompareFunction.LessEqual
+            };
 
             window.GraphicsDevice.DepthStencilState = dstate;
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
@@ -479,24 +485,20 @@ namespace MonogameTestbed
         
         Scene scene;
         Scene3D scene3D;
-        GamePadStateTracker Gamepad = new GamePadStateTracker();
-        KeyboardStateTracker keyboard = new KeyboardStateTracker();
+        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly KeyboardStateTracker keyboard = new KeyboardStateTracker();
 
         AnnotationVizLib.MorphologyGraph graph;
 
         //GridPolygon A;
         //GridPolygon B;
 
-        PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
-        PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
-
-        Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
-        Camera3DManipulator Camera3DManipulator = new Camera3DManipulator();
-
-
-        List<BajajMultiOTVAssignmentView> wrapViews = new List<BajajMultiOTVAssignmentView>();
-
-        bool Draw3D = true;
+        readonly PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
+        readonly PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
+        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly Camera3DManipulator Camera3DManipulator = new Camera3DManipulator();
+        readonly List<BajajMultiOTVAssignmentView> wrapViews = new List<BajajMultiOTVAssignmentView>();
+        readonly bool Draw3D = true;
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
@@ -507,9 +509,11 @@ namespace MonogameTestbed
 
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
-            this.scene3D = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D());
-            this.scene3D.MaxDrawDistance = 1000000;
-            this.scene3D.MinDrawDistance = 1;
+            this.scene3D = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D())
+            {
+                MaxDrawDistance = 1000000,
+                MinDrawDistance = 1
+            };
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
             keyboard.Update(Keyboard.GetState());
@@ -796,8 +800,10 @@ namespace MonogameTestbed
 
         public void SaveMeshes()
         {
-            BasicColladaView ColladaView = new BasicColladaView(graph.scale.X, null);
-            ColladaView.SceneTitle = "BajajMultitest";
+            BasicColladaView ColladaView = new BasicColladaView(graph.scale.X, null)
+            {
+                SceneTitle = "BajajMultitest"
+            };
 
             foreach (var view in wrapViews)
             {
@@ -809,8 +815,10 @@ namespace MonogameTestbed
                 {
                     var mesh = view.meshAssemblyPlan.Root.MeshModel.composite;
                     StructureModel rootModel = new StructureModel(structure_id, mesh,
-                    new MaterialLighting(MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, graph.Subgraphs[structure_id].structure), System.Drawing.Color.CornflowerBlue));
-                    rootModel.Translation = view.Graph.BoundingBox.CenterPoint * 0.001;
+                    new MaterialLighting(MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, graph.Subgraphs[structure_id].structure), System.Drawing.Color.CornflowerBlue))
+                    {
+                        Translation = view.Graph.BoundingBox.CenterPoint * 0.001
+                    };
 
                     ColladaView.Add(rootModel);
                 }
@@ -823,13 +831,17 @@ namespace MonogameTestbed
         }
 
         public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, GridVector3 Position, ulong structure_id)
-        { 
-            BasicColladaView ColladaView = new BasicColladaView(graph.scale.X, null);
-            ColladaView.SceneTitle = "BajajMultitest";
+        {
+            BasicColladaView ColladaView = new BasicColladaView(graph.scale.X, null)
+            {
+                SceneTitle = "BajajMultitest"
+            };
 
             StructureModel rootModel = new StructureModel(structure_id, mesh,
-                new MaterialLighting(MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, graph.Subgraphs[structure_id].structure), System.Drawing.Color.CornflowerBlue));
-            rootModel.Translation = Position * 0.001;
+                new MaterialLighting(MaterialLighting.CreateKey(COLORSOURCE.STRUCTURE, graph.Subgraphs[structure_id].structure), System.Drawing.Color.CornflowerBlue))
+            {
+                Translation = Position * 0.001
+            };
 
             ColladaView.Add(rootModel);
 
