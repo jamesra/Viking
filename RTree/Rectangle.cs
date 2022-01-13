@@ -412,6 +412,22 @@ namespace RTree
             return equals;
         }
 
+        public override int GetHashCode()
+        {
+            int hashcode = 0;
+            foreach(double d in min)
+            {
+                hashcode = hashcode ^ d.GetHashCode();
+            }
+
+            foreach (double d in max)
+            {
+                hashcode = hashcode ^ d.GetHashCode();
+            }
+
+            return hashcode;
+        }
+
         /** 
          * Determine whether this rectangle is the same as another object
          * 
