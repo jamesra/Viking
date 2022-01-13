@@ -88,12 +88,11 @@ namespace Geometry
         public T[] Values
         {
             get
-            {
-                T[] values = Array.Empty<T>();
+            { 
                 try
                 {
                     rwLock.EnterReadLock();
-                    values = new T[ValueToNodeTable.Count];
+                    var values = new T[ValueToNodeTable.Count];
                     ValueToNodeTable.Keys.CopyTo(values, 0);
                     return values;
                 }

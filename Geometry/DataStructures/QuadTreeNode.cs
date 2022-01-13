@@ -529,8 +529,7 @@ namespace Geometry
                         if (_quadrants[iQuad].Border.Intersects(rect))
                         {
                             double newDistance = double.MaxValue;
-                            GridVector2 foundNode;
-                            T foundValue = _quadrants[iQuad].FindNearest(point, out foundNode, ref newDistance);
+                            T foundValue = _quadrants[iQuad].FindNearest(point, out GridVector2 foundNode, ref newDistance);
 
                             if (newDistance < distance)
                             {

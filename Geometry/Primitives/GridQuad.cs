@@ -140,13 +140,12 @@ namespace Geometry
             GridLineSegment[] RA = new GridLineSegment[4] { RL1, RL2, RL3, RL4 };
             GridLineSegment[] A = new GridLineSegment[4] { L1, L2, L3, L4 };
 
-            GridVector2 outparam; 
             foreach (GridLineSegment RL in RA)
             {
                 foreach (GridLineSegment L in A)
                 {
-                    if (RL.Intersects(L, out outparam))
-                        return true; 
+                    if (RL.Intersects(L, out GridVector2 outparam))
+                        return true;
                 }
             }
 

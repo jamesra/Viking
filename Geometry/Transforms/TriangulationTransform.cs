@@ -556,8 +556,6 @@ namespace Geometry.Transforms
         private List<MappingGridVector2> IntersectingRectangle(in GridRectangle gridRect,
                                                                QuadTree<List<MappingGridTriangle>> PointTree)
         {
-            List<GridVector2> Points;
-            List<List<MappingGridTriangle>> ListofListTriangles;
 
             List<MappingGridVector2> MappingPointList = null;
 
@@ -567,7 +565,7 @@ namespace Geometry.Transforms
                 return MappingPointList;
             }
 
-            PointTree.Intersect(gridRect, out Points, out ListofListTriangles);
+            PointTree.Intersect(gridRect, out List<GridVector2> Points, out List<List<MappingGridTriangle>> ListofListTriangles);
 
             bool[] Added = new bool[MapPoints.Length];
             MappingPointList = new List<MappingGridVector2>(Points.Count * 2);

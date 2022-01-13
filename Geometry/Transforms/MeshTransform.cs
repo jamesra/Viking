@@ -314,8 +314,7 @@ namespace Geometry.Transforms
                 if (mapLine.MaxY < L.MinY)
                     continue;
 
-                GridVector2 result;
-                bool bIntersected = mapLine.Intersects(L, out result);
+                bool bIntersected = mapLine.Intersects(L, out GridVector2 result);
                 double distance = GridVector2.Distance(OutsidePoint, result);
                 if (distance < nearestIntersect && bIntersected)
                 {

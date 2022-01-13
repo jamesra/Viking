@@ -468,7 +468,7 @@ namespace Geometry.Transforms
 
         #region .mosaic Parsing code
 
-        private static Regex TileNumberRegex = new Regex(@"[^\d]*(?<number>\d+)[^\.]*(?<ext>\..+)?", RegexOptions.Compiled);
+        private static readonly Regex TileNumberRegex = new Regex(@"[^\d]*(?<number>\d+)[^\.]*(?<ext>\..+)?", RegexOptions.Compiled);
         /// <summary>
         /// Load mosaic from specified file and add it to transforms list using specified key
         /// </summary>

@@ -27,7 +27,8 @@ namespace Geometry.Transforms
     public class RBFTransform : ReferencePointBasedTransform, IContinuousTransform, IMemoryMinimization
     {
         public delegate double BasisFunctionDelegate(double distance);
-        BasisFunctionDelegate BasisFunction = new BasisFunctionDelegate(StandardBasisFunction);
+
+        readonly BasisFunctionDelegate BasisFunction = new BasisFunctionDelegate(StandardBasisFunction);
 
         private float[] _ControlToMappedSpaceWeights = null;
         private float[] ControlToMappedSpaceWeights

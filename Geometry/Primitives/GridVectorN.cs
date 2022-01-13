@@ -242,7 +242,7 @@ namespace Geometry
 
         public bool Equals(IShape2D other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             IPointN p = other as IPointN;

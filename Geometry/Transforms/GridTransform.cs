@@ -32,9 +32,8 @@ namespace Geometry.Transforms
         {
             GridVector2 key = new GridVector2(GridSizeX, GridSizeY);
 
-            int[] Indicies = null;
 
-            bool success = TriangleIndexDictionary.TryGetValue(key, out Indicies);
+            bool success = TriangleIndexDictionary.TryGetValue(key, out int[] Indicies);
             if (!success)
             {
                 Indicies = new int[(GridSizeX - 1) * (GridSizeY - 1) * 6];
@@ -131,9 +130,8 @@ namespace Geometry.Transforms
         {
             GridVector2 key = new GridVector2(GridSizeX, GridSizeY);
 
-            List<int>[] edges = null;
 
-            bool success = EdgesDictionary.TryGetValue(key, out edges);
+            bool success = EdgesDictionary.TryGetValue(key, out List<int>[] edges);
             if (!success)
             {
                 edges = new List<int>[GridSizeX * GridSizeY];
@@ -368,8 +366,7 @@ namespace Geometry.Transforms
             Direction IntersectDir = Direction.NONE;
             for (int iBorder = 0; iBorder < Borders.Length; iBorder++)
             {
-                GridVector2 BorderIntersect;
-                bool success = L.Intersects(Borders[iBorder], out BorderIntersect);
+                bool success = L.Intersects(Borders[iBorder], out GridVector2 BorderIntersect);
                 if (success)
                 {
                     double IntersectDistance = GridVector2.Distance(OutsidePoint, BorderIntersect);

@@ -60,12 +60,7 @@ namespace Geometry.Transforms
         /// Space the transform maps from
         /// </summary>
         public readonly int MappedSection;
-
-        /// <summary>
-        /// This records the modified date of the file the transform was loaded from
-        /// </summary>
-        public readonly DateTime LastModified;
-
+          
         int IStosTransformInfo.ControlSection => ControlSection;
 
         int IStosTransformInfo.MappedSection => MappedSection;

@@ -596,8 +596,7 @@ namespace Geometry
                 System.Array.Copy(curve_segments, iIdealStart, ideal_segments, 0, num_ideal_segments);
 
                 //If we need to add a control point repeat this loop iteration, otherwise increment and check the next portion of the curve
-                GridVector2 ControlPointToAdd;
-                if (TryFindOutlierControlPoint(ideal_segments, proposedCurve, MaxDistanceFromSimplifiedToIdeal, out ControlPointToAdd))
+                if (TryFindOutlierControlPoint(ideal_segments, proposedCurve, MaxDistanceFromSimplifiedToIdeal, out GridVector2 ControlPointToAdd))
                 {
                     Debug.Assert(simplified_inflection_points.Contains(ControlPointToAdd) == false);
 #if DEBUG

@@ -11,8 +11,8 @@ namespace Geometry.Transforms
     [Serializable]
     public class DiscreteTransformWithContinuousFallback : IContinuousTransform, ITransformInfo, IMemoryMinimization, IControlPointTriangulation
     {
-        IDiscreteTransform DiscreteTransform;
-        IContinuousTransform ContinuousTransform;
+        readonly IDiscreteTransform DiscreteTransform;
+        readonly IContinuousTransform ContinuousTransform;
 
         public override string ToString()
         {
@@ -113,8 +113,7 @@ namespace Geometry.Transforms
 
         public GridVector2 Transform(GridVector2 Point)
         {
-            GridVector2 output;
-            if (!DiscreteTransform.TryTransform(Point, out output))
+            if (!DiscreteTransform.TryTransform(Point, out GridVector2 output))
             {
                 output = ContinuousTransform.Transform(Point);
             }
@@ -141,8 +140,7 @@ namespace Geometry.Transforms
 
         public GridVector2 InverseTransform(GridVector2 Point)
         {
-            GridVector2 output;
-            if (!DiscreteTransform.TryInverseTransform(Point, out output))
+            if (!DiscreteTransform.TryInverseTransform(Point, out GridVector2 output))
             {
                 output = ContinuousTransform.InverseTransform(Point);
             }

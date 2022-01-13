@@ -208,7 +208,7 @@ namespace Geometry.Meshing
 
         int IComparable<IVertex3D>.CompareTo(IVertex3D other)
         {
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return 1;
 
             return this.Index.CompareTo(other.Index);

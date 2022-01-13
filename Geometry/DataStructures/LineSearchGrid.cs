@@ -12,7 +12,7 @@ namespace Geometry
     /// </summary>
     public class LineSearchGrid<T> : IDisposable
     {
-        GridRectangle Bounds;
+        readonly GridRectangle Bounds;
         readonly List<GridLineSegment>[,] _LineGrid;
 
         readonly Dictionary<GridLineSegment, T> tableLineToValue;
@@ -1036,8 +1036,7 @@ namespace Geometry
                     if (l.MaxY < TestLine.MinY)
                         continue;
 
-                    GridVector2 result;
-                    bool bIntersected = l.Intersects(in TestLine, out result);
+                    bool bIntersected = l.Intersects(in TestLine, out GridVector2 result);
                     double distance = GridVector2.Distance(in TestLine.A, in result);
                     if (distance < nearestIntersect && bIntersected)
                     {
@@ -1094,8 +1093,7 @@ namespace Geometry
                 GridLineSegment BestLine = default;
                 foreach (GridLineSegment l in potentialIntersections)
                 {
-                    GridVector2 thisIntersection;
-                    double distance = l.DistanceToPoint(in Position, out thisIntersection);
+                    double distance = l.DistanceToPoint(in Position, out GridVector2 thisIntersection);
                     if (distance < ClosestDistance)
                     {
                         ClosestDistance = distance;

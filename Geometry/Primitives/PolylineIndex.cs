@@ -58,7 +58,7 @@ namespace Geometry
             //   http://go.microsoft.com/fwlink/?LinkId=85238
             //
 
-            if (object.ReferenceEquals(obj, null) || GetType() != obj.GetType())
+            if (obj is null || GetType() != obj.GetType())
             {
                 return false;
             }

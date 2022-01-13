@@ -211,7 +211,7 @@ namespace Geometry
 
         bool IEquatable<IShape2D>.Equals(IShape2D other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             IPoint2D p = other as IPoint2D;
@@ -225,7 +225,7 @@ namespace Geometry
 
         bool IEquatable<IPoint2D>.Equals(IPoint2D B)
         {
-            if (object.ReferenceEquals(B, null))
+            if (B is null)
                 return false;
 
             double XDelta = X - B.X;
@@ -258,7 +258,7 @@ namespace Geometry
 
         public override bool Equals(object obj)
         {
-            if (object.ReferenceEquals(obj, null))
+            if (obj is null)
                 return false;
 
             if (obj is GridVector2 other)
@@ -845,5 +845,25 @@ namespace Geometry
 
         #endregion
         IPoint2D ICentroid.Centroid => this;
+
+        public static bool operator <(GridVector2 left, GridVector2 right)
+        {
+            return left.CompareTo(right) < 0;
+        }
+
+        public static bool operator <=(GridVector2 left, GridVector2 right)
+        {
+            return left.CompareTo(right) <= 0;
+        }
+
+        public static bool operator >(GridVector2 left, GridVector2 right)
+        {
+            return left.CompareTo(right) > 0;
+        }
+
+        public static bool operator >=(GridVector2 left, GridVector2 right)
+        {
+            return left.CompareTo(right) >= 0;
+        }
     }
 }

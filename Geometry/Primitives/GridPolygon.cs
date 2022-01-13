@@ -148,8 +148,7 @@ namespace Geometry
             }
         }
 
-
-        List<GridPolygon> _InteriorPolygons = new List<GridPolygon>();
+        readonly List<GridPolygon> _InteriorPolygons = new List<GridPolygon>();
 
         /// <summary>
         /// Read only please
@@ -1813,8 +1812,7 @@ namespace Geometry
 
         public bool InteriorPolygonContains(in GridVector2 p)
         {
-            GridPolygon intersectedPoly;
-            return InteriorPolygonContains(p, out intersectedPoly);
+            return InteriorPolygonContains(p, out GridPolygon intersectedPoly);
         }
 
         public bool InteriorPolygonContains(in GridVector2 p, out GridPolygon interiorPolygon)
@@ -2131,8 +2129,7 @@ namespace Geometry
 
                 IntersectedSegments = polygonSegments.Where(line =>
                 {
-                    GridVector2 Intersection;
-                    bool intersected = line.Intersects(test_line, out Intersection);
+                    bool intersected = line.Intersects(test_line, out GridVector2 Intersection);
                     if (intersected)
                     {
                         intersectionsBag.Add(Intersection);
@@ -2149,8 +2146,7 @@ namespace Geometry
 
                 IntersectedSegments = polygonSegments.Where(line =>
                 {
-                    GridVector2 Intersection;
-                    bool intersected = line.Intersects(test_line, out Intersection);
+                    bool intersected = line.Intersects(test_line, out GridVector2 Intersection);
                     if (intersected)
                     {
                         intersections.Add(Intersection);
@@ -2478,8 +2474,7 @@ namespace Geometry
             List<GridVector2> Intersections = new List<Geometry.GridVector2>(ExteriorRing.Length);
             for (int i = 0; i < _ExteriorSegments.Length; i++)
             {
-                GridVector2 intersection;
-                if (line.Intersects(this._ExteriorSegments[i], out intersection))
+                if (line.Intersects(this._ExteriorSegments[i], out GridVector2 intersection))
                 {
                     double CenterDist = GridVector2.Distance(Centroid, intersection);
                     double PointDist = GridVector2.Distance(p, intersection);
@@ -2495,8 +2490,7 @@ namespace Geometry
 
         public int[] VerticiesOnConvexHull()
         {
-            int[] indicies;
-            GridVector2[] convex_hull_verts = this.ExteriorRing.ConvexHull(out indicies);
+            GridVector2[] convex_hull_verts = this.ExteriorRing.ConvexHull(out int[] indicies);
 
             return indicies;
         }
@@ -2693,9 +2687,8 @@ namespace Geometry
                 //newRing.Add(this[polyIndex]);
                 addedVertexQuad.Add(this[polyIndex], this[polyIndex]);
 
-                GridVector2[] IntersectionPoints;
                 //Since we want the out parameter just get a quick list of candidates with the ls.bounding box in instead of running the full intersection test twice.
-                List<GridLineSegment> candidates = ls.Intersections(other.GetIntersectingSegments(ls.BoundingBox), out IntersectionPoints);
+                List<GridLineSegment> candidates = ls.Intersections(other.GetIntersectingSegments(ls.BoundingBox), out GridVector2[] IntersectionPoints);
                 if (candidates.Count == 0)
                     continue;
 
@@ -2847,9 +2840,8 @@ namespace Geometry
 
                 newRing.Add(ExteriorRing[i]);
 
-                IShape2D intersection;
 
-                var intersects = ls.Intersects(other, true, out intersection); //Don't check the endpoints of the segment because we are already adding them
+                var intersects = ls.Intersects(other, true, out IShape2D intersection); //Don't check the endpoints of the segment because we are already adding them
 
                 if (intersects)
                 {
@@ -2898,8 +2890,7 @@ namespace Geometry
                 if (newRing.Count == 0 || GridVector2.DistanceSquared(newRing.Last(), ExteriorRing[i]) > Global.EpsilonSquared)
                     newRing.Add(ExteriorRing[i]);
 
-                GridVector2[] IntersectionPoints;
-                List<GridLineSegment> candidates = ls.Intersections(other, out IntersectionPoints);
+                List<GridLineSegment> candidates = ls.Intersections(other, out GridVector2[] IntersectionPoints);
 
                 //Remove any duplicates of the existing endpoints 
                 foreach (GridVector2 p in IntersectionPoints)
@@ -3265,7 +3256,7 @@ namespace Geometry
 
         public bool Equals(IShape2D other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (object.ReferenceEquals(this, other))
@@ -3282,7 +3273,7 @@ namespace Geometry
 
         public bool Equals(IPolygon2D other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (object.ReferenceEquals(this, other))
@@ -3314,7 +3305,7 @@ namespace Geometry
 
         public bool Equals(GridPolygon other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (this.ExteriorRing.Length != other.ExteriorRing.Length)

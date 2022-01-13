@@ -32,8 +32,7 @@ namespace Geometry
 
         private static T GetCell(ConcurrentDictionary<GridIndex, T> Cells, GridIndex key)
         {
-            T Result;
-            if (Cells.TryGetValue(key, out Result))
+            if (Cells.TryGetValue(key, out T Result))
                 return Result;
             return null;
         }
