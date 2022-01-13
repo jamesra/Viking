@@ -368,7 +368,8 @@ namespace MonogameTestbed
     class Delaunay3DTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
-        GamePadStateTracker Gamepad = new GamePadStateTracker();
+
+        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
 
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
           
@@ -381,7 +382,7 @@ namespace MonogameTestbed
         public bool Initialized { get { return _initialized; } }
 
         //Polygons with internal polygon merging with external concavity
-        ulong[] TroubleIDS = new ulong[] {
+        readonly ulong[] TroubleIDS = new ulong[] {
           1333661, //Z = 2
           1333662, //Z = 3
           1333665 //Z =2 
@@ -391,9 +392,11 @@ namespace MonogameTestbed
         {
             _initialized = true;
 
-            this.Scene = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D());
-            this.Scene.MaxDrawDistance = 1000000;
-            this.Scene.MinDrawDistance = 1;
+            this.Scene = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D())
+            {
+                MaxDrawDistance = 1000000,
+                MinDrawDistance = 1
+            };
             this.meshView = new MeshView<VertexPositionNormalColor>();
 
             labelCamera = new LabelView("", new GridVector2(0, 100));
@@ -477,11 +480,13 @@ namespace MonogameTestbed
         {
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
 
-            DepthStencilState dstate = new DepthStencilState();
-            dstate.DepthBufferEnable = true;
-            dstate.StencilEnable = false;
-            dstate.DepthBufferWriteEnable = true;
-            dstate.DepthBufferFunction = CompareFunction.LessEqual;
+            DepthStencilState dstate = new DepthStencilState
+            {
+                DepthBufferEnable = true,
+                StencilEnable = false,
+                DepthBufferWriteEnable = true,
+                DepthBufferFunction = CompareFunction.LessEqual
+            };
 
             window.GraphicsDevice.DepthStencilState = dstate;
             //window.GraphicsDevice.BlendState = BlendState.Opaque;

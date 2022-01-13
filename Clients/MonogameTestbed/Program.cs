@@ -31,7 +31,7 @@ namespace MonogameTestbed
 
             public List<ulong> LocationIDs { get; private set; }
 
-            [Option('e', "Endpoint", Required = false, HelpText = "Endpoint, either URL or one of [TEST, RC1, RC2, TEMPORALMONKEY, INFERIORMONKEY, RPC1]", Separator = ' ')]
+            [Option('e', "Endpoint", Required = false, HelpText = "Endpoint, either URL or one of [TEST, RC1, RC2, TEMPORALMONKEY, INFERIORMONKEY, RPC1, RPC2]", Separator = ' ')]
             public string EndpointParam { get; set; }
 
             public Uri EndpointUri

@@ -24,7 +24,7 @@ namespace MonogameTestbed
         private LineView[] PolyRingViews = null;
         private LabelView[] PolyIndexLabels = new LabelView[0];
 
-        private List<GridPolygon> _Polygons = new List<GridPolygon>();
+        private readonly List<GridPolygon> _Polygons = new List<GridPolygon>();
 
         public Color[] PolyLineColors;
         public Color[] PolyVertexColors;

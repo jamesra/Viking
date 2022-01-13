@@ -11,10 +11,10 @@ namespace MonogameTestbed
     class GeometryTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
-        List<IShape2D> shapes = new List<IShape2D>();
 
-        LineView lineView;
-        CircleView circleView;
+        readonly List<IShape2D> shapes = new List<IShape2D>();
+        readonly LineView lineView;
+        readonly CircleView circleView;
         
         List<IColorView> ShapeViews = new List<IColorView>();
         List<IColorView> GroundTruth = new List<IColorView>();

@@ -96,9 +96,9 @@ namespace MonogameTestbed
 
     internal class Camera3DManipulator
     {
-        KeyboardStateTracker keyboard = new KeyboardStateTracker();
-        GamePadStateTracker gamepad = new GamePadStateTracker();
-        MouseStateTracker mouse = new MouseStateTracker();
+        readonly KeyboardStateTracker keyboard = new KeyboardStateTracker();
+        readonly GamePadStateTracker gamepad = new GamePadStateTracker();
+        readonly MouseStateTracker mouse = new MouseStateTracker();
 
         public float UnitStepSize = 10.0f;
         const double OneDegree = (Math.PI * 2.0 / 360);
