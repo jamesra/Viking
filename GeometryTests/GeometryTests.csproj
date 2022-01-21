@@ -118,6 +118,7 @@
     <Compile Include="MeshTest.cs" />
     <Compile Include="PathTest.cs" />
     <Compile Include="FSCheck\PointTuple.cs" />
+    <Compile Include="PolygonIndexTest.cs" />
     <Compile Include="Primitives.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FSCheck\QuadTreeSpec.cs" />

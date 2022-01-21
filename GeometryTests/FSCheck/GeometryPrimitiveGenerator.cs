@@ -1004,6 +1004,9 @@ namespace GeometryTests.FSCheck
             //Shrink a polygon by randomly removing verticies
             for (int i = 0; i < poly.ExteriorRing.Length - 1; i++)
             {
+                if (poly.ExteriorRing.Length <= 4)
+                    break; 
+
                 copy = (GridPolygon)poly.Clone();
                 //Trace.WriteLine(string.Format("Try remove {0} from {1}", i, copy));
 
