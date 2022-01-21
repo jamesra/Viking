@@ -61,7 +61,7 @@ namespace Viking.AnnotationServiceTypes
                 return true;
             }
 
-            if ((object)A != null)
+            if (A is object)
                 return A.Equals(B);
 
             return false;
@@ -74,7 +74,7 @@ namespace Viking.AnnotationServiceTypes
                 return false;
             }
 
-            if ((object)A != null)
+            if (A is object)
                 return !A.Equals(B);
 
             return true;
@@ -84,7 +84,7 @@ namespace Viking.AnnotationServiceTypes
         {
             if (System.Object.ReferenceEquals(this, obj))
                 return true;
-            if ((object)obj == null)
+            if (obj is null)
                 return false;
             if (obj is LocationLinkKey otherKey)
                 return Equals(otherKey);
@@ -103,7 +103,7 @@ namespace Viking.AnnotationServiceTypes
 
         bool IEquatable<ILocationLink>.Equals(ILocationLink other)
         {
-            if ((object)other == null)
+            if (other is null)
                 return false;
 
             return ((ulong)this.A == other.A && (ulong)this.B == other.B) || ((ulong)this.B == other.A && (ulong)this.A == other.B);
@@ -111,7 +111,7 @@ namespace Viking.AnnotationServiceTypes
 
         bool IEquatable<ILocationLinkReadOnly>.Equals(ILocationLinkReadOnly other)
         {
-            if ((object)other == null)
+            if (other is null)
                 return false;
 
             return ((ulong)this.A == other.A && (ulong)this.B == other.B) || ((ulong)this.B == other.A && (ulong)this.A == other.B);

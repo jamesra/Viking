@@ -35,7 +35,7 @@ namespace Viking.AnnotationServiceTypes
                 return true;
             }
 
-            if ((object)A != null)
+            if (A is object)
                 return A.Equals(B);
 
             return false;
@@ -48,7 +48,7 @@ namespace Viking.AnnotationServiceTypes
                 return false;
             }
 
-            if ((object)A != null)
+            if (A is object)
                 return !A.Equals(B);
 
             return true;
@@ -76,7 +76,7 @@ namespace Viking.AnnotationServiceTypes
 
         public bool Equals(ServerObjBaseWithKey<KEY, T> other)
         {
-            if ((object)other == null)
+            if (other is null)
                 return false;
 
             return this.ID.Equals(other.ID);
