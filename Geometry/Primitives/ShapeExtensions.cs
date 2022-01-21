@@ -56,6 +56,11 @@ namespace Geometry
         {
             return !(left == right);
         }
+
+        public override string ToString()
+        {
+            return $"Intersection: {iA} {iB} {Intersection}";
+        }
     }
 
     public static class ShapeDecomposition
@@ -1362,7 +1367,7 @@ namespace Geometry
 #endif
             }
 
-            return added_intersections;
+            return added_intersections.Distinct().ToList();
         }
 
         /// <summary>
@@ -1409,15 +1414,21 @@ namespace Geometry
 
                 if (A is GridPolygon polyA && B is GridPolygon polyB)
                 {
-                    var newIntersections = polyA.AddPointsAtIntersections(polyB);
-                    added_intersections.AddRange(newIntersections); 
+                    var newAIntersections = polyA.AddPointsAtIntersections(polyB);
+                    
+                    //var newBIntersections = polyB.AddPointsAtIntersections(polyA);
+                    added_intersections.AddRange(newAIntersections.Union(newAIntersections).Distinct()); 
                 } 
                 else if(A is GridPolyline lineA && B is GridPolyline lineB)
                 {
-                    var newIntersections = lineA.AddPointsAtIntersections(lineB);
-                    added_intersections.AddRange(newIntersections);
+                    var newAIntersections = lineA.AddPointsAtIntersections(lineB);
+                    //var newBIntersections = lineB.AddPointsAtIntersections(lineA);
+                    added_intersections.AddRange(newAIntersections);
+                } 
+                else
+                {
+                    throw new NotImplementedException("Corresponding points for polygons and polylines not implemented yet.");
                 }
-
             }
 
             return added_intersections;
