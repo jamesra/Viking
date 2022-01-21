@@ -1486,6 +1486,11 @@ namespace Geometry
 
         public static GridRectangle BoundingBox(this IReadOnlyList<GridPolygon> polygons)
         {
+            if(polygons is null)
+            {
+                throw new ArgumentNullException(nameof(polygons));
+            }
+
             if (!polygons.Any())
             {
                 throw new ArgumentException("No polygons in array to calculate bounding box");
