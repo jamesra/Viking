@@ -46,6 +46,40 @@ namespace Geometry
             }
         }
 
+        /// <summary>
+        /// Used by QuadTree when a duplicate value (two points with the same value) is added
+        /// </summary>
+        internal class DuplicateValueException : ArgumentException
+        {
+            public DuplicateValueException()
+            {
+            }
+
+            public DuplicateValueException(GridVector2 point, object value) : base("Value {value}, associated with the point {point}, being inserted into the quad tree is a duplicate value")
+            {
+            }
+
+            public DuplicateValueException(string message) : base(message)
+            {
+            }
+
+            public DuplicateValueException(string message, Exception innerException) : base(message, innerException)
+            {
+            }
+
+            public DuplicateValueException(string message, string paramName) : base(message, paramName)
+            {
+            }
+
+            public DuplicateValueException(string message, string paramName, Exception innerException) : base(message, paramName, innerException)
+            {
+            }
+
+            protected DuplicateValueException(SerializationInfo info, StreamingContext context) : base(info, context)
+            {
+            }
+        }
+
         //GridVector2[] _points;
         QuadTreeNode<T> Root;
 
@@ -55,12 +89,12 @@ namespace Geometry
         }
 
 
-        ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
+        readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
 
         /// <summary>
         /// Maps the values to the node containing the values. Populated by the QuadTreeNode class.
         /// </summary>
-        internal Dictionary<T, QuadTreeNode<T>> ValueToNodeTable = new Dictionary<T, QuadTreeNode<T>>();
+        internal readonly Dictionary<T, QuadTreeNode<T>> ValueToNodeTable = new Dictionary<T, QuadTreeNode<T>>();
 
         public QuadTree()
         {
@@ -157,6 +191,10 @@ namespace Geometry
             try
             {
                 rwLock.EnterWriteLock();
+
+                if (ValueToNodeTable.ContainsKey(value))
+                    throw new QuadTree<T>.DuplicateValueException(point, value);
+                
                 if (this.Root.ExpandBorder(in point, out var new_root))
                 {
                     this.Root = new_root;
@@ -334,8 +372,7 @@ namespace Geometry
 
             if (node.IsRoot == false)
             {
-                node.Parent.Remove(node);
-                node.Tree = null; //Remove link to the tree for the removed node
+                node.Parent.Remove(node); 
             }
             else
             {
@@ -530,15 +567,11 @@ namespace Geometry
             }
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (disposing)
             {
-                if (rwLock != null)
-                {
-                    rwLock.Dispose();
-                    rwLock = null;
-                }
+                rwLock?.Dispose();
             }
         }
 
