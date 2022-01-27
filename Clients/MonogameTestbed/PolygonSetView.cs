@@ -161,12 +161,27 @@ namespace MonogameTestbed
         }
 
 
-        public PolygonSetView(IEnumerable<GridPolygon> polys, double PointRadius=1.0)
+        public static readonly Color[] DefaultColorMapping = new Color[]
+        {
+            Color.Green,
+            Color.Yellow,
+            Color.Red,
+            Color.Blue
+        };
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="polys"></param>
+        /// <param name="colors">Colors can be null and does not need to match the length of the polys array.  If an entry does not exist a random color is selected.</param>
+        /// <param name="PointRadius"></param>
+        public PolygonSetView(IEnumerable<GridPolygon> polys, IReadOnlyList<Color> colors = null, double PointRadius=1.0)
         {
             this._PointRadius = PointRadius;
-
+              
             _Polygons = polys.ToList();
-            PolyLineColors = _Polygons.Select(p => Color.Black.Random()).ToArray();
+            PolyLineColors = polys.Select((_,i) => colors != null && colors.Count > i ? 
+                colors[i] : Color.Black.Random()).ToArray();
             PolyVertexColors = PolyLineColors.Select(c => c.SetAlpha(0.5f)).ToArray();
 
             UpdatePolyViews();
