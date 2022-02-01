@@ -113,7 +113,7 @@ namespace TriangleNet.Voronoi.Legacy
 
         private void ComputeCircumCenters()
         {
-            Otri tri = default(Otri);
+            Otri tri = default;
             double xi = 0, eta = 0;
             Point pt;
 
@@ -144,12 +144,12 @@ namespace TriangleNet.Voronoi.Legacy
 
             var vpoints = new List<Point>();
 
-            Otri f = default(Otri);
-            Otri f_init = default(Otri);
-            Otri f_next = default(Otri);
-            Otri f_prev = default(Otri);
+            Otri f = default;
+            Otri f_init = default;
+            Otri f_next = default;
+            Otri f_prev = default;
 
-            Osub sub = default(Osub);
+            Osub sub = default;
 
             // Call f_init a triangle incident to x
             vertex.tri.Copy(ref f_init);

@@ -37,8 +37,8 @@ namespace TriangleNet.Meshing
         /// </summary>
         public static Mesh ToMesh(Polygon polygon, ITriangle[] triangles)
         {
-            Otri tri = default(Otri);
-            Osub subseg = default(Osub);
+            Otri tri = default;
+            Osub subseg = default;
             int i = 0;
 
             int elements = triangles == null ? 0 : triangles.Length;
@@ -88,10 +88,10 @@ namespace TriangleNet.Meshing
         /// </summary>
         private static List<Otri>[] SetNeighbors(Mesh mesh, ITriangle[] triangles)
         {
-            Otri tri = default(Otri);
-            Otri triangleleft = default(Otri);
-            Otri checktri = default(Otri);
-            Otri checkleft = default(Otri);
+            Otri tri = default;
+            Otri triangleleft = default;
+            Otri checktri = default;
+            Otri checkleft = default;
             Otri nexttri;
             TVertex tdest, tapex;
             TVertex checkdest, checkapex;
@@ -105,7 +105,7 @@ namespace TriangleNet.Meshing
             // Each vertex is initially unrepresented.
             for (i = 0; i < mesh.vertices.Count; i++)
             {
-                Otri tmp = default(Otri);
+                Otri tmp = default;
                 tmp.tri = mesh.dummytri;
                 vertexarray[i] = new List<Otri>(3);
                 vertexarray[i].Add(tmp);
@@ -205,11 +205,11 @@ namespace TriangleNet.Meshing
         /// </summary>
         private static void SetSegments(Mesh mesh, Polygon polygon, List<Otri>[] vertexarray)
         {
-            Otri checktri = default(Otri);
+            Otri checktri = default;
             Otri nexttri; // Triangle
             TVertex checkdest;
-            Otri checkneighbor = default(Otri);
-            Osub subseg = default(Osub);
+            Otri checkneighbor = default;
+            Osub subseg = default;
             Otri prevlink; // Triangle
 
             TVertex tmp;
@@ -382,7 +382,7 @@ namespace TriangleNet.Meshing
                 map[t.id] = new List<HalfEdge>(3);
             }
 
-            Otri tri = default(Otri), neighbor = default(Otri);
+            Otri tri = default, neighbor = default;
             TriangleNet.Geometry.Vertex org, dest;
 
             int id, nid, count = mesh.triangles.Count;

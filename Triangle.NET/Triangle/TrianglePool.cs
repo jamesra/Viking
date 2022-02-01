@@ -162,8 +162,8 @@ namespace TriangleNet
             {
                 triangle.vertices[i] = null;
 
-                triangle.subsegs[i] = default(Osub);
-                triangle.neighbors[i] = default(Otri);
+                triangle.subsegs[i] = default;
+                triangle.neighbors[i] = default;
             }
         }
 

@@ -71,7 +71,7 @@ namespace TriangleNet.Meshing.Algorithm
             this.mesh = new Mesh(config);
             this.mesh.TransferNodes(points);
 
-            Otri hullleft = default(Otri), hullright = default(Otri);
+            Otri hullleft = default, hullright = default;
             int i, j, n = points.Count;
 
             // Allocate an array of pointers to vertices for sorting.
@@ -161,11 +161,11 @@ namespace TriangleNet.Meshing.Algorithm
         void MergeHulls(ref Otri farleft, ref Otri innerleft, ref Otri innerright,
                         ref Otri farright, int axis)
         {
-            Otri leftcand = default(Otri), rightcand = default(Otri);
-            Otri nextedge = default(Otri);
-            Otri sidecasing = default(Otri), topcasing = default(Otri), outercasing = default(Otri);
-            Otri checkedge = default(Otri);
-            Otri baseedge = default(Otri);
+            Otri leftcand = default, rightcand = default;
+            Otri nextedge = default;
+            Otri sidecasing = default, topcasing = default, outercasing = default;
+            Otri checkedge = default;
+            Otri baseedge = default;
             Vertex innerleftdest;
             Vertex innerrightorg;
             Vertex innerleftapex, innerrightapex;
@@ -488,11 +488,11 @@ namespace TriangleNet.Meshing.Algorithm
         void DivconqRecurse(int left, int right, int axis,
                             ref Otri farleft, ref Otri farright)
         {
-            Otri midtri = default(Otri);
-            Otri tri1 = default(Otri);
-            Otri tri2 = default(Otri);
-            Otri tri3 = default(Otri);
-            Otri innerleft = default(Otri), innerright = default(Otri);
+            Otri midtri = default;
+            Otri tri1 = default;
+            Otri tri2 = default;
+            Otri tri3 = default;
+            Otri innerleft = default, innerright = default;
             double area;
             int vertices = right - left + 1;
             int divider;
@@ -641,9 +641,9 @@ namespace TriangleNet.Meshing.Algorithm
         /// <returns>Number of vertices on the hull.</returns>
         int RemoveGhosts(ref Otri startghost)
         {
-            Otri searchedge = default(Otri);
-            Otri dissolveedge = default(Otri);
-            Otri deadtriangle = default(Otri);
+            Otri searchedge = default;
+            Otri dissolveedge = default;
+            Otri deadtriangle = default;
             Vertex markorg;
 
             int hullsize;

@@ -86,9 +86,9 @@ namespace TriangleNet.Meshing.Iterators
         /// <param name="protector"></param>
         void ProcessRegion(Action<Triangle> action, Func<SubSegment, bool> protector)
         {
-            Otri testtri = default(Otri);
-            Otri neighbor = default(Otri);
-            Osub neighborsubseg = default(Osub);
+            Otri testtri = default;
+            Otri neighbor = default;
+            Osub neighborsubseg = default;
 
             // Loop through all the infected triangles, spreading the attribute
             // and/or area constraint to their neighbors, then to their neighbors'

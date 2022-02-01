@@ -94,7 +94,7 @@ namespace TriangleNet.Voronoi
         /// <returns>An empty map, which will map all vertices to a list of leaving edges.</returns>
         protected List<HalfEdge>[] ComputeVertices(Mesh mesh, Vertex[] vertices)
         {
-            Otri tri = default(Otri);
+            Otri tri = default;
             double xi = 0, eta = 0;
             Vertex vertex;
             Point pt;
@@ -130,7 +130,7 @@ namespace TriangleNet.Voronoi
         /// <param name="map">Empty vertex map.</param>
         protected void ComputeEdges(Mesh mesh, Vertex[] vertices, Face[] faces, List<HalfEdge>[] map)
         {
-            Otri tri, neighbor = default(Otri);
+            Otri tri, neighbor = default;
             TriangleNet.Geometry.Vertex org, dest;
 
             double px, py;

@@ -49,14 +49,14 @@ namespace TriangleNet.Meshing.Algorithm
             SweepEvent nextevent;
             SweepEvent newevent;
             SplayNode splayroot;
-            Otri bottommost = default(Otri);
-            Otri searchtri = default(Otri);
+            Otri bottommost = default;
+            Otri searchtri = default;
             Otri fliptri;
-            Otri lefttri = default(Otri);
-            Otri righttri = default(Otri);
-            Otri farlefttri = default(Otri);
-            Otri farrighttri = default(Otri);
-            Otri inserttri = default(Otri);
+            Otri lefttri = default;
+            Otri righttri = default;
+            Otri farlefttri = default;
+            Otri farrighttri = default;
+            Otri inserttri = default;
             Vertex firstvertex, secondvertex;
             Vertex nextvertex, lastvertex;
             Vertex connectvertex;
@@ -602,7 +602,7 @@ namespace TriangleNet.Meshing.Algorithm
             double xac, yac, xbc, ybc;
             double aclen2, bclen2;
             Point searchpoint = new Point(); // TODO: mesh.nextras
-            Otri dummytri = default(Otri);
+            Otri dummytri = default;
 
             ccwabc = predicates.CounterClockwise(pa, pb, pc);
             xac = pa.x - pc.x;
@@ -694,9 +694,9 @@ namespace TriangleNet.Meshing.Algorithm
         /// <returns>Number of vertices on the hull.</returns>
         int RemoveGhosts(ref Otri startghost)
         {
-            Otri searchedge = default(Otri);
-            Otri dissolveedge = default(Otri);
-            Otri deadtriangle = default(Otri);
+            Otri searchedge = default;
+            Otri dissolveedge = default;
+            Otri deadtriangle = default;
             Vertex markorg;
             int hullsize;
 
