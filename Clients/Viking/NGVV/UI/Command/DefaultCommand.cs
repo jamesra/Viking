@@ -115,14 +115,7 @@ namespace Viking.UI.Commands
 
             base.OnMouseMove(sender, e);
         }
-
-        protected virtual void OnPenMove(object sender, PenEventArgs e)
-        {
-
-            base.OnPenMove(sender, e);
-            return;
-        }
-
+  
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
             //Middle mouse button is for Wacom Pen Support
