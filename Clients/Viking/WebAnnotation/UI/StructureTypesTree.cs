@@ -35,11 +35,11 @@ namespace WebAnnotation.UI
         }
 
         protected void UpdateNodeChildren(StructureType obj)
-        {
+        { 
             GenericTreeNode[] Nodes = Tree.GetNodesForObject(obj);
             foreach (GenericTreeNode node in Nodes)
             {
-                node.UpdateChildNodes();
+                BeginInvoke(new Action(() => node.UpdateChildNodes()));
             }
         }
 
