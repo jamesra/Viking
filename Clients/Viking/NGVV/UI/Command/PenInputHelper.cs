@@ -363,7 +363,7 @@ namespace Viking.UI
         private void AssignID()
         {
             this.ID = _NextID;
-            _NextID = _NextID + 1;
+            _NextID++;
         }
 
         /// <summary>

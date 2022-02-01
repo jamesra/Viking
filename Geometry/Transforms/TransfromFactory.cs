@@ -149,8 +149,11 @@ namespace Geometry.Transforms
 
         public static async Task<ITransform> ParseStos(Uri stosURI, XElement elem, System.Net.NetworkCredential UserCredentials)
         {
-            if (elem == null || stosURI == null)
-                throw new ArgumentNullException();
+            if (elem == null) 
+                throw new ArgumentNullException(nameof(elem));
+
+            if (stosURI == null)
+                throw new ArgumentNullException(nameof(stosURI));
 
             int pixelSpacing = System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("pixelSpacing").Value);
 
@@ -476,8 +479,11 @@ namespace Geometry.Transforms
         /// <param name="Key"></param>
         public static ITransform[] LoadMosaic(string path, string[] mosaic, DateTime lastModified)
         {
-            if (mosaic == null || path == null)
-                throw new ArgumentNullException();
+            if (mosaic == null)
+                throw new ArgumentNullException(nameof(mosaic));
+
+            if (path == null)
+                throw new ArgumentNullException(nameof(path));
 
             int numTiles = 0;
             //           double PixelSpacing; 

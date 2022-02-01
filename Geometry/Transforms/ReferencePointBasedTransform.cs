@@ -120,7 +120,7 @@ namespace Geometry.Transforms
         protected ReferencePointBasedTransform(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             _mapPoints = info.GetValue("_mapPoints", typeof(MappingGridVector2[])) as MappingGridVector2[];
             this.Info = info.GetValue("Info", typeof(TransformBasicInfo)) as TransformBasicInfo;
@@ -131,7 +131,7 @@ namespace Geometry.Transforms
         public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             info.AddValue("_mapPoints", _mapPoints);
             info.AddValue("MappedBounds", MappedBounds);

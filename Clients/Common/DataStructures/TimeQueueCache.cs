@@ -67,12 +67,12 @@ namespace Viking.Common
         /// <returns></returns>
         public virtual FETCHTYPE Fetch(KEY key)
         {
-            FETCHTYPE value = default(FETCHTYPE);
+            FETCHTYPE value = default;
             CACHEENTRY entry;
 
             bool success = dictEntries.TryGetValue(key, out entry);
             if (success == false)
-                return default(FETCHTYPE);
+                return default;
 
             //Record the fact that someone asked for this tile
             entry.WasUsedSinceLastCheckpoint = true;

@@ -272,7 +272,7 @@ namespace Viking.UI.Commands
         private void AssignID()
         {
             this.ID = _NextID;
-            _NextID = _NextID + 1;
+            _NextID++;
         }
 
         public Command(Viking.UI.Controls.SectionViewerControl parent)
@@ -434,8 +434,7 @@ namespace Viking.UI.Commands
                         UnsubscribeToInterfaceEvents();
                         OnDeactivate();
 
-                        if (OnCommandCompleteHandler != null)
-                            OnCommandCompleteHandler(this, null);
+                        OnCommandCompleteHandler?.Invoke(this, null);
                     }
 
                     _Deactivated = value;
@@ -484,7 +483,7 @@ namespace Viking.UI.Commands
             }
             else if (Command.OnUnhandledMouseDown != null)
             {
-                Command.OnUnhandledMouseDown(sender, e); 
+                OnUnhandledMouseDown(sender, e); 
             }
         }
 

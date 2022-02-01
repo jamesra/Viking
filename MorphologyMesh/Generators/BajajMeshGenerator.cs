@@ -1887,7 +1887,7 @@ namespace MorphologyMesh
                 return null;
 
             BajajGeneratorMesh bajajMesh = mesh as BajajGeneratorMesh;
-            SliceChordOriginTestResultsCache KnownCandidateFailures = bajajMesh == null ? null : bajajMesh.SliceChordCandidateCache.GetFailuresForOrigin(vertex.Index);
+            SliceChordOriginTestResultsCache KnownCandidateFailures = bajajMesh?.SliceChordCandidateCache.GetFailuresForOrigin(vertex.Index);
             SliceChordTestType failures;
 
             if (NearestPoint.FacesAreComplete == false) //An optimization from profiling. 

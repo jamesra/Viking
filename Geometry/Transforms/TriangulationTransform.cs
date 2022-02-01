@@ -88,7 +88,7 @@ namespace Geometry.Transforms
             : base(info, context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             _TriangleIndicies = info.GetValue("_TriangleIndicies", typeof(int[])) as int[];
         }
@@ -96,7 +96,7 @@ namespace Geometry.Transforms
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             info.AddValue("_TriangleIndicies", _TriangleIndicies);
 

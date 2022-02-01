@@ -103,21 +103,9 @@ namespace MorphologyMesh
             get; set;
         }
 
-        public GridBox BoundingBox
-        {
-            get
-            {
-                return Mesh.BoundingBox;
-            }
-        }
+        public GridBox BoundingBox => Mesh.BoundingBox;
 
-        public double Z
-        {
-            get
-            {
-                return BoundingBox.CenterPoint.Z;
-            }
-        }
+        public double Z => BoundingBox.CenterPoint.Z;
 
         /// <summary>
         /// Z level of the cap port connection

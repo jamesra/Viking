@@ -183,7 +183,7 @@ namespace VikingXNAGraphics
         {
             this._ControlPointTexture = texture;
             this.LineWidth = lineWidth;
-            this._ControlPoints = controlPoints == null ? null : controlPoints.ToList();
+            this._ControlPoints = controlPoints?.ToList();
             this.Color = color;
             this.Style = lineStyle;
             this.ControlPointViews = CreateControlPointViews(this.ControlPoints, this.ControlPointRadius, color, texture);
