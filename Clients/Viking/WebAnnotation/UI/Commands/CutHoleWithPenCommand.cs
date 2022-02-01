@@ -22,16 +22,7 @@ namespace WebAnnotation.UI.Commands
                 return Global.NumClosedCurveInterpolationPoints;
             }
         }
-
-        public static int _NextID = 0;
-        public int ID;
-
-        private void AssignID()
-        {
-            this.ID = _NextID;
-            _NextID = _NextID + 1;
-        }
-
+           
         Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         /// <summary>
@@ -48,7 +39,6 @@ namespace WebAnnotation.UI.Commands
                                         OnCommandSuccess success_callback)
             : base(parent, color, origin, LineWidth, success_callback)
         {
-            AssignID();
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             this.OriginalMosaicPolygon = mosaic_polygon;
             this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
