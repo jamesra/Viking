@@ -396,7 +396,15 @@ namespace MorphologyMesh
                     case SupportedGeometryType.POLYGON:
                         {
                             //Start a task to simplify the polygon
-                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Translate(translationToCenter).Simplify(tolerance), node);
+                            Task<IShape2D> t = new Task<IShape2D>((node_) => 
+                            {
+                                var poly = ((MorphologyNode)node_).Geometry.ToPolygon();
+                                if (poly.BoundingBox.Area < Global.MinAnnotationArea)
+                                    return null;
+
+                                return poly.Translate(translationToCenter).Simplify(tolerance);
+                            }, node);
+
                             t.Start();
                             tasks.Add(t);
                         }
@@ -416,14 +424,21 @@ namespace MorphologyMesh
                 try
                 {
                     IShape2D output = await task;
+                    if(output is null)
+                    {
+                        continue;
+                    }
+
+                    Debug.Assert(output.BoundingBox.Area > 0);
+
                     //Rounding exposed a rare bug on 82682, 82680 RPC1 where the inner hole was exactly over the exterior ring of the opposite polygon
                     if(output is GridPolygon poly)
                     {
-                        result[(ulong)((MorphologyNode)(task.AsyncState)).ID] = poly.Round(Global.SignificantDigits);
+                        result.Add((ulong)((MorphologyNode)(task.AsyncState)).ID, poly.Round(Global.SignificantDigits));
                     }
                     else if (output is GridPolyline line)
                     {
-                        result[(ulong)((MorphologyNode)(task.AsyncState)).ID] = line.Round(Global.SignificantDigits);
+                        result.Add((ulong)((MorphologyNode)(task.AsyncState)).ID, line.Round(Global.SignificantDigits));
                     }
                     else
                     {
@@ -535,6 +550,7 @@ namespace MorphologyMesh
 
             SliceTopology output = new SliceTopology(group.Key, Polygons, IsUpper, ShapeZ, VertexShapeIndexToMorphNodeIndex);
 
+            
             return output;
         }
     }
