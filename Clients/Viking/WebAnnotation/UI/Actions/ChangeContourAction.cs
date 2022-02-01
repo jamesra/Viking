@@ -61,12 +61,10 @@ namespace WebAnnotation.UI.Actions
             RetraceType = retraceType;
             this.Location = Store.Locations[locationID];
 
-            this.Transform = transform == null ?
-                WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
-                : transform;
+            this.Transform = transform ?? WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
             this.NewMosaicPolygon = newMosaicPolygon;
-            this.NewVolumePolygon = newVolumePolygon == null ? Transform.TryMapShapeSectionToVolume(newMosaicPolygon) : newVolumePolygon;
+            this.NewVolumePolygon = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon);
             this.NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints); 
         }
 

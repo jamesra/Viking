@@ -74,6 +74,11 @@ namespace Geometry
             this.Direction = GridVector2.Normalize(new GridVector2(dir.X, dir.Y));
         }
 
+        public override string ToString()
+        {
+            return $"Line Origin {Origin} Direction {Direction}";
+        }
+
         public bool Intersects(GridLine seg, out GridVector2 Intersection)
         {
             //Function for each line

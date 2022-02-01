@@ -43,7 +43,7 @@ namespace WebAnnotation.UI.Actions
                 : transform;
 
             this.NewMosaicShape = newMosaicPolygon;
-            this.NewVolumeShape = newVolumePolygon == null ? Transform.TryMapShapeSectionToVolume(newMosaicPolygon.ToSqlGeometry()).ToIShape2D() : newVolumePolygon;
+            this.NewVolumeShape = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon.ToSqlGeometry()).ToIShape2D();
         }
 
         public void OnExecute()

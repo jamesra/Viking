@@ -11,8 +11,8 @@ namespace WebAnnotationModel
 
         public static Uri Endpoint
         {
-            get { return EndpointAddress != null ? EndpointAddress.Uri : null; }
-            set { EndpointAddress = new EndpointAddress(value); }
+            get => EndpointAddress?.Uri;
+            set => EndpointAddress = new EndpointAddress(value);
         }
 
         internal static EndpointAddress EndpointAddress

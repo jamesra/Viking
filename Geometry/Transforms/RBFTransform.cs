@@ -93,7 +93,7 @@ namespace Geometry.Transforms
         protected RBFTransform(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             _ControlToMappedSpaceWeights = info.GetValue("_ControlToMappedSpaceWeights", typeof(float[])) as float[];
             _MappedToControlSpaceWeights = info.GetValue("_MappedToControlSpaceWeights", typeof(float[])) as float[];
@@ -115,8 +115,12 @@ namespace Geometry.Transforms
 
         public static GridVector2 Transform(GridVector2 Point, float[] Weights, GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (ControlPoints == null || Weights == null || BasisFunction == null)
-                throw new ArgumentNullException();
+            if (ControlPoints == null)
+                throw new ArgumentException(nameof(ControlPoints));
+            if (Weights == null)
+                throw new ArgumentException(nameof(Weights));
+            if(BasisFunction == null)
+                throw new ArgumentNullException(nameof(BasisFunction));
 
             int nPoints = ControlPoints.Length;
             double[] distances = new double[nPoints];
@@ -195,7 +199,7 @@ namespace Geometry.Transforms
         public static float[] CreateSolutionMatrixWithLinear(GridVector2[] ControlPoints)
         {
             if (ControlPoints == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
 
@@ -213,7 +217,7 @@ namespace Geometry.Transforms
         public static Vector<float> CreateSolutionMatrix_X_WithLinear(GridVector2[] ControlPoints)
         {
             if (ControlPoints == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
 
@@ -249,7 +253,7 @@ namespace Geometry.Transforms
         public static Vector<float> CreateSolutionMatrix_Y_WithLinear(GridVector2[] ControlPoints)
         {
             if (ControlPoints == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
 
@@ -291,7 +295,10 @@ namespace Geometry.Transforms
         public static Matrix<float> CreateBetaMatrixWithLinear(GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
             if (ControlPoints == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(ControlPoints));
+
+            if (BasisFunction == null)
+                throw new ArgumentNullException(nameof(BasisFunction));
 
             int NumPts = ControlPoints.Length;
 
@@ -390,8 +397,10 @@ namespace Geometry.Transforms
 
         public static float[] CalculateRBFWeights(GridVector2[] MappedPoints, GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (MappedPoints == null || ControlPoints == null)
-                throw new ArgumentNullException();
+            if (MappedPoints == null)
+                throw new ArgumentNullException(nameof(MappedPoints));
+            if(ControlPoints == null)
+                throw new ArgumentNullException(nameof(ControlPoints));
 
             Debug.Assert(MappedPoints.Length == ControlPoints.Length);
 
