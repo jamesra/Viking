@@ -142,7 +142,7 @@ namespace TriangleNet.IO
         /// <param name="filename"></param>
         public void WriteElements(Mesh mesh, string filename)
         {
-            Otri tri = default(Otri);
+            Otri tri = default;
             Vertex p1, p2, p3;
             bool regions = mesh.behavior.useRegions;
 
@@ -270,7 +270,7 @@ namespace TriangleNet.IO
         /// are numbered right.</remarks>
         public void WritePoly(Mesh mesh, string filename, bool writeNodes)
         {
-            Osub subseg = default(Osub);
+            Osub subseg = default;
             Vertex pt1, pt2;
 
             bool useBoundaryMarkers = mesh.behavior.UseBoundaryMarkers;
@@ -349,8 +349,8 @@ namespace TriangleNet.IO
         /// <param name="filename"></param>
         public void WriteEdges(Mesh mesh, string filename)
         {
-            Otri tri = default(Otri), trisym = default(Otri);
-            Osub checkmark = default(Osub);
+            Otri tri = default, trisym = default;
+            Osub checkmark = default;
             Vertex p1, p2;
 
             Behavior behavior = mesh.behavior;
@@ -425,7 +425,7 @@ namespace TriangleNet.IO
         /// so the elements are numbered right!</remarks>
         public void WriteNeighbors(Mesh mesh, string filename)
         {
-            Otri tri = default(Otri), trisym = default(Otri);
+            Otri tri = default, trisym = default;
             int n1, n2, n3;
             int i = 0;
 

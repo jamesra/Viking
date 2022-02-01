@@ -36,7 +36,7 @@ namespace TriangleNet.Meshing.Algorithm
             foreach (var v in mesh.vertices.Values)
             {
                 starttri.tri = mesh.dummytri;
-                Osub tmp = default(Osub);
+                Osub tmp = default;
                 if (mesh.InsertVertex(v, ref starttri, ref tmp, false, false) == InsertVertexResult.Duplicate)
                 {
                     if (Log.Verbose)
@@ -65,7 +65,7 @@ namespace TriangleNet.Meshing.Algorithm
         /// </remarks>
         void GetBoundingBox()
         {
-            Otri inftri = default(Otri); // Handle for the triangular bounding box.
+            Otri inftri = default; // Handle for the triangular bounding box.
             Rectangle box = mesh.bounds;
 
             // Find the width (or height, whichever is larger) of the triangulation.
@@ -107,10 +107,10 @@ namespace TriangleNet.Meshing.Algorithm
         /// </remarks>
         int RemoveBox()
         {
-            Otri deadtriangle = default(Otri);
-            Otri searchedge = default(Otri);
-            Otri checkedge = default(Otri);
-            Otri nextedge = default(Otri), finaledge = default(Otri), dissolveedge = default(Otri);
+            Otri deadtriangle = default;
+            Otri searchedge = default;
+            Otri checkedge = default;
+            Otri nextedge = default, finaledge = default, dissolveedge = default;
             Vertex markorg;
             int hullsize;
 

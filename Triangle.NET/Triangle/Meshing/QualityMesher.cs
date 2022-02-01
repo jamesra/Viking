@@ -134,8 +134,8 @@ namespace TriangleNet.Meshing
         /// </remarks>
         public int CheckSeg4Encroach(ref Osub testsubseg)
         {
-            Otri neighbortri = default(Otri);
-            Osub testsym = default(Osub);
+            Otri neighbortri = default;
+            Osub testsym = default;
             BadSubseg encroachedseg;
             double dotproduct;
             int encroached;
@@ -239,8 +239,8 @@ namespace TriangleNet.Meshing
         /// </remarks>
         public void TestTriangle(ref Otri testtri)
         {
-            Otri tri1 = default(Otri), tri2 = default(Otri);
-            Osub testsub = default(Osub);
+            Otri tri1 = default, tri2 = default;
+            Osub testsub = default;
             Vertex torg, tdest, tapex;
             Vertex base1, base2;
             Vertex org1, dest1, org2, dest2;
@@ -440,7 +440,7 @@ namespace TriangleNet.Meshing
         /// </summary>
         private void TallyEncs()
         {
-            Osub subsegloop = default(Osub);
+            Osub subsegloop = default;
             subsegloop.orient = 0;
 
             foreach (var seg in mesh.subsegs.Values)
@@ -464,10 +464,10 @@ namespace TriangleNet.Meshing
         /// </remarks>
         private void SplitEncSegs(bool triflaws)
         {
-            Otri enctri = default(Otri);
-            Otri testtri = default(Otri);
-            Osub testsh = default(Osub);
-            Osub currentenc = default(Osub);
+            Otri enctri = default;
+            Otri testtri = default;
+            Osub testsh = default;
+            Osub currentenc = default;
             BadSubseg seg;
             Vertex eorg, edest, eapex;
             Vertex newvertex;
@@ -685,7 +685,7 @@ namespace TriangleNet.Meshing
         /// </summary>
         private void TallyFaces()
         {
-            Otri triangleloop = default(Otri);
+            Otri triangleloop = default;
             triangleloop.orient = 0;
 
             foreach (var tri in mesh.triangles)
@@ -704,7 +704,7 @@ namespace TriangleNet.Meshing
         /// <param name="badtri"></param>
         private void SplitTriangle(BadTriangle badtri)
         {
-            Otri badotri = default(Otri);
+            Otri badotri = default;
             Vertex borg, bdest, bapex;
             Point newloc; // Location of the new vertex
             double xi = 0, eta = 0;
@@ -778,7 +778,7 @@ namespace TriangleNet.Meshing
 
                     // Insert the circumcenter, searching from the edge of the triangle,
                     // and maintain the Delaunay property of the triangulation.
-                    Osub tmp = default(Osub);
+                    Osub tmp = default;
                     success = mesh.InsertVertex(newvertex, ref badotri, ref tmp, true, true);
 
                     if (success == InsertVertexResult.Successful)

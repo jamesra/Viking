@@ -20,8 +20,8 @@ namespace TriangleNet
         /// </summary>
         public static bool IsConsistent(Mesh mesh)
         {
-            Otri tri = default(Otri);
-            Otri oppotri = default(Otri), oppooppotri = default(Otri);
+            Otri tri = default;
+            Otri oppotri = default, oppooppotri = default;
             Vertex org, dest, apex;
             Vertex oppoorg, oppodest;
 
@@ -132,9 +132,9 @@ namespace TriangleNet
         /// </summary>
         private static bool IsDelaunay(Mesh mesh, bool constrained)
         {
-            Otri loop = default(Otri);
-            Otri oppotri = default(Otri);
-            Osub opposubseg = default(Osub);
+            Otri loop = default;
+            Otri oppotri = default;
+            Osub opposubseg = default;
             Vertex org, dest, apex;
             Vertex oppoapex;
 

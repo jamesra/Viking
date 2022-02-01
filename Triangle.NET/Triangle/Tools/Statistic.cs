@@ -141,7 +141,7 @@ namespace TriangleNet.Tools
                 100.0, 300.0, 1000.0, 10000.0, 100000.0, 0.0 };
 
 
-            Otri tri = default(Otri);
+            Otri tri = default;
             Vertex[] p = new Vertex[3];
             double[] dx = new double[3], dy = new double[3];
             double[] edgelength = new double[3];

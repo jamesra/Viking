@@ -102,7 +102,7 @@ namespace TriangleNet.Meshing
         /// </summary>
         private void CarveHoles()
         {
-            Otri searchtri = default(Otri);
+            Otri searchtri = default;
             Vertex searchorg, searchdest;
             LocateResult intersect;
 
@@ -290,10 +290,10 @@ namespace TriangleNet.Meshing
         /// </summary>
         private void InfectHull()
         {
-            Otri hulltri = default(Otri);
-            Otri nexttri = default(Otri);
-            Otri starttri = default(Otri);
-            Osub hullsubseg = default(Osub);
+            Otri hulltri = default;
+            Otri nexttri = default;
+            Otri starttri = default;
+            Osub hullsubseg = default;
             Vertex horg, hdest;
 
             var dummytri = mesh.dummytri;
@@ -370,9 +370,9 @@ namespace TriangleNet.Meshing
         /// </remarks>
         void Plague()
         {
-            Otri testtri = default(Otri);
-            Otri neighbor = default(Otri);
-            Osub neighborsubseg = default(Osub);
+            Otri testtri = default;
+            Otri neighbor = default;
+            Osub neighborsubseg = default;
             Vertex testvertex;
             Vertex norg, ndest;
 
@@ -576,7 +576,7 @@ namespace TriangleNet.Meshing
         /// </remarks>
         private FindDirectionResult FindDirection(ref Otri searchtri, Vertex searchpoint)
         {
-            Otri checktri = default(Otri);
+            Otri checktri = default;
             Vertex startvertex;
             Vertex leftvertex, rightvertex;
             double leftccw, rightccw;
@@ -665,7 +665,7 @@ namespace TriangleNet.Meshing
         /// </remarks>
         private void SegmentIntersection(ref Otri splittri, ref Osub splitsubseg, Vertex endpoint2)
         {
-            Osub opposubseg = default(Osub);
+            Osub opposubseg = default;
             Vertex endpoint1;
             Vertex torg, tdest;
             Vertex leftvertex, rightvertex;
@@ -795,8 +795,8 @@ namespace TriangleNet.Meshing
         /// </remarks>
         private bool ScoutSegment(ref Otri searchtri, Vertex endpoint2, int newmark)
         {
-            Otri crosstri = default(Otri);
-            Osub crosssubseg = default(Osub);
+            Otri crosstri = default;
+            Osub crosssubseg = default;
             Vertex leftvertex, rightvertex;
             FindDirectionResult collinear;
 
@@ -891,9 +891,9 @@ namespace TriangleNet.Meshing
         /// </remarks>
         private void DelaunayFixup(ref Otri fixuptri, bool leftside)
         {
-            Otri neartri = default(Otri);
-            Otri fartri = default(Otri);
-            Osub faredge = default(Osub);
+            Otri neartri = default;
+            Otri fartri = default;
+            Osub faredge = default;
             Vertex nearvertex, leftvertex, rightvertex, farvertex;
 
             fixuptri.Lnext(ref neartri);
@@ -1008,8 +1008,8 @@ namespace TriangleNet.Meshing
         /// </remarks>
         private void ConstrainedEdge(ref Otri starttri, Vertex endpoint2, int newmark)
         {
-            Otri fixuptri = default(Otri), fixuptri2 = default(Otri);
-            Osub crosssubseg = default(Osub);
+            Otri fixuptri = default, fixuptri2 = default;
+            Osub crosssubseg = default;
             Vertex endpoint1;
             Vertex farvertex;
             double area;
@@ -1113,7 +1113,7 @@ namespace TriangleNet.Meshing
         /// <param name="newmark"></param>
         private void InsertSegment(Vertex endpoint1, Vertex endpoint2, int newmark)
         {
-            Otri searchtri1 = default(Otri), searchtri2 = default(Otri);
+            Otri searchtri1 = default, searchtri2 = default;
             Vertex checkvertex = null;
 
             var dummytri = mesh.dummytri;
@@ -1194,9 +1194,9 @@ namespace TriangleNet.Meshing
         /// </summary>
         private void MarkHull()
         {
-            Otri hulltri = default(Otri);
-            Otri nexttri = default(Otri);
-            Otri starttri = default(Otri);
+            Otri hulltri = default;
+            Otri nexttri = default;
+            Otri starttri = default;
 
             // Find a triangle handle on the hull.
             hulltri.tri = mesh.dummytri;
