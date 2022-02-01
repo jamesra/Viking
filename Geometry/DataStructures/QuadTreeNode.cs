@@ -471,6 +471,10 @@ namespace Geometry
         {
             if (this.IsLeaf)
             {
+                if (this.IsRoot && HasValue == false)
+                    throw new InvalidOperationException(
+                        $"{nameof(QuadTree<T>)} has no entries, so FindNearest cannot return a valid value");
+
                 Debug.Assert(this.HasValue);
                 distance = GridVector2.Distance(in this.Point, in point);
                 nodePoint = this.Point;
