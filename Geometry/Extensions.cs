@@ -2,6 +2,7 @@
 using RTree;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
@@ -890,6 +891,20 @@ namespace Geometry
             }
 
             return length;
+        }
+
+        public static bool SetEquals(this IReadOnlyList<GridVector2> A, IReadOnlyList<GridVector2> B)
+        {
+            var sortedA = A.ToImmutableSortedSet(new GridVectorComparerXY());
+            var sortedB = B.ToImmutableSortedSet(new GridVectorComparerXY());
+            return sortedA.SetEquals(sortedB);
+        }
+
+        public static bool SetEquals(this IReadOnlyList<MappingGridVector2> A, IReadOnlyList<MappingGridVector2> B)
+        {
+            var sortedA = A.ToImmutableSortedSet(new MappingGridVector2Comparer());
+            var sortedB = B.ToImmutableSortedSet(new MappingGridVector2Comparer());
+            return sortedA.SetEquals(sortedB);
         }
     }
 
