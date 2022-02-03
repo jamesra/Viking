@@ -157,7 +157,7 @@ namespace Viking
         }
 
         
-        private static int TriedToCreateDirectory = 0;
+        private static long TriedToCreateDirectory = 0;
         private static void DeleteFileFromCache(string CacheFilename)
         {
             try
@@ -171,7 +171,7 @@ namespace Viking
             }
             catch (System.IO.DirectoryNotFoundException)
             {
-                if (Interlocked.CompareExchange(ref TriedToCreateDirectory, 1, 0) == 0)
+                if (Interlocked.Read(ref TriedToCreateDirectory) == 0)
                 {
                     Trace.WriteLine($"Failed To delete cache file from non-existant directory (probably OK): {CacheFilename}", "TextureUse");
                     TryCreatingCacheDirectory(CacheFilename);
@@ -185,7 +185,7 @@ namespace Viking
 
         private static void TryCreatingCacheDirectory(string cachefilename)
         {
-            if (Interlocked.CompareExchange(ref TriedToCreateDirectory, 1, 0) == 0)
+            if (Interlocked.Read(ref TriedToCreateDirectory) == 0)
             {
                 var dirname = System.IO.Path.GetDirectoryName(cachefilename);
                 try
@@ -243,7 +243,7 @@ namespace Viking
 
                                 var textureLastModifiedUtc = textureLastModifiedValue.Value.UtcDateTime;
 
-                                if (textureLastModifiedUtc > cacheFileInfo.LastWriteTimeUtc)
+                                if (Global.TextureCache.ContainsKey(CacheFilename) == false || textureLastModifiedUtc > cacheFileInfo.LastWriteTimeUtc)
                                 {
                                     return await TryLoadingFromHttpClientResponse(textureHeaders, CacheFilename, token).ConfigureAwait(false);
                                 }
@@ -251,14 +251,19 @@ namespace Viking
                                 {
                                     using (var stream = Global.TextureCache.Fetch(CacheFilename))
                                     {
-                                        if (token.IsCancellationRequested)
-                                            return null;
+                                        //If something is wrong with the stream load from the server
+                                        if(stream is null)
+                                            return await TryLoadingFromHttpClientResponse(textureHeaders, CacheFilename, token).ConfigureAwait(false);
+                                        else
+                                        {
+                                            if (token.IsCancellationRequested)
+                                                return null;
 
-                                        var texture = await GetTextureFromStreamAsync(graphicsDevice, stream).ConfigureAwait(false);
-                                        if (token.IsCancellationRequested)
-                                            return null;
-
-                                        return texture;
+                                            var texture = await GetTextureFromStreamAsync(graphicsDevice, stream)
+                                                .ConfigureAwait(false);
+                                            
+                                            return texture;
+                                        }
                                     }
                                 }
                             }
@@ -624,9 +629,9 @@ namespace Viking
                     try
                     {
                         var texture = await TryLoadingFromCacheOrServer(Filename, CacheFilename, token);
-                        if(texture is null)
+                        if (texture is null)
                             texture = await TryLoadingFromServer(this.Filename, token);
-                        
+
                         SetTexture(texture);
                         return this._Result;
                     }
@@ -640,6 +645,11 @@ namespace Viking
                                         CacheFilename);
                         TryDeleteFile(CacheFilename);
                         //Continue and try to load from server
+                    }
+                    catch (System.Threading.Tasks.TaskCanceledException)
+                    {
+                        Trace.WriteLine($"Aborted loading {Filename}");
+                        return null;
                     }
                     catch (Exception e)
                     {
