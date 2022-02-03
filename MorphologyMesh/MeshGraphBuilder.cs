@@ -172,7 +172,7 @@ namespace MorphologyMesh
 
             //Create a map so we can record where every vertex came from in the set of points
             //TODO: Overlapping verticies are not going to be handled...
-            Dictionary<GridVector2, List<PolygonIndex>> pointToPoly = GridPolygon.CreatePointToPolyMap(Polygons.ToArray());
+            var pointToPoly = GridPolygon.CreatePointToPolyMap(Polygons.ToArray());
 
             //Create a map from the index into our array of polygons to the actual node ID the polygon came from.
             ulong[] PolygonToNodeKey = new ulong[other_nodes.Length + 1];
