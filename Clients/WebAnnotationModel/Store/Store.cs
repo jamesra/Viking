@@ -5,47 +5,22 @@
     /// </summary>
     public class Store
     {
-        public static LocationStore Locations
-        {
-            get { return Nested.Locations; }
-        }
+        public static LocationStore Locations => Nested.Locations;
 
-        public static StructureStore Structures
-        {
-            get { return Nested.Structures; }
-        }
+        public static StructureStore Structures => Nested.Structures;
 
-        public static StructureTypeStore StructureTypes
-        {
-            get { return Nested.StructureTypes; }
-        }
+        public static StructureTypeStore StructureTypes => Nested.StructureTypes;
 
-        public static StructureLinkStore StructureLinks
-        {
-            get { return Nested.StructureLinks; }
-        }
+        public static StructureLinkStore StructureLinks => Nested.StructureLinks;
 
-        public static LocationLinkStore LocationLinks
-        {
-            get { return Nested.LocationLinks; }
-        }
+        public static LocationLinkStore LocationLinks => Nested.LocationLinks;
 
-        public static PermittedStructureLinkStore PermittedStructureLinks
-        {
-            get { return Nested.PermittedStructureLinks; }
-        }
+        public static PermittedStructureLinkStore PermittedStructureLinks => Nested.PermittedStructureLinks;
 
-        public static RegionLoader<long, LocationObj> LocationsByRegion
-        {
-            get { return Nested.RegionLocationsLoader; }
-        }
+        public static RegionLoader<long, LocationObj> LocationsByRegion => Nested.RegionLocationsLoader;
 
-        public static RegionLoader<long, StructureObj> StructuresByRegion
-        {
-            get { return Nested.RegionStructuresLoader; }
-        }
-
-
+        public static RegionLoader<long, StructureObj> StructuresByRegion => Nested.RegionStructuresLoader;
+         
         class Nested
         {
             static Nested()
