@@ -493,7 +493,8 @@ namespace Geometry
         static public List<GridVector2> IdentifyControlPoints(this IReadOnlyList<GridVector2> input, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         {
             //Copy the path so we don't modify the input
-            var path = input.ToList();
+            var path = input.Select(p => p.Round(Global.TransformSignificantDigits)).Distinct().ToList();
+            //var path = input.ToList();
 
             //We can't simplify the already simple...
             if (path == null || path.Count <= 2)
@@ -507,15 +508,16 @@ namespace Geometry
                 path.Add(path.First());
             }
 
-            GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
+            //GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
+            GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Global.TransformSignificantDigits)).ToArray();
             GridLineSegment[] curve_segments = curved_path.ToLineSegments();
-            Dictionary<GridVector2, int> point_to_ideal_curve_index = new Dictionary<GridVector2, int>(curved_path.Length);
+            QuadTree<int> point_to_ideal_curve_index = new QuadTree<int>(input.BoundingBox() * 1.1);
             for (int i = 0; i < curved_path.Length; i++)
             {
                 if (IsClosed && i == curved_path.Length - 1)
                     continue; //Skip the last point which is a duplicate in a closed curve
 
-                if (point_to_ideal_curve_index.ContainsKey(curved_path[i]))
+                if (point_to_ideal_curve_index.Contains(curved_path[i]))
                     continue;
 
                 point_to_ideal_curve_index.Add(curved_path[i], i);
@@ -524,7 +526,7 @@ namespace Geometry
 #if DEBUG
             for (int i = 0; i < path.Count; i++)
             {
-                Debug.Assert(point_to_ideal_curve_index.ContainsKey(path[i]), string.Format("Ideal curve dictionary is missing path point #{0} {1}", i, path[i]));
+                Debug.Assert(point_to_ideal_curve_index.Contains(path[i]), string.Format("Ideal curve dictionary is missing path point #{0} {1}", i, path[i]));
             }
 #endif
 
@@ -556,20 +558,22 @@ namespace Geometry
                 //Find the subset of the real curve this proposed curve should accurately represent
                 //identify the segment on the ideal curve we are comparing against
 
-                if (false == point_to_ideal_curve_index.ContainsKey(proposedCurve.First()))
+                if (false == point_to_ideal_curve_index.Contains(proposedCurve.First()))
                 {
                     iProposedVertex = iProposedVertex + 1;
                     continue;
                 }
 
-                if (false == point_to_ideal_curve_index.ContainsKey(proposedCurve.Last()))
+                if (false == point_to_ideal_curve_index.Contains(proposedCurve.Last()))
                 {
                     iProposedVertex = iProposedVertex + 1;
                     continue;
                 }
 
-                int iIdealStart = point_to_ideal_curve_index[proposedCurve.First()];
-                int iIdealEnd = point_to_ideal_curve_index[proposedCurve.Last()];
+                //int iIdealStart = point_to_ideal_curve_index[proposedCurve.First()];
+                //int iIdealEnd = point_to_ideal_curve_index[proposedCurve.Last()];
+                point_to_ideal_curve_index.TryFindNearest(proposedCurve.First(), out var foundStart, out int iIdealStart, out var distanceToStart);
+                point_to_ideal_curve_index.TryFindNearest(proposedCurve.Last(), out var foundEnd, out int iIdealEnd, out var distanceToEnd);
 
                 //I believe this is an impossible case, but checking anyway for debugging. 
                 //If the loop is closed the final vertex could be the first vertex of the loop, so we don't check

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 
@@ -10,7 +11,7 @@ namespace Geometry
     /// <summary>
     /// Stores a quadtree.  Should be safe for concurrent access
     /// </summary>
-    public class QuadTree<T> : IDisposable
+    public class QuadTree<T> : IDisposable //, IDictionary<GridVector2,T>
     {
         /// <summary>
         /// Used by QuadTree when a duplicate point is added
@@ -83,10 +84,7 @@ namespace Geometry
         //GridVector2[] _points;
         QuadTreeNode<T> Root;
 
-        public GridRectangle Border
-        {
-            get { return Root.Border; }
-        }
+        public GridRectangle Border => Root.Border;
 
 
         readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
@@ -119,6 +117,10 @@ namespace Geometry
             CreateTree(keys, values, in border);
         }
 
+        public IEnumerable<GridVector2> Keys => Root?.Keys ?? Array.Empty<GridVector2>();
+
+        //ICollection<GridVector2> IDictionary<GridVector2, T>.Keys => Keys.ToArray();
+         
         public T[] Values
         {
             get
@@ -137,6 +139,13 @@ namespace Geometry
             }
         }
 
+        //ICollection<T> IDictionary<GridVector2, T>.Values => Values;
+
+        /// <summary>
+        /// Returns the point associated with the value T
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public GridVector2 this[T value]
         {
             get
@@ -152,6 +161,33 @@ namespace Geometry
                     rwLock.ExitReadLock();
                 }
             }
+        }
+
+        /// <summary>
+        /// Returns the value nearest to the point p
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public T this[GridVector2 p]
+        {
+            get
+            {
+                try
+                {
+                    rwLock.EnterReadLock();
+                    TryFindNearest(p, out var foundPoint, out T val, out double distance);
+                    if (distance > Global.Epsilon)
+                        throw new KeyNotFoundException(
+                            $"{p} does not have an exact match in the quad tree.  Use of the index operator requires an exact match be present.");
+
+                    return val;
+                }
+                finally
+                {
+                    rwLock.ExitReadLock();
+                }
+            }
+            set => Add(p, value);
         }
 
         public int Count
@@ -175,7 +211,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
-        public void Add(GridVector2 point, in T value)
+        public void Add(GridVector2 point, T value)
         {
             /*
             try
@@ -285,6 +321,13 @@ namespace Geometry
             return false;
         }
 
+        public bool ContainsKey(GridVector2 p)
+        {
+            return Contains(p);
+        }
+
+        
+
         /// <summary>
         /// Updates the position of the passed value with the new value
         /// Creates the node if it does not exist
@@ -387,6 +430,37 @@ namespace Geometry
             return retVal;
         }
 
+        /*
+        /// <summary>
+        /// This is the internal remove function.
+        /// CALLER MUST TAKE THE WRITE LOCK BEFORE CALLING THIS FUNCTION
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private T Remove(GridVector2 toRemove)
+        { 
+            QuadTreeNode<T> node = ValueToNodeTable[toRemove];
+
+            T retVal = node.Value;
+
+            if (node.IsRoot == false)
+            {
+                node.Parent.Remove(node);
+            }
+            else
+            {
+                //We are removing the root node.  State that it has no value and return
+                ValueToNodeTable.Remove(node.Value);
+                node.HasValue = false;
+            }
+
+            node.Parent = null;
+            node.Value = default;
+
+            return retVal;
+        }
+        */
+
         public bool TryRemove(T value, out T RemovedValue)
         {
             RemovedValue = default;
@@ -423,6 +497,51 @@ namespace Geometry
             return true;
         }
 
+        /*
+        public bool TryRemove(GridVector2 point, out T RemovedValue)
+        { 
+            RemovedValue = default;
+            try
+            {
+                double distance = double.MaxValue;
+                rwLock.EnterUpgradeableReadLock();
+
+                if (Root == null)
+                {
+                    return false;
+                }
+                else if (Root.IsLeaf == true && Root.HasValue == false)
+                {
+                    return false;
+                }
+
+                var foundValue = Root.FindNearest(point, out var foundPoint, ref distance);
+
+                try
+                {
+                    rwLock.EnterWriteLock();
+
+                    RemovedValue = Remove(value);
+                }
+                catch (Exception)
+                {
+                    throw;
+                    //return false;
+                }
+                finally
+                {
+                    rwLock.ExitWriteLock();
+                }
+            }
+            finally
+            {
+                rwLock.ExitUpgradeableReadLock();
+            }
+
+            return true;
+        }
+        */
+
         private void CreateTree(GridVector2[] keys, T[] values, in GridRectangle border)
         {
             try
@@ -441,6 +560,24 @@ namespace Geometry
             finally
             {
                 rwLock.ExitWriteLock();
+            }
+        }
+
+        public bool TryGetValue(GridVector2 p, out T result)
+        {
+            try
+            {
+                result = default;
+                rwLock.EnterReadLock(); 
+                var found = TryFindNearest(p, out var foundPoint, out result, out double distance);
+                if(found)
+                    return distance <= Global.Epsilon;
+
+                return false;
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
             }
         }
 

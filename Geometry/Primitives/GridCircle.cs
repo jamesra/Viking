@@ -11,7 +11,6 @@ namespace Geometry
         public readonly GridVector2 Center;
         public readonly double Radius;
         public readonly double RadiusSquared;
-        private readonly int _HashCode;
 
         public GridCircle(double X, double Y, double radius) : this(new GridVector2(X, Y), radius)
         { }
@@ -25,7 +24,6 @@ namespace Geometry
                 throw new ArgumentException("Radius cannot be infinite or NaN");
 
             this.RadiusSquared = radius * radius;
-            _HashCode = center.GetHashCode();
         }
 
         public GridCircle(IPoint2D center, double radius) : this(new GridVector2(center.X, center.Y), radius)
@@ -290,7 +288,7 @@ namespace Geometry
         }
 
         public bool Contains(in GridVector2 p)
-        {                  
+        {
             double XDist = p.X - this.Center.X;
             double YDist = p.Y - this.Center.Y;
 
@@ -443,7 +441,7 @@ namespace Geometry
         public bool Intersects(in GridLineSegment line) => CircleIntersectionExtensions.Intersects(in this, in line);
 
         public bool Intersects(in ITriangle2D t) => this.Intersects(t.Convert());
-        
+
         public bool Intersects(in GridTriangle tri) => CircleIntersectionExtensions.Intersects(in this, in tri);
 
         public bool Intersects(in IPolygon2D p)
@@ -490,25 +488,27 @@ namespace Geometry
                 return Equals(otherShape);
 
             return false;
-        } 
+        }
 
         public bool Equals(IShape2D other)
         {
             if (other is ICircle2D otherCircle)
                 return Equals(otherCircle);
-            
+
             return false;
         }
 
         public bool Equals(ICircle2D other)
-        { 
-            return this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius); 
+        {
+            return this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius);
         }
 
 
         public override int GetHashCode()
         {
-            return _HashCode;
+            throw new InvalidOperationException($"It is not mathematically possible to implement {nameof(GetHashCode)} for a point where equality is epsilon based");
+            return 0;
+            //return _HashCode;
             /*
             if (!_HashCode.HasValue)
             {
