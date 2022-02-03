@@ -1646,24 +1646,24 @@ namespace Viking.UI.Controls
             //                                             new Microsoft.Xna.Framework.Color(0,1f,0),
             //                                          new Microsoft.Xna.Framework.Color(0,0,1f)};
 
-            MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel, this.CurrentTransform); 
-            if (Mapping == null)
+            MappingBase mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel, this.CurrentTransform); 
+            if (mapping == null)
                 return null;
 
-            if (Mapping.Initialized == false)
+            if (mapping.Initialized == false)
             {
-                Mapping.Initialize(CancellationToken.None);
+                Task.Run(() => mapping.Initialize(CancellationToken.None));
                 return null;
             }
 
-            int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
+            int[] DownsamplesToRender = CalculateDownsamplesToRender(mapping, scene.Camera.Downsample);
 
             //If we aren't loading asynchronously only load the hi-res textures since we are waiting for completion
             if (!AsynchTextureLoad)
                 DownsamplesToRender = new int[] { DownsamplesToRender.Last() };
 
             //Get all of the visible tiles
-            var visibleTiles = Mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
+            var visibleTiles = mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
 
             RenderTarget2D renderTarget = new RenderTarget2D(graphicsDevice,
                                               scene.Viewport.Width,
@@ -1680,7 +1680,7 @@ namespace Viking.UI.Controls
 
             for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
             {
-                int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
+                int level = mapping.AvailableLevels[DownsamplesToRender[iLevel]];
 
                 //Clear the depth buffer before we begin this level, we only want to compare to tiles in our level
                 graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, int.MaxValue);
@@ -1712,7 +1712,7 @@ namespace Viking.UI.Controls
                     TileViewModel tileViewModel = Global.TileViewModelCache.FetchOrConstructTile(t,
                                                                                                     tileFileName,
                                                                                                     SectionViewerControl.TileCacheFullPath(section, t.TextureCacheFilePath),
-                                                                                                    Mapping.Name,
+                                                                                                    mapping.Name,
                                                                                                     0);
 
                     //Don't request and draw a bunch of levels that cover the entire screen.  Saves time if we are at high magnification
@@ -1756,14 +1756,14 @@ namespace Viking.UI.Controls
             {
                 ITransform transform = null;
 
-                SectionToVolumeMapping StosMapping = Mapping as SectionToVolumeMapping;
+                SectionToVolumeMapping StosMapping = mapping as SectionToVolumeMapping;
                 if (StosMapping != null)
                 {
                     transform = StosMapping.VolumeTransform;
                 }
                 else
                 {
-                    TileGridToVolumeMapping TGStosMapping = Mapping as TileGridToVolumeMapping;
+                    TileGridToVolumeMapping TGStosMapping = mapping as TileGridToVolumeMapping;
                     if (TGStosMapping != null)
                     {
                         transform = TGStosMapping.VolumeTransform;
