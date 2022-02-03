@@ -41,7 +41,7 @@ namespace Viking.VolumeModel
 
             //return _TileTransforms;
 
-            if (Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) == null)
+            if (Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) is null)
             {
                 await Initialize(token);
             }
@@ -76,29 +76,33 @@ namespace Viking.VolumeModel
                 return _TileTransforms;
             }
         }*/
-
-        private int _HasBeenWarped = 0;
+        
         /// <summary>
         /// .mosaic files load as being warped.  Volume sections have to passed through a volume transform first, which we do in a lazy fashion
         /// </summary>
-        private bool HasBeenWarped => Interlocked.CompareExchange(ref _HasBeenWarped, 1, 1) > 0;
+        private bool HasBeenWarped => _Initialized > 0;
 
-        private int _Initialized = 0;
-        public override bool Initialized => Interlocked.CompareExchange(ref _HasBeenWarped, 1, 1) > 0;
+        private long _Initialized = 0;
+        public override bool Initialized => Interlocked.Read(ref _Initialized) > 0;
+
+        private long _InitializationInProgress = 0;
+        private bool InitializationInProgress => Interlocked.Read(ref _InitializationInProgress) > 0;
 
         private readonly SemaphoreSlim _InitializeSemaphore = new SemaphoreSlim(1);
 
 
         public override async Task Initialize(CancellationToken token)
         {
-            if (Interlocked.CompareExchange(ref _Initialized, 0, 0) > 0)
+            if (Initialized || InitializationInProgress)
                 return;
 
             try
             {
                 await _InitializeSemaphore.WaitAsync(token);
-                if (Interlocked.CompareExchange(ref _Initialized, 0, 0) > 0)
+                if (Interlocked.Read(ref _Initialized) > 0)
                     return;
+
+                Interlocked.Exchange(ref _InitializationInProgress, 1);
 
                 _TileTransforms = await WarpTransforms(token).ConfigureAwait(false);
 
@@ -109,13 +113,14 @@ namespace Viking.VolumeModel
                         Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(transformControlPoints);
                     _SectionBounds =
                         Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(transformControlPoints);
-                    Interlocked.CompareExchange(ref _Initialized, 1, 0);
+                    Interlocked.Exchange(ref _Initialized, 1);
+                    Interlocked.CompareExchange(ref _InitializationInProgress, 0, 1);
                 }
             }
             finally
             {
                 _InitializeSemaphore.Release();
-            } 
+            }
         }
 
         /// <summary>
@@ -147,7 +152,7 @@ namespace Viking.VolumeModel
             try
             {
                 await _InitializeSemaphore.WaitAsync();
-                if (Interlocked.CompareExchange(ref _HasBeenWarped, 0, 1) > 0)
+                if (Interlocked.CompareExchange(ref _Initialized, 0, 1) > 0)
                 {
                     _TileTransforms = null;
                     await SourceMapping.FreeMemory();
