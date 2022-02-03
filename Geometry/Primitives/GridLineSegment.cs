@@ -572,7 +572,7 @@ namespace Geometry
 
             double det = A1 * B2 - A2 * B1;
             //Check if lines are parallel
-            if (det == 0)
+            if (Math.Abs(det) < Global.EpsilonSquared)
             {
                 Intersection = GridVector2.Zero;
 
