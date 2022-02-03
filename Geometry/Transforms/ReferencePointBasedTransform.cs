@@ -147,7 +147,8 @@ namespace Geometry.Transforms
         {
             for (int i = 0; i < MapPoints.Length; i++)
             {
-                MapPoints[i].ControlPoint += vector;
+                var p = MapPoints[i];
+                MapPoints[i] = new MappingGridVector2(p.ControlPoint + vector, p.MappedPoint);
             }
 
             //Remove any cached data structures
@@ -399,5 +400,16 @@ namespace Geometry.Transforms
                     rwLockTriangles.ExitWriteLock();
             }
         }
+
+        public abstract GridVector2 Transform(GridVector2 Point);
+        public abstract GridVector2[] Transform(GridVector2[] Points);
+        public abstract GridVector2 InverseTransform(GridVector2 Point);
+        public abstract GridVector2[] InverseTransform(GridVector2[] Points);
+        public abstract bool CanTransform(GridVector2 Point);
+        public abstract bool TryTransform(GridVector2 Point, out GridVector2 v);
+        public abstract bool[] TryTransform(GridVector2[] Points, out GridVector2[] v);
+        public abstract bool CanInverseTransform(GridVector2 Point);
+        public abstract bool TryInverseTransform(GridVector2 Point, out GridVector2 v);
+        public abstract bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] v);
     }
 }

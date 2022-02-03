@@ -55,7 +55,7 @@ namespace Geometry
     /// <summary>
     /// Interface for transforms that expose control points
     /// </summary>
-    public interface ITransformControlPoints
+    public interface ITransformControlPoints : ITransform
     {
         MappingGridVector2[] MapPoints { get; }
 

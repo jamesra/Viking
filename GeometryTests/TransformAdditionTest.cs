@@ -1,6 +1,7 @@
 ﻿using Geometry.Transforms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using Geometry;
 
 namespace GeometryTests
 {
@@ -80,7 +81,7 @@ namespace GeometryTests
                                                                                              1).Result as TriangulationTransform;
             }
 
-            TriangulationTransform SliceToVolumeTriangulation = TriangulationTransform.Transform(ControlTriangulation,
+            ITransformControlPoints SliceToVolumeTriangulation = TriangulationTransform.Transform(ControlTriangulation,
                                                                                                MappedTriangulation,
                                                                                                new StosTransformInfo(37, 34,
                                                                                                DateTime.UtcNow));

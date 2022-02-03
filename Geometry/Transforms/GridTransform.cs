@@ -78,6 +78,8 @@ namespace Geometry.Transforms
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 5;
 
+            Point = Point.Round(Global.TransformSignificantDigits);
+
             if (!Bounds.Contains(Point, epsilon))
                 return null;
 
@@ -116,7 +118,7 @@ namespace Geometry.Transforms
 
             MappingGridTriangle mapTri = new MappingGridTriangle(points, TriIndicies[iTri], TriIndicies[iTri + 1], TriIndicies[iTri + 2]);
 
-            Debug.Assert(mapTri.IntersectsMapped(Point), "Calculated GridTransform does not intersect requested point");
+            Debug.Assert(mapTri.IntersectsMapped(Point.Round(Global.TransformSignificantDigits)), "Calculated GridTransform does not intersect requested point");
             return mapTri;
         }
 

@@ -108,7 +108,7 @@ namespace Geometry.Transforms
             base.GetObjectData(info, context);
         }
 
-        public bool CanTransform(GridVector2 Point)
+        public override bool CanTransform(GridVector2 Point)
         {
             return true;
         }
@@ -146,51 +146,51 @@ namespace Geometry.Transforms
             return new GridVector2(X, Y).Round(Global.TransformSignificantDigits);
         }
 
-        public GridVector2 Transform(GridVector2 Point)
+        public override GridVector2 Transform(GridVector2 Point)
         {
             return RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction);
         }
 
-        public GridVector2[] Transform(GridVector2[] Points)
+        public override GridVector2[] Transform(GridVector2[] Points)
         {
             var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction);
             return Output.ToArray();
         }
 
-        public bool TryTransform(GridVector2 Point, out GridVector2 v)
+        public override bool TryTransform(GridVector2 Point, out GridVector2 v)
         {
             v = Transform(Point);
             return true;
         }
-        public bool[] TryTransform(GridVector2[] Points, out GridVector2[] Output)
+        public override bool[] TryTransform(GridVector2[] Points, out GridVector2[] Output)
         {
             Output = this.Transform(Points);
             return Points.Select(p => true).ToArray();
         }
 
-        public bool CanInverseTransform(GridVector2 Point)
+        public override bool CanInverseTransform(GridVector2 Point)
         {
             return true;
         }
 
-        public GridVector2 InverseTransform(GridVector2 Point)
+        public override GridVector2 InverseTransform(GridVector2 Point)
         {
             return RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingGridVector2.ControlPoints(this.MapPoints), this.BasisFunction);
         }
 
-        public GridVector2[] InverseTransform(GridVector2[] Points)
+        public override GridVector2[] InverseTransform(GridVector2[] Points)
         {
             var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingGridVector2.ControlPoints(this.MapPoints), this.BasisFunction);
             return Output.ToArray();
         }
 
-        public bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
+        public override bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
         {
             v = InverseTransform(Point);
             return true;
         }
 
-        public bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] Output)
+        public override bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] Output)
         {
             Output = this.InverseTransform(Points);
             return Points.Select(p => true).ToArray();
@@ -290,15 +290,12 @@ namespace Geometry.Transforms
         /// Populates matrix by applying basis function to control points and filling a matrix [B 0; 0 B];
         /// </summary>
         /// <param name="ControlPoints"></param>
-        /// <param name="BasisFunction"></param>
+        /// <param name="BasisFunction">How to weight pairs of points, if null, use Euclidean distance</param>
         /// <returns></returns>
-        public static Matrix<float> CreateBetaMatrixWithLinear(GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
+        public static Matrix<float> CreateBetaMatrixWithLinear(GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction = null)
         {
             if (ControlPoints == null)
                 throw new ArgumentNullException(nameof(ControlPoints));
-
-            if (BasisFunction == null)
-                throw new ArgumentNullException(nameof(BasisFunction));
 
             int NumPts = ControlPoints.Length;
 
