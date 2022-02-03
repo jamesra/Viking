@@ -270,12 +270,12 @@ namespace WebAnnotation
         bool IInitExtensions.Initialize()
         {
 #if DEBUG
-//           return false;
-#endif
+            //           return false;
+#endif 
+            AnnotationService.Types.Settings.PrepareSerializers();
             //Find the server hosting the volume.  Look for an XML file mapping the volume to an endpoint.
             //return true; 
-            
-            
+
 
             Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
 
