@@ -99,7 +99,7 @@ namespace WebAnnotation.UI.Commands
             parent.OnSectionChanged += this.OnSectionChanged;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             ResetCommandVolumeOrigin(OriginalVolumePosition);
-            ScaleOrigin = GridVector2.Zero;
+            ScaleOrigin = OriginalVolumePosition;
         }
 
         protected void OnSectionChanged(object sender, Viking.Common.SectionChangedEventArgs e)
