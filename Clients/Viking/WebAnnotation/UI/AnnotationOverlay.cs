@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.Common;
@@ -1694,16 +1695,22 @@ namespace WebAnnotation
             LastVisibleWorldBounds = scene.VisibleWorldBounds;
         }
 
-        protected void LoadSectionAnnotations()
+        private readonly SemaphoreSlim LoadSectionAnnotationsSemaphore = new SemaphoreSlim(1);
+        protected async Task LoadSectionAnnotations()
         {
-            if (Parent.Scene == null)
+            if (Parent.Scene is null)
                 return;
 
-            int StartingSectionNumber = _Parent.Section.Number;
-            SectionAnnotationsView SectionAnnotations;
-
-            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number);
-            SectionAnnotations.LoadAnnotationsInRegion(Parent.Scene);
+            try
+            {
+                await LoadSectionAnnotationsSemaphore.WaitAsync();
+                var sectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number);
+                sectionAnnotations?.LoadAnnotationsInRegion(Parent.Scene);
+            }
+            finally
+            {
+                LoadSectionAnnotationsSemaphore.Release();
+            }
             //SectionAnnotationsView.LoadSectionAnnotations(SectionAnnotations, false);
         }
 
