@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -63,7 +64,7 @@ namespace MonogameTestbed
         /// </summary>
         Scene screen_space_scene;
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
@@ -91,6 +92,8 @@ namespace MonogameTestbed
             }
 
             this._initialized = true;
+
+            return Task.CompletedTask;
         }
 
         private void LayoutButtons()

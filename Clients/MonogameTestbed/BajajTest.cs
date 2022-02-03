@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using TriangleNet;
 using TriangleNet.Meshing;
 using VikingXNA;
@@ -173,10 +174,9 @@ namespace MonogameTestbed
 
             Polygons = topology.Polygons;
             PolyZ = topology.PolyZ;
-
+            
             //Create our mesh with only the verticies
-
-            PolyViews = new PolygonSetView(Polygons)
+            PolyViews = new PolygonSetView(Polygons, PolygonSetView.DefaultColorMapping)
             {
                 PointLabelType = IndexLabelType.MESH
             };
@@ -288,7 +288,7 @@ namespace MonogameTestbed
                 triView.TranslationVector = VertexPositionAverage;
 
                 //Create our mesh with only the verticies
-                PolyViews = new PolygonSetView(Polygons, 2)
+                PolyViews = new PolygonSetView(Polygons, PolygonSetView.DefaultColorMapping, 2)
                 {
                     PointLabelType = IndexLabelType.MESH
                 };
@@ -1317,7 +1317,7 @@ namespace MonogameTestbed
         readonly AnnotationVizLib.MorphologyGraph Graph;
 
 
-        public async void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -1378,7 +1378,7 @@ namespace MonogameTestbed
             GridBox bbox = new GridBox(wrapView.Polygons.BoundingBox(), Graph.Nodes.Values.Min(n => n.Z), Graph.Nodes.Values.Max(n => n.Z));
             scene3D.Camera.Position = (bbox.CenterPoint.XY().ToGridVector3(0) + new GridVector3(0, 0, 10f * (float)bbox.Depth)).ToXNAVector3();
             scene3D.Camera.LookAt = new Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0); // bbox.CenterPoint.ToXNAVector3();
-            
+
             /*
             A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
             B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
@@ -1392,6 +1392,8 @@ namespace MonogameTestbed
 
             wrapView = new TriangulationShapeWrapView(A, B);
             */
+
+            return Task.CompletedTask;
         }
 
         public void Update()

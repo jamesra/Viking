@@ -7,6 +7,7 @@ using RoundLineCode;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -80,7 +81,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Test to run at startup
         /// </summary>
-        TestMode Mode = TestMode.BAJAJMULTITEST;
+        private TestMode Mode = TestMode.BAJAJMULTITEST;
 
         LabelView testLabel = null;
 
@@ -96,8 +97,11 @@ namespace MonogameTestbed
 
         SpriteFont ILabelRenderInfo.font => this.fontArial;
 
+        private const int desired_screen_width = 1600;
+        private const int desired_screen_height = 1200;
+
         public MonoTestbed()
-        { 
+        {
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
             graphics = new GraphicsDeviceManager(this);
             VikingXNAGraphics.Global.Content = this.Content;
@@ -107,8 +111,8 @@ namespace MonogameTestbed
 
         private void graphics_PreparingDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
         {  
-            graphics.PreferredBackBufferWidth = 1600;
-            graphics.PreferredBackBufferHeight = 1200;
+            graphics.PreferredBackBufferWidth = desired_screen_width;
+            graphics.PreferredBackBufferHeight = desired_screen_height;
             graphics.PreferMultiSampling = true;
             graphics.GraphicsProfile = GraphicsProfile.HiDef;
             graphics.SynchronizeWithVerticalRetrace = true;
@@ -129,6 +133,9 @@ namespace MonogameTestbed
             base.Initialize();
 
             Window.AllowUserResizing = true;
+            this.Window.Title = "Monogame testbed";
+            this.Window.AllowUserResizing = true;
+            this.Window.Position = new Point(-desired_screen_width, 0);
 
             this.IsMouseVisible = true;
         }
@@ -324,14 +331,12 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            
             if (!listTests[Mode].Initialized)
             {
                 listTests[Mode].Init(this);
                 testLabel = new LabelView(listTests[Mode].Title, this.Scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.CenterRight);
                 Debug.Assert(listTests[Mode].Initialized);
             }
-
 
             listTests[Mode].Update();
             Window.Title = listTests[Mode].Title;
@@ -429,10 +434,12 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
             labelTexture = CreateTextureForLabel("The quick brown fox jumps over the lazy dog", window.GraphicsDevice, window.spriteBatch, window.fontArial);
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -533,7 +540,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -546,6 +553,7 @@ namespace MonogameTestbed
             curveViewCatmull = new CurveView(cpsCatmull, Color.Red, true);
             leftCatmullCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cpsCatmull, Color.Black, true);
             rightCatmullCurveLabel = new CurveLabel("C 1485", cpsCatmull, Color.PaleGoldenrod, true);
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -631,13 +639,14 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
             GridVector2[] cps = CreateTestCurve3(0, 100);
             curveLabel = new CurveLabel("CurveLabel", cps, Color.Black, false);
             labelView = new LabelView("LabelView", new GridVector2(0, 0));
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -705,7 +714,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -730,6 +739,8 @@ namespace MonogameTestbed
 
                 listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-100, 0), anchor: Anchor.CenterRight));
             }
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -766,7 +777,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -792,6 +803,7 @@ namespace MonogameTestbed
 
                 listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-25, 10)));
             }
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -826,13 +838,15 @@ namespace MonogameTestbed
         bool _initialized = false; 
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
             GridVector2[] cps = CreateTestCurve(90, 190);
             curveView = new CurveView(cps, Color.Red, true, 10, lineWidth: 64, controlPointRadius: 16, lineStyle: LineStyle.HalfTube);
             curveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, true);
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)

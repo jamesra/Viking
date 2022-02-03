@@ -17,24 +17,26 @@ using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
-    enum PolygonIntersectionTestDataSource
+    enum PolygonGeneratorTestDataSource
     {
         JSON_POLYGON_INTERSECTION,
         FS_CHECK,
         JSON_FILE
     }
 
-    public class PolygonIntersectionView
+    public class PolygonGeneratorView
     {
         readonly PolygonSetView PolygonsView = null;
          
 
-        public PolygonIntersectionView(GridPolygon[] polygons)
+        public PolygonGeneratorView(GridPolygon polygon)
         {
-            PolygonsView = new PolygonSetView(polygons, PolygonSetView.DefaultColorMapping)
+            /*
+            PolygonsView = new PolygonSetView(polygon, PolygonSetView.DefaultColorMapping)
             {
                 PointLabelType = IndexLabelType.POLYGON | IndexLabelType.POSITION
             };
+            */
         }
 
         public void Draw(MonoTestbed window, Scene scene)
@@ -46,19 +48,22 @@ namespace MonogameTestbed
         }
     }
 
-    public class PolygonIntersectionTest : IGraphicsTest
+    /// <summary>
+    /// Tests the polygon generator used for various other tests
+    /// </summary>
+    public class PolygonGeneratorTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
-        private string JSONFile = "PolygonIntersectionRepro.json";
+        private string JSONFile = "PolygonGeneratorRepro.json";
 
         Scene scene;
         readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
         readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
         //readonly PolygonIntersectionTestDataSource TestType = PolygonIntersectionTestDataSource.FS_CHECK;
-        readonly PolygonIntersectionTestDataSource TestType = PolygonIntersectionTestDataSource.JSON_FILE;
+        readonly PolygonGeneratorTestDataSource TestType = PolygonGeneratorTestDataSource.FS_CHECK;
         //readonly PolygonIntersectionTestDataType TestType = PolygonIntersectionTestDataType.JSON_POLYGON_INTERSECTION;
 
         Task TestTask = null;
@@ -82,47 +87,44 @@ namespace MonogameTestbed
 
         private async Task PopulateTestTask()
         {
+            /*
             GridRectangle rect = new GridRectangle(GridVector2.Zero, 50);
-            GridPolygon[] polygons = Array.Empty<GridPolygon>();
-            if (TestType == PolygonIntersectionTestDataSource.JSON_POLYGON_INTERSECTION)
-            {
-                polygons = PolygonIntersections1.Select(s => GeometryJSONExtensions.PolygonFromJSON(s)).ToArray();
-                 
-                //FirstTriangulationDone = true;  
-                
-            }
-            else if (TestType == PolygonIntersectionTestDataSource.FS_CHECK)
+            GridVector2[] points = Array.Empty<GridVector2>();
+            int nLines = 0;
+            if (TestType == PolygonGeneratorTestDataSource.FS_CHECK)
             {
                 TestTask = Task.Run(() => {
                     GeometryTests.GridPolygonTest.TestPolygonGeneratorUnderpinnings(this.OnPolygonUpdate);
-                }); 
+                });
             }
-            else if (TestType == PolygonIntersectionTestDataSource.JSON_FILE)
+            else if (TestType == PolygonGeneratorTestDataSource.JSON_FILE)
             {
                 FileInfo finfo = new FileInfo(JSONFile);
                 if (finfo.Exists == false)
                     throw new ArgumentException($"Input file {JSONFile} not found");
 
                 string json = System.IO.File.ReadAllText(JSONFile);
-                polygons = GeometryJSONExtensions.PolygonsFromJSON(json);
+                points = GeometryJSONExtensions.PolygonFromJSON(json);
+                nLines = 
             }
 
-            if (polygons != null && polygons.Length > 0)
+            if (points != null && points.Length > 0)
             { 
-                rect = polygons.BoundingBox();
+                rect = points.BoundingBox();
                 scene.Camera.LookAt = rect.Center.ToXNAVector2();
                 scene.Camera.Downsample = Math.Max(rect.Height, rect.Width) / Math.Min(scene.Viewport.Height, scene.Viewport.Width);
 
-                polygonSetView = new PolygonIntersectionView(polygons);
+                polygonSetView = new PolygonGeneratorView(polygons);
 
                 TestTask = Task.Run(() => {
                     polygonSetView = new PolygonIntersectionView(polygons);
-                    var result = GridPolygonTest.AssessPolygonIntersectionAndCorrespondancePoints(polygons[0], polygons[1], OnPolygonUpdate);
+                    var result = GridPolygonTest.AssessPolygonGeneration(polygons[0], polygons[1], OnPolygonUpdate);
                     result.VerboseCheckThrowOnFailure();
                 });
             }
 
             await TestTask;
+            */
         }
 
 

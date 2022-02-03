@@ -2,6 +2,7 @@
 using Geometry.JSON;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System.Threading.Tasks;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -37,7 +38,7 @@ namespace MonogameTestbed
 
         public string Title => this.GetType().Name;
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -53,7 +54,7 @@ namespace MonogameTestbed
             cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
-
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)

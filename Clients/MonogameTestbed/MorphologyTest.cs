@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -104,7 +105,7 @@ namespace MonogameTestbed
 
         };
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -159,6 +160,7 @@ namespace MonogameTestbed
             {
                 meshView.models.Add(mesh.ToVertexPositionNormalColorMeshModel(new Color((float)r.NextDouble(), (float)r.NextDouble(), (float)r.NextDouble())));
             }
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)

@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Input;
 using MorphologyMesh;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -112,7 +113,7 @@ namespace MonogameTestbed
             return mesh;
         }*/
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
             this.Scene = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D());
@@ -191,6 +192,8 @@ namespace MonogameTestbed
             meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(new GridVector3(0, 0, 0)));
             
             labelCamera = new LabelView("", new GridVector2(39950, 0));
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)

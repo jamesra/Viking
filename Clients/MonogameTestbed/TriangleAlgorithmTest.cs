@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System.Threading.Tasks;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -29,7 +30,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -44,6 +45,8 @@ namespace MonogameTestbed
             PolyBorderView.DelaunayView.color = Color.Gray;
             PolyBorderView.BoundaryView.color = Color.Yellow;
             PolyBorderView.VoronoiView.color = Color.DarkRed;
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)

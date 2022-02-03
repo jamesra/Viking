@@ -179,7 +179,7 @@ namespace MonogameTestbed
          
         Task TestTask = null;
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             GeometryTests.FSCheck.TriangulatedMeshGenerators.OnProgress = this.OnTriangulationProgress;
             Points_X_View.LabelColor = Color.Gold;
@@ -213,6 +213,8 @@ namespace MonogameTestbed
             cursorLabel = new LabelView(Cursor.ToLabel(), Cursor);
 
             ResetTestTask();
+
+            return Task.CompletedTask;
         }
 
         private void ResetTestTask()

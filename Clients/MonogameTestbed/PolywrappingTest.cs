@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using TriangleNet;
 using TriangleNet.Meshing;
 using VikingXNA;
@@ -63,7 +64,7 @@ namespace MonogameTestbed
             this.ZLevels = Z; 
             this.Color = Color.Blue;
 
-            PolyViews = new PolygonSetView(Polys); 
+            PolyViews = new PolygonSetView(Polys, PolygonSetView.DefaultColorMapping); 
 
             UpdateWrapping();
         }
@@ -439,7 +440,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
          
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -463,7 +464,9 @@ namespace MonogameTestbed
 
             //wrapView = new TriangulationShapeWrapView(A, B);
             //wrapView = new TriangulationShapeWrapView(StandardModels.SharedModelPolygons[0], StandardModels.SharedModelPolygons[1]);
-            wrapView = new MeshMergeIncrementalView(StandardModels.SharedModelPolygons, StandardModels.SharedModelEdges, StandardModels.SharedModelZ); 
+            wrapView = new MeshMergeIncrementalView(StandardModels.SharedModelPolygons, StandardModels.SharedModelEdges, StandardModels.SharedModelZ);
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)

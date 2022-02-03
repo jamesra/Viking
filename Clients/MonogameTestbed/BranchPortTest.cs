@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -237,7 +238,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -268,6 +269,7 @@ namespace MonogameTestbed
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
             UpdateCursorViews(Cursor);
+            return Task.CompletedTask;
         }
         public void UnloadContent(MonoTestbed window)
         {

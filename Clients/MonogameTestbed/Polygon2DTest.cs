@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using VikingXNAGraphics;
 
 namespace MonogameTestbed
@@ -45,7 +46,7 @@ namespace MonogameTestbed
 
         VikingXNAGraphics.MeshView<VertexPositionColor> meshView;
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true; 
             GridVector2[] cps = CreateTestPolygon(new GridVector2(-50, 0));
@@ -86,6 +87,8 @@ namespace MonogameTestbed
             this.meshView.models.Add(circle_cv_model3);
 
             meshView.WireFrame = false;
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
