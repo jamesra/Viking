@@ -53,6 +53,11 @@ namespace MorphologyMesh
         readonly MorphologyGraph Graph;
 
         /// <summary>
+        /// Polygons with an area below this we do not bother to render in the slice graph
+        /// </summary>
+        static readonly double MinAnnotationArea = 0.25;
+
+        /// <summary>
         /// Caches the shape of each morphology node in the slice graph.  After corresponding verticies are added this cache is used to ensures each section will get the same input shapes
         /// The map can also be used to support simplifying shapes.
         /// </summary>
@@ -399,7 +404,7 @@ namespace MorphologyMesh
                             Task<IShape2D> t = new Task<IShape2D>((node_) => 
                             {
                                 var poly = ((MorphologyNode)node_).Geometry.ToPolygon();
-                                if (poly.BoundingBox.Area < Global.MinAnnotationArea)
+                                if (poly.BoundingBox.Area < MinAnnotationArea)
                                     return null;
 
                                 return poly.Translate(translationToCenter).Simplify(tolerance);
