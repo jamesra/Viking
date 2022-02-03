@@ -880,7 +880,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return a list of lines the passed line intersects and the intersection points
+        /// Return the list line pairs that intersect between the two sets of lines
         /// </summary>
         /// <param name="line">Line we are checking</param>
         /// <param name="lines">Lines we are testing for intersection</param>
@@ -1415,16 +1415,16 @@ namespace Geometry
                 if (A is GridPolygon polyA && B is GridPolygon polyB)
                 {
                     var newAIntersections = polyA.AddPointsAtIntersections(polyB);
-                    
+
                     //var newBIntersections = polyB.AddPointsAtIntersections(polyA);
                     added_intersections.AddRange(newAIntersections.Union(newAIntersections).Distinct()); 
-                } 
+                }
                 else if(A is GridPolyline lineA && B is GridPolyline lineB)
                 {
                     var newAIntersections = lineA.AddPointsAtIntersections(lineB);
                     //var newBIntersections = lineB.AddPointsAtIntersections(lineA);
                     added_intersections.AddRange(newAIntersections);
-                } 
+                }
                 else
                 {
                     throw new NotImplementedException("Corresponding points for polygons and polylines not implemented yet.");
