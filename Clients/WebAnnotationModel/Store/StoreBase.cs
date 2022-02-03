@@ -171,7 +171,7 @@ namespace WebAnnotationModel
         protected void InvokeEventAction(Action a, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
 #if DEBUG
-            System.Diagnostics.Trace.WriteLine(string.Format("{0}.{1} Invoking Event Action", this.GetType().FullName, memberName));
+            //System.Diagnostics.Trace.WriteLine(string.Format("{0}.{1} Invoking Event Action", this.GetType().FullName, memberName));
 #endif
             if (State.UseAsynchEvents)
             {
