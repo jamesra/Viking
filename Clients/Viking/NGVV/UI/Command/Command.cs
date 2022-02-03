@@ -580,8 +580,6 @@ namespace Viking.UI.Commands
                 //    Trace.WriteLine("Angle changed " + angle.ToString() + " to " + control.CameraRotation.ToString(), "Command"); 
 
                 Parent.Camera.Rotation += angle;
-
-                this.Parent.Invalidate();
             }
 
             SaveAsOldMousePosition(e);            
