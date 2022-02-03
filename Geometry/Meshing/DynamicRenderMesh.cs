@@ -53,10 +53,8 @@ namespace Geometry.Meshing
             GridVector3 minCorner = BoundingBox.MinCorner;
             GridVector3 scaledCorner = minCorner.Scale(scalar);
 
-            this._Verticies.ForEach(v => v.Position = v.Position.Scale(scalar));
-            BoundingBox.Scale(scalar);
-
-            BoundingBox = new GridBox(scaledCorner, BoundingBox.dimensions);
+            this._Verticies.ForEach(v => v.Position = v.Position.Scale(scalar)); 
+            BoundingBox = new GridBox(scaledCorner, BoundingBox.Scale(scalar).dimensions);
 
             ValidateBoundingBox();
         }
@@ -75,22 +73,22 @@ namespace Geometry.Meshing
 
         protected override void UpdateBoundingBox(VERTEX v)
         {
-            if (BoundingBox == null)
+            if (BoundingBox.minVals == null)
                 BoundingBox = new GridBox(v.Position, 0);
             else
             {
-                BoundingBox.Union(v.Position);
+                BoundingBox = BoundingBox.Union(v.Position, out _);
             }
         }
 
         protected override void UpdateBoundingBox(IEnumerable<VERTEX> verts)
         {
             GridVector3[] points = verts.Select(v => v.Position).ToArray();
-            if (BoundingBox == null)
+            if (BoundingBox.minVals == null)
                 BoundingBox = points.BoundingBox();
             else
             {
-                BoundingBox.Union(points);
+                BoundingBox = BoundingBox.Union(points, out _);
             }
         }
 

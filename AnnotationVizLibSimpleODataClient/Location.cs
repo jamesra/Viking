@@ -118,16 +118,16 @@ namespace AnnotationVizLib.SimpleOData
             }
         }
 
-        GridBox _BoundingBox = null;
+        GridBox _BoundingBox = default;
         public GridBox BoundingBox
         {
             get
             {
 
                 if (VolumeShape == null)
-                    return null;
+                    return default;
 
-                if (_BoundingBox == null)
+                if (_BoundingBox == default)
                 {
                     GridRectangle bound_rect = VolumeShape.BoundingBox();
                     _BoundingBox = new GridBox(bound_rect, Z - (scale.Z.Value / 2.0), Z + (scale.Z.Value / 2.0));

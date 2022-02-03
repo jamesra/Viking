@@ -159,7 +159,7 @@ namespace AnnotationVizLib
             while (found_nodes.Count < 8 && found_nodes.Count != rtree.Count)
             {
                 GridBox bbox = shape_to_check.BoundingBox;
-                bbox.Scale(scale_factor);
+                bbox = bbox.Scale(scale_factor);
                 found_nodes = rtree.Intersects(bbox.ToRTreeRect()).ToList();
                 scale_factor *= 2.0;
             }

@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using MorphologyMesh;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using VikingXNAGraphics;
@@ -51,7 +52,11 @@ namespace MonogameTestbed
             //AssemblyPlannerLeaf[] firstLayer = sliceGraph.Nodes.Keys.OrderBy(k => k).Select(k => new AssemblyPlannerLeaf(k)).ToArray();
             AssemblyPlannerLeaf[] firstLayer = sliceGraph.Nodes.Keys.OrderBy(k => {
                                                                                 SliceTopology t = sliceGraph.GetTopology(k);
-                                                                                return t.PolyZ != null ? t.PolyZ.Average() : -1;
+                                                                                return t.PolyZ != null ? 
+                                                                                    t.PolyZ.Length > 0 ? 
+                                                                                        Math.Round(t.PolyZ.Average()) 
+                                                                                        : -1
+                                                                                    : -1;
                                                                             }).Select(k => new AssemblyPlannerLeaf(k, sliceGraph.BoundingBox.CenterPoint)).ToArray();
             Nodes = new Dictionary<ulong, IAssemblyPlannerNode>(sliceGraph.Nodes.Count * 2);
             Slices = new SortedList<ulong, AssemblyPlannerLeaf>(firstLayer.Length);
@@ -692,8 +697,7 @@ namespace MonogameTestbed
                 if (node.Depth > 0)
                 {
                     //For branches we scale the bounding box visual a bit to prevent overdrawing the leaf bounding box
-                    bbox = bbox.Clone();
-                    bbox.Scale(new GridVector3(1.02, 1.02, 1));
+                    bbox = bbox.Scale(new GridVector3(1.02, 1.02, 1));
                 }
 
                 //We have a bounding box from the cache, now build the mesh
@@ -714,42 +718,67 @@ namespace MonogameTestbed
         /// <param name="plan"></param>
         /// <param name="sliceGraph"></param>
         /// <returns></returns>
-        private GridBox CalculateAllBoundingBoxes(MeshAssemblyPlanner plan, SliceGraph sliceGraph)
+        private GridBox? CalculateAllBoundingBoxes(MeshAssemblyPlanner plan, SliceGraph sliceGraph)
         {
             return CalculateBoundingBox(plan.Root, sliceGraph); //Populate our bounding boxes from the root on down
         }
 
-        private GridBox CalculateBoundingBox(IAssemblyPlannerNode node, SliceGraph sliceGraph)
+        private GridBox? CalculateBoundingBox(IAssemblyPlannerNode node, SliceGraph sliceGraph)
         {
             IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
             if(branch != null)
             {
-                GridBox bbox = null;
+                GridBox? lbox = default;
+                GridBox? rbox = default;
+
                 if(branch.Left != null)
                 {
-                    bbox = CalculateBoundingBox(branch.Left, sliceGraph);
+                    lbox = CalculateBoundingBox(branch.Left, sliceGraph);
                 }
 
-                if(branch.Right != null)
+                if (branch.Right != null)
                 {
-                    if (bbox == null) //We don't have a bbox from the left branch
-                        bbox = CalculateBoundingBox(branch.Right, sliceGraph);
-                    else
-                    {
-                        bbox.Union(CalculateBoundingBox(branch.Right, sliceGraph));
-                    }
+                    rbox = CalculateBoundingBox(branch.Right, sliceGraph);
                 }
 
-                NodeBoundingBox[branch.Key] = bbox;
-                return bbox; 
+                GridBox result = default;
+                if (lbox.HasValue && rbox.HasValue)
+                {
+                    result = lbox.Value.Union(rbox.Value, out _);
+                }
+                else if(lbox.HasValue)
+                {
+                    result = lbox.Value;
+                }
+                else if(rbox.HasValue)
+                {
+                    result = rbox.Value;
+                }
+                else
+                {
+                    throw new ArgumentException($"Both branches have no bounding box");
+                }
+                  
+                NodeBoundingBox[branch.Key] = result;
+                return result; 
             }
             else //Is a leaf
             {
                 var topology = sliceGraph.GetTopology(node.Key);
-                GridRectangle boundingRect = topology.Polygons.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
-                GridBox bbox = new GridBox(boundingRect, topology.PolyZ.Min(), topology.PolyZ.Max());
-                NodeBoundingBox[node.Key] = bbox;
-                return bbox;
+                if (topology.Polygons is null)
+                {
+                    Debug.Assert(topology.Polygons != null, "Expected topology for node");
+                    NodeBoundingBox[node.Key] = default;
+                    return default;
+                }
+                else
+                {
+                    GridRectangle boundingRect = topology.Polygons.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
+                    GridBox bbox = new GridBox(boundingRect, topology.PolyZ.Min(), topology.PolyZ.Max());
+                    NodeBoundingBox[node.Key] = bbox;
+                    return bbox;
+                }
+
             }
         }
     }

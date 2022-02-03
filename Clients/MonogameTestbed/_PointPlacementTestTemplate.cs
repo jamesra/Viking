@@ -34,7 +34,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
         
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
