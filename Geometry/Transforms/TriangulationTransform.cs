@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Geometry.Transforms
 {
@@ -112,7 +113,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public bool CanTransform(GridVector2 Point)
+        public override bool CanTransform(GridVector2 Point)
         {
             return GetTransform(Point) != null;
         }
@@ -122,7 +123,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public GridVector2 Transform(GridVector2 Point)
+        public override GridVector2 Transform(GridVector2 Point)
         {
             MappingGridTriangle t = GetTransform(Point);
             if (t == null)
@@ -138,7 +139,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public GridVector2[] Transform(GridVector2[] Points)
+        public override GridVector2[] Transform(GridVector2[] Points)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetTransform(Point)).ToArray();
             return Points.Select(p =>
@@ -160,7 +161,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public bool TryTransform(GridVector2 Point, out GridVector2 v)
+        public override bool TryTransform(GridVector2 Point, out GridVector2 v)
         {
             v = new GridVector2();
             MappingGridTriangle t = GetTransform(Point);
@@ -179,7 +180,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public bool[] TryTransform(GridVector2[] Points, out GridVector2[] output)
+        public override bool[] TryTransform(GridVector2[] Points, out GridVector2[] output)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetTransform(Point)).ToArray();
             bool[] IsTransformed = triangles.Select(t => t != null).ToArray();
@@ -209,7 +210,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public bool CanInverseTransform(GridVector2 Point)
+        public override bool CanInverseTransform(GridVector2 Point)
         {
             return GetInverseTransform(Point) != null;
         }
@@ -219,7 +220,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public GridVector2 InverseTransform(GridVector2 Point)
+        public override GridVector2 InverseTransform(GridVector2 Point)
         {
             MappingGridTriangle t = GetInverseTransform(Point);
             if (t == null)
@@ -235,7 +236,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public GridVector2[] InverseTransform(GridVector2[] Points)
+        public override GridVector2[] InverseTransform(GridVector2[] Points)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetInverseTransform(Point)).ToArray();
             return Points.Select(p =>
@@ -257,7 +258,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
+        public override bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
         {
             v = new GridVector2();
             MappingGridTriangle t = GetInverseTransform(Point);
@@ -276,7 +277,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] output)
+        public override bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] output)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetInverseTransform(Point)).ToArray();
             bool[] IsTransformed = triangles.Select(t => t != null).ToArray();
@@ -656,7 +657,7 @@ namespace Geometry.Transforms
         /// Takes two transforms and transforms the control grid of this section into the control grid space of the passed transfrom. Requires control section
         /// of this transform to match mapped section of adding transform
         /// </summary>
-        public static TriangulationTransform Transform(ITransform BtoC, IControlPointTriangulation AtoB, TransformBasicInfo info)
+        public static ITransformControlPoints Transform(ITransform BtoC, IControlPointTriangulation AtoB, TransformBasicInfo info)
         {
             if (BtoC is null)
                 throw new ArgumentNullException(nameof(BtoC),"TriangulationTransform Transform");
@@ -819,7 +820,7 @@ namespace Geometry.Transforms
                 return null;
             }
 
-            TriangulationTransform newTransform = null;
+            ITransformControlPoints newTransform = null;
 
             //If we started with a grid transform and all the control points mapped then we can create a new grid transform
             if (AtoB is GridTransform gridTransform && AllPointsTransformed)
@@ -835,47 +836,54 @@ namespace Geometry.Transforms
             }
 
             //Optional, but useful step. In rare cases we lose some mappable space when the fixed transform are inside the control space of the mapped transform, but the triangulation of the mapped control points would eliminate these points
-            //in these cases we can test if they can be added back in. 
-            /*
+            //in these cases we can test if they can be added back in.
+            
             System.Collections.Concurrent.ConcurrentBag<MappingGridVector2> MappableFixedPoints = new System.Collections.Concurrent.ConcurrentBag<MappingGridVector2>();
-            Parallel.ForEach<MappingGridVector2>(BtoC.MapPoints, FixedPointPair =>
-            {
-                if (!newTransform.CanInverseTransform(FixedPointPair.ControlPoint) &&
-                    AtoB.CanInverseTransform(FixedPointPair.MappedPoint))
-                {
-                    GridVector2 NewMapPoint = AtoB.InverseTransform(FixedPointPair.MappedPoint);
 
-                    MappableFixedPoints.Add(new MappingGridVector2(FixedPointPair.ControlPoint, NewMapPoint));
-                    
-                }
-            }
-            );
-
-            if (MappableFixedPoints.Count > 0)
+            if (BtoC is ITransformControlPoints BtoCTriTransform)
             {
-                foreach (MappingGridVector2 newPoint in MappableFixedPoints)
+                //We only check for points on the convex hull, this eliminates losing mappable area, but may not retain high warp correction areas.
+                var BtoC_ControlPoints = BtoCTriTransform.MapPoints.Select(mp => mp.ControlPoint).ToArray();
+                var BtoC_ConvexHullControlPoints = BtoC_ControlPoints.ConvexHull(out var originalIndicies);
+                var BtoC_PointsOfConcern = originalIndicies.Select(i => BtoCTriTransform.MapPoints[i]).ToArray();
+
+                Parallel.ForEach<MappingGridVector2>(BtoC_PointsOfConcern, FixedPointPair =>
                 {
-                    bool add = true; 
-                    foreach (MappingGridVector2 oldPoint in newPoints)
+                    if (!newTransform.CanInverseTransform(FixedPointPair.ControlPoint) &&
+                        AtoB.CanInverseTransform(FixedPointPair.MappedPoint))
                     {
-                        if (newPoint.ControlPoint == oldPoint.ControlPoint ||
-                           newPoint.MappedPoint == oldPoint.MappedPoint)
+                        GridVector2 NewMapPoint = AtoB.InverseTransform(FixedPointPair.MappedPoint); 
+                        MappableFixedPoints.Add(new MappingGridVector2(FixedPointPair.ControlPoint, NewMapPoint)); 
+                    }
+                }
+                );
+
+                if (MappableFixedPoints.Count > 0)
+                {
+                    foreach (MappingGridVector2 newPoint in MappableFixedPoints)
+                    {
+                        bool add = true;
+                        foreach (MappingGridVector2 oldPoint in newPoints)
                         {
-                            add = false;
-                            break;
+                            if (newPoint.ControlPoint == oldPoint.ControlPoint ||
+                                newPoint.MappedPoint == oldPoint.MappedPoint)
+                            {
+                                add = false;
+                                break;
+                            }
+                        }
+
+                        if (add)
+                        {
+                            newPoints.Add(newPoint);
                         }
                     }
-                    
-                    if(add)
-                    {
-                        newPoints.Add(newPoint);
-                    }
-                }
 
-                //MappingGridVector2.RemoveDuplicates(newPoints);
-                newTransform = new MeshTransform(newPoints.ToArray(), info);
+                    //MappingGridVector2.RemoveDuplicates(newPoints);
+                    newTransform = new MeshTransform(newPoints.ToArray(), info);
+                }
             }
-            */
+             
             /*
              
             //            Trace.WriteLine("Ended with " + newPoints.Count + " points", "Geometry");

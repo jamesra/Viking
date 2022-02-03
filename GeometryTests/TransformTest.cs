@@ -3,6 +3,7 @@ using Geometry.Transforms;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace GeometryTests
 {
@@ -101,15 +102,19 @@ namespace GeometryTests
             MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
             MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
-            TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
+            ITransformControlPoints result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Assert.IsTrue(newPoints.Length == 4);
-            Assert.IsTrue(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
-            Assert.IsTrue(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
-            Assert.IsTrue(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
-            Assert.IsTrue(newPoints[3].ControlPoint.X == 2.5 && newPoints[3].ControlPoint.Y == 2.5);
+            MappingGridVector2[] ExpectedControlPoints = new MappingGridVector2[]
+            {
+                new MappingGridVector2(new GridVector2(2.5, 2.5), new GridVector2(2.5, 2.5)),
+                new MappingGridVector2(new GridVector2(2.5, 0), new GridVector2(2.5, 0)),
+                new MappingGridVector2( new GridVector2(0, 2.5), new GridVector2(0, 2.5)),
+                new MappingGridVector2( GridVector2.Zero, GridVector2.Zero)
+            };
+             
+            Assert.IsTrue(ExpectedControlPoints.SetEquals(newPoints)); 
         }
 
         [TestMethod]
@@ -143,15 +148,19 @@ namespace GeometryTests
             MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
             MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
-            TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
+            var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Assert.IsTrue(newPoints.Length == 4);
-            Assert.IsTrue(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
-            Assert.IsTrue(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
-            Assert.IsTrue(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
-            Assert.IsTrue(newPoints[3].ControlPoint.X == 2.5 && newPoints[3].ControlPoint.Y == 2.5);
+            MappingGridVector2[] ExpectedControlPoints = new MappingGridVector2[]
+            {
+                new MappingGridVector2(new GridVector2(2.5, 2.5), new GridVector2(2.5, 2.5)),
+                new MappingGridVector2(new GridVector2(2.5, 0), new GridVector2(2.5, 0)),
+                new MappingGridVector2( new GridVector2(0, 2.5), new GridVector2(0, 2.5)),
+                new MappingGridVector2( GridVector2.Zero, GridVector2.Zero)
+            };
+             
+            Assert.IsTrue(ExpectedControlPoints.SetEquals(newPoints));
         }
 
         [TestMethod]
@@ -189,7 +198,7 @@ namespace GeometryTests
             MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
             MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
-            TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
+            var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
@@ -232,18 +241,19 @@ namespace GeometryTests
             MeshTransform fixedTransform = new MeshTransform(fixedPoints, new TransformBasicInfo(DateTime.UtcNow));
             MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
 
-            TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
+            var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Assert.IsTrue(newPoints.Length == 3);
-            Assert.IsTrue(newPoints[0].ControlPoint.X == 2.5 && newPoints[0].ControlPoint.Y == 2.5);
-            Assert.IsTrue(newPoints[1].ControlPoint.X == 2.5 && newPoints[1].ControlPoint.Y == 10);
-            Assert.IsTrue(newPoints[2].ControlPoint.X == 10 && newPoints[2].ControlPoint.Y == 2.5);
+            MappingGridVector2[] ExpectedControlPoints = new MappingGridVector2[]
+            {
+                new MappingGridVector2(new GridVector2(2.5, 2.5), new GridVector2(25, 25)),
+                new MappingGridVector2(new GridVector2(2.5, 10), new GridVector2(25, 100)),
+                new MappingGridVector2( new GridVector2(10, 25), new GridVector2(100, 25)),
+                new MappingGridVector2( new GridVector2(10, 10), new GridVector2(100, 100))
+            };
 
-            Assert.IsTrue(newPoints[0].MappedPoint.X == 25 && newPoints[0].MappedPoint.Y == 25);
-            Assert.IsTrue(newPoints[1].MappedPoint.X == 25 && newPoints[1].MappedPoint.Y == 100);
-            Assert.IsTrue(newPoints[2].MappedPoint.X == 100 && newPoints[2].MappedPoint.Y == 25);
+            Assert.IsTrue(ExpectedControlPoints.SetEquals(newPoints));
         }
 
         [TestMethod]
@@ -310,7 +320,7 @@ namespace GeometryTests
             MeshTransform fixedTransform = new MeshTransform(fixedPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
             MeshTransform movingTransform = new MeshTransform(movingPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
 
-            TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
+            var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
@@ -380,7 +390,7 @@ namespace GeometryTests
             MeshTransform fixedTransform = new MeshTransform(fixedPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
             MeshTransform movingTransform = new MeshTransform(movingPoints.ToArray(), new TransformBasicInfo(DateTime.UtcNow));
 
-            TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
+            var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
@@ -413,17 +423,20 @@ namespace GeometryTests
 
             GridTransform fixedTransform = new GridTransform(fixedPoints, new GridRectangle(fixedV1, 10, 10), 2, 2, new TransformBasicInfo(DateTime.UtcNow));
             MeshTransform movingTransform = new MeshTransform(movingPoints, new TransformBasicInfo(DateTime.UtcNow));
-
-
-
-            TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
+             
+            var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
-            Assert.IsTrue(newPoints[0].ControlPoint.X == 0 && newPoints[0].ControlPoint.Y == 0);
-            Assert.IsTrue(newPoints[1].ControlPoint.X == 0 && newPoints[1].ControlPoint.Y == 2.5);
-            Assert.IsTrue(newPoints[2].ControlPoint.X == 2.5 && newPoints[2].ControlPoint.Y == 0);
-            Assert.IsTrue(newPoints[3].ControlPoint.X == 2.5 && newPoints[3].ControlPoint.Y == 2.5);
+            MappingGridVector2[] ExpectedControlPoints = new MappingGridVector2[]
+            {
+                new MappingGridVector2(new GridVector2(2.5, 2.5), new GridVector2(2.5, 2.5)),
+                new MappingGridVector2(new GridVector2(2.5, 0), new GridVector2(2.5, 0)),
+                new MappingGridVector2( new GridVector2(0, 2.5), new GridVector2(0, 2.5)),
+                new MappingGridVector2( GridVector2.Zero, GridVector2.Zero)
+            };
+             
+            Assert.IsTrue(ExpectedControlPoints.SetEquals(newPoints));
         }
 
         [TestMethod]
@@ -457,7 +470,7 @@ namespace GeometryTests
 
 
 
-            TriangulationTransform result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
+            var result = TriangulationTransform.Transform(fixedTransform, movingTransform, null);
 
             MappingGridVector2[] newPoints = result.MapPoints;
 
