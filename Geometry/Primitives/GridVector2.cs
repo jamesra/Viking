@@ -4,6 +4,31 @@ using System.Linq;
 
 namespace Geometry
 {
+
+    public class MappingGridVector2Comparer : IComparer<MappingGridVector2>
+    {
+        private readonly bool XYOrder;
+        private readonly bool CompareMappedPoints;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="xyOrder">Use XY comparison if true, otherwise YX</param>
+        /// <param name="compareMappedPoints">Compare Mapped Point position if true, otherwise mapped point</param>
+        public MappingGridVector2Comparer(bool xyOrder = true, bool compareMappedPoints = true)
+        {
+            XYOrder = xyOrder;
+            CompareMappedPoints = compareMappedPoints;
+        }
+          
+        public int Compare(MappingGridVector2 A, MappingGridVector2 B)
+        {
+            var pointA = CompareMappedPoints ? A.MappedPoint : A.ControlPoint;
+            var pointB = CompareMappedPoints ? B.MappedPoint : B.ControlPoint;
+            return XYOrder ? GridVectorComparerXY.CompareXY(pointA, pointB) : GridVectorComparerYX.CompareYX(pointA, pointB);
+        }
+    }
+
     public class GridVectorComparer : IComparer<GridVector2>, IComparer<IPoint2D>
     {
         public bool XYOrder;
@@ -296,36 +321,27 @@ namespace Geometry
 
         public override int GetHashCode()
         {
-            ///There have been bugs in the past where two points are within an epsilon distance
-            ///and should be equal, but they will not get the same hash value.
-            ///I believe rounding to a value that is an order of magnitude larger than the epsilon value 
-            ///should fix this... but I'm not feeling 100% certain today.
-            ///If my thinking is incorrec the fix is to 1) Avoid hashing or 2) Stop using epsilon and only use actual values.
-            ///Changing the behavior to 2 may be OK.  It would take a lot of careful testing and time is short
-            ///at the moment.  Hopefully this fixes the issue.
-            double prod = Math.Round(X, Global.SignificantDigits-1) * Math.Round(Y, Global.SignificantDigits-1);
-            double code = Math.Abs(prod);
-            if (code < 1)
-            {
-                return (int)(1.0 / code);
-            }
-            return (int)prod; 
+            //It is not possible to return a hash code for a point because a point can be within an epsilon distance of two other points which generate two 
+            //different hash codes.  The solution is either to throw an exception or return a single value for GetHashCode.
+
+            //throw new InvalidOperationException($"It is not mathematically possible to implement {nameof(GetHashCode)} for a point where equality is epsilon based");
+            return 0;
         }
         
         public override string ToString()
         {
-            return string.Format("X: {0:F2} Y: {1:F2}", X, Y);
+            return $"X: {X:F2} Y: {Y:F2}";
             //return '{' + string.Format("\"X\":{0:F2},\"Y\":{1:F2}", X, Y) + '}';
         }
 
         public string ToJSON()
         {
-            return '{' + string.Format("\"X\":{0:F2},\"Y\":{1:F2}", X, Y) + '}';
+            return '{' + $"\"X\":{X:F2},\"Y\":{Y:F2}" + '}';
         }
 
         public string ToLabel()
         {
-            return string.Format("{0:F2} {1:F2}", X, Y);
+            return $"{X:F2} {Y:F2}";
         }
 
         public static string ToMatlab(GridVector2[] array)
@@ -336,7 +352,7 @@ namespace Geometry
             string s = "[";
             for (int i = 0; i < array.Length; i++)
             {
-                s += array[i].X.ToString() + " " + array[i].Y.ToString() + ";" + System.Environment.NewLine;
+                s += $"{array[i].X} {array[i].Y};{System.Environment.NewLine}";
             }
             s += "]";
 
@@ -348,8 +364,8 @@ namespace Geometry
         public void Normalize()
         {
             double mag = this.Magnitude;
-            X = X / mag;
-            Y = Y / mag; 
+            X /= mag;
+            Y /= mag; 
         }
 
         public static GridVector2 Rotate90(in GridVector2 A)
