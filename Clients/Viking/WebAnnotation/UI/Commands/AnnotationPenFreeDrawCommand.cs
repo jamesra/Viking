@@ -145,7 +145,7 @@ namespace WebAnnotation.UI.Commands
             List<HitTestResult> listFinishHitTestResults = AnnotationOverlay.GetAnnotations(Parent.Section.Number, Finish);
 
             LocationObj loc = Store.Locations.GetObjectByID(Annotation.ID, false);
-            IViewLocation locationLinkCandidate = LinkAnnotationsCommand.FindBestLinkCandidate(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc);
+            IViewLocation locationLinkCandidate = LinkAnnotationsCommand.FindBestLinkCandidate(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc, out var _);
             if (locationLinkCandidate != null)
             {
                 LinkAnnotationsCommand.TryCreateLink(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc);
