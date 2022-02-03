@@ -138,12 +138,12 @@ namespace AnnotationVizLib.OData
             }
         }
 
-        GridBox _BoundingBox = null;
+        GridBox _BoundingBox = default;
         public GridBox BoundingBox
         {
             get
             {
-                if (_BoundingBox == null)
+                if (_BoundingBox == default)
                 {
                     GridRectangle bound_rect = Geometry.BoundingBox();
                     _BoundingBox = new GridBox(bound_rect, Z - scale.Z.Value, Z + scale.Z.Value);

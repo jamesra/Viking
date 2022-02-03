@@ -76,7 +76,7 @@ namespace AnnotationVizLib
         //Call this when the graph has changed any spatial qualities that should reset cached measurements
         protected void ResetCachedMeasurements()
         {
-            _BoundingBox = null;
+            _BoundingBox = default;
         }
 
         public void AddSubgraph(MorphologyGraph subgraph)
@@ -166,13 +166,13 @@ namespace AnnotationVizLib
             }
         }
 
-        private GridBox _BoundingBox = null;
+        private GridBox _BoundingBox = default;
         public Geometry.GridBox BoundingBox
         {
             get
             {
                 const int ParallelThreshold = 64;
-                if (_BoundingBox == null)
+                if (_BoundingBox == default)
                 {
                     if (this.Nodes.Count > 0)
                     {
