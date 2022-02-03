@@ -88,7 +88,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public double FontSize
         {
-            get { return _FontSize; }
+            get => _FontSize;
             set
             {
                 _IsMeasured = _IsMeasured && _FontSize == value;
