@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Geometry
 {
-    internal enum Quadrant : int
+    internal enum Quadrant : System.Int32
     {
         UPPERLEFT = 0,
         UPPERRIGHT = 1,
@@ -120,9 +120,7 @@ namespace Geometry
         /// </summary>
         public T Value;
 
-        public bool IsLeaf =>
-            UpperLeft == null && UpperRight == null &&
-            LowerLeft == null && LowerRight == null;
+        public bool IsLeaf => _quadrants.All(q => q is null);
 
         public bool IsRoot => Parent == null;
 
@@ -220,6 +218,27 @@ namespace Geometry
         }
 
 
+        public IEnumerable<GridVector2> Keys
+        {
+            get
+            {
+                if (this.IsLeaf && this.HasValue)
+                {
+                    yield return this.Point;
+                }
+                else
+                {
+                    foreach (var quad in _quadrants.Where(q => q != null))
+                    {
+                        foreach (var key in quad.Keys)
+                        {
+                            yield return key;
+                        }
+                    }
+                }
+            }
+        }
+
 
         /// <summary>
         /// Inserts a point into the tree.  Returns the new QuadTreeNode the caller should point to as the root of the tree
@@ -229,7 +248,7 @@ namespace Geometry
         public QuadTreeNode<T> Insert(GridVector2 insertingPoint, T value)
         {
             //Trace.WriteLine($"Insert {insertingPoint} in {this}");
-            Debug.Assert((HasBorder && Border.Contains(insertingPoint)) || (this.IsRoot && this.HasValue == false), "QuadNode must contain point for insert to succeed");
+            Debug.Assert((HasBorder && Border.Contains(insertingPoint)) || (this.IsRoot && this.HasValue == false), "QuadNode boundary must contain point for insert to succeed");
             Debug.Assert((HasBorder && HasValue && Border.Contains(Point)) || !IsLeaf || (this.IsRoot && this.HasValue == false), "QuadNode must contain its own point for insert to succeed");
 
             //If we are a leaf node, we need to divide and create new leaf nodes

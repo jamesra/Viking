@@ -166,7 +166,7 @@ namespace Geometry.Meshing
         public static Mesh2D ToDynamicRenderMesh(this ICollection<GridTriangle> triangles)
         {
             Mesh2D mesh = new Meshing.Mesh2D();
-            Dictionary<GridVector2, int> PointToVertexIndex = new Dictionary<GridVector2, int>();
+            QuadTree<int> PointToVertexIndex = new QuadTree<int>();
 
             foreach (GridVector2 v in triangles.SelectMany(tri => tri.Points).Distinct())
             {
