@@ -644,7 +644,7 @@ namespace MorphologyMesh
         /// <param name="output"></param>
         public static void AddTriangulationEdgesToMesh(TriangleNet.Meshing.IMesh triMesh, MorphRenderMesh output)
         {
-            Dictionary<GridVector2, List<PolygonIndex>> pointToPoly = GridPolygon.CreatePointToPolyMap(output.Polygons);
+            var pointToPoly = GridPolygon.CreatePointToPolyMap(output.Polygons);
 
             GridVector2[] vertArray = triMesh.Vertices.Select(v => new GridVector2(v.X, v.Y)).ToArray();
             Dictionary<int, int[]> TriIndexToMeshIndex = new Dictionary<int, int[]>();
