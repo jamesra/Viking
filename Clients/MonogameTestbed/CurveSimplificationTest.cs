@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -69,13 +70,14 @@ namespace MonogameTestbed
             LabelView.Draw(window.spriteBatch, window.fontArial, scene, new LabelView[] { cursorLabel });
         }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
             
-            Gamepad.Update(GamePad.GetState(PlayerIndex.One));
+            Gamepad.Update(GamePad.GetState(PlayerIndex.One)); 
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)

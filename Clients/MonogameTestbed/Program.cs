@@ -64,7 +64,14 @@ namespace MonogameTestbed
                     return Endpoint_uri;
                 }
             }
+
+            /// <summary>
+            /// The output file or path name
+            /// </summary>
+            [Option('o', "output", Required = false, HelpText = "Output file or folder name", Separator = ' ', Default = null)]
+            public string OutputPath { get; set; }
              
+
             private static readonly Regex IntegerRegex = new Regex(@"(\d+)");
             private static readonly Regex IntegerRangeRegex = new Regex(@"(\d+)\-(\d+)");
             private static readonly Regex IntegerOrIntegerRangeRegex = new Regex(@"((\d+)\-(\d+))|(\d+)");

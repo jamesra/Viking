@@ -119,7 +119,7 @@ namespace MonogameTestbed
             var pointEnum = new PolySetVertexEnum(Polygons);
             GridVector2[] point_array = pointEnum.Select(i => i.Point(Polygons)).ToArray();
 
-            Dictionary<GridVector2, int> DuplicatePointsAddedCount = new Dictionary<GridVector2, int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
+            QuadTree<int> DuplicatePointsAddedCount = new QuadTree<int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
             HashSet<GridVector2> KnownPoints = new HashSet<GridVector2>();
             foreach (GridVector2 p in point_array)
             {
@@ -141,12 +141,11 @@ namespace MonogameTestbed
                 listPointLabels.Add(label);
                 label.FontSize = pointradius * 2.0;
 
-                if (DuplicatePointsAddedCount.ContainsKey(point))
+                if (DuplicatePointsAddedCount.Contains(point))
                 {
                     //label.Position = label.Position + label.
                     //label.Position = label.Position + new GridVector2(0, pointradius * (DuplicatePointsAddedCount[point]-1));
-
-                    
+                     
                     string prepended_newlines = "";
                     for (int iLine = 0; iLine < DuplicatePointsAddedCount[point]; iLine++)
                         prepended_newlines += "|\n\r";

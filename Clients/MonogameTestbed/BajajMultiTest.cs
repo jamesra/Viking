@@ -503,7 +503,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
          
-        public void Init(MonoTestbed window)
+        public async Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -604,7 +604,8 @@ namespace MonogameTestbed
             GridBox bbox = graph.BoundingBox;//new GridBox(wrapView.Polygons.BoundingBox(), nodes.Min(n => n.Z), nodes.Max(n => n.Z));
             scene3D.Camera.Position = (bbox.CenterPoint - new GridVector3(bbox.Width * 3, 0, 0)).ToXNAVector3();
             scene3D.Camera.LookAt = (bbox.CenterPoint).ToXNAVector3();
-            
+
+            var meshGenTasks = new List<Task>();
             //AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
             foreach (var subgraph in graph.Subgraphs.Values)
             {
@@ -612,9 +613,19 @@ namespace MonogameTestbed
 
                 wrapViews.Add(wrapView);
 
-                wrapView.GenerateMesh(); 
+                var task = wrapView.GenerateMesh();
+                meshGenTasks.Add(task);
             }
 
+            foreach(var t in meshGenTasks)
+            {
+                await t;
+            }
+
+            if(string.IsNullOrWhiteSpace(Program.options.OutputPath) == false)
+            {
+
+            }
             /*
             A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
             B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
@@ -683,10 +694,8 @@ namespace MonogameTestbed
                     if (wrapView.iShownRegion.HasValue && wrapView.iShownRegion.Value >= wrapView.RegionViews.Count)
                     {
                         wrapView.iShownRegion = null;
-                    }
-
-                }
-
+                    } 
+                } 
 
                 if (Gamepad.X_Clicked)
                 {
@@ -741,14 +750,15 @@ namespace MonogameTestbed
                 {
                     if(wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                         SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.BoundingBox.CenterPoint, wrapView.Graph.StructureID);
-                } 
+                }
             }
 
             if (Gamepad.Back_Clicked || (keyboard.Pressed(Keys.S) && (keyboard.Pressed(Keys.LeftControl) || keyboard.Pressed(Keys.RightControl))))
             {
+                string outputPath = System.IO.Path.Combine(new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Morphology", $"BajajMultitest.dae" });
                 //if (wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                 //SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.StructureID);
-                SaveMeshes();
+                SaveMeshes("BajajMultitest", outputPath);
             }
             /*
             if(Gamepad.RightShoulder_Clicked)
@@ -798,12 +808,18 @@ namespace MonogameTestbed
                 window.Scene.SaveCamera(TestMode.BAJAJTEST);
         }
 
-        public void SaveMeshes()
+        private string CleanOutputPath(string outputPath)
+        {
+            //System.IO.P
+            throw new NotImplementedException();
+        }
+
+        public void SaveMeshes(string title, string outputPath)
         {
             BasicColladaView ColladaView = new BasicColladaView(graph.scale.X, null)
             {
-                SceneTitle = "BajajMultitest"
-            };
+                SceneTitle = title
+            }; 
 
             foreach (var view in wrapViews)
             {
@@ -823,8 +839,7 @@ namespace MonogameTestbed
                     ColladaView.Add(rootModel);
                 }
             }
-
-            string outputPath = System.IO.Path.Combine(new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Morphology", $"BajajMultitest.dae" });
+ 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(outputPath));
 
             DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputPath);

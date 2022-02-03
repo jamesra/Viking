@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using VikingXNAGraphics;
 
 namespace MonogameTestbed
@@ -53,7 +54,7 @@ namespace MonogameTestbed
             shapes.Add(polygon);
         }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
             InitGeometry();
@@ -62,6 +63,7 @@ namespace MonogameTestbed
             GroundTruth = CreateViewsForGeometries(shapes);
 
             LastGamepadState = GamePad.GetState(PlayerIndex.One);
+            return Task.CompletedTask;
         }
         public void UnloadContent(MonoTestbed window)
         {

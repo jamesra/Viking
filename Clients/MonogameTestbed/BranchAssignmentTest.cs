@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using TriangleNet;
 using TriangleNet.Meshing;
 using VikingXNA;
@@ -701,7 +702,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
          
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -721,7 +722,7 @@ namespace MonogameTestbed
             //wrapView = new MonogameTestbed.PolyBranchAssignmentView(Polygons, new double[] { 0, 10 });
 
             window.Scene.Camera.LookAt = Polygons.BoundingBox().Center.ToXNAVector2();
-            
+
             /*
             A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
             B = SqlGeometry.STPolyFromText(PolyB.ToSqlChars(), 0).ToPolygon();
@@ -735,6 +736,7 @@ namespace MonogameTestbed
 
             wrapView = new TriangulationShapeWrapView(A, B);
             */
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)

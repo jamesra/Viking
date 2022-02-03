@@ -1,11 +1,13 @@
-﻿namespace MonogameTestbed
+﻿using System.Threading.Tasks;
+
+namespace MonogameTestbed
 {
     interface IGraphicsTest
     {
         string Title { get; }
         bool Initialized { get; }
 
-        void Init(MonoTestbed window);
+        Task Init(MonoTestbed window);
 
         void Update();
 

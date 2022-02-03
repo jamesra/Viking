@@ -90,6 +90,7 @@
     <Compile Include="LabeledRectangleTests.cs" />
     <Compile Include="MeshAssemblyPlanner.cs" />
     <Compile Include="MouseStateTracker.cs" />
+    <Compile Include="PolygonGenerator.cs" />
     <Compile Include="PolygonIntersections.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Views\LineSetView.cs" />
@@ -123,6 +124,9 @@
     <Compile Include="Views\PointSetViewCollection.cs" />
     <Compile Include="Views\PolygonView.cs" />
     <Compile Include="Views\UntiledRegionView.cs" />
+    <None Include="PolygonIntersectionRepro.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
