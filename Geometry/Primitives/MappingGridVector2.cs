@@ -33,10 +33,10 @@ namespace Geometry
     /// Records the position of a point in two different 2D planes
     /// </summary>
     [Serializable]
-    public class MappingGridVector2 : ICloneable, IComparable, IEquatable<MappingGridVector2>
+    public readonly struct MappingGridVector2 : ICloneable, IComparable, IEquatable<MappingGridVector2>
     {
-        public GridVector2 MappedPoint;
-        public GridVector2 ControlPoint;
+        public readonly GridVector2 MappedPoint;
+        public readonly GridVector2 ControlPoint;
 
         public MappingGridVector2(GridVector2 control, GridVector2 mapped)
         {
@@ -81,7 +81,7 @@ namespace Geometry
 
         public MappingGridVector2 Copy()
         {
-            return ((ICloneable)this).Clone() as MappingGridVector2;
+            return new MappingGridVector2(this.ControlPoint, this.MappedPoint);
         }
 
         public override string ToString()
@@ -178,14 +178,25 @@ namespace Geometry
             return DuplicateFound;
         }
 
-        public bool Equals(MappingGridVector2 other)
+        public override int GetHashCode()
         {
-            if (object.ReferenceEquals(this, other))
-                return true;
+            //It is not possible to return a hash code for a point because a point can be within an epsilon distance of two other points which generate two 
+            //different hash codes.  The solution is either to throw an exception or return a single value for GetHashCode.
 
-            if (null == other)
-                return false;
+            //throw new InvalidOperationException($"It is not mathematically possible to implement {nameof(GetHashCode)} for a point where equality is epsilon based");
+            return 0;
+        }
 
+        public override bool Equals(object obj)
+        {
+            if (obj is MappingGridVector2 other)
+                return Equals(other);
+
+            return false;
+        }
+
+        public bool Equals(MappingGridVector2 other)
+        {  
             return this.ControlPoint == other.ControlPoint &&
                    this.MappedPoint == other.MappedPoint;
         }
