@@ -75,7 +75,7 @@ namespace Viking.VolumeModel
         protected ITransform[] _TileTransforms = null;
         public async override Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
         {
-            if (Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) == null)
+            if (Initialized == false)
             {
                 await Initialize(token);
             }
@@ -110,9 +110,7 @@ namespace Viking.VolumeModel
                 return System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, Section.Number.ToString("D4") + "_" + mosaicName + ".cache");
             }
         }
-
-
-
+         
         public TilesToSectionMapping(Section section, string name, string rootPath, string mosaicPath, string tilePrefix, string tilePostfix) :
             base(section, name, tilePrefix, tilePostfix)
         {
