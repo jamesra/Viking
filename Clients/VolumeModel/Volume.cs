@@ -209,13 +209,13 @@ namespace Viking.VolumeModel
         /// </summary>
         public SortedList<int, Section> Sections = new SortedList<int, Section>();
 
-        private int _Initialized = 0;
+        private long _Initialized = 0;
         /// <summary>
         /// Set to true if the Initialize() method has previously completed for this instance
         /// </summary>
         public bool IsInitialized
         {
-            get => Interlocked.CompareExchange(ref _Initialized, 1, 1) > 0;
+            get => Interlocked.Read(ref _Initialized) > 0;
         }
 
         /// <summary>
@@ -720,7 +720,7 @@ namespace Viking.VolumeModel
                             countStos++;
                             workerThread?.ReportProgress(ProgressPercent, $"Loading {stosFileName}");
                             
-                            ListStosLoadingTasks.Add( Task<LoadStosResult>.Run(async () =>  await LoadStos(elem, HaveStosZip), token));
+                            ListStosLoadingTasks.Add( LoadStos(elem, HaveStosZip));
 
                             break;
                         case "section":
@@ -740,7 +740,7 @@ namespace Viking.VolumeModel
                             workerThread?.ReportProgress(ProgressPercent, $"Queueing {SectionPath}");
 
                             var newSection = new Section(this, SectionPath, elem);
-                            var task = Task.Run(() => newSection.InitializeFromXML(elem, token), token);
+                            var task = newSection.InitializeFromXML(elem, token);
                             ListSectionLoadingTasks.Add(task);
                             //await task;
                             break;
@@ -766,6 +766,7 @@ namespace Viking.VolumeModel
 
                 workerThread?.ReportProgress(101, "Done!");
 
+                Interlocked.Exchange(ref _Initialized, 1);
             }
             finally
             {
