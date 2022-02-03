@@ -237,6 +237,7 @@ namespace Viking.VolumeModel
             this.Section = section;
             this.TilePrefix = Prefix;
             this.TilePostfix = Postfix;
+            this._ID = Interlocked.Increment(ref _NextID);
         }
 
         public abstract Task Initialize(CancellationToken token);
@@ -355,7 +356,8 @@ namespace Viking.VolumeModel
         }
         */
 
-        private long? _ID = new int?();
+        /*private long _ID = new int?();
+
         /// <summary>
         /// Return an unique ID for the current transform being used so we can quickly check if we need to recalculate positions
         /// </summary>
@@ -371,6 +373,11 @@ namespace Viking.VolumeModel
                 return _ID.Value;
             }
         }
+        */
+
+        private readonly long _ID;
+        private static long _NextID = 0;
+        public long ID => _ID;
 
         public abstract GridRectangle? SectionBounds { get; }
         public abstract GridRectangle? VolumeBounds { get; }
