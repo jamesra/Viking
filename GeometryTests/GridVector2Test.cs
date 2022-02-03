@@ -338,12 +338,19 @@ namespace UtilitiesTests
             GridVector2 N = new GridVector2(0, 1);
             GridVector2 E = new GridVector2(1, 0);
             GridVector2 S = new GridVector2(0, -1);
+            GridVector2 O = GridVector2.Zero;
 
             GridVector2[] WNE_Points = new GridVector2[] { W, N, E };
             GridVector2[] ENW_Points = new GridVector2[] { E, N, W };
 
             Assert.IsTrue(WNE_Points.AreClockwise());
+            Assert.IsTrue(WNE_Points.Winding() == RotationDirection.CLOCKWISE);
+            Assert.IsTrue(W.Winding(N,E) == RotationDirection.CLOCKWISE);
+
             Assert.IsFalse(ENW_Points.AreClockwise());
+            Assert.IsTrue(ENW_Points.Winding() == RotationDirection.COUNTERCLOCKWISE);
+            Assert.IsTrue(E.Winding(N, W) == RotationDirection.COUNTERCLOCKWISE);
+            
             Assert.AreNotEqual(WNE_Points.AreClockwise(), ENW_Points.AreClockwise());
 
 
@@ -351,7 +358,13 @@ namespace UtilitiesTests
             GridVector2[] SEN_Points = new GridVector2[] { S, E, N };
 
             Assert.IsTrue(NES_Points.AreClockwise());
+            Assert.IsTrue(NES_Points.Winding() == RotationDirection.CLOCKWISE);
+            Assert.IsTrue(N.Winding(E, S) == RotationDirection.CLOCKWISE);
+
             Assert.IsFalse(SEN_Points.AreClockwise());
+            Assert.IsTrue(SEN_Points.Winding() == RotationDirection.COUNTERCLOCKWISE);
+            Assert.IsTrue(S.Winding(E, N) == RotationDirection.COUNTERCLOCKWISE);
+
             Assert.AreNotEqual(NES_Points.AreClockwise(), SEN_Points.AreClockwise());
 
 
@@ -359,8 +372,24 @@ namespace UtilitiesTests
             GridVector2[] SEN_Points_Translated = SEN_Points.Translate(new GridVector2(10, 10));
 
             Assert.IsTrue(NES_Points_Translated.AreClockwise());
+            Assert.IsTrue(NES_Points_Translated.Winding() == RotationDirection.CLOCKWISE);
+            Assert.IsTrue(NES_Points_Translated[0].Winding(NES_Points_Translated[1], NES_Points_Translated[2]) == RotationDirection.CLOCKWISE);
+
             Assert.IsFalse(SEN_Points_Translated.AreClockwise());
+            Assert.IsTrue(SEN_Points_Translated.Winding() == RotationDirection.COUNTERCLOCKWISE);
+            Assert.IsTrue(SEN_Points_Translated[0].Winding(SEN_Points_Translated[1], SEN_Points_Translated[2]) == RotationDirection.COUNTERCLOCKWISE);
+
             Assert.AreNotEqual(NES_Points_Translated.AreClockwise(), SEN_Points_Translated.AreClockwise());
+
+            //Colinear
+            GridVector2[] WOE_Points = new GridVector2[] { W, GridVector2.Zero, E };
+            GridVector2[] SON_Points = new GridVector2[] { S, GridVector2.Zero, N };
+
+            Assert.IsTrue(WOE_Points.Winding() == RotationDirection.COLINEAR);
+            Assert.IsTrue(W.Winding(O, E) == RotationDirection.COLINEAR);
+
+            Assert.IsTrue(SON_Points.Winding() == RotationDirection.COLINEAR);
+            Assert.IsTrue(S.Winding(O, N) == RotationDirection.COLINEAR);
         }
 
         [TestMethod]
@@ -373,7 +402,7 @@ namespace UtilitiesTests
 
             int[] original_idx;
             GridVector2[] ConvexHullPoints = points.ConvexHull(out original_idx);
-            Assert.IsTrue(ConvexHullPoints.Length == 5);
+            Assert.IsTrue(ConvexHullPoints.Length == points.Length + 1);
 
             GridPolygon poly = new GridPolygon(ConvexHullPoints);
             Assert.IsTrue(poly.BoundingBox == points.BoundingBox());
@@ -384,7 +413,37 @@ namespace UtilitiesTests
             points = points.Translate(new GridVector2(-20, 20));
             ConvexHullPoints = points.ConvexHull(out original_idx);
 
-            Assert.IsTrue(ConvexHullPoints.Length == 5);
+            Assert.IsTrue(ConvexHullPoints.Length == points.Length + 1);
+        }
+
+        [TestMethod]
+        public void ConvexHullTest2()
+        {
+            //Colinear points on the convex hull
+            GridVector2[] points = new GridVector2[] { new GridVector2(-10,-10),
+                new GridVector2(-10, 10),
+                new GridVector2(10,10),
+                new GridVector2(10,-10),
+                new GridVector2(-10, 0),
+                new GridVector2(0, 10),
+                new GridVector2(0, -10),
+                new GridVector2(10, 0)
+            };
+
+            int[] original_idx;
+            GridVector2[] ConvexHullPoints = points.ConvexHull(out original_idx);
+            Assert.IsTrue(ConvexHullPoints.Length == points.Length + 1);
+
+            GridPolygon poly = new GridPolygon(ConvexHullPoints);
+            Assert.IsTrue(poly.BoundingBox == points.BoundingBox());
+
+            GridVector2 Centroid = ConvexHullPoints.Average();
+            Assert.IsTrue(Centroid == new GridVector2(0, 0));
+
+            points = points.Translate(new GridVector2(-20, 20));
+            ConvexHullPoints = points.ConvexHull(out original_idx);
+
+            Assert.IsTrue(ConvexHullPoints.Length == points.Length+1);
         }
 
 

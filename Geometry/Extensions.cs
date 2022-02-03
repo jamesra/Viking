@@ -567,7 +567,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return true if the points are placed in clockwise order.  Assumes points do not cross over themselves. 
+        /// Return RotationDirection of the points.  Code Assumes points do not cross over themselves. 
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
@@ -575,20 +575,33 @@ namespace Geometry
         {
             if (points.Length <= 2)
                 return RotationDirection.COLINEAR;
-
-            double area = points.PolygonArea();
-            RotationDirection result = area == 0 ? RotationDirection.COLINEAR :
-                   area < 0 ? RotationDirection.CLOCKWISE : RotationDirection.COUNTERCLOCKWISE;
-            /*
-#if DEBUG
-            if(points.Length == 3)
+            else if (points.Length == 3)
+                return Winding(points[0], points[1], points[2]);
+            else
             {
-                RotationDirection TriResult = GridTriangle.GetWinding(points);
-                System.Diagnostics.Debug.Assert(result == TriResult);
-            }
-#endif
-*/
-            return result;
+                double area = points.PolygonArea();
+                RotationDirection result = area == 0 ? RotationDirection.COLINEAR :
+                    area < 0 ? RotationDirection.CLOCKWISE : RotationDirection.COUNTERCLOCKWISE;
+                return result;
+            }  
+        }
+
+        /// <summary>
+        /// Return RotationDirection of the points.  Code Assumes points do not cross over themselves. 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static RotationDirection Winding(this GridVector2 p1, GridVector2 p2, GridVector2 p3)
+        {                      
+            // See 10th slides from following link
+            // for derivation of the formula
+            double val = (p2.Y - p1.Y) * (p3.X - p2.X) -
+                      (p2.X - p1.X) * (p3.Y - p2.Y);
+
+            if (val > -Global.Epsilon && val < Global.Epsilon) return RotationDirection.COLINEAR;
+
+            // clock or counterclock wise
+            return (val > 0) ? RotationDirection.CLOCKWISE : RotationDirection.COUNTERCLOCKWISE;
         }
 
         /// <summary>
