@@ -110,8 +110,9 @@ namespace MonogameTestbed
             if (polygons != null && polygons.Length > 0)
             { 
                 rect = polygons.BoundingBox();
-                scene.Camera.LookAt = rect.Center.ToXNAVector2();
-                scene.Camera.Downsample = Math.Max(rect.Height, rect.Width) / Math.Min(scene.Viewport.Height, scene.Viewport.Width);
+                scene.VisibleWorldBounds = rect;
+                //scene.Camera.LookAt = rect.Center.ToXNAVector2();
+                //scene.Camera.Downsample = Math.Max(rect.Height, rect.Width) / Math.Min(scene.Viewport.Height, scene.Viewport.Width);
 
                 polygonSetView = new PolygonIntersectionView(polygons);
 
