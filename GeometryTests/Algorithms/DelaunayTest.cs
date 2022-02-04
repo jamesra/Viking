@@ -452,7 +452,8 @@ namespace GeometryTests.Algorithms
             p = p.Translate(-p.Centroid);
             //var mesh = p.Triangulate(p.ExteriorRing.Distinct().Select(p => new Vertex2D(p)).ToArray(),null,OnProgress);
             var mesh = p.Triangulate(0, OnProgress); // Geometry.Meshing.MeshExtensions.Triangulate(p, 0, OnProgress);//p.ExteriorRing.Select(t => new Vertex2D(t)).ToArray(), OnProgress);
-            var PosToVert = mesh.Verticies.ToDictionary(v => v.Position);
+            
+            var PosToVert = mesh.Verticies.ToQuadTree(v => v.Position);
 
             foreach (GridLineSegment s in p.AllSegments)
             {
@@ -460,7 +461,7 @@ namespace GeometryTests.Algorithms
                 expectedConstrainedEdges.Add(key);
             }
 
-            return mesh;
+            return mesh; 
         }
 
 
@@ -482,9 +483,7 @@ namespace GeometryTests.Algorithms
             configuration.QuietOnSuccess = false;
             configuration.StartSize = 2;
             configuration.Replay = Global.StdGenSeed;
-
-
-
+            
             Prop.ForAll<GridPolygon, GridVector2[]>((p, interior) =>
             {
                 GridVector2 pCentroid = p.Centroid;
