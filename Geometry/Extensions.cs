@@ -998,6 +998,40 @@ namespace Geometry
         }
     }
 
+    public static class VectorExtensions
+    {
+        public static QuadTree<TElement> ToQuadTree<TSource, TElement>(
+            this IEnumerable<TSource> source,
+            Func<TSource, GridVector2> keySelector,
+            Func<TSource, TElement> elementSelector)
+        {
+            var items = source.Select(item => new {Key = keySelector(item), Item = elementSelector(item)}).ToArray();
+            var bbox = items.Select(item => item.Key).BoundingBox();
+            var output = new QuadTree<TElement>(bbox * 1.5);
+            foreach (var item in items)
+            {
+                output.Add(item.Key, item.Item);
+            }
+
+            return output;
+        }
+
+        public static QuadTree<TSource> ToQuadTree<TSource>(
+            this IEnumerable<TSource> source,
+            Func<TSource, GridVector2> keySelector)
+        {
+            var items = source.Select(item => new { Key = keySelector(item), Item = item }).ToArray();
+            var bbox = items.Select(item => item.Key).BoundingBox();
+            var output = new QuadTree<TSource>(bbox * 1.5);
+            foreach (var item in items)
+            {
+                output.Add(item.Key, item.Item);
+            }
+
+            return output;
+        }
+    }
+
     public static class GridLineSegmentExtensions
     {
 
