@@ -126,8 +126,8 @@ namespace VikingXNAGraphics
             GridVector2[] point_array = Points.ToArray();
 
             //Figure out if we have duplicate points and offset labels as needed
-            Dictionary<GridVector2, int> DuplicatePointsAddedCount = new Dictionary<GridVector2, int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
-            HashSet < GridVector2 > KnownPoints = new HashSet<GridVector2>();
+            var DuplicatePointsAddedCount = new QuadTree<int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
+            var KnownPoints = new List<GridVector2>();
             foreach(GridVector2 p in point_array)
             {
                 if(KnownPoints.Contains(p))
