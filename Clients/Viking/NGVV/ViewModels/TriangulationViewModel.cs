@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using VikingXNAGraphics;
 
 namespace Viking.ViewModels
@@ -125,10 +126,7 @@ namespace Viking.ViewModels
 
             graphicsDevice.DepthStencilState = originalDepthState;
 
-        }
-
-        static SpriteFont _font;
-        static SpriteBatch _spriteBatch;
+        } 
 
         LabelView[] _Labels = null;
 
@@ -158,10 +156,13 @@ namespace Viking.ViewModels
                 labels[(i * 2) + 1] = mapped_label;
             }
 
-            Vector2 string_size = _font.MeasureString("ControlPoints");
+            if (!labels.Any())
+                return labels;
 
+            var lineHeight = labels[0].font.LineSpacing;
+             
             labels[map_points.Length] = new LabelView("Control Points", new GridVector2(15, 15), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
-            labels[map_points.Length + 1] = new LabelView("Mapped Points", new GridVector2(15, 15 + (string_size.Y * 2.15)), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
+            labels[map_points.Length + 1] = new LabelView("Mapped Points", new GridVector2(15, 15 + (lineHeight * 2.15)), anchor: Anchor.CenterLeft, scaleFontWithScene: false); ;
 
             return labels;
         }
