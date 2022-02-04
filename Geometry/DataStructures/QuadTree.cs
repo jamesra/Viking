@@ -172,20 +172,13 @@ namespace Geometry
         {
             get
             {
-                try
-                {
-                    rwLock.EnterReadLock();
-                    TryFindNearest(p, out var foundPoint, out T val, out double distance);
-                    if (distance > Global.Epsilon)
-                        throw new KeyNotFoundException(
-                            $"{p} does not have an exact match in the quad tree.  Use of the index operator requires an exact match be present.");
+                
+                if (false == TryFindNearest(p, out var foundPoint, out T val, out double distance) ||
+                    distance > Global.Epsilon)
+                    throw new KeyNotFoundException(
+                        $"{p} does not have an exact match in the quad tree.  Use of the index operator requires an exact match be present.");
 
-                    return val;
-                }
-                finally
-                {
-                    rwLock.ExitReadLock();
-                }
+                return val;
             }
             set => Add(p, value);
         }
