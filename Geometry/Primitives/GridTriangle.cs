@@ -52,9 +52,7 @@ namespace Geometry
         GridRectangle IShape2D.BoundingBox => this.BoundingBox;
         
         public readonly GridLineSegment[] Segments;
-
-        private readonly int _HashCode;
-
+          
         private readonly BaryCoefs _BarycentricCoefficients;
 
         public GridTriangle(IReadOnlyList<GridVector2> points)
@@ -76,9 +74,7 @@ namespace Geometry
             Points = new GridVector2[] { p1, p2, p3 };
 
             BoundingBox = Points.BoundingBox();
-
-            _HashCode = ((p1 + p2 + p3) / 3).GetHashCode();
-
+              
             Segments = new GridLineSegment[] { new GridLineSegment(p1,p2),
                                                 new GridLineSegment(p2,p3),
                                                 new GridLineSegment(p3,p1)};
@@ -137,7 +133,7 @@ namespace Geometry
         }
 
 
-        public override int GetHashCode() => _HashCode;
+        public override int GetHashCode() => throw new InvalidOperationException("It is not possible to generate a hashcode for points when using an epsilon value, see GridVector2.GetHashCode");
 
         public static bool operator ==(in GridTriangle A, in GridTriangle B)
         {
