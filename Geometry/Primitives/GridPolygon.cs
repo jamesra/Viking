@@ -1996,7 +1996,7 @@ namespace Geometry
                         return OverlapType.TOUCHING;
                 }
 
-                if (seg.SameSideOfLine)
+                if (seg.SameSideOfLine || seg.OnTheLine)
                 {
                     continue;
                 }
