@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using TriangleNet;
@@ -24,6 +25,7 @@ namespace MonogameTestbed
         POLYGONS,
         RANDOM,
         JSON_POLYGON_CONSTRAINED,
+        JSON_POLYGON_CONSTRAINED_FROMFILE,
         JSON_POLYGON_INTERSECTION,
         FSCHECK_DELAUNAY,
         FSCHECK_CONSTRAINED_DELAUNAY,
@@ -173,11 +175,15 @@ namespace MonogameTestbed
         MonoTestbed Window;
 
         private bool ShowMeshFaces = false;
-        readonly DelaunayTestDataType testData = DelaunayTestDataType.FSCHECK_DELAUNAY; ////////////////////////////////////////////////////////
-        
+        //readonly DelaunayTestDataType testData = DelaunayTestDataType.FSCHECK_DELAUNAY;
+        private readonly DelaunayTestDataType testData = DelaunayTestDataType.JSON_POLYGON_CONSTRAINED_FROMFILE;
+        //////////////////////////////////////////////////////////
+
         ConstrainedDelaunayModel model;
          
         Task TestTask = null;
+
+        private string JSONFile = "PolygonDelaunayRepro.json";
 
         public Task Init(MonoTestbed window)
         {
@@ -233,7 +239,7 @@ namespace MonogameTestbed
                 //listPoints = listPoints.Select(p => p - avg).ToList();
                 scene.Camera.LookAt = listPoints.Average().ToXNAVector2();
                 rect = listPoints.BoundingBox();
-                scene.Camera.Downsample = rect.Height / scene.Viewport.Height;
+                scene.Camera.Downsample = Math.Max(rect.Height, rect.Width) / Math.Min(scene.Viewport.Height, scene.Viewport.Width);
 
                 TestTask = new Task<TriangulationMesh<IVertex2D>>(() => GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(listPoints.Select(p => new TriangulationVertex(p)).ToArray(), OnTriangulationProgress));
             }
@@ -246,9 +252,7 @@ namespace MonogameTestbed
                 listPoints = listPoints.Select(p => p - avg).ToList();
 
                 //scene.Camera.LookAt = listPoints[567].ToXNAVector2();//listPoints.Average().ToXNAVector2();
-                scene.Camera.LookAt = listPoints.Average().ToXNAVector2();
-                rect = listPoints.BoundingBox();
-                scene.Camera.Downsample = rect.Height / scene.Viewport.Height;
+                scene.VisibleWorldBounds = listPoints.BoundingBox();
             }
             else if(testData == DelaunayTestDataType.JSON_POLYGON_CONSTRAINED)
             {
@@ -262,11 +266,29 @@ namespace MonogameTestbed
                     polygon.ValidatePolygonTriangulation(mesh, expectedConstrainedEdges);
                 });
 
-                scene.Camera.LookAt = polygon.Centroid.ToXNAVector2();
-                rect = polygon.BoundingBox;
-                scene.Camera.Downsample = Math.Max(rect.Height, rect.Width) / Math.Min(scene.Viewport.Height, scene.Viewport.Width);
+                scene.VisibleWorldBounds = polygon.BoundingBox;
             }
-            
+            else if (testData == DelaunayTestDataType.JSON_POLYGON_CONSTRAINED_FROMFILE)
+            {
+                FileInfo finfo = new FileInfo(JSONFile);
+                if (finfo.Exists == false)
+                    throw new ArgumentException($"Input file {JSONFile} not found");
+
+                string json = System.IO.File.ReadAllText(JSONFile);
+                GridPolygon polygon = GeometryJSONExtensions.PolygonFromJSON(json);
+                  
+                FirstTriangulationDone = true;
+
+                TestTask = new Task(() =>
+                {
+                    var mesh = DelaunayTest.TriangulatePoly(polygon, out List<IEdgeKey> expectedConstrainedEdges, OnTriangulationProgress);
+                    polygon.ValidatePolygonTriangulation(mesh, expectedConstrainedEdges);
+                });
+
+                //scene.Camera.LookAt = polygon.Centroid.ToXNAVector2();
+                scene.VisibleWorldBounds = polygon.BoundingBox;
+                //scene.Camera.Downsample = Math.Max(rect.Height, rect.Width) / Math.Min(scene.Viewport.Height, scene.Viewport.Width);
+            } 
             else if(testData == DelaunayTestDataType.FSCHECK_DELAUNAY)
             {
                 FirstTriangulationDone = true;
