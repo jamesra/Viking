@@ -246,8 +246,13 @@ namespace Viking
                     {
                         using (HttpClient client = new HttpClient())
                         {
+                            CancellationTokenSource stopReadingFromServerToken = new CancellationTokenSource();
+
+                            //Allows the caller or us to stop reading data from the server if it is no longer needed
+                            var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, stopReadingFromServerToken.Token);
+
                             var textureHeaders =
-                                await client.GetAsync(textureUri, HttpCompletionOption.ResponseHeadersRead, token)
+                                await client.GetAsync(textureUri, HttpCompletionOption.ResponseHeadersRead, linkedTokenSource.Token)
                                     .ConfigureAwait(false);
                             {
                                 if (token.IsCancellationRequested)
@@ -274,6 +279,10 @@ namespace Viking
                                         {
                                             if (token.IsCancellationRequested)
                                                 return null;
+
+                                            //Since we start thinking about what to do as soon as we get the header, cancel the read as soon as we know 
+                                            //we are loading from the cache
+                                            stopReadingFromServerToken.Cancel();
 
                                             var texture = await GetTextureFromStreamAsync(graphicsDevice, stream)
                                                 .ConfigureAwait(false);
