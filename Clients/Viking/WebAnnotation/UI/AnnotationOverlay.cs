@@ -31,8 +31,8 @@ namespace WebAnnotation
     [Viking.Common.SectionOverlay("Annotation")]
     class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, IPenActionSupport, ICanvasViewHitTesting
     {
-        static public float LocationTextScaleFactor = 5;
-        static public float ReferenceLocationTextScaleFactor = 2.5f;
+        public static float LocationTextScaleFactor = 5;
+        public static float ReferenceLocationTextScaleFactor = 2.5f;
 
         Viking.UI.Controls.SectionViewerControl _Parent;
         public Viking.UI.Controls.SectionViewerControl Parent { get { return _Parent; } }
@@ -126,7 +126,7 @@ namespace WebAnnotation
             return 10;
         }
 
-        static public void GoToStructure(long locID)
+        public static void GoToStructure(long locID)
         {
             StructureObj s = Store.Structures.GetObjectByID(locID);
             if (s == null)
@@ -135,7 +135,7 @@ namespace WebAnnotation
             GoToStructure(s);
         }
 
-        static public void GoToStructure(StructureObj s)
+        public static void GoToStructure(StructureObj s)
         {
             if (s == null)
                 return;
@@ -160,7 +160,7 @@ namespace WebAnnotation
 
         }
 
-        static public void GoToLocation(long locID)
+        public static void GoToLocation(long locID)
         {
             LocationObj loc = Store.Locations.GetObjectByID(locID);
             if (loc == null)
@@ -169,7 +169,7 @@ namespace WebAnnotation
             GoToLocation(loc);
         }
 
-        static public void GoToLocation(LocationObj loc)
+        public static void GoToLocation(LocationObj loc)
         {
             if (loc == null)
                 return;
@@ -1031,7 +1031,7 @@ namespace WebAnnotation
                         ToggleStructureTagCommandAction tagStructureAction = Global.UserSettings.Actions.ToggleStructureTagCommandAction.SingleOrDefault(action => action.Name == h.Action);
                         if (tagStructureAction != null)
                         {
-                            OnToggleStructureTag(tagStructureAction.Tag, tagStructureAction.SetValueToUsername);
+                            OnToggleStructureTag(tagStructureAction.Tag, tagStructureAction.Value);
 
                             return;
                         }
@@ -1039,7 +1039,7 @@ namespace WebAnnotation
                         ToggleLocationTagCommandAction tagLocationAction = Global.UserSettings.Actions.ToggleLocationTagCommandAction.SingleOrDefault(action => action.Name == h.Action);
                         if (tagLocationAction != null)
                         {
-                            OnToggleLocationTag(tagLocationAction.Tag, tagLocationAction.SetValueToUsername);
+                            OnToggleLocationTag(tagLocationAction.Tag, tagLocationAction.Value);
 
                             return;
                         }
@@ -1297,7 +1297,7 @@ namespace WebAnnotation
         }
 
 
-        protected void OnToggleStructureTag(string tag, bool SetValueToUsername)
+        protected void OnToggleStructureTag(string tag, string value)
         {
             if (LastMouseOverObject == null)
             {
@@ -1305,19 +1305,20 @@ namespace WebAnnotation
                 return;
             }
 
-            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
+            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView;
             if (loc == null)
             {
                 Trace.WriteLine("No mouse over location to toggle tag");
                 return;
             }
 
-            Parent.CommandQueue.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, Store.Structures[loc.ParentID.Value], tag, SetValueToUsername });
+            //Convert special tag values
 
+            Parent.CommandQueue.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, Store.Structures[loc.ParentID.Value], tag, TryConvertTagValue(value, out var _) });
             return;
         }
 
-        protected void OnToggleLocationTag(string tag, bool SetValueToUsername)
+        protected void OnToggleLocationTag(string tag, string value)
         {
             if (LastMouseOverObject == null)
             {
@@ -1325,18 +1326,41 @@ namespace WebAnnotation
                 return;
             }
 
-            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView; // GetNearestLocation(WorldPosition, out distance);
+            LocationCanvasView loc = LastMouseOverObject as LocationCanvasView;
             if (loc == null)
             {
                 Trace.WriteLine("No mouse over location to toggle tag");
                 return;
             }
 
-            Parent.CommandQueue.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, Store.Locations[loc.ID], tag, SetValueToUsername });
-
+            Parent.CommandQueue.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, Store.Locations[loc.ID], tag, TryConvertTagValue(value, out var _) });
             return;
         }
 
+        protected string TryConvertTagValue(string input, out bool conversionFound)
+        {
+            conversionFound = false;
+            if (string.IsNullOrWhiteSpace(input))
+                return input;
+
+            if (input[0] == '@')
+            {
+                conversionFound = true;
+                string specialValueMapKey = input.Substring(1);
+                switch (specialValueMapKey.ToLower())
+                {
+                    case "username":
+                        return State.UserCredentials.UserName;
+                    default:
+                        conversionFound = false;
+                        throw new ArgumentException(
+                            $"Unknown custom value mapping {input} found in server's webannotationsettings.xml.  Please contact an admin to update the hotkey mapping on the server.");
+                }
+            }
+
+            return input;
+        }
+         
         protected void OnToggleLocationTerminalTag()
         {
             if (LastMouseOverObject == null)
@@ -1762,8 +1786,8 @@ namespace WebAnnotation
         }
         */
 
-        static private BasicEffect basicEffect = null;
-        static private BlendState defaultBlendState = null;
+        private static BasicEffect basicEffect = null;
+        private static BlendState defaultBlendState = null;
 
         private static BasicEffect CreateBasicEffect(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
