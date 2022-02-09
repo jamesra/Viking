@@ -36,8 +36,7 @@ namespace WebAnnotation.UI.Forms
 
             if(Store.Locations.GetObjectByID(this.LocationID, true) != null)
             {
-                if (OnGo != null)
-                    this.Dispatcher.BeginInvoke(new Action(() => { OnGo(this.LocationID); }));
+                OnGo?.Invoke(LocationID);
 
                 //TODO: Set a property that fires an event so WebAnnotation can travel where it needs to go
                 //WebAnnotation.AnnotationOverlay.GoToLocation(this.LocationID);
@@ -56,8 +55,7 @@ namespace WebAnnotation.UI.Forms
                 return;
             }
 
-            if (OnGo != null)
-                this.Dispatcher.BeginInvoke(new Action(() => { OnGo(this.LocationID); }));
+            OnGo?.Invoke(LocationID);
 
             //WebAnnotation.AnnotationOverlay.GoToLocation(this.LocationID);
         }
