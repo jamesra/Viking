@@ -1004,7 +1004,7 @@ namespace WebAnnotation
                         if (!IsCommandDefault())
                             return;
 
-                        connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.Where(action => action.Name == h.Action).SingleOrDefault();
+                        connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
                         if (a != null)
                         {
                             System.Type commandType;
@@ -1019,7 +1019,7 @@ namespace WebAnnotation
                             return;
                         }
 
-                        CreateStructureCommandAction comAction = Global.UserSettings.Actions.CreateStructureCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        CreateStructureCommandAction comAction = Global.UserSettings.Actions.CreateStructureCommandAction.SingleOrDefault(action => action.Name == h.Action);
                         if (comAction != null)
                         {
                             OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList, comAction.GetLocationType());
@@ -1027,7 +1027,7 @@ namespace WebAnnotation
                             return;
                         }
 
-                        ToggleStructureTagCommandAction tagStructureAction = Global.UserSettings.Actions.ToggleStructureTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        ToggleStructureTagCommandAction tagStructureAction = Global.UserSettings.Actions.ToggleStructureTagCommandAction.SingleOrDefault(action => action.Name == h.Action);
                         if (tagStructureAction != null)
                         {
                             OnToggleStructureTag(tagStructureAction.Tag, tagStructureAction.Value);
@@ -1035,7 +1035,7 @@ namespace WebAnnotation
                             return;
                         }
 
-                        ToggleLocationTagCommandAction tagLocationAction = Global.UserSettings.Actions.ToggleLocationTagCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        ToggleLocationTagCommandAction tagLocationAction = Global.UserSettings.Actions.ToggleLocationTagCommandAction.SingleOrDefault(action => action.Name == h.Action);
                         if (tagLocationAction != null)
                         {
                             OnToggleLocationTag(tagLocationAction.Tag, tagLocationAction.Value);
@@ -1043,7 +1043,7 @@ namespace WebAnnotation
                             return;
                         }
 
-                        ToggleLocationTerminalCommandAction tagToggleTerminalAction = Global.UserSettings.Actions.ToggleLocationTerminalCommandAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        ToggleLocationTerminalCommandAction tagToggleTerminalAction = Global.UserSettings.Actions.ToggleLocationTerminalCommandAction.SingleOrDefault(action => action.Name == h.Action);
                         if (tagToggleTerminalAction != null)
                         {
                             OnToggleLocationTerminalTag();
@@ -1051,11 +1051,10 @@ namespace WebAnnotation
                             return;
                         }
 
-                        ChangeLocationAnnotationTypeAction tagChangeLocationAnnotationTypeAction = Global.UserSettings.Actions.ChangeLocationAnnotationTypeAction.Where(action => action.Name == h.Action).SingleOrDefault();
+                        ChangeLocationAnnotationTypeAction tagChangeLocationAnnotationTypeAction = Global.UserSettings.Actions.ChangeLocationAnnotationTypeAction.SingleOrDefault(action => action.Name == h.Action);
                         if (tagChangeLocationAnnotationTypeAction != null)
                         {
-                            OnChangeLocationAnnotationType(tagChangeLocationAnnotationTypeAction.GetLocationType());
-
+                            OnChangeLocationAnnotationType(tagChangeLocationAnnotationTypeAction.GetLocationType()); 
                             return;
                         }
 
@@ -1085,7 +1084,7 @@ namespace WebAnnotation
             }
             catch (Exception except)
             {
-                Trace.WriteLine("Error with hotkeys: " + except.ToString());
+                Trace.WriteLine($"Error with hotkeys: {except}");
                 throw;
             }
 

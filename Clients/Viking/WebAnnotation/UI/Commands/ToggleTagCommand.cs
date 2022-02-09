@@ -6,27 +6,17 @@ namespace WebAnnotation.UI.Commands
 {
     class ToggleStructureTag : Viking.UI.Commands.Command
     {
-        readonly StructureObj target;
-        readonly string tag;
+        private readonly StructureObj target;
+        private readonly string tag;
         private readonly string value;
-
-        public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent,
-                                         StructureObj structure,
-                                         string Tag, bool setValueToUsername = false)
-            : base(parent)
-        {
-            this.target = structure;
-            this.tag = Tag;
-            this.value = setValueToUsername ? WebAnnotationModel.State.UserCredentials.UserName : null;
-        }
-
+        
         public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent,
             StructureObj structure,
-            string Tag, string value)
+            string tag, string value)
             : base(parent)
         {
             this.target = structure;
-            this.tag = Tag;
+            this.tag = tag;
             this.value = value;
         }
 
@@ -55,28 +45,18 @@ namespace WebAnnotation.UI.Commands
 
     class ToggleLocationTag : Viking.UI.Commands.Command
     {
-        readonly LocationObj target;
-        readonly string tag;
+        private readonly LocationObj target;
+        private readonly string tag;
         private readonly string value;
-
-        public ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
-                                         LocationObj loc,
-                                         string Tag, bool setValueToUsername = false)
-            : base(parent)
-        {
-            this.target = loc;
-            this.tag = Tag;
-            this.value = setValueToUsername ? WebAnnotationModel.State.UserCredentials.UserName : null;
-        }
-
+        
         public ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
             LocationObj loc,
-            string Tag, string Value)
+            string tag, string value)
             : base(parent)
         {
             this.target = loc;
-            this.tag = Tag;
-            this.value = Value;
+            this.tag = tag;
+            this.value = value;
         }
 
         public override void OnActivate()
@@ -85,7 +65,8 @@ namespace WebAnnotation.UI.Commands
         }
 
         protected override void Execute()
-        { 
+        {
+            target.ToggleAttribute(this.tag, this.value);
             try
             {
                 Store.Locations.Save();

@@ -77,7 +77,9 @@
     <xs:complexType>
       <xs:attribute name="Name" type="xs:string" use="required"/>
       <xs:attribute name="Tag" type="xs:string" use="required"/> 
-      <xs:attribute name="Value" type="xs:string" use="optional"/>  <!--If @Username is the value the current username is used as the value-->
+      <xs:attribute name="Value" type="xs:string" use="optional"/> <xs:annotation>
+          <xs:documentation>If @Username is the value the current username is used as the value</xs:documentation>
+        </xs:annotation>
     </xs:complexType>
   </xs:element>
 
@@ -85,7 +87,10 @@
     <xs:complexType>
       <xs:attribute name="Name" type="xs:string" use="required"/>
       <xs:attribute name="Tag" type="xs:string" use="required"/>
-      <xs:attribute name="Value" type="xs:string" use="optional"/> <!--If @Username is the value the current username is used as the value-->
+      <xs:attribute name="Value" type="xs:string" use="optional"/>
+	  <xs:annotation>
+          <xs:documentation>If @Username is the value the current username is used as the value</xs:documentation>
+        </xs:annotation>
     </xs:complexType>
   </xs:element>
 
