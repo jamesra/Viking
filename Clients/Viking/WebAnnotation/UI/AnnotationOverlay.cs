@@ -1055,8 +1055,7 @@ namespace WebAnnotation
                         ChangeLocationAnnotationTypeAction tagChangeLocationAnnotationTypeAction = Global.UserSettings.Actions.ChangeLocationAnnotationTypeAction.SingleOrDefault(action => action.Name == h.Action);
                         if (tagChangeLocationAnnotationTypeAction != null)
                         {
-                            OnChangeLocationAnnotationType(tagChangeLocationAnnotationTypeAction.GetLocationType());
-
+                            OnChangeLocationAnnotationType(tagChangeLocationAnnotationTypeAction.GetLocationType()); 
                             return;
                         }
 
@@ -1086,7 +1085,7 @@ namespace WebAnnotation
             }
             catch (Exception except)
             {
-                Trace.WriteLine("Error with hotkeys: " + except.ToString());
+                Trace.WriteLine($"Error with hotkeys: {except}");
                 throw;
             }
 
