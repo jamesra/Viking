@@ -2532,6 +2532,12 @@ namespace Viking.UI.Controls
 
         public void GoToLocation(Vector2 location, int Z, bool InputInSectionSpace, double newDownsample)
         {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => GoToLocation( location, Z, InputInSectionSpace, newDownsample)));
+                return;
+            }
+
             if (UI.State.volume.SectionViewModels.ContainsKey(Z) == false)
             {
                 MessageBox.Show("There is no section # " + Z.ToString() + " in the volume.", "Error", MessageBoxButtons.OK);
