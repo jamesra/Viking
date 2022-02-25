@@ -1,10 +1,10 @@
-﻿using IdentityServer.Data;
-using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Viking.Identity.Models.UserViewModels;
 
-namespace IdentityServer
+namespace Viking.Identity
 {
     /// <summary>
     /// Helper methods to generate viewmodels related to permissions

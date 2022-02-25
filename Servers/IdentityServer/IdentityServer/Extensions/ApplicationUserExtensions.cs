@@ -1,12 +1,12 @@
-﻿using IdentityServer.Data;
-using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Viking.Identity.Models.UserViewModels;
 
-namespace IdentityServer.Extensions
+namespace Viking.Identity.Extensions
 {
     public static class ApplicationUserExtensions
     {

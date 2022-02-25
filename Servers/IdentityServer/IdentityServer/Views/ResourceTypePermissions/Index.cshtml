@@ -1,4 +1,4 @@
-﻿@model IEnumerable<IdentityServer.Models.ResourceTypePermission>
+﻿@model IEnumerable<Viking.Identity.Models.ResourceTypePermission>
 
 @{
     ViewData["Title"] = "Index";
@@ -6,7 +6,7 @@
 
 <h2>Index</h2>
 
-@if (this.User.IsInRole(Config.AdminRoleName))
+@if (this.User.IsInRole(Special.Roles.Admin))
 {
     <p>
         <a asp-action="Create">Create New</a>
@@ -42,7 +42,7 @@
                     @Html.DisplayFor(modelItem => item.Description)
                 </td> 
                 <td>
-                    @if (this.User.IsInRole(Config.AdminRoleName))
+                    @if (this.User.IsInRole(Special.Roles.Admin))
                     {
                         @Html.ActionLink("Edit", "Edit", item)<text> | </text>
                         @Html.ActionLink("Details", "Details", item)<text> | </text>

@@ -1,15 +1,16 @@
-﻿using IdentityServer.Data;
-using IdentityServer.Extensions;
-using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
+﻿using Viking.Identity.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.Identity.Authorization;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Viking.Identity.Models.UserViewModels;
 
-namespace IdentityServer.Controllers
+namespace Viking.Identity.Controllers
 {
     [Route("[controller]/[action]")]
     public class ApplicationUsersController : Controller
@@ -96,7 +97,7 @@ namespace IdentityServer.Controllers
 
         private bool IsUserAnAdminOrSelf(string UserId)
         {
-            if (!this.User.IsInRole(Config.AdminRoleName))
+            if (!this.User.IsInRole(Special.Roles.Admin))
             {
                 var originalUsername = _context.ApplicationUser.Where(u => u.Id == UserId).Select(u => u.Email).FirstOrDefault();
                 if (!(this.User.Identity.Name == originalUsername))
@@ -193,7 +194,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> EditOrganizations(string id, [Bind("Id, Name")] UserGroupsViewModel applicationUser, [Bind] IEnumerable<GroupSelectedViewModel> UserOrganizations)
         {
             if (id != applicationUser.Id)
@@ -205,7 +206,7 @@ namespace IdentityServer.Controllers
             var groups = _context.Group.Where(g => UserOrganizations.Any(uo => uo.Id == g.Id));
             foreach(var group in groups)
             {
-                var result = await _authorizationService.AuthorizeAsync(User, group, IdentityServer.Authorization.Operations.GroupAccessManager);
+                var result = await _authorizationService.AuthorizeAsync(User, group, Operations.GroupAccessManager);
                 if (result.Succeeded)
                 {
                     continue;
@@ -271,7 +272,7 @@ namespace IdentityServer.Controllers
         // POST: ApplicationUsers/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var applicationUser = await _context.ApplicationUser.SingleOrDefaultAsync(m => m.Id == id);

@@ -1,12 +1,12 @@
-﻿using IdentityServer.Data;
-using IdentityServer.Models;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
 
-namespace IdentityServer.Controllers
+namespace Viking.Identity.Controllers
 {
     [Route("[controller]/[action]")]
     [Authorize]
@@ -54,7 +54,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Create([Bind("Id,Name,NormalizedName,ConcurrencyStamp")] ApplicationRole applicationRole)
         {
             if (ModelState.IsValid)
@@ -90,7 +90,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Edit(string id, [Bind("Id,Name,NormalizedName,ConcurrencyStamp")] ApplicationRole applicationRole)
         {
             if (id != applicationRole.Id)
@@ -142,7 +142,7 @@ namespace IdentityServer.Controllers
         // POST: ApplicationRoles/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var applicationRole = await _context.ApplicationRole.SingleOrDefaultAsync(m => m.Id == id);

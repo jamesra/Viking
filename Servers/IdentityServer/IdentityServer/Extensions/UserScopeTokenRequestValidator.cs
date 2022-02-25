@@ -1,11 +1,11 @@
-﻿using IdentityServer.Data;
-using IdentityServer4.Validation;
+﻿using IdentityServer4.Validation;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
 
 
-namespace IdentityServer.Extensions
+namespace Viking.Identity.Extensions
 {
     public class UserScopeTokenRequestValidator : ICustomTokenRequestValidator
     {

@@ -1,4 +1,4 @@
-namespace IdentityServer.Models
+namespace Viking.Identity.Models
 {
     public class ErrorViewModel
     {

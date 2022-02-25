@@ -1,4 +1,4 @@
-﻿@model IdentityServer.Models.ApplicationUser
+﻿@model Viking.Identity.Models.ApplicationUser
 
 @{
     ViewData["Title"] = "Details";
@@ -69,7 +69,7 @@
         <dd>
             @Html.DisplayFor(model => model.EmailConfirmed)
         </dd>
-        @if (this.User.IsInRole(Config.AdminRoleName))
+        @if (this.User.IsInRole(Special.Roles.Admin))
         {
             <dt>
                 @Html.DisplayNameFor(model => model.PasswordHash)

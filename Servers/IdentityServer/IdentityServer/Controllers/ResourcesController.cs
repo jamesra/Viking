@@ -1,8 +1,5 @@
-﻿using IdentityServer.Authorization;
-using IdentityServer.Data;
-using IdentityServer.Extensions;
-using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
+﻿using Viking.Identity.Authorization;
+using Viking.Identity.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -11,8 +8,11 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Viking.Identity.Models.UserViewModels;
 
-namespace IdentityServer.Controllers
+namespace Viking.Identity.Controllers
 {
     public class ResourcesController : Controller
     {
@@ -41,6 +41,7 @@ namespace IdentityServer.Controllers
         }
 
         // GET: Resources
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             var applicationDbContext = _context.Resource.Include(r => r.Parent).Include(r => r.ResourceType);

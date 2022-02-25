@@ -1,7 +1,4 @@
 ﻿using IdentityModel;
-using IdentityServer.Data;
-using IdentityServer.Models;
-using IdentityServer.Services;
 using IdentityServer4.EntityFramework.DbContexts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -23,8 +20,13 @@ using IdentityModel.Client;
 using IdentityServer4;
 using IdentityServer4.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Viking.Identity.Authorization;
+using Viking.Identity.Data;
+using Viking.Identity.Extensions;
+using Viking.Identity.Models;
+using Viking.Identity.Services;
 
-namespace IdentityServer
+namespace Viking.Identity
 {
     public static class PolicySchemeSelector
     {
@@ -104,7 +106,7 @@ namespace IdentityServer
             return "Bearer";
         } 
         */
-
+        
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -113,21 +115,21 @@ namespace IdentityServer
 
             //System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Add("sub", System.IdentityModel.ClaimTypes.NameIdentifier);
 
-            services.AddControllersWithViews();
+            services.ConfigureIdentityServerDataContext(Configuration.GetSection("DataContext"));
+
+            services.AddControllers(); //Adds api controllers
+            services.AddControllersWithViews(); 
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
 
-            var connectionString = Configuration.GetConnectionString("IdentityConnection");
+            //var connectionString = Configuration.GetConnectionString("IdentityConnection");
             var persistedGrantConnectionString = Configuration.GetConnectionString("PersistedGrantConnection");
-            var configConnectionString = Configuration.GetConnectionString("ConfigConnection");
+            //var configConnectionString = Configuration.GetConnectionString("ConfigConnection");
 
             services.AddLogging(loggingBuilder =>
                 loggingBuilder.AddSerilog(dispose: true));
-
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")).EnableDetailedErrors().EnableSensitiveDataLogging());
-
+             
             services.AddAntiforgery();
-            
+             
             IConfigurationSection identityServerConfig = Configuration.GetSection("IdentityServer");
             var OAuth2ConfigurationSection = Configuration.GetSection(nameof(OAuth2IntrospectionOptions));
             if (OAuth2ConfigurationSection is null)
@@ -206,10 +208,10 @@ namespace IdentityServer
 
             //services.AddHttpContextAccessor();
             //services.AddTransient<System.Security.Claims.ClaimsPrincipal>(provider => provider.GetService<IHttpContextAccessor>().HttpContext.User);
-            services.AddTransient<IdentityServer4.Validation.ICustomTokenRequestValidator, IdentityServer.Extensions.UserScopeTokenRequestValidator>();
-            services.AddScoped<IdentityServer.Extensions.AuthorizationHelper>();
-            services.AddScoped<IAuthorizationHandler, IdentityServer.Authorization.ResourceIdPermissionsAuthorizationHandler>();
-            services.AddScoped<IAuthorizationHandler, IdentityServer.Authorization.ResourcePermissionsAuthorizationHandler>();
+            services.AddTransient<IdentityServer4.Validation.ICustomTokenRequestValidator, UserScopeTokenRequestValidator>();
+            services.AddScoped<AuthorizationHelper>();
+            services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
+            services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
             //services.AddTransient<IdentityServer.Extensions.AuthorizationHelper>();
 
             var https_port_section = Configuration.GetSection("https_port");
@@ -286,7 +288,7 @@ namespace IdentityServer
 
                     // this enables automatic token cleanup. this is optional.
                     options.EnableTokenCleanup = true;
-                    options.TokenCleanupInterval = 30;
+                    options.TokenCleanupInterval = 3600;
                 })                
                 .AddAspNetIdentity<ApplicationUser>()
                 .AddJwtBearerClientAuthentication();
@@ -295,7 +297,7 @@ namespace IdentityServer
             IConfigurationSection sslConfig = Configuration.GetSection("SSL");
             ConfigureSSL(builder, sslConfig);
 
-            services.AddTransient<IdentityServer4.Services.IProfileService, IdentityServer.Extensions.IdentityWithExtendedClaimsProfileService>();
+            services.AddTransient<IdentityServer4.Services.IProfileService, IdentityWithExtendedClaimsProfileService>();
               
             services.AddAuthorizationPolicyEvaluator();
 
@@ -369,8 +371,7 @@ namespace IdentityServer
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IWebHostEnvironment env)
-        {
-            
+        { 
             // this will do the initial DB population
             InitializeDatabase(app);
 
@@ -384,9 +385,8 @@ namespace IdentityServer
             {
                 app.UseExceptionHandler("/Home/Error"); 
             }
-
+             
             app.UseSerilogRequestLogging();
-
             app.UseHttpsRedirection();
             app.UseStaticFiles();           
             app.UseIdentityServer();
@@ -397,6 +397,7 @@ namespace IdentityServer
             {
                 //We cannot require authorization on all routes or users are unable to login
                 endpoints.MapDefaultControllerRoute(); //.RequireAuthorization(Config.Policy.BearerToken); 
+                endpoints.MapControllers();
             });
 
             /*
@@ -413,11 +414,9 @@ namespace IdentityServer
             using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
             {
                 serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
-                serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
-
-                Config.AdminRoleId = serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Roles.FirstOrDefault(ur => ur.Name == Config.AdminRoleName).Id;
-
-                /* This should be added when I transition from keeping configuration in memory to keeping it in the database*/
+            }
+             
+            /* This should be added when I transition from keeping configuration in memory to keeping it in the database*/
                 /*
                var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
                context.Database.Migrate();
@@ -448,7 +447,7 @@ namespace IdentityServer
                    context.SaveChanges();
                }
                */
-            }
+            
         }
     }
 }

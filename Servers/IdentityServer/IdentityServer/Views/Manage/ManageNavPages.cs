@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using System;
 
-namespace IdentityServer.Views.Manage
+namespace Viking.Identity.Views.Manage
 {
     public static class ManageNavPages
     {

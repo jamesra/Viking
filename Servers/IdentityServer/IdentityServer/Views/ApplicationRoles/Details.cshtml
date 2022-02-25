@@ -1,4 +1,4 @@
-﻿@model IdentityServer.Models.ApplicationRole
+﻿@model Viking.Identity.Models.ApplicationRole
 
 @{
     ViewData["Title"] = "Details";
@@ -24,7 +24,7 @@
             @Html.DisplayFor(model => model.NormalizedName)
         </dd>
 
-        @if (this.User.IsInRole(Config.AdminRoleName))
+        @if (this.User.IsInRole(Special.Roles.Admin))
         {
             <dt>
                 @Html.DisplayNameFor(model => model.ConcurrencyStamp)

@@ -1,5 +1,4 @@
 ﻿using IdentityModel;
-using IdentityServer.Data;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
 using Microsoft.EntityFrameworkCore;
@@ -7,8 +6,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Resource = Viking.Identity.Models.Resource;
 
-namespace IdentityServer
+namespace Viking.Identity
 {
     public class IdentityServerCustomResourceStore : IResourceStore
     {
@@ -43,7 +45,7 @@ namespace IdentityServer
             _context = context;
         }
 
-        private static ApiResource ResourceToResourceApi(IdentityServer.Models.Resource r)
+        private static ApiResource ResourceToResourceApi(Resource r)
         {
             return new ApiResource()
             {
@@ -55,7 +57,7 @@ namespace IdentityServer
             };
         }
 
-        private static IEnumerable<ApiResource> ResourceToResourceApi(IEnumerable<IdentityServer.Models.Resource> resources)
+        private static IEnumerable<ApiResource> ResourceToResourceApi(IEnumerable<Resource> resources)
         {
             return resources.Select(r => ResourceToResourceApi(r));
         }

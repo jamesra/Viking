@@ -18,8 +18,8 @@ namespace Client
             Pause();
         }
 
-        private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/";
-        //private const string IdentityServerEndpoint = "https://localhost:44322/";
+        //private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/identityserver";
+        private const string IdentityServerEndpoint = "https://localhost:5001/";
 
         private const string Secret = "CorrectHorseBatteryStaple";
 
@@ -137,11 +137,17 @@ namespace Client
             {
                 client.SetBearerToken(tokenResponse.AccessToken);
 
+                string userAddress = $"{identityServerEndpoint}api/permissions/CurrentUser";
+
+                var appUser = await client.GetStringAsync(userAddress);
+
+                Console.WriteLine($"Server reports username = {appUser}");
+
                 //client.SetToken("token", tokenResponse.AccessToken);
 
                 //client.SetBasicAuthentication("jamesan", "Wat>com3");
   
-                string address = $"{identityServerEndpoint}Resources/UserPermissions?id={VolumeName}";
+                string address = $"{identityServerEndpoint}api/permissions/Volume";
 
                  var response = await client.GetStringAsync(address); 
 

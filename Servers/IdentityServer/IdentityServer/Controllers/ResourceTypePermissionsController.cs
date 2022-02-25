@@ -1,13 +1,13 @@
-﻿using IdentityServer.Data;
-using IdentityServer.Models;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
 
-namespace IdentityServer.Controllers
+namespace Viking.Identity.Controllers
 {
     [Authorize]
     public class ResourceTypePermissionsController : Controller
@@ -71,7 +71,7 @@ namespace IdentityServer.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Create([Bind("ResourceTypeId,PermissionId,Description")] ResourceTypePermission resourceTypePermission)
         {
             if (ModelState.IsValid)
@@ -109,7 +109,7 @@ namespace IdentityServer.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Edit(string id, [Bind("ResourceTypeId,PermissionId,Description")] ResourceTypePermission resourceTypePermission)
         {
             if (id != resourceTypePermission.ResourceTypeId)
@@ -164,7 +164,7 @@ namespace IdentityServer.Controllers
         // POST: ResourceTypePermissions/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> DeleteConfirmed([Bind("ResourceTypeId,PermissionId")] ResourceTypePermission key)
         {
             var resourceTypeId = key.ResourceTypeId;

@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace IdentityServer.Services
+namespace Viking.Identity.Services
 {
     public interface IEmailSender
     {

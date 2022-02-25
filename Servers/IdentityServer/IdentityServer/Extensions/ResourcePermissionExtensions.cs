@@ -1,9 +1,9 @@
-﻿using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using Viking.Identity.Models;
+using Viking.Identity.Models.UserViewModels;
 
-namespace IdentityServer.Extensions
+namespace Viking.Identity.Extensions
 {
     public static class UpdateResourcePermissionExtensions
     {

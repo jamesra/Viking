@@ -1,8 +1,8 @@
-﻿using IdentityServer.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using Viking.Identity.Models;
 
-namespace IdentityServer.Controllers
+namespace Viking.Identity.Controllers
 {
     public class HomeController : Controller
     {

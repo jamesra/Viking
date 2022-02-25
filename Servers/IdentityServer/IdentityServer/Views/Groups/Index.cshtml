@@ -1,4 +1,4 @@
-﻿@model IEnumerable<IdentityServer.Models.Group>
+﻿@model IEnumerable<Viking.Identity.Models.Group>
 
 @{
     ViewData["Title"] = "Groups";
@@ -8,7 +8,7 @@
 <h2>Groups</h2>
 <p>Users can be associated with any number of the groups listed below.  The meaning of group membership is arbitrary.  The description for a group should indicate its purpose.</p>
 
-@if (this.User.IsInRole(Config.AdminRoleName))
+@if (this.User.IsInRole(Special.Roles.Admin))
 {
     <p>
         <a asp-action="Create">Create New</a>

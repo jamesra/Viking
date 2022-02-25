@@ -1,4 +1,4 @@
-using IdentityServer.Controllers;
+using Viking.Identity.Controllers;
 
 namespace Microsoft.AspNetCore.Mvc
 {

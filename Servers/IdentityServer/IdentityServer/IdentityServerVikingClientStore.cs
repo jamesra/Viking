@@ -1,12 +1,12 @@
-﻿using IdentityServer.Data;
-using IdentityServer4;
+﻿using IdentityServer4;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
 
-namespace IdentityServer
+namespace Viking.Identity
 {
     public class IdentityServerVikingClientStore : IClientStore
     {

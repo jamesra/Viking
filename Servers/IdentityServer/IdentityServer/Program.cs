@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Serilog;
 
-namespace IdentityServer
+namespace Viking.Identity
 {
     public class Program
     {
