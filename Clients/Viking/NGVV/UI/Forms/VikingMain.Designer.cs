@@ -76,7 +76,7 @@ namespace Viking
             // CacheCleaningTimer
             // 
             this.CacheCleaningTimer.Enabled = true;
-            this.CacheCleaningTimer.Interval = 15000;
+            this.CacheCleaningTimer.Interval = 60000;
             this.CacheCleaningTimer.Tick += new System.EventHandler(this.CacheCleaningTimer_Tick);
             // 
             // TabsModules
