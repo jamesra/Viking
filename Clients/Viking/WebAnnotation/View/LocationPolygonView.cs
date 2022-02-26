@@ -6,6 +6,7 @@ using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,7 +60,7 @@ namespace WebAnnotation.View
 
         public Microsoft.Xna.Framework.Color Color
         {
-            get { return _Color; }
+            get => _Color;
             set
             {
                 _Color = value;
@@ -71,14 +72,11 @@ namespace WebAnnotation.View
             }
         }
 
-        public Microsoft.Xna.Framework.Color HSLColor
-        {
-            get { return _Color.ConvertToHSL(); }
-        }
+        public Microsoft.Xna.Framework.Color HSLColor => _Color.ConvertToHSL();
 
         public float Alpha
         {
-            get { return polygonMesh.Alpha; }
+            get => polygonMesh.Alpha;
             set
             {
                 polygonMesh.Alpha = value;
@@ -88,13 +86,7 @@ namespace WebAnnotation.View
 
         private double _ControlPointRadius;
 
-        public double ControlPointRadius
-        {
-            get
-            {
-                return _ControlPointRadius;
-            }
-        }
+        public double ControlPointRadius => _ControlPointRadius;
 
 
         public double lineWidth = 32;
@@ -137,7 +129,16 @@ namespace WebAnnotation.View
 
             this.ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
 
-            SmoothedVolumePolygon = VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay);
+            try
+            {
+                SmoothedVolumePolygon = VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay);
+            }
+            catch (ArgumentException)
+            {
+                Trace.WriteLine($"Unable to smooth volume polygon: {this.ID}");
+                SmoothedVolumePolygon = VolumePolygon;
+            }
+
             polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, this.HSLColor);
             CreateLabelObjects();
 
