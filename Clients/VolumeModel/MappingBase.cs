@@ -42,14 +42,14 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        bool[] TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
+        bool[] TrySectionToVolume(in GridVector2[] Points, out GridVector2[] transformedP);
 
         /// <summary>
         /// Maps the point from the volume to the section if this is overriden by a volume mapping class
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        bool[] TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
+        bool[] TryVolumeToSection(in GridVector2[] Points, out GridVector2[] transformedP);
 
         /// <summary>
         /// Maps the point from the volume to the section if this is overriden by a volume mapping class
@@ -402,7 +402,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        public abstract bool[] TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
+        public abstract bool[] TrySectionToVolume(in GridVector2[] Points, out GridVector2[] transformedP);
 
 
         /// <summary>
@@ -410,6 +410,6 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        public abstract bool[] TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
+        public abstract bool[] TryVolumeToSection(in GridVector2[] Points, out GridVector2[] transformedP);
     }
 }

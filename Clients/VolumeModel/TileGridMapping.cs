@@ -153,7 +153,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TryVolumeToSection(in GridVector2[] P, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[P.Length];
             P.CopyTo(transformedP, 0);
@@ -165,7 +165,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TrySectionToVolume(in GridVector2[] P, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[P.Length];
             P.CopyTo(transformedP, 0);

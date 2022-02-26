@@ -66,7 +66,7 @@ namespace Viking.VolumeModel
             return Transform.Transform(P);
         }
 
-        public bool[] TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP)
+        public bool[] TrySectionToVolume(in GridVector2[] Points, out GridVector2[] transformedP)
         {
             return Transform.TryTransform(Points, out transformedP);
         }
@@ -76,7 +76,7 @@ namespace Viking.VolumeModel
             return Transform.TryTransform(P, out transformedP);
         }
 
-        public bool[] TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP)
+        public bool[] TryVolumeToSection(in GridVector2[] Points, out GridVector2[] transformedP)
         {
             return Transform.TryInverseTransform(Points, out transformedP);
         }
