@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace WebAnnotationModel
@@ -111,6 +112,15 @@ namespace WebAnnotationModel
                 AsyncResult = null;
             }
         }
+
+        public override string ToString()
+        {
+#if DEBUG
+            return (this.debug_message ?? "") +  $" {this.LastQuery} InProgress: {this.OutstandingQuery} OutstandingQuery: {this.OutstandingQuery}";
+#else
+            return $" {this.LastQuery} InProgress: {this.OutstandingQuery} OutstandingQuery: {this.OutstandingQuery}";
+#endif
+        }
     }
 
     public class AnnotationRegions<OBJECT> : BoundlessRegionPyramid<RegionRequestData<OBJECT>>
@@ -194,7 +204,8 @@ namespace WebAnnotationModel
                                                     double ScreenPixelSizeInVolume,
                                                     int SectionNumber,
                                                     Action<ICollection<OBJECT>> OnServerObjectsLoadedCallback,
-                                                    Action<ICollection<OBJECT>> FoundCachedLocalObjectsCallback)
+                                                    Action<ICollection<OBJECT>> FoundCachedLocalObjectsCallback, 
+                                                    CancellationToken token)
         {
             if (!VolumeBounds.HasValue)
             {
@@ -216,6 +227,9 @@ namespace WebAnnotationModel
 
             foreach (GridIndex iCell in gridRange.Indicies)
             {
+                if (token.IsCancellationRequested)
+                    return;
+
                 int iX = iCell.X;
                 int iY = iCell.Y;
 
