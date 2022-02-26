@@ -47,8 +47,8 @@ namespace WebAnnotation
         private static AnnotationOverlay _CurrentOverlay = null;
         public static AnnotationOverlay CurrentOverlay { get { return _CurrentOverlay; } }
 
-        protected static WebAnnotation.UI.Forms.GoToLocationForm GoToLocationForm;
-        public static WebAnnotation.UI.Forms.GoToStructureForm GoToStructureForm;
+        protected static WebAnnotation.UI.Forms.GoToActionForm GoToLocationForm;
+        protected static WebAnnotation.UI.Forms.GoToActionForm GoToStructureForm;
 
         GridVector2 LastMouseDownCoords;
         GridVector2 LastMouseMoveVolumeCoords;
@@ -66,6 +66,11 @@ namespace WebAnnotation
         internal static ICanvasGeometryView LastIntersectedObject = null;
 
         private MouseOverLocationCanvasViewEffect mouseOverEffect = new MouseOverLocationCanvasViewEffect();
+
+        /// <summary>
+        /// Used to cancel loading section annotations when the desired annotations have changed
+        /// </summary>
+        private CancellationTokenSource loadSectionAnnotationsCancellationTokenSource;
 
         static AnnotationOverlay()
         {
@@ -129,7 +134,7 @@ namespace WebAnnotation
         public static void GoToStructure(long locID)
         {
             StructureObj s = Store.Structures.GetObjectByID(locID);
-            if (s == null)
+            if (s is null)
                 return;
 
             GoToStructure(s);
@@ -137,7 +142,7 @@ namespace WebAnnotation
 
         public static void GoToStructure(StructureObj s)
         {
-            if (s == null)
+            if (s is null)
                 return;
 
             ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(s.ID);
@@ -156,14 +161,13 @@ namespace WebAnnotation
                 List<double> Depth = nearest.Select(l => l.Z).ToList();
 
                 GoToLocation(nearest.First());
-            }
-
+            } 
         }
 
         public static void GoToLocation(long locID)
         {
             LocationObj loc = Store.Locations.GetObjectByID(locID);
-            if (loc == null)
+            if (loc is null)
                 return;
 
             GoToLocation(loc);
@@ -171,7 +175,7 @@ namespace WebAnnotation
 
         public static void GoToLocation(LocationObj loc)
         {
-            if (loc == null)
+            if (loc is null)
                 return;
 
             //Adjust downsample so the location fits nicely in the view
@@ -212,52 +216,46 @@ namespace WebAnnotation
             */
         }
 
+        private readonly static SemaphoreSlim GetOrCreateAnnotationsForSectionSemaphore = new SemaphoreSlim(1);
         /// <summary>
         /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not
         /// </summary>
         /// <param name="SectionNumber"></param>
         public static SectionAnnotationsView GetOrCreateAnnotationsForSection(int SectionNumber)
         {
+            SectionAnnotationsView SectionAnnotations = cacheSectionAnnotations.Fetch(SectionNumber);
+            if (SectionAnnotations != null)
+                return SectionAnnotations;
+
             if (Viking.UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
             {
-                SectionAnnotationsView SectionAnnotations = cacheSectionAnnotations.Fetch(SectionNumber);
-                if (SectionAnnotations != null)
-                    return SectionAnnotations;
-
-                if (false == Viking.UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
-                    return null;
-
-                SectionAnnotations = new SectionAnnotationsView(Viking.UI.State.volume.SectionViewModels[SectionNumber]);
-
-                SectionAnnotationsView retVal = cacheSectionAnnotations.GetOrAdd(SectionNumber, SectionAnnotations);
-
-                //If we did add a new view model to the cache, then subscribe to events and reduce cache footprint if needed
-                if (object.ReferenceEquals(retVal, SectionAnnotations))
+                try
                 {
-                    cacheSectionAnnotations.ReduceCacheFootprint(null);
-                }
-                else
-                {
-                    //Otherwise make the duplicate SectionLocationsViewModel go away 
-                    SectionAnnotations = null;
-                }
+                    GetOrCreateAnnotationsForSectionSemaphore.Wait();
+                     
+                    SectionAnnotationsView retVal = cacheSectionAnnotations.GetOrAdd(SectionNumber, (k) => new SectionAnnotationsView(Viking.UI.State.volume.SectionViewModels[SectionNumber]));
 
-                return retVal;
+                    //If we did add a new view model to the cache, then subscribe to events and reduce cache footprint if needed
+                    if (object.ReferenceEquals(retVal, SectionAnnotations))
+                    {
+                        cacheSectionAnnotations.ReduceCacheFootprint(null);
+                    }
+                    else
+                    {
+                        //Otherwise make the duplicate SectionLocationsViewModel go away 
+                        SectionAnnotations = null;
+                    }
+
+                    return retVal;
+                }
+                finally
+                {
+                    GetOrCreateAnnotationsForSectionSemaphore.Release();
+                }
             }
 
             return null;
-        }
-
-
-
-
-        public SectionAnnotationsView CurrentSectionAnnotations
-        {
-            get
-            {
-                return GetOrCreateAnnotationsForSection(_Parent.Section.Number);
-            }
-        }
+        } 
 
         public string[] HelpStrings
         {
@@ -274,9 +272,7 @@ namespace WebAnnotation
                 return helpstrings.ToArray();
             }
         }
-
-
-
+         
         protected string[] LastMouseOverHelpStrings = new string[] { };
 
         public static void GotoLastModifiedLocation()
@@ -443,12 +439,14 @@ namespace WebAnnotation
             this._Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(this.OnCameraPropertyChanged);
             //linksView = new LocationLinksViewModel(parent); 
 
-            LoadSectionAnnotations();
+            LoadSectionAnnotations(CancellationToken.None);
         }
 
         private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            System.Threading.Tasks.Task.Run(() => LoadSectionAnnotations());
+            loadSectionAnnotationsCancellationTokenSource?.Cancel();
+            loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
+            System.Threading.Tasks.Task.Run(() => LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token),loadSectionAnnotationsCancellationTokenSource.Token);
         }
 
         protected void UpdateMouseCursor()
@@ -903,8 +901,10 @@ namespace WebAnnotation
         {
             if (GoToStructureForm == null)
             {
-                GoToStructureForm = new UI.Forms.GoToStructureForm();
-                GoToStructureForm.OnGo += GoToStructure;
+                GoToStructureForm = new UI.Forms.GoToActionForm();
+                GoToStructureForm.Title = "Enter Structure ID";
+                GoToStructureForm.IsValidInput = (ID) => Store.Structures.GetObjectByID(ID, true) != null;
+                GoToStructureForm.OnGo = GoToStructure;
                 GoToStructureForm.Closed += GoToStructureForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToStructureForm);
                 GoToStructureForm.Show();
@@ -919,8 +919,10 @@ namespace WebAnnotation
         {
             if (GoToLocationForm == null)
             {
-                GoToLocationForm = new UI.Forms.GoToLocationForm(); 
-                GoToLocationForm.OnGo += GoToLocation;
+                GoToLocationForm = new UI.Forms.GoToActionForm();
+                GoToLocationForm.Title = "Enter Location ID";
+                GoToLocationForm.IsValidInput = (ID) => Store.Locations.GetObjectByID(ID, true) != null;
+                GoToLocationForm.OnGo = GoToLocation;
                 GoToLocationForm.Closed += GoToLocationForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToLocationForm);
                 GoToLocationForm.Show();
@@ -937,7 +939,7 @@ namespace WebAnnotation
             {
                 //Refresh the annotations on F5
                 case Keys.F5:
-                    ResetAnnotationsAsync();
+                    ResetAnnotationsAsync(CancellationToken.None);
                     return;
                 case Keys.F3:
                     OnContinueLastTrace();
@@ -1092,14 +1094,12 @@ namespace WebAnnotation
         }
 
         private void GoToStructureForm_Closed(object sender, EventArgs e)
-        { 
-            GoToStructureForm.OnGo -= GoToStructure;
+        {  
             WebAnnotation.AnnotationOverlay.GoToStructureForm = null;
         }
 
         private void GoToLocationForm_Closed(object sender, EventArgs e)
-        {
-            GoToLocationForm.OnGo -= GoToLocation; 
+        { 
             WebAnnotation.AnnotationOverlay.GoToLocationForm = null;
         }
 
@@ -1110,7 +1110,7 @@ namespace WebAnnotation
                 case Keys.Space:
 
                     //Only load the annotations for any section once so we can't fire multiple requests by pounding the spacebar
-                    LoadSectionAnnotations();
+                    LoadSectionAnnotations(CancellationToken.None);
                     InvalidateParent();
 
                     break;
@@ -1196,19 +1196,13 @@ namespace WebAnnotation
                     new ResizeCircleCommand.OnCommandSuccess((double radius) => {
 
                                     newLocation.TypeCode = LocationType.CIRCLE;
-                                    newLocation.MosaicShape = SqlGeometryUtils.Extensions.ToCircle(sectionPos.X,
-                                       sectionPos.Y,
-                                       newLocation.Section,
-                                       radius);
-                                    newLocation.VolumeShape = SqlGeometryUtils.Extensions.ToCircle(worldPos.X,
-                                        worldPos.Y,
-                                        newLocation.Section,
-                                        radius);
+                                    LocationActions.UpdateCircleLocationCallback(newLocation, worldPos, sectionPos,
+                                        radius); 
                                     newLocation.Width = null;
 
                                     if(SaveToStore)
                                         SaveLocationsWithMessageBoxOnError();
-                                     })});
+                    })});
         }
 
         public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
@@ -1483,7 +1477,9 @@ namespace WebAnnotation
             //Don't load annotations when flipping sections if the user is holding down space bar to hide them
             if (_Parent.ShowOverlays)
             {
-                LoadSectionAnnotations();
+                loadSectionAnnotationsCancellationTokenSource?.Cancel();
+                loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
+                LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
                 Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading));
             }
         }
@@ -1611,10 +1607,7 @@ namespace WebAnnotation
             foreach (int section in changedSections)
             {
                 SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
-                if (SLVModel != null)
-                {
-                    SLVModel.OnLocationsStoreChanged(sender, e);
-                }
+                SLVModel?.OnLocationsStoreChanged(sender, e);
             }
 
             foreach (int section in AdjacentSections)
@@ -1622,10 +1615,7 @@ namespace WebAnnotation
                 if (!changedSections.Contains(section))
                 {
                     SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
-                    if (SLVModel != null)
-                    {
-                        SLVModel.OnLocationsStoreChanged(sender, e);
-                    }
+                    SLVModel?.OnLocationsStoreChanged(sender, e);
                 }
             }
 
@@ -1662,19 +1652,25 @@ namespace WebAnnotation
         {
             ///This could be optimized, but it should be a rare event
             cacheSectionAnnotations.RemoveEntry(e.ChangedSection.Number);
-
+            
             if (e.ChangedSection.Number == this.CurrentSectionNumber)
-                LoadSectionAnnotations();
+            {
+                loadSectionAnnotationsCancellationTokenSource?.Cancel();
+                loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
+                LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
+            }
         }
 
-        /// <summary>
-        /// When this occurs we should update the positions we draw the locations at. 
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        public void OnSectionTransformChanged(object sender, TransformChangedEventArgs e)
+            /// <summary>
+            /// When this occurs we should update the positions we draw the locations at. 
+            /// </summary>
+            /// <param name="sender"></param>
+            /// <param name="e"></param>
+            public void OnSectionTransformChanged(object sender, TransformChangedEventArgs e)
         {
-            ResetAnnotationsAsync();
+            loadSectionAnnotationsCancellationTokenSource?.Cancel();
+            loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
+            ResetAnnotationsAsync(loadSectionAnnotationsCancellationTokenSource.Token);
         }
 
         /// <summary>
@@ -1684,16 +1680,15 @@ namespace WebAnnotation
         /// <param name="e"></param>
         public void OnVolumeTransformChanged(object sender, TransformChangedEventArgs e)
         {
-            ResetAnnotationsAsync();
+            loadSectionAnnotationsCancellationTokenSource?.Cancel();
+            loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
+            ResetAnnotationsAsync(loadSectionAnnotationsCancellationTokenSource.Token);
         }
 
-        private void ResetAnnotationsAsync()
+        private async Task ResetAnnotationsAsync(CancellationToken token)
         {
-            Task.Run(() =>
-            {
-                cacheSectionAnnotations.Clear();
-                LoadSectionAnnotations();
-            });
+            cacheSectionAnnotations.Clear();
+            await LoadSectionAnnotations(token);
         }
 
         private GridRectangle LastVisibleWorldBounds;
@@ -1720,16 +1715,23 @@ namespace WebAnnotation
         }
 
         private readonly SemaphoreSlim LoadSectionAnnotationsSemaphore = new SemaphoreSlim(1);
-        protected async Task LoadSectionAnnotations()
+        protected async Task LoadSectionAnnotations(CancellationToken token)
         {
             if (Parent.Scene is null)
                 return;
 
             try
             {
-                await LoadSectionAnnotationsSemaphore.WaitAsync();
+                await LoadSectionAnnotationsSemaphore.WaitAsync(token);
+                if (token.IsCancellationRequested)
+                    return;
+
                 var sectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number);
-                sectionAnnotations?.LoadAnnotationsInRegion(Parent.Scene);
+                sectionAnnotations?.LoadAnnotationsInRegion(Parent.Scene, token);
+            }
+            catch (TaskCanceledException)
+            {
+                return;
             }
             finally
             {
@@ -1850,7 +1852,7 @@ namespace WebAnnotation
             basicEffect.Alpha = 1;
 
             RasterizerState OriginalRasterState = graphicsDevice.RasterizerState;
-            SectionAnnotationsView currentSectionAnnotations = CurrentSectionAnnotations;
+            SectionAnnotationsView currentSectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number);
             Debug.Assert(currentSectionAnnotations != null);
 
             int SectionNumber = _Parent.Section.Number;
