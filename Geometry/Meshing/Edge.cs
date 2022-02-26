@@ -155,8 +155,8 @@ namespace Geometry.Meshing
 
     public class Edge : IComparable<IEdge>, IEquatable<IEdge>, IEdge
     {
-        readonly protected SortedSet<IFace> _Faces; //The two faces adjacent to the edge
-        readonly public IEdgeKey Key;
+        protected readonly SortedSet<IFace> _Faces; //The two faces adjacent to the edge
+        public readonly IEdgeKey Key;
 
         public int A
         {

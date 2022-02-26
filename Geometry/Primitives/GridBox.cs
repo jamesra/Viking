@@ -406,7 +406,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns></returns>
-        static public GridBox Union(GridBox A, GridBox B)
+        public static GridBox Union(GridBox A, GridBox B)
         {
             if (A.minVals is null && B.minVals is null)
                 return default;
@@ -423,7 +423,7 @@ namespace Geometry
             return new GridBox(new_mins, new_maxs);
         }
 
-        static public GridBox GetBoundingBox(IEnumerable<GridVector3> points)
+        public static GridBox GetBoundingBox(IEnumerable<GridVector3> points)
         {
             if (points == null)
                 throw new ArgumentException("Bounding box cannot be created for null points collection");

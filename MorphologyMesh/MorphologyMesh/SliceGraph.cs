@@ -300,7 +300,7 @@ namespace MorphologyMesh
             {
                 foreach (var id in cycle_ids)
                 {
-                    Trace.WriteLine(string.Format("Location {0} forms a cycle in the morphology graph", id));
+                    Console.WriteLine($"Location {id} forms a cycle in the morphology graph");
                 }
 
                 //Debug.Assert(cycle_ids.Length == 0, string.Format("Cycle found in graph: {0}", cycle_ids[0]));

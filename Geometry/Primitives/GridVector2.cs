@@ -450,14 +450,7 @@ namespace Geometry
         /// <param name="B"></param>
         /// <returns></returns>
         public static double Dot(in GridVector2 A, in GridVector2 B)
-        {
-            /*
-            double AX = Math.Round(A.X, 3);
-            double AY = Math.Round(A.Y, 3);
-            double BX = Math.Round(B.X, 3);
-            double BY = Math.Round(B.Y, 3);
-             */
-
+        {  
             double AX = (double)(float)A.X;
             double AY = (double)(float)A.Y;
             double BX = (double)(float)B.X;
