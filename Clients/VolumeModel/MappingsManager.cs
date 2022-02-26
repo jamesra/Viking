@@ -1,4 +1,5 @@
-﻿using Geometry;
+﻿using System;
+using Geometry;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
@@ -34,6 +35,12 @@ namespace Viking.VolumeModel
         protected override SectionMappingsCacheEntry CreateEntry(int key, SectionTransformsDictionary entry)
         {
             SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entry);
+            return cacheEntry;
+        }
+
+        protected override SectionMappingsCacheEntry CreateEntry(int key, Func<int, SectionTransformsDictionary> entryFactory)
+        {
+            SectionMappingsCacheEntry cacheEntry = new SectionMappingsCacheEntry(key, entryFactory(key));
             return cacheEntry;
         }
 
