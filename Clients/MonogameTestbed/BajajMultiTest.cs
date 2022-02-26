@@ -10,8 +10,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -146,10 +148,11 @@ namespace MonogameTestbed
         }
 
         public readonly MorphologyGraph Graph;
+
         /// <summary>
         /// Used to lock the mesh views for individual slices
         /// </summary>
-        private readonly object drawlock = new object();
+        private readonly SemaphoreSlim drawlock = new SemaphoreSlim(1);
         readonly System.Threading.Thread BuildCompositeThread = null;
         //SliceGraph sliceGraph;
 
@@ -191,11 +194,11 @@ namespace MonogameTestbed
 
         private void AddMesh(BajajGeneratorMesh mesh, bool Success)
         {
-            System.Threading.Tasks.Task.Run(() =>
-            {
+            //System.Threading.Tasks.Task.Run(() =>
+            //{
                 meshAssemblyPlan.OnMeshCompleted(mesh, Success);
                 //CompletedMeshes.Enqueue(mesh);
-            });
+            //});
 
             //MeshModel<VertexPositionColor> meshViewModel = BajajOTVAssignmentView.CreateFaceView(mesh);
             //CompletedMeshes.Enqueue(mesh);
@@ -221,9 +224,14 @@ namespace MonogameTestbed
             this.listLineViews.Clear();
             this.MeshViews.Clear();
 
-            lock (drawlock)
+            try
             {
+                drawlock.Wait();
                 MeshViews.Add(SliceMeshView);
+            }
+            finally
+            {
+                drawlock.Release();
             }
 
             CompositeMeshView = new MeshView<VertexPositionNormalColor>
@@ -245,7 +253,7 @@ namespace MonogameTestbed
             SliceGraph sliceGraph = await SliceGraph.Create(graph, 2.0);
             Trace.WriteLine("End Slice graph construction");
 
-            meshAssemblyPlan = new MeshAssemblyPlanner(sliceGraph);
+            meshAssemblyPlan = MeshAssemblyPlanner.Create(sliceGraph);
 
             meshIncompleteView = new MeshAssemblyPlannerIncompleteView(meshAssemblyPlan, sliceGraph);
             meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan, graph.BoundingBox.CenterPoint)
@@ -253,7 +261,7 @@ namespace MonogameTestbed
                 Color = ColorExtensions.Random()
             };
 
-            List<BajajGeneratorMesh> meshes = BajajMeshGenerator.ConvertToMesh(sliceGraph, OnSliceCompleted);
+            List<BajajGeneratorMesh> meshes = await BajajMeshGenerator.ConvertToMesh(sliceGraph, OnSliceCompleted);
 
             //If we have fewer region views, reset the region view index
             if(iShownRegion.HasValue && iShownRegion.Value > RegionViews.Count)
@@ -268,9 +276,14 @@ namespace MonogameTestbed
 
             if (iShownMesh == null)
             {
-                lock (drawlock)
+                try
                 {
+                    await drawlock.WaitAsync();
                     iShownMesh = MeshViews.Count - 1;
+                }
+                finally
+                {
+                    drawlock.Release();
                 }
             }
         }
@@ -295,10 +308,15 @@ namespace MonogameTestbed
                 {
                     if (MeshViews != null  && ShowMesh && (iShownMesh.HasValue && iShownMesh.Value < MeshViews.Count))
                     {
-                        lock (drawlock)
+                        try
                         {
+                            drawlock.Wait();
                             MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.None);
                             ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
+                        }
+                        finally
+                        {
+                            drawlock.Release();
                         }
                     }
                 }
@@ -439,8 +457,9 @@ namespace MonogameTestbed
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
 
             //Expand our model if we can
-            lock (drawlock)
+            try
             {
+                drawlock.Wait();
                 if (ShowCompositeMesh == false)
                 {
                     if (iShownMesh.HasValue && iShownMesh.Value < MeshViews.Count)
@@ -457,20 +476,26 @@ namespace MonogameTestbed
                             //CompositeMeshModel.ModelLock.EnterReadLock();
                             //CompositeMeshView.Draw(window.GraphicsDevice, scene, CullMode);
                             //MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene, window.basicEffect, CullMode, meshAssemblyPlan.MeshModels);
-                            if(meshIncompleteView != null)
-                                MeshView<VertexPositionColor>.Draw(window.GraphicsDevice, scene, window.basicEffect, CullMode, FillMode.WireFrame, meshIncompleteView.MeshModels);
-                            
-                            if(meshCompletedView != null)
-                                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene, window.basicEffect, CullMode, FillMode.Solid, meshCompletedView.MeshModels);
+                            if (meshIncompleteView != null)
+                                MeshView<VertexPositionColor>.Draw(window.GraphicsDevice, scene, window.basicEffect,
+                                    CullMode, FillMode.WireFrame, meshIncompleteView.MeshModels);
+
+                            if (meshCompletedView != null)
+                                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene,
+                                    window.basicEffect, CullMode, FillMode.Solid, meshCompletedView.MeshModels);
                         }
                         finally
                         {
                             //CompositeMeshModel.ModelLock.ExitReadLock();
                         }
-                        
+
                         //ViewLabels.AppendLine(CompositeMeshView.Name);
                     }
                 }
+            }
+            finally
+            {
+                drawlock.Release();
             }
         }
     }
@@ -622,9 +647,36 @@ namespace MonogameTestbed
                 await t;
             }
 
+            //Save the output in a specific place upon request in the command line parameters
             if(string.IsNullOrWhiteSpace(Program.options.OutputPath) == false)
             {
+                try
+                {
+                    SaveMeshes("BajajMultitest", Program.options.OutputPath);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Could not save scene output mesh to {Program.options.OutputPath}.\nException:{e}");
+                }
 
+                foreach (var wrapView in wrapViews)
+                {
+                    try
+                    {
+                        if (wrapView.meshAssemblyPlan != null && wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
+                            SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.BoundingBox.CenterPoint, wrapView.Graph.StructureID, Program.options.OutputPath);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Could not save Structure #{wrapView?.Graph?.StructureID} output mesh to {Program.options.OutputPath}.\nException:{e}");
+                        
+                    }
+                }
+            }
+
+            if (Program.options.Quiet)
+            {
+                window.Exit();
             }
             /*
             A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
@@ -754,11 +806,10 @@ namespace MonogameTestbed
             }
 
             if (Gamepad.Back_Clicked || (keyboard.Pressed(Keys.S) && (keyboard.Pressed(Keys.LeftControl) || keyboard.Pressed(Keys.RightControl))))
-            {
-                string outputPath = System.IO.Path.Combine(new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Morphology", $"BajajMultitest.dae" });
+            { 
                 //if (wrapView.meshAssemblyPlan.MeshAssembledEvent.IsSet)
                 //SaveMesh(wrapView.meshAssemblyPlan.Root.MeshModel.composite, wrapView.Graph.StructureID);
-                SaveMeshes("BajajMultitest", outputPath);
+                SaveMeshes("BajajMultitest");
             }
             /*
             if(Gamepad.RightShoulder_Clicked)
@@ -814,8 +865,12 @@ namespace MonogameTestbed
             throw new NotImplementedException();
         }
 
-        public void SaveMeshes(string title, string outputPath)
+        private static string DefaultOutputPath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Morphology");
+
+        public void SaveMeshes(string title, string outputDir = null)
         {
+            outputDir = outputDir ?? DefaultOutputPath;
+
             BasicColladaView ColladaView = new BasicColladaView(graph.scale.X, null)
             {
                 SceneTitle = title
@@ -839,17 +894,22 @@ namespace MonogameTestbed
                     ColladaView.Add(rootModel);
                 }
             }
- 
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(outputPath));
 
-            DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputPath);
+            var fInfo = new System.IO.DirectoryInfo(outputDir);
+            if(fInfo.Exists == false)
+                fInfo.Create();
+
+            var outputFile = System.IO.Path.Combine(outputDir, title + ".dae");
+            DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputFile);
         }
 
-        public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, GridVector3 Position, ulong structure_id)
-        {
+        public void SaveMesh(IReadOnlyMesh3D<IVertex3D> mesh, GridVector3 Position, ulong structure_id, string outputDir = null)
+        { 
+            outputDir = outputDir ?? DefaultOutputPath;
+
             BasicColladaView ColladaView = new BasicColladaView(graph.scale.X, null)
             {
-                SceneTitle = "BajajMultitest"
+                SceneTitle = $"Structure #{structure_id}"
             };
 
             StructureModel rootModel = new StructureModel(structure_id, mesh,
@@ -860,10 +920,13 @@ namespace MonogameTestbed
 
             ColladaView.Add(rootModel);
 
-            string outputPath = System.IO.Path.Combine(new string[] { Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Morphology", $"Morphology-{structure_id}.dae" });
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(outputPath));
+            var fInfo = new System.IO.DirectoryInfo(outputDir);
+            if (fInfo.Exists == false)
+                fInfo.Create();
 
-            DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputPath);
+            var outputFile = System.IO.Path.Combine(outputDir ?? DefaultOutputPath, $"Morphology-{structure_id}.dae");
+            
+            DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputFile);
         }
     }
 }

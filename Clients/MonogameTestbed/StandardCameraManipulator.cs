@@ -137,49 +137,52 @@ namespace MonogameTestbed
             bool ShiftDown = PressedOrDown(Keys.LeftShift) || PressedOrDown(Keys.RightShift);
             bool CtrlDown = PressedOrDown(Keys.LeftControl) || PressedOrDown(Keys.RightControl);
 
+            float stepScalar = ShiftDown ? 10.0f : 1.0f;
+            double rotateScalar = ShiftDown ? 5.0 : 1.0;
+
             if (PressedOrDown(Keys.W))
             {
-                if(ShiftDown)
+                if(CtrlDown)
                 {
-                    Camera.Pitch -= OneDegree * (CtrlDown ? 5 : 1);
+                    Camera.Pitch -= OneDegree * rotateScalar;
                 }
                 else 
-                    translation += new Vector3(0, 0, -UnitStepSize) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.W) : 1);
+                    translation += new Vector3(0, 0, -UnitStepSize * stepScalar) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.W) : 1);
             }
             if (PressedOrDown(Keys.S))
             {
-                if (ShiftDown)
+                if (CtrlDown)
                 {
-                    Camera.Pitch += OneDegree * (CtrlDown ? 5 : 1);
+                    Camera.Pitch += OneDegree * rotateScalar;
                 }
                 else
-                    translation += new Vector3(0, 0, UnitStepSize) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.S) : 1);
+                    translation += new Vector3(0, 0, UnitStepSize * stepScalar) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.S) : 1);
             }
             if (PressedOrDown(Keys.A))
             {
-                if (ShiftDown)
+                if (CtrlDown)
                 {
-                    Camera.Yaw += OneDegree * (CtrlDown ? 5 : 1);
+                    Camera.Yaw += OneDegree * rotateScalar;
                 }
                 else
-                    translation += new Vector3(-UnitStepSize, 0, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.A) : 1);
+                    translation += new Vector3(-UnitStepSize * stepScalar, 0, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.A) : 1);
             }
             if (PressedOrDown(Keys.D))
             {
-                if (ShiftDown)
+                if (CtrlDown)
                 {
-                    Camera.Yaw -= OneDegree * (CtrlDown ? 5 : 1);
+                    Camera.Yaw -= OneDegree * rotateScalar;
                 }
                 else
-                    translation += new Vector3(UnitStepSize, 0, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.D) : 1);
+                    translation += new Vector3(UnitStepSize * stepScalar, 0, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.D) : 1);
             }
             if (PressedOrDown(Keys.E))
             { 
-                translation += new Vector3(0, UnitStepSize, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.E) : 1);
+                translation += new Vector3(0, UnitStepSize * stepScalar, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.E) : 1);
             }
             if (PressedOrDown(Keys.C))
             {
-                translation += new Vector3(0, -UnitStepSize, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.C) : 1);
+                translation += new Vector3(0, -UnitStepSize * stepScalar, 0) * (CapsLockDown ? ScalarForElapsedDownTime(Keys.C) : 1);
             }
              
 

@@ -277,6 +277,7 @@ namespace MorphologyMesh
 
         public delegate void OnMeshGeneratedEventHandler(BajajGeneratorMesh mesh, bool Success);
 
+        /*
         /// <summary>
         /// Convert a morphology graph to an unprocessed mesh graph
         /// </summary>
@@ -290,12 +291,13 @@ namespace MorphologyMesh
 
             return ConvertToMesh(sliceGraph, OnMeshGenerated);
         }
+        */
 
             /// Convert a morphology graph to an unprocessed mesh graph
             /// </summary>
             /// <param name="graph"></param>
             /// <returns></returns>
-        public static List<BajajGeneratorMesh> ConvertToMesh(SliceGraph sliceGraph, OnMeshGeneratedEventHandler OnMeshGenerated = null)
+        public static async Task<List<BajajGeneratorMesh>> ConvertToMesh(SliceGraph sliceGraph, OnMeshGeneratedEventHandler OnMeshGenerated = null)
         { 
             //List<MeshingGroup> MeshingGroups = CalculateMeshingGroups(graph);
             List<BajajGeneratorMesh> listBajajMeshGenerators = new List<BajajGeneratorMesh>();
@@ -316,19 +318,36 @@ namespace MorphologyMesh
   //              listBajajMeshGenerators.Add(mesh);
             }
 
-            foreach(var t in meshGenTasks)
-            {
+            var meshGenTaskArray = meshGenTasks.ToArray();
+            while (meshGenTasks.Any())
+            { 
                 try
                 {
-                    t.Wait();
-                    if(t.Status == TaskStatus.RanToCompletion)
-                        listBajajMeshGenerators.Add(t.Result);
+                    var finishedTask = Task.WhenAny(meshGenTasks);
+
+                    try
+                    {
+                        var t = finishedTask.Result;
+                        if (t.Status == TaskStatus.RanToCompletion)
+                        {
+                            listBajajMeshGenerators.Add(t.Result);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Trace.WriteLine($"Exception generating mesh {finishedTask.Result.AsyncState}");
+                    }
+                    finally
+                    {
+                        meshGenTasks.Remove(finishedTask.Result);
+                    }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
-                    Trace.WriteLine(string.Format("Exception generating {0}", t.AsyncState.ToString()));
-                }
+                    Trace.WriteLine($"Exception generating mesh {e}");
+                }  
             }
+             
             //listBajajMeshGenerators.AddRange(meshGenTasks.Select(t => t.Result));
 
             listBajajMeshGenerators.Sort(Comparer<BajajGeneratorMesh>.Create((a, b) => a.AverageZ.CompareTo(b.AverageZ)));  //Sorting the bajaj generators before launching tasks is optional but built the model in a predictable order for debug viewing
@@ -361,6 +380,11 @@ namespace MorphologyMesh
                     Trace.WriteLine(string.Format("Exception building mesh {0}:\n{1}", listBajajMeshGenerators[iMesh].ToString(), e));
                     continue;
                 }*/ 
+            }
+
+            foreach (var t in bajajTasks)
+            {
+                await t;
             }
 
             //Task<BajajGeneratorMesh>.Factory.ContinueWhenAll(bajajTasks);

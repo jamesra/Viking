@@ -2,7 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using CommandLine.Text;
 
 namespace MonogameTestbed
 {
@@ -13,6 +16,14 @@ namespace MonogameTestbed
     /// </summary>
     public static class Program
     {
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AllocConsole();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool FreeConsole();
+
         public class CommandLineOptions
         {
             /// <summary>
@@ -31,7 +42,10 @@ namespace MonogameTestbed
 
             public List<ulong> LocationIDs { get; private set; }
 
-            [Option('e', "Endpoint", Required = false, HelpText = "Endpoint, either URL or one of [TEST, RC1, RC2, TEMPORALMONKEY, INFERIORMONKEY, RPC1, RPC2]", Separator = ' ')]
+            [Option('e', "Endpoint", Required = false,
+                HelpText =
+                    "Endpoint, either URL or one of [TEST, RC1, RC2, RC3, TEMPORALMONKEY, INFERIORMONKEY, CPED, RPC1, RPC2, RPC3]",
+                Separator = ' ')]
             public string EndpointParam { get; set; }
 
             public Uri EndpointUri
@@ -48,14 +62,14 @@ namespace MonogameTestbed
                     try
                     {
                         var endpoint = EndpointParam.ToEnum<Endpoint>();
-                        if(DataSource.EndpointMap.TryGetValue(endpoint, out Endpoint_uri))
+                        if (DataSource.EndpointMap.TryGetValue(endpoint, out Endpoint_uri))
                         {
                             return Endpoint_uri;
                         }
                     }
                     catch
                     {
-                        
+
                     }
 
                     Console.WriteLine($"Could not convert {EndpointParam} to predefined Endpoint.  Trying as URI");
@@ -68,9 +82,22 @@ namespace MonogameTestbed
             /// <summary>
             /// The output file or path name
             /// </summary>
-            [Option('o', "output", Required = false, HelpText = "Output file or folder name", Separator = ' ', Default = null)]
+            [Option('o', "output", Required = false, HelpText = "Output folder name", Separator = ' ', Default = null)]
             public string OutputPath { get; set; }
-             
+
+            /// <summary>
+            /// The output file or path name
+            /// </summary>
+            [Option('q', "quiet", Required = false,
+                HelpText = "Quit program as soon as renders are generated and saved", Separator = ' ', Default = false)]
+            public bool Quiet { get; set; }
+
+            /// <summary>
+            /// The output file or path name
+            /// </summary>
+            [Option('h', "help", Required = false, HelpText = "Show help", Separator = ' ', Default = false)]
+            public bool ShowHelp { get; set; }
+
 
             private static readonly Regex IntegerRegex = new Regex(@"(\d+)");
             private static readonly Regex IntegerRangeRegex = new Regex(@"(\d+)\-(\d+)");
@@ -93,7 +120,7 @@ namespace MonogameTestbed
                     return listNumbers;
                 }
                 catch (FormatException e)
-                { 
+                {
                     Match m = IntegerRangeRegex.Match(input);
 
                     ulong start = System.Convert.ToUInt64(m.Groups[1].Value);
@@ -111,7 +138,7 @@ namespace MonogameTestbed
             }
 
             private static bool IsIntegerRange(string input)
-            { 
+            {
                 var match = IntegerRangeRegex.Match(input);
                 return match.Success;
             }
@@ -137,7 +164,8 @@ namespace MonogameTestbed
             {
                 List<ulong> listNumbers = new List<ulong>();
 
-                foreach (string chunk in input.Split(new char[] { ',', ';' }).Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)))
+                foreach (string chunk in input.Split(new char[] { ',', ';' }).Select(s => s.Trim())
+                             .Where(s => !string.IsNullOrWhiteSpace(s)))
                 {
                     if (IsIntegerOrIntegerRange(chunk))
                     {
@@ -155,8 +183,8 @@ namespace MonogameTestbed
                         }
                     }
                     else
-                    {  
-                        listNumbers.AddRange(ParseFile(chunk)); 
+                    {
+                        listNumbers.AddRange(ParseFile(chunk));
                     }
                 }
 
@@ -173,7 +201,7 @@ namespace MonogameTestbed
                         foreach (string line in System.IO.File.ReadLines(filename))
                         {
                             var IDs = InputParameterListToIDs(line);
-                            results.AddRange(IDs); 
+                            results.AddRange(IDs);
                         }
                     }
                     catch
@@ -218,32 +246,60 @@ namespace MonogameTestbed
         [STAThread]
         static void Main(string[] args)
         {
-#if DEBUG
-            Console.WriteLine($"App Domain Base Directory: {AppDomain.CurrentDomain.BaseDirectory}");
-            //Console.WriteLine("Press any key to continue");
-            //while (Console.Read() < 0)
+            bool HaveConsole = false;
+            try
             {
-                System.Threading.Tasks.Task.Delay(10000).Wait();
-            }
-#endif 
+                HaveConsole = AllocConsole();
+#if DEBUG
+                Console.WriteLine($"App Domain Base Directory: {AppDomain.CurrentDomain.BaseDirectory}");
+                //Console.WriteLine("Press any key to continue");
+                //while (Console.Read() < 0)
+                {
+                    System.Threading.Tasks.Task.Delay(10000).Wait();
+                }
+#endif
 
-            CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args)
-                .WithParsed<CommandLineOptions>(o =>
+                var argResults = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args)
+                    .WithParsed<CommandLineOptions>(o =>
+                    {
+                        o.ToString();
+                        o.ProcessStrings();
+                        Program.options = o;
+                    })
+                    .WithNotParsed(errors =>
+                    {
+                        System.Console.WriteLine($"Unable to parse command line arguments ${errors}, aborting");
+                        return;
+                    });
+
+                var helpText = HelpText.AutoBuild(argResults, null, null);
+
+                //If no parameters were supplied or help was requested then print help
+                if (Program.options.ShowHelp)
                 {
-                    o.ToString();
-                    o.ProcessStrings();
-                    Program.options = o;
-                })
-                .WithNotParsed(errors =>
-                {
-                    System.Console.WriteLine($"Unable to parse command line arguments ${errors}, aborting");
+                    Console.WriteLine(helpText);
+                    while (Console.Read() == 0)
+                    {
+                        Task.Delay(250);
+                    }
+
+                    //If help was requested, then quit afterword.
                     return;
-                });
+                }
 
-            Geometry.Global.TryUseNativeMKL();
-             
-            using (var game = new MonoTestbed())
-                game.Run();
+                if (args.Length == 0)
+                    Console.WriteLine(helpText);
+
+                Geometry.Global.TryUseNativeMKL();
+
+                using (var game = new MonoTestbed())
+                    game.Run();
+            }
+            finally
+            {
+                if (HaveConsole)
+                    FreeConsole();
+            }
         }
     }
 #endif

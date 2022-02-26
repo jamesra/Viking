@@ -16,7 +16,7 @@ namespace MonogameTestbed
     /// </summary>
     class MeshAssemblyPlanner
     {
-        public IAssemblyPlannerNode Root;
+        public readonly IAssemblyPlannerNode Root;
 
         /// <summary>
         /// Allows mapping a slice key to the original leaf node
@@ -47,20 +47,21 @@ namespace MonogameTestbed
         /// </summary>
         public event OnPlanCompletedDelegate OnPlanCompleted;
 
-        public MeshAssemblyPlanner(SliceGraph sliceGraph)
-        {
+        public static MeshAssemblyPlanner Create(SliceGraph sliceGraph)
+        { 
             //AssemblyPlannerLeaf[] firstLayer = sliceGraph.Nodes.Keys.OrderBy(k => k).Select(k => new AssemblyPlannerLeaf(k)).ToArray();
             AssemblyPlannerLeaf[] firstLayer = sliceGraph.Nodes.Keys.OrderBy(k => {
-                                                                                SliceTopology t = sliceGraph.GetTopology(k);
-                                                                                return t.PolyZ != null ? 
-                                                                                    t.PolyZ.Length > 0 ? 
-                                                                                        Math.Round(t.PolyZ.Average()) 
-                                                                                        : -1
-                                                                                    : -1;
-                                                                            }).Select(k => new AssemblyPlannerLeaf(k, sliceGraph.BoundingBox.CenterPoint)).ToArray();
-            Nodes = new Dictionary<ulong, IAssemblyPlannerNode>(sliceGraph.Nodes.Count * 2);
-            Slices = new SortedList<ulong, AssemblyPlannerLeaf>(firstLayer.Length);
-            foreach(var leaf in firstLayer)
+                SliceTopology t = sliceGraph.GetTopology(k);
+                return t.PolyZ != null ?
+                    t.PolyZ.Length > 0 ?
+                        Math.Round(t.PolyZ.Average())
+                        : -1
+                    : -1;
+            }).Select(k => new AssemblyPlannerLeaf(k, sliceGraph.BoundingBox.CenterPoint)).ToArray();
+            
+            var Nodes = new Dictionary<ulong, IAssemblyPlannerNode>(sliceGraph.Nodes.Count * 2);
+            var Slices = new SortedList<ulong, AssemblyPlannerLeaf>(firstLayer.Length);
+            foreach (var leaf in firstLayer)
             {
                 Slices.Add(leaf.Key, leaf);
                 Nodes.Add(leaf.Key, leaf);
@@ -69,18 +70,25 @@ namespace MonogameTestbed
             IAssemblyPlannerNode[] currentLayer = firstLayer;
             //This isn't a true binary tree because branches do not have values.  We build our tree from the bottom up. This 
             //always generates a balances tree.
-            while(currentLayer.Length > 1)
+            while (currentLayer.Length > 1)
             {
                 currentLayer = BuildLayer(currentLayer);
 
-                foreach(var item in currentLayer)
+                foreach (var item in currentLayer)
                 {
                     //The last node can be a carryover, so use index instead of add to prevent errors
                     Nodes[item.Key] = item;
                 }
             }
 
-            Root = currentLayer[0];
+            return new MeshAssemblyPlanner(currentLayer[0], Nodes, Slices);
+        }
+
+        private MeshAssemblyPlanner(IAssemblyPlannerNode root, Dictionary<ulong, IAssemblyPlannerNode> nodes, SortedList<ulong, AssemblyPlannerLeaf> slices)
+        {
+            Root = root;
+            Nodes = nodes;
+            Slices = slices;
         } 
          
 
@@ -120,13 +128,7 @@ namespace MonogameTestbed
             return layer;
         }
 
-        public IAssemblyPlannerNode this[ulong id]
-        {
-            get
-            {
-                return Nodes[id];
-            }
-        }
+        public IAssemblyPlannerNode this[ulong id] => Nodes[id];
 
         /// <summary>
         /// Called when a mesh is completed.  Generates a model and attempts to merge that model up the tree.
@@ -137,11 +139,7 @@ namespace MonogameTestbed
         {
             AssemblyPlannerLeaf leaf = this.Slices[mesh.Slice.Key];
             leaf.OnMeshCompletion(mesh);
-
-            if(OnNodeCompleted != null)
-            {
-                OnNodeCompleted(leaf, Success); 
-            }
+            OnNodeCompleted?.Invoke(leaf, Success);
 
             /*
             try
