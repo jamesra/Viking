@@ -40,12 +40,14 @@ namespace Viking.Identity
             var result = new Client
             {
                 ClientId = clientId,
-                AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
+                AllowedGrantTypes = new[] { GrantType.AuthorizationCode, GrantType.ResourceOwnerPassword, GrantType.ClientCredentials },
+                //AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
                 ClientSecrets =
                     {
                         new Secret(Config.Secret.Sha256())
                     },
                 AllowedScopes = scopes,
+                RedirectUris = new string[] {"http://localhost:5000/"}
             };
 
             ClientCache[clientId] = result;

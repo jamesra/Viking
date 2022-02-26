@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Viking.Identity.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -200,6 +200,6 @@ namespace Viking.Identity.Controllers
         private bool VolumeExists(long id)
         {
             return _context.Volume.Any(e => e.Id == id);
-        }
+        } 
     }
 }

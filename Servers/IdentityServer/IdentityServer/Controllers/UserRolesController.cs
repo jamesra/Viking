@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -141,7 +141,7 @@ namespace Viking.Identity.Controllers
                             if(otherAdminUsers== false)
                             {
                                 _logger.LogWarning("Cannot remove the last admin user");
-                                continue;
+                                throw new ArgumentException("Cannot remove the last admin user");
                             }
                         }
                         var urToRemove = listUserRoles.First(ur => ur.RoleId == userRole.Id && ur.UserId == User.Id);
@@ -153,9 +153,15 @@ namespace Viking.Identity.Controllers
 
                 return RedirectToAction(nameof(Index));
             }
-            catch
+            catch(Exception e)
             {
-                return View();
+                ErrorViewModel errorModel = new ErrorViewModel
+                {
+                    RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier,
+                    Details = e.Message
+                };
+
+                return View("~/Views/Shared/Error.cshtml",errorModel); 
             }
         }
         /*
