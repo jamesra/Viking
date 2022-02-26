@@ -34,7 +34,10 @@ namespace Viking.Identity.Controllers
         }
 
         [HttpGet("CurrentUser")]
-        public async Task<string> GetUsername() => User.Identity.GetUsername();
+        public string GetUsername() => User.Identity.GetUsername();
+
+        [HttpGet("CurrentUserId")]
+        public async Task<string> GetUserId() => (await GetApplicationUser()).Id;
 
          
         private async Task<ApplicationUser> GetApplicationUser()
@@ -87,23 +90,18 @@ namespace Viking.Identity.Controllers
         }
 
         /// <summary>
-        /// Return the permissions the specified user has on the resource
+        /// Return the permissions the current user has on the resource
         /// </summary>
         /// <returns></returns>
         /// <param name="id">ResourceID</param>
         // GET: Resources/UserPermissions/5/jamesan  
-        [HttpGet("{id}/{resourceId}")]
-        public async Task<ActionResult<Dictionary<long, object>>> UserPermissions([NotNull] string resourceId, [NotNull] string userId)
+        [HttpGet("resource/{resourceId}")]
+        public async Task<ActionResult<List<string>>> UserPermissions([NotNull] string resourceId)
         {
             if (resourceId is null)
             {
                 throw new ArgumentNullException(nameof(resourceId));
-            }
-
-            if (userId is null)
-            {
-                throw new ArgumentNullException(nameof(userId));
-            }
+            } 
 
             ApplicationUser appUser;
             try
@@ -114,6 +112,87 @@ namespace Viking.Identity.Controllers
             {
                 throw;
             }
+
+            return await UserPermissions(resourceId, appUser.Id); 
+        }
+
+        /// <summary>
+        /// Return the permissions the specified user has on the resource
+        /// </summary>
+        /// <returns></returns>
+        /// <param name="id">ResourceID</param>
+        // GET: Resources/UserPermissions/5/jamesan  
+        [HttpGet("{userId}/resource/{resourceId}")]
+        public async Task<ActionResult<List<string>>> UserPermissions([NotNull] string resourceId, [NotNull] string userId)
+        {
+            if (resourceId is null)
+            {
+                throw new ArgumentNullException(nameof(resourceId));
+            }
+
+            if (userId is null)
+            {
+                throw new ArgumentNullException(nameof(userId));
+            } 
+
+            Resource resourceObj = null;
+            try
+            {
+                long rId = System.Convert.ToInt64(resourceId);
+                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Id == rId);
+            }
+            catch (FormatException e)
+            {
+                resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Name == resourceId);
+            }
+
+            if (resourceObj == null)
+            {
+                return NotFound();
+            }
+
+            var result = await _context.UserResourcePermissions(userId, resourceObj.Id);
+
+            var resultList = await result.ToListAsync();
+            return resultList;
+
+            /*string[] resourceTypes = Array.Empty<string>();
+            if (resourceTypeId != null)
+                resourceTypes = new string[] { resourceTypeId };
+
+            //var result = await _context.UserResourcePermissions(resourceObj.Id, appUser.Id, resourceTypes);
+            //return result;
+
+            var userPermittedResources = await _context.UserResourcePermissions(appUser.Id, resourceTypes);
+
+            var resourceMap = from r in await _context.Resource.Include(nameof(Volume)).ToListAsync()
+                join upr in userPermittedResources.Keys on r.Id equals upr
+                select new { r.Id, r.Name, permissions = userPermittedResources[upr] };
+
+            //return Json(new {Resources = resourceMap.ToDictionary(r => r.Id, r => r.Name), Permissions = userPermittedResources });
+
+            //return Json(resourceMap.ToDictionary(r => r.Id, r => r));
+            return resourceMap.ToDictionary(r => r.Id, r => (object)r);
+            */
+        }
+
+        /// <summary>
+        /// Return the permissions the specified user has on the resource
+        /// </summary>
+        /// <returns></returns>
+        /// <param name="id">ResourceID</param>
+        // GET: Resources/UserPermissions/5/jamesan  
+        private async Task<ActionResult<Dictionary<long, object>>> UserPermissions([NotNull] string resourceId, [NotNull] ApplicationUser user)
+        {
+            if (resourceId is null)
+            {
+                throw new ArgumentNullException(nameof(resourceId));
+            }
+
+            if (user is null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            } 
 
             Resource resourceObj = null;
             try

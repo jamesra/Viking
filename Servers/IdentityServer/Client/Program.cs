@@ -6,6 +6,8 @@ using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 
 namespace Client
@@ -57,7 +59,7 @@ namespace Client
                 Password = "Wat>com3",
                 ClientId = Client,
                 ClientSecret = Secret,
-                Scope = "openid Viking.Annotation",
+                Scope = "openid Viking.Annotation RC1.Read RC1.Annotate", //Add desired permissions to scope
             });
 
             //var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
@@ -139,19 +141,38 @@ namespace Client
 
                 string userAddress = $"{identityServerEndpoint}api/permissions/CurrentUser";
 
-                var appUser = await client.GetStringAsync(userAddress);
-
+                var appUserResponse = await client.GetStringAsync(userAddress);
+                string appUser = JsonSerializer.Deserialize<string>(appUserResponse);
+                 
                 Console.WriteLine($"Server reports username = {appUser}");
+
+                string userIdAddress = $"{identityServerEndpoint}api/permissions/CurrentUserId";
+
+                var appUserIdResponse = await client.GetStringAsync(userIdAddress);
+                string appUserId = JsonSerializer.Deserialize<string>(appUserIdResponse);
+
+                Console.WriteLine($"Server reports userId = {appUserId}");
 
                 //client.SetToken("token", tokenResponse.AccessToken);
 
                 //client.SetBasicAuthentication("jamesan", "Wat>com3");
-  
-                string address = $"{identityServerEndpoint}api/permissions/Volume";
 
-                 var response = await client.GetStringAsync(address); 
+                {
+                    string address = $"{identityServerEndpoint}api/permissions/{appUserId}/resource/{VolumeName}";
 
-                 Console.WriteLine('\t' + response);
+                    var permissionsResponse = await client.GetStringAsync(address);
+                    var permissions = JsonSerializer.Deserialize<string[]>(permissionsResponse);
+                    Console.WriteLine($"\t{VolumeName} permissions, explicit userId, {permissionsResponse}");
+                }
+
+                {
+                    string address = $"{identityServerEndpoint}api/permissions/resource/{VolumeName}";
+
+                    var permissionsResponse = await client.GetStringAsync(address);
+                    var permissions = JsonSerializer.Deserialize<string[]>(permissionsResponse);
+                    Console.WriteLine($"\t{VolumeName} permissions, token userId, {permissionsResponse}");
+                }
+
             }
 
             Console.ResetColor();

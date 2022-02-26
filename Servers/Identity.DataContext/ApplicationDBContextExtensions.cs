@@ -104,6 +104,12 @@ namespace Viking.Identity.Data
             return result;
         }
 
+        public static Task<IQueryable<string>> UserResourcePermissions(this ApplicationDbContext context,
+            [NotNull] string UserId, [NotNull] long ResourceId)
+        {
+            return context.UserResourcePermissions(UserId, new long[] { ResourceId });
+        }
+
         /// <summary>
         /// Returns all PermissionIds the user has for the specified resource
         /// </summary>
@@ -119,8 +125,6 @@ namespace Viking.Identity.Data
                                     join r in resources on gup.ResourceId equals r.Id
                                     where gup.UserId == UserId
                                    select new { gup.ResourceId, gup.Resource.Name, gup.PermissionId, gup.Resource.ResourceTypeId };
-
-            
              
             var group_memberships = (await context.RecursiveMemberOfGroups(UserId)).Select(g => g.Id);
 
