@@ -189,6 +189,16 @@ namespace SIMeasurement
 
             return A.Length / B.Length;
         }
+         
+        public static LengthMeasurement operator *(LengthMeasurement A, double B)
+        {
+            return new LengthMeasurement(A.Units, A.Length * B);
+        }
+         
+        public static LengthMeasurement operator /(LengthMeasurement A, double B)
+        {
+            return new LengthMeasurement(A.Units, A.Length / B);
+        }
 
         /*
          * Returns an area... not needed at this time so I'm leaving it alone.
