@@ -124,6 +124,11 @@ namespace Viking
             return entry;
         }
 
+        protected override TileViewModelCacheEntry CreateEntry(string key, Func<string,TileViewModel> valueFactory)
+        {
+            return new TileViewModelCacheEntry(key, valueFactory(key));
+        }
+
         protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileViewModel value)
         {
             return Task.FromResult(CreateEntry(key, value));

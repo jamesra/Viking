@@ -173,6 +173,16 @@ namespace Viking
         /// </summary>
         /// <param name="filename"></param>
         /// <param name="textureStream"></param>
+        protected override LocalTextureCacheEntry CreateEntry(string filename, Func<string,byte[]> textureBufferFactory)
+        {
+            return CreateEntry(filename, textureBufferFactory(filename)); 
+        }
+
+        /// <summary>
+        /// Creates a file for the texture passed.
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="textureStream"></param>
         protected override async Task<LocalTextureCacheEntry> CreateEntryAsync(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
