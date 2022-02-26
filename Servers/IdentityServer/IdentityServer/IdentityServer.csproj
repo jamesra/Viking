@@ -5,7 +5,7 @@
     <UserSecretsId>aspnet-IdentityServer-5FE82F6F-0884-4871-829E-BCFE700497A2</UserSecretsId>
     <OutputType>Exe</OutputType>
     <SignAssembly>false</SignAssembly>
-    <StartupObject>IdentityServer.Program</StartupObject>
+    <StartupObject>Viking.Identity.Program</StartupObject>
     <RootNamespace>Viking.Identity.Server</RootNamespace>
     <AssemblyName>Viking.Identity.Server</AssemblyName>
   </PropertyGroup>
