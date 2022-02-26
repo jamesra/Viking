@@ -299,6 +299,23 @@ namespace Geometry
             return uv;
         } 
 
+        /// <summary>
+        /// Returns u,v coordinate of point in triangle.  Calculates areas and returns fractions of area.  This can return 0,0 if the point is well outside the 
+        /// triangle because the math hits the limit of the double data-type
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public GridVector2[] Barycentric(in GridVector2[] points)
+        {
+            GridVector2[] uv = new GridVector2[points.Length];
+            for (int i = 0; i < uv.Length; i++)
+            {
+                uv[i] = Barycentric(points[i]);
+            } 
+
+            return uv;
+        } 
+
         public GridVector2 BaryToVector(in GridVector2 bary)
         {
             return GridVector2.FromBarycentric(p1, p2, p3, bary.X, bary.Y);

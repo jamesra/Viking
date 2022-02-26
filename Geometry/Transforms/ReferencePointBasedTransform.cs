@@ -401,15 +401,15 @@ namespace Geometry.Transforms
             }
         }
 
-        public abstract GridVector2 Transform(GridVector2 Point);
-        public abstract GridVector2[] Transform(GridVector2[] Points);
-        public abstract GridVector2 InverseTransform(GridVector2 Point);
-        public abstract GridVector2[] InverseTransform(GridVector2[] Points);
-        public abstract bool CanTransform(GridVector2 Point);
-        public abstract bool TryTransform(GridVector2 Point, out GridVector2 v);
-        public abstract bool[] TryTransform(GridVector2[] Points, out GridVector2[] v);
-        public abstract bool CanInverseTransform(GridVector2 Point);
-        public abstract bool TryInverseTransform(GridVector2 Point, out GridVector2 v);
-        public abstract bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] v);
+        public abstract GridVector2 Transform(in GridVector2 Point);
+        public abstract GridVector2[] Transform(in GridVector2[] Points);
+        public abstract GridVector2 InverseTransform(in GridVector2 Point);
+        public abstract GridVector2[] InverseTransform(in GridVector2[] Points);
+        public abstract bool CanTransform(in GridVector2 Point);
+        public abstract bool TryTransform(in GridVector2 Point, out GridVector2 v);
+        public abstract bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v);
+        public abstract bool CanInverseTransform(in GridVector2 Point);
+        public abstract bool TryInverseTransform(in GridVector2 Point, out GridVector2 v);
+        public abstract bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v);
     }
 }

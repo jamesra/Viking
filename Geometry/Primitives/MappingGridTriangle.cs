@@ -5,9 +5,12 @@ using System.Linq;
 
 namespace Geometry
 {
-    public class MappingGridTriangle : ICloneable, IEquatable<MappingGridTriangle>
+    /// <summary>
+    /// Maps points from one triangle to another using barycentric coordinates
+    /// </summary>
+    public class MappingGridTriangle : ICloneable, IEquatable<MappingGridTriangle>, ITransform
     {
-        internal MappingGridVector2[] Nodes;
+        internal readonly MappingGridVector2[] Nodes;
 
         internal readonly int N1; //Index of first node
         internal readonly int N2; //Index of second node 
@@ -98,13 +101,7 @@ namespace Geometry
             }
         }
 
-        public GridRectangle MappedBoundingBox
-        {
-            get
-            {
-                return new GridRectangle(MinMapX, MaxMapX, MinMapY, MaxMapY);
-            }
-        }
+        public GridRectangle MappedBoundingBox => new GridRectangle(MinMapX, MaxMapX, MinMapY, MaxMapY);
 
         #endregion
 
@@ -176,31 +173,12 @@ namespace Geometry
 
         #endregion
 
-        public GridRectangle ControlBoundingBox
-        {
-            get
-            {
-                return new GridRectangle(MinCtrlX, MaxCtrlX, MinCtrlY, MaxCtrlY);
-            }
-        }
+        public GridRectangle ControlBoundingBox => new GridRectangle(MinCtrlX, MaxCtrlX, MinCtrlY, MaxCtrlY);
 
 
+        public GridTriangle Control => new GridTriangle(Nodes[N1].ControlPoint, Nodes[N2].ControlPoint, Nodes[N3].ControlPoint);
 
-        public GridTriangle Control
-        {
-            get
-            {
-                return new GridTriangle(Nodes[N1].ControlPoint, Nodes[N2].ControlPoint, Nodes[N3].ControlPoint);
-            }
-        }
-
-        public GridTriangle Mapped
-        {
-            get
-            {
-                return new GridTriangle(Nodes[N1].MappedPoint, Nodes[N2].MappedPoint, Nodes[N3].MappedPoint);
-            }
-        }
+        public GridTriangle Mapped => new GridTriangle(Nodes[N1].MappedPoint, Nodes[N2].MappedPoint, Nodes[N3].MappedPoint);
 
         public MappingGridTriangle(MappingGridVector2[] nodes, int n1, int n2, int n3)
         {
@@ -220,36 +198,39 @@ namespace Geometry
             return this.MemberwiseClone();
         }
 
-        public bool IntersectsMapped(GridVector2 Point)
+        public bool CanTransform(in GridVector2 Point)
         {
             return Mapped.Contains(Point);
         }
 
-        public bool IntersectsControl(GridVector2 Point)
+        public bool CanInverseTransform(in GridVector2 Point)
         {
             return Control.Contains(Point);
         }
 
-        public GridVector2 Transform(GridVector2 Point)
+        private bool BarycentricCoordIsMappable(in GridVector2 uv) =>
+            uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0);
+
+        public GridVector2 Transform(in GridVector2 Point)
         {
             GridVector2 uv = Mapped.Barycentric(Point);
-            Debug.Assert(uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0));
+            Debug.Assert(BarycentricCoordIsMappable(uv));
              
             GridVector2 translated = GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, uv.Y, uv.X);
             return translated.Round(Global.TransformSignificantDigits);
 
         }
 
-        public GridVector2 InverseTransform(GridVector2 Point)
+        public GridVector2 InverseTransform(in GridVector2 Point)
         {
             GridVector2 uv = Control.Barycentric(Point);
-            //          Debug.Assert(uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0));
+            //Debug.Assert(BarycentricCoordIsMappable(uv));
 
             GridVector2 translated = GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, uv.Y, uv.X);
             return translated.Round(Global.TransformSignificantDigits);
         }
 
-        public GridVector2[] Transform(GridVector2[] Points)
+        public GridVector2[] Transform(in GridVector2[] Points)
         {
             var uv_points = Points.Select(Point => Mapped.Barycentric(Point));
             Debug.Assert(uv_points.All(uv => uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0)));
@@ -257,7 +238,7 @@ namespace Geometry
             return uv_points.Select(uv => GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, uv.Y, uv.X).Round(Global.TransformSignificantDigits)).ToArray();
         }
 
-        public GridVector2[] InverseTransform(GridVector2[] Points)
+        public GridVector2[] InverseTransform(in GridVector2[] Points)
         {
             var uv_points = Points.Select(Point => Control.Barycentric(Point));
             //  Debug.Assert(uv_points.All(uv => uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0)));
@@ -274,6 +255,72 @@ namespace Geometry
                 return false;
 
             return this.N1 == other.N1 && this.N2 == other.N2 && this.N3 == other.N3;
+        }
+         
+        public bool TryTransform(in GridVector2 Point, out GridVector2 translated)
+        {
+            GridVector2 uv = Mapped.Barycentric(Point);
+            if (false == BarycentricCoordIsMappable(uv))
+            {
+                translated = default;
+                return false;
+            }
+
+            translated = GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, uv.Y, uv.X);
+            translated = translated.Round(Global.TransformSignificantDigits);
+            return true;
+        }
+
+        public bool[] TryTransform(in GridVector2[] Points, out GridVector2[] output)
+        {
+            output = Mapped.Barycentric(Points);
+            var wasMapped = output.Select(uv => BarycentricCoordIsMappable(uv)).ToArray();
+            for (int i = 0; i < Points.Length; i++)
+            {
+                if (wasMapped[i] == false)
+                {
+                    output[i] = default;
+                    continue;
+                }
+                    
+                output[i] = GridVector2.FromBarycentric(Control.p1, Control.p2, Control.p3, output[i].Y, output[i].X);
+                output[i] = output[i].Round(Global.TransformSignificantDigits);
+            } 
+            
+            return wasMapped;
+        }
+         
+        public bool TryInverseTransform(in GridVector2 Point, out GridVector2 translated)
+        {
+            GridVector2 uv = Control.Barycentric(Point);
+            if (false == BarycentricCoordIsMappable(uv))
+            {
+                translated = default;
+                return false;
+            }
+
+            translated = GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, uv.Y, uv.X);
+            translated = translated.Round(Global.TransformSignificantDigits);
+            return true;
+        }
+
+        public bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] output)
+        {
+            output = Control.Barycentric(Points);
+            var wasMapped = output.Select(uv => BarycentricCoordIsMappable(uv)).ToArray();
+            for (int i = 0; i < Points.Length; i++)
+            {
+                if (wasMapped[i] == false)
+                {
+                    output[i] = default;
+                    continue;
+                }
+                    
+                output[i] = GridVector2.FromBarycentric(Mapped.p1, Mapped.p2, Mapped.p3, output[i].Y, output[i].X);
+                output[i] = output[i].Round(Global.TransformSignificantDigits);
+            } 
+            
+            return wasMapped;
         }
     }
 }
