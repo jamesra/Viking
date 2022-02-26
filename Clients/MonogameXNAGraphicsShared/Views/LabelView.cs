@@ -8,6 +8,56 @@ using VikingXNA;
 
 namespace VikingXNAGraphics
 {
+    public class ScaledLabelView : LabelView
+    {
+        private readonly IScene _Scene;
+
+        public ScaledLabelView(string Text, GridVector2 VolumePosition, Color color, IScene scene, Alignment alignment = null, Anchor anchor = null, double fontSize = 16) : base(Text, VolumePosition, color, alignment, anchor, true, fontSize)
+        {
+            _Scene = scene;
+        }
+
+        public ScaledLabelView(string Text, GridVector2 VolumePosition, IScene scene, Alignment alignment = null, Anchor anchor = null, double fontSize = 16) : base(Text, VolumePosition, alignment, anchor, true, fontSize)
+        {
+            _Scene = scene;
+        }
+
+        public ScaledLabelView(string Text, GridLineSegment VolumePosition, IScene scene, Alignment alignment = null, Anchor anchor = null, double lineWidth = 16) : base(Text, VolumePosition, alignment, anchor, true, lineWidth)
+        {
+            _Scene = scene;
+        }
+
+        public ScaledLabelView(string Text, GridLineSegment VolumePosition, Color color, IScene scene, Alignment alignment = null, Anchor anchor = null, double lineWidth = 16) : base(Text, VolumePosition, color, alignment, anchor, true, lineWidth)
+        {
+            _Scene = scene;
+        }
+
+        public ScaledLabelView(string Text, GridVector2 VolumePosition, SpriteFont font, IScene scene, Alignment alignment = null, Anchor anchor = null, double fontSize = 16) : base(Text, VolumePosition, font, alignment, anchor, true, fontSize)
+        {
+            _Scene = scene;
+        }
+
+        public override GridRectangle BoundingRect{
+        
+            get{ 
+                double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
+                var scaledFont = ScaleForMagnification(FontScaleForVolume, _Scene);
+                var unanchoredBoundingRect = UnanchoredUnscaledBoundingRect;
+
+                GridVector2 label_size = new GridVector2(unanchoredBoundingRect.Width * scaledFont, unanchoredBoundingRect.Height * scaledFont);
+                GridVector2 half_label_size = label_size / 2.0;
+
+                GridVector2 origin = Position;
+                GridVector2 offset = new GridVector2(
+                    Anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : Anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
+                    Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
+                );
+
+                return new GridRectangle(this.Position + offset, label_size.X, label_size.Y);
+            }
+        }
+
+    }
 
     public class LabelView : IText, IColorView, IViewPosition2D, IRenderable, IAnchor, IAlignment
     {
@@ -33,20 +83,14 @@ namespace VikingXNAGraphics
                                                                                     DefaultAlpha);
         public Color Color
         {
-            get { return _Color; }
-            set { _Color = value; }
+            get => _Color;
+            set => _Color = value;
         }
 
         public float Alpha
         {
-            get
-            {
-                return this._Color.GetAlpha();
-            }
-            set
-            {
-                _Color = this._Color.SetAlpha(value);
-            }
+            get => this._Color.GetAlpha();
+            set => _Color = this._Color.SetAlpha(value);
         }
 
         public float Rotation
@@ -58,7 +102,7 @@ namespace VikingXNAGraphics
 
         public double MaxLineWidth
         {
-            get { return _MaxLineWidth; }
+            get => _MaxLineWidth;
             set
             {
                 _IsMeasured = _MaxLineWidth == value && _IsMeasured;
@@ -73,7 +117,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public SpriteFont font
         {
-            get { return _font; }
+            get => _font;
             set
             {
                 _IsMeasured = _font == value && _IsMeasured;
@@ -96,10 +140,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        private static double ScaleFontSizeToVolume(SpriteFont font, double fontsize)
-        {
-            return fontsize / font.LineSpacing;
-        }
+        protected static double ScaleFontSizeToVolume(SpriteFont font, double fontsize) => fontsize / font.LineSpacing;
 
         /// <summary>
         /// We have to scale the font to match the scale we need to use for the label sprites.
@@ -159,8 +200,7 @@ namespace VikingXNAGraphics
         private string _Text;
         public string Text
         {
-            get
-            { return _Text; }
+            get => _Text;
             set
             {
                 _IsMeasured = _IsMeasured && _Text == value;
@@ -171,20 +211,14 @@ namespace VikingXNAGraphics
         private GridVector2 _Position;
         public GridVector2 Position
         {
-            get
-            {
-                return _Position;
-            }
-            set
-            {
-                _Position = value;
-            }
+            get => _Position;
+            set => _Position = value;
         }
-        
+
         /// <summary>
-        /// Returns the measured bounding box of the text in the label.
+        /// Returns the measured bounding box of the text in the label.  It does not scale the bounding box to the scene if needed or translate the bounding box according to the anchor.
         /// </summary>
-        public GridRectangle BoundingRect
+        protected GridRectangle UnanchoredUnscaledBoundingRect
         {
             get
             {
@@ -193,12 +227,21 @@ namespace VikingXNAGraphics
                     MeasureLabel();
                 }
 
+                var Width = _RowMeasurements.Max(m => m.X);
+                var Height = _RowMeasurements.Sum(m => m.Y);
+
+                return new GridRectangle(this.Position, Width, Height);
+            }
+        }
+
+
+        public virtual GridRectangle BoundingRect{
+        
+            get{ 
                 double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
+                var unanchoredBoundingRect = UnanchoredUnscaledBoundingRect;
 
-                double Width = _RowMeasurements.Max(m => m.X);
-                double Height = _RowMeasurements.Sum(m => m.Y);
-
-                GridVector2 label_size = new GridVector2(Width * FontScaleForVolume, Height * FontScaleForVolume);
+                GridVector2 label_size = new GridVector2(unanchoredBoundingRect.Width * FontScaleForVolume, unanchoredBoundingRect.Height * FontScaleForVolume);
                 GridVector2 half_label_size = label_size / 2.0;
 
                 GridVector2 origin = Position;
@@ -207,9 +250,52 @@ namespace VikingXNAGraphics
                     Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
                     );
 
-                return new GridRectangle(this.Position + offset, Width * FontScaleForVolume, Height * FontScaleForVolume);
+                return new GridRectangle(this.Position + offset, label_size.X, label_size.Y);
             }
         }
+
+        /// <summary>
+        /// Returns the measured bounding box of the text in the label.
+        /// This bounding rect is not scaled for magnification if ScaleFontSizeForMagnification is set to true
+        /// </summary>
+        public GridRectangle GetAnchoredBoundingRect(IScene scene)
+        {
+            if (!_IsMeasured)
+            {
+                MeasureLabel();
+            }
+
+            double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);
+
+            double Width = _RowMeasurements.Max(m => m.X);
+            double Height = _RowMeasurements.Sum(m => m.Y);
+
+            GridVector2 label_size = new GridVector2(Width * FontScaleForVolume, Height * FontScaleForVolume);
+            GridVector2 half_label_size = label_size / 2.0;
+
+            GridVector2 origin = Position;
+            GridVector2 offset = new GridVector2(
+                Anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : Anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
+                Anchor.Vertical == VerticalAlignment.BOTTOM ? 0 : Anchor.Vertical == VerticalAlignment.TOP ? -label_size.Y : -half_label_size.Y
+            );
+
+            return new GridRectangle(this.Position + offset, Width * FontScaleForVolume, Height * FontScaleForVolume); 
+        }
+
+        
+        /// <summary>
+        /// Fonts are always the same size, they aren't rendered on a texture or anything.  So we have to scale the font according to the magnification requested by the viewer.
+        /// </summary>
+        /// <param name="MagnificationFactor"></param>
+        /// <returns>Fraction (0 to 1) of the screen's Y-axis the font will display upon. </returns>
+        protected double ScaleForMagnification(double FontSize, VikingXNA.IScene scene)
+        {
+            Vector3 center  = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
+            Vector3 topedge = scene.Viewport.Project(Position.ToXNAVector3(0) - new Vector3(0, (float)FontSize / 2, 0), scene.Projection, scene.View, scene.World);
+            //return FontSize / scene.Camera.Downsample;
+            return (topedge.Y - center.Y) * 2;
+        }
+         
 
         /// <summary>
         /// What does the font size need to be to fit the provided bounds?
@@ -278,24 +364,13 @@ namespace VikingXNAGraphics
             if (font == null) //The first time draw is called font is initialized.  So allow us to draw if we haven't initialized font yet.
                 return true;
              
-            double fontSizeInScreenPixels = ScaleFontSizeForMagnification(this.FontSize, scene);
+            double fontSizeInScreenPixels = ScaleForMagnification(this.FontSize, scene);
 
             //Don't draw labels if no human could read them
             return !IsLabelTooSmallToSee(fontSizeInScreenPixels / scene.Viewport.Height);
         }
 
-        /// <summary>
-        /// Fonts are always the same size, they aren't rendered on a texture or anything.  So we have to scale the font according to the magnification requested by the viewer.
-        /// </summary>
-        /// <param name="MagnificationFactor"></param>
-        /// <returns>Fraction (0 to 1) of the screen's Y-axis the font will display upon. </returns>
-        private double ScaleFontSizeForMagnification(double FontSize, VikingXNA.IScene scene)
-        {
-            Vector3 center  = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
-            Vector3 topedge = scene.Viewport.Project(Position.ToXNAVector3(0) - new Vector3(0, (float)FontSize / 2, 0), scene.Projection, scene.View, scene.World);
-            //return FontSize / scene.Camera.Downsample;
-            return (topedge.Y - center.Y) * 2;
-        }
+        
 
         private static int NumberOfNewlines(string label)
         {
@@ -541,7 +616,7 @@ namespace VikingXNAGraphics
                             Microsoft.Xna.Framework.Graphics.SpriteFont font,
                             VikingXNA.IScene scene)
         {
-            double fontSizeInScreenPixels = ScaleFontSizeForMagnification(this.FontSize, scene);
+            double fontSizeInScreenPixels = ScaleForMagnification(this.FontSize, scene);
 
             if (this.ScaleFontWithScene && IsLabelTooSmallToSee(fontSizeInScreenPixels / scene.Viewport.Height))
                 return;
@@ -573,7 +648,7 @@ namespace VikingXNAGraphics
 
     //scene.WorldToScreen(this.Position).ToXNAVector2();
 
-            float fontScale = this.ScaleFontWithScene ? (float)ScaleFontSizeForMagnification(FontScaleForVolume, scene) : (float)FontScaleForVolume;
+            float fontScale = this.ScaleFontWithScene ? (float)ScaleForMagnification(FontScaleForVolume, scene) : (float)FontScaleForVolume;
 
             float LineStep = (float)font.LineSpacing * fontScale;  //How much do we increment Y to move down a line?
             float yOffset = -((float)font.LineSpacing) * fontScale;  //What is the offset to draw the line at the correct position?  We have to draw below label if it exists
