@@ -71,9 +71,22 @@ namespace Viking.UI.Commands
         /// </summary>
         /// <param name="CommandType"></param>
         /// <param name="Args"></param>
-        public void EnqueueCommand(System.Type CommandType, Object[] Args)
+        public void EnqueueCommand(System.Type CommandType, params object[] Args)
         {
             CommandQueueEntry entry = new CommandQueueEntry(CommandType, Args);
+            _CommandQueue.Enqueue(entry);
+            OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
+        }
+
+        /// <summary>
+        /// We enqueue commands that we want to run immediately after completing the current command
+        /// If the default command is active, then set the passed command as the current command, otherwise add to queue.
+        /// </summary>
+        /// <param name="CommandType"></param>
+        /// <param name="Args"></param>
+        public void EnqueueCommand<T>(params object[] Args)
+        {
+            CommandQueueEntry entry = new CommandQueueEntry(typeof(T), Args);
             _CommandQueue.Enqueue(entry);
             OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
         }
