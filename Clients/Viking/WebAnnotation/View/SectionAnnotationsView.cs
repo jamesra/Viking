@@ -43,7 +43,7 @@ namespace WebAnnotation.ViewModel
 
         public abstract void Init();
 
-        public virtual void LoadAnnotationsInRegion(VikingXNA.Scene scene)
+        public virtual void LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
         {
             //We get an exception if the rectangle cannot be mapped to mosaic space, for example if it is out of bounds.  
             //We should fallback by mapping as many points as possible, and then using those to make an equivalent sized rectangle.
@@ -54,7 +54,7 @@ namespace WebAnnotation.ViewModel
             if (!VisibleMosaicBounds.HasValue)
                 return;
 
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, AddLocationsInLocalCache); // this.AddLocations, null);
+            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, AddLocationsInLocalCache, token); // this.AddLocations, null);
         }
 
         protected abstract void AddLocationsInLocalCache(IEnumerable<LocationObj> locations);
@@ -1249,22 +1249,22 @@ namespace WebAnnotation.ViewModel
 
         #endregion
 
-        public override void LoadAnnotationsInRegion(VikingXNA.Scene scene)
+        public override void LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
         {
             //Store.LocationsByRegion.LoadSectionAnnotationsInRegion(scene.VisibleWorldBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, this.AddLocationsInRegionCallback);
             GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
 
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, AddLocationsInLocalCache);// this.AddLocationsInRegionCallback);
+            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, AddLocationsInLocalCache, token);// this.AddLocationsInRegionCallback);
 
 
             if (this.SectionAbove != null)
             {
-                this.SectionAbove.LoadAnnotationsInRegion(scene);
+                this.SectionAbove.LoadAnnotationsInRegion(scene, token);
             }
 
             if (this.SectionBelow != null)
             {
-                this.SectionBelow.LoadAnnotationsInRegion(scene);
+                this.SectionBelow.LoadAnnotationsInRegion(scene, token);
             }
         }
 
