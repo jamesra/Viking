@@ -5,6 +5,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace VikingXNA
 {
@@ -155,44 +156,49 @@ namespace VikingXNA
             OnPropertyChanged("Camera." + e.PropertyName);
         }
 
-        private System.Threading.ReaderWriterLockSlim rw_lock = new System.Threading.ReaderWriterLockSlim();
+        private readonly SemaphoreSlim initVisibleWorldBoundsSemaphore = new SemaphoreSlim(1);
         private Geometry.GridRectangle? _VisibleWorldBounds; //This should only be set by using ResetVisibleWorldBounds
 
         public Geometry.GridRectangle VisibleWorldBounds
         {
             get
             {
+                var visibleBounds = _VisibleWorldBounds;
+                if (visibleBounds.HasValue)
+                    return visibleBounds.Value;
+
                 try
                 {
-                    rw_lock.EnterUpgradeableReadLock();
+                    initVisibleWorldBoundsSemaphore.Wait();
+                    visibleBounds = _VisibleWorldBounds;
+                    if (visibleBounds.HasValue)
+                        return visibleBounds.Value;
 
-                    if (!_VisibleWorldBounds.HasValue)
-                    {
-                        try
-                        {
-                            rw_lock.EnterWriteLock();
-                            double offset = 0;
-                            GridRectangle projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
-                            GridVector2 BottomLeft = ScreenToWorld(offset, _Viewport.Height);
-                            _VisibleWorldBounds = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
-                        }
-                        finally
-                        {
-                            rw_lock.ExitWriteLock();
-                        }
-                    }
-
-                    return _VisibleWorldBounds.Value;
+                    double offset = 0;
+                    var projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
+                    var BottomLeft = ScreenToWorld(offset, _Viewport.Height);
+                    var result = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
+                    _VisibleWorldBounds = result;
+                    return result;
                 }
                 finally
                 {
-                    rw_lock.ExitUpgradeableReadLock();
+                    initVisibleWorldBoundsSemaphore.Release();
                 } 
             }
             set
             {
                 Camera.LookAt = new Vector2((float)value.Center.X, (float)value.Center.Y);
                 Camera.Downsample = Math.Max(value.Height, value.Width) / Math.Min(Viewport.Height, Viewport.Width);
+                try
+                {
+                    initVisibleWorldBoundsSemaphore.Wait();
+                    _VisibleWorldBounds = value;
+                }
+                finally
+                {
+                    initVisibleWorldBoundsSemaphore.Release();
+                }
             }
         }
 
@@ -200,12 +206,12 @@ namespace VikingXNA
         {
             try
             {
-                rw_lock.EnterWriteLock();
-                _VisibleWorldBounds = new GridRectangle?();
+                initVisibleWorldBoundsSemaphore.Wait();
+                _VisibleWorldBounds = null;
             }
             finally
             {
-                rw_lock.ExitWriteLock();
+                initVisibleWorldBoundsSemaphore.Release();
             }
         }
 
