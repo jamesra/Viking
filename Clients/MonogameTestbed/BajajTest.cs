@@ -1237,10 +1237,7 @@ namespace MonogameTestbed
             139799 ,
             139796
         };
-
-
-
-
+         
 
         /// <summary>
         /// The set of cases we want to be able to run successfully
@@ -1287,8 +1284,7 @@ namespace MonogameTestbed
             new BajajRepro(108602,  108528, DataSource.EndpointMap[Endpoint.RPC1], "We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges",1.0),
             new BajajRepro(113919,  113910, DataSource.EndpointMap[Endpoint.RPC1], "Duplicate point found in exterior ring", 1.0),
             new BajajRepro(269802 , 269803, DataSource.EndpointMap[Endpoint.RPC1], "Index out of range", 3.0),
-            new BajajRepro(85470 , 85449, DataSource.EndpointMap[Endpoint.RPC1], "Scale check", 2.0)
-
+            new BajajRepro(85470 , 85449, DataSource.EndpointMap[Endpoint.RPC1], "Scale check", 2.0) 
         };
 
         /// <summary>

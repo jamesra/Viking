@@ -37,6 +37,12 @@ namespace Viking.AU
         [Option('s', "sections", DefaultValue = null, Required = false, HelpText = "Section Numbers to update")]
         public string SectionNumbersString { get; set; }
 
+        [Option('t', "threads", DefaultValue = null, Required = false, HelpText = "Number of threads to process and submit updates on.  If VikingAU is reporting timeout errors lower this number.  If VikingAU isn't using 100% of the CPU you can try raising it.  Default value is the number of cores on the machine + 1")]
+        public int? NumThreads { get; set; }
+
+        [Option('h', "help", DefaultValue = false, Required = false, HelpText = "Show help")]
+        public bool ShowHelp { get; set; }
+
         public IList<long> Sections
         {
             get
@@ -61,6 +67,7 @@ namespace Viking.AU
             var match = regex.Match(input);
             return match.Success;
         }
+
 
         /// <summary>
         /// Convert a string of two integers seperated by a hyphen to a list of integers
@@ -133,7 +140,7 @@ namespace Viking.AU
         {
 
             StringBuilder output = new StringBuilder();
-            string Details = string.Format("{0}% {1}", ProgressPercentage, message);
+            string Details = $"{ProgressPercentage}% {message}";
             int LineLength = Details.Length;
             output.Append('\b', LastLineLength);
             output.Append(Details);
@@ -155,14 +162,28 @@ namespace Viking.AU
     class Program
     {
         static CommandLineOptions options = new CommandLineOptions();
+        private static readonly SemaphoreSlim ConsoleLock = new SemaphoreSlim(1);
 
         static async Task Main(string[] args)
         {
+            var help = HelpText.AutoBuild(Program.options);
+
             if (!CommandLine.Parser.Default.ParseArguments(args, Program.options))
-            {
+            {    
+                System.Console.WriteLine(help);
+                System.Console.ForegroundColor = ConsoleColor.Red;
                 System.Console.WriteLine("Unable to parse command line arguments, aborting");
+                System.Console.ResetColor();
                 return;
             }
+
+            if (options.ShowHelp)
+            {
+                System.Console.WriteLine(help);
+                return;
+            }
+
+            int numThreads = options.NumThreads ?? System.Environment.ProcessorCount + 1;
 
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
             SqlServerTypes.Utilities.SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
@@ -197,7 +218,7 @@ namespace Viking.AU
             }
 
             //OK.  Figure out which command we are executing.
-            await UpdateVolumePositionsAsync(SectionsToProcess, CancellationToken.None);
+            await UpdateVolumePositionsAsync(SectionsToProcess, numThreads, CancellationToken.None);
             //UpdateVolumePositions(SectionsToProcess);
 
             System.GC.Collect();
@@ -216,45 +237,20 @@ namespace Viking.AU
         }
         */
 
-        static async Task UpdateVolumePositionsAsync(IList<long> SectionNumbers, CancellationToken token)
+        static async Task UpdateVolumePositionsAsync(IList<long> SectionNumbers, int NumThreads, CancellationToken token)
         {
             //SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
-            object LockConsole = new object();
+            
 
-            using (System.Threading.SemaphoreSlim concurrencySemaphore = new System.Threading.SemaphoreSlim(System.Environment.ProcessorCount * 2))
+            using (System.Threading.SemaphoreSlim concurrencySemaphore = new System.Threading.SemaphoreSlim(NumThreads)) //))
             {
-                List<Task<string>> tasks = new List<Task<string>>(SectionNumbers.Count);
-                List<long> taskSectionNumbers = new List<long>(SectionNumbers.Count);
+                List<Task<string>> tasks = new List<Task<string>>(SectionNumbers.Count); 
                  
                 foreach (long sectionNumber in SectionNumbers)
                 {
                     //    UpdateVolumePositions(sectionNumber);
-                    await concurrencySemaphore.WaitAsync(token);
-                    if (token.IsCancellationRequested)
-                        return;
 
-                    taskSectionNumbers.Add(sectionNumber);
-                    var task = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            string result =  await UpdateSectionPositions(sectionNumber, token);
-                            
-                            lock (LockConsole)
-                            {
-                                Console.WriteLine(result);
-                            }
-
-                            State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
-                            return result;
-                        }
-                        finally
-                        {
-                            concurrencySemaphore.Release();
-                        }
-                    }
-                    );
-
+                    var task = Task.Run(() => UpdateVolumePositionsOnSectionAsync(sectionNumber, concurrencySemaphore, token),token);
                     tasks.Add(task);
                     //var task = System.Threading.Tasks.Task.Run();
                     //tasks.Add(sectionNumber, task);
@@ -262,7 +258,7 @@ namespace Viking.AU
                     /*while (tasks.Keys.Count > 2)
                     {
                         RemoveCompletedTasks(tasks);
-                    }*/ 
+                    }*/
                 }
 
                 Task[] taskArray = tasks.Cast<Task>().ToArray();
@@ -299,31 +295,36 @@ namespace Viking.AU
             */
         }
 
-        private static void RemoveCompletedTasks(SortedDictionary<long, Task<string>> tasks)
+        private static async Task<string> UpdateVolumePositionsOnSectionAsync(long sectionNumber, SemaphoreSlim concurrencySemaphore,
+            CancellationToken token)
         {
-            bool AnyCompleted = false;
-            foreach (long sectionNumber in tasks.Keys.ToArray())
+            try
             {
-                var task = tasks[sectionNumber];
-                if (task.IsCompleted)
+                await concurrencySemaphore.WaitAsync(token).ConfigureAwait(false);
+                if (token.IsCancellationRequested)
+                    return null;
+
+                string result = await UpdateSectionPositions(sectionNumber, token).ConfigureAwait(false);
+
+                try
                 {
-                    if (task.Result != null)
-                        Console.WriteLine(task.Result);
-                    else
-                        Console.WriteLine("Task had null result");
-
-                    tasks.Remove(sectionNumber);
-                    AnyCompleted = true;
-                    State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
+                    await ConsoleLock.WaitAsync(token).ConfigureAwait(false);
+                    Console.WriteLine(result);
                 }
-            }
+                finally
+                {
+                    ConsoleLock.Release();
+                }
 
-            if (!AnyCompleted)
+                State.MappingsManager.SectionMappingCache.Remove((int)sectionNumber);
+                return result;
+            }
+            finally
             {
-                System.Threading.Thread.Sleep(500);
+                concurrencySemaphore.Release();
             }
         }
-
+         
         static async Task<string> UpdateSectionPositions(long SectionNumber, CancellationToken token)
         {
             LocationStore threadLocationStore = new LocationStore();
@@ -345,26 +346,41 @@ namespace Viking.AU
 
                 foreach (LocationObj loc in LocDict.Values)
                 {
-                    bool result = UpdateVolumeShape(loc, mapper);
-                    if (result)
-                        NumUpdated++;
+                    try
+                    {
+                        bool result = UpdateVolumeShape(loc, mapper);
+                        if (result)
+                            NumUpdated++;
+                    }
+                    catch (ArgumentException e)
+                    { 
+                        Console.WriteLine($"Location {loc.ID} could not be updated.  {e}"); 
+                    } 
                 }
-            } 
-             
+            }
+
+            var Result = $"Section {SectionNumber} : {NumUpdated} / {LocDict.Count} locations needed updates";
+
             if (NumUpdated > 0)
             {
                 try
                 {
-                    threadLocationStore.Save();
+                    if(threadLocationStore.Save() == false)
+                        Result = $"Section {SectionNumber} : Failed {NumUpdated} / {LocDict.Count} locations needing updates";
                 }
                 catch (System.ServiceModel.FaultException e)
                 {
-                    Trace.WriteLine(string.Format("Exception saving volume locations:\n{0}", e));
+                    Trace.WriteLine($"Exception saving volume locations:\n{e}");
+                    Result = $"Section {SectionNumber} : Failed {NumUpdated} / {LocDict.Count} locations needing updates with error{e}";
                     //Console.Write("...Locations updated");
                 }
-            }
-
-            string Result = string.Format("Section {0} : {1} / {2} locations needed updates", SectionNumber, NumUpdated, LocDict.Count);
+                catch (Exception e)
+                {
+                    Trace.WriteLine($"Exception saving volume locations:\n{e}");
+                    Result = $"Section {SectionNumber} : Failed {NumUpdated} / {LocDict.Count} locations needing updates with error{e}";
+                    //Console.Write("...Locations updated");
+                }
+            } 
 
             threadLocationStore.RemoveSection((int)SectionNumber);
 
@@ -384,11 +400,11 @@ namespace Viking.AU
             {
                 if (TryRepairLocationType(loc))
                 {
-                    Console.WriteLine(string.Format("Repaired Type for Location {0}", loc.ID));
+                    Console.WriteLine($"Repaired Type for Location {loc.ID}");
                     TypeUpdated = true;
                 }
                 else
-                    Console.WriteLine(string.Format("Unable to repair type for Location {0}", loc.ID));
+                    Console.WriteLine($"Unable to repair type for Location {loc.ID}");
             }
 
             SqlGeometry updatedVolumeShape = VolumeShapeForLocation(loc, mapper);
@@ -399,7 +415,7 @@ namespace Viking.AU
             }
             if (!updatedVolumeShape.STIsValid())
             {
-                Console.WriteLine(string.Format("Location {0} invalid : {1} ", loc.ID, updatedVolumeShape.IsValidDetailed()));
+                Console.WriteLine($"Location {loc.ID} invalid : {updatedVolumeShape.IsValidDetailed()} ");
                 return false;
             }
 
@@ -446,9 +462,7 @@ namespace Viking.AU
             if (UnsmoothedVolumeShape == null)
                 return null;
 
-            //Check a rare case where points are stored as circles
-
-
+            //Check a rare case where points are stored as circles 
             SqlGeometry SmoothedVolumeShape = loc.TypeCode.GetSmoothedShape(UnsmoothedVolumeShape);
             return SmoothedVolumeShape;
         }

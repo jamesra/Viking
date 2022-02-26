@@ -7,12 +7,15 @@ using RoundLineCode;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
+    
+
     enum TestMode
     {
         TEXT,
@@ -135,7 +138,11 @@ namespace MonogameTestbed
             Window.AllowUserResizing = true;
             this.Window.Title = "Monogame testbed";
             this.Window.AllowUserResizing = true;
+#if DEBUG
             this.Window.Position = new Point(-desired_screen_width, 0);
+#else
+            //this.Window.Position = new Point(0, 0);
+#endif
 
             this.IsMouseVisible = true;
         }
@@ -344,6 +351,7 @@ namespace MonogameTestbed
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
                 //Close the game, but Monogame won't allow it?
+                base.Exit();
             }
 
             ProcessKeyboard();
@@ -351,7 +359,7 @@ namespace MonogameTestbed
             //meshView.Update(gameTime); 
 
             listTests[Mode].Update();
-
+            
             base.Update(gameTime);
         }
 

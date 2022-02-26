@@ -239,6 +239,9 @@ namespace VikingXNAGraphics
 
                 foreach (MeshModel<VERTEXTYPE> model in group)
                 {
+                    if (!group.Any())
+                        continue;  
+
                     effect.World = model.ModelMatrix * scene.World;
 
                     foreach (EffectPass pass in effect.CurrentTechnique.Passes)

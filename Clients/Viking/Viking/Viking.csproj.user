@@ -14,6 +14,6 @@
     <EnableSecurityDebugging>false</EnableSecurityDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
-    <StartArguments>-v http://connectomes.utah.edu/Rabbit/WebDevFulltestNewIdentityServer.VikingXml -u jamesan -p 4%25w%25o06</StartArguments>
+    <StartArguments>-u jamesan -p 4%25w%25o06</StartArguments>
   </PropertyGroup>
 </Project>
