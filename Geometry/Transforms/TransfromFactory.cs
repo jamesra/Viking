@@ -261,7 +261,7 @@ namespace Geometry.Transforms
 
         }
 
-        static public ReadOnlyCollection<MappingGridVector2> ParseRotateTranslateAffineTransform(string[] parts,
+        public static ReadOnlyCollection<MappingGridVector2> ParseRotateTranslateAffineTransform(string[] parts,
             float pixelSpacing,
             int iFixedParameters,
             int iVariableParameters,
@@ -317,7 +317,7 @@ namespace Geometry.Transforms
             return new ReadOnlyCollection<MappingGridVector2>(mappings);
         }
 
-        static private GridTransform ParseGridTransform(TransformParameters transform,
+        private static GridTransform ParseGridTransform(TransformParameters transform,
                                                                 StosTransformInfo info,
                                                                 float pixelSpacing,
                                                                 int iFixedParameters,

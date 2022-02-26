@@ -8,21 +8,19 @@ namespace Geometry
     /// </summary>
     public interface ITransform
     {
-        GridVector2 Transform(GridVector2 Point);
-        GridVector2[] Transform(GridVector2[] Points);
+        GridVector2 Transform(in GridVector2 Point);
+        GridVector2[] Transform(in GridVector2[] Points);
 
-        GridVector2 InverseTransform(GridVector2 Point);
-        GridVector2[] InverseTransform(GridVector2[] Points);
+        GridVector2 InverseTransform(in GridVector2 Point);
+        GridVector2[] InverseTransform(in GridVector2[] Points);
 
-        bool CanTransform(GridVector2 Point);
-        bool TryTransform(GridVector2 Point, out GridVector2 v);
-        bool[] TryTransform(GridVector2[] Points, out GridVector2[] v);
+        bool CanTransform(in GridVector2 Point);
+        bool TryTransform(in Geometry.GridVector2 Point, out GridVector2 v);
+        bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v);
 
-        bool CanInverseTransform(GridVector2 Point);
-        bool TryInverseTransform(GridVector2 Point, out GridVector2 v);
-        bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] v);
-
-        void Translate(GridVector2 vector);
+        bool CanInverseTransform(in GridVector2 Point);
+        bool TryInverseTransform(in GridVector2 Point, out GridVector2 v);
+        bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v); 
     }
 
     /// <summary>
@@ -50,6 +48,7 @@ namespace Geometry
 
     public interface IContinuousTransform : ITransform
     {
+        void Translate(in GridVector2 vector);
     }
 
     /// <summary>

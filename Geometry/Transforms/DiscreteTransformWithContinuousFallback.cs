@@ -101,17 +101,17 @@ namespace Geometry.Transforms
             info.AddValue("ContinuousTransform", ContinuousTransform);
         }
 
-        public bool CanTransform(GridVector2 p)
+        public bool CanTransform(in GridVector2 p)
         {
             return true;
         }
 
-        public bool CanInverseTransform(GridVector2 p)
+        public bool CanInverseTransform(in GridVector2 p)
         {
             return true;
         }
 
-        public GridVector2 Transform(GridVector2 Point)
+        public GridVector2 Transform(in GridVector2 Point)
         {
             if (!DiscreteTransform.TryTransform(Point, out GridVector2 output))
             {
@@ -121,24 +121,24 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public GridVector2[] Transform(GridVector2[] Points)
+        public GridVector2[] Transform(in GridVector2[] Points)
         {
             return Points.Select(p => this.Transform(p)).ToArray();
         }
 
-        public bool TryTransform(GridVector2 Point, out GridVector2 v)
+        public bool TryTransform(in GridVector2 Point, out GridVector2 v)
         {
             v = Transform(Point);
             return true;
         }
 
-        public bool[] TryTransform(GridVector2[] Points, out GridVector2[] v)
+        public bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v)
         {
             v = Transform(Points);
             return v.Select(p => true).ToArray();
         }
 
-        public GridVector2 InverseTransform(GridVector2 Point)
+        public GridVector2 InverseTransform(in GridVector2 Point)
         {
             if (!DiscreteTransform.TryInverseTransform(Point, out GridVector2 output))
             {
@@ -148,24 +148,24 @@ namespace Geometry.Transforms
             return output;
         }
 
-        public GridVector2[] InverseTransform(GridVector2[] Points)
+        public GridVector2[] InverseTransform(in GridVector2[] Points)
         {
             return Points.Select(p => this.InverseTransform(p)).ToArray();
         }
 
-        public bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
+        public bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
         {
             v = InverseTransform(Point);
             return true;
         }
 
-        public bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] v)
+        public bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v)
         {
             v = InverseTransform(Points);
             return v.Select(p => true).ToArray();
         }
 
-        public void Translate(GridVector2 vector)
+        public void Translate(in GridVector2 vector)
         {
             throw new NotImplementedException();
         }

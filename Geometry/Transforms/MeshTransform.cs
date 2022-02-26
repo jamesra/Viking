@@ -129,7 +129,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetTransform(GridVector2 Point)
+        internal override MappingGridTriangle GetTransform(in GridVector2 Point)
         {
             //TODO: Optimize the search
 
@@ -152,7 +152,7 @@ namespace Geometry.Transforms
                 if (!t.MappedBoundingBox.Contains(Point))
                     continue;
 
-                if (t.IntersectsMapped(Point))
+                if (t.CanTransform(Point))
                     return t;
             }
 
@@ -164,7 +164,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetInverseTransform(GridVector2 Point)
+        internal override MappingGridTriangle GetInverseTransform(in GridVector2 Point)
         {
             //TODO: Optimize the search
 
@@ -187,7 +187,7 @@ namespace Geometry.Transforms
                 if (!t.ControlBoundingBox.Contains(Point))
                     continue;
 
-                if (t.IntersectsControl(Point))
+                if (t.CanInverseTransform(Point))
                     return t;
             }
 

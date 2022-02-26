@@ -7,66 +7,66 @@ namespace Geometry.Transforms
     [Serializable]
     public class IdentityTransform : Geometry.IContinuousTransform
     {
-        public bool CanInverseTransform(GridVector2 Point)
+        public bool CanInverseTransform(in GridVector2 Point)
         {
             return true;
         }
 
-        public bool CanTransform(GridVector2 Point)
+        public bool CanTransform(in GridVector2 Point)
         {
             return true;
         }
 
-        public GridVector2[] InverseTransform(GridVector2[] Points)
+        public GridVector2[] InverseTransform(in GridVector2[] Points)
         {
             GridVector2[] transformedP = new GridVector2[Points.Length];
             Points.CopyTo(transformedP, 0);
             return transformedP;
         }
 
-        public GridVector2 InverseTransform(GridVector2 Point)
+        public GridVector2 InverseTransform(in GridVector2 Point)
         {
             return Point;
         }
 
-        public GridVector2[] Transform(GridVector2[] Points)
+        public GridVector2[] Transform(in GridVector2[] Points)
         {
             GridVector2[] transformedP = new GridVector2[Points.Length];
             Points.CopyTo(transformedP, 0);
             return transformedP;
         }
 
-        public GridVector2 Transform(GridVector2 Point)
+        public GridVector2 Transform(in GridVector2 Point)
         {
             return Point;
         }
 
-        public void Translate(GridVector2 vector)
+        public void Translate(in GridVector2 vector)
         {
             throw new NotImplementedException();
         }
 
-        public bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] transformedP)
+        public bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[Points.Length];
             Points.CopyTo(transformedP, 0);
             return transformedP.Select(p => true).ToArray();
         }
 
-        public bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
+        public bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
         {
             v = Point;
             return true;
         }
 
-        public bool[] TryTransform(GridVector2[] Points, out GridVector2[] transformedP)
+        public bool[] TryTransform(in GridVector2[] Points, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[Points.Length];
             Points.CopyTo(transformedP, 0);
             return transformedP.Select(p => true).ToArray();
         }
 
-        public bool TryTransform(GridVector2 Point, out GridVector2 v)
+        public bool TryTransform(in GridVector2 Point, out GridVector2 v)
         {
             v = Point;
             return true;
@@ -75,7 +75,7 @@ namespace Geometry.Transforms
 
 
     [Serializable]
-    abstract public class TransformBase : ISerializable, IMemoryMinimization, ITransformInfo
+    public abstract class TransformBase : ISerializable, IMemoryMinimization, ITransformInfo
     {
         public TransformBasicInfo Info { get; set; }
 
@@ -87,23 +87,23 @@ namespace Geometry.Transforms
                 return "Transform Base, No Info";
         }
 
-        abstract public bool CanTransform(GridVector2 Point);
-        abstract public GridVector2 Transform(GridVector2 Point);
-        abstract public GridVector2[] Transform(GridVector2[] Points);
-        abstract public bool TryTransform(GridVector2 Point, out GridVector2 v);
-        abstract public bool[] TryTransform(GridVector2[] Points, out GridVector2[] v);
+        public abstract bool CanTransform(in GridVector2 Point);
+        public abstract GridVector2 Transform(in GridVector2 Point);
+        public abstract GridVector2[] Transform(in GridVector2[] Points);
+        public abstract bool TryTransform(in GridVector2 Point, out GridVector2 v);
+        public abstract bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v);
 
-        abstract public bool CanInverseTransform(GridVector2 Point);
-        abstract public GridVector2 InverseTransform(GridVector2 Point);
-        abstract public GridVector2[] InverseTransform(GridVector2[] Points);
-        abstract public bool TryInverseTransform(GridVector2 Point, out GridVector2 v);
-        abstract public bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] v);
+        public abstract bool CanInverseTransform(in GridVector2 Point);
+        public abstract GridVector2 InverseTransform(in GridVector2 Point);
+        public abstract GridVector2[] InverseTransform(in GridVector2[] Points);
+        public abstract bool TryInverseTransform(in GridVector2 Point, out GridVector2 v);
+        public abstract bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v);
 
         /// <summary>
         /// Adjust the output of the transform by the following vector
         /// </summary>
         /// <param name="vector"></param>
-        abstract public void Translate(GridVector2 vector);
+        public abstract void Translate(GridVector2 vector);
 
         protected TransformBase(TransformBasicInfo info)
         {

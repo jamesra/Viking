@@ -19,14 +19,14 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal abstract MappingGridTriangle GetTransform(GridVector2 Point);
+        internal abstract MappingGridTriangle GetTransform(in GridVector2 Point);
 
         /// <summary>
         /// Return the mapping triangle which can map the point
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal abstract MappingGridTriangle GetInverseTransform(GridVector2 Point);
+        internal abstract MappingGridTriangle GetInverseTransform(in GridVector2 Point);
 
         /// <summary>
         /// This stores the output of the Delaunay triangulation.  Every group of three integers represents a triangle
@@ -113,7 +113,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool CanTransform(GridVector2 Point)
+        public override bool CanTransform(in GridVector2 Point)
         {
             return GetTransform(Point) != null;
         }
@@ -123,7 +123,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override GridVector2 Transform(GridVector2 Point)
+        public override GridVector2 Transform(in GridVector2 Point)
         {
             MappingGridTriangle t = GetTransform(Point);
             if (t == null)
@@ -137,9 +137,10 @@ namespace Geometry.Transforms
         /// <summary>
         /// Transform point from mapped space to control space
         /// </summary>
+        /// <param name="Points"></param>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override GridVector2[] Transform(GridVector2[] Points)
+        public override GridVector2[] Transform(in GridVector2[] Points)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetTransform(Point)).ToArray();
             return Points.Select(p =>
@@ -161,7 +162,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool TryTransform(GridVector2 Point, out GridVector2 v)
+        public override bool TryTransform(in GridVector2 Point, out GridVector2 v)
         {
             v = new GridVector2();
             MappingGridTriangle t = GetTransform(Point);
@@ -178,18 +179,21 @@ namespace Geometry.Transforms
         /// <summary>
         /// Transform point from mapped space to control space
         /// </summary>
+        /// <param name="Points"></param>
+        /// <param name="output"></param>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool[] TryTransform(GridVector2[] Points, out GridVector2[] output)
+        public override bool[] TryTransform(in GridVector2[] Points, out GridVector2[] output)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetTransform(Point)).ToArray();
             bool[] IsTransformed = triangles.Select(t => t != null).ToArray();
+            var inputPoints = Points;
 
             output = triangles.Select((tri, i) =>
             {
                 if (tri != null)
                 {
-                    return tri.Transform(Points[i]);
+                    return tri.Transform(inputPoints[i]);
                 }
                 else
                     return default;
@@ -210,7 +214,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool CanInverseTransform(GridVector2 Point)
+        public override bool CanInverseTransform(in GridVector2 Point)
         {
             return GetInverseTransform(Point) != null;
         }
@@ -220,7 +224,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override GridVector2 InverseTransform(GridVector2 Point)
+        public override GridVector2 InverseTransform(in GridVector2 Point)
         {
             MappingGridTriangle t = GetInverseTransform(Point);
             if (t == null)
@@ -234,9 +238,10 @@ namespace Geometry.Transforms
         /// <summary>
         /// Transform point from mapped space to control space
         /// </summary>
+        /// <param name="Points"></param>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override GridVector2[] InverseTransform(GridVector2[] Points)
+        public override GridVector2[] InverseTransform(in GridVector2[] Points)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetInverseTransform(Point)).ToArray();
             return Points.Select(p =>
@@ -257,8 +262,9 @@ namespace Geometry.Transforms
         /// Transform point from mapped space to control space
         /// </summary>
         /// <param name="Point"></param>
+        /// <param name="v"></param>
         /// <returns></returns>
-        public override bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
+        public override bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
         {
             v = new GridVector2();
             MappingGridTriangle t = GetInverseTransform(Point);
@@ -275,18 +281,21 @@ namespace Geometry.Transforms
         /// <summary>
         /// Transform point from mapped space to control space
         /// </summary>
+        /// <param name="Points"></param>
+        /// <param name="output"></param>
         /// <param name="Point"></param>
         /// <returns></returns>
-        public override bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] output)
+        public override bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] output)
         {
             MappingGridTriangle[] triangles = Points.Select(Point => GetInverseTransform(Point)).ToArray();
             bool[] IsTransformed = triangles.Select(t => t != null).ToArray();
 
+            var inputPoints = Points;
             output = triangles.Select((tri, i) =>
             {
                 if (tri != null)
                 {
-                    return tri.InverseTransform(Points[i]);
+                    return tri.InverseTransform(inputPoints[i]);
                 }
                 else
                     return default;
