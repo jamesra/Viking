@@ -155,7 +155,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="B"></param>
         /// <returns>Array of distances along each axis</returns>
-        static public double[] Diff(IPointN A, IPointN B)
+        public static double[] Diff(IPointN A, IPointN B)
         {
             ThrowOnDimensionMismatch(A, B);
 
@@ -169,14 +169,14 @@ namespace Geometry
             return diff;
         }
 
-        static public double DistanceSquared(IPointN A, IPointN B)
+        public static double DistanceSquared(IPointN A, IPointN B)
         {
             ThrowOnDimensionMismatch(A, B);
 
             return Diff(A, B).Select(dist => dist * dist).Sum();
         }
 
-        static public double Magnitude(IPointN A)
+        public static double Magnitude(IPointN A)
         {
             return Math.Sqrt(A.coords.Select(val => val * val).Sum());
         }
@@ -190,7 +190,7 @@ namespace Geometry
             }
         }
 
-        static public GridVectorN Normalize(IPointN A)
+        public static GridVectorN Normalize(IPointN A)
         {
             double mag = Magnitude(A);
 

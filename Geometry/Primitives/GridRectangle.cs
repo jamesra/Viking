@@ -43,23 +43,23 @@ namespace Geometry
 
         public GridVector2 Center => new GridVector2(LowerLeft.X + (Width / 2.0), LowerLeft.Y + (Height / 2.0));
 
-        public GridVector2 LowerLeft => Corners[(int)Corner.LowerLeft];
+        public GridVector2 LowerLeft => Corners?[(int)Corner.LowerLeft] ?? default;
 
-        public GridVector2 UpperLeft => Corners[(int)Corner.UpperLeft];
+        public GridVector2 UpperLeft => Corners?[(int)Corner.UpperLeft] ?? default;
 
-        public GridVector2 LowerRight => Corners[(int)Corner.LowerRight];
+        public GridVector2 LowerRight => Corners?[(int)Corner.LowerRight] ?? default;
 
-        public GridVector2 UpperRight => Corners[(int)Corner.UpperRight];
+        public GridVector2 UpperRight => Corners?[(int)Corner.UpperRight] ?? default;
 
         public double Area => Width * Height;
 
-        public GridLineSegment LeftEdge => new GridLineSegment(Corners[(int)Corner.LowerLeft], Corners[(int)Corner.UpperLeft]);
+        public GridLineSegment LeftEdge => new GridLineSegment(Corners?[(int)Corner.LowerLeft] ?? default, Corners?[(int)Corner.UpperLeft] ?? default);
 
-        public GridLineSegment RightEdge => new GridLineSegment(Corners[(int)Corner.LowerRight],Corners[(int)Corner.UpperRight]);
+        public GridLineSegment RightEdge => new GridLineSegment(Corners?[(int)Corner.LowerRight] ?? default, Corners?[(int)Corner.UpperRight] ?? default);
 
-        public GridLineSegment TopEdge => new GridLineSegment(Corners[(int)Corner.UpperLeft], Corners[(int)Corner.UpperRight]);
+        public GridLineSegment TopEdge => new GridLineSegment(Corners?[(int)Corner.UpperLeft] ?? default, Corners?[(int)Corner.UpperRight] ?? default);
 
-        public GridLineSegment BottomEdge => new GridLineSegment(Corners[(int)Corner.LowerLeft], Corners[(int)Corner.LowerRight]);
+        public GridLineSegment BottomEdge => new GridLineSegment(Corners?[(int)Corner.LowerLeft] ?? default, Corners?[(int)Corner.LowerRight] ?? default);
 
         public GridLineSegment[] Edges => new GridLineSegment[] { TopEdge, BottomEdge, LeftEdge, RightEdge };
 
@@ -363,7 +363,7 @@ namespace Geometry
             return OverlapType.NONE;
         }
 
-        public bool Contains(GridVector2 pos, double epsilon = Global.Epsilon)
+        public bool Contains(in GridVector2 pos, double epsilon = Global.Epsilon)
         {
             //Find out if the rectangles can't possibly intersect
             if (pos.X >= this.Left - epsilon &&

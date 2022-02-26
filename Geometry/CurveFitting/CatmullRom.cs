@@ -353,7 +353,7 @@ namespace Geometry
     /// </summary>
     public static class CatmullRomControlPointSimplification
     {
-        static private GridVector2[] GetControlPointSubsetForCurve(IReadOnlyList<GridVector2> path, int iStart, bool IsClosed)
+        private static GridVector2[] GetControlPointSubsetForCurve(IReadOnlyList<GridVector2> path, int iStart, bool IsClosed)
         {
             return IsClosed ? GetControlPointSubsetForClosedCurve(path, iStart) : GetControlPointSubsetForOpenCurve(path, iStart);
         }
@@ -364,7 +364,7 @@ namespace Geometry
         /// <param name="path"></param>
         /// <param name="iStart"></param>
         /// <returns></returns>
-        static private GridVector2[] GetControlPointSubsetForOpenCurve(IReadOnlyList<GridVector2> path, int iStart)
+        private static GridVector2[] GetControlPointSubsetForOpenCurve(IReadOnlyList<GridVector2> path, int iStart)
         {
             if (path.Count < 2)
             {
@@ -403,7 +403,7 @@ namespace Geometry
         /// <param name="path"></param>
         /// <param name="iStart"></param>
         /// <returns></returns>
-        static private GridVector2[] GetControlPointSubsetForClosedCurve(IReadOnlyList<GridVector2> path, int iStart)
+        private static GridVector2[] GetControlPointSubsetForClosedCurve(IReadOnlyList<GridVector2> path, int iStart)
         {
             if (path.Count < 3)
             {
@@ -504,7 +504,7 @@ namespace Geometry
         /// Take a high density path, fit a curve to it using catmull rom, and remove control points until we have a smaller number of control points where all points are within a minimum distance from the curve. 
         /// </summary>
         /// <param name="path"></param>
-        static private List<GridVector2> IdentifyControlPoints(this List<GridVector2> path, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
+        public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<GridVector2> input, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         {
             //Copy the path so we don't modify the input
             var path = input.Select(p => p.Round(Global.TransformSignificantDigits)).Distinct().ToList();

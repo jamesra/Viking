@@ -870,7 +870,7 @@ namespace Geometry
         /// </summary>
         /// <param name="position"></param>
         /// <returns></returns>
-        static public GridVector2? IntersectionPoint(this ICollection<GridVector2> Verticies, GridLineSegment testSeg)
+        public static GridVector2? IntersectionPoint(this ICollection<GridVector2> Verticies, GridLineSegment testSeg)
         {
             GridLineSegment[] segments = GridLineSegment.SegmentsFromPoints(Verticies.ToArray());
             return segments.IntersectionPoint(testSeg, false);
@@ -884,7 +884,7 @@ namespace Geometry
         /// <param name="p"></param>
         /// <param name="MinDistance"></param>
         /// <returns></returns>
-        static public int NearestPoint(this ICollection<GridVector2> points, GridVector2 testPoint, out double MinDistance)
+        public static int NearestPoint(this ICollection<GridVector2> points, GridVector2 testPoint, out double MinDistance)
         {
             //Find the line segment the NewControlPoint intersects
             double[] distancesToRemovalPoint = points.Select(p => GridVector2.Distance(p, testPoint)).ToArray();
@@ -894,7 +894,7 @@ namespace Geometry
             return iNearestPoint;
         }
 
-        static public double PerimeterLength(this GridVector2[] points)
+        public static double PerimeterLength(this GridVector2[] points)
         {
             points = points.EnsureClosedRing();
             double length = 0;
@@ -1041,7 +1041,7 @@ namespace Geometry
         /// <param name="position"></param>
         /// <param name="IgnoreEndpoints">Ignore line segments where the endpoints are identical</param>
         /// <returns></returns>
-        static public GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints)
+        public static GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints)
         {
             return IntersectionPoint(segments, testSeg, IgnoreEndpoints, out GridLineSegment? intersectedSegment);
         }
@@ -1052,7 +1052,7 @@ namespace Geometry
         /// <param name="position"></param>
         /// <param name="IgnoreEndpoints">Ignore line segments where the endpoints are identical</param>
         /// <returns></returns>
-        static public GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints, out GridLineSegment? intersectedSegment)
+        public static GridVector2? IntersectionPoint(this ICollection<GridLineSegment> segments, GridLineSegment testSeg, bool IgnoreEndpoints, out GridLineSegment? intersectedSegment)
         {
             intersectedSegment = new GridLineSegment?();
 
@@ -1078,7 +1078,7 @@ namespace Geometry
         /// </summary>
         /// <param name="segments"></param>
         /// <returns></returns>
-        static public GridVector2[] Verticies(this ICollection<GridLineSegment> segments)
+        public static GridVector2[] Verticies(this ICollection<GridLineSegment> segments)
         {
             GridVector2[] verticies = new GridVector2[segments.Count + 1];
             for (int i = 0; i < segments.Count; i++)
@@ -1099,7 +1099,7 @@ namespace Geometry
         /// <param name="p"></param>
         /// <param name="MinDistance"></param>
         /// <returns></returns>
-        static public int NearestSegment(this ICollection<GridLineSegment> segments, GridVector2 p, out double MinDistance)
+        public static int NearestSegment(this ICollection<GridLineSegment> segments, GridVector2 p, out double MinDistance)
         {
             //Find the line segment the NewControlPoint intersects
             int iNearestSegment = segments.TakeWhile(s => s.A != p).Count();
@@ -1128,7 +1128,7 @@ namespace Geometry
         /// <param name="segments"></param>
         /// <param name="newPoint"></param>
         /// <returns></returns>
-        static public GridLineSegment[] Insert(this ICollection<GridLineSegment> lineSegs, GridVector2 newPointPosition, int segmentIndex)
+        public static GridLineSegment[] Insert(this ICollection<GridLineSegment> lineSegs, GridVector2 newPointPosition, int segmentIndex)
         {
             GridVector2[] newControlPoints = new GridVector2[lineSegs.Count + 2];
 
@@ -1143,7 +1143,7 @@ namespace Geometry
         /// <param name="lineSegs"></param>
         /// <param name="iNearestPoint"></param>
         /// <returns></returns>
-        static public GridLineSegment[] Remove(this ICollection<GridLineSegment> lineSegs, int iNearestPoint)
+        public static GridLineSegment[] Remove(this ICollection<GridLineSegment> lineSegs, int iNearestPoint)
         {
             GridVector2[] OriginalControlPoints = lineSegs.Verticies();
             GridVector2[] newControlPoints = new GridVector2[OriginalControlPoints.Length - 1];

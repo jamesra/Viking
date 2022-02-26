@@ -35,7 +35,7 @@ namespace Geometry
             return Center.ToString() + " Radius: " + Radius.ToString("F2");
         }
 
-        static public GridCircle CircleFromThreePoints(GridVector2[] points)
+        public static GridCircle CircleFromThreePoints(GridVector2[] points)
         {
             if (points == null)
             {
@@ -54,7 +54,7 @@ namespace Geometry
             return CircleFromThreePoints(A, B, C);
         }
 
-        static public GridCircle CircleFromThreePoints(GridVector2 One, GridVector2 Two, GridVector2 Three)
+        public static GridCircle CircleFromThreePoints(GridVector2 One, GridVector2 Two, GridVector2 Three)
         {
             if (One.X == Two.X && Two.X == Three.X)
             {
