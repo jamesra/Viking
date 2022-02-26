@@ -20,10 +20,7 @@ namespace Geometry
             this.Y = Y;
         }
 
-        public override string ToString()
-        {
-            return string.Format("X:{0} Y:{1}", X, Y);
-        }
+        public override string ToString() => $"X:{X} Y:{Y}";
 
         public override int GetHashCode()
         {
@@ -91,6 +88,11 @@ namespace Geometry
             this.Width = Width;
             this.Height = Height;
         }
+
+        public override string ToString()
+        {
+            return $"W: {Width} H: {Height}";
+        }
     }
 
     /// <summary>
@@ -105,6 +107,11 @@ namespace Geometry
         {
             this.Width = Width;
             this.Height = Height;
+        }
+
+        public override string ToString()
+        {
+            return $"W: {Width} H: {Height}";
         }
     }
 
@@ -421,6 +428,11 @@ namespace Geometry
                 }
                 return false;
             }
+        }
+
+        public override string ToString()
+        {
+            return $"Level: {this.Level} MinRadius: {this.MinRadius} CellDim: {this.CellDimensions} GridDim: {this.GridDimensions}";
         }
     }
 
