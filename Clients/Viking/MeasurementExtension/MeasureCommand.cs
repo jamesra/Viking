@@ -3,15 +3,21 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SIMeasurement;
 using System.Collections.Generic;
+using System.Web.UI.WebControls;
 using System.Windows.Forms;
+using VikingXNA;
 using VikingXNAGraphics;
+using HorizontalAlignment = VikingXNAGraphics.HorizontalAlignment;
+using Label = System.Web.UI.WebControls.Label;
 
 namespace MeasurementExtension
 {
     [Viking.Common.CommandAttribute()]
-    class MeasureCommand : Viking.UI.Commands.Command, Viking.Common.IObservableHelpStrings
+    public class MeasureCommand : Viking.UI.Commands.Command, Viking.Common.IObservableHelpStrings
     {
         GridVector2 Origin;
+        private readonly LengthMeasurement PixelSize;
+        private LabelView distanceLabel;
 
         private static string[] DefaultHelpStrings = new string[]
         {
@@ -23,6 +29,8 @@ namespace MeasurementExtension
             get
             {
                 List<string> s = new List<string>(MeasureCommand.DefaultHelpStrings);
+                s.Add("CTRL - Horizontal measurement");
+                s.Add("SHIFT - Vertical measurement");
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 return s.ToArray();
             }
@@ -36,11 +44,12 @@ namespace MeasurementExtension
             }
         }
 
-        public MeasureCommand(Viking.UI.Controls.SectionViewerControl parent)
+        public MeasureCommand(Viking.UI.Controls.SectionViewerControl parent, LengthMeasurement pixelSize)
             : base(parent)
         {
             //Make the cursor something distinct and appropriate for measuring
             parent.Cursor = Cursors.Cross;
+            PixelSize = pixelSize;
         }
 
         protected override void OnMouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -67,27 +76,55 @@ namespace MeasurementExtension
             Parent.Invalidate();
         }
 
-
-        private string DistanceToString(double distance)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="distance"></param>
+        /// <returns>A string describing the distance in human readable units</returns>
+        private static string DistanceToString(LengthMeasurement distance)
         {
-            LengthMeasurement us = LengthMeasurement.ConvertToReadableUnits(Global.UnitOfMeasure, distance);
-            return us.ToString(3, true);
-            //return us.Length.ToString("#0.000") + " " + us.Units;
+            return LengthMeasurement.ConvertToReadableUnits(distance).ToString(3, PreserveNonSignificant: true);
         }
 
-        private double? GetMosaicDistance()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="distance"></param>
+        /// <returns>null if no value passed, otherwise as string describing the distance</returns>
+        private string DistanceToString(LengthMeasurement? distance)
         {
-            GridVector2 mosaic_origin;
-            GridVector2 mosaic_target;
-            bool transformed_origin = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(Origin, out mosaic_origin);
-            bool transformed_current = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(this.oldWorldPosition, out mosaic_target);
-
-            if (transformed_origin && transformed_current)
+            if (distance.HasValue)
             {
-                return new double?(GridVector2.Distance(mosaic_origin, mosaic_target) * MeasurementExtension.Global.UnitsPerPixel);
+                return LengthMeasurement.ConvertToReadableUnits(distance.Value).ToString(3, PreserveNonSignificant: true);
             }
 
-            return new double?();
+            return null;
+        }
+
+        private LengthMeasurement GetVolumeDistance(GridVector2 target)
+        { 
+            return new LengthMeasurement(PixelSize.Units,
+                GridVector2.Distance(Origin, target) * PixelSize.Length);
+        }
+
+        private LengthMeasurement? GetMosaicDistance(GridVector2 target)
+        {
+            if (false == Viking.UI.State.volume.UsingVolumeTransform)
+            {
+                return null;
+            }
+
+            GridVector2 mosaic_origin;
+            GridVector2 mosaic_target;
+            bool transformedOrigin = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(Origin, out mosaic_origin);
+            bool transformedTarget = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(target, out mosaic_target);
+
+            if (transformedOrigin && transformedTarget)
+            {
+                return new LengthMeasurement(PixelSize.Units, GridVector2.Distance(mosaic_origin, mosaic_target) * PixelSize.Length);
+            }
+
+            return null;
         }
 
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
@@ -95,75 +132,113 @@ namespace MeasurementExtension
             if (CommandActive == false)
                 return;
 
+            Color lineColor = Color.Yellow.SetAlpha(0.9f);//new Color(Color.YellowGreen.R, Color.YellowGreen.G, Color.YellowGreen.B, 0.75f));
+
             //Retrieve the mouse position from the last update, the base class records this for us
             Vector3 target = new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f);
             if ((Control.ModifierKeys == Keys.Shift))
             {
                 target.Y = (float)Origin.Y;
             }
-
-            Color lineColor = new Color(Color.YellowGreen.R, Color.YellowGreen.G, Color.YellowGreen.B, 0.75f);
-
-            double VolumeDistance = GridVector2.Distance(Origin, this.oldWorldPosition) * MeasurementExtension.Global.UnitsPerPixel;
-
-            string mosaic_space_string = "No mosaic transform";
-
-            if (Viking.UI.State.volume.UsingVolumeTransform)
+            else if((Control.ModifierKeys == Keys.Control))
             {
-                double? mosaicDistance = GetMosaicDistance();
-                if (mosaicDistance.HasValue)
-                {
-                    mosaic_space_string = DistanceToString(mosaicDistance.Value);
-                }
-            }
-            else
-            {
-                mosaic_space_string = null;
-            }
+                target.X = (float)Origin.X;
+            } 
 
-            string volume_space_string = DistanceToString(VolumeDistance);
-
+            LengthMeasurement volumeDistance = GetVolumeDistance(target.ToGridVector2XY());
+            var mosaicDistance = GetMosaicDistance(target.ToGridVector2XY());
+              
             RoundLineCode.RoundLine lineToParent = new RoundLineCode.RoundLine((float)Origin.X,
                                                    (float)Origin.Y,
                                                    (float)target.X,
                                                    (float)target.Y);
 
             Parent.LumaOverlayLineManager.Draw(lineToParent,
-                                    (float)(1 * Parent.Downsample),
+                                    (float)(6 * Parent.Downsample),
                                     lineColor.ConvertToHSL(),
                                     scene.Camera.View * scene.Projection,
                                     1,
                                     "Glow");
 
             //Draw the distance near the cursor
-            Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
-
+            string distanceLabelString = DistanceLabel(volumeDistance, mosaicDistance);
             GridVector2 DrawPosition = Parent.WorldToScreen(target.X, target.Y);
+            var alignment = FindTextAlignment(Origin, target.ToGridVector2XY());
+            var anchor = FindTextAnchor(Origin, target.ToGridVector2XY());
+            var fontSize = 40.0f;
+            float fontScaleForVolume = (float)(fontSize / (double)VikingXNAGraphics.Global.DefaultFont.LineSpacing);
+            //distanceLabel = new LabelView(distanceLabelString, target.ToGridVector2XY(),  lineColor, alignment,
+                //anchor, scaleFontWithScene: false,  fontSize: 32);
 
-            string output_string = null;
-            if (mosaic_space_string != null)
-            {
-                output_string = mosaic_space_string + " Mosaic\n" + volume_space_string + " Volume";
-            }
-            else
-            {
-                output_string = volume_space_string;
-            }
+            var label_size = VikingXNAGraphics.Global.DefaultFont.MeasureString(distanceLabelString) * fontScaleForVolume;
+            var half_label_size = label_size / 2;
+            GridVector2 offset = new GridVector2(
+                anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
+                anchor.Vertical == VerticalAlignment.BOTTOM ? -label_size.Y : anchor.Vertical == VerticalAlignment.TOP ? 0 : -half_label_size.Y
+            );
 
+            DrawPosition += offset;
+
+            //Draw the distance near the cursor
+            Parent.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
+               
             Parent.spriteBatch.DrawString(VikingXNAGraphics.Global.DefaultFont,
-                output_string,
+                distanceLabelString,
                 new Vector2((float)DrawPosition.X, (float)DrawPosition.Y),
-                lineColor,
+                Color.DarkMagenta,
                 0,
                 new Vector2(0, 0),
-                0.25f,
+                fontScaleForVolume,
                 SpriteEffects.None,
                 0);
 
             Parent.spriteBatch.End();
-
+             
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }
+        
+        /// <summary>
+        /// Choose a text alignment that puts the label away from the target, and not over the line we are going to draw
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        private Alignment FindTextAlignment(GridVector2 origin, GridVector2 target)
+        {
+            return Alignment.TopLeft;
+            HorizontalAlignment hAlign = origin.X < target.X ? HorizontalAlignment.RIGHT : HorizontalAlignment.LEFT;
+            VerticalAlignment vAlign = origin.Y < target.Y ? VerticalAlignment.BOTTOM : VerticalAlignment.TOP;
+            return new Alignment { Horizontal = hAlign, Vertical = vAlign };
+                
+        }
 
+        /// <summary>
+        /// Choose a text anchor that puts the label away from the target, and not over the line we are going to draw
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        private Anchor FindTextAnchor(GridVector2 origin, GridVector2 target)
+        { 
+            HorizontalAlignment hAlign = origin.X <= target.X ? HorizontalAlignment.RIGHT : HorizontalAlignment.LEFT;
+            VerticalAlignment vAlign = origin.Y < target.Y ? VerticalAlignment.BOTTOM : VerticalAlignment.TOP;
+            return new Anchor { Horizontal = hAlign, Vertical = vAlign };
+                
+        }
+
+        private string DistanceLabel(LengthMeasurement volumeDistance, LengthMeasurement? mosaicDistance)
+        {
+            string volume_space_string = DistanceToString(volumeDistance);
+            string mosaic_space_string = DistanceToString(mosaicDistance);
+            string output_string = null;
+            if (mosaicDistance != null)
+            {
+                return $"{mosaic_space_string} Mosaic\n{volume_space_string} Volume";
+            }
+            else
+            {
+                return volume_space_string;
+            }
+        }
     }
 }

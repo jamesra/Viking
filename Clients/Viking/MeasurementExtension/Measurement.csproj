@@ -43,7 +43,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\Viking\bin\Debug\Modules\Measurement\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -56,7 +56,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\Viking\bin\Release\Modules\Measurement\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -160,6 +160,7 @@
     <ProjectReference Include="..\..\..\SIMeasurement\SIMeasurement.csproj">
       <Project>{0b489584-5d3e-4fb4-8a3d-77b7030e2994}</Project>
       <Name>SIMeasurement</Name>
+      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\Common\Common.csproj">
       <Project>{b35b0c61-ec9c-425a-846d-f160d5b12158}</Project>
@@ -208,8 +209,11 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>mkdir $(SolutionDir)Clients\Viking\Viking\Modules\Measurement
-copy $(TargetDir)* $(SolutionDir)Clients\Viking\Viking\Modules\Measurement /Y</PostBuildEvent>
+    <PostBuildEvent>mkdir $(SolutionDir)Clients\Viking\Viking\Modules\$(ProjectName)
+(robocopy $(TargetDir) $(SolutionDir)Clients\Viking\Viking\Modules\$(ProjectName)\ * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0
+
+mkdir $(ProjectDir)..\Viking\Content\$(ProjectName)
+(robocopy $(TargetDir)Content $(ProjectDir)..\Viking\Content\$(ProjectName) * /MIR) ^&amp; IF %25ERRORLEVEL%25 LEQ 1 exit 0</PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

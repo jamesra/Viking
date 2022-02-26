@@ -13,7 +13,8 @@ namespace MeasurementExtension
     {
         private SectionViewerControl Parent; 
 
-        public static double MeasureBarWidthScreenFraction = 0.15;
+        public static double MeasureBarWidthScreenTargetFraction = 0.15;
+        public static double MeasureBarWidthScreenMinimumFraction = 0.075;
         public static double MeasureBarHeight = double.NaN;
 
         public static double ScaleBarStartXFraction = 0.01;
@@ -31,9 +32,8 @@ namespace MeasurementExtension
             double ViewWidthInPixels = scene.VisibleWorldBounds.Width;
             double ViewWidthInUnits = ViewWidthInPixels / Global.UnitsPerPixel;
 
-            LengthMeasurement ApproximateViewBarWidth = new LengthMeasurement(Global.UnitOfMeasure, ViewWidthInUnits * MeasureBarWidthScreenFraction);
-
-            LengthMeasurement AdjustedApproximateViewBarWidth = LengthMeasurement.ConvertToReadableUnits(Global.UnitOfMeasure, ViewWidthInUnits * MeasureBarWidthScreenFraction);
+            LengthMeasurement ApproximateViewBarWidth = new LengthMeasurement(Global.UnitOfMeasure, ViewWidthInUnits * MeasureBarWidthScreenTargetFraction);
+            LengthMeasurement AdjustedApproximateViewBarWidth = LengthMeasurement.ConvertToReadableUnits(Global.UnitOfMeasure, ViewWidthInUnits * MeasureBarWidthScreenTargetFraction);
 
             //Round to the nearest power of 10
             double log10 = Math.Log10(AdjustedApproximateViewBarWidth.Length);
@@ -47,9 +47,15 @@ namespace MeasurementExtension
             }
 
             LengthMeasurement FinalBarWidth = new LengthMeasurement(AdjustedApproximateViewBarWidth.Units, MeasureBarDistance);
-            FinalBarWidth = FinalBarWidth.ConvertTo(SILengthUnits.nm);
+            FinalBarWidth = FinalBarWidth.ConvertTo(Global.PixelWidth.Units);
             //Determine how large our scale bar is in screen pixels
             double BarWidthInPixels = FinalBarWidth / Global.PixelWidth;
+            while (BarWidthInPixels / ViewWidthInPixels < MeasureBarWidthScreenMinimumFraction)
+            {
+                FinalBarWidth *= 2;
+                BarWidthInPixels = FinalBarWidth / Global.PixelWidth;
+            }
+
             double BarHeightInPixels = (VikingXNAGraphics.Global.DefaultFont.LineSpacing * Parent.Downsample) / 3;
 
             GridVector2 CornerOffset = new GridVector2(scene.VisibleWorldBounds.Width * CornerOffsetFractions.X, scene.VisibleWorldBounds.Height * CornerOffsetFractions.Y);
@@ -67,7 +73,7 @@ namespace MeasurementExtension
             
             RectangleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, new RectangleView[] { scaleBarView });
 
-            LabelView label = new LabelView(LengthMeasurement.ConvertToReadableUnits(FinalBarWidth).ToString(), scaleBarRect.Center);
+            LabelView label = new LabelView(LengthMeasurement.ConvertToReadableUnits(FinalBarWidth).ToString(), scaleBarRect.Center, scaleFontWithScene: true);
             label.Color = Microsoft.Xna.Framework.Color.White;
             label.FontSize = BarHeightInPixels * 0.9;
             
