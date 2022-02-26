@@ -1,4 +1,4 @@
-﻿@model IEnumerable<IdentityServer.Models.ApplicationUser>
+﻿@model IEnumerable<Viking.Identity.Models.ApplicationUser>
 
 @{
     ViewData["Title"] = "Users";
@@ -7,7 +7,7 @@
 
 <h2>Users</h2>
 
-@if (this.User.IsInRole(Config.AdminRoleName))
+@if (this.User.IsInRole(Special.Roles.Admin))
 {
     <p>
         <a asp-action="Create">Create New</a>
@@ -133,12 +133,12 @@
                     @Html.DisplayFor(modelItem => item.AccessFailedCount)
                 </td>
                 <td>
-                    @if (this.User.IsInRole(Config.AdminRoleName) || this.User.Identity.Name == item.UserName)
+                    @if (this.User.IsInRole(Special.Roles.Admin) || this.User.Identity.Name == item.UserName)
                     {
                         <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> @Html.Raw("|")
                     }
                     <a asp-action="Details" asp-route-id="@item.Id"> Details </a>
-                    @if (this.User.IsInRole(Config.AdminRoleName) || this.User.Identity.Name == item.UserName)
+                    @if (this.User.IsInRole(Special.Roles.Admin) || this.User.Identity.Name == item.UserName)
                     {
                         <a asp-action="Delete" asp-route-id="@item.Id"> Delete </a>
                     }

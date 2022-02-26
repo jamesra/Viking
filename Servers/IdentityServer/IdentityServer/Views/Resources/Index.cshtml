@@ -1,4 +1,4 @@
-﻿@model IEnumerable<IdentityServer.Models.Resource>
+﻿@model IEnumerable<Viking.Identity.Models.Resource>
 
 @{
     ViewData["Title"] = "Index";
@@ -8,7 +8,7 @@
 }
 
 <h2>Index</h2>
-@if (this.User.IsInRole(Config.AdminRoleName))
+@if (this.User.IsInRole(Special.Roles.Admin))
 {
     <p>
         <a asp-action="Create">Create New</a>

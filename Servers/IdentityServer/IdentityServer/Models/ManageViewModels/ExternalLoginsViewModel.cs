@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using System.Collections.Generic;
 
-namespace IdentityServer.Models.ManageViewModels
+namespace Viking.Identity.Models.ManageViewModels
 {
     public class ExternalLoginsViewModel
     {

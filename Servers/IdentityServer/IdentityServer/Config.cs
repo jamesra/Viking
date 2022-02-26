@@ -1,49 +1,25 @@
 ﻿using IdentityModel;
-using IdentityServer.Data;
-using IdentityServer.Models;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
 using IdentityServer4;
 using IdentityServer4.Models;
 using System.Collections.Generic;
 
 
-namespace IdentityServer
+namespace Viking.Identity
 {
 
     public class Config
     {
-        internal const string Secret = "CorrectHorseBatteryStaple";
-        public const string AdminRoleName = "Administrator";
+        internal const string Secret = "CorrectHorseBatteryStaple"; 
+
+        public const string AuthenticationSchemes = "Bearer, Introspection, Cookies, idsrv";
 
         public readonly struct Policy
         {
             public const string GroupAccessManager = "Access Manager";
             public const string OrgUnitAdmin = "Administrator";
             public const string BearerToken = "BearerToken";
-        }
-        
-
-        public const string OrgUnitAdminPermission = "Administrator";
-        public const string GroupAccessManagerPermission = "Access Manager";
-
-        /// <summary>
-        /// Permissions defined in the global group are available to all groups (All child groups?)
-        /// </summary>
-        public const long AdminGroupId = -2;
-        public const string AdminGroupName = "Administrators";
-
-        public const long EveryoneGroupId = -1;
-        public const string EveryoneGroupName = "Everyone";
-
-        public const string GroupResourceType = nameof(Group);
-        public const string VolumeResourceType = nameof(Volume);
-
-        public static string AdminRoleId { get; set; }
-
-        ApplicationDbContext _context; 
-
-        public Config(IdentityServer.Data.ApplicationDbContext context)
-        {
-            _context = context;
         }
 
         // scopes define the resources in your system
@@ -173,7 +149,7 @@ namespace IdentityServer
                     ClientId = "mvc",
                     ClientName = "MVC Client",
                     //AllowedGrantTypes = GrantTypes.HybridAndClientCredentials,
-                    AllowedGrantTypes = GrantTypes.Implicit,
+                    AllowedGrantTypes = GrantTypes.Code,
 
                     RequireConsent = false,
 

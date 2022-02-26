@@ -1,6 +1,4 @@
 ﻿using IdentityModel;
-using IdentityServer.Data;
-using IdentityServer.Models;
 using IdentityServer4.Extensions;
 using IdentityServer4.Models;
 using IdentityServer4.Services;
@@ -10,8 +8,10 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
 
-namespace IdentityServer.Extensions
+namespace Viking.Identity.Extensions
 {
     public class IdentityWithExtendedClaimsProfileService : IProfileService
     {

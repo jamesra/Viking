@@ -1,16 +1,18 @@
-﻿using IdentityServer.Data;
-using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
+using System;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Viking.Identity.Models.UserViewModels;
 
-namespace IdentityServer.Controllers
+namespace Viking.Identity.Controllers
 {
 
     [Route("[controller]/[action]")]
@@ -111,7 +113,7 @@ namespace IdentityServer.Controllers
         // POST: UserRoles/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public ActionResult Edit(UserRolesViewModel id, IFormCollection collection)
         {
             try
@@ -132,9 +134,10 @@ namespace IdentityServer.Controllers
                     else if(!check && listUserRoles.Any(ur => ur.RoleId == userRole.Id))
                     {
                         //Safety check, make sure we do not remove the last admin user from the admin role
-                        if(userRole.Name == Config.AdminRoleName)
+                        if(userRole.Name == Special.Roles.Admin)
                         {
-                            bool otherAdminUsers = _context.UserRoles.Where(ur => ur.RoleId == Config.AdminRoleId && ur.UserId != User.Id).Any();
+                            var adminRoleId = _context.Roles.FirstOrDefault(ur => ur.Name == Special.Roles.Admin).Id;
+                            bool otherAdminUsers = _context.UserRoles.Where(ur => ur.RoleId == adminRoleId && ur.UserId != User.Id).Any();
                             if(otherAdminUsers== false)
                             {
                                 _logger.LogWarning("Cannot remove the last admin user");

@@ -1,6 +1,6 @@
-﻿@model IdentityServer.Models.ResourceType
+﻿@model Viking.Identity.Models.ResourceType
 
-@if (this.User.IsInRole(Config.AdminRoleName))
+@if (this.User.IsInRole(Special.Roles.Admin))
 {
     <p>
         @Html.ActionLink("Create New Permission", "Create", "ResourceTypePermissions", new { ResourceTypeId = Model.Id })
@@ -36,7 +36,7 @@
                         @Html.DisplayFor(modelItem => item.Description)
                     </td>
                     <td>
-                        @if (this.User.IsInRole(Config.AdminRoleName))
+                        @if (this.User.IsInRole(Special.Roles.Admin))
                         {
                             @Html.ActionLink("Edit", "Edit", "ResourceTypePermissions", item)<text> | </text>
                             @Html.ActionLink("Details", "Details", "ResourceTypePermissions", item)<text> | </text>

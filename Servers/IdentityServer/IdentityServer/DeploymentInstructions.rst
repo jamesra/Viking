@@ -42,11 +42,20 @@ SSL
 Install the SSL certificate on the server.  When I did this I needed to put the certificate in my personal store, but I do suspect it could have worked in the machine store with more research on my part. 
 Ensure that the identities (active directory users) for the IIS application pool running the Identity Server have access to the private SSL key.
     
-       * Certificate manager (certlm) allows one to browse certificates on the machine.  Right click the certificate, select "All Tasks -> Manage Private Keys" from the context menu to edit access rights to the key.
+       * Certificate manager (certlm) allows one to browse certificates on the machine.  Right click the certificate, select "All Tasks -> Manage Private Keys" from the context menu to edit access rights to the key. NOTE: In more recent versions of Windows the certificate must be in the personal store to edit permissions.  So drag it to the personal store, edit permissions, then drag it back to the machine store.
        * Ensure the IIS website has an SSL binding that points to the certificate you want to use. 
        * Disable HTTP access to the identity website to prevent unencrypted communication.
        * Ensure the appsettings.json file refers to the correct SSL key.  The serial number is stored under "SSL -> SerialNumber"
        * Ensure the identity the IIS application runs as has access rights to the SSL certificate's private key via certificate manager.
+
+SSL Turnover
+------------
+
+IT makes our lab replace the SSL certificates every year.  
+*   Replace the bindings on the Default Web Site to point at the new SSL certificate after installation
+*   Update the appsettings.json file to refer to the new certificates serial #
+*   Replacing the cert breaks web deployment.  To delete the old certificate from web deploy run this administrative command line: 'netsh http delete sslcert ipport=0.0.0.0:8172' Then in IIS open "Management Service".  Update the web deploy certificate to the latest certificate.
+
 
 Deploy to IIS
 -------------

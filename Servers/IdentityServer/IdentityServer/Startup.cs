@@ -1,7 +1,4 @@
 ﻿using IdentityModel;
-using IdentityServer.Data;
-using IdentityServer.Models;
-using IdentityServer.Services;
 using IdentityServer4.EntityFramework.DbContexts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -18,22 +15,73 @@ using Serilog;
 using System;
 using System.Linq;
 using System.Reflection;
+using IdentityModel.AspNetCore.OAuth2Introspection;
+using IdentityModel.Client;
+using IdentityServer4;
+using IdentityServer4.Extensions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Viking.Identity.Authorization;
+using Viking.Identity.Data;
+using Viking.Identity.Extensions;
+using Viking.Identity.Models;
+using Viking.Identity.Services;
 
-namespace IdentityServer
+namespace Viking.Identity
 {
+    public static class PolicySchemeSelector
+    {
+        public static string SchemeSelector(HttpContext context)
+        {
+            var (scheme, token) = GetSchemeAndCredential(context);
+
+            if (!string.Equals(scheme, "Bearer", StringComparison.OrdinalIgnoreCase))
+            {
+                return "";
+            }
+
+            if (token.Contains("."))
+            {
+                return "Bearer";
+            }
+            else
+            {
+                return "Introspection";
+            }
+        }
+
+        /// <summary>
+        /// Extracts scheme and credential from Authorization header (if present)
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static (string, string) GetSchemeAndCredential(HttpContext context)
+        {
+            var header = context.Request.Headers["Authorization"].FirstOrDefault();
+
+            if (string.IsNullOrEmpty(header))
+            {
+                return ("", "");
+            }
+
+            var parts = header.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length != 2)
+            {
+                return ("", "");
+            }
+
+            return (parts[0], parts[1]);
+        }
+    }
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
         {
-            Configuration = configuration;
-              
-            Log.Logger = new LoggerConfiguration()
-              .Enrich.FromLogContext()
-              .WriteTo.File("IDServerLogs.json", Serilog.Events.LogEventLevel.Verbose)
-              .CreateLogger();
+            Configuration = configuration; 
         }
 
-        public IConfiguration Configuration { get; }
+        private IConfiguration Configuration { get; }
          
         /*
         private string ForwardReferenceToken(HttpContext context)
@@ -58,7 +106,7 @@ namespace IdentityServer
             return "Bearer";
         } 
         */
-
+        
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -67,24 +115,34 @@ namespace IdentityServer
 
             //System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Add("sub", System.IdentityModel.ClaimTypes.NameIdentifier);
 
-            services.AddControllersWithViews();
+            services.ConfigureIdentityServerDataContext(Configuration.GetSection("DataContext"));
+
+            services.AddControllers(); //Adds api controllers
+            services.AddControllersWithViews(); 
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
 
-            var connectionString = Configuration.GetConnectionString("IdentityConnection");
+            //var connectionString = Configuration.GetConnectionString("IdentityConnection");
             var persistedGrantConnectionString = Configuration.GetConnectionString("PersistedGrantConnection");
-            var configConnectionString = Configuration.GetConnectionString("ConfigConnection");
+            //var configConnectionString = Configuration.GetConnectionString("ConfigConnection");
 
             services.AddLogging(loggingBuilder =>
                 loggingBuilder.AddSerilog(dispose: true));
-
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("IdentityConnection")).EnableDetailedErrors().EnableSensitiveDataLogging());
-
-
+             
+            services.AddAntiforgery();
+             
             IConfigurationSection identityServerConfig = Configuration.GetSection("IdentityServer");
+            var OAuth2ConfigurationSection = Configuration.GetSection(nameof(OAuth2IntrospectionOptions));
+            if (OAuth2ConfigurationSection is null)
+                throw new ArgumentException(
+                    $"{nameof(OAuth2IntrospectionOptions)} section missing from appsettings.json configuration");
+
+            OAuth2IntrospectionOptions OAuth2Options = OAuth2ConfigurationSection.Get<OAuth2IntrospectionOptions>();
 
             services.AddAuthentication(options =>
-            { 
+            {
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             })
                 .AddCookie()
             //.AddApplicationCookie()
@@ -103,25 +161,34 @@ namespace IdentityServer
              * The end result is any Web API style calls that require a token must be decorated with
              * [Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)]
              * */
-            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+                .AddOAuth2Introspection("Introspection", options =>
+                {
+                    OAuth2ConfigurationSection.Bind(options);
+                })
+                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidateAudience = false,
+                    ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuer = true,
                     ValidateTokenReplay = true,
-
+                    ValidateIssuerSigningKey = true, 
                 };
-                options.RequireHttpsMetadata = true;
+
+                options.RequireHttpsMetadata = false;
                 options.Authority = identityServerConfig["Endpoint"];
                 options.SaveToken = true;
 
                 options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
-                //options.MapInboundClaims = false; 
+                options.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
 
-                // if token does not contain a dot, it is a reference token
-                //options.ForwardDefaultSelector = ForwardReferenceToken;//Selector.ForwardReferenceToken("introspection");
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    NameClaimType = "name",
+                    ValidAudience = "Viking.Annotation"
+                    //RoleClaimType = "role",
+                };
             })
             //.AddApplicationCookie()
              
@@ -138,22 +205,13 @@ namespace IdentityServer
             }) */
             ;
 
-            services.AddAuthorization(options =>
-            {
-                var builder = new AuthorizationPolicyBuilder();
-                builder.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
-                builder.RequireAuthenticatedUser();
-                options.AddPolicy(Config.Policy.BearerToken, builder.Build());
-                options.AddPolicy(Config.Policy.GroupAccessManager, policy => policy.Requirements.Add(Authorization.Operations.GroupAccessManager));
-                options.AddPolicy(Config.Policy.OrgUnitAdmin, policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
-            });
 
             //services.AddHttpContextAccessor();
             //services.AddTransient<System.Security.Claims.ClaimsPrincipal>(provider => provider.GetService<IHttpContextAccessor>().HttpContext.User);
-            services.AddTransient<IdentityServer4.Validation.ICustomTokenRequestValidator, IdentityServer.Extensions.UserScopeTokenRequestValidator>();
-            services.AddScoped<IdentityServer.Extensions.AuthorizationHelper>();
-            services.AddScoped<IAuthorizationHandler, IdentityServer.Authorization.ResourceIdPermissionsAuthorizationHandler>();
-            services.AddScoped<IAuthorizationHandler, IdentityServer.Authorization.ResourcePermissionsAuthorizationHandler>();
+            services.AddTransient<IdentityServer4.Validation.ICustomTokenRequestValidator, UserScopeTokenRequestValidator>();
+            services.AddScoped<AuthorizationHelper>();
+            services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
+            services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
             //services.AddTransient<IdentityServer.Extensions.AuthorizationHelper>();
 
             var https_port_section = Configuration.GetSection("https_port");
@@ -230,7 +288,7 @@ namespace IdentityServer
 
                     // this enables automatic token cleanup. this is optional.
                     options.EnableTokenCleanup = true;
-                    options.TokenCleanupInterval = 30;
+                    options.TokenCleanupInterval = 3600;
                 })                
                 .AddAspNetIdentity<ApplicationUser>()
                 .AddJwtBearerClientAuthentication();
@@ -239,30 +297,81 @@ namespace IdentityServer
             IConfigurationSection sslConfig = Configuration.GetSection("SSL");
             ConfigureSSL(builder, sslConfig);
 
-            services.AddTransient<IdentityServer4.Services.IProfileService, IdentityServer.Extensions.IdentityWithExtendedClaimsProfileService>();
-             
-            services.Configure<SMTPOptions>(Configuration.GetSection("SMTP")); 
+            services.AddTransient<IdentityServer4.Services.IProfileService, IdentityWithExtendedClaimsProfileService>();
+              
+            services.AddAuthorizationPolicyEvaluator();
+
+            services.AddAuthorization(options =>
+            {
+                var builder = new AuthorizationPolicyBuilder();
+                builder.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+                //builder.AddAuthenticationSchemes("Introspection");
+                //builder.AddAuthenticationSchemes("Cookies");
+                builder.RequireAuthenticatedUser();
+                options.AddPolicy("protectedScope", policy => policy.RequireClaim("scope", "Viking.Annotation"));
+                options.AddPolicy(Config.Policy.BearerToken, builder.Build());
+                options.AddPolicy(Config.Policy.GroupAccessManager, policy => policy.Requirements.Add(Authorization.Operations.GroupAccessManager));
+                options.AddPolicy(Config.Policy.OrgUnitAdmin, policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
+            });
+
+
+            services.Configure<SMTPOptions>(Configuration.GetSection("SMTP"));
+
+            
+            services.AddAccessTokenManagement(options =>
+            {
+                // client config is inferred from OpenID Connect settings
+                // if you want to specify scopes explicitly, do it here, otherwise the scope parameter will not be sent
+                //options.Client.Scope = "Viking.Annotation";
+                options.Client.Clients.Add("identityserver", new ClientCredentialsTokenRequest
+                {
+                    Address = identityServerConfig["Endpoint"],
+                    ClientId = "mvc",
+                    ClientSecret = "CorrectHorseBatteryStaple",
+                    Scope = "openid profile Viking.Annotation"
+                });
+            });
+            /*
+            services.AddUserAccessTokenHttpClient("user_client", null, (client) =>
+            {
+                client.BaseAddress = new Uri(identityServerConfig["Endpoint"] + "/api/");
+            });
+
+            // registers HTTP client that uses the managed client access token
+            services.AddClientAccessTokenHttpClient("client", configureClient: client =>
+            {
+                client.BaseAddress = new Uri(identityServerConfig["Endpoint"] + "/api/");
+            });
+            */
+            services.AddMvcCore().AddAuthorization();
         }
 
         public void ConfigureSSL(IIdentityServerBuilder builder, IConfigurationSection config)
         {
             string serialNumber = config["SerialNumber"];
-            //var certs = X509.LocalMachine.My.SubjectDistinguishedName.Find(serialNumber).ToList();
+            if (serialNumber.IsNullOrEmpty())
+            { 
+                builder.AddDeveloperSigningCredential();
+            }
+            else
+            { 
+                //var certs = X509.LocalMachine.My.SubjectDistinguishedName.Find(serialNumber).ToList();
 
-            var cert = X509.LocalMachine.My.SerialNumber.Find(serialNumber, false)
-                .Where(o => DateTime.UtcNow >= o.NotBefore)
-                .OrderByDescending(o => o.NotAfter)
-                .FirstOrDefault();
-            if (cert == null) throw new Exception("No valid certificates could be found.");
+                var cert = X509.LocalMachine.My.SerialNumber.Find(serialNumber, false)
+                    .Where(o => DateTime.UtcNow >= o.NotBefore)
+                    .OrderByDescending(o => o.NotAfter)
+                    .FirstOrDefault();
+                if (cert == null) throw new Exception("No valid certificates could be found.");
 
-            var signingCredentials = new SigningCredentials(new X509SecurityKey(cert), "RS256");
+                var signingCredentials = new SigningCredentials(new X509SecurityKey(cert), "RS256");
 
-            builder.AddSigningCredential(signingCredentials);
+                builder.AddSigningCredential(signingCredentials);
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IWebHostEnvironment env)
-        {
+        { 
             // this will do the initial DB population
             InitializeDatabase(app);
 
@@ -276,14 +385,20 @@ namespace IdentityServer
             {
                 app.UseExceptionHandler("/Home/Error"); 
             }
-
+             
+            app.UseSerilogRequestLogging();
             app.UseHttpsRedirection();
             app.UseStaticFiles();           
             app.UseIdentityServer();
             app.UseRouting(); 
-            //app.UseAuthentication();
+            app.UseAuthentication();
             app.UseAuthorization();
-            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+            app.UseEndpoints(endpoints =>
+            {
+                //We cannot require authorization on all routes or users are unable to login
+                endpoints.MapDefaultControllerRoute(); //.RequireAuthorization(Config.Policy.BearerToken); 
+                endpoints.MapControllers();
+            });
 
             /*
             app.UseMvc(routes =>
@@ -299,11 +414,9 @@ namespace IdentityServer
             using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
             {
                 serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
-                serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
-
-                Config.AdminRoleId = serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Roles.FirstOrDefault(ur => ur.Name == Config.AdminRoleName).Id;
-
-                /* This should be added when I transition from keeping configuration in memory to keeping it in the database*/
+            }
+             
+            /* This should be added when I transition from keeping configuration in memory to keeping it in the database*/
                 /*
                var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
                context.Database.Migrate();
@@ -334,7 +447,7 @@ namespace IdentityServer
                    context.SaveChanges();
                }
                */
-            }
+            
         }
     }
 }

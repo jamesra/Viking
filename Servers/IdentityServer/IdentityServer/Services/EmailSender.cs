@@ -4,7 +4,7 @@ using System;
 using System.Net.Mail;
 using System.Threading.Tasks;
 
-namespace IdentityServer.Services
+namespace Viking.Identity.Services
 {
     public class SMTPOptions
     {

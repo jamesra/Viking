@@ -1,9 +1,4 @@
-﻿using IdentityServer.Data;
-using IdentityServer.Extensions;
-using IdentityServer.Models;
-using IdentityServer.Models.ManageViewModels;
-using IdentityServer.Models.UserViewModels;
-using IdentityServer.Services;
+﻿using Viking.Identity.Extensions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,8 +10,13 @@ using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Viking.Identity.Models.ManageViewModels;
+using Viking.Identity.Models.UserViewModels;
+using Viking.Identity.Services;
 
-namespace IdentityServer.Controllers
+namespace Viking.Identity.Controllers
 {
     [Authorize]
     [Route("[controller]/[action]")]
@@ -142,7 +142,7 @@ namespace IdentityServer.Controllers
 
             List<string> InvolvedAdmins = new List<string>();
 
-            Dictionary<long, List<ApplicationUser>> OrgAdmins = _context.GetOrganizationAdminMap(Config.GroupAccessManagerPermission);
+            Dictionary<long, List<ApplicationUser>> OrgAdmins = _context.GetOrganizationAdminMap(Special.Permissions.Group.AccessManager);
 
             //Create the message
             string message = string.Format("<p><b>{0}</b> is requesting additional claims:</p>", User.UserName);

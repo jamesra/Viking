@@ -13,7 +13,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IdentityServer", "IdentityS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingWebAppSettings", "..\WebAppSettings\VikingWebAppSettings.csproj", "{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitsAndScale", "..\..\UnitsAndScale\UnitsAndScale.csproj", "{D451457B-2782-4473-A935-EFA25C4FAD7C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitsAndScale", "..\..\UnitsAndScale\UnitsAndScale.csproj", "{D451457B-2782-4473-A935-EFA25C4FAD7C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.DataContext", "..\Identity.DataContext\Identity.DataContext.csproj", "{4579477D-044B-4311-87B2-5F946AAC919E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Models", "..\Identity.Models\Identity.Models.csproj", "{96089E7A-A037-4CF4-8F19-53AF653F0F07}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Tests", "..\Identity.Tests\Identity.Tests.csproj", "{1A1C7CAE-A15B-4754-986C-0C422ED344A4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -58,6 +64,24 @@ Global
 		{D451457B-2782-4473-A935-EFA25C4FAD7C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D451457B-2782-4473-A935-EFA25C4FAD7C}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{D451457B-2782-4473-A935-EFA25C4FAD7C}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{4579477D-044B-4311-87B2-5F946AAC919E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4579477D-044B-4311-87B2-5F946AAC919E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4579477D-044B-4311-87B2-5F946AAC919E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4579477D-044B-4311-87B2-5F946AAC919E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4579477D-044B-4311-87B2-5F946AAC919E}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{4579477D-044B-4311-87B2-5F946AAC919E}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{96089E7A-A037-4CF4-8F19-53AF653F0F07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96089E7A-A037-4CF4-8F19-53AF653F0F07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96089E7A-A037-4CF4-8F19-53AF653F0F07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96089E7A-A037-4CF4-8F19-53AF653F0F07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96089E7A-A037-4CF4-8F19-53AF653F0F07}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{96089E7A-A037-4CF4-8F19-53AF653F0F07}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{1A1C7CAE-A15B-4754-986C-0C422ED344A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A1C7CAE-A15B-4754-986C-0C422ED344A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A1C7CAE-A15B-4754-986C-0C422ED344A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A1C7CAE-A15B-4754-986C-0C422ED344A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A1C7CAE-A15B-4754-986C-0C422ED344A4}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{1A1C7CAE-A15B-4754-986C-0C422ED344A4}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

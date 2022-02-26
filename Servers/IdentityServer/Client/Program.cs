@@ -18,8 +18,8 @@ namespace Client
             Pause();
         }
 
-        private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/";
-        //private const string IdentityServerEndpoint = "https://localhost:44322/";
+        //private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/identityserver";
+        private const string IdentityServerEndpoint = "https://localhost:5001/";
 
         private const string Secret = "CorrectHorseBatteryStaple";
 
@@ -96,11 +96,10 @@ namespace Client
             {
                 Console.WriteLine(claim.ToString()); 
             }
-            Console.ForegroundColor = ConsoleColor.White;
-             
+            Console.ForegroundColor = ConsoleColor.White; 
 
             Console.WriteLine("\n\n");
-            await GetUserPermissions( tokenResponse, "RC1");
+            await GetUserPermissions(IdentityServerEndpoint, tokenResponse, "RC1");
             Console.WriteLine("\n\n");
 
             await CheckClaims(disco, tokenResponse, Client, "RC1.Read");
@@ -129,7 +128,7 @@ namespace Client
             */
         }
 
-        private static async Task<bool> GetUserPermissions(TokenResponse tokenResponse, string VolumeName)
+        private static async Task<bool> GetUserPermissions(string identityServerEndpoint, TokenResponse tokenResponse, string VolumeName)
         {
 
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -138,11 +137,17 @@ namespace Client
             {
                 client.SetBearerToken(tokenResponse.AccessToken);
 
+                string userAddress = $"{identityServerEndpoint}api/permissions/CurrentUser";
+
+                var appUser = await client.GetStringAsync(userAddress);
+
+                Console.WriteLine($"Server reports username = {appUser}");
+
                 //client.SetToken("token", tokenResponse.AccessToken);
 
                 //client.SetBasicAuthentication("jamesan", "Wat>com3");
   
-                string address = $"{IdentityServerEndpoint}Resources/UserPermissions?id={VolumeName}";
+                string address = $"{identityServerEndpoint}api/permissions/Volume";
 
                  var response = await client.GetStringAsync(address); 
 

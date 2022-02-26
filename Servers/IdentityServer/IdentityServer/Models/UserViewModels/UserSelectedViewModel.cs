@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace IdentityServer.Models.UserViewModels
+namespace Viking.Identity.Models.UserViewModels
 {
     public class UserSelectedViewModel : NamedItemSelectedViewModel<string> { }
 

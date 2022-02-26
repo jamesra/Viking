@@ -1,8 +1,4 @@
-﻿using IdentityServer.Data;
-using IdentityServer.Models;
-using IdentityServer.Models.AccountViewModels;
-using IdentityServer.Services;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -13,8 +9,12 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Viking.Identity.Models.AccountViewModels;
+using Viking.Identity.Services;
 
-namespace IdentityServer.Controllers
+namespace Viking.Identity.Controllers
 {
     [Authorize]
     [Route("[controller]/[action]")]
@@ -234,7 +234,7 @@ namespace IdentityServer.Controllers
 
                     if (firstUser)
                     {
-                        await _userManager.AddToRoleAsync(user, Config.AdminRoleName);
+                        await _userManager.AddToRoleAsync(user, Special.Roles.Admin);
                     }
 
                     try

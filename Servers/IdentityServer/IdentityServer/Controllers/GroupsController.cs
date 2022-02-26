@@ -1,8 +1,4 @@
-﻿using IdentityServer.Authorization;
-using IdentityServer.Data;
-using IdentityServer.Extensions;
-using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
+﻿using Viking.Identity.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -10,9 +6,13 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.Identity.Authorization;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Viking.Identity.Models.UserViewModels;
 
 
-namespace IdentityServer.Controllers
+namespace Viking.Identity.Controllers
 {
     [Authorize]
     public class GroupsController : Controller
@@ -130,7 +130,7 @@ namespace IdentityServer.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Create([Bind("Name,ParentId,Description,Members")] CreateGroupViewModel model)
         {
             long? ParentID = (model.ParentId.Value != 0 ? model.ParentId : default) ?? default;
@@ -214,7 +214,7 @@ namespace IdentityServer.Controllers
                 })
                 .SingleOrDefaultAsync(g => g.Group.Id == id);
 
-            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, groupEditDetails.Group, IdentityServer.Authorization.Operations.GroupAccessManager);
+            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, groupEditDetails.Group, Operations.GroupAccessManager);
             if(authResult.Succeeded == false)
             {
                 return Unauthorized();
@@ -326,7 +326,7 @@ namespace IdentityServer.Controllers
                 return NotFound();
             }
 
-            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, id.Value, IdentityServer.Authorization.Operations.GroupAccessManager);
+            var authResult = await _authorization.AuthorizeAsync(HttpContext.User, id.Value, Operations.GroupAccessManager);
             if (authResult.Succeeded == false)
             {
                 return Unauthorized();
@@ -345,7 +345,7 @@ namespace IdentityServer.Controllers
         // POST: Organizations/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Config.AdminRoleName)]
+        [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
             var group = await _context.Group

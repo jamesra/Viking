@@ -1,11 +1,11 @@
-﻿using IdentityServer.Data;
-using IdentityServer4.Validation;
+﻿using IdentityServer4.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
+using Viking.Identity.Data;
 
-namespace IdentityServer
+namespace Viking.Identity
 {
     public class ParameterizedScopeParser : DefaultScopeParser
     {

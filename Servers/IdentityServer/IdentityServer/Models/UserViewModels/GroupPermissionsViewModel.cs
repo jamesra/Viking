@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace IdentityServer.Models.UserViewModels
+namespace Viking.Identity.Models.UserViewModels
 {
     public class CreateGrantedResourcePermissionViewModel
     {

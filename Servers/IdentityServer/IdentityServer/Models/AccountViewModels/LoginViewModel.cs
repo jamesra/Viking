@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace IdentityServer.Models.AccountViewModels
+namespace Viking.Identity.Models.AccountViewModels
 {
     public class LoginViewModel
     {

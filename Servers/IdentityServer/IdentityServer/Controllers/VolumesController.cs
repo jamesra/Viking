@@ -1,17 +1,18 @@
-﻿using IdentityServer.Authorization;
-using IdentityServer.Data;
-using IdentityServer.Models;
-using IdentityServer.Models.UserViewModels;
+using System;
+using Viking.Identity.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.Identity.Extensions;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
+using Viking.Identity.Models.UserViewModels;
 
-namespace IdentityServer.Controllers
-{
-    [Authorize]
+namespace Viking.Identity.Controllers
+{ 
     public class VolumesController : Controller
     {
         private readonly ApplicationDbContext _context;

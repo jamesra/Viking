@@ -1,35 +1,35 @@
-﻿using IdentityServer.Data;
-using IdentityServer.Extensions;
-using IdentityServer.Models;
+﻿using Viking.Identity.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using System.Threading.Tasks;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
 
-namespace IdentityServer.Authorization
+namespace Viking.Identity.Authorization
 {
     public static class Operations
     {
-        public static ResourcePermissionRequirement GroupAccessManager = new ResourcePermissionRequirement(Config.GroupAccessManagerPermission);
-        public static ResourcePermissionRequirement OrgUnitAdmin = new ResourcePermissionRequirement(Config.OrgUnitAdminPermission);
+        public static ResourcePermissionRequirement GroupAccessManager = new ResourcePermissionRequirement(Special.Permissions.Group.AccessManager);
+        public static ResourcePermissionRequirement OrgUnitAdmin = new ResourcePermissionRequirement(Special.Permissions.OrgUnit.Admin);
     }
 
     public static class AuthorizationServiceExtensions
     {
         public static async Task<bool> IsGroupAccessManagerAsync(this IAuthorizationService _authorizationService, System.Security.Claims.ClaimsPrincipal User, Group group)
         {
-            if (User.IsInRole(Config.AdminRoleName))
+            if (User.IsInRole(Special.Roles.Admin))
                 return true; 
 
-            var result = await _authorizationService.AuthorizeAsync(User, group, IdentityServer.Authorization.Operations.GroupAccessManager);
+            var result = await _authorizationService.AuthorizeAsync(User, group, Operations.GroupAccessManager);
             return result.Succeeded;
         }
 
         public static async Task<bool> IsOrgUnitAdminAsync(this IAuthorizationService _authorizationService, System.Security.Claims.ClaimsPrincipal User, OrganizationalUnit orgUnit)
         {
-            if (User.IsInRole(Config.AdminRoleName))
+            if (User.IsInRole(Special.Roles.Admin))
                 return true;
 
-            var result = await _authorizationService.AuthorizeAsync(User, orgUnit, IdentityServer.Authorization.Operations.OrgUnitAdmin);
+            var result = await _authorizationService.AuthorizeAsync(User, orgUnit, Operations.OrgUnitAdmin);
             return result.Succeeded;
         }
 
@@ -42,13 +42,13 @@ namespace IdentityServer.Authorization
         /// <returns></returns>
         public static async Task<bool> IsParentOrgUnitAdminAsync(this IAuthorizationService _authorizationService, System.Security.Claims.ClaimsPrincipal User, Resource resource)
         {
-            if (User.IsInRole(Config.AdminRoleName))
+            if (User.IsInRole(Special.Roles.Admin))
                 return true;
 
             if (resource.ParentID.HasValue == false)
                 return false;
 
-            var result = await _authorizationService.AuthorizeAsync(User, resource.Parent == null ? resource.ParentID.Value : resource.Parent, IdentityServer.Authorization.Operations.OrgUnitAdmin);
+            var result = await _authorizationService.AuthorizeAsync(User, resource.Parent == null ? resource.ParentID.Value : resource.Parent, Operations.OrgUnitAdmin);
             return result.Succeeded;
         } 
     }
@@ -112,7 +112,7 @@ namespace IdentityServer.Authorization
             //If the user is a site admin they can do anything, note this also covers the case
             //where resource_requested is null because we asked about the parent org of an OrgUnit 
             //with no parent. i.e. Only admins can edit OrgUnits/Resources at the root of the heirarchy.
-            if (context.User.IsInRole(Config.AdminRoleName))
+            if (context.User.IsInRole(Special.Roles.Admin))
             {
                 context.Succeed(requirement);
                 return;
@@ -163,7 +163,7 @@ namespace IdentityServer.Authorization
                 return;
             }
 
-            if (context.User.IsInRole(Config.AdminRoleName))
+            if (context.User.IsInRole(Special.Roles.Admin))
             {
                 context.Succeed(requirement);
                 return;

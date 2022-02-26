@@ -1,12 +1,12 @@
-﻿using IdentityServer.Authorization;
-using IdentityServer.Data;
-using IdentityServer.Models;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Viking.Identity.Authorization;
+using Viking.Identity.Data;
+using Viking.Identity.Models;
 
-namespace IdentityServer.Extensions
+namespace Viking.Identity.Extensions
 {
     /// <summary>
     /// Makes calls to IAuthorizationService using the ClaimsPrincipal from the current context
@@ -40,7 +40,7 @@ namespace IdentityServer.Extensions
             if (user == null)
                 user = _principal;
               
-            var authResult = await _authorization.AuthorizeAsync(user, orgUnit, IdentityServer.Authorization.Operations.OrgUnitAdmin);
+            var authResult = await _authorization.AuthorizeAsync(user, orgUnit, Operations.OrgUnitAdmin);
             return authResult.Succeeded;
         }
 
@@ -68,7 +68,7 @@ namespace IdentityServer.Extensions
             if (user == null)
                 user = _principal;
 
-            var authResult = await _authorization.AuthorizeAsync(user, group, IdentityServer.Authorization.Operations.GroupAccessManager);
+            var authResult = await _authorization.AuthorizeAsync(user, group, Operations.GroupAccessManager);
             return authResult.Succeeded;
         }
     }

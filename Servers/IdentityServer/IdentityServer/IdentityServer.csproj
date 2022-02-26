@@ -6,6 +6,8 @@
     <OutputType>Exe</OutputType>
     <SignAssembly>false</SignAssembly>
     <StartupObject>IdentityServer.Program</StartupObject>
+    <RootNamespace>Viking.Identity.Server</RootNamespace>
+    <AssemblyName>Viking.Identity.Server</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,35 +16,24 @@
 
 
   <ItemGroup> 
-    <PackageReference Include="IdentityModel" Version="5.1.0" /> 
+    <PackageReference Include="IdentityModel.AspNetCore" Version="4.0.1" /> 
     <PackageReference Include="IdentityModel.AspNetCore.AccessTokenValidation" Version="1.0.0-preview.0" /> 
     <PackageReference Include="IdentityModel.AspNetCore.OAuth2Introspection" Version="5.1.0" /> 
     <PackageReference Include="IdentityServer4" Version="4.1.2" /> 
     <PackageReference Include="IdentityServer4.AspNetIdentity" Version="4.1.2" /> 
     <PackageReference Include="IdentityServer4.EntityFramework" Version="4.1.2" /> 
-    <PackageReference Include="log4net" Version="2.0.13" /> 
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.5" /> 
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="5.0.5" /> 
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="5.0.5" /> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.5" /> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.5">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.5" /> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.5" /> 
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.5">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference> 
+    <PackageReference Include="log4net" Version="2.0.14" /> 
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.12" /> 
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="5.0.12" /> 
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" /> 
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration" Version="5.0.2" /> 
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Core" Version="5.0.2" /> 
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="5.0.2" />  
-    <PackageReference Include="Serilog" Version="2.10.0" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
+    <PackageReference Include="Serilog" Version="2.10.0" />  
+    <PackageReference Include="Serilog.AspNetCore" Version="4.1.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="3.1.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="4.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -54,6 +45,11 @@
   <ItemGroup>
     <Folder Include="Views\Permission\" />
     <Folder Include="Views\Shared\EditorTemplates\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Identity.DataContext\Identity.DataContext.csproj" />
+    <ProjectReference Include="..\..\Identity.Models\Identity.Models.csproj" />
   </ItemGroup>
 
   <ItemGroup>

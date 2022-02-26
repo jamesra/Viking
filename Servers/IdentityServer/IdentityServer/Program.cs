@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 
-namespace IdentityServer
+namespace Viking.Identity
 {
     public class Program
     {
