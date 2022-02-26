@@ -29,10 +29,7 @@ namespace RoundLineCode
 
         public Vector2 P0
         {
-            get
-            {
-                return p0;
-            }
+            get => p0;
             set
             {
                 p0 = value;
@@ -41,10 +38,7 @@ namespace RoundLineCode
         }
         public Vector2 P1
         {
-            get
-            {
-                return p1;
-            }
+            get => p1;
             set
             {
                 p1 = value;

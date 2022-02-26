@@ -374,14 +374,13 @@ namespace VikingXNAGraphics
             return new Geometry.GridVector2(vec.X, vec.Y);
         }
 
-        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.GridVector3 v)
-        {
-            return new Microsoft.Xna.Framework.Vector3((float)v.X, (float)v.Y, (float)v.Z);
-        }
+        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.GridVector3 v) => new Microsoft.Xna.Framework.Vector3((float)v.X, (float)v.Y, (float)v.Z);
 
-        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.GridVector2 v, double z = 0)
+        public static Microsoft.Xna.Framework.Vector3 ToXNAVector3(this Geometry.GridVector2 v, double z = 0) => new Microsoft.Xna.Framework.Vector3((float)v.X, (float)v.Y, (float)z);
+
+        public static Geometry.GridVector2 ToGridVector2XY(this Microsoft.Xna.Framework.Vector3 v)
         {
-            return new Microsoft.Xna.Framework.Vector3((float)v.X, (float)v.Y, (float)z);
+            return new Geometry.GridVector2(v.X, v.Y);
         }
 
         public static Geometry.GridVector3 ToGridVector3(this Microsoft.Xna.Framework.Vector3 v)
