@@ -58,6 +58,8 @@ namespace Viking.Common
         /// <returns></returns>
         abstract protected CACHEENTRY CreateEntry(KEY key, ADDTYPE value);
 
+        abstract protected CACHEENTRY CreateEntry(KEY key, Func<KEY,ADDTYPE> valueFactory);
+
         abstract protected Task<CACHEENTRY> CreateEntryAsync(KEY key, ADDTYPE value);
 
         /// <summary>
@@ -154,6 +156,35 @@ namespace Viking.Common
         }
 
         /// <summary>
+        /// Return the cache entry for the key or create a new entry for the key if it does not exist
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public virtual FETCHTYPE GetOrAdd(KEY key, Func<KEY,ADDTYPE> newEntryGenerator)
+        {
+            CACHEENTRY dictEntry = null;
+
+            //Check before we create an entry...
+            bool found = dictEntries.TryGetValue(key, out dictEntry);
+            if (found)
+            {
+                return Fetch(dictEntry);
+            }
+
+            //OK, try to create an entry and add it
+            CACHEENTRY entry = CreateEntry(key,newEntryGenerator(key));
+            dictEntry = dictEntries.GetOrAdd(key, entry);
+            
+            if (object.ReferenceEquals(dictEntry, entry))
+            {
+                ChangeCacheSize(entry.Size);
+            }
+
+            return Fetch(dictEntry);
+        }
+
+        /// <summary>
         /// Remove the entry from the cache
         /// </summary>
         /// <param name="key"></param>
@@ -239,7 +270,7 @@ namespace Viking.Common
                 {
                     LostCount++;
                 }
-                else
+                else if(entry.WasUsedSinceLastCheckpoint == false)
                 {
                     FreedCount += entry.Size;
                     RemoveEntry(entry);
