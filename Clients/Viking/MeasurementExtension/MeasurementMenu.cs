@@ -8,7 +8,7 @@ namespace MeasurementExtension
     class MeasurementMenu
     {
         [Viking.Common.MenuItem("Set Scale")]
-        static public void OnMenuSetScale(object sender, EventArgs e)
+        public static void OnMenuSetScale(object sender, EventArgs e)
         {
             Debug.Print("Set Scale");
 
@@ -24,7 +24,7 @@ namespace MeasurementExtension
         }
 
         [Viking.Common.MenuItem("Show Scale Bar")]
-        static public void OnMenuShowScaleBar(object sender, EventArgs e)
+        public static void OnMenuShowScaleBar(object sender, EventArgs e)
         {
             Debug.Print("Show Scale Bar");
 
@@ -33,13 +33,13 @@ namespace MeasurementExtension
         }
 
         [Viking.Common.MenuItem("Measure Line")]
-        static public void OnMenuMeasureLine(object sender, EventArgs e)
+        public static void OnMenuMeasureLine(object sender, EventArgs e)
         {
             Debug.Print("Measure Line");
 
             Viking.UI.Controls.SectionViewerControl viewer = Viking.UI.State.ViewerControl;
 
-            viewer.CommandQueue.EnqueueCommand(typeof(MeasureCommand));
+            viewer.CommandQueue.EnqueueCommand<MeasureCommand>(viewer, Global.PixelWidth );
         }
     }
 }
