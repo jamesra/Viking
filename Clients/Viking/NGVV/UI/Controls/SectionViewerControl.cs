@@ -1304,7 +1304,6 @@ namespace Viking.UI.Controls
 
             BlendState OriginalBlendState = graphicsDevice.BlendState;
 
-            DrawCallSinceTileCacheCheckpoint = true;
 
             double HalfWidth = Bounds.Width / 2;
             double HalfHeight = Bounds.Height / 2;
@@ -1449,6 +1448,7 @@ namespace Viking.UI.Controls
             }
 
             graphicsDevice.BlendState = OriginalBlendState;
+            DrawCallSinceTileCacheCheckpoint = true;
         }
 
         private void UpdateLumaTextureForOverlayEffects(Texture BackgroundLuma)
