@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 
@@ -146,22 +147,37 @@ namespace Viking.Tokens
             }
         }
 
+        public async Task<string> GetUserId(string accessToken)
+        {
+            var disco = await GetDiscoveryDocumentAsync();
+            using (var client = new System.Net.Http.HttpClient())
+            {
+                var userInfo = await client.GetUserInfoAsync(new UserInfoRequest()
+                {
+                    Address = disco.UserInfoEndpoint,
+                    Token = accessToken
+                });
+
+                var userIdClaim = userInfo.Claims.FirstOrDefault(c => c.Type.Equals("sub"));
+                if (userIdClaim is null)
+                    throw new ArgumentException($"No sub claim found for access token {accessToken}");
+
+                return userIdClaim.Value;
+            }
+        }
+
         public async Task<string[]> RetrieveUserVolumePermissions(TokenResponse user_token, string VolumeName)
         {
             using (var client = new System.Net.Http.HttpClient())
             {
-                client.SetBearerToken(user_token.AccessToken);
-
-                var address_uri = IdentityServerURL.UriCombine($"Api/UserPermissions?id={VolumeName}");
+                client.SetBearerToken(user_token.AccessToken); 
+                var address_uri = IdentityServerURL.UriCombine($"api/permissions/resource/{VolumeName}");
                 string address = address_uri.ToString();
 
-                var response = await client.GetStringAsync(address);
-                
-                JArray joResponse = JArray.Parse(response);
-
-                System.Diagnostics.Trace.WriteLine(joResponse);
-
-                return joResponse.Select(j => j.Value<string>()).ToArray();
+                var response = await client.GetStringAsync(address); 
+                var permissions = JsonSerializer.Deserialize<string[]>(response);
+                System.Diagnostics.Trace.WriteLine(permissions);
+                return permissions;
             }
         }
     } 

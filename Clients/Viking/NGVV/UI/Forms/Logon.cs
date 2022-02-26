@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -327,32 +328,30 @@ namespace Viking.UI.Forms
             }
 
             var id_token = id_token_response as TokenResponse;
-              
-            var permissions = await TokenHelper.RetrieveUserVolumePermissions(id_token, VolumeName);
-
-            if (permissions != null)
+            string[] volumePermissions = Array.Empty<string>();
+            try
             {
-                string Permissions = "";
-                foreach (string p in permissions)
+                var volumePermissions = await TokenHelper.RetrieveUserVolumePermissions(id_token, VolumeName);
+                if (volumePermissions != null && volumePermissions.Length > 0)
                 {
-                    Permissions += p + ", ";
+                    SetUpdateText($"Login Successful!\n{VolumeName} permissions: {volumePermissions.ToCsv()}");
                 }
-
-                if(Permissions.Length > 0)
-                    SetUpdateText($"Login Successful!\nPermissions: {Permissions}");
                 else
+                {
                     SetUpdateText($"User does not have permissions in volume");
+                }
             }
-            else
+            catch(Exception e)
             {
-                SetUpdateText($"Could not optain permissions information for user");
+                SetUpdateText($"Error retrieving permissions");
+                MessageBox.Show(e.ToString(), "Error retrieving permissions", MessageBoxButtons.OK);
                 return;
             }
 
             List<string> list_permissions = new List<string>();
             list_permissions.Add("openid");
             list_permissions.Add("Viking.Annotation");
-            list_permissions.AddRange(permissions.Select(p => $"{VolumeName}.{p}"));
+            list_permissions.AddRange(volumePermissions.Select(p => $"{VolumeName}.{p}"));
 
             var bearer_token_response = await TokenHelper.RetrieveBearerToken(userName, password, list_permissions.ToArray());
             if (bearer_token_response.IsError)
@@ -366,7 +365,7 @@ namespace Viking.UI.Forms
             this.Credentials = new NetworkCredential(userName, password);
             //this.Credentials = new NetworkCredential("jamesan", "4%w%o06");
 
-            State.UserAccessLevel = permissions;
+            State.UserAccessLevel = volumePermissions;
 
             if (this.textUsername.Text != readUserName)
                 System.IO.File.Delete(this.KeyFileFullPath);
