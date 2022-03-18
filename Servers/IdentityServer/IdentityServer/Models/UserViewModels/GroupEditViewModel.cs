@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
+using Viking.Identity.Models;
 
-namespace Viking.Identity.Models.UserViewModels
+namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
 {
     public class GroupMembershipViewModel
     {

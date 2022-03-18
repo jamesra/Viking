@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Viking.Identity.Models.ManageViewModels
+namespace Viking.Identity.Server.WebManagement.Models.ManageViewModels
 {
     public class IndexViewModel
     {

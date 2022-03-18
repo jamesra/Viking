@@ -1,18 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
-using Viking.Identity.Models.UserViewModels;
+using Viking.Identity.Server.WebManagement.Models;
+using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
-namespace Viking.Identity.Controllers
+namespace Viking.Identity.Server.WebManagement.Controllers
 {
 
     [Route("[controller]/[action]")]

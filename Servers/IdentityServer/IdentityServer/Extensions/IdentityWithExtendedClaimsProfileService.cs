@@ -1,17 +1,15 @@
-﻿using IdentityModel;
+﻿using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using IdentityModel;
 using IdentityServer4.Extensions;
 using IdentityServer4.Models;
 using IdentityServer4.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
 
-namespace Viking.Identity.Extensions
+namespace Viking.Identity.Server.WebManagement.Extensions
 {
     public class IdentityWithExtendedClaimsProfileService : IProfileService
     {

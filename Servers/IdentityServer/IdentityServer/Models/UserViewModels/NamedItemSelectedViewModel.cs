@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Viking.Identity.Models.UserViewModels
+namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
 {
     public class ItemSelectedViewModel<KEY>
     {

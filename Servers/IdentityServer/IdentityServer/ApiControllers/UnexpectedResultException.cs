@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Viking.Identity.Controllers
+namespace Viking.Identity.Server.WebManagement.ApiControllers
 { 
     /// <summary>
     /// Thrown from my code to prompt an IActionResult that is not the expected result for the operation

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace Viking.Identity.Models.UserViewModels
+namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
 {
     public class GroupTreeViewModel
     {

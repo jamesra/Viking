@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Viking.Identity.Models;
 
-namespace Viking.Identity.Models.UserViewModels
+namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
 {
     /// <summary>
     /// Lists all available roles, and lists the roles of each user

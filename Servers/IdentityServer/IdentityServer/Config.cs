@@ -1,17 +1,14 @@
-﻿using IdentityModel;
-using Viking.Identity.Data;
-using Viking.Identity.Models;
+﻿using System.Collections.Generic;
+using System.Linq;
+using IdentityModel;
 using IdentityServer4;
 using IdentityServer4.Models;
-using System.Collections.Generic;
 
-
-namespace Viking.Identity
+namespace Viking.Identity.Server.WebManagement
 {
-
     public class Config
     {
-        internal const string Secret = "CorrectHorseBatteryStaple"; 
+        //internal const string Secret = "CorrectHorseBatteryStaple"; 
 
         public const string AuthenticationSchemes = "Bearer, Introspection, Cookies, idsrv";
 
@@ -32,14 +29,14 @@ namespace Viking.Identity
             };
         }
 
-        public static IEnumerable<ApiResource> GetApiResources()
+        public static IEnumerable<ApiResource> GetApiResources(VikingIdentityServerOptions options)
         {
             return new List<ApiResource>
             {
                 new ApiResource("Viking.Annotation", "Viking Annotation API")
                 {
                     UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
-                    ApiSecrets = { new Secret(Secret.Sha256())}
+                    ApiSecrets = { new Secret(options.Secret.Sha256())}
                 },
             };
         }
@@ -68,14 +65,18 @@ namespace Viking.Identity
             return apiResources;
         }
         */
-
-        public static IEnumerable<ApiScope> GetApiScopes()
+         
+        public static IEnumerable<ApiScope> GetApiScopes(VikingIdentityServerOptions options)
         {
+            return options.ApiScopes;
+            /*
             return new List<ApiScope>
             {
                 new ApiScope(name: "Viking.Annotation", displayName:"Access to Annotate a volume")
             };
-        }
+            */
+        } 
+
         /*
         public IEnumerable<ApiResource> GetApiScopes()
         {
@@ -106,13 +107,14 @@ namespace Viking.Identity
             new string[]
             {
                 IdentityServerConstants.StandardScopes.OpenId,
-                IdentityServerConstants.StandardScopes.Profile,
-                "Viking.Annotation"
+                IdentityServerConstants.StandardScopes.Profile  
             };
 
         // clients want to access resources (aka scopes)
-        public static IEnumerable<Client> GetClients()
+        public static IEnumerable<Client> GetClients(VikingIdentityServerOptions options)
         { 
+            var allowedScopes = AnnotationScopes.Union(options.ApiScopes.Select(s => s.Name)).ToArray();
+
             // client credentials client
             return new List<Client>
             {
@@ -155,13 +157,12 @@ namespace Viking.Identity
 
                     ClientSecrets =
                     {
-                        new Secret(Secret.Sha256())
+                        new Secret(options.Secret.Sha256())
                     },
 
-                    RedirectUris = { "http://localhost:5001/signin-oidc" },
-                    PostLogoutRedirectUris = { "http://localhost:5001/signout-callback-oidc" },
-
-                    AllowedScopes = AnnotationScopes,
+                    RedirectUris = { options.Authority + "signin-oidc" },
+                    PostLogoutRedirectUris = { options.Authority + "signout-callback-oidc"},
+                    AllowedScopes = allowedScopes,
                     AllowOfflineAccess = true
                 }
             };

@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using System;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using System;
 
-namespace Viking.Identity.Views.Manage
+namespace Viking.Identity.Server.WebManagement.Views.Manage
 {
     public static class ManageNavPages
     {

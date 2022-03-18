@@ -1,12 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
-using Viking.Identity.Models.UserViewModels;
+using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
-namespace Viking.Identity.Extensions
+namespace Viking.Identity.Server.WebManagement.Extensions
 {
     public static class ApplicationUserExtensions
     {
@@ -36,22 +36,7 @@ namespace Viking.Identity.Extensions
             return new UserClaimRequestViewModel() { UserId = user.Id, AvailableOrganizations = orgs, UserComments="", NewOrganization="" };
         }  
 
-        public static string GetUsername(this System.Security.Principal.IIdentity identity)
-        {
-            if (identity.IsAuthenticated == false)
-                return null;
-
-            if (identity.Name != null)
-                return identity.Name;
-
-            if (identity is System.Security.Claims.ClaimsIdentity principal)
-            {
-                var result =  principal.Claims.FirstOrDefault(c => c.Type.Equals("name", StringComparison.OrdinalIgnoreCase))?.Value;
-                return result;
-            }
-
-            return null;
-        } 
+        
     }
 
 

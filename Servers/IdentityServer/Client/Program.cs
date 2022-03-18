@@ -8,145 +8,163 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using IdentityModel;
 
 
 namespace Client
 {
     public class Program
     {
-        public static void Main(string[] args)
-        {
-            MainAsync().GetAwaiter().GetResult();
-            Pause();
-        }
 
-        //private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/identityserver";
-        private const string IdentityServerEndpoint = "https://localhost:5001/";
+        private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/identityserver/"; 
+        //private const string IdentityServerEndpoint = "https://localhost:5001/";
+        //private const string IdentityServerEndpoint = "https://localhost:44387/";
+
+        private const string IdentityServerApiEndpoint = "https://identity.connectomes.utah.edu/api/";
+        //private const string IdentityServerApiEndpoint = "https://localhost:44387/";
+        //private const string IdentityServerApiEndpoint = "https://localhost:5001/";
 
         private const string Secret = "CorrectHorseBatteryStaple";
 
         private const string Client = "ro.viking";
 
-        private static void Pause()
-        {
+        private static async Task Pause()
+        { 
             Console.WriteLine("Press a key to continue");
-            Console.ReadKey();
+            while (Console.KeyAvailable == false)
+            {
+                await Task.Delay(500);
+            } 
         }
-
-        private static async Task MainAsync()
+        public static async Task Main(string[] args)
         {
-            //string IdentityServerEndpoint = "https://identity.connectomes.utah.edu"; 
-
-            DiscoveryCache _disco_cache = new DiscoveryCache(IdentityServerEndpoint);
-
-            // discover endpoints from metadata 
-            var disco = await _disco_cache.GetAsync();
-            if (disco.IsError)
+            try
             {
-                Console.WriteLine(disco.Error);
-                return;
-            }
-             
-            // request token
-            //var tokenClient = new TokenClient(disco.TokenEndpoint, Client , Secret);
+                const string VolumeName = "RC1";
+                DiscoveryCache _disco_cache = new DiscoveryCache(IdentityServerEndpoint);
 
-            HttpClient client = new HttpClient();
-            
-            var tokenResponse = await client.RequestPasswordTokenAsync(new PasswordTokenRequest
-            {
-                Address = disco.TokenEndpoint,
-                UserName = "jamesan",
-                Password = "Wat>com3",
-                ClientId = Client,
-                ClientSecret = Secret,
-                Scope = "openid Viking.Annotation RC1.Read RC1.Annotate", //Add desired permissions to scope
-            });
+                // discover endpoints from metadata 
+                var disco = await _disco_cache.GetAsync();
+                if (disco.IsError)
+                {
+                    Console.WriteLine(disco.Error);
+                    return;
+                }
 
-            //var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
-            //var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jander42@hotmail.com", "Wat>com3", "Viking.Annotation openid");
-            //var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jamesan", "Wat>com3", "openid Viking.Annotation RC1.Read");
+                // request token
+                //var tokenClient = new TokenClient(disco.TokenEndpoint, Client , Secret);
 
-            if (tokenResponse.IsError)
-            {
-                Console.WriteLine(tokenResponse.Error); 
-                return;
-            }
+                HttpClient client = new HttpClient();
 
-            Console.WriteLine(tokenResponse.Json);
+                var tokenResponse = await client.RequestPasswordTokenAsync(new PasswordTokenRequest
+                {
+                    Address = disco.TokenEndpoint,
+                    UserName = "jamesan",
+                    Password = "Wat>com3",
+                    ClientId = Client,
+                    ClientSecret = Secret,
+                    Scope = $"openid Viking.Annotation {VolumeName}.Read {VolumeName}.Annotate", //Add desired permissions to scope
+                });
 
-            Console.WriteLine(tokenResponse.IdentityToken);
-            Console.WriteLine("\n\n");
+                //var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
+                //var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jander42@hotmail.com", "Wat>com3", "Viking.Annotation openid");
+                //var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("jamesan", "Wat>com3", "openid Viking.Annotation RC1.Read");
 
-            var userInfo = await client.GetUserInfoAsync(new UserInfoRequest()
-            {
-                Address = disco.UserInfoEndpoint, 
-                Token = tokenResponse.AccessToken
-            });
+                if (tokenResponse.IsError)
+                {
+                    Console.WriteLine(tokenResponse.Error);
+                    return;
+                }
+
+                Console.WriteLine(tokenResponse.Json);
+
+                Console.WriteLine(tokenResponse.IdentityToken);
+                Console.WriteLine("\n\n");
+
+                var userInfo = await client.GetUserInfoAsync(new UserInfoRequest()
+                {
+                    Address = disco.UserInfoEndpoint,
+                    Token = tokenResponse.AccessToken
+                });
 
 //            var userInfoClient = new UserInfoClient(disco.UserInfoEndpoint);
-            //var userInfo = await userInfoClient.GetAsync(tokenResponse.AccessToken);
+                //var userInfo = await userInfoClient.GetAsync(tokenResponse.AccessToken);
 
-            if (userInfo.IsError)
-            {
-                Console.WriteLine($"Error: {userInfo.Error}");
-                return;
+                if (userInfo.IsError)
+                {
+                    Console.WriteLine($"Error: {userInfo.Error}");
+                    return;
+                }
+
+                Console.WriteLine("Claims");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                foreach (var claim in userInfo.Claims)
+                {
+                    Console.WriteLine(claim.ToString());
+                }
+
+                Console.ForegroundColor = ConsoleColor.White;
+
+                Console.WriteLine("\n\n");
+                try
+                {
+                    await GetUserPermissions(IdentityServerApiEndpoint, tokenResponse, VolumeName);
+                } 
+                catch (Exception e) 
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"Could not retrieve user permissions for {VolumeName}:\n{e}");
+                }
+
+                Console.WriteLine("\n\n");
+
+                await CheckClaims(disco, tokenResponse, Client, "RC1.Read");
+                await CheckClaims(disco, tokenResponse, Client, "RC1.Annotate");
+                await CheckClaims(disco, tokenResponse, Client, "Viking.Annotation");
+                await CheckClaims(disco, tokenResponse, Client, "openid");
+
+                await CheckClaims(disco, tokenResponse, Client, "Bogus.Read");
+                await CheckClaims(disco, tokenResponse, Client, "RC1.Bogus");
+
+                /*
+                // call api
+                var client = new HttpClient();
+                client.SetBearerToken(tokenResponse.AccessToken);
+    
+                //var response = await client.GetAsync("http://localhost:5001/identity");
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine(response.StatusCode);
+                }
+                else
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine(JArray.Parse(content));
+                }
+                */
             }
-            
-            Console.WriteLine("Claims");
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            foreach (var claim in userInfo.Claims)
+            finally
             {
-                Console.WriteLine(claim.ToString()); 
-            }
-            Console.ForegroundColor = ConsoleColor.White; 
-
-            Console.WriteLine("\n\n");
-            await GetUserPermissions(IdentityServerEndpoint, tokenResponse, "RC1");
-            Console.WriteLine("\n\n");
-
-            await CheckClaims(disco, tokenResponse, Client, "RC1.Read");
-            await CheckClaims(disco, tokenResponse, Client, "RC1.Annotate");
-            await CheckClaims(disco, tokenResponse, Client, "Viking.Annotation");
-            await CheckClaims(disco, tokenResponse, Client, "openid");
-
-            await CheckClaims(disco, tokenResponse, Client, "Bogus.Read");
-            await CheckClaims(disco, tokenResponse, Client, "RC1.Bogus");
-               
-            /*
-            // call api
-            var client = new HttpClient();
-            client.SetBearerToken(tokenResponse.AccessToken);
-
-            //var response = await client.GetAsync("http://localhost:5001/identity");
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine(response.StatusCode);
-            }
-            else
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(JArray.Parse(content));
-            }
-            */
+                await Pause();
+              } 
         }
 
         private static async Task<bool> GetUserPermissions(string identityServerEndpoint, TokenResponse tokenResponse, string VolumeName)
         {
-
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"Permissions on {VolumeName}");
             using (var client = new System.Net.Http.HttpClient())
             {
                 client.SetBearerToken(tokenResponse.AccessToken);
 
-                string userAddress = $"{identityServerEndpoint}api/permissions/CurrentUser";
+                string userAddress = $"{identityServerEndpoint}permissions/CurrentUser";
 
                 var appUserResponse = await client.GetStringAsync(userAddress);
                 string appUser = JsonSerializer.Deserialize<string>(appUserResponse);
                  
                 Console.WriteLine($"Server reports username = {appUser}");
 
-                string userIdAddress = $"{identityServerEndpoint}api/permissions/CurrentUserId";
+                string userIdAddress = $"{identityServerEndpoint}permissions/CurrentUserId";
 
                 var appUserIdResponse = await client.GetStringAsync(userIdAddress);
                 string appUserId = JsonSerializer.Deserialize<string>(appUserIdResponse);
@@ -158,7 +176,7 @@ namespace Client
                 //client.SetBasicAuthentication("jamesan", "Wat>com3");
 
                 {
-                    string address = $"{identityServerEndpoint}api/permissions/{appUserId}/resource/{VolumeName}";
+                    string address = $"{identityServerEndpoint}permissions/{appUserId}/resource/{VolumeName}";
 
                     var permissionsResponse = await client.GetStringAsync(address);
                     var permissions = JsonSerializer.Deserialize<string[]>(permissionsResponse);
@@ -166,7 +184,7 @@ namespace Client
                 }
 
                 {
-                    string address = $"{identityServerEndpoint}api/permissions/resource/{VolumeName}";
+                    string address = $"{identityServerEndpoint}permissions/resource/{VolumeName}";
 
                     var permissionsResponse = await client.GetStringAsync(address);
                     var permissions = JsonSerializer.Deserialize<string[]>(permissionsResponse);

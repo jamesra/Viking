@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace Viking.Identity.Models.ManageViewModels
+namespace Viking.Identity.Server.WebManagement.Models.ManageViewModels
 {
     public class EnableAuthenticatorViewModel
     {

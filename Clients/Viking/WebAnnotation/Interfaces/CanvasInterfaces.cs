@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
+using Viking.AnnotationServiceTypes;
 using VikingXNA;
 using WebAnnotation.UI;
 using WebAnnotationModel.Objects;

@@ -1,36 +1,30 @@
-﻿using IdentityModel;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
-using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using IdentityModel;
+using IdentityServer4.Models;
+using IdentityServer4.Stores;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Viking.Identity.Data;
-using Viking.Identity.Models;
 using Resource = Viking.Identity.Models.Resource;
 
-namespace Viking.Identity
+namespace Viking.Identity.Server.WebManagement
 {
     public class IdentityServerCustomResourceStore : IResourceStore
     {
-        ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context;
+        private readonly Secret _Secret;
+
         internal static ApiScope[] StandardScopes = new ApiScope[]
         {  
             new ApiScope("Viking.Annotation")
         };
 
-        internal static ApiResource[] StandardResources = new ApiResource[]
-        {
-            new ApiResource("Viking.Annotation", "Viking Annotation API")
-            {
-                UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
-                ApiSecrets = { new Secret(Config.Secret.Sha256())},
-                Scopes = {"Viking.Annotation"}
-            },
-        };
+        internal readonly ApiResource[] StandardResources;
 
-        internal static IdentityResource[] StandardIdentityResources = new IdentityResource[]
+        internal IdentityResource[] StandardIdentityResources = new IdentityResource[]
         {
             new IdentityResources.OpenId(),
             new IdentityResources.Address(),
@@ -40,12 +34,24 @@ namespace Viking.Identity
         };
 
 
-        public IdentityServerCustomResourceStore(ApplicationDbContext context)
+        public IdentityServerCustomResourceStore(ApplicationDbContext context, IOptions<VikingIdentityServerOptions> serverOptions)
         {
+            var options = serverOptions.Value;
+            _Secret = new Secret(options.Secret.Sha256());
             _context = context;
+
+            StandardResources = new ApiResource[]
+            {
+                new ApiResource("Viking.Annotation", "Viking Annotation API")
+                {
+                    UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
+                    ApiSecrets = { _Secret },
+                    Scopes = options.ApiScopes.Select(s => s.Name).ToArray()//{"Viking.Annotation"}
+                },
+            };
         }
 
-        private static ApiResource ResourceToResourceApi(Resource r)
+        private ApiResource ResourceToResourceApi(Resource r)
         {
             return new ApiResource()
             {
@@ -53,11 +59,11 @@ namespace Viking.Identity
                 UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name },
                 Description = r.Description,
                 Scopes = r.AvailablePermissions.Select(permission => $"{r.Name}.{permission.PermissionId}").ToList(),
-                ApiSecrets = { new Secret(Config.Secret.Sha256()) }
+                ApiSecrets = { _Secret }
             };
         }
 
-        private static IEnumerable<ApiResource> ResourceToResourceApi(IEnumerable<Resource> resources)
+        private IEnumerable<ApiResource> ResourceToResourceApi(IEnumerable<Resource> resources)
         {
             return resources.Select(r => ResourceToResourceApi(r));
         }
