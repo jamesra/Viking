@@ -60,11 +60,8 @@ namespace Viking.AnnotationServiceTypes
             {
                 return true;
             }
-
-            if (A is object)
-                return A.Equals(B);
-
-            return false;
+             
+            return A.Equals(B);
         }
 
         public static bool operator !=(LocationLinkKey A, LocationLinkKey B)
@@ -73,11 +70,8 @@ namespace Viking.AnnotationServiceTypes
             {
                 return false;
             }
-
-            if (A is object)
-                return !A.Equals(B);
-
-            return true;
+            
+            return !A.Equals(B); 
         }
          
         public override bool Equals(object obj)
