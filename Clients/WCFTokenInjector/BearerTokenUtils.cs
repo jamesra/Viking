@@ -24,19 +24,14 @@ namespace Viking.Tokens
         public string ClientId { get; set; } = "ro.viking";
         public string ClientSecret { get; set; } = "CorrectHorseBatteryStaple";
 
-        public string IdentityServerURL { get; set; }
+        public Uri IdentityServerURL { get; set; }
 
         private DiscoveryCache _disco = null;
 
         /// <summary>
         /// Returns null if there is an error obtaining the Discovery document
         /// </summary>
-        public DiscoveryDocumentResponse DiscoveryDocument { 
-            get
-            {
-                return GetDiscoveryDocumentAsync().Result as DiscoveryDocumentResponse;
-            } 
-        }
+        public DiscoveryDocumentResponse DiscoveryDocument => GetDiscoveryDocumentAsync().Result as DiscoveryDocumentResponse;
 
         public IdentityServerHelper()
         {
@@ -48,7 +43,7 @@ namespace Viking.Tokens
         {
             if (_disco == null)
             {
-                _disco = new DiscoveryCache(IdentityServerURL);
+                _disco = new DiscoveryCache(IdentityServerURL.ToString());
             }
 
             return await _disco.GetAsync();
@@ -171,7 +166,7 @@ namespace Viking.Tokens
             using (var client = new System.Net.Http.HttpClient())
             {
                 client.SetBearerToken(user_token.AccessToken); 
-                var address_uri = IdentityServerURL.UriCombine($"api/permissions/resource/{VolumeName}");
+                var address_uri = $"{IdentityServerURL.Scheme}://" + IdentityServerURL.Host.UriCombine($"api/permissions/resource/{VolumeName}");
                 string address = address_uri.ToString();
 
                 var response = await client.GetStringAsync(address); 

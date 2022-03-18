@@ -7,10 +7,7 @@ namespace Viking.Tokens
 {
     public class TokenInjectionBehaviorExtension : BehaviorExtensionElement
     {
-        public override Type BehaviorType
-        {
-            get { return typeof(TokenInjectionEndpointBehavior); }
-        }
+        public override Type BehaviorType => typeof(TokenInjectionEndpointBehavior);
 
         protected override object CreateBehavior()
         {
