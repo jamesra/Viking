@@ -8,6 +8,9 @@ namespace UnitsAndScale
     [Serializable]
     public class AxisUnits : IAxisUnits
     {
+        double IAxisUnits.Value => this.Value;
+        string IAxisUnits.Units => Units;
+        
         public double Value { get; private set; }
         public string Units { get; private set; }
 
