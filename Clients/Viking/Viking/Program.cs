@@ -1,4 +1,4 @@
-﻿#define USEASPMEMBERSHIP
+﻿//#define USEASPMEMBERSHIP
 
 using CommandLine;
 using System;
@@ -184,6 +184,9 @@ namespace Viking
 
             options.WithNotParsed((o) => { website = ShowLoginWindow(website); });
 
+            //Close the program if no website is configured
+            if (website is null)
+                return;
             /*
 #if !USEASPMEMBERSHIP
             using (Logon vikingLogon = new Logon(website))
@@ -224,7 +227,7 @@ namespace Viking
 
             // --------------------------------------------------------------------------------------
 
-            Trace.WriteLine("Loading: " + website, "Viking");
+            Trace.WriteLine($"Loading: {website}", "Viking");
 
             /*
 
@@ -285,7 +288,7 @@ namespace Viking
                 UI.State.UserCredentials = vikingLogon.Credentials;
 
                 Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
-                Viking.Tokens.TokenInjector.BearerTokenAuthority = "https://identity.connectomes.utah.edu";
+                Viking.Tokens.TokenInjector.BearerTokenAuthority = vikingLogon.AuthenticationServiceURL;
 
                 return vikingLogon.VolumeURL;
             }

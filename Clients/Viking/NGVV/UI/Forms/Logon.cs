@@ -18,34 +18,21 @@ using Viking.Properties;
 namespace Viking.UI.Forms
 {
     public partial class Logon : Form
-    {
-        public string IdentityServerUri = "https://identity.connectomes.utah.edu/";
+    { 
         private string _AuthenticationServiceURL = null;
         public string AuthenticationServiceURL
         {
-            get { return _AuthenticationServiceURL; }
+            get => _AuthenticationServiceURL;
             set
             {
-                _AuthenticationServiceURL = value;
+                _AuthenticationServiceURL = value is null ? null : (new Uri(value).AbsoluteUri);  
                 OnAuthenticationServiceURLChanged(_AuthenticationServiceURL);
             }
         }
 
-        protected string RegistrationURL
-        {
-            get
-            {
-                return AuthenticationServiceURL + "/Account/Register";
-            }
-        }
+        protected string RegistrationURL => AuthenticationServiceURL + "/Account/Register";
 
-        protected string AuthenticationURL
-        {
-            get
-            {
-                return AuthenticationServiceURL + "/Account/Authenticate";
-            }
-        }
+        protected string AuthenticationURL => AuthenticationServiceURL + "/Account/Authenticate";
 
 
         private string _VolumeURL;
@@ -56,7 +43,7 @@ namespace Viking.UI.Forms
 
         public string VolumeURL
         {
-            get { return _VolumeURL; }
+            get => _VolumeURL;
             set
             {
                 if (_VolumeURL == Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(value))
@@ -126,10 +113,7 @@ namespace Viking.UI.Forms
 
         protected XDocument VolumeDocument
         {
-            get
-            {
-                return _VolumeDocument;
-            }
+            get => _VolumeDocument;
             set
             {
                 _VolumeDocument = value;
@@ -155,20 +139,11 @@ namespace Viking.UI.Forms
 
         public TokenResponse BearerToken;
 
-        protected string KeyFileFolderPath
-        {
-            get { return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Viking"); }
-        }
+        protected string KeyFileFolderPath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Viking");
 
-        protected string KeyFileFullPath
-        {
-            get { return System.IO.Path.Combine(this.KeyFileFolderPath, this.keyFile); }
-        }
+        protected string KeyFileFullPath => System.IO.Path.Combine(this.KeyFileFolderPath, this.keyFile);
 
-        protected string passkey
-        {
-            get { return "marclab.connectome.utah"; }
-        }
+        protected string passkey => "marclab.connectome.utah";
 
         public Logon(string authenticationURL, string VolumePath = null)
         {
@@ -309,7 +284,7 @@ namespace Viking.UI.Forms
              
             var TokenHelper = new Viking.Tokens.IdentityServerHelper()
             {
-                IdentityServerURL = this.AuthenticationServiceURL,
+                IdentityServerURL = new Uri(this.AuthenticationServiceURL),
                 ClientId = "ro.viking",
                 ClientSecret = "CorrectHorseBatteryStaple"
             };
@@ -331,7 +306,7 @@ namespace Viking.UI.Forms
             string[] volumePermissions = Array.Empty<string>();
             try
             {
-                var volumePermissions = await TokenHelper.RetrieveUserVolumePermissions(id_token, VolumeName);
+                volumePermissions = await TokenHelper.RetrieveUserVolumePermissions(id_token, VolumeName);
                 if (volumePermissions != null && volumePermissions.Length > 0)
                 {
                     SetUpdateText($"Login Successful!\n{VolumeName} permissions: {volumePermissions.ToCsv()}");
