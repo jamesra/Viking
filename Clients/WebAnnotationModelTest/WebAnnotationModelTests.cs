@@ -46,7 +46,7 @@ namespace WebAnnotationModelTest
         {
             TokenHelper = new IdentityServerHelper()
             {
-                IdentityServerURL = IdentityEndpoint,
+                IdentityServerURL = new Uri(IdentityEndpoint),
             };
 
             var token = await TokenHelper.RetrieveBearerToken(Username, Password);
