@@ -294,6 +294,9 @@ namespace Viking.VolumeModel
         /// <param name="workerThread">optional worker thread to report progress</param>
         public Volume(string path, string localCachePath, Viking.Common.IProgressReporter workerThread)
         {
+            if (path is null)
+                throw new ArgumentNullException(nameof(path));
+
             //Load the default settings from user preferences
             //            ChannelInfo DefaultChannel = new ChannelInfo();
             DefaultChannels = new ChannelInfo[0];
@@ -403,6 +406,8 @@ namespace Viking.VolumeModel
         /// <param name="path"></param>
         public static XDocument LoadXDocument(string path, System.Net.NetworkCredential UserCredentials = null, Viking.Common.IProgressReporter workerThread = null)
         {
+            if (path is null)
+                throw new ArgumentNullException(nameof(path));
             Uri uri = new Uri(path);
 
             if(workerThread != null)
