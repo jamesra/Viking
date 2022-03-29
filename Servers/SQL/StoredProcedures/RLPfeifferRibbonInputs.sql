@@ -1,4 +1,8 @@
 
+IF OBJECT_ID('RLPfeiffer.RibbonInputs', 'p') IS NOT NULL
+	DROP PROCEDURE RLPfeiffer.RibbonInputs;
+GO
+
 CREATE PROCEDURE RLPfeiffer.RibbonInputs @TargetCell bigint
 AS
 BEGIN
@@ -16,7 +20,7 @@ Child.TypeID = 35
 
 
 select SParent.ID as SourceParent, SParent.Label as SourceParentLabel, S.TypeID as SourceStructureType, SourceID, TargetID, TParent.ID as TargetParent, 
-	TParent.Label as TargetParentLabel, SParent.Notes as Notes from StructureLink
+	TParent.Label as TargetParentLabel, SParent.Notes as Notes, dbo.ufnStructureArea(TargetID) as TargetArea from StructureLink
 inner join Structure T on T.ID = TargetID
 inner join Structure S on S.ID = SourceID
 inner join Structure TParent on T.ParentID = TParent.ID
