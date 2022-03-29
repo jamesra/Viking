@@ -25,8 +25,9 @@ namespace Viking.VolumeView
 
             Viking.VolumeViewModel.VolumeViewModel volume = Microsoft.Practices.ServiceLocation.ServiceLocator.Current.GetInstance<Viking.VolumeViewModel.VolumeViewModel>();
 
-            WebAnnotationModel.State.Endpoint = GetEndpointFromXML(volume.VolumeXML).Uri;
+            /*WebAnnotationModel.State.Endpoint = GetEndpointFromXML(volume.VolumeXML).Uri;
             WebAnnotationModel.State.UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome"); 
+            */
         }
 
         /// <summary>
