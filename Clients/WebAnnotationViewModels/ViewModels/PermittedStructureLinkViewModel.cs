@@ -15,8 +15,8 @@ namespace Annotation.ViewModels
     {   
         public StructureTypeObj Model
         {
-            get { return (StructureTypeObj)GetValue(ModelProperty); }
-            set { SetValue(ModelProperty, value); }
+            get => (StructureTypeObj)GetValue(ModelProperty);
+            set => SetValue(ModelProperty, value);
         }
 
         // Using a DependencyProperty as the backing store for structureTypeObj.  This enables animation, styling, binding, etc...
@@ -27,8 +27,8 @@ namespace Annotation.ViewModels
          
         public ObservableCollection<PermittedStructureLinkObj> NewPermits
         {
-            get { return (ObservableCollection<PermittedStructureLinkObj>)GetValue(NewPermitsProperty); }
-            set { SetValue(NewPermitsProperty, value); }
+            get => (ObservableCollection<PermittedStructureLinkObj>)GetValue(NewPermitsProperty);
+            set => SetValue(NewPermitsProperty, value);
         }
 
         // Using a DependencyProperty as the backing store for NewPermits.  This enables animation, styling, binding, etc...

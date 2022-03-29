@@ -70,8 +70,8 @@ namespace Annotation.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
         public StructureTypeObj Model
         {
-            get { return (StructureTypeObj)GetValue(ModelProperty); }
-            set { SetValue(ModelProperty, value); }
+            get => (StructureTypeObj)GetValue(ModelProperty);
+            set => SetValue(ModelProperty, value);
         }
 
         // Using a DependencyProperty as the backing store for structureTypeObj.  This enables animation, styling, binding, etc...
@@ -82,8 +82,8 @@ namespace Annotation.ViewModels
 
         public ObservableCollection<PermittedStructureLinkObj> NewPermits
         {
-            get { return (ObservableCollection<PermittedStructureLinkObj>)GetValue(NewPermitsProperty); }
-            set { SetValue(NewPermitsProperty, value); }
+            get => (ObservableCollection<PermittedStructureLinkObj>)GetValue(NewPermitsProperty);
+            set => SetValue(NewPermitsProperty, value);
         }
 
         // Using a DependencyProperty as the backing store for NewPermits.  This enables animation, styling, binding, etc...
@@ -207,29 +207,20 @@ namespace Annotation.ViewModels
 
         public string Name
         {
-            get { return Model.Name;  }
-            set
-            {
-                Model.Name = value; 
-            }
+            get => Model.Name;
+            set => Model.Name = value;
         }
 
         public uint Color
         {
-            get { return Model.Color; }
-            set
-            {
-                Model.Color = value;
-            }
+            get => Model.Color;
+            set => Model.Color = value;
         }
 
         public string Code
         {
-            get { return Model.Code; }
-            set
-            {
-                Model.Code = value;
-            }
+            get => Model.Code;
+            set => Model.Code = value;
         }
 
         #region Delete commands
