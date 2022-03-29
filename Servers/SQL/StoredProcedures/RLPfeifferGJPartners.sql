@@ -1,3 +1,7 @@
+IF OBJECT_ID('RLPfeiffer.GJPartners', 'p') IS NOT NULL
+	DROP PROCEDURE RLPfeiffer.GJPartners;
+GO
+
 CREATE PROCEDURE RLPfeiffer.GJPartners @TargetCell bigint
 AS
 BEGIN
@@ -22,5 +26,6 @@ from StructureLink
 	inner join Structure SParent on S.ParentID = SParent.ID
 	inner join #GJPartner GJP on GJP.child = TargetID
 WHERE TParent.ID = @TargetCell OR SParent.ID = @TargetCell
+ORDER BY SourceParentLabel
 END
 GO

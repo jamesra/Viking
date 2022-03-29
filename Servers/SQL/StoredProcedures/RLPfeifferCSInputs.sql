@@ -24,6 +24,7 @@ inner join Structure S on S.ID = SourceID
 inner join Structure TParent on T.ParentID = TParent.ID
 inner join Structure SParent on S.ParentID =SParent.ID
 where TargetID in (select Child from #CS_Input)
-AND TParent.ID = @TargetCell 
+AND TParent.ID = @TargetCell
+ORDER BY SourceParentLabel
 END
 GO

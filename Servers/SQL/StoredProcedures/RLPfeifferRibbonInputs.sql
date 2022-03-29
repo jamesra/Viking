@@ -27,5 +27,6 @@ inner join Structure TParent on T.ParentID = TParent.ID
 inner join Structure SParent on S.ParentID =SParent.ID
 where TargetID in (select Child from #Rb_Input)
 AND TParent.ID = @TargetCell 
+ORDER BY SourceParentLabel
 END
 GO
