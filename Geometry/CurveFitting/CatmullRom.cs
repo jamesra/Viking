@@ -485,20 +485,13 @@ namespace Geometry
 
             return new List<GridVector2>(new GridVector2[] { path.First(), path[firstTwo[0]], path[firstTwo[1]], path.Last() });
         }
-
+        
         public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<IPoint2D> input,
             double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         { 
             return IdentifyControlPoints(input.Select(p => p.ToGridVector2()).ToList(), MaxDistanceFromSimplifiedToIdeal,
                  IsClosed,  NumInterpolations);
-        }
-
-        public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<GridVector2> input,
-            double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
-        { 
-            return IdentifyControlPoints(input.ToList(), MaxDistanceFromSimplifiedToIdeal,
-                 IsClosed, NumInterpolations);
-        }
+        } 
 
         /// <summary>
         /// Take a high density path, fit a curve to it using catmull rom, and remove control points until we have a smaller number of control points where all points are within a minimum distance from the curve. 

@@ -378,7 +378,123 @@ namespace Geometry
 
         public static GridVector2 ToGridVector2(this IPoint2D p)
         {
+            if (p is GridVector2 gv)
+                return gv;
+
             return new GridVector2(p.X, p.Y);
+        }
+
+        public static GridVector2[] ToGridVector2(this IPoint2D[] points)
+        {
+            GridVector2[] output = new GridVector2[points.Length];
+            for (int i = 0; i < points.Length; i++)
+            {
+                output[i] = points[i].ToGridVector2();
+            }
+
+            return output;
+        }
+
+        public static GridVector2[] ToGridVector2(this ICollection<IPoint2D> points)
+        {
+            GridVector2[] output = new GridVector2[points.Count];
+            int i = 0;
+            foreach(var p in points)
+            {
+                output[i] = p.ToGridVector2();
+                i++;
+            }
+
+            return output;
+        }
+
+        public static GridVector2[] ToGridVector2(this IReadOnlyCollection<IPoint2D> points)
+        {
+            GridVector2[] output = new GridVector2[points.Count];
+            int i = 0;
+            foreach(var p in points)
+            {
+                output[i] = p.ToGridVector2();
+                i++;
+            }
+
+            return output;
+        }
+
+        public static GridVector2[] ToGridVector2(this IEnumerable<IPoint2D> points)
+        {
+            GridVector2[] output = new GridVector2[points.Count()];
+            int i = 0;
+            foreach(var p in points)
+            {
+                output[i] = p.ToGridVector2();
+                i++;
+            }
+
+            return output;
+        }
+
+        // <summary>
+        /// Return true if the points are placed in clockwise order.  Assumes points do not cross over themselves. 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static bool AreClockwise(this IPoint2D[] points)
+        {
+            return points.Winding() == RotationDirection.CLOCKWISE;
+        }
+
+        /// <summary>
+        /// Return RotationDirection of the points.  Code Assumes points do not cross over themselves. 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static RotationDirection Winding(this IPoint2D[] points)
+        {
+            if (points.Length <= 2)
+                return RotationDirection.COLINEAR;
+            else if (points.Length == 3)
+                return Winding(points[0], points[1], points[2]);
+            else
+            {
+                //Convert to GridVector2 since numerous extension methods exist for that type that I
+                //haven't duplicated into IPoint2D versions, which are generally slower anyway.
+                return points.Select(p => p.ToGridVector2()).ToArray().Winding();
+            }  
+        }
+
+        /// <summary>
+        /// Return RotationDirection of the points.  Code Assumes points do not cross over themselves. 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static RotationDirection Winding(in IPoint2D p1, in IPoint2D p2, in IPoint2D p3)
+        {                      
+            // See 10th slides from following link
+            // for derivation of the formula
+            double val = (p2.Y - p1.Y) * (p3.X - p2.X) -
+                      (p2.X - p1.X) * (p3.Y - p2.Y);
+
+            if (val > -Global.Epsilon && val < Global.Epsilon) return RotationDirection.COLINEAR;
+
+            // clock or counterclock wise
+            return (val > 0) ? RotationDirection.CLOCKWISE : RotationDirection.COUNTERCLOCKWISE;
+        }
+
+        public static ICircle2D ToCircle(this IPoint2D[] points)
+        {
+            if (points is null) throw new ArgumentNullException(nameof(points));
+
+            if (points.Length < 3)
+            {
+                throw new ArgumentException("Circle must be created with three points or more");
+            }
+            else if (points.Length == 3)
+            {
+                return GridCircle.CircleFromThreePoints(points);
+            }
+
+            return points.ToGridVector2().ToCircle();
         }
     }
 
@@ -432,7 +548,9 @@ namespace Geometry
         /// <returns></returns>
         public static GridVector2[] EnsureClosedRing(this GridVector2[] points)
         {
-            if (points.First() != points.Last())
+            if (points is null) throw new ArgumentNullException(nameof(points));
+
+            if (points[0] != points[points.Length-1])
             {
                 GridVector2[] newPoints = new GridVector2[points.Length + 1];
                 Array.Copy(points, newPoints, points.Length);
@@ -451,6 +569,8 @@ namespace Geometry
         /// <returns></returns>
         public static ICollection<GridVector2> EnsureOpenRing(this ICollection<GridVector2> points)
         {
+            if (points is null) throw new ArgumentNullException(nameof(points));
+
             if (points.Count < 2)
                 return points.ToList();
 
@@ -472,6 +592,8 @@ namespace Geometry
         /// <returns></returns>
         public static GridVector2[] EnsureOpenRing(this GridVector2[] points)
         {
+            if (points is null) throw new ArgumentNullException(nameof(points));
+
             if (points.Length < 2)
                 return points.ToArray();
 
@@ -591,7 +713,7 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static RotationDirection Winding(this GridVector2 p1, GridVector2 p2, GridVector2 p3)
+        public static RotationDirection Winding(this in GridVector2 p1, in GridVector2 p2, in GridVector2 p3)
         {                      
             // See 10th slides from following link
             // for derivation of the formula
@@ -641,6 +763,34 @@ namespace Geometry
 
             GridPolyline polyline = new GridPolyline(points, AllowSelfIntersection);
             return polyline;
+        }
+
+        /// <summary>
+        /// Builds a circle, either from three points, or if there are more than three points
+        /// it returns the largest circle we can inscribe into the resulting polygon
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridCircle ToCircle(this GridVector2[] points)
+        {
+            if (points is null) throw new ArgumentNullException(nameof(points));
+
+            if (points.Length < 3) throw new ArgumentException("Polygon must be created with three points or more");
+            else if(points.Length == 3)
+                return GridCircle.CircleFromThreePoints(points);
+            else if (points.Length == 4)
+            {
+                var openRing = points.EnsureOpenRing();
+                if(openRing.Length == 3)
+                    return GridCircle.CircleFromThreePoints(points);
+            }
+            
+            if (points.AreClockwise())
+                points = points.Reverse().ToArray();
+
+            points = points.EnsureClosedRing();
+            var poly = new GridPolygon(points);
+            return poly.InscribedCircle();
         }
 
         /// <summary>
