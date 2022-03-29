@@ -6,7 +6,7 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    public struct readonly LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, ILocationLinkKey
+    public readonly struct LocationLinkKey : IComparable<LocationLinkKey>, IEquatable<LocationLinkKey>, ILocationLinkKey
     {
         public readonly long A;
         public readonly long B;
@@ -105,10 +105,7 @@ namespace WebAnnotationModel
 
     public class LocationLinkObj : WCFObjBaseWithKey<LocationLinkKey, LocationLink>
     {
-        public override LocationLinkKey ID
-        {
-            get { return new LocationLinkKey(this); }
-        }
+        public override LocationLinkKey ID => new LocationLinkKey(this);
 
         public override string ToString()
         {
@@ -171,15 +168,9 @@ namespace WebAnnotationModel
                 return (int)(other.B - B);
         }
 
-        public long A
-        {
-            get { return Data.SourceID < Data.TargetID ? Data.SourceID : Data.TargetID; }
-        }
+        public long A => Data.SourceID < Data.TargetID ? Data.SourceID : Data.TargetID;
 
-        public long B
-        {
-            get { return Data.SourceID > Data.TargetID ? Data.SourceID : Data.TargetID; }
-        }
+        public long B => Data.SourceID > Data.TargetID ? Data.SourceID : Data.TargetID;
 
         public LocationLinkObj()
         {
