@@ -35,12 +35,25 @@ namespace Geometry
             return Center.ToString() + " Radius: " + Radius.ToString("F2");
         }
 
+        public static GridCircle CircleFromThreePoints(IPoint2D[] points)
+        {
+            if (points == null) throw new ArgumentNullException(nameof(points));
+            
+            Debug.Assert(points.Length == 3);
+            if (points.Length != 3) throw new ArgumentException("GridCircle: Expected an array with three elements");
+
+            GridVector2 A = points[0].ToGridVector2();
+            GridVector2 B = points[1].ToGridVector2();
+            GridVector2 C = points[2].ToGridVector2();
+
+            return CircleFromThreePoints(A, B, C);
+        }
+
         public static GridCircle CircleFromThreePoints(GridVector2[] points)
         {
             if (points == null)
             {
-                throw new ArgumentNullException(nameof(points));
-
+                throw new ArgumentNullException(nameof(points)); 
             }
 
             Debug.Assert(points.Length == 3);
@@ -53,6 +66,8 @@ namespace Geometry
 
             return CircleFromThreePoints(A, B, C);
         }
+
+        public static GridCircle CircleFromThreePoints(IPoint2D One, IPoint2D Two, IPoint2D Three) => CircleFromThreePoints(One.ToGridVector2(), Two.ToGridVector2(), Three.ToGridVector2());
 
         public static GridCircle CircleFromThreePoints(GridVector2 One, GridVector2 Two, GridVector2 Three)
         {

@@ -392,36 +392,33 @@ namespace MorphologyMesh
                 if (node.Geometry == null)
                     continue;
 
-                SupportedGeometryType nodeType = node.Geometry.GeometryType();
-                switch (nodeType)
+                var nodeType = node.Geometry.ShapeType;
+                if (node.Geometry is IPolygon2D poly)
                 {
-                    case SupportedGeometryType.POINT:
-                        continue;
-                    case SupportedGeometryType.CURVEPOLYGON:
-                    case SupportedGeometryType.POLYGON:
-                        {
-                            //Start a task to simplify the polygon
-                            Task<IShape2D> t = new Task<IShape2D>((node_) => 
-                            {
-                                var poly = ((MorphologyNode)node_).Geometry.ToPolygon();
-                                if (poly.BoundingBox.Area < MinAnnotationArea)
-                                    return null;
+                    Task<IShape2D> t = new Task<IShape2D>((node_) => 
+                    { 
+                        if (poly.BoundingBox.Area < MinAnnotationArea)
+                            return null;
 
-                                return poly.Translate(translationToCenter).Simplify(tolerance);
-                            }, node);
+                        var vp = new GridPolygon(poly.ExteriorRing, poly.InteriorRings);
+                        return vp.Translate(translationToCenter).Simplify(tolerance);
+                    }, node);
 
-                            t.Start();
-                            tasks.Add(t);
-                        }
-                            break;
-                    case SupportedGeometryType.POLYLINE:
-                        {
-                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolyLine().Translate(translationToCenter).Simplify(tolerance), node);
-                            t.Start();
-                            tasks.Add(t);
-                        }
-                        break;
-                } 
+                    t.Start();
+                    tasks.Add(t);
+                }
+                else if (node.Geometry is IPolyLine2D line)
+                {
+                    var vl = new GridPolyline(line.Points);
+                    
+                    Task<IShape2D> t = new Task<IShape2D>((node_) => vl.Translate(translationToCenter).Simplify(tolerance), node);
+                    t.Start();
+                    tasks.Add(t);
+                }
+                else
+                {
+                    throw new ArgumentException($"Unexpected shape {node.Geometry}");
+                }
             }
 
             foreach (var task in tasks)
@@ -507,15 +504,14 @@ namespace MorphologyMesh
 
             if (polyLookup != null)
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
-                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
+                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry));
+                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry));
             }
             else
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToShape2D()));
-                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToShape2D()));
-            }
-
+                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry));
+                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry));
+            } 
 
             VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesAbove);
             VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesBelow);

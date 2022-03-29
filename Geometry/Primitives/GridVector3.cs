@@ -31,7 +31,15 @@ namespace Geometry
 
         public double X { get => _coords[(int)AXIS.X]; }
         public double Y { get => _coords[(int)AXIS.Y]; }
-        public double Z { get =>_coords[(int)AXIS.Z]; } 
+        public double Z { get =>_coords[(int)AXIS.Z]; }
+        
+         double IPoint.X { get => _coords[(int)AXIS.X];
+            set => _coords[(int)AXIS.X] = value;
+        }
+         double IPoint.Y { get => _coords[(int)AXIS.Y];
+            set => _coords[(int)AXIS.Y] = value; }
+         double IPoint.Z { get =>_coords[(int)AXIS.Z];
+            set => _coords[(int)AXIS.Z] = value; } 
 
         public GridVector3(double[] input)
         {
@@ -108,6 +116,16 @@ namespace Geometry
         public bool Equals(IPoint other)
         {
             return Distance(this, other) <= EpsilonSquared;
+        }
+
+        public bool Equals(IShape2D other)
+        {
+            if (other is IPoint p)
+            {
+                return Equals(p);
+            }
+
+            return false;
         }
 
         public override bool Equals(object obj)
@@ -349,52 +367,10 @@ namespace Geometry
         {
             return new GridVector3(this._coords.Select(val => val * scalar));
         }
-        
+
         public static GridBox BoundingBox(GridVector3[] points)
         {
-            return GridBox.GetBoundingBox(points); 
-        } 
-        
-        #region IPoint Members
-
-        double IPoint2D.X
-        {
-            get
-            {
-                return _coords[(int)AXIS.X];
-            }
-            set
-            {
-                _coords[(int)AXIS.X] = value; 
-            }
+            return GridBox.GetBoundingBox(points);
         }
-
-        double IPoint2D.Y
-        {
-            get
-            {
-                return _coords[(int)AXIS.Y]; 
-            }
-            set
-            {
-                _coords[(int)AXIS.Y] = value; 
-            }
-        }
-
-        double IPoint.Z
-        {
-            get
-            {
-                return _coords[(int)AXIS.Z];
-            }
-            set
-            {
-                _coords[(int)AXIS.Z] = value;
-            }
-        }
-
-        #endregion
-
-        IPoint2D ICentroid.Centroid => this.XY();
     }
 }

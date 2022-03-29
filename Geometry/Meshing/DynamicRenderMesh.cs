@@ -111,7 +111,7 @@ namespace Geometry.Meshing
 
         public GridLineSegment ToSegment(IEdgeKey e)
         {
-            return new GridLineSegment(_Verticies[e.A].Position, _Verticies[e.B].Position);
+            return new GridLineSegment(_Verticies[e.A].Position.XY(), _Verticies[e.B].Position.XY());
         }
 
         public GridTriangle ToTriangle(IFace f)

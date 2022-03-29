@@ -476,7 +476,7 @@ namespace MorphologyMesh
                 return;
 
             GridPolygon UpperPoly = PolygonForPort(mesh, Port);
-            IPoint2D[] internal_points = Port.InternalVerticies.Select(iv => mesh.Verticies[(int)iv].Position.Convert() as IPoint2D).ToArray();
+            IPoint2D[] internal_points = Port.InternalVerticies.Select(iv => mesh.Verticies[(int)iv].Position.XY() as IPoint2D).ToArray();
             IMesh triangulate = UpperPoly.Triangulate(internal_points);
 
             double Z = mesh[Port.ExternalBorder.First()].Position.Z; 

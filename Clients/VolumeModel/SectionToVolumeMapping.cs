@@ -36,7 +36,7 @@ namespace Viking.VolumeModel
 
         public async override  Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
         {
-            if (Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) is null
+            if (Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) is null)
             {
                 await Initialize(token);
             }

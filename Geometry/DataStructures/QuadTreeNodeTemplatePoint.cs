@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace Geometry
 {
     internal class QuadTreeNodeTemplatePoint<TPoint, TValue>
-        where TPoint : struct, IPoint
+        where TPoint : struct, IPoint2D
     {
         readonly QuadTreeTemplatePoint<TPoint, TValue> Tree;
         internal QuadTreeNodeTemplatePoint<TPoint, TValue> Parent = null;
@@ -162,7 +162,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <returns></returns>
-        private Quadrant GetQuad(IPoint point)
+        private Quadrant GetQuad(IPoint2D point)
         {
             Quadrant quad;
 

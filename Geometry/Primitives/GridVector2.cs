@@ -155,7 +155,7 @@ namespace Geometry
 
 
     [Serializable]
-    public struct GridVector2 : IShape2D, IPoint, ICloneable, IComparable,
+    public struct GridVector2 : IShape2D, IPoint2D, ICloneable, IComparable,
                                 IComparable<GridVector2>, IEquatable<GridVector2>,
                                 IComparable<IPoint2D>, IEquatable<IPoint2D>
     {
@@ -859,15 +859,7 @@ namespace Geometry
             get => Y;
             set => Y = value;
         }
-
-        double IPoint.Z
-        {
-            get => 0;
-            set
-            {
-
-            }
-        }
+         
 
         GridRectangle IShape2D.BoundingBox => new GridRectangle(this, 0, 0);
 
@@ -877,7 +869,16 @@ namespace Geometry
 
 
         #endregion
-        IPoint2D ICentroid.Centroid => this;
+
+        GridVector2 IShape2D.Centroid
+        {
+            get { return this; }
+        }
+
+        IPoint2D ICentroid.Centroid
+        {
+            get { return this; }
+        }
 
         public static bool operator <(GridVector2 left, GridVector2 right)
         {

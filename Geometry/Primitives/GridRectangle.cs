@@ -77,6 +77,10 @@ namespace Geometry
 
         public readonly GridVector2[] Corners;
           
+        public GridRectangle(IPoint2D corner, IPoint2D oppositeCorner) : this(corner.ToGridVector2(), oppositeCorner.ToGridVector2())
+        {  
+        }
+
         public GridRectangle(GridVector2 corner, GridVector2 oppositeCorner)
         {  
             GridVector2 RectOrigin = new GridVector2(Math.Min(corner.X, oppositeCorner.X), Math.Min(corner.Y, oppositeCorner.Y));
@@ -161,6 +165,10 @@ namespace Geometry
             {
                 throw new ArgumentException("Grid Rectangle must have non-negative width and height");
             }
+        }
+
+        public GridRectangle(IPoint2D position, double radius) : this(position.ToGridVector2(), radius)
+        {  
         }
 
         public GridRectangle(GridVector2 position, double radius)

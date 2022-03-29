@@ -1870,6 +1870,11 @@ namespace Geometry
             return false;
         }
 
+        /// <summary>
+        /// This is not truly the largest inscribed circle, but a measurement from the centroid to the
+        /// nearest point on the exterior ring
+        /// </summary>
+        /// <returns></returns>
         public GridCircle InscribedCircle()
         {
             GridVector2 center = this.Centroid;

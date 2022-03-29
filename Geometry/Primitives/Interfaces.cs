@@ -106,14 +106,16 @@ namespace Geometry
     }
 
 
-    public interface IPoint2D : IPointN, IEquatable<IPoint2D>, ICentroid
+    public interface IPoint2D : IPointN, IEquatable<IPoint2D>, ICentroid, IShape2D
     {
         double X { get; set; }
         double Y { get; set; }
     }
 
-    public interface IPoint : IPoint2D, IEquatable<IPoint>
+    public interface IPoint : IPointN, IEquatable<IPoint>
     {
+        double X { get; set; }
+        double Y { get; set; }
         double Z { get; set; }
     }
 
