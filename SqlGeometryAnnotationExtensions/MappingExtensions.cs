@@ -12,6 +12,7 @@ namespace Viking.VolumeModel
 
     public static class MappingExtensions
     {
+
         /// <summary>
         /// A faster mapping technique for geometries that do not use control points such as circles and points.
         /// </summary>
@@ -19,6 +20,8 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         private static bool MapLocationCentroidToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, LocationObj loc)
         {
+            throw new NotImplementedException();
+            /*
             //Don't bother mapping if the location was already mapped
             if (loc.VolumeTransformID == mapper.ID)
                 return true;
@@ -39,6 +42,7 @@ namespace Viking.VolumeModel
             //loc.VolumePosition = VolumePosition;
 
             return true;
+            */
         }
 
         public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
