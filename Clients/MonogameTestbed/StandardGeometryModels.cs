@@ -247,7 +247,7 @@ namespace MonogameTestbed
             {
                 MorphologyMesh.MeshNode node = new MeshNode((ulong)i)
                 {
-                    Mesh = SmoothMeshGraphGenerator.CreateNodeMesh(shapes[i].Translate(translate), ZLevels[i], (ulong)i)
+                    Mesh = SmoothMeshGraphGenerator.CreateNodeMesh(shapes[i].Translate(translate.XY()), ZLevels[i], (ulong)i)
                 };
                 graph.AddNode(node);
                 node.MeshGraph = graph;

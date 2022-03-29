@@ -68,7 +68,7 @@ namespace MonogameTestbed
                 bool SkipCell = false;
                 foreach (Combo<MIVector3> combo in cell.Vertices.CombinationPairs())
                 {
-                    GridLineSegment line = new GridLineSegment(combo.A.P, combo.B.P);
+                    GridLineSegment line = new GridLineSegment(combo.A.P.XY(), combo.B.P.XY());
 
                     PolygonIndex A = cell.Vertices[combo.iA].PolyIndex;
                     PolygonIndex B = cell.Vertices[combo.iB].PolyIndex;
@@ -101,7 +101,7 @@ namespace MonogameTestbed
                     int OnSurfaceCount = 0;
                     foreach (Combo<int> combo in face.CombinationPairs())
                     {
-                        var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
+                        var line = new GridLineSegment(cell.Vertices[combo.A].P.XY(), cell.Vertices[combo.B].P.XY());
                         PolygonIndex A = cell.Vertices[combo.A].PolyIndex;
                         PolygonIndex B = cell.Vertices[combo.B].PolyIndex;
 
