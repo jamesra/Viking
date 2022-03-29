@@ -10,9 +10,9 @@ namespace UnitsAndScale
     {
         double IAxisUnits.Value => Value;
         string IAxisUnits.Units => Units;
-        
-        public double Value { get; private set; }
-        public string Units { get; private set; }
+
+        public readonly double Value;
+        public readonly string Units;
 
         public AxisUnits(double value, string units)
         {
