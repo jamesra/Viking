@@ -1,5 +1,4 @@
 ﻿using Viking.AnnotationServiceTypes.Interfaces;
-using AnnotationService.Types;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
