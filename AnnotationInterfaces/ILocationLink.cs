@@ -2,7 +2,7 @@
 
 namespace Viking.AnnotationServiceTypes.Interfaces
 {
-    public interface ILocationLinkKey : IEquatable<ILocationLinkKey>, IComparable<ILocationLinkKey>
+    public interface ILocationLink : IEquatable<ILocationLink>, IDataObjectWithKey<ILocationLinkKey>, IDataObjectWithKey<LocationLinkKey>
     {
         ulong A { get; }
         ulong B { get; }

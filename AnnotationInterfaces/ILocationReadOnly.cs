@@ -101,6 +101,7 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         /// <summary>
         /// Volume space shape
         /// </summary>
+        string VolumeGeometryWKT { get; set; }
 
     }
 }
