@@ -10,16 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace WebAnnotationModel.gRPC.Converters
 {
-    public static class PermittedStructureLinkConverterExtensions
-    {
-        public static IServiceCollection AddStandardPermittedStructureLinkConverters(this IServiceCollection service)
-        {
-            service.AddSingleton<IObjectConverter<PermittedStructureLink, PermittedStructureLinkObj>, PermittedStructureLinkServerToClientConverter>();
-            service.AddSingleton<IObjectConverter<PermittedStructureLinkObj, PermittedStructureLink>, PermittedStructureLinkClientToServerConverter>();
-            service.AddTransient<IObjectUpdater<PermittedStructureLinkObj, PermittedStructureLink>, PermittedStructureLinkServerToClientUpdater>();
-            return service;
-        }
-    }
  
     public class PermittedStructureLinkServerToClientConverter : IObjectConverter<PermittedStructureLink, PermittedStructureLinkObj>
     {

@@ -12,16 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace WebAnnotationModel.gRPC.Converters
 {
-    public static class StructureConverterExtensions
-    {
-        public static IServiceCollection AddStandardStructureConverters(this IServiceCollection service)
-        {
-            service.AddSingleton<IObjectConverter<Structure, StructureObj>, StructureServerToClientConverter>();
-            service.AddSingleton<IObjectConverter<StructureObj, Structure>, StructureClientToServerConverter>();
-            service.AddTransient<IObjectUpdater<StructureObj, Structure>, StructureServerToClientUpdater>();
-            return service;
-        }
-    }
 
     public class StructureServerToClientConverter : IObjectConverter<Structure, StructureObj>
     {
