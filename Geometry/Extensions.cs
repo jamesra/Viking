@@ -1182,6 +1182,17 @@ namespace Geometry
         }
     }
 
+    public static class GridRectangleExtensions
+    {
+        public static GridRectangle ToGridRectangle(this IRectangle rect)
+        {
+            if (rect is GridRectangle r)
+                return r;
+
+            return new GridRectangle(new GridVector2(rect.Left, rect.Bottom), new GridVector2(rect.Right, rect.Top));
+        }
+    }
+
     public static class GridLineSegmentExtensions
     {
 
