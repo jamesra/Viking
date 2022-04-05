@@ -209,39 +209,14 @@ namespace Geometry
 
         public GridPolygon(IEnumerable<GridVector2> exteriorRing) : this(exteriorRing.ToArray())
         { }
-
-        public GridPolygon(GridVector2[] exteriorRing)
-        {
-            //Debug.Assert(exteriorRing.Length < 1000, "This is a huge polygon, why?");
-
-            if (!exteriorRing.IsValidClosedRing())
-            {
-                throw new ArgumentException("Exterior polygon ring must be valid");
-            }
-
-            //The only duplicate point should be the first and the last.  If not throw an exception
-            var nonDuplicatedPoints = exteriorRing.RemoveDuplicates();
-            if (nonDuplicatedPoints.Length != exteriorRing.Length - 1)
-            {
-                throw new ArgumentException("Duplicate point found in exterior ring");
-            }
-
-            if (exteriorRing.AreClockwise())
-            {
-                exteriorRing = exteriorRing.Reverse().ToArray();
-            }
-
-            ExteriorRing = exteriorRing;
-        }
-
-
+          
         public GridPolygon(IEnumerable<IPoint2D> exteriorRing, IEnumerable<IPoint2D[]> interiorRings)
             : this(exteriorRing.Select(p => p.Convert()).ToArray(),
                    interiorRings.Select(inner_ring => inner_ring.Select(p => p.Convert()).ToArray()).ToArray())
         {
         }
 
-        public GridPolygon(GridVector2[] exteriorRing, IEnumerable<GridVector2[]> interiorRings)
+        public GridPolygon(GridVector2[] exteriorRing, IEnumerable<GridVector2[]> interiorRings = null)
         {
             Debug.Assert(exteriorRing.Length < 5000, "This is a huge polygon, why?");
 
@@ -250,7 +225,29 @@ namespace Geometry
                 throw new ArgumentException("Exterior polygon ring must be valid");
             }
 
+#if DEBUG
+            //The only duplicate point should be the first and the last.  If not throw an exception
+            //This is slow, debug only?
+            var nonDuplicatedPoints = exteriorRing.RemoveDuplicates(); 
+            if (nonDuplicatedPoints.Length != exteriorRing.Length - 1)
+            {
+                throw new ArgumentException("Duplicate point found in exterior ring");
+            }
+
+            if (exteriorRing.AreClockwise())
+            {
+                throw new ArgumentException($"Polygon exterior ring must be in {RotationDirection.COUNTERCLOCKWISE} order"); 
+            }
+#else
+            if (exteriorRing.AreClockwise())
+            { 
+                exteriorRing = exteriorRing.Reverse().ToArray();
+            }
+#endif
+             
             ExteriorRing = exteriorRing;
+
+            if (interiorRings == null) return;
 
             foreach (GridVector2[] interiorRing in interiorRings)
             {
