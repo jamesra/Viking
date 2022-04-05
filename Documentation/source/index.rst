@@ -20,7 +20,7 @@ Viking Client Installation
 
 Viking requires the following:
    * Windows 7+ 
-   * `.NET Framework 4.6`_
+   * `.NET Framework 4.8`_
    * `XNA 4.0 Framework Redistributable`_
    * A dedicated GPU.  Intel chips with embedded graphics also work.
    * An internet connection
@@ -50,7 +50,7 @@ Accounts are only required to write to the database.  Read-only access via Vikin
 
 Create accounts and do some basic visualization on the `original visualization site`_
 
-.. image::  Footer_v2.jpg  
+.. image::  Footer_v2.jpg
    :width: 768
    :align: center
    
