@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Logging;
 
 #nullable disable
 
@@ -9,13 +10,17 @@ namespace Viking.DataModel.Annotation
 {
     public partial class AnnotationContext : DbContext
     {
-        public AnnotationContext()
+        private readonly ILogger Log;
+
+        public AnnotationContext(ILogger log = null)
         {
+            Log = log;
         }
 
-        public AnnotationContext(DbContextOptions<AnnotationContext> options)
+        public AnnotationContext(DbContextOptions<AnnotationContext> options,ILogger log = null)
             : base(options)
         {
+            Log = log;
         }
 
         public virtual DbSet<DeletedLocation> DeletedLocations { get; set; }
