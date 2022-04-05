@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Clients\VolumeModel\VolumeModel.csproj" />
+    <ProjectReference Include="..\Geometry\Geometry.csproj" />
+  </ItemGroup>
+
+</Project>

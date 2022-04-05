@@ -11,6 +11,7 @@
     <ProjectReference Include="..\Clients\WebAnnotationModel\WebAnnotationModel.csproj" />
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\Viking.Annotation.Geometry\Viking.Annotation.Geometry.csproj" />
+    <ProjectReference Include="..\Viking.Annotation.Mapping\Viking.Annotation.Mapping.csproj" />
   </ItemGroup>
 
 </Project>

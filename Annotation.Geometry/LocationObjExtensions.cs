@@ -52,12 +52,9 @@ namespace WebAnnotationModel
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromGeometryInSection(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
-        {
-            if (!shape.STIsValid().Value)
-                throw new ArgumentException("Shape must be valid SQL Geometry " + shape.IsValidDetailed());
-
-            Microsoft.SqlServer.Types.SqlGeometry volume_shape = mapper.TryMapShapeSectionToVolume(shape);
+        public static void SetShapeFromGeometryInSection(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, IShape2D shape)
+        { 
+            IShape2D volume_shape = mapper.TryMapShape(shape, TransformDirection.SectionToVolume);
 
             location.VolumeShape = location.TypeCode.GetSmoothedShape(volume_shape);
             location.MosaicShape = shape;
@@ -72,12 +69,9 @@ namespace WebAnnotationModel
         /// <param name="location"></param>
         /// <param name="volumePoints"></param>
         /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromGeometryInVolume(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry volume_shape)
-        {
-            if (!volume_shape.STIsValid().Value)
-                throw new ArgumentException("Shape must be valid SQL Geometry " + volume_shape.IsValidDetailed());
-
-            Microsoft.SqlServer.Types.SqlGeometry mosaic_shape = mapper.TryMapShapeVolumeToSection(volume_shape);
+        public static void SetShapeFromGeometryInVolume(this LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, IShape2D volume_shape)
+        { 
+            IShape2D mosaic_shape = mapper.TryMapShape(volume_shape, TransformDirection.VolumeToSection);
 
             location.VolumeShape = location.TypeCode.GetSmoothedShape(volume_shape);
             location.MosaicShape = mosaic_shape;
@@ -112,6 +106,5 @@ namespace WebAnnotationModel
 
             return volume_innerRingPoints;
         }
-
     }
 }
