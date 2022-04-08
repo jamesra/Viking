@@ -4,8 +4,11 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using Viking.AnnotationServiceTypes;
+using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 
@@ -46,8 +49,14 @@ namespace Annotation.ViewModels
         public System.Windows.Input.ICommand SaveModelCommand { get; set; }
         public System.Windows.Input.ICommand ResetModelCommand { get; set; }
 
-        public PermittedStructureLinkViewModel(StructureTypeObj model)
-        { 
+        private readonly IPermittedStructureLinkStore PermittedStructureLinkStore;
+        private readonly IStructureTypeStore StructureTypeStore;
+
+        public PermittedStructureLinkViewModel(IStructureTypeStore structureTypeStore, IPermittedStructureLinkStore permittedLinksStore, StructureTypeObj model)
+        {
+            StructureTypeStore = structureTypeStore ?? throw new ArgumentNullException(nameof(structureTypeStore));
+            PermittedStructureLinkStore = permittedLinksStore ?? throw new ArgumentNullException(nameof(permittedLinksStore));
+
             DeletePermittedLinkSourceTypeCommand = new DelegateCommand(DeletePermittedLinkSourceType, CanDeletePermittedLinkSourceType);
             DeletePermittedLinkTargetTypeCommand = new DelegateCommand(DeletePermittedLinkTargetType, CanDeletePermittedLinkTargetType);
             DeletePermittedLinkBidirectionalTypeCommand = new DelegateCommand(DeletePermittedLinkBidirectionalType, CanDeletePermittedLinkBidirectionalType);
@@ -119,7 +128,7 @@ namespace Annotation.ViewModels
         }
 
 #region Delete commands
-        private void DeletePermittedLinkSourceType(object item)
+        private async Task DeletePermittedLinkSourceType(object item)
         {
             long ID;
             try
@@ -128,17 +137,17 @@ namespace Annotation.ViewModels
             }
             catch
             {
-                Trace.WriteLine(string.Format("Could not convert parameter to ID {0}", item));
+                Trace.WriteLine($"Could not convert parameter to ID {item}");
                 return;
             }
 
             PermittedStructureLinkKey key = new PermittedStructureLinkKey(ID, Model.ID, false);
 
-            var obj = Store.PermittedStructureLinks.GetObjectByID(key, false);
+            var obj = await PermittedStructureLinkStore.GetObjectByID(key, AskServer: false, ForceRefreshFromServer: false, CancellationToken.None);
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
-            Store.PermittedStructureLinks.Remove(key);
+            await PermittedStructureLinkStore.Remove(key);
         }
 
         private bool CanDeletePermittedLinkSourceType(object item)
@@ -146,7 +155,7 @@ namespace Annotation.ViewModels
             return true;
         }
 
-        private void DeletePermittedLinkTargetType(object item)
+        private async Task DeletePermittedLinkTargetType(object item)
         {
             long ID;
             try
@@ -155,16 +164,16 @@ namespace Annotation.ViewModels
             }
             catch
             {
-                Trace.WriteLine(string.Format("Could not convert parameter to ID {0}", item));
+                Trace.WriteLine($"Could not convert parameter to ID {item}");
                 return;
             }
 
             PermittedStructureLinkKey key = new PermittedStructureLinkKey(Model.ID, ID, false);
-            var obj = Store.PermittedStructureLinks.GetObjectByID(key, false);
+            var obj = await PermittedStructureLinkStore.GetObjectByID(key, AskServer: false, ForceRefreshFromServer: false, CancellationToken.None);
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
-            Store.PermittedStructureLinks.Remove(key); 
+            await PermittedStructureLinkStore.Remove(key); 
         }
 
         private bool CanDeletePermittedLinkTargetType(object item)
@@ -172,7 +181,7 @@ namespace Annotation.ViewModels
             return true;
         }
 
-        private void DeletePermittedLinkBidirectionalType(object item)
+        private async Task DeletePermittedLinkBidirectionalType(object item)
         {
             long ID;
             try
@@ -181,16 +190,16 @@ namespace Annotation.ViewModels
             }
             catch
             {
-                Trace.WriteLine(string.Format("Could not convert parameter to ID {0}", item));
+                Trace.WriteLine($"Could not convert parameter to ID {item}");
                 return;
             }
 
             PermittedStructureLinkKey key = new PermittedStructureLinkKey(Model.ID, ID, true);
-            var obj = Store.PermittedStructureLinks.GetObjectByID(key, false);
+            var obj = await PermittedStructureLinkStore.GetObjectByID(key, AskServer: true, ForceRefreshFromServer: false, CancellationToken.None);
             if (NewPermits.Contains(obj))
                 NewPermits.Remove(obj);
 
-            Store.PermittedStructureLinks.Remove(key);
+            await PermittedStructureLinkStore.Remove(key);
         }
 
         private bool CanDeletePermittedLinkBidirectionalType(object item)
@@ -200,7 +209,7 @@ namespace Annotation.ViewModels
 
         #endregion
 
-        private static long ParamterToStructureTypeID(object item)
+        private static long ParameterToStructureTypeID(object item)
         {
             long ID;
 
@@ -216,7 +225,7 @@ namespace Annotation.ViewModels
                 }
                 catch
                 {
-                    Trace.WriteLine(string.Format("Could not convert parameter to ID {0}", item));
+                    Trace.WriteLine($"Could not convert parameter to ID {item}");
                     throw;
                 }
             }
@@ -265,34 +274,33 @@ namespace Annotation.ViewModels
 
         private bool CanAddPermittedLinkBidirectionalType(object item)
         {
-            long ID = ParamterToStructureTypeID(item);
+            long ID = ParameterToStructureTypeID(item);
             return Model.PermittedLinkBidirectionalTypes.Contains(ID) == false;
         }
 
         private bool CanSaveModel(object item)
         {
-            return true; 
-            return Model.DBAction != AnnotationService.Types.DBACTION.NONE;
+            return true;  
         }
 
         private void SaveModel(object item)
         {
-            Store.StructureTypes.Save();
+            StructureTypeStore.Save();
 
             foreach(PermittedStructureLinkObj newObj in NewPermits)
             {
-                Store.PermittedStructureLinks.Create(newObj);
+                PermittedStructureLinkStore.Create(newObj);
             }
         }
 
         private bool CanRestoreModel(object item)
         {
-            return Model.DBAction != AnnotationService.Types.DBACTION.NONE;
+            return Model.DBAction != DBACTION.NONE;
         }
 
-        private void RestoreModel(object item)
+        private async Task RestoreModel(object item)
         {
-            Store.StructureTypes.GetObjectByID(Model.ID, AskServer: true, ForceRefreshFromServer: true);
+            await StructureTypeStore.GetObjectByID(Model.ID, ForceRefreshFromServer: true, AskServer: true, token: CancellationToken.None);
         }
     }
 }
