@@ -36,6 +36,13 @@ namespace Viking.DataModel.Annotation
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            if (System.Diagnostics.Debugger.IsAttached == false)
+            {
+                //System.Diagnostics.Debugger.Launch();
+            }
+
+            base.OnModelCreating(modelBuilder);
+            
             modelBuilder.HasAnnotation("Relational:Collation", "SQL_Latin1_General_CP1_CI_AS");
 
             modelBuilder.Entity<DeletedLocation>(entity =>
