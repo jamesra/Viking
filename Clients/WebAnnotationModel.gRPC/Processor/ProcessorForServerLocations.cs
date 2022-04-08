@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel.Objects;
+using WebAnnotationModel.ServerInterface;
 
 namespace WebAnnotationModel.gRPC.Converters
 {
