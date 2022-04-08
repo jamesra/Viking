@@ -1,4 +1,5 @@
-﻿using Jotunn.Common;
+﻿using System;
+using Jotunn.Common;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -74,20 +75,23 @@ namespace AnnotationViewModel
 
         }
 
-        public VisibleRectLocations(TileMappingViewModel tileMapping, long SectionNumber)
+        private readonly ILocationStore LocationStore;
+        public VisibleRectLocations(ILocationStore locationStore, TileMappingViewModel tileMapping, long SectionNumber)
         {
+            LocationStore = locationStore ?? throw new ArgumentNullException(nameof(locationStore));
+
             this.TileMapping = tileMapping;
             this.SectionNumber = SectionNumber;
 
-            WebAnnotationModel.Store.Locations.OnCollectionChanged += this.OnLocationCollectionChanged;
-            ConcurrentDictionary<long, LocationObj> locsForSection = WebAnnotationModel.Store.Locations.GetObjectsForSection(1);
+            LocationStore.CollectionChanged += this.OnLocationCollectionChanged;
+            ConcurrentDictionary<long, LocationObj> locsForSection = LocationStore.GetObjectsForSection(1);
             UpdateCollectionWithLocations(locsForSection);
         }
 
         private void OnLocationCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         { 
-            ConcurrentDictionary<long, LocationObj> locsForSection = WebAnnotationModel.Store.Locations.GetLocalObjectsForSection(1);
-            WebAnnotationModel.Store.Locations.OnCollectionChanged -= this.OnLocationCollectionChanged;
+            ConcurrentDictionary<long, LocationObj> locsForSection = LocationStore.GetLocalObjectsForSection(1);
+            LocationStore.CollectionChanged -= this.OnLocationCollectionChanged;
 
             UpdateCollectionWithLocationsCaller d = new UpdateCollectionWithLocationsCaller(this.UpdateCollectionWithLocations);
             Dispatcher.BeginInvoke(d, locsForSection);            
