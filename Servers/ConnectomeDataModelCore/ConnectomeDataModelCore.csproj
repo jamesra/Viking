@@ -6,6 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Partials\**" />
+    <EmbeddedResource Remove="Partials\**" />
+    <None Remove="Partials\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="EfCore.SchemaCompare" Version="5.1.4" />
     <PackageReference Include="EntityFrameworkExtras.EFCore" Version="5.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.15">
@@ -18,10 +24,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Libs\NetTopologySuite.IO.SqlServerBytes\src\NetTopologySuite.IO.SqlServerBytes\NetTopologySuite.IO.SqlServerBytes.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Partials\" />
   </ItemGroup>
 
 </Project>

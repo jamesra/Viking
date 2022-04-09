@@ -12,12 +12,11 @@ namespace Viking.DataModel.Annotation
     {
         private readonly ILogger Log;
 
-        public AnnotationContext(ILogger log = null)
+        public AnnotationContext(DbContextOptions<AnnotationContext> options) : base(options)
         {
-            Log = log;
         }
 
-        public AnnotationContext(DbContextOptions<AnnotationContext> options,ILogger log = null)
+        public AnnotationContext(DbContextOptions<AnnotationContext> options,ILogger log)
             : base(options)
         {
             Log = log;
@@ -292,7 +291,7 @@ namespace Viking.DataModel.Annotation
 
                 entity.Property(e => e.HotKey)
                     .IsUnicode(false)
-                    .HasDefaultValueSql("('\\0')")
+                    .HasDefaultValueSql("(N'\0')")
                     .IsFixedLength(true)
                     .HasComment("Hotkey used to create a structure of this type");
 

@@ -8,6 +8,7 @@ using Xunit;
 
 namespace ConnectomeDataModelCoreTests
 {
+    /*
     public class AnnotationsTests : IClassFixture<CreateDropDatabaseFixture>
     {
         private readonly AnnotationContext _dbContext;
@@ -23,8 +24,7 @@ namespace ConnectomeDataModelCoreTests
         }
 
         protected DbContextOptions<AnnotationContext> ContextOptions { get; }
-
-        /*
+     
         private void Seed()
         {
             using (var context = new AnnotationContext(ContextOptions))
@@ -50,11 +50,10 @@ namespace ConnectomeDataModelCoreTests
 
                 context.SaveChanges();
             }
-        }*/
+        } 
 
         #endregion
-
-        /*
+     
         [Fact]
         public void GeometryCanLoad()
         {
@@ -67,7 +66,7 @@ namespace ConnectomeDataModelCoreTests
             loc = context.Locations.Find(Id);
 
             Console.WriteLine($"{loc.Id} - {loc.VolumeShape}");
-        }
-        */
+        } 
     }
+    */
 }

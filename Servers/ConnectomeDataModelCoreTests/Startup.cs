@@ -19,14 +19,18 @@ namespace Viking.DataModel.Annotation.Tests
         }
 
         public void ConfigureServices(IServiceCollection services)
-        { 
+        {
+            services.AddOptions<ContextBuilderOptions<AnnotationContext>>()
+                .Configure(o =>
+                {
+                    o.ConnectionStringName = "AnnotationConnection";
+                });
+
             services.AddSingleton<IConfiguration>(Configuration);
 
-            services.AddDbContext<Viking.DataModel.Annotation.AnnotationContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("AnnotationConnection"),
-                                     options => options.UseNetTopologySuite())
-                       .EnableDetailedErrors()
-                       .EnableSensitiveDataLogging());
+            services.AddTransient<IContextBuilder<AnnotationContext>, ContextBuilder<AnnotationContext>>();
+
+            services.AddTransient<AnnotationContext>();
         }
     }
 }

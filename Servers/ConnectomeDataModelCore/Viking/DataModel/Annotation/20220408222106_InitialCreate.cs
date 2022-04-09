@@ -36,7 +36,7 @@ namespace Viking.DataModel.Annotation
                     Color = table.Column<int>(type: "int", nullable: false, defaultValueSql: "(0xFFFFFF)"),
                     Version = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
                     Code = table.Column<string>(type: "nchar(16)", fixedLength: true, maxLength: 16, nullable: false, defaultValueSql: "(N'No Code')", comment: "Code used to identify these items in the UI"),
-                    HotKey = table.Column<string>(type: "char(1)", unicode: false, fixedLength: true, maxLength: 1, nullable: false, defaultValueSql: "('\\0')", comment: "Hotkey used to create a structure of this type"),
+                    HotKey = table.Column<string>(type: "char(1)", unicode: false, fixedLength: true, maxLength: 1, nullable: false, defaultValueSql: "(N'\0')", comment: "Hotkey used to create a structure of this type"),
                     Username = table.Column<string>(type: "nvarchar(254)", maxLength: 254, nullable: false, defaultValueSql: "(N'')", comment: "Last username to modify the row"),
                     LastModified = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getutcdate())"),
                     Created = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getutcdate())")
@@ -358,6 +358,71 @@ namespace Viking.DataModel.Annotation
                 table: "StructureType",
                 column: "ParentID")
                 .Annotation("SqlServer:FillFactor", 90);
+            
+            migrationBuilder.Sql(
+                @"CREATE TRIGGER [dbo].[Location_update]  
+            ON[dbo].[Location] 
+            FOR UPDATE 
+            AS 
+                SET NOCOUNT ON;
+                Update dbo.Location 
+                Set LastModified = (GETUTCDATE())  
+                WHERE ID in (SELECT ID FROM inserted)");
+
+            migrationBuilder.Sql(
+                @"CREATE TRIGGER [dbo].[Location_delete] 
+	               ON  [dbo].[Location]
+	               FOR DELETE
+	             AS 
+                    SET NOCOUNT ON;
+		            INSERT INTO [dbo].[DeletedLocations] (ID)
+		            SELECT deleted.ID FROM deleted
+		            
+		            delete from LocationLink 
+			            where A in  (SELECT deleted.ID FROM deleted)
+				            or B in (SELECT deleted.ID FROM deleted)");
+
+            migrationBuilder.Sql(
+                @"CREATE TRIGGER [dbo].[StructureLink_ReciprocalCheck] 
+                    ON  [dbo].[StructureLink]
+                    AFTER INSERT, UPDATE
+                    AS 
+	                    IF ((select count(SLA.SourceID)
+		                    from inserted SLA 
+		                    JOIN StructureLink SLB 
+		                    ON (SLA.SourceID = SLB.TargetID AND SLA.TargetID = SLB.SourceID)) > 0)
+		                    BEGIN
+			                    RAISERROR(N'Reciprocal structure links are not allowed. Set the bidirectional property on the link instead.',14,1);
+			                    ROLLBACK TRANSACTION;
+			                    RETURN
+		                    END");
+
+            migrationBuilder.Sql(
+                @"CREATE TRIGGER [dbo].[StructureType_LastModified] 
+	               ON  [dbo].[StructureType]
+	               FOR UPDATE
+	            AS 
+                    -- SET NOCOUNT ON added to prevent extra result sets from
+		            -- interfering with SELECT statements.
+                    SET NOCOUNT ON;
+		            Update dbo.[StructureType]
+		            Set LastModified = (SYSUTCDATETIME())
+		            WHERE ID in (SELECT ID FROM inserted)
+		            
+		            ");
+
+            migrationBuilder.Sql(
+                @"CREATE TRIGGER [dbo].[Structure_LastModified] 
+	               ON  [dbo].[Structure]
+	               FOR UPDATE
+	            AS 
+                    -- SET NOCOUNT ON added to prevent extra result sets from
+		            -- interfering with SELECT statements.
+		            SET NOCOUNT ON;
+		            Update dbo.[Structure]
+		            Set LastModified = (SYSUTCDATETIME())
+		            WHERE ID in (SELECT ID FROM inserted)
+		            ");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
