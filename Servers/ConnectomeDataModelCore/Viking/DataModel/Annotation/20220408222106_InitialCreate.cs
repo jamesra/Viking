@@ -361,13 +361,13 @@ namespace Viking.DataModel.Annotation
             
             migrationBuilder.Sql(
                 @"CREATE TRIGGER [dbo].[Location_update]  
-            ON[dbo].[Location] 
-            FOR UPDATE 
-            AS 
-                SET NOCOUNT ON;
-                Update dbo.Location 
-                Set LastModified = (GETUTCDATE())  
-                WHERE ID in (SELECT ID FROM inserted)");
+                ON[dbo].[Location] 
+                FOR UPDATE 
+                AS 
+                    SET NOCOUNT ON;
+                    Update dbo.Location 
+                    Set LastModified = (GETUTCDATE())  
+                    WHERE ID in (SELECT ID FROM inserted)");
 
             migrationBuilder.Sql(
                 @"CREATE TRIGGER [dbo].[Location_delete] 
@@ -423,6 +423,23 @@ namespace Viking.DataModel.Annotation
 		            Set LastModified = (SYSUTCDATETIME())
 		            WHERE ID in (SELECT ID FROM inserted)
 		            ");
+
+            migrationBuilder.Sql(
+                @"  CREATE SPATIAL INDEX [MosaicShape_Index] ON [dbo].[Location]
+                    (
+	                    [MosaicShape]
+                    )USING  GEOMETRY_AUTO_GRID 
+                    WITH (BOUNDING_BOX =(0, 0, 150000, 150000), 
+                    CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+                    GO");
+
+            migrationBuilder.Sql(
+                @"  CREATE SPATIAL INDEX [VolumeShape_Index] ON [dbo].[Location]
+                    (
+	                    [VolumeShape]
+                    )USING  GEOMETRY_AUTO_GRID 
+                    WITH (BOUNDING_BOX =(0, 0, 150000, 150000), 
+                    CELLS_PER_OBJECT = 16, PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
