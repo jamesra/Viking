@@ -53,12 +53,12 @@ Create accounts and do some basic visualization on the `original visualization s
 .. image::  Footer_v2.jpg
    :width: 768
    :align: center
-   
+
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`search`
+* :ref:`search` 
 
 .. _Papers: 
 .. _Click here to install the Viking client: http://connectomes.utah.edu/Software/Viking4/setup.exe
@@ -68,5 +68,5 @@ Indices and tables
 .. _SSTEM and Computation Molecular Phenotyping: http://www.plosbiology.org/article/info%3Adoi%2F10.1371%2Fjournal.pbio.1000074#abstract0
 .. _original visualization site: http://connectomes.utah.edu/viz/
 .. _.NET Framework 4.8: https://www.microsoft.com/en-us/download/details.aspx?id=48130
-.. _XNA 4.0 Framework Redistributable: http://connectomes.utah.edu/XNA Framework 4.0 Redist.msi
+.. _XNA 4.0 Framework Redistributable: http://connectomes.utah.edu/XNA%20Framework%204.0%20Redist.msi
 .. _public key: https://connectomes.utah.edu/Software/Viking4/VikingPublicKey.cer
