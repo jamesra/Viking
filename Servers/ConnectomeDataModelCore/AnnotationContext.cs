@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Logging;
 
 #nullable disable
 
@@ -9,13 +10,16 @@ namespace Viking.DataModel.Annotation
 {
     public partial class AnnotationContext : DbContext
     {
-        public AnnotationContext()
+        private readonly ILogger Log;
+
+        public AnnotationContext(DbContextOptions<AnnotationContext> options) : base(options)
         {
         }
 
-        public AnnotationContext(DbContextOptions<AnnotationContext> options)
+        public AnnotationContext(DbContextOptions<AnnotationContext> options,ILogger log)
             : base(options)
         {
+            Log = log;
         }
 
         public virtual DbSet<DeletedLocation> DeletedLocations { get; set; }
@@ -31,6 +35,13 @@ namespace Viking.DataModel.Annotation
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            if (System.Diagnostics.Debugger.IsAttached == false)
+            {
+                //System.Diagnostics.Debugger.Launch();
+            }
+
+            base.OnModelCreating(modelBuilder);
+            
             modelBuilder.HasAnnotation("Relational:Collation", "SQL_Latin1_General_CP1_CI_AS");
 
             modelBuilder.Entity<DeletedLocation>(entity =>
@@ -280,7 +291,7 @@ namespace Viking.DataModel.Annotation
 
                 entity.Property(e => e.HotKey)
                     .IsUnicode(false)
-                    .HasDefaultValueSql("('\\0')")
+                    .HasDefaultValueSql("(N'\0')")
                     .IsFixedLength(true)
                     .HasComment("Hotkey used to create a structure of this type");
 

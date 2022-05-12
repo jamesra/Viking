@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevTest", "DevTest\DevTest.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevTestAPI", "DevTestAPI\DevTestAPI.csproj", "{67F0903E-0CE0-436D-BEF7-F2EF27EAA170}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IdentityServer", "IdentityServer\IdentityServer.csproj", "{5C3E1807-0A27-4365-9919-024F9D75AE05}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IdentityManagementWebsite", "IdentityServer\IdentityManagementWebsite.csproj", "{5C3E1807-0A27-4365-9919-024F9D75AE05}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingWebAppSettings", "..\WebAppSettings\VikingWebAppSettings.csproj", "{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}"
 EndProject
@@ -20,6 +20,14 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Models", "..\Identity.Models\Identity.Models.csproj", "{96089E7A-A037-4CF4-8F19-53AF653F0F07}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Tests", "..\Identity.Tests\Identity.Tests.csproj", "{1A1C7CAE-A15B-4754-986C-0C422ED344A4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IdentityServerStandalone", "IdentityServerStandalone\IdentityServerStandalone.csproj", "{356BE43C-00F7-4A0B-A9EA-1CA50CCB1767}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Viking.Identity.Server.WebApi", "Viking.Identity.Server.WebApi\Viking.Identity.Server.WebApi.csproj", "{1C6D75F0-22ED-473D-87D4-08F9BF81092D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Viking.Identity.Server.Extensions", "Viking.Identity.Server.Extensions\Viking.Identity.Server.Extensions.csproj", "{04AA7D60-8C8D-49B0-8027-1F9ABA6418C5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identity.Configuration", "Identity.Configuration\Identity.Configuration.csproj", "{A2E06DE9-BBE9-44E2-9B02-70A458F8A627}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -82,6 +90,30 @@ Global
 		{1A1C7CAE-A15B-4754-986C-0C422ED344A4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1A1C7CAE-A15B-4754-986C-0C422ED344A4}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{1A1C7CAE-A15B-4754-986C-0C422ED344A4}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{356BE43C-00F7-4A0B-A9EA-1CA50CCB1767}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{356BE43C-00F7-4A0B-A9EA-1CA50CCB1767}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{356BE43C-00F7-4A0B-A9EA-1CA50CCB1767}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{356BE43C-00F7-4A0B-A9EA-1CA50CCB1767}.Release|Any CPU.Build.0 = Release|Any CPU
+		{356BE43C-00F7-4A0B-A9EA-1CA50CCB1767}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{356BE43C-00F7-4A0B-A9EA-1CA50CCB1767}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{1C6D75F0-22ED-473D-87D4-08F9BF81092D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C6D75F0-22ED-473D-87D4-08F9BF81092D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C6D75F0-22ED-473D-87D4-08F9BF81092D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C6D75F0-22ED-473D-87D4-08F9BF81092D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C6D75F0-22ED-473D-87D4-08F9BF81092D}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{1C6D75F0-22ED-473D-87D4-08F9BF81092D}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{04AA7D60-8C8D-49B0-8027-1F9ABA6418C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04AA7D60-8C8D-49B0-8027-1F9ABA6418C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04AA7D60-8C8D-49B0-8027-1F9ABA6418C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04AA7D60-8C8D-49B0-8027-1F9ABA6418C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04AA7D60-8C8D-49B0-8027-1F9ABA6418C5}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{04AA7D60-8C8D-49B0-8027-1F9ABA6418C5}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{A2E06DE9-BBE9-44E2-9B02-70A458F8A627}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2E06DE9-BBE9-44E2-9B02-70A458F8A627}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2E06DE9-BBE9-44E2-9B02-70A458F8A627}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2E06DE9-BBE9-44E2-9B02-70A458F8A627}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2E06DE9-BBE9-44E2-9B02-70A458F8A627}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{A2E06DE9-BBE9-44E2-9B02-70A458F8A627}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -15,7 +15,7 @@ namespace Geometry.Meshing
     public class MeshEdgeAngleComparer<VERTEX> : IComparer<IEdgeKey>
         where VERTEX : IVertex2D
     {
-        IMesh2D<VERTEX> Mesh;
+        readonly IMesh2D<VERTEX> Mesh;
         public readonly bool ClockwiseOrder;
 
         /// <summary>
@@ -62,14 +62,15 @@ namespace Geometry.Meshing
     public class MeshEdgeAngleComparerFixedIndex<VERTEX> : IComparer<IEdgeKey>
         where VERTEX : IVertex2D
     {
-        IMesh<VERTEX> Mesh;
+        readonly IMesh<VERTEX> Mesh;
         public readonly bool ClockwiseOrder;
 
-        private int OriginVertex;
+        private readonly int OriginVertex;
+
         /// <summary>
         /// A line originating from the vertex.  It determines which edge is the first in the rotation order.
         /// </summary>
-        GridLine OriginLine;
+        readonly GridLine OriginLine;
 
         /// <summary>
         /// Precalculated comparison point used to compare angles
@@ -212,7 +213,7 @@ namespace Geometry.Meshing
     public class MeshVertexComparerXY<VERTEX> : IComparer<long>
         where VERTEX : IVertex2D
     {
-        private IMesh<VERTEX> Mesh;
+        private readonly IMesh<VERTEX> Mesh;
 
         public MeshVertexComparerXY(IMesh<VERTEX> mesh)
         {
@@ -228,7 +229,7 @@ namespace Geometry.Meshing
     public class MeshVertexComparerYX<VERTEX> : IComparer<long>
          where VERTEX : IVertex2D
     {
-        private IMesh<VERTEX> Mesh;
+        private readonly IMesh<VERTEX> Mesh;
 
         public MeshVertexComparerYX(IMesh<VERTEX> mesh)
         {
@@ -877,7 +878,7 @@ namespace Geometry.Meshing
                 iEdge = iEdge < 0 ? CreatedEdges.Count - 1 : iEdge;
                 Edge edge = CreatedEdges[iEdge] as Edge;
                 CreatedEdges.RemoveAt(iEdge);
-                iEdge = iEdge - 1;
+                iEdge--;
 
                 if (edge.Faces.Count < 2) //Should not be possible but added it as an edge case check because it was hit during bajaj generation
                     continue;

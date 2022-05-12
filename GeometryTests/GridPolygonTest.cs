@@ -2,27 +2,62 @@
 using Geometry;
 using Geometry.JSON;
 using GeometryTests.FSCheck;
+using Microsoft.FSharp.Collections;
+using Microsoft.FSharp.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace GeometryTests
-{
+{ 
+    class MyFSCheckRunner : IRunner
+    {
+        public void OnArguments(int value1, FSharpList<object> value2, FSharpFunc<int, FSharpFunc<FSharpList<object>, string>> value3)
+        {
+            Runner.consoleRunner.OnArguments(value1, value2, value3);
+        }
+
+        public void OnFinished(string value1, TestResult value2)
+        {
+            Runner.consoleRunner.OnFinished(value1, value2);
+
+            if (value2 is TestResult.Exhausted exhausted)
+            {
+                Console.Write($"{value1} test options exhausted");
+            }
+            else if (value2 is TestResult.False falseResult)
+            {
+                Console.Write($"{value1} test failed");
+                throw new AssertFailedException(value1);
+            }
+            else if (value2 is TestResult.True trueResult)
+            {
+                Console.WriteLine($"{value1} passed");
+            }
+        }
+
+        public void OnShrink(FSharpList<object> args, FSharpFunc<FSharpList<object>, string> argsToString)
+        {
+            string output = argsToString?.Invoke(args);
+            Debug.WriteLine(output);
+            Console.WriteLine(output); 
+        }
+
+        public void OnStartFixture(Type value)
+        {
+            Runner.consoleRunner.OnStartFixture(value);
+        }
+    } 
+
     [TestClass]
     public class GridPolygonTest
     {
         public delegate void OnPolygonIntersectionProgress(GridPolygon[] polygons, List<GridVector2> foundPoints, List<GridVector2> expectedPoints);
-
-
-
-        GridPolygon CreateBoxPolygon(double scale)
-        {
-            GridVector2[] ExteriorPointsScaled = Primitives.BoxVerticies(scale);
-
-            return new GridPolygon(ExteriorPointsScaled);
-        }
-
+         
         GridPolygon CreateTrianglePolygon(double scale)
         {
             GridVector2[] ExteriorPoints =
@@ -33,15 +68,88 @@ namespace GeometryTests
                 new GridVector2(-1,-1)
             };
 
-            return new GridPolygon(ExteriorPoints);
-
+            return new GridPolygon(ExteriorPoints).Scale(scale); 
         }
 
-        GridPolygon CreateUPolygon(double scale)
+        private static Configuration GetPolygonGeneratorConfiguration(FsCheck.Random.StdGen seed = null)
         {
-            GridVector2[] ExteriorPointsScaled = Primitives.ConcaveUVerticies(scale);
+            var configuration = Configuration.QuickThrowOnFailure; //The Configuration.QuickThrowOnFailure implementation returned a new instance every time when I first wrote this...
+            configuration.MaxNbOfTest = 100;
+            configuration.QuietOnSuccess = false;
+            configuration.StartSize = 250;
+            configuration.EndSize = 750;
+            configuration.EveryShrink = (args) =>
+            {
+                if (args.Length > 0 && args is object[] parameters)
+                {
+                    string output = $"Shrunk\n";
+                    if (args[0] is Tuple<GridVector2[], int> paramTuple)
+                    {
+                        output = $"Shrunk to {paramTuple.Item1.Length} points & {paramTuple.Item2} lines.";
+                    }
 
-            return new GridPolygon(ExteriorPointsScaled);
+                    return output;
+                }
+
+                return $"Shrunk {args}";
+            }; 
+            configuration.Replay = seed ?? Global.StdGenSeed;
+            configuration.Name = nameof(TestPolygonGeneratorUnderpinnings);
+            return configuration; 
+        }
+
+        [TestMethod]
+        public void TestPolygonGeneratorUnderpinnings()
+        {
+            //GeometryArbitraries.Register(); 
+            Arb.Register<GridVector2Generators>();
+
+            var myRunner = new MyFSCheckRunner(); 
+
+            try
+            {  
+                Prop.ForAll<GridVector2[], int>(AssessPolygonGeneration).Check(GetPolygonGeneratorConfiguration());
+            }
+            catch (Exception e)
+            {
+                Assert.Fail(e.ToString());
+            }
+        }
+
+        public static void TestPolygonGeneratorUnderpinnings(OnPolygonIntersectionProgress OnProgress = null, FsCheck.Random.StdGen seed = null)
+        {
+            Arb.Register<GridVector2Generators>();
+            
+            Global.ResetRollingSeed();
+
+            Prop.ForAll<GridPolygon, GridPolygon>((p1, p2) => AssessPolygonIntersectionAndCorrespondancePoints(p1, p2, OnProgress)).Check(GetPolygonGeneratorConfiguration(seed));
+        }
+
+        public static Property AssessPolygonGeneration(GridVector2[] points, int nLines)
+        {
+            if (points.Length < 3)
+                return true.Trivial(points.Length < 3);
+
+            if (nLines < 3)
+                nLines = 3;
+
+            try
+            { 
+                var poly =
+                    GridLineSegmentGenerators.GenConcavePolygonWithInteriorHolesFromPoints(points, nLines);
+                bool NonZeroArea = poly.Area > 0;
+                bool IsValid = poly.IsValid();
+
+                return NonZeroArea.Label("Non zero area")
+                    .And(IsValid).Label("Generated Polygon is valid")
+                    .Label($"{poly.ToJSON()}");
+            }
+            catch (Exception e)
+            {
+                return false.Label($"{e}")
+                    .Label($"points: {points.ToJSON()}")
+                    .Label($"nLines: {nLines}");
+            }
         }
 
         [TestMethod]
@@ -49,16 +157,46 @@ namespace GeometryTests
         {
             GeometryArbitraries.Register();
 
-            Prop.ForAll<GridPolygon>((pl) =>
+            try
             {
-                return pl.Area > 0;
-            }).QuickCheckThrowOnFailure();
+                Prop.ForAll<GridPolygon>((poly) =>
+                {
+                    try
+                    {
+                        bool NonZeroArea = poly.Area > 0;
+                        bool IsValid = poly.IsValid();
+
+                        return NonZeroArea.Label("Non zero area")
+                            .And(IsValid).Label("Generated Polygon is valid")
+                            .Label($"{poly.ToJSON()}");
+                    }
+                    catch (Exception e)
+                    {
+                        return false.Label($"{e}")
+                            .Label($"points: {poly.ToJSON()}");
+                    }
+
+                }).QuickCheckThrowOnFailure();
+            }
+            catch (Exception e)
+            {
+                Assert.Fail(e.ToString());
+            }
         }
 
         [TestMethod]
         public void TestPolygonIntersectionGenerator()
         {
-            TestPolygonIntersectionGenerator(null);
+            try
+            {
+                TestPolygonIntersectionGenerator(null);
+            }
+            catch(Exception e)
+            {
+                Assert.Fail(e.ToString());
+            }
+
+            return;
         }
 
         public static void TestPolygonIntersectionGenerator(OnPolygonIntersectionProgress OnProgress = null)
@@ -73,63 +211,113 @@ namespace GeometryTests
 
             Global.ResetRollingSeed();
 
-            Prop.ForAll<GridPolygon, GridPolygon>((p1, p2) =>
-            {
-                p1 = p1.Clone() as GridPolygon; //Clone our input shapes so we don't edit them.
-                p2 = p2.Clone() as GridPolygon; //Clone our input shapes so we don't edit them.
-
-                var p1Copy = p1.Clone() as GridPolygon;
-                var p2Copy = p2.Clone() as GridPolygon;
-
-                GridPolygon[] polygons = { p1, p2 };
-
-
-                OnProgress?.Invoke(polygons, new List<GridVector2>(), new List<GridVector2>());
-
-                var ExpectedIntersectionSegments = p1.ExteriorSegments.Intersections(p2.ExteriorSegments, false);
-
-                var ExpectedIntersections = ExpectedIntersectionSegments.Select((i) =>
-                {
-                    i.A.Intersects(i.B, out GridVector2 Intersection);
-                    return Intersection;
-                }).Distinct().ToList();
-
-
-                OnProgress?.Invoke(polygons, new List<GridVector2>(), ExpectedIntersections);
-
-                List<GridVector2> Intersections;
-                try
-                {
-                    Intersections = p1.AddPointsAtIntersections(p2);
-                }
-                catch (ArgumentException e)
-                {
-                    return false.Label(e.ToString());
-                }
-
-                var ExactMissingIntersections = ExpectedIntersections.Where(e => Intersections.Contains(e) == false).ToArray();
-                var ExactMissingExpected = Intersections.Where(e => ExpectedIntersections.Contains(e) == false).ToArray();
-
-                var ApproxMissingIntersections = ExactMissingIntersections.Where(i => ExpectedIntersections.Any(e => e == i) == false).ToArray();
-                var ApproxMissingExpected = ExactMissingExpected.Where(i => Intersections.Any(e => e == i) == false).ToArray();
-
-                bool IntersectionsInExpected = ApproxMissingIntersections.Length == 0;
-                bool ExpectedInIntersections = ApproxMissingExpected.Length == 0;
-
-                bool Success = IntersectionsInExpected && ExpectedInIntersections;
-
-                if (Success == false && OnProgress != null)
-                {
-                    OnProgress(polygons, Intersections, ExpectedIntersections);
-                }
-
-                return IntersectionsInExpected.Label("Polygon intersections all expected")
-                        .And(ExpectedInIntersections.Label("Expected intersections all found"))
-                        .Label(string.Format("p1 = {0}", p1.ToJSON()))
-                        .Label(string.Format("p2 = {0}", p2.ToJSON()));
-            }).QuickCheckThrowOnFailure();
+            Prop.ForAll<GridPolygon, GridPolygon>((p1, p2) => AssessPolygonIntersectionAndCorrespondancePoints(p1, p2, OnProgress)).VerboseCheckThrowOnFailure();
         }
 
+        public static Property AssessPolygonIntersectionAndCorrespondancePoints(GridPolygon p1, GridPolygon p2, OnPolygonIntersectionProgress OnProgress = null)
+        {
+            p1 = p1.Clone() as GridPolygon; //Clone our input shapes so we don't edit them.
+            p2 = p2.Clone() as GridPolygon; //Clone our input shapes so we don't edit them.
+
+            var AllOriginalP1Verts = p1.AllVerticies.ToArray();
+            var AllOriginalP2Verts = p2.AllVerticies.ToArray();
+
+            var p1Copy = p1.Clone() as GridPolygon;
+            var p2Copy = p2.Clone() as GridPolygon;
+
+            GridPolygon[] polygons = { p1, p2 };
+
+            OnProgress?.Invoke(polygons, new List<GridVector2>(), new List<GridVector2>());
+
+            //var ExpectedExteriorIntersectionSegments = p1.ExteriorSegments.Intersections(p2.ExteriorSegments, false);
+
+            var ExpectedIntersectionSegments = p1.AllSegments.Intersections(p2.AllSegments, false);
+
+            var ExpectedIntersections = ExpectedIntersectionSegments.Select((i) =>
+            {
+                i.A.Intersects(i.B, out GridVector2 Intersection);
+                return Intersection;
+            }).Distinct().ToList();
+
+            OnProgress?.Invoke(polygons, new List<GridVector2>(), ExpectedIntersections);
+
+            List<GridVector2> Intersections = new List<GridVector2>();
+            try
+            {
+                Intersections = p1Copy.AddPointsAtIntersections(p2Copy);
+            }
+            catch (ArgumentException e)
+            {
+                OnProgress(polygons, Intersections, ExpectedIntersections);
+                Task.Delay(50).Wait();
+                return false
+                    .Label(e.ToString())
+                    .Label($"{polygons.ToJArray()}");
+            }
+            catch (Exception e)
+            {
+                OnProgress(polygons, Intersections, ExpectedIntersections);
+                Task.Delay(50).Wait();
+                return false
+                    .Label(e.ToString())
+                    .Label($"{polygons.ToJArray()}");
+            }
+
+            var ExactMissingIntersections = ExpectedIntersections.Where(e => Intersections.Contains(e) == false).ToArray();
+            var ExactMissingExpected = Intersections.Where(e => ExpectedIntersections.Contains(e) == false).ToArray();
+
+            var ApproxMissingIntersections = ExactMissingIntersections.Where(i => ExpectedIntersections.Any(e => e == i) == false).ToArray();
+            var ApproxMissingExpected = ExactMissingExpected.Where(i => Intersections.Any(e => e == i) == false).ToArray();
+
+            List<GridVector2> correspondingIntersections;
+
+            var ExpectedCorrespondingPoints = ExpectedIntersections; //ExpectedIntersections.Where(i => AllOriginalP1Verts.Contains(i) == false).ToList();
+            try
+            {
+                List<IShape2D> shapes = new List<IShape2D>();
+                shapes.Add(p1.Clone() as IShape2D);
+                shapes.Add(p2.Clone() as IShape2D);
+                correspondingIntersections = shapes.AddCorrespondingVerticies();
+            }
+            catch (ArgumentException e)
+            {
+                OnProgress(polygons, Intersections, ExpectedIntersections);
+                Task.Delay(50).Wait();
+                return false
+                    .Label(e.ToString())
+                    .Label($"{polygons.ToJArray()}");
+            }
+            catch (Exception e)
+            {
+                OnProgress(polygons, Intersections, ExpectedIntersections);
+                Task.Delay(50).Wait();
+                return false
+                    .Label(e.ToString())
+                    .Label($"{polygons.ToJArray()}");
+            }
+
+            bool IntersectionsInExpected = ApproxMissingIntersections.Length == 0;
+            bool ExpectedInIntersections = ApproxMissingExpected.Length == 0;
+
+            //bool CorrespondingCountMatch = correspondingIntersections.Count == ExpectedCorrespondingPoints.Count;
+            bool CorrespondingPointsMatchExpected = correspondingIntersections.All(c => ExpectedCorrespondingPoints.Contains(c));
+
+            bool Success = IntersectionsInExpected && ExpectedInIntersections /* && CorrespondingCountMatch */ && CorrespondingPointsMatchExpected;
+
+            if (Success == false && OnProgress != null)
+            {
+                OnProgress(polygons, Intersections, ExpectedIntersections);
+                Task.Delay(500).Wait();
+            }
+
+            return IntersectionsInExpected.Label("Polygon intersections all expected")
+                    .And(ExpectedInIntersections.Label("Expected intersections all found"))
+                    //.And(CorrespondingCountMatch.Label("Number of corresponding points are equal"))
+                    .And(CorrespondingPointsMatchExpected.Label("Corresponding point positions match"))
+                    .Label($"p1 = {p1.ToJSON()}")
+                    .Label($"p2 = {p2.ToJSON()}")
+                    .Label($"{polygons.ToJArray()}");
+        }
         /*
         [TestMethod]
         public void TestPolygonOverlap()
@@ -202,10 +390,8 @@ namespace GeometryTests
                        .And((IntersectionsIncludingEndpoints.Count > 0).Label("Intersection points are all endpoints"))
                        .And((IntersectionsExcludingEndpoints.Count == 0).Label("Intersections points are not all at endpoints"));
 
-            }).QuickCheckThrowOnFailure();
-        }
-
-
+            }).VerboseCheckThrowOnFailure();
+        } 
 
         public static bool PolygonContainsIntersections(GridPolygon poly, List<GridVector2> points)
         {
@@ -244,65 +430,28 @@ namespace GeometryTests
         }
 
         /// <summary>
-        /// Ensure our Clockwise function works and that polygons are created Counter-Clockwise
-        /// </summary>
-        [TestMethod]
-        public void GridPolygonVertexEnumeratorTest()
+            /// Ensure our Clockwise function works and that polygons are created Counter-Clockwise
+            /// </summary>
+            
+
+        private static double AreaDiff(IShape2D A, IShape2D B)
         {
-            // 15      O3------------------------------O2
-            //          |                               |
-            // 10       |   I5---I4        I3----I2     |
-            //          |    |    |         |     |     |
-            //  5       |    |    |         |     |     |
-            //          |    |    |         |     |     |
-            //  0      O4    |    |         |    B2     |
-            //          |    |    |         |     |     |
-            // -5       |    |   I5--------I4     |     |
-            //          |    |                    |     |   
-            // -10      |    I0------------------I1     |
-            //          |                               |
-            // -15     O0------------------------------O1
-            //              
-            // -20          
-            //
-            //        -15   -10  -5    0    5    10    15
-            //
-
-            ////////////////////////////////////////
-            //Only the outer poly
-            GridPolygon box = CreateBoxPolygon(10);
-
-            CheckVertexEnumerator(box);
-
-            /////////////////////////////////
-            //Outer poly with one inner poly
-            GridPolygon OuterBox = CreateBoxPolygon(15);
-            GridPolygon U = CreateUPolygon(10);
-
-            //Add the U polygon as an interior polygon
-            OuterBox.AddInteriorRing(U);
-
-            CheckVertexEnumerator(OuterBox);
-
-            /////////////////////////////////
-            //Outer poly with two inner poly
-            GridPolygon mini_box = CreateUPolygon(1);
-
-            OuterBox.AddInteriorRing(mini_box);
-            CheckVertexEnumerator(OuterBox);
+            return Math.Abs(A.Area - B.Area);
         }
 
-        private void CheckVertexEnumerator(GridPolygon polygon)
+        private static double AreaDiff(IShape2D A, double B)
         {
-            PolygonIndex[] forward = new PolygonVertexEnum(polygon).ToArray();
-            PolygonIndex[] backward = new PolygonVertexEnum(polygon, reverse: true).Reverse().ToArray();
+            return Math.Abs(A.Area - B);
+        }
 
-            Assert.AreEqual(forward.Length, backward.Length);
+        private static bool AreaApproxEqual(IShape2D A, IShape2D B, double epsilon = Geometry.Global.Epsilon)
+        {
+            return AreaDiff(A,B) <= epsilon;
+        }
 
-            for (int i = 0; i < forward.Length; i++)
-            {
-                Assert.AreEqual(forward[i], backward[i]);
-            }
+        private static bool AreaApproxEqual(IShape2D A, double B, double epsilon = Geometry.Global.Epsilon)
+        {
+            return AreaDiff(A, B) <= epsilon;
         }
 
         /// <summary>
@@ -330,44 +479,80 @@ namespace GeometryTests
         [TestMethod]
         public void AreaTest()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
             Assert.AreEqual(box.Area, box.BoundingBox.Area);
             Assert.AreEqual(box.Area, 400);
 
             //Check adding and removing interior polygons
-            GridPolygon inner_box = CreateBoxPolygon(1);
+            GridPolygon inner_box = Primitives.BoxPolygon(1);
+            Assert.AreEqual(inner_box.Area, inner_box.BoundingBox.Area);
             box.AddInteriorRing(inner_box);
             Assert.AreEqual(box.Area, 396);
 
             box.RemoveInteriorRing(0);
             Assert.AreEqual(box.Area, box.BoundingBox.Area);
 
+            GridPolygon inner_box_2 = Primitives.BoxPolygon(2).Translate(new GridVector2(6, 6));
+            Assert.AreEqual(inner_box_2.Area, inner_box_2.BoundingBox.Area);
+            box.AddInteriorRing(inner_box);
+            box.AddInteriorRing(inner_box_2);
+            Assert.AreEqual(box.Area, 380);
+
+            box.RemoveInteriorRing(0);
+            Assert.AreEqual(box.Area, 384);
+            box.RemoveInteriorRing(0);
+            Assert.AreEqual(box.Area, 400);
+
+
+            //Check that translation doesn't break area somehow
             GridPolygon translated_box = box.Translate(new GridVector2(10, 10));
             Assert.AreEqual(Math.Round(translated_box.Area), translated_box.BoundingBox.Area);
             Assert.AreEqual(Math.Round(translated_box.Area), 400);
-            Assert.AreEqual(Math.Round(translated_box.Area), box.Area);
+            Assert.AreEqual(Math.Round(translated_box.Area), box.Area); 
+        }
 
+        [TestMethod]
+        public void AreaTest2()
+        {
             GridPolygon tri = CreateTrianglePolygon(10);
-            Assert.AreEqual(tri.Area, tri.BoundingBox.Area / 2.0);
-            Assert.AreEqual(tri.Area, 2);
+            Assert.IsTrue(AreaApproxEqual(tri, tri.BoundingBox.Area / 2));
+            Assert.IsTrue(AreaApproxEqual(tri, 200));
 
-            GridPolygon translated_tri = tri.Translate(new GridVector2(10, -10));
-            Assert.AreEqual(translated_tri.Area, translated_tri.BoundingBox.Area / 2.0);
-            Assert.AreEqual(translated_tri.Area, 2);
-            Assert.AreEqual(translated_tri.Area, tri.Area);
+            //Check translating the shape
+            var translated_tri = tri.Translate(new GridVector2(10, -10));
+            Assert.IsTrue(AreaApproxEqual(translated_tri, translated_tri.BoundingBox.Area / 2));
+            Assert.IsTrue(AreaApproxEqual(translated_tri, 200));
+            Assert.IsTrue(AreaApproxEqual(translated_tri, tri));
+             
+            //Check adding and removing interior polygons
+            GridPolygon inner = CreateTrianglePolygon(1).Translate(new GridVector2(-2,-2));
+            Assert.IsTrue(AreaApproxEqual(inner, inner.BoundingBox.Area / 2)); 
+            tri.AddInteriorRing(inner);
+            Assert.IsTrue(AreaApproxEqual(tri, 198));
+             
+            //Check translating the shape with the interior poly
+            translated_tri = tri.Translate(new GridVector2(10, -10)); 
+            Assert.IsTrue(AreaApproxEqual(translated_tri, 198));
+            Assert.IsTrue(AreaApproxEqual(translated_tri, tri));
+
+            //Check removing the interior ring
+            tri.RemoveInteriorRing(0);
+            translated_tri.RemoveInteriorRing(0);
+            Assert.IsTrue(AreaApproxEqual(tri, 200));
+            Assert.IsTrue(AreaApproxEqual(tri, translated_tri));
         }
 
         [TestMethod]
         public void CentroidTest()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
             Assert.AreEqual(box.Centroid, box.BoundingBox.Center);
         }
 
         [TestMethod]
         public void PolygonConvexContainsTest()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
             Assert.IsTrue(box.Contains(new GridVector2(-5, 5)));
             Assert.IsTrue(box.Contains(new GridVector2(0, 0)));
@@ -376,7 +561,7 @@ namespace GeometryTests
             Assert.IsTrue(box.Contains(new GridVector2(0, 10))); //Point exactly on the line
             Assert.IsTrue(box.Contains(new GridVector2(0, -10))); //Point exactly on the line
 
-            GridPolygon inner_box = CreateBoxPolygon(5);
+            GridPolygon inner_box = Primitives.BoxPolygon(5);
             Assert.IsTrue(box.Contains(inner_box));
 
             //OK, add an inner ring and make sure contains works
@@ -393,9 +578,50 @@ namespace GeometryTests
         }
 
         [TestMethod]
+        public void PolygonConvexContainsExtTest()
+        {
+            GridPolygon box = Primitives.BoxPolygon(10);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-15, 5)), OverlapType.NONE);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-5, 5)), OverlapType.CONTAINED);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(0, 0)), OverlapType.CONTAINED);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-10, 0)), OverlapType.TOUCHING); //Point exactly on the line
+            Assert.AreEqual(box.ContainsExt(new GridVector2(10, 0)), OverlapType.TOUCHING); //Point exactly on the line
+            Assert.AreEqual(box.ContainsExt(new GridVector2(0, 10)), OverlapType.TOUCHING); //Point exactly on the line
+            Assert.AreEqual(box.ContainsExt(new GridVector2(0, -10)), OverlapType.TOUCHING); //Point exactly on the line
+
+            GridPolygon inner_box = Primitives.BoxPolygon(5);
+            Assert.AreEqual(box.ContainsExt(inner_box), OverlapType.CONTAINED);
+
+            //OK, add an inner ring and make sure contains works
+            box.AddInteriorRing(inner_box.ExteriorRing);
+
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-15, 5)), OverlapType.NONE); //Point inside inner box
+            Assert.AreEqual(box.ContainsExt(new GridVector2(0, 0)), OverlapType.NONE); //Point inside inner box
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-7.5, 7.5)), OverlapType.CONTAINED);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-7.5, 5)), OverlapType.CONTAINED); //x-axis perfectly overlapped with inner polygon
+
+            //Test points exactly on the inner ring
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-5, 0)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(5, 0)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(0, -5)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(0, 5)), OverlapType.TOUCHING);
+
+            //Test points exactly on corners of external and inner ring
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-5, -5)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(5, 5)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(5, -5)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-5, 5)), OverlapType.TOUCHING);
+
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-10, -10)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(10, 10)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(10, -10)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.ContainsExt(new GridVector2(-10, 10)), OverlapType.TOUCHING);
+        }
+
+        [TestMethod]
         public void PolygonConcaveContainsTest()
         {
-            GridPolygon box = CreateUPolygon(10);
+            GridPolygon box = Primitives.UPolygon(10);
             Assert.IsFalse(box.Contains(new GridVector2(0, 10)));
             Assert.IsFalse(box.Contains(new GridVector2(-15, 5)));
             Assert.IsTrue(box.Contains(new GridVector2(-6.6, -6.6)));
@@ -404,7 +630,7 @@ namespace GeometryTests
             Assert.IsTrue(box.Contains(box.ExteriorRing.First()));
             Assert.IsTrue(box.Contains(new GridVector2(-7.5, 10)));
 
-            GridPolygon outside = CreateUPolygon(1);
+            GridPolygon outside = Primitives.UPolygon(1);
             Assert.IsFalse(box.Contains(outside));
 
             GridPolygon inside = outside.Translate(new GridVector2(0, -7.5));
@@ -415,7 +641,7 @@ namespace GeometryTests
         public void PolygonContainsReproTest()
         {
             //Test for an edge case I hit once 
-            GridPolygon diamond = new GridPolygon(Primitives.DiamondVerticies(10));
+            GridPolygon diamond = new GridPolygon(Primitives.TrapezoidVerticies(10));
 
             Assert.IsFalse(diamond.Contains(new GridVector2(-11, 0)));
             Assert.IsTrue(diamond.Contains(new GridVector2(-9, 0)));
@@ -437,8 +663,8 @@ namespace GeometryTests
         [TestMethod]
         public void PolygonTestLineIntersection()
         {
-            GridPolygon OuterBox = CreateBoxPolygon(15);
-            GridPolygon U = CreateUPolygon(10);
+            GridPolygon OuterBox = Primitives.BoxPolygon(15);
+            GridPolygon U = Primitives.UPolygon(10);
             OuterBox.AddInteriorRing(U);
 
             //Line entirely outside outer polygon
@@ -482,8 +708,8 @@ namespace GeometryTests
         [TestMethod]
         public void PolygonTestLineCrossesPolygon()
         {
-            GridPolygon OuterBox = CreateBoxPolygon(15);
-            GridPolygon U = CreateUPolygon(10);
+            GridPolygon OuterBox = Primitives.BoxPolygon(15);
+            GridPolygon U = Primitives.UPolygon(10);
             OuterBox.AddInteriorRing(U);
 
             //Line entirely outside outer polygon
@@ -527,8 +753,8 @@ namespace GeometryTests
         [TestMethod]
         public void PolygonAddRemoveVertexTest()
         {
-            GridPolygon original_box = CreateBoxPolygon(10);
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon original_box = Primitives.BoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
             int numOriginalVerticies = box.ExteriorRing.Length;
             GridVector2 newVertex = new GridVector2(-10, -5);
             box.AddVertex(newVertex);
@@ -538,7 +764,7 @@ namespace GeometryTests
             box.RemoveVertex(newVertex);
             Assert.AreEqual(box.ExteriorRing.Length, numOriginalVerticies);
 
-            box = CreateBoxPolygon(10);
+            box = Primitives.BoxPolygon(10);
             newVertex = new GridVector2(-5, -10);
             box.AddVertex(newVertex);
             Assert.AreEqual(box.ExteriorRing.Length, numOriginalVerticies + 1);
@@ -555,9 +781,9 @@ namespace GeometryTests
         [TestMethod]
         public void PolygonAddRemoveInternalVertexTest()
         {
-            GridPolygon box = CreateBoxPolygon(10);
-            GridPolygon interior_poly_A = CreateBoxPolygon(1);
-            GridPolygon interior_poly_B = CreateBoxPolygon(7);
+            GridPolygon box = Primitives.BoxPolygon(10);
+            GridPolygon interior_poly_A = Primitives.BoxPolygon(1);
+            GridPolygon interior_poly_B = Primitives.BoxPolygon(7);
 
             interior_poly_A = interior_poly_A.Translate(new GridVector2(8.5, 8.5));
             Assert.AreEqual(interior_poly_A.Centroid, new GridVector2(8.5, 8.5));
@@ -674,9 +900,9 @@ namespace GeometryTests
         [TestMethod]
         public void PolygonRemoveVertexToInvalidStateTest()
         {
-            GridPolygon box = CreateBoxPolygon(10);
-            GridPolygon interior_poly_A = CreateBoxPolygon(1);
-            GridPolygon interior_poly_B = CreateBoxPolygon(7);
+            GridPolygon box = Primitives.BoxPolygon(10);
+            GridPolygon interior_poly_A = Primitives.BoxPolygon(1);
+            GridPolygon interior_poly_B = Primitives.BoxPolygon(7);
 
             interior_poly_A = interior_poly_A.Translate(new GridVector2(8.5, 8.5));
             Assert.AreEqual(interior_poly_A.Centroid, new GridVector2(8.5, 8.5));
@@ -699,8 +925,8 @@ namespace GeometryTests
         [TestMethod]
         public void PolygonAddPointsAtIntersectionsTest()
         {
-            GridPolygon box = CreateBoxPolygon(10);
-            GridPolygon U = CreateUPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
+            GridPolygon U = Primitives.UPolygon(10);
 
             //Move the box so the top line is along Y=0 
             box = box.Translate(new GridVector2(0, -10));
@@ -741,9 +967,9 @@ namespace GeometryTests
             //
             //        -15   -10  -5    0    5    10    15
             //
-            GridPolygon box = CreateBoxPolygon(10);
-            GridPolygon OuterBox = CreateBoxPolygon(15);
-            GridPolygon U = CreateUPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
+            GridPolygon OuterBox = Primitives.BoxPolygon(15);
+            GridPolygon U = Primitives.UPolygon(10);
 
             //Add the U polygon as an interior polygon
             OuterBox.AddInteriorRing(U);
@@ -773,7 +999,7 @@ namespace GeometryTests
             //OK, now test from the other direction 
             box.AddPointsAtIntersections(OuterBox);
 
-            //We should add 5 new verticies since the box had an extra vertex at -1,0 originally.  See CreateBoxPolygon
+            //We should add 5 new verticies since the box had an extra vertex at -1,0 originally.  See Primitives.BoxPolygon
             Assert.IsTrue(OriginalExteriorVertCount + 5 == box.ExteriorRing.Length);
             Assert.IsTrue(box.ExteriorRing.Contains(new GridVector2(-10, -15)));
             Assert.IsTrue(box.ExteriorRing.Contains(new GridVector2(10, -15)));
@@ -786,10 +1012,10 @@ namespace GeometryTests
         [TestMethod]
         public void EnumeratePolygonIndiciesTest()
         {
-            GridPolygon box = CreateBoxPolygon(10);
-            GridPolygon OuterBox = CreateBoxPolygon(15);
-            GridPolygon U = CreateUPolygon(10);
-            GridPolygon U2 = CreateBoxPolygon(1);
+            GridPolygon box = Primitives.BoxPolygon(10);
+            GridPolygon OuterBox = Primitives.BoxPolygon(15);
+            GridPolygon U = Primitives.UPolygon(10);
+            GridPolygon U2 = Primitives.BoxPolygon(1);
 
             //Move the box so it doesn't overlap
             box = box.Translate(new GridVector2(50, 0));
@@ -915,7 +1141,7 @@ namespace GeometryTests
         public void Theorem4Test()
         {
             GridLineSegment line;
-            GridPolygon U = CreateUPolygon(10);
+            GridPolygon U = Primitives.UPolygon(10);
 
             //Line passes along the entire length of exterior ring
             line = new GridLineSegment(new GridVector2(-11, -10), new GridVector2(11, -10));
@@ -948,7 +1174,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestInternalPolygonCut_NoInteriorCutPoint()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
 
             GridVector2 A = new GridVector2(-15, 1);
             GridVector2 B = new GridVector2(15, 1);
@@ -994,9 +1220,9 @@ namespace GeometryTests
         [TestMethod]
         public void TestInternalPolygonCut_NoInteriorCutPoint_InnerPoly()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
 
-            GridPolygon inner = CreateBoxPolygon(1).Translate(new GridVector2(0, -2));
+            GridPolygon inner = Primitives.BoxPolygon(1).Translate(new GridVector2(0, -2));
 
             box.AddInteriorRing(inner);
 
@@ -1046,7 +1272,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestInternalPolygonCut_OneInteriorCutPoint()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
 
             GridVector2 A = new GridVector2(-15, 1);
             GridVector2 B = new GridVector2(0, 1);
@@ -1095,7 +1321,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestInternalPolygonCut_TwoInteriorCutPoints()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
 
             GridVector2 A = new GridVector2(-15, 1);
             GridVector2 B = new GridVector2(0, 1);
@@ -1151,7 +1377,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestInternalPolygonCut_NoInteriorCutPointsThroughPolygonVerts()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
 
             GridVector2 A = new GridVector2(-15, 15);
             GridVector2 B = new GridVector2(15, -15);
@@ -1200,7 +1426,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestInternalPolygonCut_OneInteriorCutPointsThroughPolygonVerts()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
 
             GridVector2 A = new GridVector2(-15, 15);
             GridVector2 B = new GridVector2(0, 0);
@@ -1250,7 +1476,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestInternalPolygonCut_ExtraExteriorVerts_OneInteriorCutPointsThroughPolygonVerts()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
 
             GridVector2 A = new GridVector2(-15, 15);
             GridVector2 B = new GridVector2(0, 0);
@@ -1307,7 +1533,7 @@ namespace GeometryTests
         [TestMethod]
         public void TestExternalPolygonCut()
         {
-            GridPolygon box = CreateBoxPolygon(10);
+            GridPolygon box = Primitives.BoxPolygon(10);
 
             GridVector2 A = new GridVector2(-9, 1);
             GridVector2 B = new GridVector2(-15, 1);
@@ -1466,6 +1692,188 @@ namespace GeometryTests
             {
                 Assert.IsTrue(expected_cut.InteriorRings[iRing].SequenceEqual(cut.InteriorRings[iRing]));
             }
+        }
+
+        [TestMethod]
+        public void TestCorrespondingPointsSimple()
+        {
+            var A = Primitives.BoxPolygon(10);
+            var AInner = Primitives.BoxPolygon(1);
+            A.AddInteriorRing(AInner);
+
+            var B = Primitives.BoxPolygon(20).Translate(GridVector2.UnitY * 20);
+
+            var expectedCorresponding = new GridVector2[] {new GridVector2(-10,0),
+                                              new GridVector2(-1,0),
+                                              new GridVector2(1,0),
+                                              new GridVector2(10,0)};
+
+            //Simplified view, '+' are corresponding locations I expect
+            //      *---------*
+            //      |         |
+            //      |  *---*  |
+            //  *---+--+---+--+----*      
+            //  |   |  *---*  |    |
+            //  |   |         |    |
+            //  |   *---------*    |
+            //  |                  |
+
+            TestFindingCorrespondingPoints(A, B, expectedCorresponding);
+        }
+
+        [TestMethod]
+        public void TestCorrespondingPointsExactOverlap()
+        {
+            var A = Primitives.BoxPolygon(10);
+            var AInner = Primitives.BoxPolygon(1);
+            A.AddInteriorRing(AInner);
+
+            var B = A.Clone() as GridPolygon;
+
+            var expectedCorresponding = A.AllVerticies.ToArray();
+
+            //Simplified view, '+' are corresponding locations I expect
+            //      *---------*
+            //      |         |
+            //      |  *---*  |
+            //  *---+--+---+--+----*      
+            //  |   |  *---*  |    |
+            //  |   |         |    |
+            //  |   *---------*    |
+            //  |                  |
+
+            TestFindingCorrespondingPoints(A, B, expectedCorresponding);
+        }
+
+        [TestMethod]
+        public void TestCorrespondingPointsSimple2()
+        {
+            var A = Primitives.BoxPolygon(5);
+            var AInner = Primitives.BoxPolygon(1);
+            A.AddInteriorRing(AInner);
+
+            var B = Primitives.DiamondPolygon(5).Translate(GridVector2.UnitY * 5);
+
+            var expectedCorresponding = new GridVector2[] {new GridVector2(-1,1),
+                new GridVector2(1,1),
+                new GridVector2(-5,5),
+                new GridVector2(5,5)};
+
+            //Simplified view, '+' are corresponding locations I expect
+            //      *---------*
+            //      |         |
+            //      |  *---*  |
+            //      |  | + |  |
+            //      |  +---+  |
+            //      |/       \|
+            //      +---------+
+            //       \       /
+            //        \     /
+            //         \   /
+            //          \ /
+            //           *
+
+            TestFindingCorrespondingPoints(A, B, expectedCorresponding);
+        }
+
+        [TestMethod]
+        public void TestCorrespondingPointsSimple3()
+        {
+            var A = Primitives.BoxPolygon(5);
+            var AInner = Primitives.BoxPolygon(1);
+            A.AddInteriorRing(AInner);
+
+            var B = Primitives.DiamondPolygon(5).Translate(GridVector2.UnitY * 6);
+
+            var expectedCorresponding = new GridVector2[] {new GridVector2(0,1),
+                new GridVector2(-4,5),
+                new GridVector2(4,5)};
+
+            //Simplified view, '+' are corresponding locations I expect
+            //      *---------*
+            //      |         |
+            //      |  *---*  |
+            //      |  |   |  |
+            //      |  *-+-*  |
+            //      |   / \   |
+            //      *--+---+--*
+            //        /     \
+            //       *       *
+            //        \     /
+            //         \   /
+            //          \ /
+            //           *
+
+            TestFindingCorrespondingPoints(A, B, expectedCorresponding);
+        }
+
+
+        private void TestFindingCorrespondingPoints(GridPolygon A, GridPolygon B, GridVector2[] expectedCorresponding)
+        {
+            //Ensure test setup does not expect duplicate corresponding points
+            Assert.AreEqual(expectedCorresponding.Distinct().Count(), expectedCorresponding.Length);
+
+            var list = new GridPolygon[] { A.Clone() as GridPolygon, B.Clone() as GridPolygon };
+            var corresponding = list.AddCorrespondingVerticies().ToArray();
+            EvaluateCorrespondingPointsResults(list[0], list[1], expectedCorresponding, corresponding);
+
+            //Reverse the order the polygons are passed, check that we get the same result
+            var listReversed = new GridPolygon[] { B.Clone() as GridPolygon, A.Clone() as GridPolygon };
+            var reversedCorresponding = listReversed.AddCorrespondingVerticies().ToArray();
+            EvaluateCorrespondingPointsResults(listReversed[0], listReversed[1], expectedCorresponding, reversedCorresponding);
+        }
+
+        private void EvaluateCorrespondingPointsResults(GridPolygon A, GridPolygon B, GridVector2[] expectedCorresponding, GridVector2[] foundCorresponding)
+        {
+        //Ensure we found the correct number of corresponding points
+            Assert.AreEqual(foundCorresponding.Length, expectedCorresponding.Length);
+
+            //Ensure we do not have duplicate points in the output
+            Assert.AreEqual(foundCorresponding.Distinct().Count(), foundCorresponding.Length);
+
+            //Ensure the expected corresponding points are verticies in both polygons
+            var allAVerts = A.AllVerticies;
+            var allBVerts = B.AllVerticies;
+            foreach (var p in expectedCorresponding)
+            {
+                Assert.IsTrue(allAVerts.Contains(p));
+                Assert.IsTrue(allBVerts.Contains(p));
+            } 
+        }
+
+        /// <summary>
+        /// Replace an existing vertex in a polygon with one less than an epsilon distance away
+        /// </summary>
+        [TestMethod]
+        public void TestSetVertexEpsilonChange()
+        {
+            DoSetVertexFromOffsetPosition(Geometry.Global.Epsilon / 2);
+            DoSetVertexFromOffsetPosition(Geometry.Global.Epsilon * 2);
+            DoSetVertexFromOffsetPosition(1);
+        }
+
+        /// <summary>
+        /// Creates a polygon, translates it by a set amount, and the tests SetVertex on each polygon ensuring the 
+        /// SetVertex function works.
+        /// </summary>
+        /// <param name="offset"></param>
+        private void DoSetVertexFromOffsetPosition(double offset)
+        { 
+            var A = Primitives.BoxPolygon(10);
+            var AInner = Primitives.BoxPolygon(1);
+            A.AddInteriorRing(AInner);
+              
+            var AEpsilon = (A.Clone() as GridPolygon).Translate(GridVector2.UnitX * Geometry.Global.Epsilon / 2.0);
+
+            var expectedPoints = A.AllVerticies;
+
+            var enumerator = new PolygonVertexEnum(AEpsilon, reverse: true);
+            foreach(PolygonIndex pIndex in enumerator)
+            {
+                var desiredValue = A[pIndex];
+                AEpsilon.SetVertex(pIndex, desiredValue);
+                Assert.IsTrue(AEpsilon[pIndex] == desiredValue);
+            } 
         }
 
 

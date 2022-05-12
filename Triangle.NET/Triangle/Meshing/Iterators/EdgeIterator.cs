@@ -16,9 +16,9 @@ namespace TriangleNet.Meshing.Iterators
     public class EdgeIterator : IEnumerator<Edge>
     {
         IEnumerator<Triangle> triangles;
-        Otri tri = default(Otri);
-        Otri neighbor = default(Otri);
-        Osub sub = default(Osub);
+        Otri tri = default;
+        Otri neighbor = default;
+        Osub sub = default;
         Edge current;
         Vertex p1, p2;
 

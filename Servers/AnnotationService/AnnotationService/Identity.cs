@@ -33,7 +33,7 @@ namespace Annotation.Identity
         /// </summary>
         public string Token { get; }
 
-        private List<string> ValidatedClaims = new List<string>();
+        private readonly List<string> ValidatedClaims = new List<string>();
 
         public bool IsInRole(string role)
         {
@@ -118,14 +118,14 @@ namespace Annotation.Identity
             Console.WriteLine(validation.Json);
             */
 #endif
-            bool FoundClaim = false;
+            bool foundClaim = false;
             foreach (var c in validation.Claims)
             { 
                 if (c.Type == "scope")
-                    FoundClaim = FoundClaim | c.Value.Split().Contains(scope);
+                    foundClaim = foundClaim | c.Value.Split().Contains(scope);
             }
 
-            return FoundClaim;
+            return foundClaim;
         }
     }
     
@@ -251,6 +251,5 @@ namespace Annotation.Identity
             }
             return true;
         } 
-    }
-    
+    } 
 }

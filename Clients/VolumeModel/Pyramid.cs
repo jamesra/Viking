@@ -29,8 +29,8 @@ namespace Viking.VolumeModel
 
         protected Pyramid(XElement PyramidElement)
         {
-            this.Name = IO.GetAttributeCaseInsensitive(PyramidElement, "name").Value;
-            this.Path = IO.GetAttributeCaseInsensitive(PyramidElement, "path").Value;
+            this.Name = PyramidElement.GetAttributeCaseInsensitive("name").Value;
+            this.Path = PyramidElement.GetAttributeCaseInsensitive("path").Value;
 
             XElement scale_elem = PyramidElement.Elements().Where(elem => elem.Name.LocalName == "Scale").FirstOrDefault();
             if (scale_elem != null)
@@ -40,8 +40,8 @@ namespace Viking.VolumeModel
             IEnumerable<XElement> LevelElements = PyramidElement.Elements().Where(elem => elem.Name.LocalName == "Level");
             foreach (XElement levelElement in LevelElements)
             {
-                int Downsample = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(levelElement, "Downsample").Value);
-                string LevelPath = IO.GetAttributeCaseInsensitive(levelElement, "path").Value;
+                int Downsample = System.Convert.ToInt32(levelElement.GetAttributeCaseInsensitive("Downsample").Value);
+                string LevelPath = levelElement.GetAttributeCaseInsensitive("path").Value;
 
                 AddLevel(Downsample, LevelPath);
             }
@@ -55,8 +55,8 @@ namespace Viking.VolumeModel
             if (!LevelElements.Any())
                 return null;
 
-            string Name = IO.GetAttributeCaseInsensitive(PyramidElement, "name").Value;
-            string Path = IO.GetAttributeCaseInsensitive(PyramidElement, "path").Value;
+            string Name = PyramidElement.GetAttributeCaseInsensitive("name").Value;
+            string Path = PyramidElement.GetAttributeCaseInsensitive("path").Value;
 
             Pyramid pyramid = new Pyramid(Name, Path);
 
@@ -68,8 +68,8 @@ namespace Viking.VolumeModel
 
             foreach (XElement levelElement in LevelElements)
             {
-                int Downsample = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(levelElement, "Downsample").Value);
-                string LevelPath = IO.GetAttributeCaseInsensitive(levelElement, "path").Value;
+                int Downsample = System.Convert.ToInt32(levelElement.GetAttributeCaseInsensitive("Downsample").Value);
+                string LevelPath = levelElement.GetAttributeCaseInsensitive("path").Value;
 
                 pyramid.AddLevel(Downsample, LevelPath);
             }

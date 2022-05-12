@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace Geometry
@@ -10,9 +11,15 @@ namespace Geometry
 
         /// <summary>
         /// Value used to round values.  Currently used to ensure points hash to the same value if they are
-        /// within an epsilon distance
+        /// within an epsilon distance.
         /// </summary>
         public const int SignificantDigits = 3;
+
+        /// <summary>
+        /// Transformed points are rounded to a set number of significant digits.  This prevents floating point
+        /// precision errors from causing errors in various geometric tests.
+        /// </summary>
+        public const int TransformSignificantDigits = 3;
 
         public const float EpsilonSquared = Global.Epsilon * Global.Epsilon;
 
@@ -40,13 +47,12 @@ namespace Geometry
 
         public static bool IsCacheFileValid(string CacheStosPath, ICollection<DateTime> times)
         {
-            if (System.IO.File.Exists(CacheStosPath))
-            {
-                DateTime CacheLastModifiedUtc = System.IO.File.GetLastWriteTimeUtc(CacheStosPath);
-                return times.All(server_transform_time => server_transform_time <= CacheLastModifiedUtc);
-            }
+            var fInfo = new FileInfo(CacheStosPath);
+            if (false == fInfo.Exists)
+                return false;
 
-            return false;
+            DateTime CacheLastModifiedUtc = fInfo.LastWriteTimeUtc;
+            return times.All(server_transform_time => server_transform_time <= CacheLastModifiedUtc);
         }
 
         public static bool TryDeleteCacheFile(string FilePath)
@@ -73,7 +79,7 @@ namespace Geometry
         }
 
         //TODO: Choose number of points based on distance between control points
-        static public readonly uint NumOpenCurveInterpolationPoints = 3;
-        static public readonly uint NumClosedCurveInterpolationPoints = 5;
+        public static readonly uint NumOpenCurveInterpolationPoints = 3;
+        public static readonly uint NumClosedCurveInterpolationPoints = 5;
     }
 }

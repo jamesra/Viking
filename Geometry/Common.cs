@@ -65,7 +65,7 @@ namespace Geometry
             } 
         }
 
-        private static Regex splitLinesRegex = new Regex(@"\r\n|\r|\n", RegexOptions.Compiled);
+        private static readonly Regex splitLinesRegex = new Regex(@"\r\n|\r|\n", RegexOptions.Compiled);
         public static string[] ToLines(this string input)
         {
             if (input == null)

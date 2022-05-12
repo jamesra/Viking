@@ -6,27 +6,35 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
+using GeometryTests;
+using Newtonsoft.Json.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
-    enum PolygonIntersectionTestDataType
+    enum PolygonIntersectionTestDataSource
     {
         JSON_POLYGON_INTERSECTION,
-        FS_CHECK
+        FS_CHECK,
+        JSON_FILE
     }
 
     public class PolygonIntersectionView
     {
-        PolygonSetView PolygonsView = null;
+        readonly PolygonSetView PolygonsView = null;
+         
 
         public PolygonIntersectionView(GridPolygon[] polygons)
         {
-            PolygonsView = new PolygonSetView(polygons);
-            PolygonsView.PointLabelType = IndexLabelType.POLYGON | IndexLabelType.POSITION;
+            PolygonsView = new PolygonSetView(polygons, PolygonSetView.DefaultColorMapping)
+            {
+                PointLabelType = IndexLabelType.POLYGON | IndexLabelType.POSITION
+            };
         }
 
         public void Draw(MonoTestbed window, Scene scene)
@@ -44,58 +52,85 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        Scene scene;
-        Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
-        GamePadStateTracker Gamepad = new GamePadStateTracker();
+        private string JSONFile = "PolygonIntersectionRepro.json";
 
-        PolygonIntersectionTestDataType TestType = PolygonIntersectionTestDataType.FS_CHECK;
+        Scene scene;
+        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        //readonly PolygonIntersectionTestDataSource TestType = PolygonIntersectionTestDataSource.FS_CHECK;
+        readonly PolygonIntersectionTestDataSource TestType = PolygonIntersectionTestDataSource.JSON_FILE;
+        //readonly PolygonIntersectionTestDataType TestType = PolygonIntersectionTestDataType.JSON_POLYGON_INTERSECTION;
 
         Task TestTask = null;
 
         PolygonIntersectionView polygonSetView = null;
 
-        private static string[] PolygonIntersections1 = new string[]
+        private static readonly string[] PolygonIntersections1 = new string[]
         {
-            "{  \"ExteriorRing\": [    {      \"X\": 84.0,      \"Y\": -87.0    },    {      \"X\": 86.352103764631451,      \"Y\": -5.1467889908256881    },   {      \"X\": 89.0,      \"Y\": 87.0    },    {      \"X\": 72.422599608099276,      \"Y\": 85.001306335728287    },    {      \"X\": -52.0,      \"Y\": 70.0    },    {      \"X\": 84.0,      \"Y\": -87.0    }  ],  \"InteriorRings\": []}",
-            "{ \"ExteriorRing\": [    {      \"X\": 89.0,      \"Y\": -6.0    },    {      \"X\": 89.0,      \"Y\": 99.0    },    {      \"X\": 72.422599608099276,      \"Y\": 85.001306335728287    },    {      \"X\": -1.0,      \"Y\": 23.0    },    {      \"X\": 86.352103764631451,      \"Y\": -5.1467889908256881    },    {      \"X\": 89.0,      \"Y\": -6.0    }  ],  \"InteriorRings\": []    }"
+            "{\"ExteriorRing\": [{\"X\": -30.0,\"Y\": 70.0},{\"X\": -93.928035982008993,\"Y\": -77.526236881559214},{\"X\": -95.0,\"Y\": -80.0},{\"X\": -91.377245508982043,\"Y\": -76.487025948103792},{\"X\": 70.0,\"Y\": 80.0},{\"X\": -30.0,\"Y\": 70.0}],\"InteriorRings\": []}",
+            "{ \"ExteriorRing\": [{\"X\": -100.0,\"Y\": -80.0},{\"X\": -95.0,\"Y\": -80.0},{\"X\": 35.0,\"Y\": -25.0},{\"X\": -91.377245508982043,\"Y\": -76.487025948103792},{\"X\": -93.928035982008993,\"Y\": -77.526236881559214},    {\"X\": -100.0,\"Y\": -80.0}],\"InteriorRings\": []}"
         };
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
-             
-            PopulateTestTask();
+
+            TestTask = PopulateTestTask();
+            return TestTask;
         }
 
-        private void PopulateTestTask()
+        private async Task PopulateTestTask()
         {
             GridRectangle rect = new GridRectangle(GridVector2.Zero, 50);
-            if (TestType == PolygonIntersectionTestDataType.JSON_POLYGON_INTERSECTION)
+            GridPolygon[] polygons = Array.Empty<GridPolygon>();
+            if (TestType == PolygonIntersectionTestDataSource.JSON_POLYGON_INTERSECTION)
             {
-                GridPolygon[] polygons = PolygonIntersections1.Select(s => GeometryJSONExtensions.PolygonFromJSON(s)).ToArray();
-
-                GridPolygon p1 = polygons[0];
+                polygons = PolygonIntersections1.Select(s => GeometryJSONExtensions.PolygonFromJSON(s)).ToArray();
+                 
                 //FirstTriangulationDone = true;  
+                
+            }
+            else if (TestType == PolygonIntersectionTestDataSource.FS_CHECK)
+            {
+                TestTask = Task.Run(() => {
+                    GeometryTests.GridPolygonTest.TestPolygonGeneratorUnderpinnings(this.OnPolygonUpdate);
+                }); 
+            }
+            else if (TestType == PolygonIntersectionTestDataSource.JSON_FILE)
+            {
+                FileInfo finfo = new FileInfo(JSONFile);
+                if (finfo.Exists == false)
+                    throw new ArgumentException($"Input file {JSONFile} not found");
+
+                string json = System.IO.File.ReadAllText(JSONFile);
+                polygons = GeometryJSONExtensions.PolygonsFromJSON(json);
+            }
+
+            if (polygons != null && polygons.Length > 0)
+            { 
                 rect = polygons.BoundingBox();
-                scene.Camera.LookAt = rect.Center.ToXNAVector2();
-                scene.Camera.Downsample = Math.Max(rect.Height, rect.Width) / Math.Min(scene.Viewport.Height, scene.Viewport.Width);
+                scene.VisibleWorldBounds = rect;
+                //scene.Camera.LookAt = rect.Center.ToXNAVector2();
+                //scene.Camera.Downsample = Math.Max(rect.Height, rect.Width) / Math.Min(scene.Viewport.Height, scene.Viewport.Width);
 
                 polygonSetView = new PolygonIntersectionView(polygons);
 
-                TestTask = new Task(() => {
-
-                    var CorrespondingPoints = polygons.AddCorrespondingVerticies();
+                TestTask = Task.Run(() => {
                     polygonSetView = new PolygonIntersectionView(polygons);
+                    var result = GridPolygonTest.AssessPolygonIntersectionAndCorrespondancePoints(polygons[0], polygons[1], OnPolygonUpdate);
+                    result.VerboseCheckThrowOnFailure();
+                });
+            }
 
-                });
-            }
-            else if (TestType == PolygonIntersectionTestDataType.FS_CHECK)
-            {
-                TestTask = new Task(() => {
-                    GeometryTests.GridPolygonTest.TestPolygonIntersectionGenerator(this.OnPolygonUpdate);
-                });
-            }
+            await TestTask;
+        }
+
+
+        AnnotationVizLib.MorphologyGraph graph;
+        private void PopulateFromOData()
+        {
+
         }
 
         private void OnPolygonUpdate(GridPolygon[] polygons, List<GridVector2> found, List<GridVector2> expected)
@@ -136,7 +171,7 @@ namespace MonogameTestbed
 
                 if (TestTask == null)
                 {
-                    PopulateTestTask();
+                    TestTask = PopulateTestTask();
                 }
 
                 TestTask.Start();

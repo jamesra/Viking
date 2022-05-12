@@ -2,9 +2,9 @@
 using System.Linq;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
-using Viking.Identity.Models.UserViewModels;
+using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
-namespace Viking.Identity
+namespace Viking.Identity.Server.WebManagement
 {
     /// <summary>
     /// Helper methods to generate viewmodels related to permissions

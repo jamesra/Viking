@@ -6,14 +6,12 @@ namespace Annotation.ViewModels.Commands
     public class DelegateCommand : System.Windows.Input.ICommand
     {  
         public Action<object> on_execute;
-        public Func<object, bool> can_execute;
-        private ICommand assignParentCommand;
-        private object canAssignParentCommand;
+        public Func<object, bool> can_execute; 
 
         public event EventHandler CanExecuteChanged
         {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
+            add => CommandManager.RequerySuggested += value;
+            remove => CommandManager.RequerySuggested -= value;
         }
 
         public void RaiseCanExecuteChanged()
@@ -26,13 +24,7 @@ namespace Annotation.ViewModels.Commands
             on_execute = Execute;
             can_execute = CanExecute;
         }
-
-        public DelegateCommand(ICommand assignParentCommand, object canAssignParentCommand)
-        {
-            this.assignParentCommand = assignParentCommand;
-            this.canAssignParentCommand = canAssignParentCommand;
-        }
-
+         
         public bool CanExecute(object parameter)
         {
             if (can_execute != null)
@@ -55,8 +47,8 @@ namespace Annotation.ViewModels.Commands
 
         public event EventHandler CanExecuteChanged
         {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
+            add => CommandManager.RequerySuggested += value;
+            remove => CommandManager.RequerySuggested -= value;
         }
 
         public void RaiseCanExecuteChanged()

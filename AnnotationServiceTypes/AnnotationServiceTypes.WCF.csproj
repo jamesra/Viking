@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Interfaces\IAnnotatePermittedStructureLinks.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="Types\AnnotationSet.cs" />
     <Compile Include="Attributes.cs" />
     <Compile Include="Types\DataObject.cs" />

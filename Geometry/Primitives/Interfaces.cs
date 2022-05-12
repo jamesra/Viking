@@ -40,14 +40,32 @@ namespace Geometry
         POINT = 0,
         CIRCLE = 1,
         ELLIPSE = 2,
-        POLYGON = 4,     //Polygon, no smoothing of exterior verticies with curve fitting
-        OPENCURVE = 5,   //Line segments with a line width, additional control points created using curve fitting function
-        CURVEPOLYGON = 6, //Polygon whose outer and inner verticies are supplimented with a curve fitting function
-        CLOSEDCURVE = 7, //Ring of line segments with a line width
+        /// <summary>
+        /// Polygon, no smoothing of exterior verticies with curve fitting
+        /// </summary>
+        POLYGON = 4,     
+        /// <summary>
+        /// Line segments with a line width, additional control points created using curve fitting function
+        /// </summary>
+        OPENCURVE = 5,
+        /// <summary>
+        /// Polygon whose outer and inner verticies are supplimented with a curve fitting function
+        /// </summary>
+        CURVEPOLYGON = 6, 
+        /// <summary>
+        /// Closed ring of line segments with a line width
+        /// </summary>
+        CLOSEDCURVE = 7, 
         RECTANGLE = 8,
         TRIANGLE = 9,
         LINE = 10,
-        COLLECTION = 11, //A collection of many geometry objects
+        /// <summary>
+        /// A collection of many geometry objects
+        /// </summary>
+        COLLECTION = 11,
+        /// <summary>
+        /// Points describing a series of connected line segments.
+        /// </summary>
         POLYLINE = 12
     };
 
@@ -106,14 +124,16 @@ namespace Geometry
     }
 
 
-    public interface IPoint2D : IPointN, IEquatable<IPoint2D>, ICentroid
+    public interface IPoint2D : IPointN, IEquatable<IPoint2D>, ICentroid, IShape2D
     {
         double X { get; set; }
         double Y { get; set; }
     }
 
-    public interface IPoint : IPoint2D, IEquatable<IPoint>
+    public interface IPoint : IPointN, IEquatable<IPoint>
     {
+        double X { get; set; }
+        double Y { get; set; }
         double Z { get; set; }
     }
 

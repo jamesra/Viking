@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Serilog;
 
-namespace Viking.Identity
+namespace Viking.Identity.Server.WebManagement
 {
     public class Program
     {
@@ -13,7 +13,7 @@ namespace Viking.Identity
 #if DEBUG
                 .WriteTo.Console()
 #endif
-                .WriteTo.File("IDServerLogs.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
+                .WriteTo.File("IdentityServerManagement.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
                 .CreateLogger();
 
             BuildWebHost(args).Run();

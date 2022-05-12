@@ -1,32 +1,28 @@
-﻿using IdentityModel;
-using IdentityServer4.EntityFramework.DbContexts;
+﻿using System;
+using System.Linq;
+using System.Reflection;
+using IdentityModel;
+using IdentityModel.AspNetCore.OAuth2Introspection;
+using IdentityServer4.Extensions;
+using IdentityServer4.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using System;
-using System.Linq;
-using System.Reflection;
-using IdentityModel.AspNetCore.OAuth2Introspection;
-using IdentityModel.Client;
-using IdentityServer4;
-using IdentityServer4.Extensions;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Viking.Identity.Authorization;
 using Viking.Identity.Data;
-using Viking.Identity.Extensions;
 using Viking.Identity.Models;
-using Viking.Identity.Services;
+using Viking.Identity.Server.Authorization;
+using Viking.Identity.Server.WebManagement.Extensions;
+using Viking.Identity.Server.Services;
 
-namespace Viking.Identity
+namespace Viking.Identity.Server.WebManagement
 {
     public static class PolicySchemeSelector
     {
@@ -115,7 +111,15 @@ namespace Viking.Identity
 
             //System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Add("sub", System.IdentityModel.ClaimTypes.NameIdentifier);
 
-            services.ConfigureIdentityServerDataContext(Configuration.GetSection("DataContext"));
+            services.AddSingleton<ICorsPolicyService>((container) => {
+                var logger = container.GetRequiredService<ILogger<DefaultCorsPolicyService>>();
+                return new DefaultCorsPolicyService(logger) {
+                    //AllowedOrigins = { "https://websvc1.connectomes.utah.edu", "https://bar" }
+                    AllowAll = true
+                };
+            });
+
+            services.ConfigureIdentityServerDataContext(Configuration);
 
             services.AddControllers(); //Adds api controllers
             services.AddControllersWithViews(); 
@@ -126,17 +130,29 @@ namespace Viking.Identity
             //var configConnectionString = Configuration.GetConnectionString("ConfigConnection");
 
             services.AddLogging(loggingBuilder =>
-                loggingBuilder.AddSerilog(dispose: true));
+                loggingBuilder.AddSerilog(dispose: true).AddConsole()
+            );
              
             services.AddAntiforgery();
              
-            IConfigurationSection identityServerConfig = Configuration.GetSection("IdentityServer");
+            //IConfigurationSection identityServerConfig = Configuration.GetSection("IdentityServer");
+            JwtBearerOptions jwtOptions = Configuration.GetSection(nameof(JwtBearerOptions)).Get<JwtBearerOptions>();
+
+            //Configuration.GetSection(nameof(JwtBearerOptions)).Bind(jwtOptions);
+            services.Configure<JwtBearerOptions>(Configuration.GetSection(nameof(JwtBearerOptions)));
+
+            var serverOptions = Configuration.GetSection(nameof(VikingIdentityServerOptions)).Get<VikingIdentityServerOptions>();
+            services.Configure<VikingIdentityServerOptions>(
+                Configuration.GetSection(nameof(VikingIdentityServerOptions)));
+            //jwtOptions.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
+              
             var OAuth2ConfigurationSection = Configuration.GetSection(nameof(OAuth2IntrospectionOptions));
             if (OAuth2ConfigurationSection is null)
                 throw new ArgumentException(
                     $"{nameof(OAuth2IntrospectionOptions)} section missing from appsettings.json configuration");
 
             OAuth2IntrospectionOptions OAuth2Options = OAuth2ConfigurationSection.Get<OAuth2IntrospectionOptions>();
+            OAuth2Options.Validate();
 
             services.AddAuthentication(options =>
             {
@@ -166,30 +182,34 @@ namespace Viking.Identity
                     OAuth2ConfigurationSection.Bind(options);
                 })
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuer = true,
-                    ValidateTokenReplay = true,
-                    ValidateIssuerSigningKey = true, 
-                };
-
-                options.RequireHttpsMetadata = false;
-                options.Authority = identityServerConfig["Endpoint"];
-                options.SaveToken = true;
-
-                options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
-                options.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
-
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    NameClaimType = "name",
-                    ValidAudience = "Viking.Annotation"
-                    //RoleClaimType = "role",
-                };
-            })
+                    Configuration.Bind(nameof(JwtBearerOptions), options);
+                    options.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
+                    /*
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuer = true,
+                        ValidateTokenReplay = true,
+                        ValidateIssuerSigningKey = true, 
+                    };
+    
+                    options.RequireHttpsMetadata = jwtOptions.RequireHttpsMetadata;
+                    options.Authority = jwtOptions.Authority;
+                    options.SaveToken = true;
+    
+                    options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
+                    options.ForwardDefaultSelector = PolicySchemeSelector.SchemeSelector;
+    
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        NameClaimType = "name",
+                        ValidAudience = "Viking.Annotation"
+                        //RoleClaimType = "role",
+                    };
+                    */
+                })
             //.AddApplicationCookie()
              
             // reference tokens
@@ -198,7 +218,7 @@ namespace Viking.Identity
             {
                 options.Authority = identityServerConfig["Endpoint"];
                 options.ClientId = "mvc";
-                options.ClientSecret = Config.Secret;
+                options.ClientSecret = Config.Secret.ToSha256();
                 options.SaveToken = true;
                 options.SkipTokensWithDots = true;
                 options.
@@ -209,7 +229,7 @@ namespace Viking.Identity
             //services.AddHttpContextAccessor();
             //services.AddTransient<System.Security.Claims.ClaimsPrincipal>(provider => provider.GetService<IHttpContextAccessor>().HttpContext.User);
             services.AddTransient<IdentityServer4.Validation.ICustomTokenRequestValidator, UserScopeTokenRequestValidator>();
-            services.AddScoped<AuthorizationHelper>();
+                //services.AddScoped<IAuthorizationHelper, AuthorizationHelper>();
             services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
             //services.AddTransient<IdentityServer.Extensions.AuthorizationHelper>();
@@ -256,6 +276,8 @@ namespace Viking.Identity
             //services.AddMvc(options => options.EnableEndpointRouting = false);
              
             // configure identity server with in-memory stores, keys, clients and scopes
+            
+            /*
             var builder = services.AddIdentityServer(options =>
             {
                 options.Events.RaiseErrorEvents = true;
@@ -272,10 +294,11 @@ namespace Viking.Identity
                             sql => sql.MigrationsAssembly(migrationsAssembly));
                 })
                 */
+            /*
                 //.AddScopeParser<ParameterizedScopeParser>()
-                .AddInMemoryApiScopes(Config.GetApiScopes())
-                .AddInMemoryApiResources(Config.GetApiResources())
-                .AddInMemoryClients(Config.GetClients()) 
+                .AddInMemoryApiScopes(Config.GetApiScopes(serverOptions))
+                .AddInMemoryApiResources(Config.GetApiResources(serverOptions))
+                .AddInMemoryClients(Config.GetClients(serverOptions)) 
                 .AddInMemoryIdentityResources(Config.GetIdentityResources())
                 .AddResourceStore<IdentityServerCustomResourceStore>()
                 .AddClientStore<IdentityServerVikingClientStore>()
@@ -292,10 +315,11 @@ namespace Viking.Identity
                 })                
                 .AddAspNetIdentity<ApplicationUser>()
                 .AddJwtBearerClientAuthentication();
-
+            */
             //            builder.AddDeveloperSigningCredential();
-            IConfigurationSection sslConfig = Configuration.GetSection("SSL");
+            /*IConfigurationSection sslConfig = Configuration.GetSection("SSL");
             ConfigureSSL(builder, sslConfig);
+            */
 
             services.AddTransient<IdentityServer4.Services.IProfileService, IdentityWithExtendedClaimsProfileService>();
               
@@ -323,13 +347,15 @@ namespace Viking.Identity
                 // client config is inferred from OpenID Connect settings
                 // if you want to specify scopes explicitly, do it here, otherwise the scope parameter will not be sent
                 //options.Client.Scope = "Viking.Annotation";
+                /*
                 options.Client.Clients.Add("identityserver", new ClientCredentialsTokenRequest
                 {
-                    Address = identityServerConfig["Endpoint"],
+                    Address = jwtOptions.Authority,
                     ClientId = "mvc",
-                    ClientSecret = "CorrectHorseBatteryStaple",
+                    ClientSecret = serverOptions.Secret.ToSha256(),
                     Scope = "openid profile Viking.Annotation"
                 });
+                */
             });
             /*
             services.AddUserAccessTokenHttpClient("user_client", null, (client) =>
@@ -343,7 +369,7 @@ namespace Viking.Identity
                 client.BaseAddress = new Uri(identityServerConfig["Endpoint"] + "/api/");
             });
             */
-            services.AddMvcCore().AddAuthorization();
+            //services.AddMvcCore().AddAuthorization();
         }
 
         public void ConfigureSSL(IIdentityServerBuilder builder, IConfigurationSection config)
@@ -388,8 +414,8 @@ namespace Viking.Identity
              
             app.UseSerilogRequestLogging();
             app.UseHttpsRedirection();
-            app.UseStaticFiles();           
-            app.UseIdentityServer();
+            app.UseStaticFiles();
+            //app.UseIdentityServer();
             app.UseRouting(); 
             app.UseAuthentication();
             app.UseAuthorization();
@@ -411,11 +437,12 @@ namespace Viking.Identity
 
         private void InitializeDatabase(IApplicationBuilder app)
         {
+            /*
             using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
             {
                 serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
             }
-             
+             */
             /* This should be added when I transition from keeping configuration in memory to keeping it in the database*/
                 /*
                var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();

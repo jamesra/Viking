@@ -71,9 +71,22 @@ namespace Viking.UI.Commands
         /// </summary>
         /// <param name="CommandType"></param>
         /// <param name="Args"></param>
-        public void EnqueueCommand(System.Type CommandType, Object[] Args)
+        public void EnqueueCommand(System.Type CommandType, params object[] Args)
         {
             CommandQueueEntry entry = new CommandQueueEntry(CommandType, Args);
+            _CommandQueue.Enqueue(entry);
+            OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
+        }
+
+        /// <summary>
+        /// We enqueue commands that we want to run immediately after completing the current command
+        /// If the default command is active, then set the passed command as the current command, otherwise add to queue.
+        /// </summary>
+        /// <param name="CommandType"></param>
+        /// <param name="Args"></param>
+        public void EnqueueCommand<T>(params object[] Args)
+        {
+            CommandQueueEntry entry = new CommandQueueEntry(typeof(T), Args);
             _CommandQueue.Enqueue(entry);
             OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
         }
@@ -272,7 +285,7 @@ namespace Viking.UI.Commands
         private void AssignID()
         {
             this.ID = _NextID;
-            _NextID = _NextID + 1;
+            _NextID++;
         }
 
         public Command(Viking.UI.Controls.SectionViewerControl parent)
@@ -434,8 +447,7 @@ namespace Viking.UI.Commands
                         UnsubscribeToInterfaceEvents();
                         OnDeactivate();
 
-                        if (OnCommandCompleteHandler != null)
-                            OnCommandCompleteHandler(this, null);
+                        OnCommandCompleteHandler?.Invoke(this, null);
                     }
 
                     _Deactivated = value;
@@ -484,7 +496,7 @@ namespace Viking.UI.Commands
             }
             else if (Command.OnUnhandledMouseDown != null)
             {
-                Command.OnUnhandledMouseDown(sender, e); 
+                OnUnhandledMouseDown(sender, e); 
             }
         }
 
@@ -581,8 +593,6 @@ namespace Viking.UI.Commands
                 //    Trace.WriteLine("Angle changed " + angle.ToString() + " to " + control.CameraRotation.ToString(), "Command"); 
 
                 Parent.Camera.Rotation += angle;
-
-                this.Parent.Invalidate();
             }
 
             SaveAsOldMousePosition(e);            

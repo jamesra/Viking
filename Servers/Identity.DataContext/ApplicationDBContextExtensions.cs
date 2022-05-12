@@ -47,9 +47,9 @@ namespace Viking.Identity.Data
         public static async Task<bool> IsUserPermitted(this ApplicationDbContext context, long ResourceId, string UserId, string PermissionId)
         {
             var permitted_users = from user in context.Users
-                                  join permit in context.GrantedUserPermissions on user.Id equals permit.UserId
-                                  where permit.PermissionId == PermissionId && permit.ResourceId == ResourceId && permit.UserId == UserId
-                                  select user;
+                join permit in context.GrantedUserPermissions on user.Id equals permit.UserId
+                where permit.PermissionId == PermissionId && permit.ResourceId == ResourceId && permit.UserId == UserId
+                select user;
 
             if (permitted_users.Any())
                 return true;
@@ -57,14 +57,16 @@ namespace Viking.Identity.Data
             var group_memberships = await context.RecursiveMemberOfGroups(UserId);
 
             var permitted_groups = from g in group_memberships
-                                    join ggp in context.GrantedGroupPermissions on g.Id equals ggp.GroupId
-                                    where ggp.PermissionId == PermissionId && ggp.ResourceId == ResourceId
-                                    select ggp.GroupId;
+                join ggp in context.GrantedGroupPermissions on g.Id equals ggp.GroupId
+                where ggp.PermissionId == PermissionId && ggp.ResourceId == ResourceId
+                select ggp.GroupId;
 
             var intersection = permitted_groups.Intersect(group_memberships.Select(g => g.Id));
 
             return intersection.Any();
         }
+
+        
 
         /// <summary>
         /// Returns all PermissionIds the user has for the specified resource

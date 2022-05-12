@@ -11,8 +11,8 @@ namespace Geometry
         CONCAVE = -1,
         PARALLEL = 0,
         CONVEX = 1
-    } 
-     
+    }
+
     /// <summary>
     /// A polygon with interior rings representing holes
     /// Rings are described by points.  The first and last point should match
@@ -97,8 +97,6 @@ namespace Geometry
             }
         }
 
-
-
         /// <summary>
         /// Test if a line segment is one of the polygons exterior segments
         /// </summary>
@@ -148,8 +146,7 @@ namespace Geometry
             }
         }
 
-
-        List<GridPolygon> _InteriorPolygons = new List<GridPolygon>();
+        readonly List<GridPolygon> _InteriorPolygons = new List<GridPolygon>();
 
         /// <summary>
         /// Read only please
@@ -212,18 +209,26 @@ namespace Geometry
 
         public GridPolygon(IEnumerable<GridVector2> exteriorRing) : this(exteriorRing.ToArray())
         { }
-
-        public GridPolygon(GridVector2[] exteriorRing)
+          
+        public GridPolygon(IEnumerable<IPoint2D> exteriorRing, IEnumerable<IPoint2D[]> interiorRings)
+            : this(exteriorRing.Select(p => p.Convert()).ToArray(),
+                   interiorRings.Select(inner_ring => inner_ring.Select(p => p.Convert()).ToArray()).ToArray())
         {
-            //Debug.Assert(exteriorRing.Length < 1000, "This is a huge polygon, why?");
+        }
+
+        public GridPolygon(GridVector2[] exteriorRing, IEnumerable<GridVector2[]> interiorRings = null)
+        {
+            Debug.Assert(exteriorRing.Length < 5000, "This is a huge polygon, why?");
 
             if (!exteriorRing.IsValidClosedRing())
             {
                 throw new ArgumentException("Exterior polygon ring must be valid");
             }
 
+#if DEBUG
             //The only duplicate point should be the first and the last.  If not throw an exception
-            var nonDuplicatedPoints = exteriorRing.RemoveDuplicates();
+            //This is slow, debug only?
+            var nonDuplicatedPoints = exteriorRing.RemoveDuplicates(); 
             if (nonDuplicatedPoints.Length != exteriorRing.Length - 1)
             {
                 throw new ArgumentException("Duplicate point found in exterior ring");
@@ -231,29 +236,18 @@ namespace Geometry
 
             if (exteriorRing.AreClockwise())
             {
+                throw new ArgumentException($"Polygon exterior ring must be in {RotationDirection.COUNTERCLOCKWISE} order"); 
+            }
+#else
+            if (exteriorRing.AreClockwise())
+            { 
                 exteriorRing = exteriorRing.Reverse().ToArray();
             }
-
+#endif
+             
             ExteriorRing = exteriorRing;
-        }
 
-
-        public GridPolygon(IEnumerable<IPoint2D> exteriorRing, IEnumerable<IPoint2D[]> interiorRings)
-            : this(exteriorRing.Select(p => p.Convert()).ToArray(),
-                   interiorRings.Select(inner_ring => inner_ring.Select(p => p.Convert()).ToArray()).ToArray())
-        {
-        }
-
-        public GridPolygon(GridVector2[] exteriorRing, IEnumerable<GridVector2[]> interiorRings)
-        {
-            Debug.Assert(exteriorRing.Length < 1000, "This is a huge polygon, why?");
-
-            if (!exteriorRing.IsValidClosedRing())
-            {
-                throw new ArgumentException("Exterior polygon ring must be valid");
-            }
-
-            ExteriorRing = exteriorRing;
+            if (interiorRings == null) return;
 
             foreach (GridVector2[] interiorRing in interiorRings)
             {
@@ -303,7 +297,7 @@ namespace Geometry
         public int TotalUniqueVerticies => (ExteriorRing.Length - 1) + InteriorRings.Sum(ir => ir.Length - 1);
 
         IPoint2D ICentroid.Centroid => Centroid;
-        
+
         /// <summary>
         /// Adds an Interior Ring to this polygon.  Input must not intersect the exterior ring or existing interior rings.
         /// </summary>
@@ -524,9 +518,7 @@ namespace Geometry
                 if (this.IsValid() == false)
                 {
                     //Restore our state to a known good state before throwing the exception
-                    //this.ExteriorRing = original_verts;
-
-
+                    //this.ExteriorRing = original_verts; 
                     this._ExteriorRingArea = original_area;
                     this._BoundingRect = original_bbox;
                     this._ExteriorRing = original_verts;
@@ -542,14 +534,14 @@ namespace Geometry
             //this._SegmentRTree = null; //Reset our RTree since yanking a polygon and changing the indicies are a pain
             return true;
         }
-          
+
         /// <summary>
         /// Set the specified vertex to the new position.
         /// If the new position results in an invalid polygon the polygon is restored to the original state and an ArgumentException is thrown.
         /// </summary>
         /// <param name="iVertex"></param>
         /// <param name="value"></param>
-        private void SetVertex(PolygonIndex iVertex, GridVector2 value)
+        internal void SetVertex(PolygonIndex iVertex, GridVector2 value)
         {
             if (iVertex.iPoly != 0)
                 iVertex = iVertex.Reindex(0);
@@ -587,7 +579,7 @@ namespace Geometry
                 if (iVertex.IsFirstIndexInRing())
                 {
                     this.ExteriorRing[0] = value;
-                    this.ExteriorRing[ExteriorRing.Length-1] = value;
+                    this.ExteriorRing[ExteriorRing.Length - 1] = value;
                 }
                 else
                 {
@@ -834,14 +826,24 @@ namespace Geometry
             GridLineSegment newPrevSeg = new GridLineSegment(this[index.Previous], this[index]);
             GridLineSegment newSeg = new GridLineSegment(this[index], this[index.Next]);
 
-            _ExteriorSegments[index.Previous.iVertex] = newPrevSeg;
-            _ExteriorSegments[index.iVertex] = newSeg;
+            //Update the exterior segments if we are not updating an internal polygon, 
+            //if this is an internal polygon it should have updated its own exterior segments
+            //before reaching this point
+            if (false == index.IsInner)
+            {
+                _ExteriorSegments[index.Previous.iVertex] = newPrevSeg;
+                _ExteriorSegments[index.iVertex] = newSeg;
+            }
 
             bool RTreePreviousItemFound = _SegmentRTree.Delete(index.Previous, out PolygonIndex rTreeRemovedPreviousItem);
-            Debug.Assert(RTreePreviousItemFound, "Expected to find removed segment (previous) in the RTree");
+            //Debug.Assert(RTreePreviousItemFound, $"Expected to find removed segment {index.Previous} (previous) in the RTree");
+            if (RTreePreviousItemFound == false)
+                throw new InvalidOperationException($"Expected to find removed segment {index.Previous} in the RTree");
 
             bool RTreeItemFound = _SegmentRTree.Delete(index, out PolygonIndex rTreeRemovedItem);
-            Debug.Assert(RTreeItemFound, "Expected to find removed segment in the RTree");
+            //Debug.Assert(RTreeItemFound, $"Expected to find removed segment {index} in the RTree");
+            if (RTreeItemFound == false)
+                throw new InvalidOperationException($"Expected to find removed segment {index} in the RTree");
 
             _SegmentRTree.Add(newSeg.BoundingBox, index);
             _SegmentRTree.Add(newPrevSeg.BoundingBox, index.Previous);
@@ -956,14 +958,13 @@ namespace Geometry
             if (_SegmentRTree == null)
                 return;
 
-            PolygonIndex index = new PolygonIndex(0, iInnerRing, 0, this.InteriorRings[iInnerRing].Length - 1);
-            do
+            var toRemove = _SegmentRTree.Items.Where(i => i.IsInner && i.iInnerPoly == iInnerRing);
+
+            foreach (var item in toRemove)
             {
-                bool found = _SegmentRTree.Delete(index, out PolygonIndex removed);
-                Debug.Assert(found, $"Expected index {index} missing from RTree");
-                index = index.Next;
+                bool found = _SegmentRTree.Delete(item, out var removedItem);
+                Debug.Assert(found, $"Expected index {item} missing from RTree");
             }
-            while (index != index.FirstInRing);
         }
 
 
@@ -1027,6 +1028,9 @@ namespace Geometry
                 if (AnyInnerPolygonsIntersect())
                     return false;
             }
+
+            if (this.Area < Global.Epsilon)
+                return false;
 
             return true;
         }
@@ -1524,6 +1528,10 @@ namespace Geometry
                     //if (inner_result != OverlapType.NONE) //Including TOUCHING results probably breaks Bajaj generation, but it is correct
                     if (inner_result == OverlapType.CONTAINED)
                         return OverlapType.NONE; //The point is in the inner polygon, therefore not part of this polygon
+
+                    //Is a point on an inner polygon touching the polygon or contained?
+                    if (inner_result == OverlapType.TOUCHING)
+                        return inner_result;
                 }
             }
 
@@ -1813,8 +1821,7 @@ namespace Geometry
 
         public bool InteriorPolygonContains(in GridVector2 p)
         {
-            GridPolygon intersectedPoly;
-            return InteriorPolygonContains(p, out intersectedPoly);
+            return InteriorPolygonContains(p, out GridPolygon intersectedPoly);
         }
 
         public bool InteriorPolygonContains(in GridVector2 p, out GridPolygon interiorPolygon)
@@ -1860,6 +1867,11 @@ namespace Geometry
             return false;
         }
 
+        /// <summary>
+        /// This is not truly the largest inscribed circle, but a measurement from the centroid to the
+        /// nearest point on the exterior ring
+        /// </summary>
+        /// <returns></returns>
         public GridCircle InscribedCircle()
         {
             GridVector2 center = this.Centroid;
@@ -1897,10 +1909,24 @@ namespace Geometry
                 IsPLeftOfSeg = is_p_left_of_seg;
             }
 
-            public bool CrossesLine => A_is_left != B_is_left;
+            /// <summary>
+            /// The segment crosses the line, with one endpoint on one side and the the other across it
+            /// </summary>
+            public bool CrossesLine => TouchesLine == false && A_is_left != B_is_left;
 
+            /// <summary>
+            /// The segment touches the line, one endpoint is off the line, the other is on the line
+            /// </summary>
+            public bool TouchesLine => (A_is_left == 0 ^ B_is_left == 0);
+
+            /// <summary>
+            /// The segment is perfectly on the line, both endpoints are on the line
+            /// </summary>
             public bool OnTheLine => A_is_left == 0 && B_is_left == 0;
 
+            /// <summary>
+            /// The segment is to one side or the other, but does not intersect
+            /// </summary>
             public bool SameSideOfLine => A_is_left == B_is_left && A_is_left != 0;
 
         }
@@ -1941,10 +1967,6 @@ namespace Geometry
         private static OverlapType IsPointInsidePolygonByWindingTest(List<GridLineSegment> polygonSegments, GridLine test_line)
         {
             GridVector2 test_point = test_line.Origin;
-            /*
-            if (polygonSegments.Any(ps => ps.IsEndpoint(test_line.Origin)))
-                return OverlapType.TOUCHING;
-            */
 #if DEBUG
             var OriginalSegments = polygonSegments.ToList(); //Create a copy so we can examine the debugger
 #endif
@@ -1961,49 +1983,28 @@ namespace Geometry
                     return OverlapType.TOUCHING;
                 }
 
-                var seg = new SegmentIsLeftData(a_is_left: test_line.IsLeft(s.A), b_is_left: test_line.IsLeft(s.B), seg: s, is_p_left_of_seg: new int?() );
-                if (seg.CrossesLine || seg.OnTheLine)
+                var seg = new SegmentIsLeftData(a_is_left: test_line.IsLeft(s.A), b_is_left: test_line.IsLeft(s.B), seg: s, is_p_left_of_seg: new int?());
+                if (seg.TouchesLine)
                 {
-                    //Check the case of the point exactly on the line
+                    //Check the case of the segment crossing, contacting, or perfectly overlapped to the line within epsilon error limit
+                    if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
+                        return OverlapType.TOUCHING;
+
+                }
+                else if (seg.CrossesLine || seg.OnTheLine)
+                {
+                    //Check the case of the segment crossing, contacting, or perfectly overlapped to the line within epsilon error limit
                     if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
                         return OverlapType.TOUCHING;
                 }
 
-                if (seg.SameSideOfLine)
+                if (seg.SameSideOfLine || seg.OnTheLine)
                 {
                     continue;
                 }
 
                 IsLeft.Add(seg);
             }
-
-            /*
-            //var IsLeft = polygonSegments.Select((s,i) => new { A = test_line.IsLeft(s.A), B = test_line.IsLeft(s.B), S = s, IsPLeftOfSeg=new int?()}).ToList();
-
-
-
-            //OK, now we need to condense any instance where IsLeft.A or IsLeft.B == 0.  That is, the segment does not cross the line, mearly touches it. 
-            //If we have opposite IsLeftValues we create a new edge that entirely crosses the line.  Otherwise we ignore the edge, which is the case where the segment touches the test_line but does not cross.
-            for(int i = 0; i < IsLeft.Count; i++)
-            {
-                var seg = IsLeft[i];
-                if (seg.A != seg.B || (seg.A == 0 && seg.B == 0))
-                {
-                    //Check the case of the point exactly on the line
-                    if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
-                        return OverlapType.TOUCHING;
-                }
-
-                if (seg.A == seg.B) //Remove all segments that are on the same side of the line or parallel to the line.  This leaves only segments that cross or touch the line
-                {
-                    //We can remove this segment entirely as it is perfectly parallel to our test line
-                    //polygonSegments.RemoveAt(i); 
-                    IsLeft.RemoveAt(i);
-                    i = i - 1;
-                    continue;
-                }
-            }
-            */
 
             if (IsLeft.Count == 0)
                 return OverlapType.NONE;
@@ -2131,8 +2132,7 @@ namespace Geometry
 
                 IntersectedSegments = polygonSegments.Where(line =>
                 {
-                    GridVector2 Intersection;
-                    bool intersected = line.Intersects(test_line, out Intersection);
+                    bool intersected = line.Intersects(test_line, out GridVector2 Intersection);
                     if (intersected)
                     {
                         intersectionsBag.Add(Intersection);
@@ -2149,8 +2149,7 @@ namespace Geometry
 
                 IntersectedSegments = polygonSegments.Where(line =>
                 {
-                    GridVector2 Intersection;
-                    bool intersected = line.Intersects(test_line, out Intersection);
+                    bool intersected = line.Intersects(test_line, out GridVector2 Intersection);
                     if (intersected)
                     {
                         intersections.Add(Intersection);
@@ -2263,7 +2262,11 @@ namespace Geometry
                 return new List<Geometry.GridLineSegment>(0);
             }
 
-            return SegmentRTree.Intersects(bbox.ToRTreeRectEpsilonPadded(0)).Select(p => p.Segment(this)).Where(segment => bbox.Intersects(segment)).ToList();
+            var intersections = SegmentRTree.Intersects(bbox.ToRTreeRectEpsilonPadded(0));
+            var segments = intersections.Select(p => p.Segment(this));
+            var candidates = segments.Where(segment => bbox.Intersects(segment)).ToList();
+            return candidates;
+
         }
 
         /// <summary>
@@ -2478,8 +2481,7 @@ namespace Geometry
             List<GridVector2> Intersections = new List<Geometry.GridVector2>(ExteriorRing.Length);
             for (int i = 0; i < _ExteriorSegments.Length; i++)
             {
-                GridVector2 intersection;
-                if (line.Intersects(this._ExteriorSegments[i], out intersection))
+                if (line.Intersects(this._ExteriorSegments[i], out GridVector2 intersection))
                 {
                     double CenterDist = GridVector2.Distance(Centroid, intersection);
                     double PointDist = GridVector2.Distance(p, intersection);
@@ -2495,8 +2497,7 @@ namespace Geometry
 
         public int[] VerticiesOnConvexHull()
         {
-            int[] indicies;
-            GridVector2[] convex_hull_verts = this.ExteriorRing.ConvexHull(out indicies);
+            GridVector2[] convex_hull_verts = this.ExteriorRing.ConvexHull(out int[] indicies);
 
             return indicies;
         }
@@ -2673,9 +2674,6 @@ namespace Geometry
 
             List<GridVector2> newRing = new List<Geometry.GridVector2>();
 
-            //int i = 0;
-            //while (i < ExteriorRing.Length - 1)
-            //for (int i = 0; i < ExteriorRing.Length - 1; i++)
             var vertEnumerator = new PolygonVertexEnum(this, reverse: true);
 
             QuadTree<GridVector2> addedVertexQuad = new QuadTree<GridVector2>();
@@ -2684,20 +2682,40 @@ namespace Geometry
             //Handle an edge case where we insert at the end of the loop, but the .Next index wraps to zero which changes the index of every item in the loop.
             foreach (PolygonIndex originalpolyIndex in vertEnumerator)
             {
-                PolygonIndex polyIndex = originalpolyIndex.ReindexToSize(this);
-                GridLineSegment ls = polyIndex.Segment(this);
+                GridVector2[] IntersectionPoints = Array.Empty<GridVector2>();
 
-                //GridLineSegment ls = new GridLineSegment(ExteriorRing[i], ExteriorRing[i + 1]);
-                //PointIndex polyIndex = new PointIndex(0, i, ExteriorRing.Length - 1);
-                //newRing.Add(ExteriorRing[i]);
-                //newRing.Add(this[polyIndex]);
-                addedVertexQuad.Add(this[polyIndex], this[polyIndex]);
+                //This block identifies intersection points
+                {
+                    PolygonIndex polyIndex = originalpolyIndex.ReindexToSize(this);
+                    GridLineSegment ls = polyIndex.Segment(this);
 
-                GridVector2[] IntersectionPoints;
-                //Since we want the out parameter just get a quick list of candidates with the ls.bounding box in instead of running the full intersection test twice.
-                List<GridLineSegment> candidates = ls.Intersections(other.GetIntersectingSegments(ls.BoundingBox), out IntersectionPoints);
-                if (candidates.Count == 0)
-                    continue;
+                    //GridLineSegment ls = new GridLineSegment(ExteriorRing[i], ExteriorRing[i + 1]);
+                    //PointIndex polyIndex = new PointIndex(0, i, ExteriorRing.Length - 1);
+                    //newRing.Add(ExteriorRing[i]);
+                    //newRing.Add(this[polyIndex]);
+                    try
+                    {
+                        var polyvertex = this[polyIndex];
+                        addedVertexQuad.Add(polyvertex, polyvertex);
+                    }
+                    catch (QuadTree<GridVector2>.DuplicateItemException)
+                    {
+                        //Ignore a duplicate insert if it already exists in the other polygon
+                        Debug.Assert(other.AllVerticies.Contains(this[polyIndex]));
+                    }
+                    catch (QuadTree<GridVector2>.DuplicateValueException)
+                    {
+                        //Points can be slightly different but have equivalent values.  The code below should harmonize the vertex positions to truly equal. 
+                        Debug.Assert(other.AllVerticies.Contains(this[polyIndex]));
+                    }
+
+                    //Since we want the out parameter just get a quick list of candidates with the ls.bounding box in instead of running the full intersection test twice.
+                    var otherSegmentCandidates = other.GetIntersectingSegments(ls.BoundingBox);
+                    List<GridLineSegment> candidates = ls.Intersections(otherSegmentCandidates, false,
+                        out IntersectionPoints);
+                    if (candidates.Count == 0)
+                        continue;
+                }
 
                 //Reverse the intersection list so we are adding points furthest to nearest.  This prevents our polyIndex from pointing at the wrong index after adding a point when there are multiple intersections for a segment.
                 IntersectionPoints = IntersectionPoints.Reverse().ToArray();
@@ -2705,119 +2723,155 @@ namespace Geometry
                 //Remove any duplicates of the existing endpoints 
                 for (int iInter = 0; iInter < IntersectionPoints.Length; iInter++)
                 {
+                    PolygonIndex polyIndex = originalpolyIndex.ReindexToSize(this);
                     GridVector2 p = IntersectionPoints[iInter];
-                    /*if(iInter != 0)
-                        this.NearestSegment(p, out polyIndex); //After adding a point to the polygon our indexing may be off, so just calculate the correct index
-                        */
-                    //System.Diagnostics.Debug.Assert(!newRing.Contains(p));
-                    //if (!newRing.Any(nr => nr == p)) //We can't use contains because the equality operator uses an epsilon and contains does not
-                    bool found = addedVertexQuad.TryFindNearest(p, out var found_nearest, out double nearest_distance);
-                    Debug.Assert(found);
-                    if (nearest_distance > Global.Epsilon) //Our nearest vertex is too far away so we need to add a vertex to ourselves
+
+                    try
                     {
-                        double other_segment_distance = other.NearestSegment(p, out PolygonIndex other_nearest_segment);
-
-                        Debug.Assert(other_nearest_segment.NumUniqueInRing == other_nearest_segment.Polygon(other).ExteriorRing.Length - 1, "Index found with incorrect number of verticies in ring."); //An old bug I want to check for where the index ring size in RTree was not updating as points were added
-
-                        //There is a horrible case where a very thin triangle can have two corresponding points that are < epsilon distance apart.  I 
-                        //solved this by looking for the nearest segment on the other triangle, and then using that to check for an existing vertex
-                        PolygonIndex other_vertex_index = other_nearest_segment;
-                        double other_vertex_distance = GridVector2.Distance(other[other_nearest_segment], p);
-
-                        //double other_vertex_distance = other.NearestVertex(p, out PointIndex other_vertex_index);
-
-                        //We need to cover an edge case here.  We insert at Index.Next.  For the last point in the ring this will return index 0.  That will change the indexing of the ring.  Instead we explicitly state we want a new point added at the end of the ring.
-                        PolygonIndex InsertIndex = polyIndex.IsLastIndexInRing() ? new PolygonIndex(0, polyIndex.iInnerPoly, polyIndex.iVertex + 1, polyIndex.NumUniqueInRing) : polyIndex.Next;
-                        PolygonIndex OtherInsertIndex = other_nearest_segment.IsLastIndexInRing() ? new PolygonIndex(0, other_nearest_segment.iInnerPoly, other_nearest_segment.iVertex + 1, other_nearest_segment.NumUniqueInRing) : other_nearest_segment.Next;
-
-                        //If we intersect close enough to another vertex on the other polygon, just add that point to ourselves.
-                        if (other_vertex_distance == 0)
+                        bool found =
+                            addedVertexQuad.TryFindNearest(p, out var found_nearest, out double nearest_distance);
+                        Debug.Assert(found);
+                        if (nearest_distance >
+                            Global.Epsilon) //Our nearest vertex is too far away so we need to add a vertex to ourselves
                         {
-                            //Vertex exists in the other polygon at exact position
-                            //newRing.Add(p);
-                            addedVertexQuad.Add(p, p);
-                            //Add a vertex between the point we tested and the next
-                            InsertVertex(p, InsertIndex);
+                            double other_segment_distance =
+                                other.NearestSegment(p, out PolygonIndex other_nearest_segment);
 
-                            found_or_added_intersections.Add(p);
-                        }
-                        else if (other_vertex_distance < Global.Epsilon)
-                        {
-                            //Use the position of the existing vertex in the other polygon for our own position
-                            //newRing.Add(other_vertex_index.Point(other));
-                            addedVertexQuad.Add(other_vertex_index.Point(other), other_vertex_index.Point(other));
-                            InsertVertex(other_vertex_index.Point(other), InsertIndex);
-                            found_or_added_intersections.Add(other_vertex_index.Point(other));
-                        }
-                        else
-                        {
-                            //Intersection point is not a  vertex on either polygon
-                            //double other_segment_distance = other.NearestSegment(p, out PointIndex other_nearest_segment);
+                            Debug.Assert(
+                                other_nearest_segment.NumUniqueInRing ==
+                                other_nearest_segment.Polygon(other).ExteriorRing.Length - 1,
+                                "Index found with incorrect number of verticies in ring."); //An old bug I want to check for where the index ring size in RTree was not updating as points were added
 
-                            //newRing.Add(p);
-                            addedVertexQuad.Add(p, p);
-                            InsertVertex(p, InsertIndex);
-                            other.InsertVertex(p, OtherInsertIndex);
-                            found_or_added_intersections.Add(p);
-                        }
+                            //There is a horrible case where a very thin triangle can have two corresponding points that are < epsilon distance apart.  I 
+                            //solved this by looking for the nearest segment on the other triangle, and then using that to check for an existing vertex
+                            PolygonIndex other_vertex_index = other_nearest_segment;
+                            double other_vertex_distance = GridVector2.Distance(other[other_nearest_segment], p);
 
-                        //Skip the point we inserted so the next insert is in the correct place and we don't double check an inserted point
-                        //i += 1;
+                            //double other_vertex_distance = other.NearestVertex(p, out PointIndex other_vertex_index);
 
-                        //Trace.WriteLine(string.Format("Add Corresponding Point {0}", p));
-                    }
-                    else //Intersection is already one of our verticies or close enough
-                    {
-                        //Check if the intersection point occurs in the other polygon
-                        //double other_vertex_distance = other.NearestVertex(p, out PointIndex other_vertex_index);
+                            //We need to cover an edge case here.  We insert at Index.Next.  For the last point in the ring this will return index 0.  That will change the indexing of the ring.  Instead we explicitly state we want a new point added at the end of the ring.
+                            PolygonIndex InsertIndex = polyIndex.IsLastIndexInRing()
+                                ? new PolygonIndex(0, polyIndex.iInnerPoly, polyIndex.iVertex + 1,
+                                    polyIndex.NumUniqueInRing)
+                                : polyIndex.Next;
+                            PolygonIndex OtherInsertIndex = other_nearest_segment.IsLastIndexInRing()
+                                ? new PolygonIndex(0, other_nearest_segment.iInnerPoly,
+                                    other_nearest_segment.iVertex + 1, other_nearest_segment.NumUniqueInRing)
+                                : other_nearest_segment.Next;
 
-                        double other_segment_distance = other.NearestSegment(p, out PolygonIndex other_nearest_segment);
-                        PolygonIndex other_vertex_index = other_nearest_segment;
-                        double other_vertex_distance = GridVector2.Distance(other[other_nearest_segment], p);
-
-                        PolygonIndex OtherInsertIndex = other_nearest_segment.IsLastIndexInRing() ? new PolygonIndex(0, other_nearest_segment.iInnerPoly, other_nearest_segment.iVertex + 1, other_nearest_segment.NumUniqueInRing) : other_nearest_segment.Next;
-
-
-                        //We need the point to be exact, so adjust our point accordingly
-                        if (other_vertex_distance == 0)
-                        {
-                            //No action needed.  Vertex exists in the other polygon at exact position and in this polygon at exact position.
-                            //We still report the intersection though
-                            found_or_added_intersections.Add(other_vertex_index.Point(other));
-
-                        }
-                        else if (other_vertex_distance < Global.Epsilon) //Use the position of the existing vertex in the other polygon for our own position
-                        {
-                            //Q: Shouldn't we check if we intersect with the near or far endpoint of our segment before nudging?
-                            //A: No, because we enumerate in reverse order, so the far endpoing would be tested previously... unless it is the first last vertex in the loop...
-                            GridVector2 other_vert_pos = other_vertex_index.Point(other);
-                            if (polyIndex.IsLastIndexInRing() && GridVector2.Distance(ls.B, other_vert_pos) < Global.Epsilon)
+                            //If we intersect close enough to another vertex on the other polygon, just add that point to ourselves.
+                            if (other_vertex_distance == 0)
                             {
+                                //Vertex exists in the other polygon at exact position
+                                //newRing.Add(p);
+                                addedVertexQuad.Add(p, p);
+                                //Add a vertex between the point we tested and the next
+                                InsertVertex(p, InsertIndex);
 
-                                //This should be a very rare case
+                                Debug.Assert(false == found_or_added_intersections.Contains(p));
+                                found_or_added_intersections.Add(p);
+                            }
+                            else if (other_vertex_distance < Global.Epsilon)
+                            {
+                                //Use the position of the existing vertex in the other polygon for our own position
+                                //newRing.Add(other_vertex_index.Point(other));
+                                addedVertexQuad.Add(other_vertex_index.Point(other), other_vertex_index.Point(other));
+                                InsertVertex(other_vertex_index.Point(other), InsertIndex);
 
-                                this.SetVertex(polyIndex.Next, other_vertex_index.Point(other));
+                                Debug.Assert(false ==
+                                             found_or_added_intersections.Contains(other_vertex_index.Point(other)));
+                                found_or_added_intersections.Add(other_vertex_index.Point(other));
                             }
                             else
                             {
+                                //Intersection point is not a  vertex on either polygon
+                                //double other_segment_distance = other.NearestSegment(p, out PointIndex other_nearest_segment);
 
-                                this.SetVertex(polyIndex, other_vertex_index.Point(other));
+                                //newRing.Add(p);
+                                addedVertexQuad.Add(p, p);
+                                InsertVertex(p, InsertIndex);
+                                other.InsertVertex(p, OtherInsertIndex);
+
+                                Debug.Assert(false == found_or_added_intersections.Contains(p));
+                                found_or_added_intersections.Add(p);
                             }
 
-                            //newRing[existingIndex] = other_vert_pos;
-                            addedVertexQuad.TryRemove(p, out GridVector2 removed_point);
-                            addedVertexQuad.Add(other_vert_pos, other_vert_pos);
-                            found_or_added_intersections.Add(other_vert_pos);
-                        }
-                        else
-                        {
-                            //We have the vertex, but it is not in the other polygon.  Add the vertex to the other polygon
-                            //double other_segment_distance = other.NearestSegment(p, out PointIndex other_nearest_segment);
+                            //Skip the point we inserted so the next insert is in the correct place and we don't double check an inserted point
+                            //i += 1;
 
-                            //other.AddVertex(p);
-                            other.InsertVertex(p, OtherInsertIndex);
-                            found_or_added_intersections.Add(p);
+                            //Trace.WriteLine(string.Format("Add Corresponding Point {0}", p));
                         }
+                        else //Intersection is already one of our verticies or close enough
+                        {
+                            //Check if the intersection point occurs in the other polygon
+                            //double other_vertex_distance = other.NearestVertex(p, out PointIndex other_vertex_index);
+
+                            double other_segment_distance =
+                                other.NearestSegment(p, out PolygonIndex other_nearest_segment);
+                            PolygonIndex other_vertex_index = other_nearest_segment;
+                            double other_vertex_distance = GridVector2.Distance(other[other_nearest_segment], p);
+
+                            PolygonIndex OtherInsertIndex = other_nearest_segment.IsLastIndexInRing()
+                                ? new PolygonIndex(0, other_nearest_segment.iInnerPoly,
+                                    other_nearest_segment.iVertex + 1, other_nearest_segment.NumUniqueInRing)
+                                : other_nearest_segment.Next;
+
+                            //We need the point to be exact, so adjust our point accordingly
+                            if (other_vertex_distance == 0)
+                            {
+                                //No action needed.  Vertex exists in the other polygon at exact position and in this polygon at exact position.
+                                //We still report the intersection though
+
+                                //Debug.Assert(found_or_added_intersections.Contains(other_vertex_index.Point(other)));
+                                //found_or_added_intersections.Add(other_vertex_index.Point(other));
+                                found_or_added_intersections.Add(other_vertex_index.Point(other));
+
+                            }
+                            else if (
+                                other_vertex_distance <
+                                Global.Epsilon) //Use the position of the existing vertex in the other polygon for our own position
+                            {
+                                //Q: Shouldn't we check if we intersect with the near or far endpoint of our segment before nudging?
+                                //A: No, because we enumerate in reverse order, so the far endpoint would be tested previously... unless it is the first last vertex in the loop...
+                                GridVector2 other_vert_pos = other_vertex_index.Point(other);
+                                if (GridVector2.Distance(polyIndex.Segment(this).B, other_vert_pos) < Global.Epsilon)
+                                {
+                                    //This should be a very rare case
+                                    this.SetVertex(polyIndex.Next, other_vertex_index.Point(other));
+                                }
+                                else
+                                {
+                                    this.SetVertex(polyIndex, other_vertex_index.Point(other));
+                                }
+
+                                //newRing[existingIndex] = other_vert_pos;
+                                //Remove, then add to eliminate issues with verts being an epsilon equivalent point but being assigned to different quadrants with strict comparison tests
+                                bool removed = addedVertexQuad.TryRemove(p, out GridVector2 _);
+                                addedVertexQuad.Add(other_vert_pos, other_vert_pos);
+
+                                //Update the position reported in our list since we nudged ourselves
+                                //and the vertex was inserted originally using our position
+                                found_or_added_intersections.Remove(p);
+                                //Debug.Assert(false == found_or_added_intersections.Contains(other_vert_pos));
+                                found_or_added_intersections.Add(other_vert_pos);
+                            }
+                            else
+                            {
+                                //We have the vertex, but it is not in the other polygon.  Add the vertex to the other polygon
+                                //double other_segment_distance = other.NearestSegment(p, out PointIndex other_nearest_segment);
+
+                                //other.AddVertex(p);
+                                other.InsertVertex(p, OtherInsertIndex);
+
+                                Debug.Assert(false == found_or_added_intersections.Contains(p));
+                                found_or_added_intersections.Add(p);
+                            }
+                        }
+                    }
+                    catch (ArgumentException e)
+                    {
+                        Trace.WriteLine($"{this} could not add corresponding point {polyIndex} : {p} ");
+                        continue;
                     }
                 }
 
@@ -2847,9 +2901,8 @@ namespace Geometry
 
                 newRing.Add(ExteriorRing[i]);
 
-                IShape2D intersection;
 
-                var intersects = ls.Intersects(other, true, out intersection); //Don't check the endpoints of the segment because we are already adding them
+                var intersects = ls.Intersects(other, true, out IShape2D intersection); //Don't check the endpoints of the segment because we are already adding them
 
                 if (intersects)
                 {
@@ -2898,8 +2951,7 @@ namespace Geometry
                 if (newRing.Count == 0 || GridVector2.DistanceSquared(newRing.Last(), ExteriorRing[i]) > Global.EpsilonSquared)
                     newRing.Add(ExteriorRing[i]);
 
-                GridVector2[] IntersectionPoints;
-                List<GridLineSegment> candidates = ls.Intersections(other, out IntersectionPoints);
+                List<GridLineSegment> candidates = ls.Intersections(other, out GridVector2[] IntersectionPoints);
 
                 //Remove any duplicates of the existing endpoints 
                 foreach (GridVector2 p in IntersectionPoints)
@@ -2931,10 +2983,10 @@ namespace Geometry
         /// Returns a dictionary mapping each vertex coordinate to an index
         /// </summary>
         /// <returns></returns>
-        public Dictionary<GridVector2, PolygonIndex> CreatePointToPolyMap()
+        public QuadTree<PolygonIndex> CreatePointToPolyMap()
         {
             var map = CreatePointToPolyMap(new GridPolygon[] { this });
-            Dictionary<GridVector2, PolygonIndex> flatMap = new Dictionary<Geometry.GridVector2, Geometry.PolygonIndex>(); //The map without the possibility of multiple verticies at the same position
+            QuadTree<PolygonIndex> flatMap = new QuadTree<PolygonIndex>(); //The map without the possibility of multiple verticies at the same position
 
             foreach (GridVector2 p in map.Keys)
             {
@@ -2949,9 +3001,9 @@ namespace Geometry
         /// </summary>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public static Dictionary<GridVector2, PolygonIndex> CreatePointToPolyMap2D(GridPolygon[] Polygons)
+        public static QuadTree<PolygonIndex> CreatePointToPolyMap2D(GridPolygon[] Polygons)
         {
-            Dictionary<GridVector2, PolygonIndex> pointToPoly = new Dictionary<GridVector2, PolygonIndex>();
+            QuadTree<PolygonIndex> pointToPoly = new QuadTree<PolygonIndex>();
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
             {
                 GridPolygon poly = Polygons[iPoly];
@@ -3005,9 +3057,9 @@ namespace Geometry
         /// Polygon index instead of the position in the passed Polygons array.  This is useful when generating a map for a subset of a larger 
         /// collection of polygons. </param>
         /// <returns></returns>
-        public static Dictionary<GridVector2, List<PolygonIndex>> CreatePointToPolyMap(GridPolygon[] Polygons, IReadOnlyList<int> PolygonIndicies = null)
+        public static QuadTree<List<PolygonIndex>> CreatePointToPolyMap(GridPolygon[] Polygons, IReadOnlyList<int> PolygonIndicies = null)
         {
-            Dictionary<GridVector2, List<PolygonIndex>> pointToPoly = new Dictionary<GridVector2, List<PolygonIndex>>();
+            QuadTree<List<PolygonIndex>> pointToPoly = new QuadTree<List<PolygonIndex>>();
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
             {
                 int iPolygon = iPoly; //Used to adjust polygon index if PolygonIndicies is remapping those values
@@ -3265,7 +3317,7 @@ namespace Geometry
 
         public bool Equals(IShape2D other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (object.ReferenceEquals(this, other))
@@ -3274,7 +3326,7 @@ namespace Geometry
             if (other.ShapeType != this.ShapeType)
                 return false;
 
-            if(other is IPolygon2D otherPoly)
+            if (other is IPolygon2D otherPoly)
                 return this.Equals(otherPoly);
 
             return false;
@@ -3282,7 +3334,7 @@ namespace Geometry
 
         public bool Equals(IPolygon2D other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (object.ReferenceEquals(this, other))
@@ -3314,7 +3366,7 @@ namespace Geometry
 
         public bool Equals(GridPolygon other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (this.ExteriorRing.Length != other.ExteriorRing.Length)
@@ -3341,5 +3393,24 @@ namespace Geometry
             return true;
         }
 
+        public override bool Equals(object obj)
+        {
+            if (obj is GridPolygon poly)
+                return Equals(poly);
+
+            if (obj is IPolygon2D ipoly)
+                return Equals(ipoly);
+
+            if (obj is IShape2D shape)
+                return Equals(shape);
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            throw new InvalidOperationException(
+                "Cannot use hash codes for shapes that can change/have epsilon based comparisons.  See GridVector2.GetHashCode");
+        }
     }
 }

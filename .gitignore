@@ -11,8 +11,12 @@
 *.key
 *.pdb
 *.user
-*.cachefile
-**/*.xnb
+**.cachefile
+/**/*.user
+/**/*.suo
+/**/*.dgml
+/**/*.psess
+/**/*.xnb
 TestResults
 /Packages/
 /Papers/

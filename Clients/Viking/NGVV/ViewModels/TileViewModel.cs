@@ -240,7 +240,7 @@ namespace Viking.ViewModels
             var tokenSource = Interlocked.CompareExchange(ref TextureLoadCancellationTokenSource, TextureLoadCancellationTokenSource,
                 TextureLoadCancellationTokenSource);
 
-            if (tokenSource != null)
+            if (tokenSource != null && false == tokenSource.IsCancellationRequested)
             {
                 Trace.WriteLine($"Aborting {this.TextureFileName}");
                 tokenSource.Cancel();

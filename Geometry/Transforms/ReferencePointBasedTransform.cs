@@ -120,7 +120,7 @@ namespace Geometry.Transforms
         protected ReferencePointBasedTransform(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             _mapPoints = info.GetValue("_mapPoints", typeof(MappingGridVector2[])) as MappingGridVector2[];
             this.Info = info.GetValue("Info", typeof(TransformBasicInfo)) as TransformBasicInfo;
@@ -131,7 +131,7 @@ namespace Geometry.Transforms
         public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             info.AddValue("_mapPoints", _mapPoints);
             info.AddValue("MappedBounds", MappedBounds);
@@ -147,7 +147,8 @@ namespace Geometry.Transforms
         {
             for (int i = 0; i < MapPoints.Length; i++)
             {
-                MapPoints[i].ControlPoint += vector;
+                var p = MapPoints[i];
+                MapPoints[i] = new MappingGridVector2(p.ControlPoint + vector, p.MappedPoint);
             }
 
             //Remove any cached data structures
@@ -232,7 +233,7 @@ namespace Geometry.Transforms
         /// You need to take this lock when building or changing the QuadTrees managing the triangles of the mesh
         /// </summary>
         [NonSerialized]
-        ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim();
+        readonly ReaderWriterLockSlim rwLockTriangles = new ReaderWriterLockSlim();
 
         private RTree.RTree<MappingGridVector2> _mappedPointsRTree = null;
 
@@ -399,5 +400,16 @@ namespace Geometry.Transforms
                     rwLockTriangles.ExitWriteLock();
             }
         }
+
+        public abstract GridVector2 Transform(in GridVector2 Point);
+        public abstract GridVector2[] Transform(in GridVector2[] Points);
+        public abstract GridVector2 InverseTransform(in GridVector2 Point);
+        public abstract GridVector2[] InverseTransform(in GridVector2[] Points);
+        public abstract bool CanTransform(in GridVector2 Point);
+        public abstract bool TryTransform(in GridVector2 Point, out GridVector2 v);
+        public abstract bool[] TryTransform(in GridVector2[] Points, out GridVector2[] v);
+        public abstract bool CanInverseTransform(in GridVector2 Point);
+        public abstract bool TryInverseTransform(in GridVector2 Point, out GridVector2 v);
+        public abstract bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] v);
     }
 }

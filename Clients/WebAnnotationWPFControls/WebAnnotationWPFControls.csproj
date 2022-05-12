@@ -57,11 +57,8 @@
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Converters\PermittedStructureLinkToStructureTypeConverters.cs" />
     <Compile Include="Converters\StructureTypeToStructureTypeViewModel.cs" />
-    <Compile Include="Forms\GoToLocationForm.xaml.cs">
-      <DependentUpon>GoToLocationForm.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Forms\GoToStructureForm.xaml.cs">
-      <DependentUpon>GoToStructureForm.xaml</DependentUpon>
+    <Compile Include="Forms\GoToActionForm.xaml.cs">
+      <DependentUpon>GoToActionForm.xaml</DependentUpon>
     </Compile>
     <Compile Include="Forms\StructureTypeManagementForm.xaml.cs">
       <DependentUpon>StructureTypeManagementForm.xaml</DependentUpon>
@@ -78,11 +75,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Forms\GoToLocationForm.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Forms\GoToStructureForm.xaml">
+    <Page Include="Forms\GoToActionForm.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

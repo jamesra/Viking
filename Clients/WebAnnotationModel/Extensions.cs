@@ -13,6 +13,11 @@ namespace WebAnnotationModel
         /*
         public static SqlGeometry ToGeometry(GridVector2[] points, double Z, double radius, LocationType type)
         {
+            if (points is null)
+            {
+                throw new ArgumentNullException(nameof(points));
+            }
+
             switch (type)
             {
                 case LocationType.CIRCLE:

@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 
@@ -23,19 +24,14 @@ namespace Viking.Tokens
         public string ClientId { get; set; } = "ro.viking";
         public string ClientSecret { get; set; } = "CorrectHorseBatteryStaple";
 
-        public string IdentityServerURL { get; set; }
+        public Uri IdentityServerURL { get; set; }
 
         private DiscoveryCache _disco = null;
 
         /// <summary>
         /// Returns null if there is an error obtaining the Discovery document
         /// </summary>
-        public DiscoveryDocumentResponse DiscoveryDocument { 
-            get
-            {
-                return GetDiscoveryDocumentAsync().Result as DiscoveryDocumentResponse;
-            } 
-        }
+        public DiscoveryDocumentResponse DiscoveryDocument => GetDiscoveryDocumentAsync().Result as DiscoveryDocumentResponse;
 
         public IdentityServerHelper()
         {
@@ -47,7 +43,7 @@ namespace Viking.Tokens
         {
             if (_disco == null)
             {
-                _disco = new DiscoveryCache(IdentityServerURL);
+                _disco = new DiscoveryCache(IdentityServerURL.ToString());
             }
 
             return await _disco.GetAsync();
@@ -146,22 +142,37 @@ namespace Viking.Tokens
             }
         }
 
+        public async Task<string> GetUserId(string accessToken)
+        {
+            var disco = await GetDiscoveryDocumentAsync();
+            using (var client = new System.Net.Http.HttpClient())
+            {
+                var userInfo = await client.GetUserInfoAsync(new UserInfoRequest()
+                {
+                    Address = disco.UserInfoEndpoint,
+                    Token = accessToken
+                });
+
+                var userIdClaim = userInfo.Claims.FirstOrDefault(c => c.Type.Equals("sub"));
+                if (userIdClaim is null)
+                    throw new ArgumentException($"No sub claim found for access token {accessToken}");
+
+                return userIdClaim.Value;
+            }
+        }
+
         public async Task<string[]> RetrieveUserVolumePermissions(TokenResponse user_token, string VolumeName)
         {
             using (var client = new System.Net.Http.HttpClient())
             {
-                client.SetBearerToken(user_token.AccessToken);
-
-                var address_uri = IdentityServerURL.UriCombine($"Api/UserPermissions?id={VolumeName}");
+                client.SetBearerToken(user_token.AccessToken); 
+                var address_uri = $"{IdentityServerURL.Scheme}://" + IdentityServerURL.Host.UriCombine($"api/permissions/resource/{VolumeName}");
                 string address = address_uri.ToString();
 
-                var response = await client.GetStringAsync(address);
-                
-                JArray joResponse = JArray.Parse(response);
-
-                System.Diagnostics.Trace.WriteLine(joResponse);
-
-                return joResponse.Select(j => j.Value<string>()).ToArray();
+                var response = await client.GetStringAsync(address); 
+                var permissions = JsonSerializer.Deserialize<string[]>(response);
+                System.Diagnostics.Trace.WriteLine(permissions);
+                return permissions;
             }
         }
     } 

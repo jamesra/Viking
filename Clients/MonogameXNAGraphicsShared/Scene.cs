@@ -5,6 +5,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace VikingXNA
 {
@@ -26,75 +27,62 @@ namespace VikingXNA
         {
             OnSceneChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-          
-        public Matrix Projection
-        {
-            get { return _Projection; }
-        }
 
-        public Matrix View
-        {
-            get { return this.Camera.View; }
-        }
+        public Matrix Projection => _Projection;
 
-        public Matrix ViewProj
-        {
-            get { return this.Camera.View * this.Projection; }
-        }
+        public Matrix View => this.Camera.View;
+
+        public Matrix ViewProj => this.Camera.View * this.Projection;
 
         public Matrix World
         {
-            get { return _World; }
-            set { _World = value;
-                  _WorldViewProj = (_World * Camera.View) * _Projection;
-                  OnPropertyChanged();
+            get => _World;
+            set
+            {
+                _World = value;
+                _WorldViewProj = (_World * Camera.View) * _Projection;
+                OnPropertyChanged();
             }
         }
-          
-        public Matrix WorldViewProj
-        {
-            get { return _WorldViewProj;}
-        }
-         
-         
+
+        public Matrix WorldViewProj => _WorldViewProj;
+
+
         private PropertyChangedEventHandler cameraPropertyChangedEventHandler = null;
 
         private Camera _camera;
         public Camera Camera
         {
-            get{ return _camera; }
+            get => _camera;
             set
             {
-                if(value.Equals(_camera))
-                    return; 
+                if (value.Equals(_camera))
+                    return;
 
-                if(_camera != null)
+                if (_camera != null)
                     _camera.PropertyChanged -= cameraPropertyChangedEventHandler;
-                
-                if(value != null)
+
+                if (value != null)
                 {
                     value.PropertyChanged += cameraPropertyChangedEventHandler;
-                    _camera = value; 
+                    _camera = value;
                     UpdateProjectionMatrix();
                 }
 
                 OnPropertyChanged();
             }
-        } 
+        }
 
-        private Viewport _Viewport;  
+        private Viewport _Viewport;
         /// <summary>
         /// The viewport used for this scene.
         /// </summary>
-        public Viewport Viewport 
+        public Viewport Viewport
         {
-            get
-            {
-                return _Viewport; 
-            }
+            get => _Viewport;
             set
             {
-                if(_Viewport.Equals(value) == false)
+                if (_Viewport.Equals(value) == false)
                     _Viewport = value;
 
                 UpdateProjectionMatrix();
@@ -104,7 +92,7 @@ namespace VikingXNA
 
         public float MinDrawDistance
         {
-            get { return _MinDrawDistance; }
+            get => _MinDrawDistance;
             set
             {
                 if (_MinDrawDistance != value)
@@ -118,7 +106,7 @@ namespace VikingXNA
 
         public float MaxDrawDistance
         {
-            get { return _MaxDrawDistance; }
+            get => _MaxDrawDistance;
             set
             {
                 if (_MaxDrawDistance != value)
@@ -132,14 +120,14 @@ namespace VikingXNA
 
         public Scene(Viewport v, Camera cam)
         {
-            
+
             this.cameraPropertyChangedEventHandler = new PropertyChangedEventHandler(OnCameraPropertyChanged);
 
             this._camera = cam;
             if (_camera != null)
                 _camera.PropertyChanged += cameraPropertyChangedEventHandler;
 
-            _Viewport = v; 
+            _Viewport = v;
             _World = Matrix.Identity;
 
             UpdateProjectionMatrix();
@@ -168,101 +156,80 @@ namespace VikingXNA
             OnPropertyChanged("Camera." + e.PropertyName);
         }
 
-        private System.Threading.ReaderWriterLockSlim rw_lock = new System.Threading.ReaderWriterLockSlim();
+        private readonly SemaphoreSlim initVisibleWorldBoundsSemaphore = new SemaphoreSlim(1);
         private Geometry.GridRectangle? _VisibleWorldBounds; //This should only be set by using ResetVisibleWorldBounds
 
         public Geometry.GridRectangle VisibleWorldBounds
         {
             get
             {
+                var visibleBounds = _VisibleWorldBounds;
+                if (visibleBounds.HasValue)
+                    return visibleBounds.Value;
+
                 try
                 {
-                    rw_lock.EnterUpgradeableReadLock();
+                    initVisibleWorldBoundsSemaphore.Wait();
+                    visibleBounds = _VisibleWorldBounds;
+                    if (visibleBounds.HasValue)
+                        return visibleBounds.Value;
 
-                    if (!_VisibleWorldBounds.HasValue)
-                    {
-                        try
-                        {
-                            rw_lock.EnterWriteLock();
-                            double offset = 0;
-                            GridRectangle projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
-                            GridVector2 BottomLeft = ScreenToWorld(offset, _Viewport.Height);
-                            _VisibleWorldBounds = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
-                        }
-                        finally
-                        {
-                            rw_lock.ExitWriteLock();
-                        }
-                    }
-
-                    return _VisibleWorldBounds.Value;
+                    double offset = 0;
+                    var projectedArea = new GridRectangle(new GridVector2(0, 0), ((double)_Viewport.Width * Camera.Downsample), (double)_Viewport.Height * Camera.Downsample); ;
+                    var BottomLeft = ScreenToWorld(offset, _Viewport.Height);
+                    var result = new GridRectangle(BottomLeft, projectedArea.Width, projectedArea.Height);
+                    _VisibleWorldBounds = result;
+                    return result;
                 }
                 finally
                 {
-                    rw_lock.ExitUpgradeableReadLock();
+                    initVisibleWorldBoundsSemaphore.Release();
+                } 
+            }
+            set
+            {
+                Camera.LookAt = new Vector2((float)value.Center.X, (float)value.Center.Y);
+                Camera.Downsample = Math.Max(value.Height, value.Width) / Math.Min(Viewport.Height, Viewport.Width);
+                try
+                {
+                    initVisibleWorldBoundsSemaphore.Wait();
+                    _VisibleWorldBounds = value;
                 }
-
-            } 
+                finally
+                {
+                    initVisibleWorldBoundsSemaphore.Release();
+                }
+            }
         }
 
         private void ResetVisibleWorldBounds()
         {
             try
             {
-                rw_lock.EnterWriteLock(); 
-                _VisibleWorldBounds = new GridRectangle?();
+                initVisibleWorldBoundsSemaphore.Wait();
+                _VisibleWorldBounds = null;
             }
             finally
             {
-                rw_lock.ExitWriteLock();
+                initVisibleWorldBoundsSemaphore.Release();
             }
         }
 
-        public double MinVisibleWorldBorderLength
-        {
-            get
-            {
-                return Math.Min(this.VisibleWorldBounds.Width, this.VisibleWorldBounds.Height);
-            }
-        }
+        public double MinVisibleWorldBorderLength => Math.Min(this.VisibleWorldBounds.Width, this.VisibleWorldBounds.Height);
 
-        public double MaxVisibleWorldBorderLength
-        {
-            get
-            {
-                return Math.Max(this.VisibleWorldBounds.Width, this.VisibleWorldBounds.Height);
-            }
-        }
+        public double MaxVisibleWorldBorderLength => Math.Max(this.VisibleWorldBounds.Width, this.VisibleWorldBounds.Height);
 
         /// <summary>
         /// Returns how large a single pixel is on the device in world coordinates
         /// </summary>
-        public double DevicePixelWidth
-        {
-            get
-            {
-                return this.VisibleWorldBounds.Width / (double)this.Viewport.Width;
-            }
-        }
+        public double DevicePixelWidth => this.VisibleWorldBounds.Width / (double)this.Viewport.Width;
 
         /// <summary>
         /// Returns how large a single pixel is on the device in world coordinates
         /// </summary>
-        public double DevicePixelHeight
-        {
-            get
-            {
-                return this.VisibleWorldBounds.Height / (double)this.Viewport.Height;
-            }
-        }
+        public double DevicePixelHeight => this.VisibleWorldBounds.Height / (double)this.Viewport.Height;
 
-        public double ScreenPixelSizeInVolume
-        {
-            get
-            {
-                return Math.Min(this.DevicePixelHeight, this.DevicePixelWidth);
-            }
-        }
+        public double ScreenPixelSizeInVolume => Math.Min(this.DevicePixelHeight, this.DevicePixelWidth);
 
         public Geometry.GridVector2 ScreenToWorld(GridVector2 pos)
         {
@@ -304,8 +271,8 @@ namespace VikingXNA
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this); 
+            GC.SuppressFinalize(this);
         }
-        
+
     }
 }

@@ -14,18 +14,7 @@ using Geometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace WebAnnotationModel.gRPC.Converters
-{
-    public static class LocationConverterExtensions
-    {
-        public static IServiceCollection AddStandardLocationConverters(this IServiceCollection service)
-        {
-            service.AddSingleton<IObjectConverter<Location, LocationObj>, LocationServerToClientConverter>();
-            service.AddSingleton<IObjectConverter<LocationObj, Location>, LocationClientToServerConverter>();
-            service.AddTransient<IObjectUpdater<LocationObj, Location>, LocationServerToClientUpdater>();
-            service.AddTransient<IBoundingBoxConverter<LocationObj>, LocationServerToMosaicShapeConverter>();
-            return service;
-        }
-    }
+{ 
 
     public class LocationServerToClientConverter : IObjectConverter<Location, LocationObj>
     {

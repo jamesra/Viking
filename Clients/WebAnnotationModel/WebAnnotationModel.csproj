@@ -5,14 +5,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
-    <ProjectReference Include="..\..\GeometrySqlTypeMapper\GeometryOGCMapper.csproj" />
-    <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
-    <ProjectReference Include="..\Common\Common.csproj" />
+    <Compile Remove="Spatial\**" />
+    <EmbeddedResource Remove="Spatial\**" />
+    <None Remove="Spatial\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Spatial\" />
+    <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
+    <ProjectReference Include="..\..\GeometrySqlTypeMapper\GeometryOGCMapper.csproj" />
+    <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\..\Viking.Annotation.Geometry\Viking.Annotation.Geometry.csproj" />
+    <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

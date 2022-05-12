@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System.Threading.Tasks;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -13,14 +14,12 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
         Scene scene;
-        PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
-        PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
-        PointSetViewCollection Points_C = new PointSetViewCollection(Color.Red, Color.Pink, Color.GreenYellow);
-
-        UntiledRegionView PolyBorderView = new UntiledRegionView();
-
-        GamePadStateTracker Gamepad = new GamePadStateTracker();
-        Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly PointSetViewCollection Points_A = new PointSetViewCollection(Color.Blue, Color.BlueViolet, Color.PowderBlue);
+        readonly PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
+        readonly PointSetViewCollection Points_C = new PointSetViewCollection(Color.Red, Color.Pink, Color.GreenYellow);
+        readonly UntiledRegionView PolyBorderView = new UntiledRegionView();
+        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
 
         GridVector2 Cursor;
         CircleView cursorView;
@@ -31,7 +30,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -46,6 +45,8 @@ namespace MonogameTestbed
             PolyBorderView.DelaunayView.color = Color.Gray;
             PolyBorderView.BoundaryView.color = Color.Yellow;
             PolyBorderView.VoronoiView.color = Color.DarkRed;
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -64,18 +65,22 @@ namespace MonogameTestbed
             {
                 Cursor += state.ThumbSticks.Left.ToGridVector2();
                 cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
-                cursorLabel = new LabelView(Cursor.ToLabel(), Cursor);
-                cursorLabel.FontSize = 2;
-                cursorLabel.Color = Color.Yellow;
+                cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
+                {
+                    FontSize = 2,
+                    Color = Color.Yellow
+                };
             }
 
             if (state.Buttons.RightStick == ButtonState.Pressed)
             {
                 Cursor = this.scene.Camera.LookAt.ToGridVector2();
                 cursorView = new CircleView(new GridCircle(Cursor, PointRadius), Color.Gray);
-                cursorLabel = new LabelView(Cursor.ToLabel(), Cursor);
-                cursorLabel.FontSize = 2;
-                cursorLabel.Color = Color.Yellow;
+                cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
+                {
+                    FontSize = 2,
+                    Color = Color.Yellow
+                };
             }
 
             if (Gamepad.A_Clicked)

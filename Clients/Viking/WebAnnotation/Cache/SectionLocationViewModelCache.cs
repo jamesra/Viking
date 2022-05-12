@@ -45,6 +45,11 @@ namespace WebAnnotation
             return new SectionAnnotationsViewCacheEntry(key, value);
         }
 
+        protected override SectionAnnotationsViewCacheEntry CreateEntry(int key, Func<int,SectionAnnotationsView> valueFactory)
+        {
+            return new SectionAnnotationsViewCacheEntry(key, valueFactory(key));
+        }
+
         protected override Task<SectionAnnotationsViewCacheEntry> CreateEntryAsync(int key, SectionAnnotationsView value)
         {
             return Task.FromResult(CreateEntry(key, value));

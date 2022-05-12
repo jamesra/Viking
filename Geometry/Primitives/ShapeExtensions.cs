@@ -56,6 +56,11 @@ namespace Geometry
         {
             return !(left == right);
         }
+
+        public override string ToString()
+        {
+            return $"Intersection: {iA} {iB} {Intersection}";
+        }
     }
 
     public static class ShapeDecomposition
@@ -679,8 +684,7 @@ namespace Geometry
         public static bool Intersects(this in GridLineSegment line, in GridPolygon poly, out GridVector2 intersection)
         {
             intersection = GridVector2.Zero;
-            List<GridVector2> intersections;
-            bool intersected = Intersects(line, poly, false, out intersections);
+            bool intersected = Intersects(line, poly, false, out List<GridVector2> intersections);
             if (intersected)
             {
                 intersection = intersections.First();
@@ -691,8 +695,7 @@ namespace Geometry
 
         public static bool Intersects(this in GridLineSegment line, in GridPolygon poly, bool EndpointsOnRingDoNotIntersect = false)
         {
-            List<GridVector2> intersections;
-            return Intersects(line, poly, EndpointsOnRingDoNotIntersect, out intersections);
+            return Intersects(line, poly, EndpointsOnRingDoNotIntersect, out List<GridVector2> intersections);
         }
 
         /// <summary>
@@ -760,8 +763,7 @@ namespace Geometry
         /// <returns></returns>
         public static bool Crosses(this in GridLineSegment line, in GridPolygon poly)
         {
-            List<GridVector2> Intersections;
-            return line.Crosses(poly, out Intersections);
+            return line.Crosses(poly, out List<GridVector2> Intersections);
         }
 
         /// <summary>
@@ -830,8 +832,7 @@ namespace Geometry
 
             foreach (GridLineSegment testLine in lines)
             {
-                GridVector2 intersection;
-                if (line.Intersects(testLine, out intersection))
+                if (line.Intersects(testLine, out GridVector2 intersection))
                 {
                     //Check that NewPoints does not contain the point.  This can occur when the test line intersects exactly over the endpoint of two lines.
                     if (EndpointsOnLineDoNotIntersect && line.IsEndpoint(intersection))
@@ -879,7 +880,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Return a list of lines the passed line intersects and the intersection points
+        /// Return the list line pairs that intersect between the two sets of lines
         /// </summary>
         /// <param name="line">Line we are checking</param>
         /// <param name="lines">Lines we are testing for intersection</param>
@@ -1064,8 +1065,7 @@ namespace Geometry
                         if (B.SharedEndPoint(in A))
                             return false;
 
-                        GridVector2 intersection;
-                        if (B.Intersects(A, out intersection))
+                        if (B.Intersects(A, out GridVector2 intersection))
                         {
 
 
@@ -1086,8 +1086,7 @@ namespace Geometry
                     //Find the first line we do not intersect on an endpoint of our line
                     GridLineSegment B = intersections.First();
 
-                    GridVector2 intersection;
-                    if (B.Intersects(A, out intersection))
+                    if (B.Intersects(A, out GridVector2 intersection))
                     {
                         AddedPoints.Add(intersection);
                         linesToTest.Push(new GridLineSegment(A.A, intersection));
@@ -1368,7 +1367,7 @@ namespace Geometry
 #endif
             }
 
-            return added_intersections;
+            return added_intersections.Distinct().ToList();
         }
 
         /// <summary>
@@ -1415,15 +1414,21 @@ namespace Geometry
 
                 if (A is GridPolygon polyA && B is GridPolygon polyB)
                 {
-                    var newIntersections = polyA.AddPointsAtIntersections(polyB);
-                    added_intersections.AddRange(newIntersections); 
-                } 
+                    var newAIntersections = polyA.AddPointsAtIntersections(polyB);
+
+                    //var newBIntersections = polyB.AddPointsAtIntersections(polyA);
+                    added_intersections.AddRange(newAIntersections.Union(newAIntersections).Distinct()); 
+                }
                 else if(A is GridPolyline lineA && B is GridPolyline lineB)
                 {
-                    var newIntersections = lineA.AddPointsAtIntersections(lineB);
-                    added_intersections.AddRange(newIntersections);
+                    var newAIntersections = lineA.AddPointsAtIntersections(lineB);
+                    //var newBIntersections = lineB.AddPointsAtIntersections(lineA);
+                    added_intersections.AddRange(newAIntersections);
                 }
-
+                else
+                {
+                    throw new NotImplementedException("Corresponding points for polygons and polylines not implemented yet.");
+                }
             }
 
             return added_intersections;

@@ -159,19 +159,20 @@ namespace Viking.UI
         /// </summary>
         public double SimplifiedPathToleranceInPixels
         {
-            get
-            {
-                return _SimplifiedPathToleranceInPixels;
-            }
+            get => _SimplifiedPathToleranceInPixels;
             set
             {
                 if (value != _SimplifiedPathToleranceInPixels)
                 {
                     _SimplifiedPathToleranceInPixels = value;
-                    path.SimplifiedPathTolerance = value * Parent.Camera.Downsample;
-                }
-
+                    UpdatePathTolerance();
+                } 
             }
+        }
+
+        private void UpdatePathTolerance()
+        {
+            path.SimplifiedPathTolerance = _SimplifiedPathToleranceInPixels * (Parent.Camera.Downsample < 1 ? 1 : Parent.Camera.Downsample);
         }
 
         /// <summary>
@@ -363,7 +364,7 @@ namespace Viking.UI
         private void AssignID()
         {
             this.ID = _NextID;
-            _NextID = _NextID + 1;
+            _NextID++;
         }
 
         /// <summary>
@@ -452,10 +453,10 @@ namespace Viking.UI
 
         private void OnCameraPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs args)
         {
-            if (args.PropertyName == "Downsample")
-            {
-
-                this.path.SimplifiedPathTolerance = Parent.Camera.Downsample * SimplifiedPathToleranceInPixels; //Adjust our tolerance to match the camera's downsample level times a multiplier that lets simplified path drift by almost imperceptable amounts
+            if (args.PropertyName == nameof(Parent.Camera.Downsample))
+            { 
+                UpdatePathTolerance();
+                //this.path.SimplifiedPathTolerance = (Parent.Camera.Downsample < 1 ? 1 : Parent.Camera.Downsample) * SimplifiedPathToleranceInPixels; //Adjust our tolerance to match the camera's downsample level times a multiplier that lets simplified path drift by almost imperceptable amounts
             }
         }
 

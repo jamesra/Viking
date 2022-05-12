@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -31,16 +32,16 @@ namespace MonogameTestbed
         /// If true we pass a rectangle to the LabeledRectangle instead of a point position
         /// </summary>
         public bool PassRectanglesToConstructor = true;
-         
+
         /// <summary>
         /// Labels that are displayed on the grid and should change size and position on the screen as the camera changes
         /// </summary>
-        List<LabeledRectangleView> views = new List<LabeledRectangleView>();
+        readonly List<LabeledRectangleView> views = new List<LabeledRectangleView>();
 
         /// <summary>
         /// The background grid used to provide scale and visual proof that rectangles have proper dimensions
         /// </summary>
-        List<CircleView> dot_views = new List<CircleView>();
+        readonly List<CircleView> dot_views = new List<CircleView>();
 
         /// <summary>
         /// A direct rectangle view shown in the corner to verify that Rectangle Views have correct dimensions
@@ -51,11 +52,10 @@ namespace MonogameTestbed
         /// Rectangle labels that are positioned in screen coordinates and should not change size or scale with camera movements
         /// I did not get fixed labels working using a separate viewport and moved on.
         /// </summary>
-        List<LabeledRectangleView> fixed_views = new List<LabeledRectangleView>();
-
-        GamePadStateTracker Gamepad = new GamePadStateTracker();
-        KeyboardStateTracker Keypad = new KeyboardStateTracker();
-        Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly List<LabeledRectangleView> fixed_views = new List<LabeledRectangleView>();
+        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly KeyboardStateTracker Keypad = new KeyboardStateTracker();
+        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
 
         Scene scene;
 
@@ -64,7 +64,7 @@ namespace MonogameTestbed
         /// </summary>
         Scene screen_space_scene;
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
@@ -92,6 +92,8 @@ namespace MonogameTestbed
             }
 
             this._initialized = true;
+
+            return Task.CompletedTask;
         }
 
         private void LayoutButtons()

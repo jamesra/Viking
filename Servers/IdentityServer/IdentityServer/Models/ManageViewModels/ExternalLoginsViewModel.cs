@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using System.Collections.Generic;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
-using System.Collections.Generic;
 
-namespace Viking.Identity.Models.ManageViewModels
+namespace Viking.Identity.Server.WebManagement.Models.ManageViewModels
 {
     public class ExternalLoginsViewModel
     {

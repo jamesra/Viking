@@ -49,6 +49,7 @@ namespace Geometry
 
         public double Length => Segments.Sum(s => s.Length);
 
+        private readonly uint _SimplifiedPathInterpolations = 5;
         /// <summary>
         /// Sets how far from the actual path is a simplified path is allowed to stray.
         /// </summary>
@@ -56,10 +57,7 @@ namespace Geometry
 
         public double SimplifiedPathTolerance
         {
-            get
-            {
-                return _SimplifiedPathTolerance;
-            }
+            get => _SimplifiedPathTolerance;
             set
             {
                 if (value == _SimplifiedPathTolerance)
@@ -82,14 +80,14 @@ namespace Geometry
                 {
                     try
                     {
-                        _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance, false, 5).ToArray();
+                        _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance, false, _SimplifiedPathInterpolations).ToArray();
                     }
                     catch (ArgumentException)
                     {
                         Trace.WriteLine("Could not simplify path, trying tighter tolerance...");
                         try
                         {
-                            _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance / 2.0, false, 5).ToArray();
+                            _SimplifiedPath = CatmullRomControlPointSimplification.IdentifyControlPoints(this.Points, SimplifiedPathTolerance / 2.0, false, _SimplifiedPathInterpolations).ToArray();
                         }
                         catch (ArgumentException)
                         {
@@ -161,7 +159,7 @@ namespace Geometry
                 if (_SimplifiedLoop == null)
                 {
                     if (HasSelfIntersection)
-                        this._SimplifiedLoop = CatmullRomControlPointSimplification.IdentifyControlPoints(this._Loop, this.SimplifiedPathTolerance, true).EnsureClosedRing().ToArray();
+                        this._SimplifiedLoop = this._Loop.IdentifyControlPoints(this.SimplifiedPathTolerance, true, _SimplifiedPathInterpolations).EnsureClosedRing().ToArray();
                     else
                         return null;
                 }

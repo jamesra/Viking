@@ -208,13 +208,13 @@ namespace Viking.VolumeModel
         /// </summary>
         public SortedList<int, Section> Sections = new SortedList<int, Section>();
 
-        private int _Initialized = 0;
+        private long _Initialized = 0;
         /// <summary>
         /// Set to true if the Initialize() method has previously completed for this instance
         /// </summary>
         public bool IsInitialized
         {
-            get => Interlocked.CompareExchange(ref _Initialized, 1, 1) > 0;
+            get => Interlocked.Read(ref _Initialized) > 0;
         }
 
         /// <summary>
@@ -294,6 +294,9 @@ namespace Viking.VolumeModel
         /// <param name="workerThread">optional worker thread to report progress</param>
         public Volume(string path, string localCachePath, Viking.Common.IProgressReporter workerThread)
         {
+            if (path is null)
+                throw new ArgumentNullException(nameof(path));
+
             //Load the default settings from user preferences
             //            ChannelInfo DefaultChannel = new ChannelInfo();
             DefaultChannels = new ChannelInfo[0];
@@ -403,10 +406,12 @@ namespace Viking.VolumeModel
         /// <param name="path"></param>
         public static XDocument LoadXDocument(string path, System.Net.NetworkCredential UserCredentials = null, Viking.Common.IProgressReporter workerThread = null)
         {
+            if (path is null)
+                throw new ArgumentNullException(nameof(path));
             Uri uri = new Uri(path);
 
             if(workerThread != null)
-                workerThread.ReportProgress(0, "Requesting " + path);
+                workerThread.ReportProgress(0, $"Requesting {path}");
 
             XDocument XMLInitData;
             if (uri.Scheme == "http" || uri.Scheme == "https")
@@ -459,7 +464,7 @@ namespace Viking.VolumeModel
             catch (WebException e)
             {
                 /*PORT: Don't have forms, throw a better exception*/
-                throw new WebException("Error connecting to volume server: \n" + path + "\n" + e.Message, e);
+                throw new WebException($"Error connecting to volume server: \n{path}\n{e.Message}", e);
             }
             
             return reader;
@@ -531,7 +536,7 @@ namespace Viking.VolumeModel
             }
             catch (WebException e)
             {
-                Trace.WriteLine("Error connecting to volume server: \n" + StosZipPath + "\n" + e.Message, "VolumeModel");
+                Trace.WriteLine($"Error connecting to volume server: \n{StosZipPath}\n{e.Message}", "VolumeModel");
                 return false;
             }
             catch (Exception e)
@@ -613,7 +618,7 @@ namespace Viking.VolumeModel
                 }
                 catch (FormatException)
                 {
-                    Trace.WriteLine("Unable to parse default section: " + defaultsection.Value);
+                    Trace.WriteLine($"Unable to parse default section: {defaultsection.Value}");
                 }
             }
 
@@ -685,8 +690,8 @@ namespace Viking.VolumeModel
                 if (VolumeElement.GetAttributeCaseInsensitive("StosZip") != null)
                 {
                     string StosZipFileName = VolumeElement.GetAttributeCaseInsensitive("StosZip").Value;
-                    workerThread?.ReportProgress(0, "Loading compressed transform file " + StosZipFileName);
-                    HaveStosZip = await FetchStosZip(new Uri(Host + '/' + StosZipFileName), this.UserCredentials, this.Paths.ServerStosCachePath);
+                    workerThread?.ReportProgress(0, $"Loading compressed transform file {StosZipFileName}");
+                    HaveStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath);
                 }
 
                 int countStos = 0;
@@ -716,9 +721,9 @@ namespace Viking.VolumeModel
                             //      int pixelSpacing = System.Convert.ToInt32(GetAttributeCaseInsensitive(elem,"pixelSpacing").Value);
                             int ProgressPercent = (countStos * 100) / NumStosFiles;
                             countStos++;
-                            workerThread?.ReportProgress(ProgressPercent, "Loading " + stosFileName);
+                            workerThread?.ReportProgress(ProgressPercent, $"Loading {stosFileName}");
                             
-                            ListStosLoadingTasks.Add( Task<LoadStosResult>.Run(async () =>  await LoadStos(elem, HaveStosZip), token));
+                            ListStosLoadingTasks.Add( LoadStos(elem, HaveStosZip));
 
                             break;
                         case "section":
@@ -735,10 +740,10 @@ namespace Viking.VolumeModel
                             }
 
                             countSections++;
-                            workerThread?.ReportProgress(ProgressPercent, "Queueing " + SectionPath);
+                            workerThread?.ReportProgress(ProgressPercent, $"Queueing {SectionPath}");
 
                             var newSection = new Section(this, SectionPath, elem);
-                            var task = Task.Run(() => newSection.InitializeFromXML(elem, token), token);
+                            var task = newSection.InitializeFromXML(elem, token);
                             ListSectionLoadingTasks.Add(task);
                             //await task;
                             break;
@@ -764,6 +769,7 @@ namespace Viking.VolumeModel
 
                 workerThread?.ReportProgress(101, "Done!");
 
+                Interlocked.Exchange(ref _Initialized, 1);
             }
             finally
             {
@@ -823,7 +829,7 @@ namespace Viking.VolumeModel
                 int pixelSpacing =
                     System.Convert.ToInt32(element.GetAttributeCaseInsensitive("pixelSpacing").Value);
                 string type = element.GetAttributeCaseInsensitive("type").Value;
-                string groupName = type + " " + pixelSpacing.ToString();
+                string groupName = $"{type} {pixelSpacing}";
 
                 XAttribute GroupNameAttribute = element.Attribute("GroupName");
                 if (GroupNameAttribute != null)
@@ -857,7 +863,7 @@ namespace Viking.VolumeModel
 
                     if (transformDict.ContainsKey(info.MappedSection))
                     {
-                        Console.WriteLine("Volume stos mapping already contains " + info.ToString());
+                        Console.WriteLine($"Volume stos mapping already contains {info}");
                     }
                     else
                     {
@@ -866,7 +872,7 @@ namespace Viking.VolumeModel
                 }
                 else
                 {
-                    Trace.WriteLine("Could not load stos file: " + element.ToString());
+                    Trace.WriteLine($"Could not load stos file: {element}");
                 }
             }
             finally
@@ -922,12 +928,12 @@ namespace Viking.VolumeModel
 
                 if (result.Transform == null)
                 {
-                    workerThread?.ReportProgress(Progress, "Failed Loading " + result.element.ToString());
+                    workerThread?.ReportProgress(Progress, $"Failed Loading {result.element}");
                     continue;
                 }
                 else
                 {
-                    workerThread?.ReportProgress(Progress, "Loaded " + result.Transform.ToString());
+                    workerThread?.ReportProgress(Progress, $"Loaded {result.Transform}");
                 }
             }
         }
@@ -962,7 +968,7 @@ namespace Viking.VolumeModel
                     Progress = 100;
 
                 OnSectionLoadComplete(Section);
-                workerThread?.ReportProgress(Progress, "Loaded " + Section.ToString());
+                workerThread?.ReportProgress(Progress, $"Loaded {Section}");
             }
         }
 
@@ -1017,9 +1023,9 @@ namespace Viking.VolumeModel
 
             try
             {
-                if (Geometry.Global.IsCacheFileValid(CacheStosPath, new DateTime[] { ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified }))
+                if (Geometry.Global.IsCacheFileValid(CacheStosPath, new DateTime[] { ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified, Global.OldestValidCachedTransform }))
                 {
-                    string outString = "Loading from binary cache: " + SectionToControlInfo.MappedSection + " to " + ControlToVolumeInfo.ControlSection.ToString();
+                    string outString = $"Loading from binary cache: {SectionToControlInfo.MappedSection} to {ControlToVolumeInfo.ControlSection}";
                     Trace.WriteLine(outString);
                     using (Stream binFile = System.IO.File.OpenRead(CacheStosPath))
                     {
@@ -1034,7 +1040,7 @@ namespace Viking.VolumeModel
             }
             catch (Exception)
             {
-                Trace.WriteLine(string.Format("Exception loading {0}, deleting", CacheStosPath));
+                Trace.WriteLine($"Exception loading {CacheStosPath}, deleting");
                 Geometry.Global.TryDeleteCacheFile(CacheStosPath);
 
                 return null;
@@ -1049,9 +1055,10 @@ namespace Viking.VolumeModel
             DiscreteTransformWithContinuousFallback continuousTransform = null;
             try
             {
-                if (Geometry.Global.IsCacheFileValid(CacheStosPath, new DateTime[] { ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified }))
+                if (Geometry.Global.IsCacheFileValid(CacheStosPath, new DateTime[] { ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified, Global.OldestValidCachedTransform }))
                 {
-                    string outString = "Loading from ITK string cache: " + SectionToControlInfo.MappedSection + " to " + ControlToVolumeInfo.ControlSection.ToString();
+                    string outString =
+                        $"Loading from ITK string cache: {SectionToControlInfo.MappedSection} to {ControlToVolumeInfo.ControlSection}";
                     Trace.WriteLine(outString);
                     DateTime CacheLastModifiedUtc = System.IO.File.GetLastWriteTimeUtc(CacheStosPath);
                     StosTransformInfo stosInfo = new StosTransformInfo(ControlToVolumeInfo.ControlSection, SectionToControlInfo.MappedSection, CacheLastModifiedUtc);
@@ -1187,7 +1194,7 @@ namespace Viking.VolumeModel
 
                                     try
                                     {
-                                        string outString = "Adding transforms: " + trans.ToString() + " to " + ControlTrans.ToString();
+                                        string outString = $"Adding transforms: {trans} to {ControlTrans}";
                                         workerThread.ReportProgress((iSectionProgress * 100) / TList.Count, outString);
 
                                         TList[childSection] = ContinuousControlTransform.TransformTransform((trans as ITransformControlPoints), trans.GetType());
@@ -1214,7 +1221,7 @@ namespace Viking.VolumeModel
                                 }
                                 else
                                 {
-                                    string outString = "Loading transforms from Cache: " + trans.ToString() + " to " + ControlTrans.ToString();
+                                    string outString = $"Loading transforms from Cache: {trans} to {ControlTrans}";
                                     workerThread.ReportProgress((iSectionProgress * 100) / TList.Count, outString);
                                 }
                             }

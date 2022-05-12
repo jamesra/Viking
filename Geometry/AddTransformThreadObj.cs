@@ -34,10 +34,13 @@ namespace Geometry.Transforms
 
         //TODO: Convert this entire class to an async method 
         public void ThreadPoolCallback(Object threadContext)
-        {  
+        {
             bool[] mapped = fixedTransform.TryTransform(warpingTransform.MapPoints.Select(p => p.ControlPoint).ToArray(), out var MappedControlPoints);
-
-            List<MappingGridVector2> newPointsList = MappedControlPoints.Where((p, i) => mapped[i]).Select((cp, i) => new MappingGridVector2(cp, warpingTransform.MapPoints[i].MappedPoint)).ToList();
+            
+            //Create new MappingGridVector2s for all the points we could cleanly transform
+            List<MappingGridVector2> newPointsList = MappedControlPoints.Select((cp, i) => mapped[i] ? 
+                new MappingGridVector2(cp, warpingTransform.MapPoints[i].MappedPoint) :
+                default).Where((_,i) => mapped[i]).ToList();
              
             if (!mapped.All(m => m))
             {
@@ -66,12 +69,11 @@ namespace Geometry.Transforms
                         GridLineSegment ctrlLine = new GridLineSegment(UnmappedPoint.ControlPoint, this.warpingTransform.MapPoints[iEdgePoint].ControlPoint);
                         GridLineSegment mapLine = new GridLineSegment(UnmappedPoint.MappedPoint, this.warpingTransform.MapPoints[iEdgePoint].MappedPoint);
 
-                        GridLineSegment foundCtrlLine; //Control line found in nearest line call
-                        GridLineSegment foundMapLine; //Corresponding map line found in nearest line call
-                        GridVector2 intersect;
+                        //Control line found in nearest line call
+                        //Corresponding map line found in nearest line call
 
                         //Find out if there is a line in the fixed transform we intersect with. 
-                        double distance = discreteFixedTransform.ConvexHullIntersection(ctrlLine, UnmappedPoint.ControlPoint, out foundCtrlLine, out foundMapLine, out intersect);
+                        double distance = discreteFixedTransform.ConvexHullIntersection(ctrlLine, UnmappedPoint.ControlPoint, out GridLineSegment foundCtrlLine, out GridLineSegment foundMapLine, out GridVector2 intersect);
                         if (distance == double.MaxValue)
                             continue;
 

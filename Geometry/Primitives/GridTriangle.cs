@@ -52,9 +52,7 @@ namespace Geometry
         GridRectangle IShape2D.BoundingBox => this.BoundingBox;
         
         public readonly GridLineSegment[] Segments;
-
-        private readonly int _HashCode;
-
+          
         private readonly BaryCoefs _BarycentricCoefficients;
 
         public GridTriangle(IReadOnlyList<GridVector2> points)
@@ -76,9 +74,7 @@ namespace Geometry
             Points = new GridVector2[] { p1, p2, p3 };
 
             BoundingBox = Points.BoundingBox();
-
-            _HashCode = ((p1 + p2 + p3) / 3).GetHashCode();
-
+              
             Segments = new GridLineSegment[] { new GridLineSegment(p1,p2),
                                                 new GridLineSegment(p2,p3),
                                                 new GridLineSegment(p3,p1)};
@@ -125,7 +121,7 @@ namespace Geometry
 
         public bool Equals(ITriangle2D other)
         {
-            if (object.ReferenceEquals(other, null)) return false;
+            if (other is null) return false;
 
             for (int i = 0; i < Points.Length; i++)
             {
@@ -137,7 +133,7 @@ namespace Geometry
         }
 
 
-        public override int GetHashCode() => _HashCode;
+        public override int GetHashCode() => throw new InvalidOperationException("It is not possible to generate a hashcode for points when using an epsilon value, see GridVector2.GetHashCode");
 
         public static bool operator ==(in GridTriangle A, in GridTriangle B)
         {
@@ -242,7 +238,12 @@ namespace Geometry
         public bool Contains(in IPoint2D point)
         {
             if (false == BoundingBox.Contains(point))
+            {
+                //False positives can happen in cases where the points have floating point precision issues.
+                //Particularly in GridTransforms.  This should be handled by rounding the transform results. 
+                //However it may be worth the computation cost to do Barycentric calculation instead.
                 return false;
+            }
 
             GridVector2 uv = Barycentric(point);
 
@@ -294,6 +295,23 @@ namespace Geometry
 
                 Debug.Assert(uv.X + uv.Y <= 1.0f, "Failed to correct for u+v near 1.0f + epsilon case in barycentric conversion"); 
             }
+
+            return uv;
+        } 
+
+        /// <summary>
+        /// Returns u,v coordinate of point in triangle.  Calculates areas and returns fractions of area.  This can return 0,0 if the point is well outside the 
+        /// triangle because the math hits the limit of the double data-type
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public GridVector2[] Barycentric(in GridVector2[] points)
+        {
+            GridVector2[] uv = new GridVector2[points.Length];
+            for (int i = 0; i < uv.Length; i++)
+            {
+                uv[i] = Barycentric(points[i]);
+            } 
 
             return uv;
         } 

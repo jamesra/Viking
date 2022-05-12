@@ -168,7 +168,7 @@ namespace TriangleNet.IO
             // Number of segments.
             stream.WriteLine("{0}", mesh.subsegs.Count);
 
-            Osub subseg = default(Osub);
+            Osub subseg = default;
             subseg.orient = 0;
 
             foreach (var item in mesh.subsegs.Values)
@@ -187,7 +187,7 @@ namespace TriangleNet.IO
                 stream.WriteLine("{0} {1} {2} {3}", subseg.seg.hash, p1.id, p2.id, subseg.seg.boundary);
             }
 
-            Otri tri = default(Otri), trisym = default(Otri);
+            Otri tri = default, trisym = default;
             tri.orient = 0;
 
             int n1, n2, n3, h1, h2, h3;

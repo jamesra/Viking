@@ -126,7 +126,7 @@ namespace TriangleNet
             double xPetalCtr_1, yPetalCtr_1, xPetalCtr_2, yPetalCtr_2, xPetalCtr, yPetalCtr, xMidOfShortestEdge, yMidOfShortestEdge;
             double dxcenter1, dycenter1, dxcenter2, dycenter2;
             // for finding neighbor
-            Otri neighborotri = default(Otri);
+            Otri neighborotri = default;
             double[] thirdPoint = new double[2];
             //int neighborNotFound = -1;
             bool neighborNotFound;
@@ -814,7 +814,7 @@ namespace TriangleNet
             double xPetalCtr_1, yPetalCtr_1, xPetalCtr_2, yPetalCtr_2, xPetalCtr, yPetalCtr, xMidOfShortestEdge, yMidOfShortestEdge;
             double dxcenter1, dycenter1, dxcenter2, dycenter2;
             // for finding neighbor
-            Otri neighborotri = default(Otri);
+            Otri neighborotri = default;
             double[] thirdPoint = new double[2];
             //int neighborNotFound = -1;
             // for keeping the vertices of the neighbor triangle
@@ -2235,7 +2235,7 @@ namespace TriangleNet
                     int whichPoint, ref double[] points)
         {
 
-            Otri neighotri = default(Otri);  // for return value of the function
+            Otri neighotri = default;  // for return value of the function
             Otri tempotri;   // for temporary usage
             double first_x = 0, first_y = 0;	  // keeps the first point to be considered
             double second_x = 0, second_y = 0;  // for determining the edge we will begin
@@ -2325,7 +2325,7 @@ namespace TriangleNet
                         ref double[] thirdpoint, ref Otri neighotri)
         {
 
-            Otri neighbor = default(Otri); // keeps the neighbor triangles
+            Otri neighbor = default; // keeps the neighbor triangles
             bool notFound = false;	// boolean variable if we can find that neighbor or not
 
             // for keeping the vertices of the neighbor triangle
@@ -4018,7 +4018,7 @@ namespace TriangleNet
         /// <returns></returns>
         private double MinDistanceToNeighbor(double newlocX, double newlocY, ref Otri searchtri)
         {
-            Otri horiz = default(Otri);	// for search operation
+            Otri horiz = default;	// for search operation
             LocateResult intersect = LocateResult.Outside;
             Vertex v1, v2, v3, torg, tdest;
             double d1, d2, d3, ahead;

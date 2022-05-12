@@ -9,7 +9,7 @@ which you can then pass to Viking's splash screen.
 
 Nornir contains scripts which VikingXML files automatically. 
 
-Link to the `XML Schema Definition for VikingXML`_
+Link to the `XML Schema Definition for VikingXML_`
 
 Viking has not been tested against a lot of different input and does not yet have robust error reporting. 
 We recommend testing after adding each element and not deviating too much from the sample below at first. 
@@ -199,4 +199,4 @@ Channel
    :Color: Color to use when displaying channel, specify as a web color i.e. #00ff00
 
 .. _snippet of VikingXML: http://connectomes.utah.edu/Rabbit/Volume.VikingXML
-.. _XML Schema Definition for VikingXML:https://github.com/jamesra/Viking/VikingXML.xsd
+.. _XML Schema Definition for VikingXML: https://github.com/jamesra/Viking/VikingXML.xsd

@@ -27,7 +27,8 @@ namespace Geometry.Transforms
     public class RBFTransform : ReferencePointBasedTransform, IContinuousTransform, IMemoryMinimization
     {
         public delegate double BasisFunctionDelegate(double distance);
-        BasisFunctionDelegate BasisFunction = new BasisFunctionDelegate(StandardBasisFunction);
+
+        readonly BasisFunctionDelegate BasisFunction = new BasisFunctionDelegate(StandardBasisFunction);
 
         private float[] _ControlToMappedSpaceWeights = null;
         private float[] ControlToMappedSpaceWeights
@@ -92,7 +93,7 @@ namespace Geometry.Transforms
         protected RBFTransform(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             if (info == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(info));
 
             _ControlToMappedSpaceWeights = info.GetValue("_ControlToMappedSpaceWeights", typeof(float[])) as float[];
             _MappedToControlSpaceWeights = info.GetValue("_MappedToControlSpaceWeights", typeof(float[])) as float[];
@@ -107,15 +108,19 @@ namespace Geometry.Transforms
             base.GetObjectData(info, context);
         }
 
-        public bool CanTransform(GridVector2 Point)
+        public override bool CanTransform(in GridVector2 Point)
         {
             return true;
         }
 
         public static GridVector2 Transform(GridVector2 Point, float[] Weights, GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (ControlPoints == null || Weights == null || BasisFunction == null)
-                throw new ArgumentNullException();
+            if (ControlPoints == null)
+                throw new ArgumentException(nameof(ControlPoints));
+            if (Weights == null)
+                throw new ArgumentException(nameof(Weights));
+            if(BasisFunction == null)
+                throw new ArgumentNullException(nameof(BasisFunction));
 
             int nPoints = ControlPoints.Length;
             double[] distances = new double[nPoints];
@@ -138,54 +143,54 @@ namespace Geometry.Transforms
             double X = WeightSumX + (Point.Y * Weights[nPoints]) + (Point.X * Weights[nPoints + 1]) + Weights[nPoints + 2];
             double Y = WeightSumY + (Point.Y * Weights[nPoints + 3 + nPoints]) + (Point.X * Weights[nPoints + nPoints + 3 + 1]) + Weights[nPoints + nPoints + 3 + 2];
 
-            return new GridVector2(X, Y);
+            return new GridVector2(X, Y).Round(Global.TransformSignificantDigits);
         }
 
-        public GridVector2 Transform(GridVector2 Point)
+        public override GridVector2 Transform(in GridVector2 Point)
         {
             return RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction);
         }
 
-        public GridVector2[] Transform(GridVector2[] Points)
+        public override GridVector2[] Transform(in GridVector2[] Points)
         {
             var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, MappedToControlSpaceWeights, MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction);
             return Output.ToArray();
         }
 
-        public bool TryTransform(GridVector2 Point, out GridVector2 v)
+        public override bool TryTransform(in GridVector2 Point, out GridVector2 v)
         {
             v = Transform(Point);
             return true;
         }
-        public bool[] TryTransform(GridVector2[] Points, out GridVector2[] Output)
+        public override bool[] TryTransform(in GridVector2[] Points, out GridVector2[] Output)
         {
             Output = this.Transform(Points);
             return Points.Select(p => true).ToArray();
         }
 
-        public bool CanInverseTransform(GridVector2 Point)
+        public override bool CanInverseTransform(in GridVector2 Point)
         {
             return true;
         }
 
-        public GridVector2 InverseTransform(GridVector2 Point)
+        public override GridVector2 InverseTransform(in GridVector2 Point)
         {
             return RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingGridVector2.ControlPoints(this.MapPoints), this.BasisFunction);
         }
 
-        public GridVector2[] InverseTransform(GridVector2[] Points)
+        public override GridVector2[] InverseTransform(in GridVector2[] Points)
         {
             var Output = from Point in Points.AsParallel().AsOrdered() select RBFTransform.Transform(Point, ControlToMappedSpaceWeights, MappingGridVector2.ControlPoints(this.MapPoints), this.BasisFunction);
             return Output.ToArray();
         }
 
-        public bool TryInverseTransform(GridVector2 Point, out GridVector2 v)
+        public override bool TryInverseTransform(in GridVector2 Point, out GridVector2 v)
         {
             v = InverseTransform(Point);
             return true;
         }
 
-        public bool[] TryInverseTransform(GridVector2[] Points, out GridVector2[] Output)
+        public override bool[] TryInverseTransform(in GridVector2[] Points, out GridVector2[] Output)
         {
             Output = this.InverseTransform(Points);
             return Points.Select(p => true).ToArray();
@@ -194,7 +199,7 @@ namespace Geometry.Transforms
         public static float[] CreateSolutionMatrixWithLinear(GridVector2[] ControlPoints)
         {
             if (ControlPoints == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
 
@@ -212,7 +217,7 @@ namespace Geometry.Transforms
         public static Vector<float> CreateSolutionMatrix_X_WithLinear(GridVector2[] ControlPoints)
         {
             if (ControlPoints == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
 
@@ -248,7 +253,7 @@ namespace Geometry.Transforms
         public static Vector<float> CreateSolutionMatrix_Y_WithLinear(GridVector2[] ControlPoints)
         {
             if (ControlPoints == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
 
@@ -285,12 +290,12 @@ namespace Geometry.Transforms
         /// Populates matrix by applying basis function to control points and filling a matrix [B 0; 0 B];
         /// </summary>
         /// <param name="ControlPoints"></param>
-        /// <param name="BasisFunction"></param>
+        /// <param name="BasisFunction">How to weight pairs of points, if null, use Euclidean distance</param>
         /// <returns></returns>
-        public static Matrix<float> CreateBetaMatrixWithLinear(GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
+        public static Matrix<float> CreateBetaMatrixWithLinear(GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction = null)
         {
             if (ControlPoints == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
 
@@ -389,8 +394,10 @@ namespace Geometry.Transforms
 
         public static float[] CalculateRBFWeights(GridVector2[] MappedPoints, GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (MappedPoints == null || ControlPoints == null)
-                throw new ArgumentNullException();
+            if (MappedPoints == null)
+                throw new ArgumentNullException(nameof(MappedPoints));
+            if(ControlPoints == null)
+                throw new ArgumentNullException(nameof(ControlPoints));
 
             Debug.Assert(MappedPoints.Length == ControlPoints.Length);
 
@@ -487,6 +494,11 @@ namespace Geometry.Transforms
             }
 
             return false;
+        }
+
+        void IContinuousTransform.Translate(in GridVector2 vector)
+        {
+            throw new NotImplementedException();
         }
     }
 }

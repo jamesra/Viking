@@ -329,7 +329,7 @@ namespace ColladaIO
             visual_scene_type visual_scene = new ColladaIO.visual_scene_type();
 
             visual_scene.id = "VisualSceneNode";
-            visual_scene.name = scene.Title == null ? "untitled" : scene.Title;
+            visual_scene.name = scene.Title ?? "untitled";
 
             List<node_type> listNodes = new List<node_type>();
             foreach(StructureModel model in scene.RootModels.Values)

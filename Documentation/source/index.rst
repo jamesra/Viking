@@ -3,7 +3,7 @@
 .. image::  Banner.jpg 
    :width: 768
    :align: center
-
+ 
 #################################
 Welcome to Viking's Documentation
 #################################
@@ -20,7 +20,7 @@ Viking Client Installation
 
 Viking requires the following:
    * Windows 7+ 
-   * `.NET Framework 4.6`_
+   * `.NET Framework 4.8`_
    * `XNA 4.0 Framework Redistributable`_
    * A dedicated GPU.  Intel chips with embedded graphics also work.
    * An internet connection
@@ -50,7 +50,7 @@ Accounts are only required to write to the database.  Read-only access via Vikin
 
 Create accounts and do some basic visualization on the `original visualization site`_
 
-.. image::  Footer_v2.jpg  
+.. image::  Footer_v2.jpg
    :width: 768
    :align: center
    
@@ -67,6 +67,6 @@ Indices and tables
 .. _Nornir: http://nornir.github.io
 .. _SSTEM and Computation Molecular Phenotyping: http://www.plosbiology.org/article/info%3Adoi%2F10.1371%2Fjournal.pbio.1000074#abstract0
 .. _original visualization site: http://connectomes.utah.edu/viz/
-.. _.NET Framework 4.6: https://www.microsoft.com/en-us/download/details.aspx?id=48130
+.. _.NET Framework 4.8: https://www.microsoft.com/en-us/download/details.aspx?id=48130
 .. _XNA 4.0 Framework Redistributable: http://connectomes.utah.edu/XNA Framework 4.0 Redist.msi
 .. _public key: https://connectomes.utah.edu/Software/Viking4/VikingPublicKey.cer

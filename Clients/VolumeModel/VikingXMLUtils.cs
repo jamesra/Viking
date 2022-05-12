@@ -14,8 +14,8 @@ namespace Viking.VolumeModel
                 Trace.WriteLine("Scale element missing required elements " + scale_elem.ToString());
             }
 
-            string UnitsOfMeasure = IO.GetAttributeCaseInsensitive(scale_elem, "UnitsOfMeasure").Value;
-            double UnitsPerPixel = Convert.ToDouble(IO.GetAttributeCaseInsensitive(scale_elem, "UnitsPerPixel").Value);
+            string UnitsOfMeasure = scale_elem.GetAttributeCaseInsensitive("UnitsOfMeasure").Value;
+            double UnitsPerPixel = Convert.ToDouble(scale_elem.GetAttributeCaseInsensitive("UnitsPerPixel").Value);
 
             return new UnitsAndScale.AxisUnits(UnitsPerPixel, UnitsOfMeasure);
         }

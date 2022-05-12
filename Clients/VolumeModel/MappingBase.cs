@@ -42,14 +42,14 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        bool[] TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
+        bool[] TrySectionToVolume(in GridVector2[] Points, out GridVector2[] transformedP);
 
         /// <summary>
         /// Maps the point from the volume to the section if this is overriden by a volume mapping class
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        bool[] TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
+        bool[] TryVolumeToSection(in GridVector2[] Points, out GridVector2[] transformedP);
 
         /// <summary>
         /// Maps the point from the volume to the section if this is overriden by a volume mapping class
@@ -237,6 +237,7 @@ namespace Viking.VolumeModel
             this.Section = section;
             this.TilePrefix = Prefix;
             this.TilePostfix = Postfix;
+            this._ID = Interlocked.Increment(ref _NextID);
         }
 
         public abstract Task Initialize(CancellationToken token);
@@ -356,7 +357,8 @@ namespace Viking.VolumeModel
         }
         */
 
-        private long? _ID = new int?();
+        /*private long _ID = new int?();
+
         /// <summary>
         /// Return an unique ID for the current transform being used so we can quickly check if we need to recalculate positions
         /// </summary>
@@ -372,6 +374,11 @@ namespace Viking.VolumeModel
                 return _ID.Value;
             }
         }
+        */
+
+        private readonly long _ID;
+        private static long _NextID = 0;
+        public long ID => _ID;
 
         public abstract GridRectangle? SectionBounds { get; }
         public abstract GridRectangle? VolumeBounds { get; }
@@ -395,7 +402,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        public abstract bool[] TrySectionToVolume(GridVector2[] Points, out GridVector2[] transformedP);
+        public abstract bool[] TrySectionToVolume(in GridVector2[] Points, out GridVector2[] transformedP);
 
 
         /// <summary>
@@ -403,6 +410,6 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="P"></param>
         /// <returns></returns>
-        public abstract bool[] TryVolumeToSection(GridVector2[] Points, out GridVector2[] transformedP);
+        public abstract bool[] TryVolumeToSection(in GridVector2[] Points, out GridVector2[] transformedP);
     }
 }

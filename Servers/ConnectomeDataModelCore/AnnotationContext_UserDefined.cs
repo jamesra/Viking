@@ -20,6 +20,9 @@ namespace Viking.DataModel.Annotation
 
                 entity.Property(e => e.MosaicShape)
                     .HasConversion(geometry_converter);
+
+                //entity.HasIndex(e => e.VolumeShape, "VolumeShape_Index");
+                //entity.HasIndex(e => e.MosaicShape, "MosaicShape_Index");
             });
         }
         //Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter CurvePolyConverter;

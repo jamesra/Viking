@@ -7,35 +7,37 @@ namespace WebAnnotation.UI.Commands
 {
     class ToggleStructureTag : Viking.UI.Commands.Command
     {
-        StructureObj target;
-        string tag;
-        bool SetValueToUsername = false;
+        private readonly StructureObj target;
+        private readonly string tag;
+        private readonly string value;
+        
         public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent,
-                                         StructureObj structure,
-                                         string Tag, bool setValueToUsername)
+            StructureObj structure,
+            string tag, string value)
             : base(parent)
         {
             this.target = structure;
-            this.tag = Tag;
-            this.SetValueToUsername = setValueToUsername;
+            this.tag = tag;
+            this.value = value;
         }
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
+            this.Parent.BeginInvoke((Action)this.Execute);
         }
 
         protected override void Execute()
         {
-            target.ToggleAttribute(this.tag, this.SetValueToUsername ? WebAnnotationModel.State.UserCredentials.UserName : null);
+            target.ToggleAttribute(this.tag, this.value);
 
             try
             {
                 Store.Structures.Save();
             }
-            catch (FaultException)
+            catch (FaultException ex)
             {
-                target.ToggleAttribute(this.tag, this.SetValueToUsername ? WebAnnotationModel.State.UserCredentials.UserName : null);
+                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
+                target.ToggleAttribute(this.tag, this.value);
             }
 
             base.Execute();
@@ -44,35 +46,28 @@ namespace WebAnnotation.UI.Commands
 
     class ToggleLocationTag : Viking.UI.Commands.Command
     {
-        LocationObj target;
-        string tag;
-        bool SetValueToUsername = false;
+        private readonly LocationObj target;
+        private readonly string tag;
+        private readonly string value;
+        
         public ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
-                                         LocationObj loc,
-                                         string Tag, bool setValueToUsername)
+            LocationObj loc,
+            string tag, string value)
             : base(parent)
         {
             this.target = loc;
-            this.tag = Tag;
-            this.SetValueToUsername = setValueToUsername;
+            this.tag = tag;
+            this.value = value;
         }
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
+            this.Parent.BeginInvoke((Action)this.Execute);
         }
 
         protected override void Execute()
         {
-            if (this.SetValueToUsername)
-            {
-                target.ToggleAttribute(this.tag, WebAnnotationModel.State.UserCredentials.UserName);
-            }
-            else
-            {
-                target.ToggleAttribute(this.tag);
-            }
-
+            target.ToggleAttribute(this.tag, this.value);
             try
             {
                 Store.Locations.Save();
@@ -80,7 +75,7 @@ namespace WebAnnotation.UI.Commands
             catch (System.ServiceModel.FaultException ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                target.ToggleAttribute(this.tag, SetValueToUsername ? WebAnnotationModel.State.UserCredentials.UserName : null);
+                target.ToggleAttribute(this.tag, value);
             }
 
             base.Execute();

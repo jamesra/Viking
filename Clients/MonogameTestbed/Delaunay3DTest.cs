@@ -10,6 +10,7 @@ using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -67,7 +68,7 @@ namespace MonogameTestbed
                 bool SkipCell = false;
                 foreach (Combo<MIVector3> combo in cell.Vertices.CombinationPairs())
                 {
-                    GridLineSegment line = new GridLineSegment(combo.A.P, combo.B.P);
+                    GridLineSegment line = new GridLineSegment(combo.A.P.XY(), combo.B.P.XY());
 
                     PolygonIndex A = cell.Vertices[combo.iA].PolyIndex;
                     PolygonIndex B = cell.Vertices[combo.iB].PolyIndex;
@@ -100,7 +101,7 @@ namespace MonogameTestbed
                     int OnSurfaceCount = 0;
                     foreach (Combo<int> combo in face.CombinationPairs())
                     {
-                        var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
+                        var line = new GridLineSegment(cell.Vertices[combo.A].P.XY(), cell.Vertices[combo.B].P.XY());
                         PolygonIndex A = cell.Vertices[combo.A].PolyIndex;
                         PolygonIndex B = cell.Vertices[combo.B].PolyIndex;
 
@@ -368,7 +369,8 @@ namespace MonogameTestbed
     class Delaunay3DTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
-        GamePadStateTracker Gamepad = new GamePadStateTracker();
+
+        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
 
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
           
@@ -381,19 +383,21 @@ namespace MonogameTestbed
         public bool Initialized { get { return _initialized; } }
 
         //Polygons with internal polygon merging with external concavity
-        ulong[] TroubleIDS = new ulong[] {
+        readonly ulong[] TroubleIDS = new ulong[] {
           1333661, //Z = 2
           1333662, //Z = 3
           1333665 //Z =2 
         }; 
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
-            this.Scene = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D());
-            this.Scene.MaxDrawDistance = 1000000;
-            this.Scene.MinDrawDistance = 1;
+            this.Scene = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D())
+            {
+                MaxDrawDistance = 1000000,
+                MinDrawDistance = 1
+            };
             this.meshView = new MeshView<VertexPositionNormalColor>();
 
             labelCamera = new LabelView("", new GridVector2(0, 100));
@@ -427,6 +431,7 @@ namespace MonogameTestbed
                 mesh.RecalculateNormals();
                 meshView.models.Add(mesh.ToVertexPositionNormalColorMeshModel(new Color((float)r.NextDouble(), (float)r.NextDouble(), (float)r.NextDouble())));
             }
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -477,11 +482,13 @@ namespace MonogameTestbed
         {
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
 
-            DepthStencilState dstate = new DepthStencilState();
-            dstate.DepthBufferEnable = true;
-            dstate.StencilEnable = false;
-            dstate.DepthBufferWriteEnable = true;
-            dstate.DepthBufferFunction = CompareFunction.LessEqual;
+            DepthStencilState dstate = new DepthStencilState
+            {
+                DepthBufferEnable = true,
+                StencilEnable = false,
+                DepthBufferWriteEnable = true,
+                DepthBufferFunction = CompareFunction.LessEqual
+            };
 
             window.GraphicsDevice.DepthStencilState = dstate;
             //window.GraphicsDevice.BlendState = BlendState.Opaque;

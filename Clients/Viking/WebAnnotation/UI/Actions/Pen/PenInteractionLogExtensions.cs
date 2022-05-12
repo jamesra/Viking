@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Viking.AnnotationServiceTypes;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 

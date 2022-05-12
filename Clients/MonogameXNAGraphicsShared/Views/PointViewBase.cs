@@ -17,10 +17,7 @@ namespace VikingXNAGraphics
 
         public ICollection<GridVector2> Points
         {
-            get
-            {
-                return _Points;
-            }
+            get => _Points;
             set
             {
                 INotifyCollectionChanged collection = _Points as INotifyCollectionChanged;
@@ -42,10 +39,7 @@ namespace VikingXNAGraphics
 
         public Color Color
         {
-            get
-            {
-                return _Color;
-            }
+            get => _Color;
 
             set
             {
@@ -56,10 +50,7 @@ namespace VikingXNAGraphics
 
         public float Alpha
         {
-            get
-            {
-                return _Color.GetAlpha();
-            }
+            get => _Color.GetAlpha();
 
             set
             {

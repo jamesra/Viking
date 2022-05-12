@@ -125,7 +125,7 @@ namespace TriangleNet.Voronoi.Legacy
 
         private void ComputeCircumCenters()
         {
-            Otri tri = default(Otri);
+            Otri tri = default;
             double xi = 0, eta = 0;
             Point pt;
 
@@ -155,10 +155,10 @@ namespace TriangleNet.Voronoi.Legacy
             Stack<Triangle> triangles;
             subsegMap = new Dictionary<int, SubSegment>();
 
-            Otri f = default(Otri);
-            Otri f0 = default(Otri);
-            Osub e = default(Osub);
-            Osub sub1 = default(Osub);
+            Otri f = default;
+            Otri f0 = default;
+            Osub e = default;
+            Osub sub1 = default;
 
             // Tag all triangles non-blind
             foreach (var t in mesh.triangles)
@@ -273,11 +273,11 @@ namespace TriangleNet.Voronoi.Legacy
             VoronoiRegion region = new VoronoiRegion(vertex);
             regions.Add(region);
 
-            Otri f = default(Otri);
-            Otri f_init = default(Otri);
-            Otri f_next = default(Otri);
-            Osub sf = default(Osub);
-            Osub sfn = default(Osub);
+            Otri f = default;
+            Otri f_init = default;
+            Otri f_next = default;
+            Osub sf = default;
+            Osub sfn = default;
 
             Point cc_f, cc_f_next, p;
 
@@ -385,12 +385,12 @@ namespace TriangleNet.Voronoi.Legacy
             VoronoiRegion region = new VoronoiRegion(vertex);
             regions.Add(region);
 
-            Otri f = default(Otri);
-            Otri f_init = default(Otri);
-            Otri f_next = default(Otri);
-            Otri f_prev = default(Otri);
-            Osub sf = default(Osub);
-            Osub sfn = default(Osub);
+            Otri f = default;
+            Otri f_init = default;
+            Otri f_next = default;
+            Otri f_prev = default;
+            Osub sf = default;
+            Osub sfn = default;
 
             Vertex torg, tdest, tapex, sorg, sdest;
             Point cc_f, cc_f_next, p;

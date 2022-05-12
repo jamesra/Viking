@@ -11,7 +11,6 @@ namespace Geometry
         public readonly GridVector2 Center;
         public readonly double Radius;
         public readonly double RadiusSquared;
-        private readonly int _HashCode;
 
         public GridCircle(double X, double Y, double radius) : this(new GridVector2(X, Y), radius)
         { }
@@ -25,7 +24,6 @@ namespace Geometry
                 throw new ArgumentException("Radius cannot be infinite or NaN");
 
             this.RadiusSquared = radius * radius;
-            _HashCode = center.GetHashCode();
         }
 
         public GridCircle(IPoint2D center, double radius) : this(new GridVector2(center.X, center.Y), radius)
@@ -37,12 +35,25 @@ namespace Geometry
             return Center.ToString() + " Radius: " + Radius.ToString("F2");
         }
 
-        static public GridCircle CircleFromThreePoints(GridVector2[] points)
+        public static GridCircle CircleFromThreePoints(IPoint2D[] points)
+        {
+            if (points == null) throw new ArgumentNullException(nameof(points));
+            
+            Debug.Assert(points.Length == 3);
+            if (points.Length != 3) throw new ArgumentException("GridCircle: Expected an array with three elements");
+
+            GridVector2 A = points[0].ToGridVector2();
+            GridVector2 B = points[1].ToGridVector2();
+            GridVector2 C = points[2].ToGridVector2();
+
+            return CircleFromThreePoints(A, B, C);
+        }
+
+        public static GridCircle CircleFromThreePoints(GridVector2[] points)
         {
             if (points == null)
             {
-                throw new ArgumentNullException(nameof(points));
-
+                throw new ArgumentNullException(nameof(points)); 
             }
 
             Debug.Assert(points.Length == 3);
@@ -56,7 +67,9 @@ namespace Geometry
             return CircleFromThreePoints(A, B, C);
         }
 
-        static public GridCircle CircleFromThreePoints(GridVector2 One, GridVector2 Two, GridVector2 Three)
+        public static GridCircle CircleFromThreePoints(IPoint2D One, IPoint2D Two, IPoint2D Three) => CircleFromThreePoints(One.ToGridVector2(), Two.ToGridVector2(), Three.ToGridVector2());
+
+        public static GridCircle CircleFromThreePoints(GridVector2 One, GridVector2 Two, GridVector2 Three)
         {
             if (One.X == Two.X && Two.X == Three.X)
             {
@@ -290,7 +303,7 @@ namespace Geometry
         }
 
         public bool Contains(in GridVector2 p)
-        {                  
+        {
             double XDist = p.X - this.Center.X;
             double YDist = p.Y - this.Center.Y;
 
@@ -443,7 +456,7 @@ namespace Geometry
         public bool Intersects(in GridLineSegment line) => CircleIntersectionExtensions.Intersects(in this, in line);
 
         public bool Intersects(in ITriangle2D t) => this.Intersects(t.Convert());
-        
+
         public bool Intersects(in GridTriangle tri) => CircleIntersectionExtensions.Intersects(in this, in tri);
 
         public bool Intersects(in IPolygon2D p)
@@ -490,25 +503,27 @@ namespace Geometry
                 return Equals(otherShape);
 
             return false;
-        } 
+        }
 
         public bool Equals(IShape2D other)
         {
             if (other is ICircle2D otherCircle)
                 return Equals(otherCircle);
-            
+
             return false;
         }
 
         public bool Equals(ICircle2D other)
-        { 
-            return this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius); 
+        {
+            return this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius);
         }
 
 
         public override int GetHashCode()
         {
-            return _HashCode;
+            throw new InvalidOperationException($"It is not mathematically possible to implement {nameof(GetHashCode)} for a point where equality is epsilon based");
+            return 0;
+            //return _HashCode;
             /*
             if (!_HashCode.HasValue)
             {

@@ -464,7 +464,7 @@ namespace TriangleNet
         /// </remarks>
         internal void MakeVertexMap()
         {
-            Otri tri = default(Otri);
+            Otri tri = default;
             Vertex triorg;
 
             foreach (var t in this.triangles)
@@ -583,21 +583,21 @@ namespace TriangleNet
         internal InsertVertexResult InsertVertex(Vertex newvertex, ref Otri searchtri,
             ref Osub splitseg, bool segmentflaws, bool triflaws)
         {
-            Otri horiz = default(Otri);
-            Otri top = default(Otri);
-            Otri botleft = default(Otri), botright = default(Otri);
-            Otri topleft = default(Otri), topright = default(Otri);
-            Otri newbotleft = default(Otri), newbotright = default(Otri);
-            Otri newtopright = default(Otri);
-            Otri botlcasing = default(Otri), botrcasing = default(Otri);
-            Otri toplcasing = default(Otri), toprcasing = default(Otri);
-            Otri testtri = default(Otri);
-            Osub botlsubseg = default(Osub), botrsubseg = default(Osub);
-            Osub toplsubseg = default(Osub), toprsubseg = default(Osub);
-            Osub brokensubseg = default(Osub);
-            Osub checksubseg = default(Osub);
-            Osub rightsubseg = default(Osub);
-            Osub newsubseg = default(Osub);
+            Otri horiz = default;
+            Otri top = default;
+            Otri botleft = default, botright = default;
+            Otri topleft = default, topright = default;
+            Otri newbotleft = default, newbotright = default;
+            Otri newtopright = default;
+            Otri botlcasing = default, botrcasing = default;
+            Otri toplcasing = default, toprcasing = default;
+            Otri testtri = default;
+            Osub botlsubseg = default, botrsubseg = default;
+            Osub toplsubseg = default, toprsubseg = default;
+            Osub brokensubseg = default;
+            Osub checksubseg = default;
+            Osub rightsubseg = default;
+            Osub newsubseg = default;
             BadSubseg encroached;
             //FlipStacker newflip;
             Vertex first;
@@ -809,7 +809,7 @@ namespace TriangleNet
                 {
                     flipstack.Clear();
 
-                    flipstack.Push(default(Otri)); // Dummy flip (see UndoVertex)
+                    flipstack.Push(default); // Dummy flip (see UndoVertex)
                     flipstack.Push(horiz);
                 }
 
@@ -1103,7 +1103,7 @@ namespace TriangleNet
                         // We're done. Return a triangle whose origin is the new vertex.
                         horiz.Lnext(ref searchtri);
 
-                        Otri recenttri = default(Otri);
+                        Otri recenttri = default;
                         horiz.Lnext(ref recenttri);
                         locator.Update(ref recenttri);
 
@@ -1127,8 +1127,8 @@ namespace TriangleNet
         /// subsegment and, if appropriate, its vertices.</param>
         internal void InsertSubseg(ref Otri tri, int subsegmark)
         {
-            Otri oppotri = default(Otri);
-            Osub newsubseg = default(Osub);
+            Otri oppotri = default;
+            Osub newsubseg = default;
             Vertex triorg, tridest;
 
             triorg = tri.Org();
@@ -1211,13 +1211,13 @@ namespace TriangleNet
         /// </remarks>
         internal void Flip(ref Otri flipedge)
         {
-            Otri botleft = default(Otri), botright = default(Otri);
-            Otri topleft = default(Otri), topright = default(Otri);
-            Otri top = default(Otri);
-            Otri botlcasing = default(Otri), botrcasing = default(Otri);
-            Otri toplcasing = default(Otri), toprcasing = default(Otri);
-            Osub botlsubseg = default(Osub), botrsubseg = default(Osub);
-            Osub toplsubseg = default(Osub), toprsubseg = default(Osub);
+            Otri botleft = default, botright = default;
+            Otri topleft = default, topright = default;
+            Otri top = default;
+            Otri botlcasing = default, botrcasing = default;
+            Otri toplcasing = default, toprcasing = default;
+            Osub botlsubseg = default, botrsubseg = default;
+            Osub toplsubseg = default, toprsubseg = default;
             Vertex leftvertex, rightvertex, botvertex;
             Vertex farvertex;
 
@@ -1334,13 +1334,13 @@ namespace TriangleNet
         /// </remarks>
         internal void Unflip(ref Otri flipedge)
         {
-            Otri botleft = default(Otri), botright = default(Otri);
-            Otri topleft = default(Otri), topright = default(Otri);
-            Otri top = default(Otri);
-            Otri botlcasing = default(Otri), botrcasing = default(Otri);
-            Otri toplcasing = default(Otri), toprcasing = default(Otri);
-            Osub botlsubseg = default(Osub), botrsubseg = default(Osub);
-            Osub toplsubseg = default(Osub), toprsubseg = default(Osub);
+            Otri botleft = default, botright = default;
+            Otri topleft = default, topright = default;
+            Otri top = default;
+            Otri botlcasing = default, botrcasing = default;
+            Otri toplcasing = default, toprcasing = default;
+            Osub botlsubseg = default, botrsubseg = default;
+            Osub toplsubseg = default, toprsubseg = default;
             Vertex leftvertex, rightvertex, botvertex;
             Vertex farvertex;
 
@@ -1483,9 +1483,9 @@ namespace TriangleNet
         private void TriangulatePolygon(Otri firstedge, Otri lastedge,
                                 int edgecount, bool doflip, bool triflaws)
         {
-            Otri testtri = default(Otri);
-            Otri besttri = default(Otri);
-            Otri tempedge = default(Otri);
+            Otri testtri = default;
+            Otri besttri = default;
+            Otri tempedge = default;
             Vertex leftbasevertex, rightbasevertex;
             Vertex testvertex;
             Vertex bestvertex;
@@ -1559,12 +1559,12 @@ namespace TriangleNet
         /// </remarks>
         internal void DeleteVertex(ref Otri deltri)
         {
-            Otri countingtri = default(Otri);
-            Otri firstedge = default(Otri), lastedge = default(Otri);
-            Otri deltriright = default(Otri);
-            Otri lefttri = default(Otri), righttri = default(Otri);
-            Otri leftcasing = default(Otri), rightcasing = default(Otri);
-            Osub leftsubseg = default(Osub), rightsubseg = default(Osub);
+            Otri countingtri = default;
+            Otri firstedge = default, lastedge = default;
+            Otri deltriright = default;
+            Otri lefttri = default, righttri = default;
+            Otri leftcasing = default, rightcasing = default;
+            Osub leftsubseg = default, rightsubseg = default;
             Vertex delvertex;
             Vertex neworg;
             int edgecount;
@@ -1636,10 +1636,10 @@ namespace TriangleNet
         {
             Otri fliptri;
 
-            Otri botleft = default(Otri), botright = default(Otri), topright = default(Otri);
-            Otri botlcasing = default(Otri), botrcasing = default(Otri), toprcasing = default(Otri);
-            Otri gluetri = default(Otri);
-            Osub botlsubseg = default(Osub), botrsubseg = default(Osub), toprsubseg = default(Osub);
+            Otri botleft = default, botright = default, topright = default;
+            Otri botlcasing = default, botrcasing = default, toprcasing = default;
+            Otri gluetri = default;
+            Osub botlsubseg = default, botrsubseg = default, toprsubseg = default;
             Vertex botvertex, rightvertex;
 
             // Walk through the list of transformations (flips and a vertex insertion)

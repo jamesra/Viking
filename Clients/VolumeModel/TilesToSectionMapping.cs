@@ -75,7 +75,7 @@ namespace Viking.VolumeModel
         protected ITransform[] _TileTransforms = null;
         public async override Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
         {
-            if (Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) == null)
+            if (Initialized == false)
             {
                 await Initialize(token);
             }
@@ -110,9 +110,7 @@ namespace Viking.VolumeModel
                 return System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, Section.Number.ToString("D4") + "_" + mosaicName + ".cache");
             }
         }
-
-
-
+         
         public TilesToSectionMapping(Section section, string name, string rootPath, string mosaicPath, string tilePrefix, string tilePostfix) :
             base(section, name, tilePrefix, tilePostfix)
         {
@@ -144,11 +142,11 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TryVolumeToSection(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TryVolumeToSection(in GridVector2[] P, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => { return true; }).ToArray();
+            return P.Select(p => true).ToArray();
         }
 
         public override GridVector2[] SectionToVolume(GridVector2[] P)
@@ -163,11 +161,11 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="?"></param>
         /// <returns></returns>
-        public override bool[] TrySectionToVolume(GridVector2[] P, out GridVector2[] transformedP)
+        public override bool[] TrySectionToVolume(in GridVector2[] P, out GridVector2[] transformedP)
         {
             transformedP = new GridVector2[P.Length];
             P.CopyTo(transformedP, 0);
-            return P.Select(p => { return true; }).ToArray();
+            return P.Select(p => true).ToArray();
         }
 
 
@@ -241,44 +239,28 @@ namespace Viking.VolumeModel
             if (token.IsCancellationRequested)
                 return null;
 
+            bool CachedFileUseable;
+             
             //Do we need to delete a stale version of the cache file?
-            var cacheFileInfo = new FileInfo(CachedTransformsFileName);
-            var cachedFileExists = cacheFileInfo.Exists;
-            if (cachedFileExists && cacheFileInfo.LastWriteTimeUtc < serverlastModified)
+            CachedFileUseable = Geometry.Global.IsCacheFileValid(CachedTransformsFileName,
+                new DateTime[] { serverlastModified, Global.OldestValidCachedTransform });
+            
+            if(CachedFileUseable == false)
             {
-                Trace.WriteLine("Deleting stale cache file: " + this.CachedTransformsFileName);
-                try
-                {
-                    System.IO.File.Delete(this.CachedTransformsFileName);
-                    cachedFileExists = false;
-                }
-                catch (System.IO.IOException e)
-                {
-                    Trace.WriteLine("Failed to delete stale cache file: " + this.CachedTransformsFileName);
-                }
+                Trace.WriteLine($"Deleting stale cache file: {this.CachedTransformsFileName}");
+                Geometry.Global.TryDeleteCacheFile(CachedTransformsFileName); 
             }
-            
-        //The file was in the internet cache.  Do we have a pre-parsed local copy we've processed in our cache?
-            
-            if (cachedFileExists)
+
+            if (CachedFileUseable)
             { 
                 try
                 { 
                     var loadedTransforms = LoadFromCache();
-                    var LoadedFromCache = loadedTransforms != null;
-                    if (LoadedFromCache)
-                    {
-                        try
-                        {
-                            //rwLockObj.EnterWriteLock(); 
-                            LoadedFromCache = true;
-                            this._LastModified = System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName); 
-                            return loadedTransforms;
-                        }
-                        finally
-                        {
-                            //rwLockObj.ExitWriteLock();
-                        }
+                    var loadedFromCache = loadedTransforms != null;
+                    if (loadedFromCache)
+                    {  
+                        this._LastModified = System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName); 
+                        return loadedTransforms; 
                     }
                 }
                 catch (Exception)
@@ -286,21 +268,14 @@ namespace Viking.VolumeModel
                     //On any error, use the traditional path
                     this._TileTransforms = null; 
                     Trace.WriteLine($"Could not load {CachedTransformsFileName} from cache even though file existed");
-                    try
-                    { 
-                        System.IO.File.Delete(this.CachedTransformsFileName);
-                    }
-                    catch (System.IO.IOException e)
-                    {
-                        Trace.WriteLine("Failed to delete unloadable cache file: " + this.CachedTransformsFileName);
-                    }
+                    Geometry.Global.TryDeleteCacheFile(CachedTransformsFileName);
                 } 
             }
 
             //Not in the local cache
             var transforms = await LoadTransforms(mosaicURI, RootPath, serverlastModified, token);
-            bool LoadedFromServer = transforms != null;
-            if (LoadedFromServer)
+            bool loadedFromServer = transforms != null;
+            if (loadedFromServer)
             {
                 Task.Run(() => SaveToCache(this.CachedTransformsFileName, transforms));
                 return transforms;

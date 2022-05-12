@@ -75,30 +75,30 @@ namespace GeometryTests
                 double Distance;
                 GridVector2 Intersection;
                 Distance = lineA.DistanceToPoint(PointOnLine, out Intersection);
-                Debug.Assert(Distance == 0);
-                Debug.Assert(Intersection == PointOnLine);
+                Assert.IsTrue(Distance == 0);
+                Assert.IsTrue(Intersection == PointOnLine);
 
                 //Check if we go past the line in X axis
                 GridVector2 PointLeftOfLine = new GridVector2(-10, 3);
                 GridVector2 PointRightOfLine = new GridVector2(10, 3);
                 Distance = lineA.DistanceToPoint(PointLeftOfLine, out Intersection);
-                Debug.Assert(Distance == 5);
-                Debug.Assert(Intersection == lineA.A);
+                Assert.IsTrue(Distance == 5);
+                Assert.IsTrue(Intersection == lineA.A);
 
                 Distance = lineA.DistanceToPoint(PointRightOfLine, out Intersection);
-                Debug.Assert(Distance == 5);
-                Debug.Assert(Intersection == lineA.B);
+                Assert.IsTrue(Distance == 5);
+                Assert.IsTrue(Intersection == lineA.B);
 
                 //Check if we go above or below line
                 GridVector2 PointAboveLine = new GridVector2(3, 8);
                 GridVector2 PointBelowLine = new GridVector2(3, -2);
                 Distance = lineA.DistanceToPoint(PointAboveLine, out Intersection);
-                Debug.Assert(Distance == 5);
-                Debug.Assert(Intersection == new GridVector2(3, 3));
+                Assert.IsTrue(Distance == 5);
+                Assert.IsTrue(Intersection == new GridVector2(3, 3));
 
                 Distance = lineA.DistanceToPoint(PointBelowLine, out Intersection);
-                Debug.Assert(Distance == 5);
-                Debug.Assert(Intersection == new GridVector2(3, 3));
+                Assert.IsTrue(Distance == 5);
+                Assert.IsTrue(Intersection == new GridVector2(3, 3));
             }
 
 
@@ -111,30 +111,30 @@ namespace GeometryTests
                 double Distance;
                 GridVector2 Intersection;
                 Distance = lineB.DistanceToPoint(PointOnLine, out Intersection);
-                Debug.Assert(Distance == 0);
-                Debug.Assert(Intersection == PointOnLine);
+                Assert.IsTrue(Distance == 0);
+                Assert.IsTrue(Intersection == PointOnLine);
 
                 //Check if we go above or below line
                 GridVector2 PointAboveLine = new GridVector2(3, 10);
                 GridVector2 PointBelowLine = new GridVector2(3, -10);
                 Distance = lineB.DistanceToPoint(PointAboveLine, out Intersection);
-                Debug.Assert(Distance == 5);
-                Debug.Assert(Intersection == lineB.B);
+                Assert.IsTrue(Distance == 5);
+                Assert.IsTrue(Intersection == lineB.B);
 
                 Distance = lineB.DistanceToPoint(PointBelowLine, out Intersection);
-                Debug.Assert(Distance == 5);
-                Debug.Assert(Intersection == lineB.A);
+                Assert.IsTrue(Distance == 5);
+                Assert.IsTrue(Intersection == lineB.A);
 
                 //Check if we go left or right of line
                 GridVector2 PointLeftOfLine = new GridVector2(-2, 4);
                 GridVector2 PointRightOfLine = new GridVector2(8, 4);
                 Distance = lineB.DistanceToPoint(PointLeftOfLine, out Intersection);
-                Debug.Assert(Distance == 5);
-                Debug.Assert(Intersection == new GridVector2(3, 4));
+                Assert.IsTrue(Distance == 5);
+                Assert.IsTrue(Intersection == new GridVector2(3, 4));
 
                 Distance = lineB.DistanceToPoint(PointRightOfLine, out Intersection);
-                Debug.Assert(Distance == 5);
-                Debug.Assert(Intersection == new GridVector2(3, 4));
+                Assert.IsTrue(Distance == 5);
+                Assert.IsTrue(Intersection == new GridVector2(3, 4));
             }
 
             {   //Check the diagonal line through the axis center
@@ -145,18 +145,18 @@ namespace GeometryTests
                 double Distance;
                 GridVector2 Intersection;
                 Distance = lineC.DistanceToPoint(PointOnLine, out Intersection);
-                Debug.Assert(Distance == 0);
-                Debug.Assert(Intersection == PointOnLine);
+                Assert.IsTrue(Distance == 0);
+                Assert.IsTrue(Intersection == PointOnLine);
 
                 GridVector2 PointOffLine = new GridVector2(-5, 5);
                 Distance = lineC.DistanceToPoint(PointOffLine, out Intersection);
-                Debug.Assert(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
-                Debug.Assert(Intersection == new GridVector2(0, 0));
+                Assert.IsTrue(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
+                Assert.IsTrue(Intersection == new GridVector2(0, 0));
 
                 GridVector2 PointPastEdge = new GridVector2(-10, 0);
                 Distance = lineC.DistanceToPoint(PointPastEdge, out Intersection);
-                Debug.Assert(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
-                Debug.Assert(Intersection == new GridVector2(-5, -5));
+                Assert.IsTrue(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
+                Assert.IsTrue(Intersection == new GridVector2(-5, -5));
             }
 
             {   //Check the diagonal line through the axis center
@@ -167,20 +167,102 @@ namespace GeometryTests
                 double Distance;
                 GridVector2 Intersection;
                 Distance = lineD.DistanceToPoint(PointOnLine, out Intersection);
-                Debug.Assert(Distance == 0);
-                Debug.Assert(Intersection == PointOnLine);
+                Assert.IsTrue(Distance == 0);
+                Assert.IsTrue(Intersection == PointOnLine);
 
                 GridVector2 PointOffLine = new GridVector2(-6, 6);
                 Distance = lineD.DistanceToPoint(PointOffLine, out Intersection);
-                Debug.Assert(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
-                Debug.Assert(Intersection == new GridVector2(-1, 1));
+                Assert.IsTrue(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
+                Assert.IsTrue(Intersection == new GridVector2(-1, 1));
 
                 GridVector2 PointPastEdge = new GridVector2(9, 1);
                 Distance = lineD.DistanceToPoint(PointPastEdge, out Intersection);
-                Debug.Assert(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
-                Debug.Assert(Intersection == new GridVector2(4, 6));
+                Assert.IsTrue(Distance == Math.Sqrt(Math.Pow(5, 2) + Math.Pow(5, 2)));
+                Assert.IsTrue(Intersection == new GridVector2(4, 6));
             }
         }
+
+        struct ExpectedLineIntersectionTest
+        { 
+            public GridLineSegment Input;
+            /// <summary>
+            /// Null if no intersection expected
+            /// </summary>
+            public IShape2D Expected;
+        }
+
+        [TestMethod]
+        public void GridLineSegmentHorizontalSimpleIntersects()
+        { 
+            //
+            // TODO: Add test logic	here
+            //
+
+            var N9 = new GridVector2(-9, 0);
+            var N5 = new GridVector2(-5, 0);
+            var N1 = new GridVector2(-1, 0);
+            var O = new GridVector2(0, 0);
+            var P1 = new GridVector2(1, 0);
+            var P5 = new GridVector2(5, 0);
+            var P9 = new GridVector2(9, 0);
+
+            //The primary line we test against
+            var Primary = new GridLineSegment(N1, P1);
+            var OP1 = new GridLineSegment(O, P1);
+            var N1O = new GridLineSegment(N1, O);
+
+            var NoIntersectionTests = new ExpectedLineIntersectionTest[]
+            {
+                new ExpectedLineIntersectionTest { Expected = null, Input = new GridLineSegment(N9, N5) },
+                new ExpectedLineIntersectionTest { Expected = null, Input = new GridLineSegment(P5, P9) },
+                new ExpectedLineIntersectionTest { Expected = null, Input = Primary.Translate(GridVector2.UnitY) }, //Parallel but offset 
+                new ExpectedLineIntersectionTest { Expected = null, Input = Primary.Translate(-GridVector2.UnitY) } //Parallel but offset 
+            };
+
+            var EndpointOnlyIntersectionTests = new ExpectedLineIntersectionTest[]
+            {
+                new ExpectedLineIntersectionTest { Expected = N1, Input = new GridLineSegment(N9, N1) },
+                new ExpectedLineIntersectionTest { Expected = P1, Input = new GridLineSegment(P1, P9) }
+            };
+
+            var IntersectionTests = new ExpectedLineIntersectionTest[]
+            {
+                new ExpectedLineIntersectionTest { Expected = Primary, Input = Primary },
+                new ExpectedLineIntersectionTest { Expected = Primary, Input = new GridLineSegment(N5, P5) },
+                new ExpectedLineIntersectionTest { Expected = Primary, Input = new GridLineSegment(N1, P5) },
+                new ExpectedLineIntersectionTest { Expected = Primary, Input = new GridLineSegment(N5, P1) },
+                new ExpectedLineIntersectionTest { Expected = OP1, Input = OP1 },
+                new ExpectedLineIntersectionTest { Expected = N1O, Input = N1O },
+                new ExpectedLineIntersectionTest { Expected = OP1, Input = new GridLineSegment(O, P5) },
+                new ExpectedLineIntersectionTest { Expected = N1O, Input = new GridLineSegment(N5, O) },
+            };
+
+            foreach (var test in NoIntersectionTests)
+            {
+                Assert.IsFalse(Primary.Intersects(test.Input));
+            }
+
+            foreach (var test in EndpointOnlyIntersectionTests)
+            {
+                IShape2D Intersection;
+                var resultNoEndpointIntersection =
+                    Primary.Intersects(test.Input, EndpointsOnRingDoNotIntersect: true, out Intersection);
+                Assert.IsFalse(resultNoEndpointIntersection);
+
+                var resultWithEndpointIntersection =
+                    Primary.Intersects(test.Input, EndpointsOnRingDoNotIntersect: false, out Intersection);
+                Assert.IsTrue(resultWithEndpointIntersection);
+                Assert.AreEqual(Intersection, test.Expected);
+            }
+
+            foreach (var test in IntersectionTests)
+            {
+                var result = Primary.Intersects(test.Input, out var intersection);
+                Assert.IsTrue(result);
+                Assert.IsTrue(test.Expected.Equals(intersection));
+            }
+        }
+
 
         [TestMethod]
         public void GridLineSegmentIntersects()
@@ -202,27 +284,27 @@ namespace GeometryTests
 
             IShape2D intersectShape;
             bool result = lineA.Intersects(lineA, out intersectShape);
-            Debug.Assert(result == true);
-            Debug.Assert(intersectShape.ShapeType == ShapeType2D.LINE);
+            Assert.IsTrue(result == true);
+            Assert.IsTrue(intersectShape.ShapeType == ShapeType2D.LINE);
             GridLineSegment intersectionLine = (GridLineSegment)intersectShape;
-            Debug.Assert(intersectionLine == lineA);
+            Assert.IsTrue(intersectionLine == lineA);
 
             GridVector2 intersect;
             intersect = new GridVector2();
             result = lineA.Intersects(lineB, out intersect);
-            Debug.Assert(result == true);
-            Debug.Assert(intersect.X == 3 && intersect.Y == 3);
+            Assert.IsTrue(result == true);
+            Assert.IsTrue(intersect.X == 3 && intersect.Y == 3);
 
             result = lineA.Intersects(lineC, out intersect);
-            Debug.Assert(result == false);
+            Assert.IsTrue(result == false);
 
             result = lineA.Intersects(lineD, out intersect);
-            Debug.Assert(result == false);
-            //      Debug.Assert(intersect.X == -4 && intersect.Y == 3);
+            Assert.IsTrue(result == false);
+            //      Assert.IsTrue(intersect.X == -4 && intersect.Y == 3);
 
             result = lineA.Intersects(lineE, out intersect);
-            Debug.Assert(result == true);
-            Debug.Assert(intersect.X == -4 && intersect.Y == 3);
+            Assert.IsTrue(result == true);
+            Assert.IsTrue(intersect.X == -4 && intersect.Y == 3);
         }
 
         [TestMethod]
@@ -419,8 +501,8 @@ namespace GeometryTests
 
             GridVector2 intersect = new GridVector2();
             bool result = lineA.Intersects(lineB, out intersect);
-            Debug.Assert(result == true);
-            Debug.Assert(intersect.X == 0 && intersect.Y == 0);
+            Assert.IsTrue(result == true);
+            Assert.IsTrue(intersect.X == 0 && intersect.Y == 0);
         }
 
         [TestMethod]
@@ -619,7 +701,7 @@ namespace GeometryTests
         {
             Arb.Register<GridVector2Generators>();
 
-            Func<GridVector2, bool> IsLeftCheck = (p) =>
+            bool IsLeftCheck(GridVector2 p)
             {
                 GridLineSegment qr = new GridLineSegment(new GridVector2(-10, 0), new GridVector2(10, 0));
                 GridLineSegment rq = new GridLineSegment(new GridVector2(10, 0), new GridVector2(-10, 0));
@@ -639,7 +721,7 @@ namespace GeometryTests
 
                 Assert.AreEqual(-qr_p_ExpectedLeft, rq_p_ExpectedLeft);
                 return rq_p_isleft == rq_p_ExpectedLeft;
-            };
+            }
 
             Prop.ForAll<GridVector2>(IsLeftCheck).QuickCheckThrowOnFailure();
         }

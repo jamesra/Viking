@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Viking.Annotation.Geometry</RootNamespace>
+    <AssemblyName>Viking.Annotation.Geometry</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Clients\VolumeModel\VolumeModel.csproj" />
+    <ProjectReference Include="..\Clients\WebAnnotationModel\WebAnnotationModel.csproj" />
+    <ProjectReference Include="..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\Viking.Annotation.Geometry\Viking.Annotation.Geometry.csproj" />
+    <ProjectReference Include="..\Viking.Annotation.Mapping\Viking.Annotation.Mapping.csproj" />
+  </ItemGroup>
+
+</Project>

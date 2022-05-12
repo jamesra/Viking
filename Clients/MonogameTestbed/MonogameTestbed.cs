@@ -7,11 +7,15 @@ using RoundLineCode;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
+    
+
     enum TestMode
     {
         TEXT,
@@ -43,7 +47,7 @@ namespace MonogameTestbed
     /// </summary>
     public class MonoTestbed : Game, IRenderInfo
     {
-        GraphicsDeviceManager graphics;
+        readonly GraphicsDeviceManager graphics;
         public SpriteBatch spriteBatch;
 
         public RoundLineManager lineManager = new RoundLineCode.RoundLineManager();
@@ -53,36 +57,34 @@ namespace MonogameTestbed
         public SpriteFont fontArial;
         public BasicEffect basicEffect;
         public OverlayShaderEffect overlayEffect;
-
-        CurveTest curveTest = new CurveTest();
-        CurveViewTest curveViewTest = new CurveViewTest();
-        LabelViewsTest labelTest = new LabelViewsTest();
-        LineViewStylesTest lineStyleTest = new LineViewStylesTest();
-        CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
-        CurveSimplificationTest curveSimplificationTest = new CurveSimplificationTest();
-        ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
-        Polygon2DTest polygon2DTest = new Polygon2DTest();
-        MeshTest meshTest = new MeshTest();
-        GeometryTest geometryTest = new GeometryTest();
-        MorphologyTest morphologyTest = new MorphologyTest();
-        TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
-        BranchPointTest branchTest = new BranchPointTest();
-        PolywrappingTest polyWrapTest = new PolywrappingTest();
-        BranchAssignmentTest brachAssignmentTest = new BranchAssignmentTest();
-        Delaunay2DTest delaunay2DTest = new Delaunay2DTest();
-        Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
-        BajajAssignmentTest bajajTest = new BajajAssignmentTest();
-        BajajMultiAssignmentTest bajajMultiTest = new BajajMultiAssignmentTest();
-        VikingDelaunay2DTest constrainedDelaunay2DTest = new VikingDelaunay2DTest();
-        PolygonIntersectionTest polygonIntersectionTest = new PolygonIntersectionTest();
-        LabeledRectangleTests labeledRectangleTests = new LabeledRectangleTests();
-
-        SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
+        readonly CurveTest curveTest = new CurveTest();
+        readonly CurveViewTest curveViewTest = new CurveViewTest();
+        readonly LabelViewsTest labelTest = new LabelViewsTest();
+        readonly LineViewStylesTest lineStyleTest = new LineViewStylesTest();
+        readonly CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
+        readonly CurveSimplificationTest curveSimplificationTest = new CurveSimplificationTest();
+        readonly ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
+        readonly Polygon2DTest polygon2DTest = new Polygon2DTest();
+        readonly MeshTest meshTest = new MeshTest();
+        readonly GeometryTest geometryTest = new GeometryTest();
+        readonly MorphologyTest morphologyTest = new MorphologyTest();
+        readonly TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
+        readonly BranchPointTest branchTest = new BranchPointTest();
+        readonly PolywrappingTest polyWrapTest = new PolywrappingTest();
+        readonly BranchAssignmentTest brachAssignmentTest = new BranchAssignmentTest();
+        readonly Delaunay2DTest delaunay2DTest = new Delaunay2DTest();
+        readonly Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
+        readonly BajajAssignmentTest bajajTest = new BajajAssignmentTest();
+        readonly BajajMultiAssignmentTest bajajMultiTest = new BajajMultiAssignmentTest();
+        readonly VikingDelaunay2DTest constrainedDelaunay2DTest = new VikingDelaunay2DTest();
+        readonly PolygonIntersectionTest polygonIntersectionTest = new PolygonIntersectionTest();
+        readonly LabeledRectangleTests labeledRectangleTests = new LabeledRectangleTests();
+        readonly SortedDictionary<TestMode, IGraphicsTest> listTests = new SortedDictionary<TestMode, IGraphicsTest>();
 
         /// <summary>
         /// Test to run at startup
         /// </summary>
-        TestMode Mode = TestMode.BAJAJMULTITEST;
+        private TestMode Mode = TestMode.BAJAJMULTITEST;
 
         LabelView testLabel = null;
 
@@ -98,8 +100,11 @@ namespace MonogameTestbed
 
         SpriteFont ILabelRenderInfo.font => this.fontArial;
 
+        private const int desired_screen_width = 1600;
+        private const int desired_screen_height = 1200;
+
         public MonoTestbed()
-        { 
+        {
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
             graphics = new GraphicsDeviceManager(this);
             VikingXNAGraphics.Global.Content = this.Content;
@@ -109,8 +114,8 @@ namespace MonogameTestbed
 
         private void graphics_PreparingDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)
         {  
-            graphics.PreferredBackBufferWidth = 1600;
-            graphics.PreferredBackBufferHeight = 1200;
+            graphics.PreferredBackBufferWidth = desired_screen_width;
+            graphics.PreferredBackBufferHeight = desired_screen_height;
             graphics.PreferMultiSampling = true;
             graphics.GraphicsProfile = GraphicsProfile.HiDef;
             graphics.SynchronizeWithVerticalRetrace = true;
@@ -131,6 +136,13 @@ namespace MonogameTestbed
             base.Initialize();
 
             Window.AllowUserResizing = true;
+            this.Window.Title = "Monogame testbed";
+            this.Window.AllowUserResizing = true;
+#if DEBUG
+            this.Window.Position = new Point(-desired_screen_width, 0);
+#else
+            //this.Window.Position = new Point(0, 0);
+#endif
 
             this.IsMouseVisible = true;
         }
@@ -157,8 +169,10 @@ namespace MonogameTestbed
             lineManager.Init(GraphicsDevice, Content);
             curveManager.Init(GraphicsDevice, Content);
 
-            RasterizerState state = new RasterizerState();
-            state.CullMode = CullMode.None;
+            RasterizerState state = new RasterizerState
+            {
+                CullMode = CullMode.None
+            };
             //state.FillMode = FillMode.WireFrame;
 
             GraphicsDevice.RasterizerState = state;
@@ -196,11 +210,13 @@ namespace MonogameTestbed
         /// </summary>
         private void InitializeEffects()
         {
-            basicEffect = new BasicEffect(this.GraphicsDevice);
-            //   basicEffect.DiffuseColor = new Vector3(0.1f, 0.1f, 0.1f);
-            //   basicEffect.SpecularColor = new Vector3(0.25f, 0.25f, 0.25f);
-            //   basicEffect.SpecularPower = 5.0f;
-            basicEffect.AmbientLightColor = new Vector3(1f, 1f, 1f);
+            basicEffect = new BasicEffect(this.GraphicsDevice)
+            {
+                //   basicEffect.DiffuseColor = new Vector3(0.1f, 0.1f, 0.1f);
+                //   basicEffect.SpecularColor = new Vector3(0.25f, 0.25f, 0.25f);
+                //   basicEffect.SpecularPower = 5.0f;
+                AmbientLightColor = new Vector3(1f, 1f, 1f)
+            };
             /*
             basicEffect.Projection = projectionMatrix;
             basicEffect.World = worldMatrix;
@@ -322,7 +338,6 @@ namespace MonogameTestbed
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            
             if (!listTests[Mode].Initialized)
             {
                 listTests[Mode].Init(this);
@@ -330,13 +345,13 @@ namespace MonogameTestbed
                 Debug.Assert(listTests[Mode].Initialized);
             }
 
-
             listTests[Mode].Update();
             Window.Title = listTests[Mode].Title;
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
                 //Close the game, but Monogame won't allow it?
+                base.Exit();
             }
 
             ProcessKeyboard();
@@ -344,7 +359,7 @@ namespace MonogameTestbed
             //meshView.Update(gameTime); 
 
             listTests[Mode].Update();
-
+            
             base.Update(gameTime);
         }
 
@@ -368,8 +383,10 @@ namespace MonogameTestbed
 
             // TODO: Add your drawing code here
 
-            RasterizerState state = new RasterizerState();
-            state.CullMode = CullMode.None;
+            RasterizerState state = new RasterizerState
+            {
+                CullMode = CullMode.None
+            };
 
             UpdateEffectMatricies(this.Scene);
 
@@ -425,10 +442,12 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
             labelTexture = CreateTextureForLabel("The quick brown fox jumps over the lazy dog", window.GraphicsDevice, window.spriteBatch, window.fontArial);
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -529,7 +548,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -542,6 +561,7 @@ namespace MonogameTestbed
             curveViewCatmull = new CurveView(cpsCatmull, Color.Red, true);
             leftCatmullCurveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cpsCatmull, Color.Black, true);
             rightCatmullCurveLabel = new CurveLabel("C 1485", cpsCatmull, Color.PaleGoldenrod, true);
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -627,13 +647,14 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
             GridVector2[] cps = CreateTestCurve3(0, 100);
             curveLabel = new CurveLabel("CurveLabel", cps, Color.Black, false);
             labelView = new LabelView("LabelView", new GridVector2(0, 0));
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -694,13 +715,14 @@ namespace MonogameTestbed
     public class LineViewStylesTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
-        List<LineView> listLineViews = new List<LineView>();
-        List<LabelView> listLabelViews = new List<LabelView>();
+
+        readonly List<LineView> listLineViews = new List<LineView>();
+        readonly List<LabelView> listLabelViews = new List<LabelView>();
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -725,6 +747,8 @@ namespace MonogameTestbed
 
                 listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-100, 0), anchor: Anchor.CenterRight));
             }
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -753,14 +777,15 @@ namespace MonogameTestbed
     public class CurveViewStylesTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
-        List<CurveView> listLineViews = new List<CurveView>();
-        List<LabelView> listLabelViews = new List<LabelView>();
+
+        readonly List<CurveView> listLineViews = new List<CurveView>();
+        readonly List<LabelView> listLabelViews = new List<LabelView>();
 
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -786,6 +811,7 @@ namespace MonogameTestbed
 
                 listLabelViews.Add(new LabelView(style.ToString(), source + new GridVector2(-25, 10)));
             }
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -820,13 +846,15 @@ namespace MonogameTestbed
         bool _initialized = false; 
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
             GridVector2[] cps = CreateTestCurve(90, 190);
             curveView = new CurveView(cps, Color.Red, true, 10, lineWidth: 64, controlPointRadius: 16, lineStyle: LineStyle.HalfTube);
             curveLabel = new CurveLabel("The quick brown fox jumps over the lazy dog", cps, Color.Black, true);
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)

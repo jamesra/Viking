@@ -41,14 +41,13 @@ namespace XNATestbed
         public SpriteFont fontArial;
         public BasicEffect basicEffect;
         public OverlayShaderEffect overlayEffect;
-
-        CurveTest curveTest = new CurveTest();
-        CurveViewTest curveViewTest = new CurveViewTest();
-        LabelViewsTest labelTest = new LabelViewsTest();
-        LineViewStylesTest lineStyleTest = new LineViewStylesTest();
-        CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
-        ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
-        Polygon2DTest polygon2DTest = new Polygon2DTest();
+        readonly CurveTest curveTest = new CurveTest();
+        readonly CurveViewTest curveViewTest = new CurveViewTest();
+        readonly LabelViewsTest labelTest = new LabelViewsTest();
+        readonly LineViewStylesTest lineStyleTest = new LineViewStylesTest();
+        readonly CurveViewStylesTest curveStyleTest = new CurveViewStylesTest();
+        readonly ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
+        readonly Polygon2DTest polygon2DTest = new Polygon2DTest();
 
         TestMode Mode = TestMode.POLYGON2D;
 
@@ -457,8 +456,8 @@ namespace XNATestbed
 
     public class LineViewStylesTest
     {
-        List<LineView> listLineViews = new List<LineView>();
-        List<LabelView> listLabelViews = new List<LabelView>();
+        readonly List<LineView> listLineViews = new List<LineView>();
+        readonly List<LabelView> listLabelViews = new List<LabelView>();
 
         public void Init(XNATestBedMain window)
         {
@@ -503,8 +502,8 @@ namespace XNATestbed
 
     public class CurveViewStylesTest
     {
-        List<CurveView> listLineViews = new List<CurveView>();
-        List<LabelView> listLabelViews = new List<LabelView>();
+        readonly List<CurveView> listLineViews = new List<CurveView>();
+        readonly List<LabelView> listLabelViews = new List<LabelView>();
 
         public void Init(XNATestBedMain window)
         {

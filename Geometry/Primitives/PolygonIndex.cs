@@ -9,7 +9,7 @@ namespace Geometry
     /// Records the index of a vertex in a polygon
     /// </summary>
     [Serializable()]
-    public readonly struct PolygonIndex : IComparable<PolygonIndex>, IEquatable<PolygonIndex>
+    public readonly struct PolygonIndex : IComparable<PolygonIndex>, IEquatable<PolygonIndex>, ICloneable
     {
         /// <summary>
         /// The index of the polygon 
@@ -382,48 +382,24 @@ namespace Geometry
         /// <summary>
         /// Returns the index of the beginning of the current ring
         /// </summary>
-        public PolygonIndex FirstInRing
-        {
-            get
-            {
-                return new PolygonIndex(this.iPoly, this.iInnerPoly, 0, this.NumUniqueInRing);
-            }
-        }
+        public PolygonIndex FirstInRing => new PolygonIndex(this.iPoly, this.iInnerPoly, 0, this.NumUniqueInRing);
 
         /// <summary>
         /// Returns the index of the end of the current ring
         /// </summary>
-        public PolygonIndex LastInRing
-        {
-            get
-            {
-                return new PolygonIndex(this.iPoly, this.iInnerPoly, this.NumUniqueInRing - 1, this.NumUniqueInRing);
-            }
-        }
+        public PolygonIndex LastInRing => new PolygonIndex(this.iPoly, this.iInnerPoly, this.NumUniqueInRing - 1, this.NumUniqueInRing);
 
         /// <summary>
         /// Return the next index after this one, staying within the same ring
         /// </summary>
         /// <returns></returns>
-        public PolygonIndex Next
-        {
-            get
-            {
-                return new PolygonIndex(this.iPoly, this.iInnerPoly, this.NextVertexInRing(), this.NumUniqueInRing);
-            }
-        }
+        public PolygonIndex Next => new PolygonIndex(this.iPoly, this.iInnerPoly, this.NextVertexInRing(), this.NumUniqueInRing);
 
         /// <summary>
         /// Return the previous index after this one, staying within the same ring
         /// </summary>
         /// <returns></returns>
-        public PolygonIndex Previous
-        {
-            get
-            {
-                return new PolygonIndex(this.iPoly, this.iInnerPoly, this.PreviousVertexInRing(), this.NumUniqueInRing);
-            }
-        }
+        public PolygonIndex Previous => new PolygonIndex(this.iPoly, this.iInnerPoly, this.PreviousVertexInRing(), this.NumUniqueInRing);
 
         private int NextVertexInRing()
         {
@@ -679,6 +655,11 @@ namespace Geometry
             }
 
             return new PolygonIndex(iPoly, iInner, this.iVertex, this.NumUniqueInRing);
+        }
+
+        public object Clone()
+        {
+            return new PolygonIndex(iPoly, iInnerPoly, iVertex, NumUniqueInRing);
         }
     }
 }

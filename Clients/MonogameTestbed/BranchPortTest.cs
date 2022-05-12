@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -54,8 +55,10 @@ namespace MonogameTestbed
         {
             Sets.Add(set);
             Shapes.Add(null);
-            LineSetView newView = new MonogameTestbed.LineSetView();
-            newView.color = new Color().Random();
+            LineSetView newView = new MonogameTestbed.LineSetView
+            {
+                color = new Color().Random()
+            };
             PolygonViews.Add(newView);
 
             set.CollectionChanged += this.OnSetChanged;
@@ -221,24 +224,21 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
         Scene scene;
-
-        List<PointSet> PointSets = new List<PointSet>();
-        List<PointSetView> PointSetViews = new List<PointSetView>();
-
-        BranchPortView PortView = new BranchPortView();
-
-        GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly List<PointSet> PointSets = new List<PointSet>();
+        readonly List<PointSetView> PointSetViews = new List<PointSetView>();
+        readonly BranchPortView PortView = new BranchPortView();
+        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
 
         GridVector2 Cursor;
         CircleView cursorView;
         LabelView cursorLabel;
 
-        static double PointRadius = 2.0;
+        static readonly double PointRadius = 2.0;
 
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
@@ -258,15 +258,18 @@ namespace MonogameTestbed
             
             foreach(PointSet set in PointSets)
             {
-                PointSetView view = new PointSetView();
-                view.Points = set;
-                view.Color = new Color().Random();
+                PointSetView view = new PointSetView
+                {
+                    Points = set,
+                    Color = new Color().Random()
+                };
                 PointSetViews.Add(view);
             }
             
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
             UpdateCursorViews(Cursor);
+            return Task.CompletedTask;
         }
         public void UnloadContent(MonoTestbed window)
         {
@@ -275,9 +278,11 @@ namespace MonogameTestbed
         private void UpdateCursorViews(GridVector2 position)
         {
             cursorView = new CircleView(new GridCircle(position, PointRadius), Color.Gray);
-            cursorLabel = new LabelView(position.ToLabel(), Cursor);
-            cursorLabel.FontSize = 2;
-            cursorLabel.Color = Color.Yellow;
+            cursorLabel = new LabelView(position.ToLabel(), Cursor)
+            {
+                FontSize = 2,
+                Color = Color.Yellow
+            };
         }
 
         public void Update()

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.UI;
@@ -12,11 +13,15 @@ namespace Viking
     internal class LocalTextureCacheEntry : CacheEntry<string>
     {
         public LocalTextureCacheEntry(string filename)
-            : base(filename)
-        {
-            FileInfo info = new FileInfo(filename);
-            this.Size = info.Length;
-            this.LastAccessed = info.LastAccessTimeUtc;
+            : this(new FileInfo(filename))
+        { 
+        }
+
+        public LocalTextureCacheEntry(FileInfo fileinfo)
+            : base(fileinfo.FullName)
+        { 
+            this.Size = fileinfo.Length;
+            this.LastAccessed = fileinfo.LastAccessTimeUtc;
         }
 
         public override void Dispose()
@@ -58,42 +63,38 @@ namespace Viking
         {
             DateTime Start = DateTime.Now;
             Trace.WriteLine("Populating cache", "TextureUse");
+            var dirinfo = new DirectoryInfo(path);
+            if (false == dirinfo.Exists)
+            {
+                dirinfo.Create();
+            }
+                
+            await CheckDirectory(dirinfo, token);
 
-            try
-            {
-                await CheckDirectory(path, token);
-                Trace.WriteLine("Cache population completed!");
-            }
-            catch (TaskCanceledException)
-            {
-                Trace.WriteLine("Cache population task cancelled!");
-            }
-            finally
-            {
-                TimeSpan elapsed = new TimeSpan(DateTime.Now.Ticks - Start.Ticks);
-                Trace.WriteLine("Cache population task runtime: " + elapsed.ToString(), "TextureUse");
-            }
+            TimeSpan elapsed = new TimeSpan(DateTime.Now.Ticks - Start.Ticks);
+            Trace.WriteLine("Finish cache populate: " + elapsed.ToString(), "TextureUse");
         }
 
         /// <summary>
         /// Recursively check the supplied directory and all subdirectories, adding files to cache lists
         /// </summary>
         /// <param name="path"></param>
-        private async Task CheckDirectory(string path, CancellationToken token)
+        private async Task CheckDirectory(DirectoryInfo path, CancellationToken token)
         {
-            string[] dirs = System.IO.Directory.GetDirectories(path);
-            System.Collections.Generic.List<Task> listTasks = new System.Collections.Generic.List<Task>(dirs.Length);
-            foreach (string dir in dirs)
+            if (path.Exists == false)
+                return;
+
+            var subdirs = path.EnumerateDirectories().ToArray();
+            System.Collections.Generic.List<Task> listTasks = new System.Collections.Generic.List<Task>(subdirs.Length);
+            foreach (var subdir in subdirs)
             {
                 if (token.IsCancellationRequested)
                     return;
 
-                listTasks.Add(CheckDirectory(dir, token));
+                listTasks.Add(CheckDirectory(subdir, token));
             }
-
-            string[] files = System.IO.Directory.GetFiles(path); 
-
-            foreach (string file in files)
+              
+            foreach (var file in path.EnumerateFiles())
             {
                 LocalTextureCacheEntry entry = new LocalTextureCacheEntry(file);
 
@@ -165,6 +166,16 @@ namespace Viking
             //     stream.Close();
             //An entry is created if the asynch write succeeds
             return null;
+        }
+
+        /// <summary>
+        /// Creates a file for the texture passed.
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <param name="textureStream"></param>
+        protected override LocalTextureCacheEntry CreateEntry(string filename, Func<string,byte[]> textureBufferFactory)
+        {
+            return CreateEntry(filename, textureBufferFactory(filename)); 
         }
 
         /// <summary>

@@ -88,6 +88,11 @@ namespace Viking.VolumeModel
             return entry;
         }
 
+        protected override TileCacheEntry CreateEntry(string key, Func<string, Tile> valueFactory)
+        {
+            return new TileCacheEntry(key, valueFactory(key));
+        }
+
         protected override Task<TileCacheEntry> CreateEntryAsync(string key, Tile value)
         {
             return Task.FromResult(CreateEntry(key, value));

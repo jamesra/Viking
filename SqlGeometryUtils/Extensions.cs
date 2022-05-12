@@ -9,13 +9,25 @@ using System.Text;
 namespace SqlGeometryUtils
 {
     /// <summary>
-    /// An enumeration of the geometry types supported in Viking
+    /// An enumeration of the SQL geometry types supported in Viking
     /// </summary>
     public enum SupportedGeometryType
     {
+        /// <summary>
+        /// A SQL Point
+        /// </summary>
         POINT,
+        /// <summary>
+        /// Circles are represented as CurvePolygons in the SQL database, a CURVEPOLYGON is currently always a circle
+        /// </summary>
         CURVEPOLYGON,
+        /// <summary>
+        /// A SQL Polygon
+        /// </summary>
         POLYGON,
+        /// <summary>
+        /// A SQL Polyline
+        /// </summary>
         POLYLINE
     };
 

@@ -1,4 +1,5 @@
-﻿@model Viking.Identity.Models.UserViewModels.ListUserRolesViewModel
+﻿@using Viking.Identity.Server.WebManagement.Models.UserViewModels
+@model Viking.Identity.Server.WebManagement.Models.UserViewModels.ListUserRolesViewModel
 
 @{
     ViewData["Title"] = "Roles";
@@ -41,7 +42,7 @@
                 foreach (var item in Model.UsersRoles)
                 {
                     <tr>
-                        @{ @Html.Partial("View", new Viking.Identity.Models.UserViewModels.EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
+                        @{ @Html.Partial("View", new EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
                     </tr>
                 }
             }
@@ -50,7 +51,7 @@
                 foreach (var item in Model.UsersRoles)
                 {
                     <tr>
-                        @{ @Html.Partial("ReadOnlyUserRolesView", new Viking.Identity.Models.UserViewModels.EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
+                        @{ @Html.Partial("ReadOnlyUserRolesView", new EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
                     </tr> 
                 }
             }

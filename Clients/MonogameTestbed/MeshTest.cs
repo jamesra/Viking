@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Input;
 using MorphologyMesh;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -16,9 +17,8 @@ namespace MonogameTestbed
         public string Title => this.GetType().Name;
         VikingXNAGraphics.MeshView<VertexPositionColor> meshView;
         VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshViewWithLighting;
-
-        Mesh3D tetraMesh = new Mesh3D();
-        Mesh3D cubeMesh =  new Mesh3D();
+        readonly Mesh3D tetraMesh = new Mesh3D();
+        readonly Mesh3D cubeMesh =  new Mesh3D();
 
         Scene3D Scene;
 
@@ -113,7 +113,7 @@ namespace MonogameTestbed
             return mesh;
         }*/
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
             this.Scene = new Scene3D(window.GraphicsDevice.Viewport, new Camera3D());
@@ -192,6 +192,8 @@ namespace MonogameTestbed
             meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(new GridVector3(0, 0, 0)));
             
             labelCamera = new LabelView("", new GridVector2(39950, 0));
+
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -495,13 +497,15 @@ namespace MonogameTestbed
         public void Draw(MonoTestbed window)
         {
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
-         
-            DepthStencilState dstate = new DepthStencilState();
-            dstate.DepthBufferEnable = true;
-            dstate.StencilEnable = false;
-            dstate.DepthBufferWriteEnable = true;
-            dstate.DepthBufferFunction = CompareFunction.LessEqual;
-            
+
+            DepthStencilState dstate = new DepthStencilState
+            {
+                DepthBufferEnable = true,
+                StencilEnable = false,
+                DepthBufferWriteEnable = true,
+                DepthBufferFunction = CompareFunction.LessEqual
+            };
+
             /*
             RasterizerState rState = new RasterizerState();
             rState.CullMode = CullMode.CullClockwiseFace;

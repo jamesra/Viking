@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace Geometry
 {
     internal class QuadTreeNodeTemplatePoint<TPoint, TValue>
-        where TPoint : struct, IPoint
+        where TPoint : struct, IPoint2D
     {
         readonly QuadTreeTemplatePoint<TPoint, TValue> Tree;
         internal QuadTreeNodeTemplatePoint<TPoint, TValue> Parent = null;
@@ -20,7 +20,7 @@ namespace Geometry
             LOWERRIGHT = 3
         };
 
-        private QuadTreeNodeTemplatePoint<TPoint, TValue>[] _quadrants = new QuadTreeNodeTemplatePoint<TPoint, TValue>[] { null, null, null, null };
+        private readonly QuadTreeNodeTemplatePoint<TPoint, TValue>[] _quadrants = new QuadTreeNodeTemplatePoint<TPoint, TValue>[] { null, null, null, null };
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
@@ -162,7 +162,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <returns></returns>
-        private Quadrant GetQuad(IPoint point)
+        private Quadrant GetQuad(IPoint2D point)
         {
             Quadrant quad;
 
@@ -347,8 +347,7 @@ namespace Geometry
                         if (_quadrants[iQuad].Border.Intersects(in rect))
                         {
                             double newDistance = double.MaxValue;
-                            TPoint foundNode;
-                            TValue foundValue = _quadrants[iQuad].FindNearest(point, out foundNode, ref newDistance);
+                            TValue foundValue = _quadrants[iQuad].FindNearest(point, out TPoint foundNode, ref newDistance);
 
                             if (newDistance < distance)
                             {

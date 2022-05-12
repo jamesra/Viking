@@ -21,7 +21,7 @@ namespace Viking.UI
     }
 
     
-    public enum PointerType : System.Int32
+    public enum PointerType : System.UInt32
     {
         /// <summary>
         /// Generic pointer type. This type never appears in pointer messages or pointer data. Some data query functions allow the caller to restrict the query to specific pointer type. The PT_POINTER type can be used in these functions to specify that the query is to include pointers of all types

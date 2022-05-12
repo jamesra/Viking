@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using TriangleNet;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -17,23 +18,22 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        GamePadStateTracker Gamepad = new GamePadStateTracker();
-        Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
+        readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
+        readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
 
         GridVector2 Cursor;
         CircleView cursorView;
         LabelView cursorLabel;
-
-        PolyLineView RawPolyLine = new PolyLineView(Color.Black.SetAlpha(0.25f));
-        PolyLineView RawInflectionPolyLine = new PolyLineView(Color.Gray.SetAlpha(0.25f));
-        PolyLineView CurvedRawInflectionPolyLine = new PolyLineView(Color.Gold);
-        PolyLineView CurvedPolyLine = new PolyLineView(Color.Green.SetAlpha(0.25f));
-        PolyLineView CurvedSimplifiedPolyLine = new PolyLineView(Color.Blue);
-        PolyLineView CurvedInflectionsPolyLine = new PolyLineView(Color.Orange);
-        PolyLineView CurvedSimplifiedWithInflectionsPolyLine = new PolyLineView(Color.Red);
-        PolyLineView CurvedRecreationFromInflectionsPolyLine = new PolyLineView(Color.BlueViolet);
-        PolyLineView MinimalCatmullFitPolyLine = new PolyLineView(Color.Yellow.SetAlpha(0.5f));
-        PolyLineView MinimalCatmullFitCurvedPolyLine = new PolyLineView(Color.Red.SetAlpha(0.5f));
+        readonly PolyLineView RawPolyLine = new PolyLineView(Color.Black.SetAlpha(0.25f));
+        readonly PolyLineView RawInflectionPolyLine = new PolyLineView(Color.Gray.SetAlpha(0.25f));
+        readonly PolyLineView CurvedRawInflectionPolyLine = new PolyLineView(Color.Gold);
+        readonly PolyLineView CurvedPolyLine = new PolyLineView(Color.Green.SetAlpha(0.25f));
+        readonly PolyLineView CurvedSimplifiedPolyLine = new PolyLineView(Color.Blue);
+        readonly PolyLineView CurvedInflectionsPolyLine = new PolyLineView(Color.Orange);
+        readonly PolyLineView CurvedSimplifiedWithInflectionsPolyLine = new PolyLineView(Color.Red);
+        readonly PolyLineView CurvedRecreationFromInflectionsPolyLine = new PolyLineView(Color.BlueViolet);
+        readonly PolyLineView MinimalCatmullFitPolyLine = new PolyLineView(Color.Yellow.SetAlpha(0.5f));
+        readonly PolyLineView MinimalCatmullFitCurvedPolyLine = new PolyLineView(Color.Red.SetAlpha(0.5f));
 
         public double PointRadius = 2.0;
 
@@ -70,13 +70,14 @@ namespace MonogameTestbed
             LabelView.Draw(window.spriteBatch, window.fontArial, scene, new LabelView[] { cursorLabel });
         }
 
-        public void Init(MonoTestbed window)
+        public Task Init(MonoTestbed window)
         {
             _initialized = true;
 
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
             
-            Gamepad.Update(GamePad.GetState(PlayerIndex.One));
+            Gamepad.Update(GamePad.GetState(PlayerIndex.One)); 
+            return Task.CompletedTask;
         }
 
         public void UnloadContent(MonoTestbed window)
@@ -134,9 +135,11 @@ namespace MonogameTestbed
             {
                 Cursor += state.ThumbSticks.Left.ToGridVector2();
                 cursorView = new CircleView(new GridCircle(Cursor, scene.Camera.Downsample < 1 ? 1.0 : scene.Camera.Downsample), Color.Gray);
-                cursorLabel = new LabelView(Cursor.ToLabel(), Cursor);
-                cursorLabel.FontSize = cursorView.Radius / 2.0;
-                cursorLabel.Color = Color.Yellow;
+                cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
+                {
+                    FontSize = cursorView.Radius / 2.0,
+                    Color = Color.Yellow
+                };
             } 
 
             if(state.Buttons.LeftShoulder == ButtonState.Pressed)
@@ -170,9 +173,11 @@ namespace MonogameTestbed
             if (lastDownsample != scene.Camera.Downsample)
             {
                 cursorView = new CircleView(new GridCircle(Cursor, scene.Camera.Downsample < 1 ? 1.0 : scene.Camera.Downsample), Color.Gray);
-                cursorLabel = new LabelView(Cursor.ToLabel(), Cursor);
-                cursorLabel.FontSize = cursorView.Radius / 2.0;
-                cursorLabel.Color = Color.Yellow;
+                cursorLabel = new LabelView(Cursor.ToLabel(), Cursor)
+                {
+                    FontSize = cursorView.Radius / 2.0,
+                    Color = Color.Yellow
+                };
 
                 double LineWidth = scene.Camera.Downsample < 1 ? 1.0 : scene.Camera.Downsample;
                 RawPolyLine.LineWidth = LineWidth / 2.0;

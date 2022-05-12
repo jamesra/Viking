@@ -70,10 +70,10 @@ namespace Geometry.Graphics
             A = (byte)(a / (double)byte.MaxValue);
         }
 
-        static readonly public Color Blue = new Color(0x00, 0x00, 0xff);
-        static readonly public Color Green = new Color(0x00, 0xff, 0x00);
-        static readonly public Color Red = new Color(0xff, 0x00, 0x00);
-        static readonly public Color Gold = new Color(0xff, 0xd7, 0x00);
+        public static readonly Color Blue = new Color(0x00, 0x00, 0xff);
+        public static readonly Color Green = new Color(0x00, 0xff, 0x00);
+        public static readonly Color Red = new Color(0xff, 0x00, 0x00);
+        public static readonly Color Gold = new Color(0xff, 0xd7, 0x00);
 
         public override string ToString()
         {

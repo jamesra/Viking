@@ -2,9 +2,27 @@
 using System;
 using System.Collections;
 
-namespace WebAnnotationModel
+namespace WebAnnotationModel.ServerInterface
 { 
-    public readonly struct UpdateResults<KEY, OBJECT>
+    public interface IUpdateResults<out KEY, out OBJECT>
+    {
+        /// <summary>
+        /// Objects freshly added to the store
+        /// </summary>
+        OBJECT[] AddedObjects { get; }
+
+        /// <summary>
+        /// Objects that existed in the store but with updated properties
+        /// </summary>
+        OBJECT[] UpdatedObjects { get; }
+
+        /// <summary>
+        /// Objects deleted from the store
+        /// </summary>
+        KEY[] DeletedIDs { get; }
+    }
+
+    public readonly struct UpdateResults<KEY, OBJECT> : IUpdateResults<KEY, OBJECT>
     {
         /// <summary>
         /// Objects freshly added to the store
@@ -37,5 +55,9 @@ namespace WebAnnotationModel
             DeletedIDs = deleted != null ? new KEY[] {
                 deleted } : Array.Empty<KEY>();
         }
+         
+        OBJECT[] IUpdateResults<KEY, OBJECT>.AddedObjects => AddedObjects;
+        OBJECT[] IUpdateResults<KEY, OBJECT>.UpdatedObjects => UpdatedObjects;
+        KEY[] IUpdateResults<KEY, OBJECT>.DeletedIDs => DeletedIDs;
     }
 }

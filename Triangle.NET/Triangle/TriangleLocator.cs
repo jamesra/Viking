@@ -130,8 +130,8 @@ namespace TriangleNet
         public LocateResult PreciseLocate(Point searchpoint, ref Otri searchtri,
             bool stopatsubsegment)
         {
-            Otri backtracktri = default(Otri);
-            Osub checkedge = default(Osub);
+            Otri backtracktri = default;
+            Osub checkedge = default;
             Vertex forg, fdest, fapex;
             double orgorient, destorient;
             bool moveleft;
@@ -272,7 +272,7 @@ namespace TriangleNet
         /// </remarks>
         public LocateResult Locate(Point searchpoint, ref Otri searchtri)
         {
-            Otri sampletri = default(Otri);
+            Otri sampletri = default;
             Vertex torg, tdest;
             double searchdist, dist;
             double ahead;

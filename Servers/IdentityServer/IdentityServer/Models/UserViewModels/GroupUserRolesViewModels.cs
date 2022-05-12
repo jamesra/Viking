@@ -1,4 +1,4 @@
-﻿namespace Viking.Identity.Models.UserViewModels
+﻿namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
 {
     /*
     public class GroupUserRolesViewModel

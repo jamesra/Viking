@@ -1,4 +1,5 @@
-﻿@model IList<Viking.Identity.Models.Resource>
+﻿@using Viking.Identity.Server.Authorization
+@model IList<Viking.Identity.Models.Resource>
 
 <dl class="dl-traditional">
     @foreach (var rtype in Model.GroupBy(m => m.ResourceTypeId).OrderBy(m => m.Key))

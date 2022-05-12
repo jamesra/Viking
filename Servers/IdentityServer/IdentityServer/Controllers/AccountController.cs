@@ -1,20 +1,21 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
-using Viking.Identity.Models.AccountViewModels;
-using Viking.Identity.Services;
+using Viking.Identity.Server.WebManagement.Extensions;
+using Viking.Identity.Server.WebManagement.Models.AccountViewModels;
+using Viking.Identity.Server.Services;
 
-namespace Viking.Identity.Controllers
+namespace Viking.Identity.Server.WebManagement.Controllers
 {
     [Authorize]
     [Route("[controller]/[action]")]

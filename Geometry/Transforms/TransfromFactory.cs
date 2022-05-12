@@ -137,8 +137,11 @@ namespace Geometry.Transforms
 
         public static async Task<ITransform> ParseStos(Uri stosURI, XElement elem, System.Net.NetworkCredential UserCredentials)
         {
-            if (elem == null || stosURI == null)
-                throw new ArgumentNullException();
+            if (elem == null) 
+                throw new ArgumentNullException(nameof(elem));
+
+            if (stosURI == null)
+                throw new ArgumentNullException(nameof(stosURI));
 
             int pixelSpacing = System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("pixelSpacing").Value);
 
@@ -213,7 +216,7 @@ namespace Geometry.Transforms
 
         }
 
-        static public ReadOnlyCollection<MappingGridVector2> ParseRotateTranslateAffineTransform(string[] parts,
+        public static ReadOnlyCollection<MappingGridVector2> ParseRotateTranslateAffineTransform(string[] parts,
             float pixelSpacing,
             int iFixedParameters,
             int iVariableParameters,
@@ -269,7 +272,7 @@ namespace Geometry.Transforms
             return new ReadOnlyCollection<MappingGridVector2>(mappings);
         }
 
-        static private GridTransform ParseGridTransform(TransformParameters transform,
+        private static GridTransform ParseGridTransform(TransformParameters transform,
                                                                 StosTransformInfo info,
                                                                 float pixelSpacing,
                                                                 int iFixedParameters,
@@ -423,7 +426,7 @@ namespace Geometry.Transforms
 
         #region .mosaic Parsing code
 
-        private static Regex TileNumberRegex = new Regex(@"[^\d]*(?<number>\d+)[^\.]*(?<ext>\..+)?", RegexOptions.Compiled);
+        private static readonly Regex TileNumberRegex = new Regex(@"[^\d]*(?<number>\d+)[^\.]*(?<ext>\..+)?", RegexOptions.Compiled);
         /// <summary>
         /// Load mosaic from specified file and add it to transforms list using specified key
         /// </summary>
@@ -431,8 +434,11 @@ namespace Geometry.Transforms
         /// <param name="Key"></param>
         public static ITransform[] LoadMosaic(string path, string[] mosaic, DateTime lastModified)
         {
-            if (mosaic == null || path == null)
-                throw new ArgumentNullException();
+            if (mosaic == null)
+                throw new ArgumentNullException(nameof(mosaic));
+
+            if (path == null)
+                throw new ArgumentNullException(nameof(path));
 
             int numTiles = 0;
             //           double PixelSpacing; 
@@ -716,22 +722,23 @@ namespace Geometry.Transforms
             GridVector2[] Points = new GridVector2[NumPts];
 
             //           verticies = new VertexPositionNormalTexture[numPts];
-
+            /*
             Double minX = Double.MaxValue;
             Double minY = Double.MaxValue;
             Double maxX = Double.MinValue;
             Double maxY = Double.MinValue;
-
+            */
             //Every number in the array is separated by an empty space in the array
             for (int i = 0; i < NumPts; i++)
             {
                 int iPoint = (i * 2);
-                Double x = transform.VariableParameters[iPoint] * PixelSpacing;
-                Double y = transform.VariableParameters[iPoint + 1] * PixelSpacing;
+                double x = transform.VariableParameters[iPoint] * PixelSpacing;
+                double y = transform.VariableParameters[iPoint + 1] * PixelSpacing;
 
                 Points[i] = new GridVector2(x, y);
 
                 //Trace.WriteLine(x.ToString() + ", " + y.ToString(), "Geometry");
+                /*
                 if (x < minX)
                     minX = x;
                 if (x > maxX)
@@ -740,6 +747,7 @@ namespace Geometry.Transforms
                     minY = y;
                 if (y > maxY)
                     maxY = y;
+                */
             }
 
             //            List<int> indicies = new List<int>();
@@ -755,7 +763,7 @@ namespace Geometry.Transforms
                     GridVector2 mapPoint = GridTransform.CoordinateFromGridPos(x, y, gridWidth, gridHeight, ImageWidth, ImageHeight);
                     GridVector2 ctrlPoint = Points[i];
 
-                    mapList[i] = new MappingGridVector2(ctrlPoint, mapPoint);
+                    mapList[i] = new MappingGridVector2(ctrlPoint.Round(Global.TransformSignificantDigits), mapPoint.Round(Global.TransformSignificantDigits));
                 }
             }
 
@@ -805,7 +813,7 @@ namespace Geometry.Transforms
                 GridVector2 Control = new GridVector2(transform.VariableParameters[iOffset + 2] * PixelSpacing,
                                                      transform.VariableParameters[iOffset + 3] * PixelSpacing);
 
-                Points[iP] = new MappingGridVector2(Control, Mapped);
+                Points[iP] = new MappingGridVector2(Control.Round(Global.TransformSignificantDigits), Mapped.Round(Global.TransformSignificantDigits));
             }
 
             MeshTransform discreteTransform = new MeshTransform(Points, info);

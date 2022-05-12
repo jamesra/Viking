@@ -238,10 +238,7 @@ namespace VikingXNAGraphics
         private GridCircle _Circle;
         public GridCircle Circle
         {
-            get
-            {
-                return _Circle;
-            }
+            get => _Circle;
             set
             {
                 ClearCachedData();
@@ -250,40 +247,21 @@ namespace VikingXNAGraphics
             }
         }
 
-        public GridVector2 VolumePosition
-        {
-            get
-            {
-                return _Circle.Center;
-            }
+        public GridVector2 VolumePosition => _Circle.Center;
 
-        }
-
-        public double Radius
-        {
-            get { return _Circle.Radius; }
-        }
+        public double Radius => _Circle.Radius;
 
         public float Alpha
         {
-            get
-            {
-                return _Color.GetAlpha();
-            }
-            set
-            {
-                Color = this._Color.SetAlpha(value);
-            }
+            get => _Color.GetAlpha();
+            set => Color = this._Color.SetAlpha(value);
         }
 
 
         private Microsoft.Xna.Framework.Color _Color;
         public Microsoft.Xna.Framework.Color Color
         {
-            get
-            {
-                return _Color;
-            }
+            get => _Color;
             set
             {
                 _Color = value;
@@ -293,13 +271,7 @@ namespace VikingXNAGraphics
         }
 
         private Microsoft.Xna.Framework.Color _HSLColor;
-        public Microsoft.Xna.Framework.Color HSLColor
-        {
-            get
-            {
-                return _HSLColor;
-            }
-        }
+        public Microsoft.Xna.Framework.Color HSLColor => _HSLColor;
 
         /// <summary>
         /// Called when we have changed a property that affects rendering
@@ -386,15 +358,9 @@ namespace VikingXNAGraphics
 
         GridVector2 IViewPosition2D.Position
         {
-            get
-            {
-                return this.VolumePosition;
-            }
+            get => this.VolumePosition;
 
-            set
-            {
-                Circle = new GridCircle(value, this.Radius);
-            }
+            set => Circle = new GridCircle(value, this.Radius);
         }
 
         /// <summary>

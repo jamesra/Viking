@@ -1,0 +1,211 @@
+2022-03-08 14:32:39.492 -08:00 [INF] User profile is available. Using 'C:\Users\u0490822\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2022-03-08 14:32:55.732 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/ - -
+2022-03-08 14:32:55.766 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:32:55.792 -08:00 [INF] Route matched with {action = "Index", controller = "Home"}. Executing controller action with signature Microsoft.AspNetCore.Mvc.IActionResult Index() on controller Viking.Identity.Server.WebManagement.Controllers.HomeController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:32:55.849 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:32:55.854 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.ViewResult in 0.4322ms.
+2022-03-08 14:32:55.869 -08:00 [INF] Executing ViewResult, running view Index.
+2022-03-08 14:32:56.127 -08:00 [INF] Executed ViewResult - view Index executed in 261.5983ms.
+2022-03-08 14:32:56.129 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement) in 335.4033ms
+2022-03-08 14:32:56.130 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:32:56.132 -08:00 [INF] HTTP GET / responded 200 in 394.0521 ms
+2022-03-08 14:32:56.137 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/ - - - 200 - text/html;+charset=utf-8 406.7604ms
+2022-03-08 14:32:56.152 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/lib/bootstrap/dist/css/bootstrap.css - -
+2022-03-08 14:32:56.152 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/images/VikingBanner1.jpg - -
+2022-03-08 14:32:56.153 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/lib/jquery/dist/jquery.js - -
+2022-03-08 14:32:56.152 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/js/site.js?v=ji3-IxbEzYWjzzLCGkF1KDjrT2jLbbrSYXw-AhMPNIA - -
+2022-03-08 14:32:56.152 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/images/NetworkBanner.png - -
+2022-03-08 14:32:56.152 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/css/site.css - -
+2022-03-08 14:32:56.164 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/lib/bootstrap/dist/js/bootstrap.js - -
+2022-03-08 14:32:56.168 -08:00 [INF] The file /images/NetworkBanner.png was not modified
+2022-03-08 14:32:56.168 -08:00 [INF] The file /lib/jquery/dist/jquery.js was not modified
+2022-03-08 14:32:56.168 -08:00 [INF] The file /js/site.js was not modified
+2022-03-08 14:32:56.168 -08:00 [INF] The file /css/site.css was not modified
+2022-03-08 14:32:56.168 -08:00 [INF] The file /images/VikingBanner1.jpg was not modified
+2022-03-08 14:32:56.168 -08:00 [INF] The file /lib/bootstrap/dist/css/bootstrap.css was not modified
+2022-03-08 14:32:56.169 -08:00 [INF] The file /lib/bootstrap/dist/js/bootstrap.js was not modified
+2022-03-08 14:32:56.171 -08:00 [INF] HTTP GET /images/NetworkBanner.png responded 304 in 3.2918 ms
+2022-03-08 14:32:56.171 -08:00 [INF] HTTP GET /lib/jquery/dist/jquery.js responded 304 in 5.8037 ms
+2022-03-08 14:32:56.176 -08:00 [INF] HTTP GET /lib/bootstrap/dist/js/bootstrap.js responded 304 in 6.9070 ms
+2022-03-08 14:32:56.174 -08:00 [INF] HTTP GET /images/VikingBanner1.jpg responded 304 in 9.1695 ms
+2022-03-08 14:32:56.172 -08:00 [INF] HTTP GET /js/site.js?v=ji3-IxbEzYWjzzLCGkF1KDjrT2jLbbrSYXw-AhMPNIA responded 304 in 5.2631 ms
+2022-03-08 14:32:56.178 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/images/NetworkBanner.png - - - 304 - image/png 25.0818ms
+2022-03-08 14:32:56.173 -08:00 [INF] HTTP GET /css/site.css responded 304 in 4.7587 ms
+2022-03-08 14:32:56.175 -08:00 [INF] HTTP GET /lib/bootstrap/dist/css/bootstrap.css responded 304 in 21.0813 ms
+2022-03-08 14:32:56.183 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/lib/jquery/dist/jquery.js - - - 304 - application/javascript 30.9176ms
+2022-03-08 14:32:56.185 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/lib/bootstrap/dist/js/bootstrap.js - - - 304 - application/javascript 25.1501ms
+2022-03-08 14:32:56.187 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/images/VikingBanner1.jpg - - - 304 - image/jpeg 34.1407ms
+2022-03-08 14:32:56.188 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/js/site.js?v=ji3-IxbEzYWjzzLCGkF1KDjrT2jLbbrSYXw-AhMPNIA - - - 304 - application/javascript 35.5964ms
+2022-03-08 14:32:56.190 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/css/site.css - - - 304 - text/css 37.8019ms
+2022-03-08 14:32:56.191 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/lib/bootstrap/dist/css/bootstrap.css - - - 304 - text/css 39.2829ms
+2022-03-08 14:32:56.205 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/favicon.ico - -
+2022-03-08 14:32:56.207 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/lib/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2 - -
+2022-03-08 14:32:56.211 -08:00 [INF] Sending file. Request path: '/favicon.ico'. Physical path: 'C:\src\git\Viking\Servers\IdentityServer\IdentityServer\wwwroot\favicon.ico'
+2022-03-08 14:32:56.211 -08:00 [INF] Sending file. Request path: '/lib/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2'. Physical path: 'C:\src\git\Viking\Servers\IdentityServer\IdentityServer\wwwroot\lib\bootstrap\dist\fonts\glyphicons-halflings-regular.woff2'
+2022-03-08 14:32:56.214 -08:00 [INF] HTTP GET /favicon.ico responded 200 in 7.7107 ms
+2022-03-08 14:32:56.216 -08:00 [INF] HTTP GET /lib/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2 responded 200 in 7.4066 ms
+2022-03-08 14:32:56.217 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/favicon.ico - - - 0 32038 image/x-icon 12.0166ms
+2022-03-08 14:32:56.218 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/lib/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2 - - - 200 18028 font/woff2 10.7490ms
+2022-03-08 14:32:57.595 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/Account/Login - -
+2022-03-08 14:32:57.599 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:32:57.611 -08:00 [INF] Route matched with {action = "Login", controller = "Account"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Login(System.String) on controller Viking.Identity.Server.WebManagement.Controllers.AccountController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:32:57.631 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:32:57.641 -08:00 [INF] AuthenticationScheme: Identity.External signed out.
+2022-03-08 14:32:57.642 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.ViewResult in 9.0718ms.
+2022-03-08 14:32:57.643 -08:00 [INF] Executing ViewResult, running view Login.
+2022-03-08 14:32:57.677 -08:00 [INF] Executed ViewResult - view Login executed in 33.9293ms.
+2022-03-08 14:32:57.678 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement) in 65.8458ms
+2022-03-08 14:32:57.680 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:32:57.681 -08:00 [INF] HTTP GET /Account/Login responded 200 in 85.4460 ms
+2022-03-08 14:32:57.683 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/Account/Login - - - 200 - text/html;+charset=utf-8 87.9025ms
+2022-03-08 14:32:57.694 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/lib/jquery-validation/dist/jquery.validate.js - -
+2022-03-08 14:32:57.694 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js - -
+2022-03-08 14:32:57.702 -08:00 [INF] Sending file. Request path: '/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js'. Physical path: 'C:\src\git\Viking\Servers\IdentityServer\IdentityServer\wwwroot\lib\jquery-validation-unobtrusive\jquery.validate.unobtrusive.js'
+2022-03-08 14:32:57.704 -08:00 [INF] HTTP GET /lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js responded 200 in 2.2411 ms
+2022-03-08 14:32:57.705 -08:00 [INF] Sending file. Request path: '/lib/jquery-validation/dist/jquery.validate.js'. Physical path: 'C:\src\git\Viking\Servers\IdentityServer\IdentityServer\wwwroot\lib\jquery-validation\dist\jquery.validate.js'
+2022-03-08 14:32:57.705 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js - - - 200 19033 application/javascript 11.5617ms
+2022-03-08 14:32:57.707 -08:00 [INF] HTTP GET /lib/jquery-validation/dist/jquery.validate.js responded 200 in 6.8656 ms
+2022-03-08 14:32:57.711 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/lib/jquery-validation/dist/jquery.validate.js - - - 200 44027 application/javascript 17.1535ms
+2022-03-08 14:33:05.123 -08:00 [INF] Request starting HTTP/2 POST https://localhost:5001/Account/Login application/x-www-form-urlencoded 252
+2022-03-08 14:33:05.128 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:05.134 -08:00 [INF] Route matched with {action = "Login", controller = "Account"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Login(Viking.Identity.Server.WebManagement.Models.AccountViewModels.LoginViewModel, System.String) on controller Viking.Identity.Server.WebManagement.Controllers.AccountController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:33:05.164 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:33:05.590 -08:00 [WRN] Sensitive data logging is enabled. Log entries and exception messages may include sensitive application data; this mode should only be enabled during development.
+2022-03-08 14:33:05.710 -08:00 [INF] Entity Framework Core 5.0.14 initialized 'ApplicationDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer' with options: SensitiveDataLoggingEnabled DetailedErrorsEnabled 
+2022-03-08 14:33:06.790 -08:00 [INF] Executed DbCommand (76ms) [Parameters=[@__normalizedUserName_0='JAMESAN' (Size = 256)], CommandType='"Text"', CommandTimeout='30']
+SELECT TOP(1) [a].[Id], [a].[AccessFailedCount], [a].[ConcurrencyStamp], [a].[Email], [a].[EmailConfirmed], [a].[FamilyName], [a].[GivenName], [a].[LockoutEnabled], [a].[LockoutEnd], [a].[NormalizedEmail], [a].[NormalizedUserName], [a].[PasswordHash], [a].[PhoneNumber], [a].[PhoneNumberConfirmed], [a].[RegistrationDate], [a].[SecurityStamp], [a].[TwoFactorEnabled], [a].[UserName]
+FROM [AspNetUsers] AS [a]
+WHERE [a].[NormalizedUserName] = @__normalizedUserName_0
+2022-03-08 14:33:06.938 -08:00 [INF] Executed DbCommand (46ms) [Parameters=[@__user_Id_0='f89b1e95-8afd-48c4-bc81-a55be1297621' (Size = 450)], CommandType='"Text"', CommandTimeout='30']
+SELECT [a].[Id], [a].[ClaimType], [a].[ClaimValue], [a].[UserId]
+FROM [AspNetUserClaims] AS [a]
+WHERE [a].[UserId] = @__user_Id_0
+2022-03-08 14:33:07.037 -08:00 [INF] Executed DbCommand (72ms) [Parameters=[@__userId_0='f89b1e95-8afd-48c4-bc81-a55be1297621' (Size = 450)], CommandType='"Text"', CommandTimeout='30']
+SELECT [t].[Name]
+FROM [AspNetUserRoles] AS [a]
+INNER JOIN (
+    SELECT [a0].[Id], [a0].[Name]
+    FROM [AspNetRoles] AS [a0]
+    WHERE [a0].[Discriminator] = N'ApplicationRole'
+) AS [t] ON [a].[RoleId] = [t].[Id]
+WHERE [a].[UserId] = @__userId_0
+2022-03-08 14:33:07.090 -08:00 [INF] Executed DbCommand (45ms) [Parameters=[@__normalizedName_0='ADMINISTRATOR' (Size = 256)], CommandType='"Text"', CommandTimeout='30']
+SELECT TOP(1) [a].[Id], [a].[ConcurrencyStamp], [a].[Discriminator], [a].[Name], [a].[NormalizedName]
+FROM [AspNetRoles] AS [a]
+WHERE ([a].[Discriminator] = N'ApplicationRole') AND ([a].[NormalizedName] = @__normalizedName_0)
+2022-03-08 14:33:07.147 -08:00 [INF] Executed DbCommand (44ms) [Parameters=[@__role_Id_0='cdf2b676-7edc-4d96-9ebb-8d1968734482' (Size = 450)], CommandType='"Text"', CommandTimeout='30']
+SELECT [a].[ClaimType], [a].[ClaimValue]
+FROM [AspNetRoleClaims] AS [a]
+WHERE [a].[RoleId] = @__role_Id_0
+2022-03-08 14:33:07.154 -08:00 [INF] AuthenticationScheme: Identity.Application signed in.
+2022-03-08 14:33:07.157 -08:00 [INF] User logged in.
+2022-03-08 14:33:07.158 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.RedirectToActionResult in 1992.3836ms.
+2022-03-08 14:33:07.160 -08:00 [INF] Executing RedirectResult, redirecting to /.
+2022-03-08 14:33:07.161 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement) in 2024.6255ms
+2022-03-08 14:33:07.162 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:07.163 -08:00 [INF] HTTP POST /Account/Login responded 302 in 2039.5810 ms
+2022-03-08 14:33:07.166 -08:00 [INF] Request finished HTTP/2 POST https://localhost:5001/Account/Login application/x-www-form-urlencoded 252 - 302 0 - 2043.1123ms
+2022-03-08 14:33:07.166 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/ - -
+2022-03-08 14:33:07.169 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:07.172 -08:00 [INF] Route matched with {action = "Index", controller = "Home"}. Executing controller action with signature Microsoft.AspNetCore.Mvc.IActionResult Index() on controller Viking.Identity.Server.WebManagement.Controllers.HomeController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:33:07.183 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:33:07.184 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.ViewResult in 0.0169ms.
+2022-03-08 14:33:07.187 -08:00 [INF] Executing ViewResult, running view Index.
+2022-03-08 14:33:07.191 -08:00 [INF] Executed ViewResult - view Index executed in 4.9488ms.
+2022-03-08 14:33:07.193 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement) in 19.4758ms
+2022-03-08 14:33:07.194 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:07.195 -08:00 [INF] HTTP GET / responded 200 in 28.2479 ms
+2022-03-08 14:33:07.196 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/ - - - 200 - text/html;+charset=utf-8 30.3139ms
+2022-03-08 14:33:08.494 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/ResourceTypes - -
+2022-03-08 14:33:08.499 -08:00 [INF] Authorization was successful.
+2022-03-08 14:33:08.500 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:08.502 -08:00 [INF] Route matched with {action = "Index", controller = "ResourceTypes"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Index() on controller Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:33:08.516 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:33:08.536 -08:00 [INF] Entity Framework Core 5.0.14 initialized 'ApplicationDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer' with options: SensitiveDataLoggingEnabled DetailedErrorsEnabled 
+2022-03-08 14:33:08.605 -08:00 [INF] Executed DbCommand (65ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [r].[Id], [r].[Description]
+FROM [ResourceTypes] AS [r]
+2022-03-08 14:33:08.610 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.ViewResult in 92.6265ms.
+2022-03-08 14:33:08.611 -08:00 [INF] Executing ViewResult, running view Index.
+2022-03-08 14:33:08.621 -08:00 [INF] Executed ViewResult - view Index executed in 9.7915ms.
+2022-03-08 14:33:08.622 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement) in 118.2686ms
+2022-03-08 14:33:08.623 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:08.625 -08:00 [INF] HTTP GET /ResourceTypes responded 200 in 129.7231 ms
+2022-03-08 14:33:08.626 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/ResourceTypes - - - 200 - text/html;+charset=utf-8 131.9198ms
+2022-03-08 14:33:10.020 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/ResourceTypes/Details/Group - -
+2022-03-08 14:33:10.024 -08:00 [INF] Authorization was successful.
+2022-03-08 14:33:10.025 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Details (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:10.028 -08:00 [INF] Route matched with {action = "Details", controller = "ResourceTypes"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Details(System.String) on controller Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:33:10.039 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Details (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:33:10.047 -08:00 [INF] Entity Framework Core 5.0.14 initialized 'ApplicationDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer' with options: SensitiveDataLoggingEnabled DetailedErrorsEnabled 
+2022-03-08 14:33:10.123 -08:00 [INF] Executed DbCommand (44ms) [Parameters=[@__id_0='Group' (Size = 128)], CommandType='"Text"', CommandTimeout='30']
+SELECT [t].[Id], [t].[Description], [p].[ResourceTypeId], [p].[PermissionId], [p].[Description]
+FROM (
+    SELECT TOP(1) [r].[Id], [r].[Description]
+    FROM [ResourceTypes] AS [r]
+    WHERE [r].[Id] = @__id_0
+) AS [t]
+LEFT JOIN [Permissions] AS [p] ON [t].[Id] = [p].[ResourceTypeId]
+ORDER BY [t].[Id], [p].[ResourceTypeId], [p].[PermissionId]
+2022-03-08 14:33:10.140 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Details (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.ViewResult in 99.0297ms.
+2022-03-08 14:33:10.143 -08:00 [INF] Executing ViewResult, running view Details.
+2022-03-08 14:33:10.156 -08:00 [INF] Executed ViewResult - view Details executed in 13.2898ms.
+2022-03-08 14:33:10.158 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Details (Viking.Identity.Server.WebManagement) in 128.768ms
+2022-03-08 14:33:10.160 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Details (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:10.161 -08:00 [INF] HTTP GET /ResourceTypes/Details/Group responded 200 in 139.8810 ms
+2022-03-08 14:33:10.162 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/ResourceTypes/Details/Group - - - 200 - text/html;+charset=utf-8 142.0039ms
+2022-03-08 14:33:12.031 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/ResourceTypes - -
+2022-03-08 14:33:12.032 -08:00 [INF] Authorization was successful.
+2022-03-08 14:33:12.033 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:12.034 -08:00 [INF] Route matched with {action = "Index", controller = "ResourceTypes"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Index() on controller Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:33:12.046 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:33:12.047 -08:00 [INF] Entity Framework Core 5.0.14 initialized 'ApplicationDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer' with options: SensitiveDataLoggingEnabled DetailedErrorsEnabled 
+2022-03-08 14:33:12.093 -08:00 [INF] Executed DbCommand (44ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [r].[Id], [r].[Description]
+FROM [ResourceTypes] AS [r]
+2022-03-08 14:33:12.095 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.ViewResult in 47.6948ms.
+2022-03-08 14:33:12.096 -08:00 [INF] Executing ViewResult, running view Index.
+2022-03-08 14:33:12.098 -08:00 [INF] Executed ViewResult - view Index executed in 2.2219ms.
+2022-03-08 14:33:12.099 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement) in 63.8171ms
+2022-03-08 14:33:12.100 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.ResourceTypesController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:12.101 -08:00 [INF] HTTP GET /ResourceTypes responded 200 in 69.4508 ms
+2022-03-08 14:33:12.103 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/ResourceTypes - - - 200 - text/html;+charset=utf-8 71.2872ms
+2022-03-08 14:33:14.046 -08:00 [INF] Request starting HTTP/2 POST https://localhost:5001/Account/Logout application/x-www-form-urlencoded 225
+2022-03-08 14:33:14.047 -08:00 [INF] Authorization was successful.
+2022-03-08 14:33:14.048 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.AccountController.Logout (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:14.050 -08:00 [INF] Route matched with {action = "Logout", controller = "Account"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Logout() on controller Viking.Identity.Server.WebManagement.Controllers.AccountController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:33:14.063 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.AccountController.Logout (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:33:14.066 -08:00 [INF] AuthenticationScheme: Identity.Application signed out.
+2022-03-08 14:33:14.066 -08:00 [INF] AuthenticationScheme: Identity.External signed out.
+2022-03-08 14:33:14.067 -08:00 [INF] AuthenticationScheme: Identity.TwoFactorUserId signed out.
+2022-03-08 14:33:14.067 -08:00 [INF] User logged out.
+2022-03-08 14:33:14.068 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.AccountController.Logout (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.RedirectToActionResult in 3.4192ms.
+2022-03-08 14:33:14.069 -08:00 [INF] Executing RedirectResult, redirecting to /.
+2022-03-08 14:33:14.070 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.AccountController.Logout (Viking.Identity.Server.WebManagement) in 18.4243ms
+2022-03-08 14:33:14.071 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.AccountController.Logout (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:14.074 -08:00 [INF] HTTP POST /Account/Logout responded 302 in 26.6713 ms
+2022-03-08 14:33:14.075 -08:00 [INF] Request finished HTTP/2 POST https://localhost:5001/Account/Logout application/x-www-form-urlencoded 225 - 302 0 - 29.1903ms
+2022-03-08 14:33:14.077 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/ - -
+2022-03-08 14:33:14.078 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:14.078 -08:00 [INF] Route matched with {action = "Index", controller = "Home"}. Executing controller action with signature Microsoft.AspNetCore.Mvc.IActionResult Index() on controller Viking.Identity.Server.WebManagement.Controllers.HomeController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:33:14.090 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:33:14.091 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.ViewResult in 0.0145ms.
+2022-03-08 14:33:14.092 -08:00 [INF] Executing ViewResult, running view Index.
+2022-03-08 14:33:14.093 -08:00 [INF] Executed ViewResult - view Index executed in 1.0926ms.
+2022-03-08 14:33:14.094 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement) in 14.0056ms
+2022-03-08 14:33:14.095 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.HomeController.Index (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:14.096 -08:00 [INF] HTTP GET / responded 200 in 18.7251 ms
+2022-03-08 14:33:14.098 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/ - - - 200 - text/html;+charset=utf-8 20.7311ms
+2022-03-08 14:33:15.658 -08:00 [INF] Request starting HTTP/2 GET https://localhost:5001/Account/Login - -
+2022-03-08 14:33:15.659 -08:00 [INF] Executing endpoint 'Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:15.660 -08:00 [INF] Route matched with {action = "Login", controller = "Account"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Login(System.String) on controller Viking.Identity.Server.WebManagement.Controllers.AccountController (Viking.Identity.Server.WebManagement).
+2022-03-08 14:33:15.672 -08:00 [INF] Executing action method Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement) - Validation state: "Valid"
+2022-03-08 14:33:15.674 -08:00 [INF] AuthenticationScheme: Identity.External signed out.
+2022-03-08 14:33:15.675 -08:00 [INF] Executed action method Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement), returned result Microsoft.AspNetCore.Mvc.ViewResult in 1.035ms.
+2022-03-08 14:33:15.676 -08:00 [INF] Executing ViewResult, running view Login.
+2022-03-08 14:33:15.679 -08:00 [INF] Executed ViewResult - view Login executed in 2.4047ms.
+2022-03-08 14:33:15.679 -08:00 [INF] Executed action Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement) in 18.176ms
+2022-03-08 14:33:15.681 -08:00 [INF] Executed endpoint 'Viking.Identity.Server.WebManagement.Controllers.AccountController.Login (Viking.Identity.Server.WebManagement)'
+2022-03-08 14:33:15.682 -08:00 [INF] HTTP GET /Account/Login responded 200 in 22.8564 ms
+2022-03-08 14:33:15.683 -08:00 [INF] Request finished HTTP/2 GET https://localhost:5001/Account/Login - - - 200 - text/html;+charset=utf-8 25.3838ms
+2022-03-08 14:42:02.216 -08:00 [INF] User profile is available. Using 'C:\Users\u0490822\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.

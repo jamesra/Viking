@@ -33,6 +33,8 @@ namespace GeometryTests
             return ExteriorPointsScaled;
         }
 
+        public static GridPolygon BoxPolygon(double scale) => new GridPolygon(BoxVerticies(scale));
+
 
         public static GridVector2[] ConcaveUVerticies(double scale)
         {
@@ -58,6 +60,8 @@ namespace GeometryTests
             return ExteriorPointsScaled;
         }
 
+        public static GridPolygon UPolygon(double scale) => new GridPolygon(Primitives.ConcaveUVerticies(scale));
+
         public static GridVector2[] ConcaveCheckVerticies(double scale)
         {
             //          *
@@ -81,7 +85,9 @@ namespace GeometryTests
             return ExteriorPointsScaled;
         }
 
-        public static GridVector2[] DiamondVerticies(double scale)
+        public static GridPolygon ConcaveCheckPolygon(double scale) => new GridPolygon(Primitives.ConcaveCheckVerticies(scale));
+
+        public static GridVector2[] TrapezoidVerticies(double scale)
         {
             //          *
             //        _/|  
@@ -104,6 +110,34 @@ namespace GeometryTests
             GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
             return ExteriorPointsScaled;
         }
+
+        public static GridPolygon TrapezoidPolygon(double scale) => new GridPolygon(Primitives.TrapezoidVerticies(scale));
+
+        public static GridVector2[] DiamondVerticies(double scale)
+        {
+            //          *
+            //         / \  
+            //        /   \
+            //       *     *
+            //        \   /
+            //         \ /
+            //          *
+            
+
+            GridVector2[] ExteriorPoints =
+            {
+                new GridVector2(-1, 0),
+                new GridVector2(0, -1),
+                new GridVector2(1, 0),
+                new GridVector2(0, 1),
+                new GridVector2(-1, 0)
+            };
+
+            GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
+            return ExteriorPointsScaled;
+        }
+
+        public static GridPolygon DiamondPolygon(double scale) => new GridPolygon(Primitives.DiamondVerticies(scale));
 
         public static GridVector2[] NotchedBoxVerticies(double scale)
         {
@@ -130,5 +164,7 @@ namespace GeometryTests
             GridVector2[] ExteriorPointsScaled = ExteriorPoints.Scale(scale, new GridVector2(0, 0)).ToArray();
             return ExteriorPointsScaled;
         }
+
+        public static GridPolygon NotchedBoxPolygon(double scale) => new GridPolygon(Primitives.NotchedBoxVerticies(scale));
     }
 }

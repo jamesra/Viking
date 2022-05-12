@@ -1,18 +1,16 @@
-﻿using Viking.Identity.Authorization;
-using Viking.Identity.Extensions;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
-using Viking.Identity.Models.UserViewModels;
+using Viking.Identity.Server.Authorization;
+using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
-namespace Viking.Identity.Controllers
+namespace Viking.Identity.Server.WebManagement.Controllers
 {
     public class ResourcesController : Controller
     {
@@ -264,13 +262,13 @@ namespace Viking.Identity.Controllers
         {
             switch (ResourceTypeId)
             {
-                case nameof(Models.OrganizationalUnit):
+                case nameof(Identity.Models.OrganizationalUnit):
                     return RedirectToAction(ActionName, "OrganizationalUnits", RouteValues);
-                case nameof(Models.Volume):
+                case nameof(Identity.Models.Volume):
                     return RedirectToAction(ActionName, "Volumes", RouteValues);
-                case nameof(Models.Group):
+                case nameof(Identity.Models.Group):
                     return RedirectToAction(ActionName, "Groups", RouteValues);
-                case nameof(Models.Resource):
+                case nameof(Identity.Models.Resource):
                     if (IsResourceAction != null)
                         return IsResourceAction(); 
                     return null; 

@@ -1,6 +1,7 @@
-using Viking.Identity.Controllers;
+using Microsoft.AspNetCore.Mvc;
+using Viking.Identity.Server.WebManagement.Controllers;
 
-namespace Microsoft.AspNetCore.Mvc
+namespace Viking.Identity.Server.WebManagement.Extensions
 {
     public static class UrlHelperExtensions
     {

@@ -4,7 +4,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Windows;
+using Viking.AnnotationServiceTypes;
+using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 
@@ -26,7 +29,7 @@ namespace Annotation.ViewModels
                 }
                 catch
                 {
-                    Trace.WriteLine(string.Format("Could not convert parameter {0} to StructureTypeObj", item));
+                    Trace.WriteLine($"Could not convert parameter {item} to StructureTypeObj");
                     return false;
                 }
 
@@ -51,7 +54,7 @@ namespace Annotation.ViewModels
                 }
                 catch
                 {
-                    Trace.WriteLine(string.Format("Could not convert parameter {0} to StructureTypeObj", item));
+                    Trace.WriteLine($"Could not convert parameter {item} to StructureTypeObj");
                     return;
                 }
 
@@ -70,8 +73,8 @@ namespace Annotation.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
         public StructureTypeObj Model
         {
-            get { return (StructureTypeObj)GetValue(ModelProperty); }
-            set { SetValue(ModelProperty, value); }
+            get => (StructureTypeObj)GetValue(ModelProperty);
+            set => SetValue(ModelProperty, value);
         }
 
         // Using a DependencyProperty as the backing store for structureTypeObj.  This enables animation, styling, binding, etc...
@@ -82,8 +85,8 @@ namespace Annotation.ViewModels
 
         public ObservableCollection<PermittedStructureLinkObj> NewPermits
         {
-            get { return (ObservableCollection<PermittedStructureLinkObj>)GetValue(NewPermitsProperty); }
-            set { SetValue(NewPermitsProperty, value); }
+            get => (ObservableCollection<PermittedStructureLinkObj>)GetValue(NewPermitsProperty);
+            set => SetValue(NewPermitsProperty, value);
         }
 
         // Using a DependencyProperty as the backing store for NewPermits.  This enables animation, styling, binding, etc...
@@ -101,9 +104,16 @@ namespace Annotation.ViewModels
         public System.Windows.Input.ICommand SaveModelCommand { get; set; }
         public System.Windows.Input.ICommand ResetModelCommand { get; set; }
 
+        private readonly IStructureTypeStore StructureTypeStore;
+        private readonly IPermittedStructureLinkStore PermittedStructureTypeStore;
 
-        public StructureTypeObjViewModel(StructureTypeObj model)
+        public StructureTypeObjViewModel(IStructureTypeStore structureTypeStore, IPermittedStructureLinkStore permittedStructureLinkStore, StructureTypeObj model)
         {
+            StructureTypeStore = structureTypeStore ?? throw new ArgumentNullException(nameof(structureTypeStore));
+
+            PermittedStructureTypeStore = permittedStructureLinkStore ??
+                                          throw new ArgumentNullException(nameof(permittedStructureLinkStore));
+
             AssignParentCommand = new DelegateCommand<StructureTypeObj>(AssignParent, CanAssignParent);
             DeletePermittedLinkSourceTypeCommand = new DelegateCommand(DeletePermittedLinkSourceType, CanDeletePermittedLinkSourceType);
             DeletePermittedLinkTargetTypeCommand = new DelegateCommand(DeletePermittedLinkTargetType, CanDeletePermittedLinkTargetType);
@@ -207,29 +217,20 @@ namespace Annotation.ViewModels
 
         public string Name
         {
-            get { return Model.Name;  }
-            set
-            {
-                Model.Name = value; 
-            }
+            get => Model.Name;
+            set => Model.Name = value;
         }
 
         public uint Color
         {
-            get { return Model.Color; }
-            set
-            {
-                Model.Color = value;
-            }
+            get => Model.Color;
+            set => Model.Color = value;
         }
 
         public string Code
         {
-            get { return Model.Code; }
-            set
-            {
-                Model.Code = value;
-            }
+            get => Model.Code;
+            set => Model.Code = value;
         }
 
         #region Delete commands
@@ -242,7 +243,7 @@ namespace Annotation.ViewModels
             }
             catch
             {
-                Trace.WriteLine(string.Format("Could not convert parameter to ID {0}", item));
+                Trace.WriteLine($"Could not convert parameter to ID {item}");
                 return;
             }
 
@@ -269,7 +270,7 @@ namespace Annotation.ViewModels
             }
             catch
             {
-                Trace.WriteLine(string.Format("Could not convert parameter to ID {0}", item));
+                Trace.WriteLine($"Could not convert parameter to ID {item}");
                 return;
             }
 
@@ -295,7 +296,7 @@ namespace Annotation.ViewModels
             }
             catch
             {
-                Trace.WriteLine(string.Format("Could not convert parameter to ID {0}", item));
+                Trace.WriteLine($"Could not convert parameter to ID {item}");
                 return;
             }
 
@@ -330,7 +331,7 @@ namespace Annotation.ViewModels
                 }
                 catch
                 {
-                    Trace.WriteLine(string.Format("Could not convert parameter to ID {0}", item));
+                    Trace.WriteLine($"Could not convert parameter to ID {item}");
                     throw;
                 }
             }
@@ -389,28 +390,28 @@ namespace Annotation.ViewModels
         private bool CanSaveModel(object item)
         {
             return true;
-            return Model.DBAction != AnnotationService.Types.DBACTION.NONE;
+            return Model.DBAction != DBACTION.NONE;
         }
 
         private void SaveModel(object item)
         {
-            Store.StructureTypes.Save();
+            StructureTypeStore.Save();
 
             foreach (PermittedStructureLinkObj newObj in NewPermits)
             {
                 //Store.PermittedStructureLinks.Create(newObj);
-                Store.PermittedStructureLinks.Save();
+                PermittedStructureTypeStore.Save();
             }
         }
 
         private bool CanRestoreModel(object item)
         {
-            return Model.DBAction != AnnotationService.Types.DBACTION.NONE;
+            return Model.DBAction != DBACTION.NONE;
         }
 
         private void RestoreModel(object item)
         {
-            Store.StructureTypes.GetObjectByID(Model.ID, AskServer: true, ForceRefreshFromServer: true);
+            StructureTypeStore.GetObjectByID(Model.ID, AskServer: true, ForceRefreshFromServer: true, CancellationToken.None);
         }
     }
 }

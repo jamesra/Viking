@@ -22,6 +22,8 @@ namespace Viking
 
         public void Initialize(string VolumeURL)
         {
+            if (VolumeURL is null)
+                throw new ArgumentNullException(nameof(VolumeURL));
             //var cancellationTokenSource = new CancellationTokenSource();
 
             using (SplashForm Splash = new SplashForm())
@@ -59,6 +61,9 @@ namespace Viking
 
         private async Task BackgroundLoading(string VolumeURL, Viking.Common.IProgressReporter progressReporter, CancellationToken token)
         {
+            if (VolumeURL is null)
+                throw new ArgumentNullException(nameof(VolumeURL));
+
             DateTime startVolume = DateTime.UtcNow;
             //The constructor populates attributes of the volume element.  Then initialize needs to be called to collect more
             var Volume = new Viking.VolumeModel.Volume(VolumeURL, UI.State.CachePath, progressReporter);

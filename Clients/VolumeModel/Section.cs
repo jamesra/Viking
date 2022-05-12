@@ -185,7 +185,7 @@ namespace Viking.VolumeModel
             this.Name = sectionElement.HasAttributeCaseInsensitive("name")
                 ? sectionElement.GetAttributeCaseInsensitive("name").Value
                 : null;
-            this.Number = System.Convert.ToInt32(IO.GetAttributeCaseInsensitive(sectionElement, "number").Value);
+            this.Number = System.Convert.ToInt32(sectionElement.GetAttributeCaseInsensitive("number").Value);
             if (this.Name == null)
                 this.Name = this.Number.ToString("D4");
         }
@@ -201,14 +201,14 @@ namespace Viking.VolumeModel
                 {
                     case "transform":
                         //Load a transform that can be applied to <Pyramids>
-                        string Name = IO.GetAttributeCaseInsensitive(elem, "name").Value;
-                        string mosaicTransformPath = IO.GetAttributeCaseInsensitive(elem, "path").Value;
-                        bool UseForVolume = System.Convert.ToBoolean(IO.GetAttributeCaseInsensitive(elem, "UseForVolume").Value);
+                        string Name = elem.GetAttributeCaseInsensitive("name").Value;
+                        string mosaicTransformPath = elem.GetAttributeCaseInsensitive("path").Value;
+                        bool UseForVolume = System.Convert.ToBoolean(elem.GetAttributeCaseInsensitive("UseForVolume").Value);
                         string TilePrefix = null;
-                        if (IO.GetAttributeCaseInsensitive(elem, "FilePrefix") != null)
-                            TilePrefix = IO.GetAttributeCaseInsensitive(elem, "FilePrefix").Value;
+                        if (elem.GetAttributeCaseInsensitive("FilePrefix") != null)
+                            TilePrefix = elem.GetAttributeCaseInsensitive("FilePrefix").Value;
 
-                        string TilePostfix = IO.GetAttributeCaseInsensitive(elem, "FilePostfix").Value;
+                        string TilePostfix = elem.GetAttributeCaseInsensitive("FilePostfix").Value;
                         TilesToSectionMapping mapping = new TilesToSectionMapping(this,
                                                                                 Name,
                                                                                 this.Path,
@@ -234,7 +234,7 @@ namespace Viking.VolumeModel
                         break;
                     case "pyramid":
                         //Load an image pyramid whose tiles can be warped using a <transform>
-                        Name = IO.GetAttributeCaseInsensitive(elem, "name").Value;
+                        Name = elem.GetAttributeCaseInsensitive("name").Value;
                         //                        string Pyramidpath = GetAttributeCaseInsensitive(elem,"path").Value;
 
                         /*PORT: The viewmodel needs to set this
@@ -245,7 +245,8 @@ namespace Viking.VolumeModel
                         Pyramid pyramid = Pyramid.CreateFromElement(elem, this);
                         if (pyramid == null) //Do not add the pyramid if it has no levels or was invalid for some reason
                         {
-                            System.Diagnostics.Trace.WriteLine(string.Format("Unable to parse TilePyramid element of Section #{0}", this.Number));
+                            System.Diagnostics.Trace.WriteLine(
+                                $"Unable to parse TilePyramid element of Section #{this.Number}");
                             continue;
                         }
 
@@ -253,7 +254,7 @@ namespace Viking.VolumeModel
                             this.ImagePyramids.Add(pyramid.Name, pyramid);
                         else
                         {
-                            Debug.WriteLine(string.Format("Duplicate Image Pyramid Level {0}-{1}", this.Number, pyramid.Path));
+                            Debug.WriteLine($"Duplicate Image Pyramid Level {this.Number}-{pyramid.Path}");
                         }
 
                         if (string.IsNullOrWhiteSpace(DefaultPyramid))
@@ -271,7 +272,7 @@ namespace Viking.VolumeModel
                         TileGridMapping tilegridmapping = TileGridMapping.CreateFromTilesetElement(elem, this);
                         if (tilegridmapping == null)
                         {
-                            System.Diagnostics.Trace.WriteLine(string.Format("Unable to parse Tileset element of Section #{0}", this.Number));
+                            System.Diagnostics.Trace.WriteLine($"Unable to parse Tileset element of Section #{this.Number}");
                             continue;
                         }
 

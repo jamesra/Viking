@@ -17,7 +17,7 @@ namespace Geometry.Transforms
 
         static readonly ConcurrentDictionary<GridVector2, List<int>[]> EdgesDictionary = new ConcurrentDictionary<GridVector2, List<int>[]>();
 
-        static public int IndexForCoord(int x, int y, int GridSizeX, int GridSizeY)
+        public static int IndexForCoord(int x, int y, int GridSizeX, int GridSizeY)
         {
             return y + (x * GridSizeY);
         }
@@ -28,13 +28,12 @@ namespace Geometry.Transforms
         /// <param name="GridSizeX"></param>
         /// <param name="GridSizeY"></param>
         /// <returns></returns>
-        static public int[] TrianglesForGrid(int GridSizeX, int GridSizeY)
+        public static int[] TrianglesForGrid(int GridSizeX, int GridSizeY)
         {
             GridVector2 key = new GridVector2(GridSizeX, GridSizeY);
 
-            int[] Indicies = null;
 
-            bool success = TriangleIndexDictionary.TryGetValue(key, out Indicies);
+            bool success = TriangleIndexDictionary.TryGetValue(key, out int[] Indicies);
             if (!success)
             {
                 Indicies = new int[(GridSizeX - 1) * (GridSizeY - 1) * 6];
@@ -73,11 +72,13 @@ namespace Geometry.Transforms
             return Indicies;
         }
 
-        static public MappingGridTriangle TriangleForPoint(int GridSizeX, int GridSizeY, in GridRectangle Bounds, MappingGridVector2[] points, int[] TriIndicies, GridVector2 Point)
+        public static MappingGridTriangle TriangleForPoint(int GridSizeX, int GridSizeY, in GridRectangle Bounds, MappingGridVector2[] points, int[] TriIndicies, GridVector2 Point)
         {
             //Having a smaller epsilon caused false positives.  
             //We just want to know if we are close enough to check with the more time consuming math
             double epsilon = 5;
+
+            Point = Point.Round(Global.TransformSignificantDigits);
 
             if (!Bounds.Contains(Point, epsilon))
                 return null;
@@ -110,14 +111,14 @@ namespace Geometry.Transforms
                 IsUpper = (X - iX) + (Y - iY) > 1;
             }
 
-            int iTri = (iY * 2) + ((GridSizeY - 1) * 2 * iX);
+            int iTri = (iY << 1) + (((GridSizeY - 1) << 1) * iX); //(iY * 2) + ((GridSizeY - 1) * 2 * iX)
             //int iTri = (iX * 2) + ((GridSizeX-1) * 2 * iY);
             iTri += IsUpper ? 1 : 0;
             iTri *= 3;//Multiply by three to get the triangle offset
 
             MappingGridTriangle mapTri = new MappingGridTriangle(points, TriIndicies[iTri], TriIndicies[iTri + 1], TriIndicies[iTri + 2]);
 
-            Debug.Assert(mapTri.IntersectsMapped(Point), "Calculated GridTransform does not intersect requested point");
+            Debug.Assert(mapTri.CanTransform(Point.Round(Global.TransformSignificantDigits)), "Calculated GridTransform does not intersect requested point");
             return mapTri;
         }
 
@@ -131,9 +132,8 @@ namespace Geometry.Transforms
         {
             GridVector2 key = new GridVector2(GridSizeX, GridSizeY);
 
-            List<int>[] edges = null;
 
-            bool success = EdgesDictionary.TryGetValue(key, out edges);
+            bool success = EdgesDictionary.TryGetValue(key, out List<int>[] edges);
             if (!success)
             {
                 edges = new List<int>[GridSizeX * GridSizeY];
@@ -288,7 +288,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetTransform(GridVector2 Point)
+        internal override MappingGridTriangle GetTransform(in GridVector2 Point)
         {
             //Having a smaller epsilon caused false positives.  
             //We just want to know if we are close enough to check with the more time consuming math
@@ -306,7 +306,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetInverseTransform(GridVector2 Point)
+        internal override MappingGridTriangle GetInverseTransform(in GridVector2 Point)
         {
             //Fetch a list of triangles from the nearest point
             List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
@@ -319,7 +319,7 @@ namespace Geometry.Transforms
                 if (!t.ControlBoundingBox.Contains(Point))
                     continue;
 
-                if (t.IntersectsControl(Point))
+                if (t.CanInverseTransform(Point))
                     return t;
             }
 
@@ -368,8 +368,7 @@ namespace Geometry.Transforms
             Direction IntersectDir = Direction.NONE;
             for (int iBorder = 0; iBorder < Borders.Length; iBorder++)
             {
-                GridVector2 BorderIntersect;
-                bool success = L.Intersects(Borders[iBorder], out BorderIntersect);
+                bool success = L.Intersects(Borders[iBorder], out GridVector2 BorderIntersect);
                 if (success)
                 {
                     double IntersectDistance = GridVector2.Distance(OutsidePoint, BorderIntersect);

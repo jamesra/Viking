@@ -128,7 +128,7 @@ namespace GeometryTests
             Assert.IsTrue(boxA.minVals.Select((val, i) => (original_mins[i]) == val).All(b => b));
 
             /*Scale the rectangle and test again*/
-            boxA.Scale(2);
+            boxA = boxA.Scale(2);
 
             double[] scaled_mins = new double[] { -30, -40, 0 };
             double[] scaled_maxs = new double[] { 10, 40, 200 };
@@ -136,7 +136,7 @@ namespace GeometryTests
             Assert.IsTrue(boxA.maxVals.Select((val, i) => (scaled_maxs[i]) == val).All(b => b));
 
             /*Scale the rectangle and test again*/
-            boxA.Scale(0.5);
+            boxA = boxA.Scale(0.5);
 
             Assert.IsTrue(boxA.minVals.Select((val, i) => (original_mins[i]) == val).All(b => b));
         }
@@ -156,9 +156,9 @@ namespace GeometryTests
             GridVector3 TopRightAB = new GridVector3(10, 100, 1000);
             GridBox boxAB = new GridBox(BotLeftAB, TopRightAB);
 
-            bool expanded = boxA.Union(boxB);
+            var result = boxA.Union(boxB, out var expanded);
             Assert.IsTrue(expanded);
-            Assert.AreEqual(boxA, boxAB);
+            Assert.AreEqual(result, boxAB);
         }
 
         [TestMethod]

@@ -61,7 +61,7 @@ namespace Geometry
             }
         }
 
-        public void Dispose() { }
+        public void Dispose() { GC.SuppressFinalize(this); }
 
         /// <summary>
         /// Go to the next index, if the shape is closed we do not return the closed index twice. 

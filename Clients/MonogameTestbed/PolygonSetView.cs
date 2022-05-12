@@ -24,7 +24,7 @@ namespace MonogameTestbed
         private LineView[] PolyRingViews = null;
         private LabelView[] PolyIndexLabels = new LabelView[0];
 
-        private List<GridPolygon> _Polygons = new List<GridPolygon>();
+        private readonly List<GridPolygon> _Polygons = new List<GridPolygon>();
 
         public Color[] PolyLineColors;
         public Color[] PolyVertexColors;
@@ -119,7 +119,7 @@ namespace MonogameTestbed
             var pointEnum = new PolySetVertexEnum(Polygons);
             GridVector2[] point_array = pointEnum.Select(i => i.Point(Polygons)).ToArray();
 
-            Dictionary<GridVector2, int> DuplicatePointsAddedCount = new Dictionary<GridVector2, int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
+            QuadTree<int> DuplicatePointsAddedCount = new QuadTree<int>(); //Track the number of times we've hit a specific duplicate point and move the label accordingly
             HashSet<GridVector2> KnownPoints = new HashSet<GridVector2>();
             foreach (GridVector2 p in point_array)
             {
@@ -141,12 +141,11 @@ namespace MonogameTestbed
                 listPointLabels.Add(label);
                 label.FontSize = pointradius * 2.0;
 
-                if (DuplicatePointsAddedCount.ContainsKey(point))
+                if (DuplicatePointsAddedCount.Contains(point))
                 {
                     //label.Position = label.Position + label.
                     //label.Position = label.Position + new GridVector2(0, pointradius * (DuplicatePointsAddedCount[point]-1));
-
-                    
+                     
                     string prepended_newlines = "";
                     for (int iLine = 0; iLine < DuplicatePointsAddedCount[point]; iLine++)
                         prepended_newlines += "|\n\r";
@@ -161,12 +160,27 @@ namespace MonogameTestbed
         }
 
 
-        public PolygonSetView(IEnumerable<GridPolygon> polys, double PointRadius=1.0)
+        public static readonly Color[] DefaultColorMapping = new Color[]
+        {
+            Color.Green,
+            Color.Yellow,
+            Color.Red,
+            Color.Blue
+        };
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="polys"></param>
+        /// <param name="colors">Colors can be null and does not need to match the length of the polys array.  If an entry does not exist a random color is selected.</param>
+        /// <param name="PointRadius"></param>
+        public PolygonSetView(IEnumerable<GridPolygon> polys, IReadOnlyList<Color> colors = null, double PointRadius=1.0)
         {
             this._PointRadius = PointRadius;
-
+              
             _Polygons = polys.ToList();
-            PolyLineColors = _Polygons.Select(p => Color.Black.Random()).ToArray();
+            PolyLineColors = polys.Select((_,i) => colors != null && colors.Count > i ? 
+                colors[i] : Color.Black.Random()).ToArray();
             PolyVertexColors = PolyLineColors.Select(c => c.SetAlpha(0.5f)).ToArray();
 
             UpdatePolyViews();

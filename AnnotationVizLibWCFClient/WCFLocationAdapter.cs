@@ -160,7 +160,7 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
-        GridBox _BoundingBox = null;
+        GridBox _BoundingBox = default;
         public GridBox BoundingBox
         {
             get

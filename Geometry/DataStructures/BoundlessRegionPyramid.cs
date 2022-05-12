@@ -11,29 +11,17 @@ namespace Geometry
         public readonly GridCellDimensions UnscaledCellDimensions;
         public readonly GridCellDimensions ScaledCellDimensions;
 
-        private readonly int _Level;
-
         public delegate double DimensionsForLevelDelegate(int level);
 
-        public int Level
-        {
-            get
-            {
-                return _Level;
-            }
-        }
+        public int Level { get; }
 
         private readonly double _MinRadius;
 
-        public double MinRadius
-        {
-            get { return _MinRadius; }
-        }
+        public double MinRadius => _MinRadius;
 
         private static T GetCell(ConcurrentDictionary<GridIndex, T> Cells, GridIndex key)
         {
-            T Result;
-            if (Cells.TryGetValue(key, out Result))
+            if (Cells.TryGetValue(key, out T Result))
                 return Result;
             return null;
         }
@@ -65,7 +53,7 @@ namespace Geometry
 
         public BoundlessRegionPyramidLevel(int Level, GridCellDimensions UnscaledCellDim, double pixelDimensionsOfLevel)
         {
-            this._Level = Level;
+            this.Level = Level;
 
             this._MinRadius = pixelDimensionsOfLevel;
 
@@ -124,6 +112,11 @@ namespace Geometry
         {
             return new GridRectangle(new GridVector2(iX * ScaledCellDimensions.Width, iY * ScaledCellDimensions.Height),
                                       ScaledCellDimensions.Width, ScaledCellDimensions.Height);
+        }
+
+        public override string ToString()
+        {
+            return $"Level: {this.Level} MinRadius: {this.MinRadius} {this.ScaledCellDimensions}";
         }
     }
 

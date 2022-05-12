@@ -11,11 +11,28 @@ namespace Geometry
 
         public static GridVector2[] CalculateCurvePoints(this GridVector2[] ControlPoints, uint NumInterpolations, bool closeCurve)
         {
+            if (ControlPoints is null) throw new ArgumentNullException(nameof(ControlPoints));
             return ((ICollection<GridVector2>)ControlPoints).CalculateCurvePoints(NumInterpolations, closeCurve);
+        }
+
+        public static GridVector2[] CalculateCurvePoints(this IPoint2D[] ControlPoints, uint NumInterpolations, bool closeCurve)
+        {
+            if (ControlPoints is null) throw new ArgumentNullException(nameof(ControlPoints));
+            return ControlPoints.ToGridVector2().CalculateCurvePoints(NumInterpolations, closeCurve);
+        }
+
+        public static GridVector2[] CalculateCurvePoints(this ICollection<IPoint2D> ControlPoints,
+            uint NumInterpolations, bool closeCurve)
+        {
+            if (ControlPoints is null) throw new ArgumentNullException(nameof(ControlPoints));
+            return ControlPoints.ToGridVector2().CalculateCurvePoints(NumInterpolations, closeCurve);
         }
 
         public static GridVector2[] CalculateCurvePoints(this ICollection<GridVector2> ControlPoints, uint NumInterpolations, bool closeCurve)
         {
+            if (ControlPoints is null) throw new ArgumentNullException(nameof(ControlPoints));
+
+
             if (NumInterpolations == 0)
             {
                 return ControlPoints.ToArray();

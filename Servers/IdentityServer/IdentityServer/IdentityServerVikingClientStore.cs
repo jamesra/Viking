@@ -1,22 +1,37 @@
-﻿using IdentityServer4;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using IdentityServer4;
+using IdentityServer4.Models;
+using IdentityServer4.Stores;
+using Microsoft.Extensions.Options;
 using Viking.Identity.Data;
 
-namespace Viking.Identity
+namespace Viking.Identity.Server.WebManagement
 {
+    public class IdentityServerVikingClientStoreConfig
+    {
+        public string ClientId { get; set; } 
+    }
+
     public class IdentityServerVikingClientStore : IClientStore
     {
         ApplicationDbContext _context;
         IResourceStore _resourceStore;
 
         Dictionary<string, Client> ClientCache = new Dictionary<string, Client>();
+        
+        private readonly Secret _clientSecret;
 
-        public IdentityServerVikingClientStore(ApplicationDbContext context, IResourceStore resourceStore)
+        private readonly string _redirectUri;
+
+        public IdentityServerVikingClientStore(ApplicationDbContext context, IResourceStore resourceStore, IOptions<VikingIdentityServerOptions> serverOptions)
         {
+            var options = serverOptions.Value;
+            var secret = options.Secret;
+
+            _redirectUri = options.Authority;
+            _clientSecret = new Secret(secret.Sha256());
             _context = context;
             _resourceStore = resourceStore;
         }
@@ -44,10 +59,10 @@ namespace Viking.Identity
                 //AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
                 ClientSecrets =
                     {
-                        new Secret(Config.Secret.Sha256())
+                       _clientSecret
                     },
                 AllowedScopes = scopes,
-                RedirectUris = new string[] {"http://localhost:5000/"}
+                RedirectUris = new string[] {_redirectUri}
             };
 
             ClientCache[clientId] = result;

@@ -408,7 +408,7 @@ namespace TriangleNet
             //SortedSet<GridVector2> AddedPoints;
             //SortedSet<GridLineSegment> NonIntersectingSegments = Polygons.NonIntersectingSegments(true, out AddedPoints);
 
-            Dictionary<GridVector2, List<PolygonIndex>> pointToPolyMap = GridPolygon.CreatePointToPolyMap(Polygons);
+            var pointToPolyMap = GridPolygon.CreatePointToPolyMap(Polygons);
             List<GridVector2> points = pointToPolyMap.Keys.Distinct().ToList();
 
             TriangleNet.Geometry.Polygon polygon = new TriangleNet.Geometry.Polygon(points.Count);

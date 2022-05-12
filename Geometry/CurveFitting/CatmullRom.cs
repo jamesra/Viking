@@ -353,7 +353,7 @@ namespace Geometry
     /// </summary>
     public static class CatmullRomControlPointSimplification
     {
-        static private GridVector2[] GetControlPointSubsetForCurve(IReadOnlyList<GridVector2> path, int iStart, bool IsClosed)
+        private static GridVector2[] GetControlPointSubsetForCurve(IReadOnlyList<GridVector2> path, int iStart, bool IsClosed)
         {
             return IsClosed ? GetControlPointSubsetForClosedCurve(path, iStart) : GetControlPointSubsetForOpenCurve(path, iStart);
         }
@@ -364,7 +364,7 @@ namespace Geometry
         /// <param name="path"></param>
         /// <param name="iStart"></param>
         /// <returns></returns>
-        static private GridVector2[] GetControlPointSubsetForOpenCurve(IReadOnlyList<GridVector2> path, int iStart)
+        private static GridVector2[] GetControlPointSubsetForOpenCurve(IReadOnlyList<GridVector2> path, int iStart)
         {
             if (path.Count < 2)
             {
@@ -403,7 +403,7 @@ namespace Geometry
         /// <param name="path"></param>
         /// <param name="iStart"></param>
         /// <returns></returns>
-        static private GridVector2[] GetControlPointSubsetForClosedCurve(IReadOnlyList<GridVector2> path, int iStart)
+        private static GridVector2[] GetControlPointSubsetForClosedCurve(IReadOnlyList<GridVector2> path, int iStart)
         {
             if (path.Count < 3)
             {
@@ -485,28 +485,23 @@ namespace Geometry
 
             return new List<GridVector2>(new GridVector2[] { path.First(), path[firstTwo[0]], path[firstTwo[1]], path.Last() });
         }
-
+        
         public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<IPoint2D> input,
             double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         { 
             return IdentifyControlPoints(input.Select(p => p.ToGridVector2()).ToList(), MaxDistanceFromSimplifiedToIdeal,
                  IsClosed,  NumInterpolations);
-        }
-
-        public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<GridVector2> input,
-            double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
-        { 
-            return IdentifyControlPoints(input.ToList(), MaxDistanceFromSimplifiedToIdeal,
-                 IsClosed, NumInterpolations);
-        }
+        } 
 
         /// <summary>
         /// Take a high density path, fit a curve to it using catmull rom, and remove control points until we have a smaller number of control points where all points are within a minimum distance from the curve. 
         /// </summary>
         /// <param name="path"></param>
-        static private List<GridVector2> IdentifyControlPoints(this List<GridVector2> path, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
+        public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<GridVector2> input, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         {
             //Copy the path so we don't modify the input
+            var path = input.Select(p => p.Round(Global.TransformSignificantDigits)).Distinct().ToList();
+            //var path = input.ToList();
 
             //We can't simplify the already simple...
             if (path == null || path.Count <= 2)
@@ -520,15 +515,16 @@ namespace Geometry
                 path.Add(path.First());
             }
 
-            GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
+            //GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
+            GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Global.TransformSignificantDigits)).ToArray();
             GridLineSegment[] curve_segments = curved_path.ToLineSegments();
-            Dictionary<GridVector2, int> point_to_ideal_curve_index = new Dictionary<GridVector2, int>(curved_path.Length);
+            QuadTree<int> point_to_ideal_curve_index = new QuadTree<int>(input.BoundingBox() * 1.1);
             for (int i = 0; i < curved_path.Length; i++)
             {
                 if (IsClosed && i == curved_path.Length - 1)
                     continue; //Skip the last point which is a duplicate in a closed curve
 
-                if (point_to_ideal_curve_index.ContainsKey(curved_path[i]))
+                if (point_to_ideal_curve_index.Contains(curved_path[i]))
                     continue;
 
                 point_to_ideal_curve_index.Add(curved_path[i], i);
@@ -537,7 +533,7 @@ namespace Geometry
 #if DEBUG
             for (int i = 0; i < path.Count; i++)
             {
-                Debug.Assert(point_to_ideal_curve_index.ContainsKey(path[i]), string.Format("Ideal curve dictionary is missing path point #{0} {1}", i, path[i]));
+                Debug.Assert(point_to_ideal_curve_index.Contains(path[i]), string.Format("Ideal curve dictionary is missing path point #{0} {1}", i, path[i]));
             }
 #endif
 
@@ -569,20 +565,22 @@ namespace Geometry
                 //Find the subset of the real curve this proposed curve should accurately represent
                 //identify the segment on the ideal curve we are comparing against
 
-                if (false == point_to_ideal_curve_index.ContainsKey(proposedCurve.First()))
+                if (false == point_to_ideal_curve_index.Contains(proposedCurve.First()))
                 {
                     iProposedVertex = iProposedVertex + 1;
                     continue;
                 }
 
-                if (false == point_to_ideal_curve_index.ContainsKey(proposedCurve.Last()))
+                if (false == point_to_ideal_curve_index.Contains(proposedCurve.Last()))
                 {
                     iProposedVertex = iProposedVertex + 1;
                     continue;
                 }
 
-                int iIdealStart = point_to_ideal_curve_index[proposedCurve.First()];
-                int iIdealEnd = point_to_ideal_curve_index[proposedCurve.Last()];
+                //int iIdealStart = point_to_ideal_curve_index[proposedCurve.First()];
+                //int iIdealEnd = point_to_ideal_curve_index[proposedCurve.Last()];
+                point_to_ideal_curve_index.TryFindNearest(proposedCurve.First(), out var foundStart, out int iIdealStart, out var distanceToStart);
+                point_to_ideal_curve_index.TryFindNearest(proposedCurve.Last(), out var foundEnd, out int iIdealEnd, out var distanceToEnd);
 
                 //I believe this is an impossible case, but checking anyway for debugging. 
                 //If the loop is closed the final vertex could be the first vertex of the loop, so we don't check
@@ -609,8 +607,7 @@ namespace Geometry
                 System.Array.Copy(curve_segments, iIdealStart, ideal_segments, 0, num_ideal_segments);
 
                 //If we need to add a control point repeat this loop iteration, otherwise increment and check the next portion of the curve
-                GridVector2 ControlPointToAdd;
-                if (TryFindOutlierControlPoint(ideal_segments, proposedCurve, MaxDistanceFromSimplifiedToIdeal, out ControlPointToAdd))
+                if (TryFindOutlierControlPoint(ideal_segments, proposedCurve, MaxDistanceFromSimplifiedToIdeal, out GridVector2 ControlPointToAdd))
                 {
                     Debug.Assert(simplified_inflection_points.Contains(ControlPointToAdd) == false);
 #if DEBUG

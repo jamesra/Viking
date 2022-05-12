@@ -129,7 +129,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetTransform(GridVector2 Point)
+        internal override MappingGridTriangle GetTransform(in GridVector2 Point)
         {
             //TODO: Optimize the search
 
@@ -146,14 +146,13 @@ namespace Geometry.Transforms
 
             if (triangles == null)
                 return null;
-
-
+             
             foreach (MappingGridTriangle t in triangles)
             {
                 if (!t.MappedBoundingBox.Contains(Point))
                     continue;
 
-                if (t.IntersectsMapped(Point))
+                if (t.CanTransform(Point))
                     return t;
             }
 
@@ -165,7 +164,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
-        internal override MappingGridTriangle GetInverseTransform(GridVector2 Point)
+        internal override MappingGridTriangle GetInverseTransform(in GridVector2 Point)
         {
             //TODO: Optimize the search
 
@@ -188,7 +187,7 @@ namespace Geometry.Transforms
                 if (!t.ControlBoundingBox.Contains(Point))
                     continue;
 
-                if (t.IntersectsControl(Point))
+                if (t.CanInverseTransform(Point))
                     return t;
             }
 
@@ -315,8 +314,7 @@ namespace Geometry.Transforms
                 if (mapLine.MaxY < L.MinY)
                     continue;
 
-                GridVector2 result;
-                bool bIntersected = mapLine.Intersects(L, out result);
+                bool bIntersected = mapLine.Intersects(L, out GridVector2 result);
                 double distance = GridVector2.Distance(OutsidePoint, result);
                 if (distance < nearestIntersect && bIntersected)
                 {

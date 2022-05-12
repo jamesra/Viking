@@ -53,6 +53,11 @@ namespace MorphologyMesh
         readonly MorphologyGraph Graph;
 
         /// <summary>
+        /// Polygons with an area below this we do not bother to render in the slice graph
+        /// </summary>
+        static readonly double MinAnnotationArea = 0.25;
+
+        /// <summary>
         /// Caches the shape of each morphology node in the slice graph.  After corresponding verticies are added this cache is used to ensures each section will get the same input shapes
         /// The map can also be used to support simplifying shapes.
         /// </summary>
@@ -295,7 +300,7 @@ namespace MorphologyMesh
             {
                 foreach (var id in cycle_ids)
                 {
-                    Trace.WriteLine(string.Format("Location {0} forms a cycle in the morphology graph", id));
+                    Console.WriteLine($"Location {id} forms a cycle in the morphology graph");
                 }
 
                 //Debug.Assert(cycle_ids.Length == 0, string.Format("Cycle found in graph: {0}", cycle_ids[0]));
@@ -387,28 +392,33 @@ namespace MorphologyMesh
                 if (node.Geometry == null)
                     continue;
 
-                SupportedGeometryType nodeType = node.Geometry.GeometryType();
-                switch (nodeType)
+                var nodeType = node.Geometry.ShapeType;
+                if (node.Geometry is IPolygon2D poly)
                 {
-                    case SupportedGeometryType.POINT:
-                        continue;
-                    case SupportedGeometryType.CURVEPOLYGON:
-                    case SupportedGeometryType.POLYGON:
-                        {
-                            //Start a task to simplify the polygon
-                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolygon().Translate(translationToCenter).Simplify(tolerance), node);
-                            t.Start();
-                            tasks.Add(t);
-                        }
-                            break;
-                    case SupportedGeometryType.POLYLINE:
-                        {
-                            Task<IShape2D> t = new Task<IShape2D>((node_) => ((MorphologyNode)node_).Geometry.ToPolyLine().Translate(translationToCenter).Simplify(tolerance), node);
-                            t.Start();
-                            tasks.Add(t);
-                        }
-                        break;
-                } 
+                    Task<IShape2D> t = new Task<IShape2D>((node_) => 
+                    { 
+                        if (poly.BoundingBox.Area < MinAnnotationArea)
+                            return null;
+
+                        var vp = new GridPolygon(poly.ExteriorRing, poly.InteriorRings);
+                        return vp.Translate(translationToCenter).Simplify(tolerance);
+                    }, node);
+
+                    t.Start();
+                    tasks.Add(t);
+                }
+                else if (node.Geometry is IPolyLine2D line)
+                {
+                    var vl = new GridPolyline(line.Points);
+                    
+                    Task<IShape2D> t = new Task<IShape2D>((node_) => vl.Translate(translationToCenter).Simplify(tolerance), node);
+                    t.Start();
+                    tasks.Add(t);
+                }
+                else
+                {
+                    throw new ArgumentException($"Unexpected shape {node.Geometry}");
+                }
             }
 
             foreach (var task in tasks)
@@ -416,14 +426,21 @@ namespace MorphologyMesh
                 try
                 {
                     IShape2D output = await task;
+                    if(output is null)
+                    {
+                        continue;
+                    }
+
+                    Debug.Assert(output.BoundingBox.Area > 0);
+
                     //Rounding exposed a rare bug on 82682, 82680 RPC1 where the inner hole was exactly over the exterior ring of the opposite polygon
                     if(output is GridPolygon poly)
                     {
-                        result[(ulong)((MorphologyNode)(task.AsyncState)).ID] = poly.Round(Global.SignificantDigits);
+                        result.Add((ulong)((MorphologyNode)(task.AsyncState)).ID, poly.Round(Global.SignificantDigits));
                     }
                     else if (output is GridPolyline line)
                     {
-                        result[(ulong)((MorphologyNode)(task.AsyncState)).ID] = line.Round(Global.SignificantDigits);
+                        result.Add((ulong)((MorphologyNode)(task.AsyncState)).ID, line.Round(Global.SignificantDigits));
                     }
                     else
                     {
@@ -487,15 +504,14 @@ namespace MorphologyMesh
 
             if (polyLookup != null)
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
-                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry.ToPolygon()));
+                ShapeList.AddRange(group.NodesAbove.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry));
+                ShapeList.AddRange(group.NodesBelow.Select(id => polyLookup.ContainsKey(id) ? polyLookup[id] : Graph[id].Geometry));
             }
             else
             {
-                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToShape2D()));
-                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToShape2D()));
-            }
-
+                ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry));
+                ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry));
+            } 
 
             VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesAbove);
             VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesBelow);
@@ -535,6 +551,7 @@ namespace MorphologyMesh
 
             SliceTopology output = new SliceTopology(group.Key, Polygons, IsUpper, ShapeZ, VertexShapeIndexToMorphNodeIndex);
 
+            
             return output;
         }
     }

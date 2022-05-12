@@ -18,15 +18,13 @@ namespace Geometry
             if (AllPoints.Length < 3)
                 return null;
 
-            int[] original_indicies;
-            GridVector2[] EntireSetConvexHull = AllPoints.ConvexHull(out original_indicies);
+            GridVector2[] EntireSetConvexHull = AllPoints.ConvexHull(out int[] original_indicies);
             return new GridPolygon(EntireSetConvexHull);
         }
 
         public static GridVector2[] ConvexHull(this IReadOnlyList<GridVector2> points)
         {
-            int[] original_indicies;
-            return ConvexHull(points, out original_indicies);
+            return ConvexHull(points, out var _);
         }
 
         /// <summary>
@@ -172,11 +170,14 @@ namespace Geometry
                 GridVector2 v1 = convex_hull.Last();
                 GridVector2 v2 = convex_hull[convex_hull.Count - 2];
 
-                GridTriangle tri = new Geometry.GridTriangle(v0, v1, v2);
+                //GridTriangle tri = new Geometry.GridTriangle(v0, v1, v2);
 
                 //bool ConvexTriangleForUpperHull = tri.VectorProducts > 0;
-                bool ConvexTriangleForUpperHull = GridVector2Extensions.AreClockwise(new GridVector2[] { v0, v1, v2 });
-                bool ConvexTriangle = TestUpperHull ? ConvexTriangleForUpperHull : !ConvexTriangleForUpperHull;
+                var winding = GridVector2Extensions.Winding(new GridVector2[] { v0, v1, v2 });
+                bool ConvexTriangleForUpperHull =
+                    winding == RotationDirection.CLOCKWISE;
+                bool ConvexTriangle = (TestUpperHull ? ConvexTriangleForUpperHull : !ConvexTriangleForUpperHull) ||
+                                      winding == RotationDirection.COLINEAR;
 
                 if (ConvexTriangle)
                 {

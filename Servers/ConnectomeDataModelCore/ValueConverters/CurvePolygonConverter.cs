@@ -41,16 +41,16 @@ namespace Viking.DataModel.Annotation.ValueConverters
 
         protected static object DoConvertFromProvider(object input)
         { 
-            if (input is IUnsupportedGeometry)
+            //if (input is IUnsupportedGeometry)
             {
                 //App specific logic
                 return null; //This is going to be a circle, later we'll need to convert null geometry to circles
             }
-            else if(input is Geometry shape)
+            if(input is Geometry shape)
             {
                 return shape;
             } 
-            throw new ArgumentException("Unexpected type passed to converter");
+            throw new NotImplementedException($"Unexpected type {input?.GetType()} passed to converter");
         }
     }
 }

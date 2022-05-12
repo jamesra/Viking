@@ -42,9 +42,12 @@ namespace MorphologyView
 
             MeshViewModel mesh = new MeshViewModel();
 
-            GridVector2[] points = node.Location.VolumeGeometry.ToPoints().Select(p => new GridVector2(p.X - node.Graph.BoundingBox.Center[0],
+            var volumeshape = node.Location.VolumeGeometryWKT.ParseWKT();
+
+            GridVector2[] points = volumeshape.ToPoints().Select(p => new GridVector2(p.X - node.Graph.BoundingBox.Center[0],
                                                                                                  p.Y - node.Graph.BoundingBox.Center[1])).ToArray();
-            GridVector2 centroid = node.Location.VolumeGeometry.Centroid();
+
+            GridVector2 centroid = volumeshape.Centroid;
             centroid = new GridVector2(centroid.X - node.Graph.BoundingBox.Center[0],
                                        centroid.Y - node.Graph.BoundingBox.Center[1]);
 

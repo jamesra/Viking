@@ -53,12 +53,13 @@ namespace Viking.DataModel.Annotation
         [Required]
         [StringLength(16)]
         public string Code { get; set; }
+
         /// <summary>
         /// Hotkey used to create a structure of this type
         /// </summary>
         [Required]
         [StringLength(1)]
-        public string HotKey { get; set; }
+        public string HotKey { get; set; } = null;
         /// <summary>
         /// Last username to modify the row
         /// </summary>

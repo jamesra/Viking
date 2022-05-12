@@ -1,17 +1,17 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
-using Viking.Identity.Extensions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
+using Viking.Identity.Server.WebManagement.Extensions;
 
-namespace Viking.Identity.Controllers
+namespace Viking.Identity.Server.WebManagement.ApiControllers
 {
     /// <summary>
     /// I got stumped getting an interactive authentication working with Identity server

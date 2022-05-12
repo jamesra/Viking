@@ -49,8 +49,8 @@ namespace TriangleNet.Meshing.Iterators
             cache.Clear();
 
             Otri init = vertex.tri;
-            Otri next = default(Otri);
-            Otri prev = default(Otri);
+            Otri next = default;
+            Otri prev = default;
 
             init.Copy(ref next);
 

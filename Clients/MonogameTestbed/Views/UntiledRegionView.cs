@@ -41,8 +41,10 @@ namespace MonogameTestbed
         {
             Sets.Add(set);
             Shapes.Add(null);
-            LineSetView newView = new MonogameTestbed.LineSetView();
-            newView.color = new Color().Random();
+            LineSetView newView = new MonogameTestbed.LineSetView
+            {
+                color = new Color().Random()
+            };
             PolygonViews.Add(newView);
             UpdateSet(set, Sets.Count - 1);
             return Sets.Count - 1;

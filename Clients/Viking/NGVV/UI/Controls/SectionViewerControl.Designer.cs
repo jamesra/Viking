@@ -72,7 +72,7 @@
             // timerTileCacheCheckpoint
             // 
             this.timerTileCacheCheckpoint.Enabled = true;
-            this.timerTileCacheCheckpoint.Interval = 10000;
+            this.timerTileCacheCheckpoint.Interval = 30000;
             this.timerTileCacheCheckpoint.Tick += new System.EventHandler(this.timerTileCacheCheckpoint_Tick);
             // 
             // menuStrip

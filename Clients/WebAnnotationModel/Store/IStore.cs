@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel.Objects;
+using WebAnnotationModel.ServerInterface;
 
 namespace WebAnnotationModel
 {
@@ -45,7 +46,12 @@ namespace WebAnnotationModel
         Task<bool> Remove(OBJECT obj);
     }
 
-    public interface IStoreWithKey<KEY, OBJECT> : IStore<OBJECT>, INotifyCollectionChanged
+    /// <summary>
+    /// A store where all objects in the store have a unique ID
+    /// </summary>
+    /// <typeparam name="KEY">The type of the unique ID</typeparam>
+    /// <typeparam name="OBJECT">The object being stored</typeparam>
+    public interface IStoreWithKey<KEY, OBJECT> : IStore<OBJECT>
         where KEY : struct, IEquatable<KEY>
     {
         Task<OBJECT> GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added);
@@ -93,6 +99,11 @@ namespace WebAnnotationModel
         List<OBJECT> ForgetLocally(KEY[] keys);
     }
      
+    /// <summary>
+    /// A store with a hierarchical element where objects in the store may optionally have a parent object. i.e. a tree structure.
+    /// </summary>
+    /// <typeparam name="KEY"></typeparam>
+    /// <typeparam name="OBJECT"></typeparam>
     public interface IStoreWithParent<KEY, OBJECT> : IStoreWithKey<KEY, OBJECT>, INotifyCollectionChanged
         where KEY : struct, IEquatable<KEY>
     {

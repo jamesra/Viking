@@ -14,21 +14,12 @@ namespace MeasurementExtension
     public class Global : IInitExtensions
     {
         internal static double _UnitsPerPixel = 1;
-        public static double UnitsPerPixel
-        {
-            get { return _UnitsPerPixel; }
-        }
-
+        public static double UnitsPerPixel => _UnitsPerPixel;
+        
         internal static SILengthUnits _UnitOfMeasure;
-        public static SILengthUnits UnitOfMeasure
-        {
-            get { return _UnitOfMeasure; }
-        }
+        public static SILengthUnits UnitOfMeasure => _UnitOfMeasure;
 
-        public static LengthMeasurement PixelWidth
-        {
-            get { return new LengthMeasurement(Global.UnitOfMeasure, Global.UnitsPerPixel); }
-        }
+        public static LengthMeasurement PixelWidth => new LengthMeasurement(Global.UnitOfMeasure, Global.UnitsPerPixel);
 
         #region IInitExtensions Members
 

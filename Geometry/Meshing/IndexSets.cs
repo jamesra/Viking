@@ -61,7 +61,7 @@ namespace Geometry
 
         public void Dispose()
         {
-            return;
+            GC.SuppressFinalize(this);
         }
 
         object IEnumerator.Current
@@ -300,7 +300,7 @@ namespace Geometry
 
         public void Dispose()
         {
-            return;
+            GC.SuppressFinalize(this);
         }
 
         object IEnumerator.Current
@@ -365,7 +365,7 @@ namespace Geometry
 
         public void Dispose()
         {
-            return;
+            GC.SuppressFinalize(this);
         }
 
         object IEnumerator.Current

@@ -28,7 +28,7 @@ namespace MonogameTestbed
         /// </summary>
         public MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>();
 
-        private Dictionary<PolygonIndex, int> PolyIndexToVertex = new Dictionary<PolygonIndex, int>();
+        private readonly Dictionary<PolygonIndex, int> PolyIndexToVertex = new Dictionary<PolygonIndex, int>();
 
         public ReaderWriterLockSlim ModelLock = new ReaderWriterLockSlim();
 

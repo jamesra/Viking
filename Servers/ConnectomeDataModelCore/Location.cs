@@ -11,8 +11,12 @@ using NetTopologySuite.Geometries;
 namespace Viking.DataModel.Annotation
 {
     [Table("Location")]
-    [Index(nameof(MosaicShape), Name = "MosaicShape_Index")]
-    [Index(nameof(VolumeShape), Name = "VolumeShape_Index")]
+    //The indicies are removed due to an issue in NetTopologySuite where it cannot 
+    //create spatial indicies.  See: https://github.com/NetTopologySuite/NetTopologySuite/issues/602
+    //If that issue is resolved the indicies should be replaced.  Note spatial inidices must
+    //be sized correctly in SQL, so there always be a manual step.
+    //[Index(nameof(MosaicShape), Name = "MosaicShape_Index")]
+    //[Index(nameof(VolumeShape), Name = "VolumeShape_Index")]
     [Index(nameof(Z), Name = "Z")]
     public partial class Location
     {

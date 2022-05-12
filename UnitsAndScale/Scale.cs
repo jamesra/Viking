@@ -8,6 +8,9 @@ namespace UnitsAndScale
     [Serializable]
     public readonly struct AxisUnits : IAxisUnits
     {
+        double IAxisUnits.Value => Value;
+        string IAxisUnits.Units => Units;
+
         public readonly double Value;
         public readonly string Units;
 
@@ -15,11 +18,7 @@ namespace UnitsAndScale
         {
             Value = value;
             Units = units;
-        }
-
-        double IAxisUnits.Value => Value;
-
-        string IAxisUnits.Units => Units;
+        } 
     }
 
     /// <summary>
