@@ -407,7 +407,21 @@ namespace MorphologyMesh
                                 if (poly.BoundingBox.Area < MinAnnotationArea)
                                     return null;
 
-                                return poly.Translate(translationToCenter).Simplify(tolerance);
+                                poly = poly.Translate(translationToCenter);
+
+                                try
+                                {
+                                    return poly.Simplify(tolerance);
+                                }
+                                catch (ArgumentException e)
+                                {
+                                    Console.WriteLine(
+                                        $"Could not simplify location #{node.ID}.  Using original (more detailed) polygon instead.");
+                                    #if DEBUG
+                                    Console.WriteLine($"{e}");
+                                    #endif
+                                    return poly;
+                                }
                             }, node);
 
                             t.Start();
