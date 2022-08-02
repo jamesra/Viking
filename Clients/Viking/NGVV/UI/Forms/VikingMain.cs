@@ -219,11 +219,12 @@ namespace Viking
                         //default to centering the viewer on startup 
                         MappingBase map = Viking.UI.State.volume.GetTileMapping(
                             Viking.UI.State.volume.DefaultVolumeTransform, DefaultSection.Number, null, null);
-                        if (map.Initialized == false)
-                            await map.Initialize(CancellationToken.None);
-
+                        
                         if (map != null)
                         {
+                            if (map.Initialized == false)
+                                await map.Initialize(CancellationToken.None);
+
                             Geometry.GridVector2 Center = map.ControlBounds.Center;
                             await State.MainThreadDispatcher.BeginInvoke(new Action(() =>
                             {
