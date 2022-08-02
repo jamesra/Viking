@@ -161,6 +161,7 @@ namespace Geometry
         public static readonly GridVector2 UnitX = new GridVector2(1, 0);
         public static readonly GridVector2 UnitY = new GridVector2(0, 1);
         public static readonly GridVector2 Zero = new GridVector2(0, 0);
+        public static readonly GridVector2 One = new GridVector2(1, 1);
 
         public double X;
         public double Y;
