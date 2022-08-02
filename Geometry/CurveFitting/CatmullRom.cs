@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Geometry.JSON;
 
 namespace Geometry
 {
@@ -664,16 +665,26 @@ namespace Geometry
         }
 
         public static GridPolygon Simplify(this GridPolygon polygon, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
-        {
-            List<GridVector2> simpleExterior = IdentifyControlPoints(polygon.ExteriorRing, MaxDistanceFromSimplifiedToIdeal, true, NumInterpolations);
+        { 
+            List<GridVector2> simpleExterior = IdentifyControlPoints(polygon.ExteriorRing,
+                MaxDistanceFromSimplifiedToIdeal, true, NumInterpolations);
             GridPolygon output = new GridPolygon(simpleExterior.ToArray());
             foreach (var innerPoly in polygon.InteriorPolygons)
             {
-                GridPolygon outputInnerPoly = innerPoly.Simplify(MaxDistanceFromSimplifiedToIdeal, NumInterpolations);
-                output.AddInteriorRing(outputInnerPoly);
+                GridPolygon outputInnerPoly =
+                    innerPoly.Simplify(MaxDistanceFromSimplifiedToIdeal, NumInterpolations);
+                try
+                {
+                    output.AddInteriorRing(outputInnerPoly);
+                }
+                catch (ArgumentException)
+                {
+                    Trace.WriteLine($"The interior polygon with {innerPoly.AllVerticies.Length} vertices (before being simplified) could not be added to the simplified outer polygon.  Trying to add unsimplified version instead.");
+                    output.AddInteriorRing(innerPoly);
+                }
             }
 
-            return output;
+            return output; 
         }
 
         public static GridPolyline Simplify(this GridPolyline polyline, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)
