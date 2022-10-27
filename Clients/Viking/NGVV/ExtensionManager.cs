@@ -374,10 +374,25 @@ namespace Viking.Common
                         throw;
                     }
                 }
+                catch (System.TypeInitializationException except)
+                {
+                    var shownException = except.InnerException is null ? except : except.InnerException;
+                    VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
+                    DialogResult result = MessageBox.Show("OK -> Run Viking without the extension.\nCancel -> Exit and throw exception with debug information.\n\nException:\n" + shownException.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
+
+                    if (result == DialogResult.OK)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
                 catch (System.Exception except)
                 {
                     VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                    DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
+                    DialogResult result = MessageBox.Show("OK -> Run Viking without the extension.\nCancel -> Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
 
                     if (result == DialogResult.OK)
                     {

@@ -285,12 +285,13 @@ namespace WebAnnotation
             if (volume == null)
                 return false;
 
-            WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials; 
+            WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
 
             //Check the VikingXML for the endpoint first.  
             if (GetEndpointFromXML(volume.VolumeElement))
             {
                 LoadUserPreferences();
+                WebAnnotationModel.Store.Init();
                 return true;
             }
             else

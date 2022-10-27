@@ -566,7 +566,7 @@ namespace Viking.UI.Forms
                 if(MessageBox.Show("There is a known issue with contacting the authentication server via SSL.  A migration to a new server is being worked on.  Checking your credentials to the authentication server is not required to annotate, but any errors in your credentials will not be detected.  Would you like to continue with the provided credentials?", "Web Exception",
                     MessageBoxButtons.YesNo) == DialogResult.Yes)
                 {
-                    return "Write";
+                    return Credentials == Viking.UI.State.AnonymousCredentials ? "Read" : "Write";
                 }
 
                 return "Exit";

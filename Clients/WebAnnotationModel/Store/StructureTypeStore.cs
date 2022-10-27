@@ -168,28 +168,35 @@ namespace WebAnnotationModel
         /// </summary>
         public void LoadStructureTypes()
         {
-            StructureType[] types = new StructureType[0];
+            StructureType[] types;
             IClientChannel proxy = null;
             try
             {
                 proxy = CreateProxy();
                 proxy.Open();
                 types = ((IAnnotateStructureTypes)proxy).GetStructureTypes();
-            }
+                if (types == null)
+                    return;
+            } 
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
+                throw;
             }
             finally
             {
                 if (proxy != null)
-                    proxy.Close();
+                {
+                    try
+                    {
+                        proxy.Close();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
-
-            if (types == null)
-                return;
-
-
+            
             //Populate our cache
             StructureTypeObj[] objList = new StructureTypeObj[types.Length];
             //Dictionary<long, StructureType> TypesTable = new Dictionary<long, StructureType>(types.Length);
