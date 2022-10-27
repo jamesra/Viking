@@ -6,11 +6,11 @@ namespace Viking.VolumeModel
 {
     public class TileCacheEntry : CacheEntry<string>
     {
-        public readonly Tile Tile;
+        public readonly TileViewModel TileViewModel;
 
-        public TileCacheEntry(string Key, Tile T) : base(Key)
+        public TileCacheEntry(string Key, TileViewModel T) : base(Key)
         {
-            Tile = T;
+            TileViewModel = T;
             LastAccessed = DateTime.UtcNow;
             Size = T == null ? 1 : T.Size;
         }
@@ -25,7 +25,7 @@ namespace Viking.VolumeModel
     /// This object manages construction of tile objects. 
     /// It first checks a cache for a tile matching the request.  If not found it creates a new tile object.
     /// </summary>
-    public class TileCache : TimeQueueCache<string, TileCacheEntry, Tile, Tile>
+    public class TileCache : TimeQueueCache<string, TileCacheEntry, TileViewModel, TileViewModel>
     {
         public TileCache()
         {
@@ -37,13 +37,13 @@ namespace Viking.VolumeModel
             return textureFileName + " " + TransformName;
         }
 
-        protected override Tile Fetch(TileCacheEntry key)
+        protected override TileViewModel Fetch(TileCacheEntry key)
         {
             key.WasUsedSinceLastCheckpoint = true;
-            return key.Tile;
+            return key.TileViewModel;
         }
 
-        public Tile ConstructTile(string TileUniqueKey,
+        public TileViewModel ConstructTile(string TileUniqueKey,
                                 PositionNormalTextureVertex[] verticies,
                                 int[] TriangleIndicies,
                                 string textureFullPath,
@@ -56,16 +56,16 @@ namespace Viking.VolumeModel
         {
             //Check to see if this tile is already loaded
             string key = TileUniqueKey;
-            Tile tile;
+            TileViewModel tileViewModel;
 
             if (verticies.Length < 3)
             {
                 //Not enough verticies for a tile.  Return null
-                tile = null;
+                tileViewModel = null;
             }
             else
             {
-                tile = new Tile(TileUniqueKey,
+                tileViewModel = new TileViewModel(TileUniqueKey,
                     verticies,
                     TriangleIndicies,
                     textureFullPath,
@@ -77,23 +77,23 @@ namespace Viking.VolumeModel
             }
 
             //We can add a null tile to the cache to indicate it has been calculated and we do not have valid data for it.
-            Add(key, tile);
+            Add(key, tileViewModel);
 
-            return tile;
+            return tileViewModel;
         }
 
-        protected override TileCacheEntry CreateEntry(string key, Tile value)
+        protected override TileCacheEntry CreateEntry(string key, TileViewModel value)
         {
             TileCacheEntry entry = new TileCacheEntry(key, value);
             return entry;
         }
 
-        protected override TileCacheEntry CreateEntry(string key, Func<string, Tile> valueFactory)
+        protected override TileCacheEntry CreateEntry(string key, Func<string, TileViewModel> valueFactory)
         {
             return new TileCacheEntry(key, valueFactory(key));
         }
 
-        protected override Task<TileCacheEntry> CreateEntryAsync(string key, Tile value)
+        protected override Task<TileCacheEntry> CreateEntryAsync(string key, TileViewModel value)
         {
             return Task.FromResult(CreateEntry(key, value));
         }

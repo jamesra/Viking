@@ -58,11 +58,14 @@ namespace Viking.VolumeModel
                 if (token.IsCancellationRequested)
                     return;
 
+                ////Determine boundaries of the section////
                 var transformControlPoints = transforms.Cast<ITransformControlPoints>().ToArray();
                 _VolumeBounds =
                     Geometry.Transforms.ReferencePointBasedTransform.CalculateControlBounds(transformControlPoints);
                 _SectionBounds =
                     Geometry.Transforms.ReferencePointBasedTransform.CalculateMappedBounds(transformControlPoints);
+                ///////////////////////////////////////////
+                
                 Interlocked.CompareExchange(ref _TileTransforms, transforms, _TileTransforms);
             }
             finally

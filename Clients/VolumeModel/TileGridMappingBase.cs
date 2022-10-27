@@ -301,7 +301,7 @@ namespace Viking.VolumeModel
 
             do
             {
-                List<Tile> newTiles = RecursiveVisibleTiles(
+                List<TileViewModel> newTiles = RecursiveVisibleTiles(
                     VisibleBounds,
                     level
                     //PORT: AsynchTextureLoad
@@ -323,7 +323,7 @@ namespace Viking.VolumeModel
         }
 
 
-        private List<Tile> RecursiveVisibleTiles(GridRectangle VisibleBounds, int roundedDownsample)
+        private List<TileViewModel> RecursiveVisibleTiles(GridRectangle VisibleBounds, int roundedDownsample)
         {
             GridInfo gridInfo = LevelToGridInfo[roundedDownsample];
 
@@ -351,17 +351,17 @@ namespace Viking.VolumeModel
                 iMinY = iMaxY;
 
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
-            List<Tile> TilesToDraw = new List<Tile>(ExpectedTileCount);
-            List<Task<Tile>> tileTasks = new List<Task<Tile>>(ExpectedTileCount);
+            List<TileViewModel> TilesToDraw = new List<TileViewModel>(ExpectedTileCount);
+            List<Task<TileViewModel>> tileTasks = new List<Task<TileViewModel>>(ExpectedTileCount);
 
             for (int iX = iMinX; iX <= iMaxX; iX++)
             {
                 for (int iY = iMinY; iY <= iMaxY; iY++)
                 {
-                    string UniqueID = Tile.CreateUniqueKey(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
+                    string UniqueID = TileViewModel.CreateUniqueKey(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
                     string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
-                    Tile tile = Global.TileCache.Fetch(UniqueID);
-                    if (tile == null && Global.TileCache.ContainsKey(UniqueID) == false)
+                    TileViewModel tileViewModel = Global.TileCache.Fetch(UniqueID);
+                    if (tileViewModel == null && Global.TileCache.ContainsKey(UniqueID) == false)
                     {
                         //Func<string, int, int, int, string, string,Tile> a = CreateTile;
                         int ixc = iX;
@@ -372,9 +372,9 @@ namespace Viking.VolumeModel
                         //TilesToDraw.Add(CreateTile(UniqueID, ixc, iyc, rd, TextureFileName, Name));
                     }
 
-                    else if (tile != null)
+                    else if (tileViewModel != null)
                     {
-                        TilesToDraw.Add(tile);
+                        TilesToDraw.Add(tileViewModel);
                     }
                 }
             }
@@ -385,7 +385,7 @@ namespace Viking.VolumeModel
             return TilesToDraw;
         }
 
-        private Tile CreateTile(string uniqueID, int iX,  int iY, int roundedDownsample, string textureFilename, string name)
+        private TileViewModel CreateTile(string uniqueID, int iX,  int iY, int roundedDownsample, string textureFilename, string name)
         {
             //TODO: Make this a task
 

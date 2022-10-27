@@ -614,10 +614,20 @@ namespace Geometry.Transforms
 
 
                     //Get the second entry which is the transform 
-                    ITransformControlPoints newTGT = ParseMosaicTileEntry(Transform, null) as ITransformControlPoints;
-                    TileTransformInfo info = new TileTransformInfo(TileFileName, iTileNumber, lastModified, newTGT.MappedBounds.Width, newTGT.MappedBounds.Height);
+                    ITransform newTGT = ParseMosaicTileEntry(Transform, null);
+                    TileTransformInfo info;
+                    if (newTGT is ITransformControlPoints tcp)
+                        info = new TileTransformInfo(TileFileName, iTileNumber, lastModified, tcp.MappedBounds.Width, tcp.MappedBounds.Height);
+                    else if (newTGT is IContinuousTransform tcont)
+                        info = new TileTransformInfo(TileFileName, iTileNumber, lastModified, 4080, 4080);
+                    else
+                        throw new NotImplementedException("Unsupported transform type");
 
-                    ((ITransformInfo)newTGT).Info = info;
+                    if (newTGT is Geometry.ITransformInfo TInfo)
+                        TInfo.Info = info;
+                    else
+                        throw new NotImplementedException(
+                            "Transform should implement ITransformInfo if used in mosaics");
 
                     //string[] transformParts = Transform.Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
                     //TileGridTransform newTGT = new TileGridTransform(path, Transform, new TileTransformInfo(TileFileName, iTileNumber, lastModified));
@@ -669,6 +679,9 @@ namespace Geometry.Transforms
 
                 case "MeshTransform_double_2_2":
                     return ParseMeshTransform(transform, info);
+
+                case "Rigid2DTransform_double_2_2":
+                    return ParseRigidTransform(transform, info);
 
                 default:
                     Debug.Assert(false, "Unexpected transform type: " + transform.TransformName);
@@ -742,6 +755,22 @@ namespace Geometry.Transforms
             MappingGridVector2[] mapPoints = new MappingGridVector2[] { BotLeft, BotRight, TopLeft, TopRight };
 
             return new GridTransform(mapPoints, new GridRectangle(0, ImageWidth, 0, ImageHeight), 2, 2, info);
+        }
+
+        private static ITransform ParseRigidTransform(TransformParameters transform, TransformBasicInfo info)
+        {
+            //string filename = System.IO.Path.GetFileName(parts[1]);
+            var angle = transform.VariableParameters[0];
+            var sourceToTargetOffset =
+                new GridVector2(transform.VariableParameters[1], transform.VariableParameters[2]);
+
+            if (angle != 0)
+            {
+                var sourceSpaceCenterOfRotation = new GridVector2(transform.FixedParameters[0], transform.FixedParameters[1]);
+                throw new NotImplementedException("Rotation by an angle not supported yet");
+            }
+
+            return new RigidNoRotationTransform(sourceToTargetOffset, info);
         }
 
         private static GridTransform ParseGridTransform(TransformParameters transform, TransformBasicInfo info)

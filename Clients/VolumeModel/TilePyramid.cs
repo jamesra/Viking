@@ -16,38 +16,38 @@ namespace Viking.VolumeModel
         /// <summary>
         /// A list of downsample levels, each entry is a sorted list using the tile names as the key and the tile object as data
         /// </summary>
-        private SortedDictionary<int, SortedDictionary<string, Tile>> TilesAtLevel = new SortedDictionary<int, SortedDictionary<string, Tile>>();
+        private SortedDictionary<int, SortedDictionary<string, TileViewModel>> TilesAtLevel = new SortedDictionary<int, SortedDictionary<string, TileViewModel>>();
 
         public TilePyramid(Geometry.GridRectangle bounds)
         {
             Bounds = bounds;
         }
 
-        public void AddTile(int downsample, Tile tile)
+        public void AddTile(int downsample, TileViewModel tileViewModel)
         {
-            SortedDictionary<string, Tile> tiles;
+            SortedDictionary<string, TileViewModel> tiles;
 
             if (TilesAtLevel.ContainsKey(downsample) == false)
             {
-                tiles = new SortedDictionary<string, Tile>();
-                tiles.Add(tile.ToString(), tile);
+                tiles = new SortedDictionary<string, TileViewModel>();
+                tiles.Add(tileViewModel.ToString(), tileViewModel);
                 TilesAtLevel.Add(downsample, tiles);
             }
             else
             {
                 tiles = TilesAtLevel[downsample];
-                Debug.Assert(false == tiles.ContainsKey(tile.ToString()));
-                tiles.Add(tile.ToString(), tile);
+                Debug.Assert(false == tiles.ContainsKey(tileViewModel.ToString()));
+                tiles.Add(tileViewModel.ToString(), tileViewModel);
             }
         }
 
-        public void AddTiles(int downsample, IEnumerable<Tile> AddedTileArray)
+        public void AddTiles(int downsample, IEnumerable<TileViewModel> AddedTileArray)
         {
-            SortedDictionary<string, Tile> tiles;
+            SortedDictionary<string, TileViewModel> tiles;
 
             if (TilesAtLevel.ContainsKey(downsample) == false)
             {
-                tiles = new SortedDictionary<string, Tile>();
+                tiles = new SortedDictionary<string, TileViewModel>();
                 TilesAtLevel.Add(downsample, tiles);
             }
             else
@@ -55,17 +55,17 @@ namespace Viking.VolumeModel
                 tiles = TilesAtLevel[downsample];
             }
 
-            foreach (Tile t in AddedTileArray)
+            foreach (TileViewModel t in AddedTileArray)
             {
                 tiles.Add(t.ToString(), t);
             }
         }
 
-        public SortedDictionary<string, Tile> GetTilesForLevel(int downsample)
+        public SortedDictionary<string, TileViewModel> GetTilesForLevel(int downsample)
         {
             if (TilesAtLevel.ContainsKey(downsample) == false)
             {
-                return new SortedDictionary<string, Tile>();
+                return new SortedDictionary<string, TileViewModel>();
             }
 
             return TilesAtLevel[downsample];

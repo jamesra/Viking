@@ -144,7 +144,7 @@ namespace Viking.VolumeModel
             int level = AvailableLevels[iLevel];
             do
             {
-                List<Tile> newTiles = RecursiveVisibleTiles(VisibleBounds,
+                List<TileViewModel> newTiles = RecursiveVisibleTiles(VisibleBounds,
                                                             SectionBorder,
                                                             VisibleQuad,
                                                             level
@@ -166,7 +166,7 @@ namespace Viking.VolumeModel
         }
 
 
-        private List<Tile> RecursiveVisibleTiles(
+        private List<TileViewModel> RecursiveVisibleTiles(
                                                  GridRectangle VolumeVisibleBounds,
                                                  GridRectangle SectionVisibleBounds,
                                                  GridQuad? VisibleQuad,
@@ -194,7 +194,7 @@ namespace Viking.VolumeModel
             iMinY = iMinY > iMaxY ? iMaxY : iMinY;
 
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
-            List<Tile> TilesToDraw = new List<Tile>(ExpectedTileCount);
+            List<TileViewModel> TilesToDraw = new List<TileViewModel>(ExpectedTileCount);
 
 
             for (int iX = iMinX; iX < iMaxX; iX++)
@@ -213,11 +213,11 @@ namespace Viking.VolumeModel
                             continue;
                     }
 
-                    string UniqueID = Tile.CreateUniqueKey(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
+                    string UniqueID = TileViewModel.CreateUniqueKey(Section.Number, "Grid to Volume", Name, roundedDownsample, this.TileTextureFileName(iX, iY));
 
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 
-                    Tile tile = Global.TileCache.Fetch(UniqueID);
-                    if (tile == null && Global.TileCache.ContainsKey(UniqueID) == false)
+                    TileViewModel tileViewModel = Global.TileCache.Fetch(UniqueID);
+                    if (tileViewModel == null && Global.TileCache.ContainsKey(UniqueID) == false)
                     {
                         //First create a new tile
                         int MipMapLevels = 1; //No mip maps
@@ -235,7 +235,7 @@ namespace Viking.VolumeModel
 
                         string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
 
-                        tile = Global.TileCache.ConstructTile(UniqueID,
+                        tileViewModel = Global.TileCache.ConstructTile(UniqueID,
                                                             verticies,
                                                             edges,
                                                             TextureFileName,
@@ -246,8 +246,8 @@ namespace Viking.VolumeModel
                                                             MipMapLevels);
                     }
 
-                    if (tile != null)
-                        TilesToDraw.Add(tile);
+                    if (tileViewModel != null)
+                        TilesToDraw.Add(tileViewModel);
                 }
             }
 

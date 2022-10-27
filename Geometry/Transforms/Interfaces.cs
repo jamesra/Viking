@@ -48,6 +48,11 @@ namespace Geometry
 
     public interface IContinuousTransform : ITransform
     {
+        /// <summary>
+        /// Translates the control space mapping.  So if source maps to control space with no offset, and
+        /// we translate target by (x = 1, y = 0).  The source space at (0,0) now maps to (1,0) in target space.
+        /// </summary>
+        /// <param name="vector"></param>
         void Translate(in GridVector2 vector);
     }
 
@@ -65,6 +70,7 @@ namespace Geometry
         GridRectangle ControlBounds { get; }
         GridRectangle MappedBounds { get; }
     }
+     
 
     public interface IControlPointTriangulation : ITransformControlPoints
     {

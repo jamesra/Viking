@@ -50,6 +50,7 @@
     <CodeAnalysisRuleSet>..\Viking\Main.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>true</RunCodeAnalysis>
     <Prefer32Bit>false</Prefer32Bit>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -135,6 +136,7 @@
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Xml.Serialization" />
     <Reference Include="WindowsBase">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
@@ -501,7 +503,7 @@
     <Compile Include="Util\BmpWriter.cs" />
     <Compile Include="Util\OpenConnectomeProject.cs" />
     <Compile Include="ViewModels\TriangulationViewModel.cs" />
-    <Compile Include="ViewModels\TileViewModel.cs" />
+    <Compile Include="ViewModels\TileView.cs" />
     <Compile Include="UI\Forms\SplashForm.cs">
       <SubType>Form</SubType>
     </Compile>

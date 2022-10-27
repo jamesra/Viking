@@ -1511,7 +1511,7 @@ namespace Viking.UI.Controls
                 for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
                 {
                     int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
-                    SortedDictionary<string, Tile> tileList = visibleTiles.GetTilesForLevel(level);
+                    SortedDictionary<string, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
                     if (tileList.Count > 0)
                         return true;
                 }
@@ -1531,7 +1531,7 @@ namespace Viking.UI.Controls
         protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool AsyncTextureLoad, CancellationToken token)
         {
             List<Task<Texture2D>> listGetTextureTasks = new List<Task<Texture2D>>();
-            List<TileViewModel> listTileViewModels = new List<ViewModels.TileViewModel>();
+            List<TileView> listTileViewModels = new List<ViewModels.TileView>();
 
             if (false == Volume.SectionViewModels.ContainsKey(Z))
                 return;
@@ -1573,9 +1573,9 @@ namespace Viking.UI.Controls
                 {
                     int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
 
-                    SortedDictionary<string, Tile> tileList = visibleTiles.GetTilesForLevel(level);
+                    SortedDictionary<string, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
 
-                    foreach (Tile t in tileList.Values)
+                    foreach (TileViewModel t in tileList.Values)
                     {
                         //Don't bother with huge tiles
                         string tileFileName = t.TextureFullPath;
@@ -1587,23 +1587,23 @@ namespace Viking.UI.Controls
                         }
                         //Create a TileViewModel if it doesn't exist and draw it
 
-                        TileViewModel tileViewModel = Global.TileViewModelCache.FetchOrConstructTile(t,
+                        TileView tileView = Global.TileViewModelCache.FetchOrConstructTile(t,
                                                                                                         tileFileName,
                                                                                                         SectionViewerControl.TileCacheFullPath(section, t.TextureCacheFilePath),
                                                                                                         Mapping.Name,
                                                                                                         0);
-                        if (tileViewModel == null)
+                        if (tileView == null)
                             continue;
 
                         //Don't request and draw a bunch of levels that cover the entire screen.  Saves time if we are at high magnification
-                        if (tileViewModel.HasTexture == false && tileViewModel.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
+                        if (tileView.HasTexture == false && tileView.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
                             continue;
 
-                        if (tileViewModel.TextureNeedsLoading)
-                            listGetTextureTasks.Add(Task.Run(() => tileViewModel.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice, token)));
+                        if (tileView.TextureNeedsLoading)
+                            listGetTextureTasks.Add(Task.Run(() => tileView.GetOrLoadTextureAsync(this.graphicsDeviceService.GraphicsDevice, token)));
                             //listGetTextureTasks.Add(Task<Texture2D>.Run(() => { return tileViewModel.GetOrRequestTexture(this.graphicsDeviceService.GraphicsDevice); }));
 
-                        listTileViewModels.Add(tileViewModel);
+                        listTileViewModels.Add(tileView);
                     }
                 }
             }
@@ -1620,7 +1620,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        private bool AllTileViewsHaveTexture(IList<TileViewModel> listTiles)
+        private bool AllTileViewsHaveTexture(IList<TileView> listTiles)
         {
             listTiles = listTiles.Where(t => t.TextureReadComplete == false).ToList();
             if (listTiles.All(t => t.TextureReadComplete) || listTiles.Count == 0)
@@ -1689,15 +1689,15 @@ namespace Viking.UI.Controls
                 graphicsDevice.ReferenceStencil = iLevel;
                 graphicsDevice.DepthStencilState = CreateDepthStateForDownsampleLevel(iLevel);
 
-                SortedDictionary<string, Tile> tileList = visibleTiles.GetTilesForLevel(level);
+                SortedDictionary<string, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
 
-                List<TileViewModel> tileViewsToDraw = new List<TileViewModel>();
+                List<TileView> tileViewsToDraw = new List<TileView>();
 
                 List<Task<Texture2D>> listGetTextureTasks = new List<Task<Texture2D>>();
                 //Trace.WriteLine(tileList.Count.ToString() + " tiles found for level " + level.ToString());
                 int iColor = 0;
                 //     bool AllTilesDrawn = true; //The first time all tiles draw successfully we can skip the remaining levels
-                foreach (Tile t in tileList.Values)
+                foreach (TileViewModel t in tileList.Values)
                 {
                     //Don't bother with huge tiles
                     string tileFileName = t.TextureFullPath;
@@ -1709,25 +1709,25 @@ namespace Viking.UI.Controls
                     }
                     //Create a TileViewModel if it doesn't exist and draw it
 
-                    TileViewModel tileViewModel = Global.TileViewModelCache.FetchOrConstructTile(t,
+                    TileView tileView = Global.TileViewModelCache.FetchOrConstructTile(t,
                                                                                                     tileFileName,
                                                                                                     SectionViewerControl.TileCacheFullPath(section, t.TextureCacheFilePath),
                                                                                                     mapping.Name,
                                                                                                     0);
 
                     //Don't request and draw a bunch of levels that cover the entire screen.  Saves time if we are at high magnification
-                    if (tileViewModel.HasTexture == false && tileViewModel.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
+                    if (tileView.HasTexture == false && tileView.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
                         continue;
 
                     //Request a texture if we need one
-                    if (tileViewModel.TextureNeedsLoading && !tileViewModel.TextureIsLoading)
+                    if (tileView.TextureNeedsLoading && !tileView.TextureIsLoading)
                         //listGetTextureTasks.Add(Task<Texture2D>.Run(() => tileViewModel.GetOrRequestTexture(graphicsDevice)));
-                        Task.Run(() => tileViewModel.GetOrLoadTextureAsync(graphicsDevice, CancellationToken.None));
-                    else if (tileViewModel.TextureReadComplete)
-                        tileViewsToDraw.Add(tileViewModel);
+                        Task.Run(() => tileView.GetOrLoadTextureAsync(graphicsDevice, CancellationToken.None));
+                    else if (tileView.TextureReadComplete)
+                        tileViewsToDraw.Add(tileView);
                 }
 
-                foreach (TileViewModel tileViewModel in tileViewsToDraw)
+                foreach (TileView tileViewModel in tileViewsToDraw)
                 {
                     tileViewModel.Draw(graphicsDevice, tileLayoutEffect, AsynchTextureLoad, ColorizeTiles);
 

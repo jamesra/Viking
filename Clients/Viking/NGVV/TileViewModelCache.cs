@@ -8,12 +8,12 @@ namespace Viking
 {
     internal class TileViewModelCacheEntry : CacheEntry<string>
     {
-        public TileViewModel TileViewModel;
+        public TileView TileView;
 
-        public TileViewModelCacheEntry(string Key, TileViewModel T)
+        public TileViewModelCacheEntry(string Key, TileView T)
             : base(Key)
         {
-            TileViewModel = T;
+            TileView = T;
             LastAccessed = DateTime.Now;
             Size = T.Size;
         }
@@ -26,7 +26,7 @@ namespace Viking
     /// This object manages construction of tile objects. 
     /// It first checks a cache for a tile matching the request.  If not found it creates a new tile object.
     /// </summary>
-    internal class TileViewModelCache : TimeQueueCache<string, TileViewModelCacheEntry, TileViewModel, TileViewModel>
+    internal class TileViewModelCache : TimeQueueCache<string, TileViewModelCacheEntry, TileView, TileView>
     {
 
         public TileViewModelCache() : base()
@@ -39,18 +39,18 @@ namespace Viking
             return $"{textureFileName} {TransformName}";
         }
 
-        public TileViewModel GetTile(string textureFileName, string TransformName)
+        public TileView GetTile(string textureFileName, string TransformName)
         {
             return this.Fetch(TileKey(textureFileName, TransformName));
         }
 
-        protected override TileViewModel Fetch(TileViewModelCacheEntry key)
+        protected override TileView Fetch(TileViewModelCacheEntry key)
         {
             key.WasUsedSinceLastCheckpoint = true;
-            return key.TileViewModel;
+            return key.TileView;
         }
 
-        public TileViewModel ConstructTile(Tile tile,
+        public TileView ConstructTile(TileViewModel tileViewModel,
                                 string textureFileName,
                                 string cachedTextureFileName,
                                 string TransformName,
@@ -60,49 +60,49 @@ namespace Viking
             //Check to see if this tile is already loaded
             string key = TileKey(textureFileName, TransformName);
 
-            TileViewModel tileViewModel = null;
+            TileView tileView = null;
             bool added = false;
             try
             {
-                tileViewModel = new TileViewModel(tile,
+                tileView = new TileView(tileViewModel,
                     textureFileName,
                     cachedTextureFileName,
                     MipMapLevels,
                     TextureSize);
 
-                added = Add(key, tileViewModel);
+                added = Add(key, tileView);
                 if (!added)
                 {
-                    tileViewModel.Dispose();
-                    tileViewModel = null;
+                    tileView.Dispose();
+                    tileView = null;
                 }
             }
             catch (Exception)
             {
-                if (tileViewModel != null)
+                if (tileView != null)
                 {
-                    tileViewModel.Dispose();
-                    tileViewModel = null;
+                    tileView.Dispose();
+                    tileView = null;
                 }
                 throw;
             }
 
 
 
-            return tileViewModel;
+            return tileView;
         }
 
         /// <summary>
         /// Retrieve existing tile if it exists, otherwise create a new one
         /// </summary>
-        /// <param name="tile"></param>
+        /// <param name="tileViewModel"></param>
         /// <param name="textureFileName"></param>
         /// <param name="cachedTextureFileName"></param>
         /// <param name="TransformName"></param>
         /// <param name="MipMapLevels"></param>
         /// <param name="size"></param>
         /// <returns></returns>
-        public TileViewModel FetchOrConstructTile(Tile tile,
+        public TileView FetchOrConstructTile(TileViewModel tileViewModel,
                                 string textureFileName,
                                 string cachedTextureFileName,
                                 string TransformName,
@@ -111,25 +111,25 @@ namespace Viking
         {
             string key = TileKey(textureFileName, TransformName);
 
-            TileViewModel tileViewModel = Fetch(key);
-            if (tileViewModel != null)
-                return tileViewModel;
+            TileView tileView = Fetch(key);
+            if (tileView != null)
+                return tileView;
 
-            return ConstructTile(tile, textureFileName, cachedTextureFileName, TransformName, MipMapLevels, tile.TextureSize);
+            return ConstructTile(tileViewModel, textureFileName, cachedTextureFileName, TransformName, MipMapLevels, tileViewModel.TextureSize);
         }
 
-        protected override TileViewModelCacheEntry CreateEntry(string key, TileViewModel value)
+        protected override TileViewModelCacheEntry CreateEntry(string key, TileView value)
         {
             TileViewModelCacheEntry entry = new TileViewModelCacheEntry(key, value);
             return entry;
         }
 
-        protected override TileViewModelCacheEntry CreateEntry(string key, Func<string,TileViewModel> valueFactory)
+        protected override TileViewModelCacheEntry CreateEntry(string key, Func<string,TileView> valueFactory)
         {
             return new TileViewModelCacheEntry(key, valueFactory(key));
         }
 
-        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileViewModel value)
+        protected override Task<TileViewModelCacheEntry> CreateEntryAsync(string key, TileView value)
         {
             return Task.FromResult(CreateEntry(key, value));
         }
@@ -141,8 +141,8 @@ namespace Viking
         /// <param name="tile"></param>
         protected override bool OnRemoveEntry(TileViewModelCacheEntry entry)
         {
-            entry.TileViewModel.FreeTexture();
-            entry.TileViewModel.Dispose();
+            entry.TileView.FreeTexture();
+            entry.TileView.Dispose();
 
             return true;
         }
@@ -161,7 +161,7 @@ namespace Viking
             if (dictEntries.ContainsKey(entry.Key))
             {
                 //Nobody is using it, abort the request
-                entry.TileViewModel.AbortRequest();
+                entry.TileView.AbortRequest();
 
                 RemoveEntry(entry);
                 //if (entry.TileViewModel.HasTexture == false)

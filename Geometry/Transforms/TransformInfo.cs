@@ -116,7 +116,6 @@ namespace Geometry.Transforms
         public TileTransformInfo(string TileFileName, int tileNumber, DateTime lastModified, double Width, double Height)
             : base(lastModified)
         {
-
             this.TileFileName = TileFileName;
             this.TileNumber = tileNumber;
             this.ImageWidth = Width;
