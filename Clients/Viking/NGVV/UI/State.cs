@@ -57,7 +57,7 @@ namespace Viking.UI
 
         static public System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
-        static public System.Net.NetworkCredential AnonymousCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
+        static public readonly System.Net.NetworkCredential AnonymousCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
         static private readonly string CacheSubPath = "Cache";
         static public readonly string CachePath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\" + CacheSubPath;
