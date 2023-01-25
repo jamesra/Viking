@@ -101,16 +101,13 @@ namespace Geometry.Transforms
                 IsUpper = true;
                 iX--;
             }
-            else if (OffsetY + double.Epsilon >= Bounds.Height)
+            
+            if (OffsetY + double.Epsilon >= Bounds.Height)
             {
                 IsUpper = true;
                 iY--;
             }
-            else
-            {
-                IsUpper = (X - iX) + (Y - iY) > 1;
-            }
-
+              
             int iTri = (iY << 1) + (((GridSizeY - 1) << 1) * iX); //(iY * 2) + ((GridSizeY - 1) * 2 * iX)
             //int iTri = (iX * 2) + ((GridSizeX-1) * 2 * iY);
             iTri += IsUpper ? 1 : 0;
