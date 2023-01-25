@@ -7,7 +7,9 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Globalization;
 using Viking.UI.Forms;
+
 
 namespace Viking
 {
@@ -69,6 +71,10 @@ namespace Viking
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");
             Trace.WriteLine("Current Directory: " + System.Environment.CurrentDirectory, "Viking");
             Trace.WriteLine("Application Directory: " + execAssembly.Location, "Viking");
+
+            var culture = CultureInfo.CreateSpecificCulture("en-US");
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+
 #if DEBUG
             //          System.Diagnostics.Debugger.Break();
 #endif
@@ -303,8 +309,7 @@ namespace Viking
                 {
                     return null;
                 }
-
-                
+                 
                 UI.State.UserCredentials = vikingLogon.Credentials;
                 return vikingLogon.VolumeURL;
             }
@@ -314,9 +319,7 @@ namespace Viking
 
         [Conditional("DEBUG")]
         private static void CreateDebugListener()
-        {
-            return;
-            /*
+        { 
             string LogPath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\Logs";
             if (!Directory.Exists(LogPath))
                 Directory.CreateDirectory(LogPath);
@@ -327,17 +330,43 @@ namespace Viking
 
             TextWriter SynchronizedDebugWriter = StreamWriter.Synchronized(DebugLogFile);
 
-            TextWriterTraceListener Listener = new TextWriterTraceListener(SynchronizedDebugWriter, "Viking Log Listener");
-
+            TextWriterTraceListener Listener = new TextWriterTraceListener(SynchronizedDebugWriter, "Viking Log Listener"); 
             Trace.Listeners.Add(Listener);
             Debug.Listeners.Add(Listener);
             
-            ConsoleTraceListener DebugOutputListener = new ConsoleTraceListener(true);
+            /*ConsoleTraceListener DebugOutputListener = new ConsoleTraceListener(true);
             Trace.Listeners.Add(DebugOutputListener);
-            Debug.Listeners.Add(DebugOutputListener);
+            Debug.Listeners.Add(DebugOutputListener);*/
 
-            Trace.UseGlobalLock = true; 
-            */
+            Trace.UseGlobalLock = true;
+            //CultureInfo[] cultures = { new CultureInfo("en-US") };
+            //CultureInfo provider = cultures[0];
+            TestCultureNumberParsing();
+        }
+
+        private static void TestCultureNumberParsing()
+        { 
+            NumberFormatInfo current1 = CultureInfo.CurrentCulture.NumberFormat;
+             
+            Debug.WriteLine("Decimal separator: " + current1.NumberDecimalSeparator);
+            Debug.WriteLine("Group separator:   " + current1.NumberGroupSeparator);
+
+            string[] testStrings = {"3,800000000000e+01",
+                                    "3.800000000000e+01",
+                                    "3.80e+01",
+                                    "38"};
+
+            foreach(string number in testStrings)
+            {
+                try
+                {
+                    Debug.WriteLine($"Parsing {number} yields {System.Convert.ToDouble(number)}");
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine($"Could not parse {number}\n{e}");
+                }
+            }
         }
     }
 }
