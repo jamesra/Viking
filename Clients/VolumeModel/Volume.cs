@@ -793,7 +793,15 @@ namespace Viking.VolumeModel
                     var stosFileCacheFullPath = System.IO.Path.Combine(this.Paths.ServerStosCachePath, stosFileName);
                     if (System.IO.File.Exists(stosFileCacheFullPath))
                     {
-                        result = await LoadStosResult.LoadAsync(stosFileCacheFullPath, elem);
+                        try { 
+                            result = await LoadStosResult.LoadAsync(stosFileCacheFullPath, elem);
+                        }
+                        catch(Exception e)
+                        {
+                            Console.WriteLine($"Exception loading {stosFileCacheFullPath}.\n{e?.InnerException}");
+                            Trace.WriteLine($"Exception loading {stosFileCacheFullPath}.\n{e?.InnerException}");
+                            throw;
+                        }
                     }
                 }
 
@@ -801,7 +809,16 @@ namespace Viking.VolumeModel
                 if (result == null)
                 {
                     //    Trace.WriteLine("Loading " + StosFileName + " from HTTP Server", "VolumeModel");
-                    result = await LoadStosResult.LoadAsync(stosPath, this.UserCredentials, elem).ConfigureAwait(false);
+                    try
+                    {
+                        result = await LoadStosResult.LoadAsync(stosPath, this.UserCredentials, elem).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Exception loading {stosPath}.\n{e?.InnerException}");
+                        Trace.WriteLine($"Exception loading {stosPath}.\n{e?.InnerException}");
+                        throw;
+                    }
                 }
             }
             finally
