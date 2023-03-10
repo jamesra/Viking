@@ -84,7 +84,7 @@ namespace AnnotationVizLib.WCFClient
             foreach (long id in this.NextHopNodes)
             {
                 if (graph.Nodes.ContainsKey(id))
-                    graph.Nodes.Remove(id);
+                    graph.RemoveNode(id);
             }
         }
 
