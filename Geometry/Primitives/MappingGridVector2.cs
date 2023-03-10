@@ -19,16 +19,39 @@ namespace Geometry
                 diff = x.MappedPoint.Y - y.MappedPoint.Y;
             }
 
-            if (diff > 0)
-                return 1;
-            if (diff < 0)
-                return -1;
+            if (diff == 0)
+                return 0;
 
-            return 0;
+            return diff > 0 ? 1 : -1;
         }
 
         #endregion
     }
+
+    public class MappingGridVector2SortByControlPoints : IComparer<MappingGridVector2>
+    {
+
+        #region IComparer<MappingGridVector2> Members
+
+        int IComparer<MappingGridVector2>.Compare(MappingGridVector2 x, MappingGridVector2 y)
+        {
+            double diff = x.ControlPoint.X - y.ControlPoint.X;
+
+            if (diff == 0.0)
+            {
+                diff = x.ControlPoint.Y - y.ControlPoint.Y;
+            }
+
+            if(diff == 0)
+                return 0;
+
+            return diff > 0 ? 1 : -1;
+        }
+
+        #endregion
+    }
+
+
     /// <summary>
     /// Records the position of a point in two different 2D planes
     /// </summary>
@@ -147,11 +170,11 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static bool RemoveDuplicates(List<MappingGridVector2> points)
+        public static bool RemoveControlSpaceDuplicates(List<MappingGridVector2> points)
         {
             bool DuplicateFound = false;
             //Remove duplicates: In the case that a line on the warpingGrid passes through a point on the fixedGrid then both ends of the line will map the point and we will get a duplicate
-            points.Sort();
+            points.Sort(new MappingGridVector2SortByControlPoints());
             int iCompareStart = 0;
             for (int iTest = 1; iTest < points.Count; iTest++)
             {
@@ -169,6 +192,43 @@ namespace Geometry
 
                     //Optimization, since the array is sorted we don't need to compare points once a point is distant enough
                     if (points[iTest].ControlPoint.X - points[jTest].ControlPoint.X > Global.Epsilon)
+                    {
+                        iCompareStart = jTest;
+                    }
+                }
+            }
+
+            return DuplicateFound;
+        }
+
+        /// <summary>
+        /// Removes duplicate points from the passed list and returns true if duplicates were removed
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static bool RemoveMappedSpaceDuplicates(List<MappingGridVector2> points)
+        {
+            bool DuplicateFound = false;
+            //Remove duplicates: In the case that a line on the warpingGrid passes through a point on the fixedGrid then both ends of the line will map the point and we will get a duplicate
+            points.Sort(new MappingGridVector2SortByMapPoints());
+
+            int iCompareStart = 0;
+            for (int iTest = 1; iTest < points.Count; iTest++)
+            {
+                //   Debug.Assert(newPoints[iTest - 1].ControlPoint != newPoints[iTest].ControlPoint);
+                //This is slow, but even though we sort on the X axis it doesn't mean a point that is not adjacent to the point on the list isn't too close
+                for (int jTest = iCompareStart; jTest < iTest; jTest++)
+                {
+                    if (points[jTest].MappedPoint == points[iTest].MappedPoint)
+                    {
+                        points.RemoveAt(iTest);
+                        iTest--;
+                        DuplicateFound = true;
+                        break;
+                    }
+
+                    //Optimization, since the array is sorted we don't need to compare points once a point is distant enough
+                    if (points[iTest].MappedPoint.X - points[jTest].MappedPoint.X > Global.Epsilon)
                     {
                         iCompareStart = jTest;
                     }

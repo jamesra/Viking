@@ -71,9 +71,22 @@ namespace Geometry.Transforms
                 //SortedSet<MappingGridVector2> listPoints = new SortedSet<MappingGridVector2>(value);
                 Array.Sort(value);
                 _mapPoints = value;
+
+                var _mapPointsList = _mapPoints.ToList();
 #if DEBUG
                 DebugVerifyPointsAreUnique(_mapPoints);
 #endif
+                bool ArrayHadDuplicates = false;
+                ArrayHadDuplicates = ArrayHadDuplicates || MappingGridVector2.RemoveControlSpaceDuplicates(_mapPointsList);
+                ArrayHadDuplicates = ArrayHadDuplicates || MappingGridVector2.RemoveMappedSpaceDuplicates(_mapPointsList);
+
+                //Replace our map points with the list that had duplicates removed if necessary
+                if (ArrayHadDuplicates)
+                {                    
+                    _mapPoints = _mapPointsList.ToArray();
+                    if(_mapPoints.Length < 3)
+                        throw new ArgumentException("Not enough control points after duplicates removed");
+                }
 
                 //Reset the bounds
                 MappedBounds = new GridRectangle();
@@ -81,16 +94,20 @@ namespace Geometry.Transforms
             }
         }
 
-        private static void DebugVerifyPointsAreUnique(MappingGridVector2[] listPoints)
+        private static bool DebugVerifyPointsAreUnique(MappingGridVector2[] listPoints)
         {
 #if DEBUG
             //Check for duplicate points
             for (int i = 1; i < listPoints.Length; i++)
             {
-                Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
-                Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, "Duplicate Points found in transform.  This breaks Delaunay.");
+                Debug.Assert(listPoints[i - 1].ControlPoint != listPoints[i].ControlPoint, $"Duplicate control space points found in transform.  This breaks Delaunay. Point #{i-1} and #{i}");
+                Debug.Assert(listPoints[i - 1].MappedPoint != listPoints[i].MappedPoint, $"Duplicate mapped space points found in transform.  This breaks Delaunay. Point #{i - 1} and #{i}");
+                return false;
             }
+            
+            return true;
 #endif
+            return true;
         }
 
         protected ReferencePointBasedTransform(MappingGridVector2[] points, TransformBasicInfo info)

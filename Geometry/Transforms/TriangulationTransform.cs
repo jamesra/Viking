@@ -646,7 +646,7 @@ namespace Geometry.Transforms
         {
             if (disposing)
             {
-                if (rwLockTriangles != null)
+                if (rwLockTriangles is null == false)
                 {
                     rwLockTriangles.Dispose();
                     rwLockTriangles = null;
@@ -821,7 +821,8 @@ namespace Geometry.Transforms
             }
 #endif
 
-            MappingGridVector2.RemoveDuplicates(newPoints);
+            MappingGridVector2.RemoveControlSpaceDuplicates(newPoints);
+            MappingGridVector2.RemoveMappedSpaceDuplicates(newPoints);
 
             //Cannot make a transform with fewer than 3 points
             if (newPoints.Count < 3)

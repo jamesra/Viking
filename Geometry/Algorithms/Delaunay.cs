@@ -62,8 +62,11 @@ namespace Geometry
             //Check to ensure the input is really sorted on the X-Axis
             for (int iDebug = 1; iDebug < points.Length; iDebug++)
             {
-                Debug.Assert(points[iDebug - 1].X <= points[iDebug].X);
-                Debug.Assert(GridVector2.Distance(in points[iDebug - 1], in points[iDebug]) >= Global.Epsilon);
+                if(points[iDebug - 1].X > points[iDebug].X)
+                    throw new ArgumentException($"Points not sorted on X axis: #{iDebug - 1} and #{iDebug}");
+
+                if(GridVector2.Distance(in points[iDebug - 1], in points[iDebug]) < Global.Epsilon)
+                    throw new ArgumentException($"Duplicate points, this breaks delaunay: #{iDebug - 1} and #{iDebug}");
             }
 #endif
 

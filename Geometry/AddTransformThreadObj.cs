@@ -122,7 +122,8 @@ namespace Geometry.Transforms
                 }
             }
 
-            MappingGridVector2.RemoveDuplicates(newPointsList);
+            MappingGridVector2.RemoveControlSpaceDuplicates(newPointsList);
+            MappingGridVector2.RemoveMappedSpaceDuplicates(newPointsList);
             newPoints = newPointsList.ToArray();
             DoneEvent.Set(); 
         }
