@@ -188,7 +188,7 @@ namespace GraphLib
             NODETYPE origin_node = graph.Nodes[Origin];
 
             //If there are no nodes, then the destination cannot be reached from here.
-            if (origin_node.Edges.Keys.Count == 0)
+            if (!origin_node.Edges.Keys.Any())
                 return null;
 
             //Remove the nodes we've already checked
@@ -313,7 +313,7 @@ namespace GraphLib
             NODETYPE origin_node = graph.Nodes[Origin];
 
             //If there are no nodes, then the destination cannot be reached from here.
-            if (origin_node.Edges.Keys.Count == 0)
+            if (!origin_node.Edges.Keys.Any())
                 return;
 
             //Remove the nodes we've already checked

@@ -12,25 +12,30 @@ namespace GraphLib
         where NODETYPE : Node<KEY, EDGETYPE>
         where EDGETYPE : Edge<KEY>
     {
-        // Contains all edges
-        public SortedList<EDGETYPE, EDGETYPE> Edges { get; }
+        // Contains all _Edges
+        public readonly SortedList<EDGETYPE, EDGETYPE> _Edges;
+        public IReadOnlyDictionary<EDGETYPE, EDGETYPE> Edges => _Edges;
 
-        public Dictionary<KEY, NODETYPE> Nodes { get; }
+        protected readonly Dictionary<KEY, NODETYPE> _Nodes;
+
+        public IReadOnlyDictionary<KEY, NODETYPE> Nodes => _Nodes;
+
+        public bool ContainsKey(KEY key) => _Nodes.ContainsKey(key);
 
         public Graph()
         {
-            Edges = new SortedList<EDGETYPE, EDGETYPE>();
-            Nodes = new Dictionary<KEY, NODETYPE>();
+            _Edges = new SortedList<EDGETYPE, EDGETYPE>();
+            _Nodes = new Dictionary<KEY, NODETYPE>();
         }
 
-        public Graph(IEnumerable<NODETYPE> nodes, IEnumerable<EDGETYPE> edges) : this()
+        public Graph(IEnumerable<NODETYPE> _Nodes, IEnumerable<EDGETYPE> _Edges) : this()
         {
-            foreach (var n in nodes)
+            foreach (var n in _Nodes)
             {
                 this.AddNode(n);
             }
 
-            foreach (var e in edges)
+            foreach (var e in _Edges)
             {
                 this.AddEdge(e);
             }
@@ -38,26 +43,23 @@ namespace GraphLib
 
         public Graph(SerializationInfo info, StreamingContext context)
         {
-            Edges = (SortedList<EDGETYPE, EDGETYPE>)info.GetValue("Edges", typeof(SortedList<EDGETYPE, EDGETYPE>));
-            Nodes = (Dictionary<KEY, NODETYPE>)info.GetValue("Nodes", typeof(Dictionary<KEY, NODETYPE>));
+            _Edges = (SortedList<EDGETYPE, EDGETYPE>)info.GetValue("_Edges", typeof(SortedList<EDGETYPE, EDGETYPE>));
+            _Nodes = (Dictionary<KEY, NODETYPE>)info.GetValue("_Nodes", typeof(Dictionary<KEY, NODETYPE>));
 
-            foreach (EDGETYPE e in Edges.Values)
+            foreach (EDGETYPE e in _Edges.Values)
             {
-                NODETYPE source = Nodes[e.SourceNodeKey];
-                NODETYPE target = Nodes[e.TargetNodeKey];
+                NODETYPE source = _Nodes[e.SourceNodeKey];
+                NODETYPE target = _Nodes[e.TargetNodeKey];
 
                 source.AddEdge(e);
                 target.AddEdge(e);
             }
         }
 
-        public NODETYPE this[KEY key]
-        {
-            get { return this.Nodes[key]; }
-        }
+        public NODETYPE this[KEY key] => _Nodes[key];
 
         /// <summary>
-        /// Returns the set of edges from Source to Target, or an empty set
+        /// Returns the set of _Edges from Source to Target, or an empty set
         /// if the edge does not exist
         /// </summary>
         /// <param name="Source"></param>
@@ -67,7 +69,7 @@ namespace GraphLib
         {
             get
             {
-                if (this.Nodes.TryGetValue(Source, out NODETYPE node))
+                if (this._Nodes.TryGetValue(Source, out NODETYPE node))
                 {
                     if (node.Edges.TryGetValue(Target, out var Result))
                     {
@@ -81,41 +83,41 @@ namespace GraphLib
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            info.AddValue("Edges", Edges, typeof(SortedList<EDGETYPE, EDGETYPE>));
-            info.AddValue("Nodes", Nodes, typeof(Dictionary<KEY, NODETYPE>));
+            info.AddValue("_Edges", _Edges, typeof(SortedList<EDGETYPE, EDGETYPE>));
+            info.AddValue("_Nodes", _Nodes, typeof(Dictionary<KEY, NODETYPE>));
         }
 
         public virtual void AddNode(NODETYPE node)
         {
-            this.Nodes.Add(node.Key, node);
+            this._Nodes.Add(node.Key, node);
         }
 
         /// <summary>
-        /// Remove the node, remove all edges to the node
+        /// Remove the node, remove all _Edges to the node
         /// </summary>
         /// <param name="key"></param>
         public virtual void RemoveNode(KEY key)
         {
-            NODETYPE node_to_remove = Nodes[key];
+            NODETYPE node_to_remove = _Nodes[key];
             SortedSet<KEY> other_nodes = new SortedSet<KEY>(node_to_remove.Edges.Keys);
 
-            //Remove edge from other nodes to our node
+            //Remove edge from other _Nodes to our node
             foreach (KEY other_id in other_nodes)
             {
                 RemoveAllEdges(key, other_id);
             }
 
-            this.Nodes.Remove(key);
+            this._Nodes.Remove(key);
         }
 
         /// <summary>
-        /// Remove all edges between these two nodes
+        /// Remove all _Edges between these two _Nodes
         /// </summary>
         /// <param name="key"></param>
         /// <param name="other_id"></param>
         private void RemoveAllEdges(KEY key, KEY other_id)
         {
-            NODETYPE other_node = Nodes[other_id];
+            NODETYPE other_node = _Nodes[other_id];
 
             ICollection<EDGETYPE> edges_to_remove = other_node.Edges[key].ToList();
 
@@ -127,29 +129,29 @@ namespace GraphLib
 
         public void AddEdge(EDGETYPE edge)
         {
-            Debug.Assert(Nodes.ContainsKey(edge.SourceNodeKey));
-            Debug.Assert(Nodes.ContainsKey(edge.TargetNodeKey));
-            Debug.Assert(!Edges.ContainsKey(edge));
+            Debug.Assert(_Nodes.ContainsKey(edge.SourceNodeKey));
+            Debug.Assert(_Nodes.ContainsKey(edge.TargetNodeKey));
+            Debug.Assert(!_Edges.ContainsKey(edge));
 
-            this.Nodes[edge.SourceNodeKey].AddEdge(edge);
-            this.Nodes[edge.TargetNodeKey].AddEdge(edge);
+            this._Nodes[edge.SourceNodeKey].AddEdge(edge);
+            this._Nodes[edge.TargetNodeKey].AddEdge(edge);
 
-            this.Edges.Add(edge, edge);
+            this._Edges.Add(edge, edge);
         }
 
         public void RemoveEdge(EDGETYPE edge)
         {
-            Debug.Assert(Nodes.ContainsKey(edge.SourceNodeKey));
-            Debug.Assert(Nodes.ContainsKey(edge.TargetNodeKey));
-            if (!Edges.ContainsKey(edge))
+            Debug.Assert(_Nodes.ContainsKey(edge.SourceNodeKey));
+            Debug.Assert(_Nodes.ContainsKey(edge.TargetNodeKey));
+            if (!_Edges.ContainsKey(edge))
             {
                 throw new ArgumentException(string.Format("Edge does not exist in graph {0}", edge));
             }
 
-            this.Nodes[edge.SourceNodeKey].RemoveEdge(edge);
-            this.Nodes[edge.TargetNodeKey].RemoveEdge(edge);
+            this._Nodes[edge.SourceNodeKey].RemoveEdge(edge);
+            this._Nodes[edge.TargetNodeKey].RemoveEdge(edge);
 
-            this.Edges.Remove(edge);
+            this._Edges.Remove(edge);
         }
 
 

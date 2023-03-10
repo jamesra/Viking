@@ -14,12 +14,14 @@ namespace GraphLib
         /// <summary>
         /// Keys are the ID of the other node in the edge, or our iD if it is a circular reference
         /// </summary>
-        public SortedDictionary<KEY, SortedSet<EDGETYPE>> Edges = new SortedDictionary<KEY, SortedSet<EDGETYPE>>();
+        private readonly SortedDictionary<KEY, SortedSet<EDGETYPE>> _Edges = new SortedDictionary<KEY, SortedSet<EDGETYPE>>();
+
+        public IReadOnlyDictionary<KEY, SortedSet<EDGETYPE>> Edges => _Edges;
 
         /// <summary>
         /// A collection of additional attributes that have been added to the node
         /// </summary>
-        public Dictionary<string, object> Attributes = new Dictionary<string, object>();
+        public readonly Dictionary<string, object> Attributes = new Dictionary<string, object>();
 
         public Node(KEY k)
         {
@@ -44,14 +46,14 @@ namespace GraphLib
             }
 
             SortedSet<EDGETYPE> edgeList = null;
-            if (Edges.ContainsKey(PartnerKey))
+            if (_Edges.ContainsKey(PartnerKey))
             {
-                edgeList = Edges[PartnerKey];
+                edgeList = _Edges[PartnerKey];
             }
             else
             {
                 edgeList = new SortedSet<EDGETYPE>();
-                Edges[PartnerKey] = edgeList;
+                _Edges[PartnerKey] = edgeList;
             }
 
             edgeList.Add(Link);
@@ -59,9 +61,9 @@ namespace GraphLib
 
         internal void RemoveEdge(KEY other)
         {
-            if (Edges.ContainsKey(other))
+            if (_Edges.ContainsKey(other))
             {
-                Edges.Remove(other);
+                _Edges.Remove(other);
             }
         }
 
@@ -78,13 +80,13 @@ namespace GraphLib
             }
 
             SortedSet<EDGETYPE> edgeList = null;
-            if (Edges.ContainsKey(PartnerKey))
+            if (_Edges.ContainsKey(PartnerKey))
             {
-                edgeList = Edges[PartnerKey];
+                edgeList = _Edges[PartnerKey];
                 edgeList.Remove(Link);
 
                 if (edgeList.Count == 0)
-                    Edges.Remove(PartnerKey);
+                    _Edges.Remove(PartnerKey);
             }
         }
 
