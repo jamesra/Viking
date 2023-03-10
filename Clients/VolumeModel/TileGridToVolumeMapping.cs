@@ -397,23 +397,13 @@ namespace Viking.VolumeModel
                     MappedPoints.RemoveAt(iPoint);
                 }
             }
-             */
-
-            //Eliminate duplicates in case tile coordinate landed exactly on transform grid (Common for 0,0)
-            for (int iPoint = 0; iPoint < MappedPoints.Count; iPoint++)
-            {
-                for (int iBoundPoint = 0; iBoundPoint < TileCornerMappedPoints.Count; iBoundPoint++)
-                {
-                    if (MappedPoints[iPoint].MappedPoint == TileCornerMappedPoints[iBoundPoint].MappedPoint)
-                    {
-                        MappedPoints.RemoveAt(iPoint);
-                        iPoint--;
-                        break;
-                    }
-                }
-            }
+             */ 
 
             MappedPoints.AddRange(TileCornerMappedPoints);
+
+            //Eliminate duplicates in case tile coordinate landed exactly on transform grid (Common for 0,0)
+            MappingGridVector2.RemoveMappedSpaceDuplicates(MappedPoints);
+
             MappedPoints.Sort(new MappingGridVector2SortByMapPoints());
 
             GridVector2[] DelaunayPoints = new GridVector2[MappedPoints.Count];
