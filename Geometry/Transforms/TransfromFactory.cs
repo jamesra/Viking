@@ -331,12 +331,43 @@ namespace Geometry.Transforms
             float MappedWidth = (float)MappedBounds.Width;
             float MappedHeight = (float)MappedBounds.Height;
 
-            int gridWidth = System.Convert.ToInt32(transform.FixedParameters[2] + 1.0);
-            int gridHeight = System.Convert.ToInt32(transform.FixedParameters[1] + 1.0);
-            double NumPts = gridHeight * gridWidth;
+            int gridWidth;
+            try
+            {
+                gridWidth = System.Convert.ToInt32(transform.FixedParameters[2]) + 1;
+            }
+            catch(System.OverflowException)
+            {
+                try { 
+                    gridWidth = (int)System.Convert.ToDouble(transform.FixedParameters[2]) + 1;
+                }
+                catch(System.OverflowException e)
+                {
+                    throw new ArgumentException($"Could not parse value: {transform.FixedParameters[2]}.", e);
+                }
+            }
+
+            int gridHeight;
+            try
+            {
+                gridHeight = System.Convert.ToInt32(transform.FixedParameters[1]) + 1;
+            }
+            catch (System.OverflowException)
+            {
+                try
+                {
+                    gridHeight = (int)System.Convert.ToDouble(transform.FixedParameters[1]) + 1;
+                }
+                catch (System.OverflowException e)
+                {
+                    throw new ArgumentException($"Could not parse value: {transform.FixedParameters[2]}.", e);
+                }
+            } 
+
+            int NumPts = gridHeight * gridWidth;
 
             mappings = new MappingGridVector2[gridWidth * gridHeight];
-            GridVector2[] Points = new GridVector2[System.Convert.ToInt32(NumPts)];
+            GridVector2[] Points = new GridVector2[NumPts];
 
             int iPoints = iVariableParameters + 2;
 
