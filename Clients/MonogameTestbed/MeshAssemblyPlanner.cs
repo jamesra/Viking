@@ -155,13 +155,19 @@ namespace MonogameTestbed
             */
 
             CheckForMerge(leaf.Parent);
+
+            
+            if(leaf == Root)//This covers the case of a single node mesh plan.
+            {
+                this.MeshAssembledEvent.Set();
+            }
         }
 
         public void CheckForMerge(AssemblyPlannerBranch node)
         {
             if (node == null)
                 return;
-
+            
             //Check if the leaf parents can be merged.
             AssemblyPlannerBranch parent = node;
             while(parent != null)
