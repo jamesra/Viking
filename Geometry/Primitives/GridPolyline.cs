@@ -146,6 +146,9 @@ namespace Geometry
             {
                 _Points.Add(next);
                 rTree.Add(line.BoundingBox, line);
+                this._LineSegments = new List<GridLineSegment>();
+                _LineSegments.Add(line);
+                return;
             }
             else if (AllowsSelfIntersection == false || AllowsSelfIntersection && KnownSelfIntersection.HasValue == false)
             {
@@ -158,10 +161,10 @@ namespace Geometry
                     else
                         this.KnownSelfIntersection = intersected;
                 }
-            }
-            
+            } 
+
+            var Existing = this._LineSegments;
             _Points.Add(next);
-            var Existing = this.LineSegments;
             Existing.Add(line);
             rTree.Add(line.BoundingBox, line);
             this._LineSegments = Existing; 
@@ -405,7 +408,7 @@ namespace Geometry
         public List<GridLineSegment> LineSegments
         {
             get
-            {
+            { 
                 if (_LineSegments != null && _LineSegments.Count == _Points.Count - 1)
                 {
                     return _LineSegments.ToList();
