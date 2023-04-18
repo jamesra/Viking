@@ -4,3 +4,6 @@
 [submodule "Servers/Libs/NetTopologySuite.Curved"]
 	path = Servers/Libs/NetTopologySuite.Curved
 	url = ../NetTopologySuite.Curved
+[submodule "Servers/Libs/NetTopologySuite"]
+	path = Servers/Libs/NetTopologySuite
+	url = ../NetTopologySuite.git

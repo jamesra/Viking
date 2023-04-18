@@ -3,7 +3,7 @@
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Databases\
 */
 DECLARE @DATABASE_NAME VARCHAR(100)
-SET @DATABASE_NAME = 'RC3'
+SET @DATABASE_NAME = 'Test'
 DECLARE @DATABASE_DIRECTORY VARCHAR(100)
 SET @DATABASE_DIRECTORY = 'C:\Databases\'
 DECLARE @QUERY VARCHAR(8000)
@@ -56,47 +56,47 @@ BEGIN
 
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [RC3]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [RC3] ON  PRIMARY 
-		( NAME = N'RC3', FILENAME = N'C:\Databases\RC3\RC3.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [Test]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [Test] ON  PRIMARY 
+		( NAME = N'Test', FILENAME = N'C:\Databases\Test\Test.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'RC3_log', FILENAME = N'C:\Databases\RC3\RC3_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'Test_log', FILENAME = N'C:\Databases\Test\Test_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [RC3] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [RC3].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [Test].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [RC3] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [RC3] SET ANSI_NULLS OFF
-	ALTER DATABASE [RC3] SET ANSI_PADDING ON
-	ALTER DATABASE [RC3] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [RC3] SET ARITHABORT OFF
-	ALTER DATABASE [RC3] SET AUTO_CLOSE OFF
-	ALTER DATABASE [RC3] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [RC3] SET AUTO_SHRINK OFF
-	ALTER DATABASE [RC3] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [RC3] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [RC3] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [RC3] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [RC3] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [RC3] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [RC3] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [RC3] SET  DISABLE_BROKER
-	ALTER DATABASE [RC3] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [RC3] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [RC3] SET TRUSTWORTHY OFF
-	ALTER DATABASE [RC3] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [RC3] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [RC3] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [RC3] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [RC3] SET  READ_WRITE
-	ALTER DATABASE [RC3] SET RECOVERY SIMPLE
-	ALTER DATABASE [RC3] SET  MULTI_USER
-	ALTER DATABASE [RC3] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [RC3] SET DB_CHAINING OFF
+	ALTER DATABASE [Test] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [Test] SET ANSI_NULLS OFF
+	ALTER DATABASE [Test] SET ANSI_PADDING ON
+	ALTER DATABASE [Test] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [Test] SET ARITHABORT OFF
+	ALTER DATABASE [Test] SET AUTO_CLOSE OFF
+	ALTER DATABASE [Test] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [Test] SET AUTO_SHRINK OFF
+	ALTER DATABASE [Test] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [Test] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [Test] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [Test] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [Test] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [Test] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [Test] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [Test] SET  DISABLE_BROKER
+	ALTER DATABASE [Test] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [Test] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [Test] SET TRUSTWORTHY OFF
+	ALTER DATABASE [Test] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [Test] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [Test] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [Test] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [Test] SET  READ_WRITE
+	ALTER DATABASE [Test] SET RECOVERY SIMPLE
+	ALTER DATABASE [Test] SET  MULTI_USER
+	ALTER DATABASE [Test] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [Test] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -104,7 +104,7 @@ END
 
 GO 
 
-USE [RC3]
+USE [Test]
 GO
  
 --------------------------------------------
@@ -601,8 +601,8 @@ DECLARE @db_id VARCHAR(100);
 SET @db_id = (select * from #UpdateVars where Version='CreateTables')
 IF @db_id IS NOT NULL	
 	EXEC('
-	/****** Object:  StoredProcedure [dbo].[ApproximaRC3ructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
-	CREATE PROCEDURE [dbo].[ApproximaRC3ructureLocation]
+	/****** Object:  StoredProcedure [dbo].[ApproximateStructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
+	CREATE PROCEDURE [dbo].[ApproximateStructureLocation]
 	@StructureID int
 	AS
 		select SUM(VolumeX*Radius*Radius)/SUM(Radius*Radius) as X,SUM(VolumeY*Radius*Radius)/SUM(Radius*Radius) as Y,SUM(Z*Radius*Radius)/SUM(Radius*Radius) as Z, AVG(Radius) as Radius
@@ -1154,15 +1154,15 @@ END
 */  
 GO
 
-Use [RC3]
+Use [Test]
 GO
   
 DECLARE @compat_level int
-SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'RC3')
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'Test')
 IF(@compat_level < 120)
 BEGIN
 	print N'Setting the database compatability level to SQL 2014'
-	ALTER DATABASE [RC3] SET COMPATIBILITY_LEVEL = 120  
+	ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 120  
 END
 GO
 
@@ -1366,13 +1366,13 @@ end
      print N'Adding SP to calculate average locations for all structures'
      BEGIN TRANSACTION three
 		
-	    IF EXISTS(select * from sys.procedures where name = 'ApproximaRC3ructureLocations')
+	    IF EXISTS(select * from sys.procedures where name = 'ApproximaTestructureLocations')
 		BEGIN
-			EXEC('DROP PROCEDURE [dbo].[ApproximaRC3ructureLocations]');
+			EXEC('DROP PROCEDURE [dbo].[ApproximateStructureLocation]');
 		END
 		
 		 EXEC('
-		 CREATE PROCEDURE [dbo].[ApproximaRC3ructureLocations]
+		 CREATE PROCEDURE [dbo].[ApproximateStructureLocation]
          AS
          BEGIN
 			-- SET NOCOUNT ON added to prevent extra result sets from
@@ -1411,13 +1411,13 @@ end
      print N'Adding SP to calculate average locations for one structure'
      BEGIN TRANSACTION four
      
-		 IF EXISTS(select * from sys.procedures where name = 'ApproximaRC3ructureLocation')
+		 IF EXISTS(select * from sys.procedures where name = 'ApproximateStructureLocation')
 		 BEGIN
-			EXEC('DROP PROCEDURE [dbo].[ApproximaRC3ructureLocation]');
+			EXEC('DROP PROCEDURE [dbo].[ApproximateStructureLocation]');
 		 END
 	
 		 EXEC('
-		 CREATE PROCEDURE [dbo].[ApproximaRC3ructureLocation]
+		 CREATE PROCEDURE [dbo].[ApproximateStructureLocation]
 		 @StructureID int
          AS
          BEGIN
@@ -1485,7 +1485,7 @@ end
 	
 	if(not(exists(select (1) from DBVersion where DBVersionID = 6)))
 	begin
-     print N'Adding SP for laRC3 modification by user'
+     print N'Adding SP for latest modification by user'
      BEGIN TRANSACTION six
      
 		IF EXISTS(select * from sys.procedures where name = 'SelectLastModifiedLocationByUsers')
@@ -1507,7 +1507,7 @@ end
 
 			select L.* from
 				(
-				select MAX(LastModifiedByUser.ID) as LaRC3ID, LastModifiedByUser.Username
+				select MAX(LastModifiedByUser.ID) as LatestID, LastModifiedByUser.Username
 					from (
 						select  Username, MAX(LastModified) as lm
 							from Location
@@ -1519,7 +1519,7 @@ end
 					group by LastModifiedByUser.Username
 					)
 					as IDList
-				inner join Location as L on IDList.LaRC3ID = ID
+				inner join Location as L on IDList.LatestID = ID
 			order by L.Username
 		END');
 		
@@ -1532,7 +1532,7 @@ end
 
 		  --insert the second version marker
 		 INSERT INTO DBVersion values (6, 
-		   'SP to calculate laRC3 modification by user',getDate(),User_ID())
+		   'SP to calculate latest modification by user',getDate(),User_ID())
 
 	COMMIT TRANSACTION six
 	
@@ -2002,7 +2002,7 @@ end
 		  
 
 		EXEC('
-			 CREATE PROCEDURE UpdaRC3ructureType
+			 CREATE PROCEDURE UpdateStructureType
 				@StructureID bigint,
 				@TypeID bigint
 			 AS
@@ -2577,7 +2577,7 @@ end
  					Select * from LocationLink
 						 WHERE (A in 
 						(SELECT L.ID
-						  FROM [RC3].[dbo].[Location] L
+						  FROM [Test].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -2586,7 +2586,7 @@ end
 						  OR
 						  (B in 
 						(SELECT L.ID
-						  FROM [RC3].[dbo].[Location] L
+						  FROM [Test].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -2841,7 +2841,7 @@ end
 				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
 				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
 
-				--Looks slow, but my RC3s indicate selecting a single column into the table is slower
+				--Looks slow, but tests indicate selecting a single column into the table is slower
 				select * into #LocationsAboveZ from Location where Z >= @Z order by ID
 				select * into #LocationsBelowZ from Location where Z <= @Z order by ID
 
@@ -2917,7 +2917,7 @@ end
 				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
 				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
 
-				--Looks slow, but my RC3s indicate selecting a single column into the table is slower
+				--Looks slow, but tests indicate selecting a single column into the table is slower
 				select * into #LocationsAboveZ from Location where Z >= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID 
 				select * into #LocationsBelowZ from Location where Z <= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID
 
@@ -4046,7 +4046,7 @@ end
 				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
 				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
 
-				--Looks slow, but my RC3s indicate selecting a single column into the table is slower
+				--Looks slow, but my tests indicate selecting a single column into the table is slower
 				select * into #LocationsAboveZ from Location where Z >= @Z AND (@bbox.STIntersects(MosaicShape) = 1) AND Radius >= @MinRadius order by ID 
 				select * into #LocationsBelowZ from Location where Z <= @Z AND (@bbox.STIntersects(MosaicShape) = 1) AND Radius >= @MinRadius order by ID
 
@@ -4127,7 +4127,7 @@ end
 				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
 				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
 
-				--Looks slow, but my RC3s indicate selecting a single column into the table is slower
+				--Looks slow, but my tests indicate selecting a single column into the table is slower
 				select * into #LocationsAboveZ from Location where Z >= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID 
 				select * into #LocationsBelowZ from Location where Z <= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID
 
@@ -4495,8 +4495,8 @@ end
 			CREATE ROLE [AnnotationPowerUser]
 		end
 
-		GRANT EXECUTE ON UpdaRC3ructureType TO [AnnotationPowerUser]
-		GRANT VIEW DEFINITION ON UpdaRC3ructureType TO [AnnotationPowerUser]
+		GRANT EXECUTE ON UpdateStructureType TO [AnnotationPowerUser]
+		GRANT VIEW DEFINITION ON UpdateStructureType TO [AnnotationPowerUser]
 
 		if(@@error <> 0)
 		 begin
@@ -6751,7 +6751,7 @@ end
 
 		 		
 		Exec('
-			CREATE TRIGGER UpdaRC3ructureSpatialCache
+			CREATE TRIGGER UpdateStructureSpatialCache
 			  ON Location
 			  AFTER INSERT, UPDATE, DELETE
 			as
@@ -6855,7 +6855,7 @@ end
 	 BEGIN TRANSACTION seventytwo
 		
 		Exec('
-			ALTER TRIGGER UpdaRC3ructureSpatialCache
+			ALTER TRIGGER UpdateStructureSpatialCache
 			  ON Location
 			  AFTER INSERT, UPDATE, DELETE
 			as
@@ -6903,7 +6903,7 @@ end
 		 end
 
 		 Exec('
-			exec sp_settriggerorder @triggername= ''UpdaRC3ructureSpatialCache'', @order=''Last'', @stmttype = ''UPDATE'';  
+			exec sp_settriggerorder @triggername= ''UpdateStructureSpatialCache'', @order=''Last'', @stmttype = ''UPDATE'';  
 		')
 
 		if(@@error <> 0)
@@ -6993,7 +6993,7 @@ end
 	 BEGIN TRANSACTION seventyfour
 		
 	 EXEC('
-		CREATE PROCEDURE DeepDeleRC3ructure
+		CREATE PROCEDURE DeepDeleteStructure
 		-- Add the parameters for the stored procedure here
 		@DeleteID bigint
 		AS
@@ -7173,7 +7173,7 @@ end
 	 BEGIN TRANSACTION seventyfour
 		
 	 EXEC('
-		CREATE PROCEDURE DeepDeleRC3ructure
+		CREATE PROCEDURE DeepDeleteStructure
 		-- Add the parameters for the stored procedure here
 		@DeleteID bigint
 		AS
