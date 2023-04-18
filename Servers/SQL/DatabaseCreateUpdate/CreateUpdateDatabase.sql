@@ -3,7 +3,7 @@
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Databases\
 */
 DECLARE @DATABASE_NAME VARCHAR(100)
-SET @DATABASE_NAME = 'Test'
+SET @DATABASE_NAME = 'RPC2'
 DECLARE @DATABASE_DIRECTORY VARCHAR(100)
 SET @DATABASE_DIRECTORY = 'C:\Databases\'
 
@@ -7131,7 +7131,7 @@ end
 
   if(not(exists(select (1) from DBVersion where DBVersionID = 74)))
 	begin
-     print N'Create helper functions for querying the existence of tags' 
+     print N'Add stored procedure to delete structures'  
 	 BEGIN TRANSACTION seventyfour
 		
 	 EXEC('
@@ -7463,14 +7463,14 @@ end
 
 	if(not(exists(select (1) from DBVersion where DBVersionID = 80)))
 	begin
-     print N'Switch to Memory Optimized Tables for UDTs'
-	 BEGIN TRANSACTION eighty
-	  
-	 DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap] 
+     print N'Create Memory Optimized Tables for UDTs'
+	 --BEGIN TRANSACTION eighty  Cannot ALTER DROP or CREATE memory optimized tables in a transaction
+	   
 
 	 DECLARE @QUERY nvarchar(4000)
 	 SET @QUERY =
-	   ' CREATE TYPE [dbo].[udtParentChildIDMap] AS TABLE(
+	   ' DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]
+	     CREATE TYPE [dbo].[udtParentChildIDMap] AS TABLE(
 			[ID] [bigint] NOT NULL,
 			[ParentID] [bigint] NOT NULL,
 			INDEX [udtParentChildIDMap_idx1] NONCLUSTERED 
@@ -7489,39 +7489,21 @@ end
 
 	if(@@error <> 0)
 		 begin
-		   ROLLBACK TRANSACTION 
+		   DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]  
 		   RETURN
 		 end  
 
-	SET @QUERY =
-	   'ALTER TYPE [dbo].[integer_list] AS TABLE(
-			[ID] [bigint] NOT NULL,
-			PRIMARY KEY CLUSTERED 
-			(
-				[ID] ASC
-			)WITH (IGNORE_DUP_KEY = OFF)
-		)
-		WITH(MEMORY_OPTIMIZED=ON)'
-	  
-	Print @QUERY
-	EXEC(@QUERY)
 	
-	 if(@@error <> 0)
-		 begin
-		   ROLLBACK TRANSACTION 
-		   RETURN
-		 end  
-	
-	DROP TYPE IF EXISTS [dbo].[udtLinks]
-
-	SET @QUERY = 'CREATE TYPE [dbo].[udtLinks] AS TABLE(
+	 
+	SET @QUERY = 'DROP TYPE IF EXISTS [dbo].[udtLinks]
+				  CREATE TYPE [dbo].[udtLinks] AS TABLE(
 					[SourceID] [bigint] NOT NULL,
 					[TargetID] [bigint] NOT NULL,
-					PRIMARY KEY CLUSTERED 
+					PRIMARY KEY NONCLUSTERED 
 					(
 						[SourceID] ASC,
 						[TargetID] ASC
-					)WITH (IGNORE_DUP_KEY = OFF),
+					),
 					INDEX [SourceID_idx] NONCLUSTERED 
 					(
 						[SourceID] ASC
@@ -7535,17 +7517,42 @@ end
 
 	Print @QUERY
 	EXEC(@QUERY)
+
 	
 	 if(@@error <> 0)
 		 begin
-		   ROLLBACK TRANSACTION 
+		   DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]  
+		   DROP TYPE IF EXISTS [dbo].[udtLinks] 
 		   RETURN
 		 end  
-		   
-	INSERT INTO DBVersion values (80, 
-		      N'Add filegroup and file for memory optimized tables' ,getDate(),User_ID())
-	 COMMIT TRANSACTION eighty
-	end
 
+	SET @QUERY =
+	
+	   'DROP TYPE IF EXISTS [dbo].[mem_integer_list] 
+	    CREATE TYPE [dbo].[mem_integer_list] AS TABLE(
+			[ID] [bigint] NOT NULL,
+			PRIMARY KEY NONCLUSTERED 
+		(
+			[ID] ASC
+		)
+		)WITH (MEMORY_OPTIMIZED = ON)'
+	  
+	Print @QUERY
+	EXEC(@QUERY)
+	
+	
+	 if(@@error <> 0)
+		 begin
+		   DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]  
+		   DROP TYPE IF EXISTS [dbo].[udtLinks] 
+		   DROP TYPE IF EXISTS [dbo].[udtLinks]
+		   RETURN
+		 end  
+
+	INSERT INTO DBVersion values (80, 
+		      N'Create Memory Optimized Tables for UDTs' ,getDate(),User_ID())
+	 --COMMIT TRANSACTION eighty
+	end
+	 
 --from here on, continually add steps in the previous manner as needed.
 COMMIT TRANSACTION main
