@@ -1,11 +1,12 @@
 /**** You need to replace the following templates to use this script ****/
-/**** Test = Name of the database  */
+/**** RC3 = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Databases\
 */
 DECLARE @DATABASE_NAME VARCHAR(100)
-SET @DATABASE_NAME = 'RPC2'
+SET @DATABASE_NAME = 'RC3'
 DECLARE @DATABASE_DIRECTORY VARCHAR(100)
 SET @DATABASE_DIRECTORY = 'C:\Databases\'
+DECLARE @QUERY VARCHAR(8000)
 
 USE [master]
 
@@ -55,47 +56,47 @@ BEGIN
 
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [Test]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [Test] ON  PRIMARY 
-		( NAME = N'Test', FILENAME = N'C:\Databases\Test\Test.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [RC3]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [RC3] ON  PRIMARY 
+		( NAME = N'RC3', FILENAME = N'C:\Databases\RC3\RC3.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'Test_log', FILENAME = N'C:\Databases\Test\Test_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'RC3_log', FILENAME = N'C:\Databases\RC3\RC3_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [RC3] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [Test].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [RC3].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [Test] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [Test] SET ANSI_NULLS OFF
-	ALTER DATABASE [Test] SET ANSI_PADDING ON
-	ALTER DATABASE [Test] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [Test] SET ARITHABORT OFF
-	ALTER DATABASE [Test] SET AUTO_CLOSE OFF
-	ALTER DATABASE [Test] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [Test] SET AUTO_SHRINK OFF
-	ALTER DATABASE [Test] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [Test] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [Test] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [Test] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [Test] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [Test] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [Test] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [Test] SET  DISABLE_BROKER
-	ALTER DATABASE [Test] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [Test] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [Test] SET TRUSTWORTHY OFF
-	ALTER DATABASE [Test] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [Test] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [Test] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [Test] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [Test] SET  READ_WRITE
-	ALTER DATABASE [Test] SET RECOVERY SIMPLE
-	ALTER DATABASE [Test] SET  MULTI_USER
-	ALTER DATABASE [Test] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [Test] SET DB_CHAINING OFF
+	ALTER DATABASE [RC3] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [RC3] SET ANSI_NULLS OFF
+	ALTER DATABASE [RC3] SET ANSI_PADDING ON
+	ALTER DATABASE [RC3] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [RC3] SET ARITHABORT OFF
+	ALTER DATABASE [RC3] SET AUTO_CLOSE OFF
+	ALTER DATABASE [RC3] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [RC3] SET AUTO_SHRINK OFF
+	ALTER DATABASE [RC3] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [RC3] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [RC3] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [RC3] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [RC3] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [RC3] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [RC3] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [RC3] SET  DISABLE_BROKER
+	ALTER DATABASE [RC3] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [RC3] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [RC3] SET TRUSTWORTHY OFF
+	ALTER DATABASE [RC3] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [RC3] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [RC3] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [RC3] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [RC3] SET  READ_WRITE
+	ALTER DATABASE [RC3] SET RECOVERY SIMPLE
+	ALTER DATABASE [RC3] SET  MULTI_USER
+	ALTER DATABASE [RC3] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [RC3] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -103,8 +104,45 @@ END
 
 GO 
 
-USE [Test]
+USE [RC3]
 GO
+ 
+--------------------------------------------
+--- CREATE MEM OPTIMIZED FILEGROUP AND FILES
+--------------------------------------------
+
+if not exists (select * from sys.filegroups where name = 'MemOptimizedData')
+BEGIN
+	DECLARE @DATABASE_NAME varchar(100)	
+	SELECT @DATABASE_NAME = UV.Value from #UpdateVariables UV where UV.Name = 'DatabaseName' 
+
+	DECLARE @QUERY nvarchar(4000)
+	SET @QUERY = 'ALTER DATABASE [' + @DATABASE_NAME + '] ' + 'ADD FILEGROUP MemOptimizedData CONTAINS MEMORY_OPTIMIZED_DATA'
+	Print N'Add filegroup and file for memory optimized tables'
+	EXEC(@QUERY)
+END
+GO 
+
+DECLARE @DB_MEM_FILEGROUP varchar(255)
+DECLARE @DATABASE_NAME varchar(255)
+SELECT @DATABASE_NAME = UV.Value from #UpdateVariables UV where UV.Name = 'DatabaseName' 
+DECLARE @DB_DIRECTORY varchar(255)
+SELECT @DB_DIRECTORY = 'C:\Databases\' --UV.Value from #UpdateVariables UV where UV.Name = 'DatabasePath'
+SET @DB_MEM_FILEGROUP = @DATABASE_NAME + '_MemOptimizedData'
+if not exists (select * from sys.database_files where type = 2 and data_space_id = (select data_space_id from sys.filegroups where name='MemOptimizedData'))
+BEGIN
+	DECLARE @QUERY varchar(1000)
+	DECLARE @FILENAME varchar(100)
+	SET @FILENAME = @DB_DIRECTORY + @DATABASE_NAME + '_MemOptimizedData.mdf'
+	Print N'Add file for memory optimized tables: ' + @FILENAME 
+	SET @QUERY = 'ALTER DATABASE [' + @DATABASE_NAME + '] ' +
+					'ADD FILE (name=''' + @DB_MEM_FILEGROUP + ''', filename=''' + @FILENAME + ''') TO FILEGROUP MemOptimizedData' 
+	EXEC(@QUERY)
+END 
+
+GO
+
+----------------------------------------------
 
 --Need to specify database owner before enabling change tracking
 EXEC sp_changedbowner 'sa'
@@ -563,8 +601,8 @@ DECLARE @db_id VARCHAR(100);
 SET @db_id = (select * from #UpdateVars where Version='CreateTables')
 IF @db_id IS NOT NULL	
 	EXEC('
-	/****** Object:  StoredProcedure [dbo].[ApproximatestructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
-	CREATE PROCEDURE [dbo].[ApproximatestructureLocation]
+	/****** Object:  StoredProcedure [dbo].[ApproximaRC3ructureLocation]    Script Date: 06/14/2011 13:13:53 ******/
+	CREATE PROCEDURE [dbo].[ApproximaRC3ructureLocation]
 	@StructureID int
 	AS
 		select SUM(VolumeX*Radius*Radius)/SUM(Radius*Radius) as X,SUM(VolumeY*Radius*Radius)/SUM(Radius*Radius) as Y,SUM(Z*Radius*Radius)/SUM(Radius*Radius) as Z, AVG(Radius) as Radius
@@ -1116,15 +1154,15 @@ END
 */  
 GO
 
-Use [Test]
+Use [RC3]
 GO
   
 DECLARE @compat_level int
-SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'Test')
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'RC3')
 IF(@compat_level < 120)
 BEGIN
 	print N'Setting the database compatability level to SQL 2014'
-	ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 120  
+	ALTER DATABASE [RC3] SET COMPATIBILITY_LEVEL = 120  
 END
 GO
 
@@ -1328,13 +1366,13 @@ end
      print N'Adding SP to calculate average locations for all structures'
      BEGIN TRANSACTION three
 		
-	    IF EXISTS(select * from sys.procedures where name = 'ApproximatestructureLocations')
+	    IF EXISTS(select * from sys.procedures where name = 'ApproximaRC3ructureLocations')
 		BEGIN
-			EXEC('DROP PROCEDURE [dbo].[ApproximatestructureLocations]');
+			EXEC('DROP PROCEDURE [dbo].[ApproximaRC3ructureLocations]');
 		END
 		
 		 EXEC('
-		 CREATE PROCEDURE [dbo].[ApproximatestructureLocations]
+		 CREATE PROCEDURE [dbo].[ApproximaRC3ructureLocations]
          AS
          BEGIN
 			-- SET NOCOUNT ON added to prevent extra result sets from
@@ -1373,13 +1411,13 @@ end
      print N'Adding SP to calculate average locations for one structure'
      BEGIN TRANSACTION four
      
-		 IF EXISTS(select * from sys.procedures where name = 'ApproximatestructureLocation')
+		 IF EXISTS(select * from sys.procedures where name = 'ApproximaRC3ructureLocation')
 		 BEGIN
-			EXEC('DROP PROCEDURE [dbo].[ApproximatestructureLocation]');
+			EXEC('DROP PROCEDURE [dbo].[ApproximaRC3ructureLocation]');
 		 END
 	
 		 EXEC('
-		 CREATE PROCEDURE [dbo].[ApproximatestructureLocation]
+		 CREATE PROCEDURE [dbo].[ApproximaRC3ructureLocation]
 		 @StructureID int
          AS
          BEGIN
@@ -1447,7 +1485,7 @@ end
 	
 	if(not(exists(select (1) from DBVersion where DBVersionID = 6)))
 	begin
-     print N'Adding SP for latest modification by user'
+     print N'Adding SP for laRC3 modification by user'
      BEGIN TRANSACTION six
      
 		IF EXISTS(select * from sys.procedures where name = 'SelectLastModifiedLocationByUsers')
@@ -1469,7 +1507,7 @@ end
 
 			select L.* from
 				(
-				select MAX(LastModifiedByUser.ID) as LatestID, LastModifiedByUser.Username
+				select MAX(LastModifiedByUser.ID) as LaRC3ID, LastModifiedByUser.Username
 					from (
 						select  Username, MAX(LastModified) as lm
 							from Location
@@ -1481,7 +1519,7 @@ end
 					group by LastModifiedByUser.Username
 					)
 					as IDList
-				inner join Location as L on IDList.LatestID = ID
+				inner join Location as L on IDList.LaRC3ID = ID
 			order by L.Username
 		END');
 		
@@ -1494,7 +1532,7 @@ end
 
 		  --insert the second version marker
 		 INSERT INTO DBVersion values (6, 
-		   'SP to calculate latest modification by user',getDate(),User_ID())
+		   'SP to calculate laRC3 modification by user',getDate(),User_ID())
 
 	COMMIT TRANSACTION six
 	
@@ -1964,7 +2002,7 @@ end
 		  
 
 		EXEC('
-			 CREATE PROCEDURE UpdatestructureType
+			 CREATE PROCEDURE UpdaRC3ructureType
 				@StructureID bigint,
 				@TypeID bigint
 			 AS
@@ -2539,7 +2577,7 @@ end
  					Select * from LocationLink
 						 WHERE (A in 
 						(SELECT L.ID
-						  FROM [Test].[dbo].[Location] L
+						  FROM [RC3].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -2548,7 +2586,7 @@ end
 						  OR
 						  (B in 
 						(SELECT L.ID
-						  FROM [Test].[dbo].[Location] L
+						  FROM [RC3].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -2803,7 +2841,7 @@ end
 				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
 				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
 
-				--Looks slow, but my tests indicate selecting a single column into the table is slower
+				--Looks slow, but my RC3s indicate selecting a single column into the table is slower
 				select * into #LocationsAboveZ from Location where Z >= @Z order by ID
 				select * into #LocationsBelowZ from Location where Z <= @Z order by ID
 
@@ -2879,7 +2917,7 @@ end
 				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
 				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
 
-				--Looks slow, but my tests indicate selecting a single column into the table is slower
+				--Looks slow, but my RC3s indicate selecting a single column into the table is slower
 				select * into #LocationsAboveZ from Location where Z >= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID 
 				select * into #LocationsBelowZ from Location where Z <= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID
 
@@ -4008,7 +4046,7 @@ end
 				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
 				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
 
-				--Looks slow, but my tests indicate selecting a single column into the table is slower
+				--Looks slow, but my RC3s indicate selecting a single column into the table is slower
 				select * into #LocationsAboveZ from Location where Z >= @Z AND (@bbox.STIntersects(MosaicShape) = 1) AND Radius >= @MinRadius order by ID 
 				select * into #LocationsBelowZ from Location where Z <= @Z AND (@bbox.STIntersects(MosaicShape) = 1) AND Radius >= @MinRadius order by ID
 
@@ -4089,7 +4127,7 @@ end
 				IF OBJECT_ID(''tempdb..#LocationsAboveZ'') IS NOT NULL DROP TABLE #LocationsAboveZ
 				IF OBJECT_ID(''tempdb..#LocationsBelowZ'') IS NOT NULL DROP TABLE #LocationsBelowZ
 
-				--Looks slow, but my tests indicate selecting a single column into the table is slower
+				--Looks slow, but my RC3s indicate selecting a single column into the table is slower
 				select * into #LocationsAboveZ from Location where Z >= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID 
 				select * into #LocationsBelowZ from Location where Z <= @Z AND (@bbox.STIntersects(VolumeShape) = 1) AND Radius >= @MinRadius order by ID
 
@@ -4457,8 +4495,8 @@ end
 			CREATE ROLE [AnnotationPowerUser]
 		end
 
-		GRANT EXECUTE ON UpdateStructureType TO [AnnotationPowerUser]
-		GRANT VIEW DEFINITION ON UpdateStructureType TO [AnnotationPowerUser]
+		GRANT EXECUTE ON UpdaRC3ructureType TO [AnnotationPowerUser]
+		GRANT VIEW DEFINITION ON UpdaRC3ructureType TO [AnnotationPowerUser]
 
 		if(@@error <> 0)
 		 begin
@@ -5694,10 +5732,10 @@ end
 	begin
      print N'Add unique constraint to PermittedStructureLink table'
      BEGIN TRANSACTION fiftyeight
-	  
-	   EXEC('
-	 
-	 ALTER TABLE [dbo].[PermittedStructureLink] ADD  CONSTRAINT [PermittedStructureLink_source_target_unique] UNIQUE NONCLUSTERED 
+	   
+	   --EXEC('ALTER TABLE [dbo].[PermittedStructureLink] DROP CONSTRAINT IF EXISTS [PermittedStructureLink_source_target_unique]')
+
+       EXEC('ALTER TABLE [dbo].[PermittedStructureLink] ADD  CONSTRAINT [PermittedStructureLink_source_target_unique] UNIQUE NONCLUSTERED 
 	 (
 		[SourceTypeID] ASC,
 		[TargetTypeID] ASC
@@ -6713,7 +6751,7 @@ end
 
 		 		
 		Exec('
-			CREATE TRIGGER UpdateStructureSpatialCache
+			CREATE TRIGGER UpdaRC3ructureSpatialCache
 			  ON Location
 			  AFTER INSERT, UPDATE, DELETE
 			as
@@ -6817,7 +6855,7 @@ end
 	 BEGIN TRANSACTION seventytwo
 		
 		Exec('
-			ALTER TRIGGER UpdateStructureSpatialCache
+			ALTER TRIGGER UpdaRC3ructureSpatialCache
 			  ON Location
 			  AFTER INSERT, UPDATE, DELETE
 			as
@@ -6865,7 +6903,7 @@ end
 		 end
 
 		 Exec('
-			exec sp_settriggerorder @triggername= ''UpdateStructureSpatialCache'', @order=''Last'', @stmttype = ''UPDATE'';  
+			exec sp_settriggerorder @triggername= ''UpdaRC3ructureSpatialCache'', @order=''Last'', @stmttype = ''UPDATE'';  
 		')
 
 		if(@@error <> 0)
@@ -6955,7 +6993,7 @@ end
 	 BEGIN TRANSACTION seventyfour
 		
 	 EXEC('
-		CREATE PROCEDURE DeepDeleteStructure
+		CREATE PROCEDURE DeepDeleRC3ructure
 		-- Add the parameters for the stored procedure here
 		@DeleteID bigint
 		AS
@@ -7016,19 +7054,19 @@ end
      print N'Make username fields long enough to hold E-mail addresses' 
 	 BEGIN TRANSACTION seventyfive
 		
-	EXEC sp_fulltext_column
-		@tabname =  'Location' , 
-		@colname =  'Username' , 
-		@action =  'drop'
+	--EXEC sp_fulltext_column
+	--	@tabname =  'Location' , 
+	--	@colname =  'Username' , 
+	--@action =  'drop'
 
 	 ALTER TABLE Location DROP CONSTRAINT [DF_Location_Username] 
 	 ALTER TABLE Location ALTER COLUMN Username nvarchar(254) NOT NULL
 	 ALTER TABLE [dbo].[Location] ADD  CONSTRAINT [DF_Location_Username]  DEFAULT (N'') FOR [Username]
 	 
-	 EXEC sp_fulltext_column  
-		@tabname =  'Location', 
-		@colname =  'Username', 
-		@action =  'add' 
+	 --EXEC sp_fulltext_column  
+	--	@tabname =  'Location', 
+	--	@colname =  'Username', 
+	--	@action =  'add' 
 
 	 if(@@error <> 0)
 		 begin
@@ -7063,19 +7101,19 @@ end
 		   RETURN
 		 end
 
-	EXEC sp_fulltext_column
-		@tabname =  'Structure' , 
-		@colname =  'Username' , 
-		@action =  'drop'
+	--EXEC sp_fulltext_column
+	--	@tabname =  'Structure' , 
+	--	@colname =  'Username' , 
+	--	@action =  'drop'
 
 	 ALTER TABLE Structure DROP CONSTRAINT [DF_Structure_Username] 
 	 ALTER TABLE Structure ALTER COLUMN Username nvarchar(254) NOT NULL
 	 ALTER TABLE [dbo].[Structure] ADD  CONSTRAINT [DF_Structure_Username]  DEFAULT (N'') FOR [Username]
 	 
-	 EXEC sp_fulltext_column  
-		@tabname =  'Structure', 
-		@colname =  'Username', 
-		@action =  'add' 
+	 --EXEC sp_fulltext_column  
+	--	@tabname =  'Structure', 
+	--	@colname =  'Username', 
+	--	@action =  'add' 
 
 	if(@@error <> 0)
 		 begin
@@ -7135,7 +7173,7 @@ end
 	 BEGIN TRANSACTION seventyfour
 		
 	 EXEC('
-		CREATE PROCEDURE DeepDeleteStructure
+		CREATE PROCEDURE DeepDeleRC3ructure
 		-- Add the parameters for the stored procedure here
 		@DeleteID bigint
 		AS
@@ -7191,10 +7229,106 @@ end
 	 COMMIT TRANSACTION seventysix
 	end
 
+--Commit the transaction so we can adjust memory optmized table types
+COMMIT TRANSACTION main
+GO
+
 	if(not(exists(select (1) from DBVersion where DBVersionID = 77)))
 	begin
+     print N'Create Memory Optimized UDTs'
+	 --BEGIN TRANSACTION seventyseven  -- Cannot ALTER DROP or CREATE memory optimized tables in a transaction
+	    
+	 DECLARE @Q80 nvarchar(4000)
+	 SET @Q80 =
+	   ' DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]
+	     CREATE TYPE [dbo].[udtParentChildIDMap] AS TABLE(
+			[ID] [bigint] NOT NULL,
+			[ParentID] [bigint] NOT NULL,
+			INDEX [udtParentChildIDMap_idx1] NONCLUSTERED 
+			(
+				[ID] ASC
+			),
+			INDEX [udtParentChildIDMap_ParentID_idx] NONCLUSTERED 
+			(
+				[ParentID] ASC
+			)
+		)
+		WITH (MEMORY_OPTIMIZED=ON)'
+		  
+	--Print @Q80
+	EXEC(@Q80)
+
+	if(@@error <> 0)
+		 begin
+		   DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]  
+		   RETURN
+		 end  
+		  
+	SET @Q80 = 'DROP TYPE IF EXISTS [dbo].[udtLinks]
+				  CREATE TYPE [dbo].[udtLinks] AS TABLE(
+					[SourceID] [bigint] NOT NULL,
+					[TargetID] [bigint] NOT NULL,
+					PRIMARY KEY NONCLUSTERED 
+					(
+						[SourceID] ASC,
+						[TargetID] ASC
+					),
+					INDEX [SourceID_idx] NONCLUSTERED 
+					(
+						[SourceID] ASC
+					),
+					INDEX [TargetID_idx] NONCLUSTERED 
+					(
+						[TargetID] ASC
+					)
+				)
+				WITH(MEMORY_OPTIMIZED=ON)'
+
+	--Print @Q80
+	EXEC(@Q80)
+	 
+	 if(@@error <> 0)
+		 begin
+		   DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]  
+		   DROP TYPE IF EXISTS [dbo].[udtLinks] 
+		   RETURN
+		 end  
+
+	SET @Q80 =
+	
+	   'DROP TYPE IF EXISTS [dbo].[mem_integer_list] 
+	    CREATE TYPE [dbo].[mem_integer_list] AS TABLE(
+			[ID] [bigint] NOT NULL,
+			PRIMARY KEY NONCLUSTERED 
+		(
+			[ID] ASC
+		)
+		)WITH (MEMORY_OPTIMIZED = ON)'
+	  
+	--Print @Q80
+	EXEC(@Q80)
+	 
+	 if(@@error <> 0)
+		 begin
+		   DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]  
+		   DROP TYPE IF EXISTS [dbo].[udtLinks] 
+		   DROP TYPE IF EXISTS [dbo].[udtLinks]
+		   RETURN
+		 end  
+
+	INSERT INTO DBVersion values (77, 
+		      N'Create Memory Optimized UDTs' ,getDate(),User_ID())
+	 --COMMIT TRANSACTION seventyseven
+	end
+	 
+GO
+
+BEGIN TRANSACTION main
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 78)))
+	begin
      print N'Remove temporary tables from stored procedures to facilitate EF Core migration tools '
-	 BEGIN TRANSACTION seventyseven
+	 BEGIN TRANSACTION seventyeight
 		 
 	 EXEC('ALTER PROCEDURE [dbo].[SelectSectionAnnotationsInMosaicBounds]
 				-- Add the parameters for the stored procedure here
@@ -7209,9 +7343,9 @@ end
 				SET NOCOUNT ON;
 
 				DECLARE @LocationsInBounds [dbo].[udtParentChildIDMap]
-				DECLARE @ModifiedStructuresInBounds integer_list
-				DECLARE @SectionStructureIDsInBounds integer_list
-				DECLARE @ModifiedLocationsInBounds integer_list
+				DECLARE @ModifiedStructuresInBounds mem_integer_list
+				DECLARE @SectionStructureIDsInBounds mem_integer_list
+				DECLARE @ModifiedLocationsInBounds mem_integer_list
 				 
 				--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
 
@@ -7310,9 +7444,9 @@ end
 				SET NOCOUNT ON;
 
 				DECLARE @LocationsInBounds [dbo].[udtParentChildIDMap]
-				DECLARE @ModifiedStructuresInBounds integer_list
-				DECLARE @SectionStructureIDsInBounds integer_list
-				DECLARE @ModifiedLocationsInBounds integer_list
+				DECLARE @ModifiedStructuresInBounds mem_integer_list
+				DECLARE @SectionStructureIDsInBounds mem_integer_list
+				DECLARE @ModifiedLocationsInBounds mem_integer_list
 				 
 				--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
 
@@ -7398,161 +7532,11 @@ end
 		   RETURN
 		 end 
 		   
-	INSERT INTO DBVersion values (77, 
-		      N'Remove temporary tables from stored procedures to facilitate EF Core migration tools ' ,getDate(),User_ID())
-	 COMMIT TRANSACTION seventyseven
-	end
-	 
-	if(not(exists(select (1) from DBVersion where DBVersionID = 78)))
-	begin
-		print N'Add filegroup and file for memory optimized tables Part one'
-		BEGIN TRANSACTION seventyeight 
-	  
-		DECLARE @DATABASE_NAME VARCHAR(100) 
-		DECLARE @QUERY nvarchar(4000)
-
-		SELECT @DATABASE_NAME = UV.Value from #UpdateVariables UV where UV.Name = 'DatabaseName' 
-	 
-		SET @QUERY =
-		'ALTER DATABASE [' + @DATABASE_NAME + '] ' +
-			'ADD FILEGROUP MemOptimizedData CONTAINS MEMORY_OPTIMIZED_DATA'
-		  
-		Print @QUERY
-		EXEC(@QUERY)
-
-		if(@@error <> 0)
-			begin
-			ROLLBACK TRANSACTION 
-			RETURN
-			end 
 	INSERT INTO DBVersion values (78, 
-		      N'Add filegroup and file for memory optimized tables Part one' ,getDate(),User_ID())
+		      N'Remove temporary tables from stored procedures to facilitate EF Core migration tools ' ,getDate(),User_ID())
 	 COMMIT TRANSACTION seventyeight
 	end
-
-	if(not(exists(select (1) from DBVersion where DBVersionID = 79)))
-	begin
-     print N'Switch to Memory Optimized Tables for UDTs Part two'
-	 BEGIN TRANSACTION seventynine
-
-		DECLARE @DATABASE_NAME VARCHAR(100)
-		DECLARE @DATABASE_DIRECTORY VARCHAR(512)
-		DECLARE @QUERY nvarchar(4000)
-
-		SELECT @DATABASE_NAME = UV.Value from #UpdateVariables UV where UV.Name = 'DatabaseName'
-		SELECT @DATABASE_DIRECTORY = UV.Value from #UpdateVariables UV where UV.Name = 'DatabasePath'
-
-		SET @QUERY =
-		   'ALTER DATABASE [' + @DATABASE_NAME + '] ' +
-			   'ADD FILE (name=' + @DATABASE_NAME + '_MemOptimizedData, filename=''' + @DATABASE_DIRECTORY + @DATABASE_NAME + '_MemOptimizedData'') TO FILEGROUP MemOptimizedData'
-	  
-		Print @QUERY
-		EXEC(@QUERY)
-	
-		if(@@error <> 0)
-		begin
-			ROLLBACK TRANSACTION 
-			RETURN
-		end  
-		
-	 INSERT INTO DBVersion values (79, 
-		      N'Switch to Memory Optimized Tables for UDTs Part two' ,getDate(),User_ID())
-	 COMMIT TRANSACTION seventynine
-	end
+	 
+	 
 		   
-
-	if(not(exists(select (1) from DBVersion where DBVersionID = 80)))
-	begin
-     print N'Create Memory Optimized Tables for UDTs'
-	 --BEGIN TRANSACTION eighty  Cannot ALTER DROP or CREATE memory optimized tables in a transaction
-	   
-
-	 DECLARE @QUERY nvarchar(4000)
-	 SET @QUERY =
-	   ' DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]
-	     CREATE TYPE [dbo].[udtParentChildIDMap] AS TABLE(
-			[ID] [bigint] NOT NULL,
-			[ParentID] [bigint] NOT NULL,
-			INDEX [udtParentChildIDMap_idx1] NONCLUSTERED 
-			(
-				[ID] ASC
-			),
-			INDEX [udtParentChildIDMap_ParentID_idx] NONCLUSTERED 
-			(
-				[ParentID] ASC
-			)
-		)
-		WITH (MEMORY_OPTIMIZED=ON)'
-		  
-	Print @QUERY
-	EXEC(@QUERY)
-
-	if(@@error <> 0)
-		 begin
-		   DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]  
-		   RETURN
-		 end  
-
-	
-	 
-	SET @QUERY = 'DROP TYPE IF EXISTS [dbo].[udtLinks]
-				  CREATE TYPE [dbo].[udtLinks] AS TABLE(
-					[SourceID] [bigint] NOT NULL,
-					[TargetID] [bigint] NOT NULL,
-					PRIMARY KEY NONCLUSTERED 
-					(
-						[SourceID] ASC,
-						[TargetID] ASC
-					),
-					INDEX [SourceID_idx] NONCLUSTERED 
-					(
-						[SourceID] ASC
-					),
-					INDEX [TargetID_idx] NONCLUSTERED 
-					(
-						[TargetID] ASC
-					)
-				)
-				WITH(MEMORY_OPTIMIZED=ON)'
-
-	Print @QUERY
-	EXEC(@QUERY)
-
-	
-	 if(@@error <> 0)
-		 begin
-		   DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]  
-		   DROP TYPE IF EXISTS [dbo].[udtLinks] 
-		   RETURN
-		 end  
-
-	SET @QUERY =
-	
-	   'DROP TYPE IF EXISTS [dbo].[mem_integer_list] 
-	    CREATE TYPE [dbo].[mem_integer_list] AS TABLE(
-			[ID] [bigint] NOT NULL,
-			PRIMARY KEY NONCLUSTERED 
-		(
-			[ID] ASC
-		)
-		)WITH (MEMORY_OPTIMIZED = ON)'
-	  
-	Print @QUERY
-	EXEC(@QUERY)
-	
-	
-	 if(@@error <> 0)
-		 begin
-		   DROP TYPE IF EXISTS [dbo].[udtParentChildIDMap]  
-		   DROP TYPE IF EXISTS [dbo].[udtLinks] 
-		   DROP TYPE IF EXISTS [dbo].[udtLinks]
-		   RETURN
-		 end  
-
-	INSERT INTO DBVersion values (80, 
-		      N'Create Memory Optimized Tables for UDTs' ,getDate(),User_ID())
-	 --COMMIT TRANSACTION eighty
-	end
-	 
---from here on, continually add steps in the previous manner as needed.
 COMMIT TRANSACTION main
