@@ -98,7 +98,7 @@ BEGIN
 			if @Distance = 0
 				PRINT 'No Path from ' + CAST(@SOURCE_ID AS VARCHAR)  + ' -> ' + CAST(@Target_ID as VARCHAR)	    
 			ELSE
-				PRINT 'Path from ' + CAST(@SOURCE_ID AS VARCHAR)  + ' -> ' + CAST(@Target_ID as VARCHAR) + ' = ' + CAST(@Distance as VARCHAR) + 'nm'
+				PRINT 'Path from ' + CAST(@SOURCE_ID AS VARCHAR)  + ' -> ' + CAST(@Target_ID as VARCHAR) + ' = ' + CAST(@Distance / 1000.0 as VARCHAR) + 'um'
 
 			insert into #results (Code, SourceID, TargetID, Distance_um, NumSteps) values (@Code, @Source_ID, @Target_ID, @Distance / 1000.0, @num_steps)
 			--select * from #results
