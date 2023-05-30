@@ -11,8 +11,6 @@ using UnitsAndScale;
 
 namespace AnnotationVizLib
 {
-
-
     [Serializable]
     public partial class MorphologyGraph : Graph<ulong, MorphologyNode, MorphologyEdge>
     {
@@ -22,19 +20,13 @@ namespace AnnotationVizLib
         /// </summary>
         public readonly ulong StructureID = 0;
 
-        public IStructure structure = null;
+        public readonly IStructure structure = null;
 
         public readonly IScale scale = null;
 
-        public virtual double SectionThickness
-        {
-            get { return scale.Z.Value; }
-        }
-
-        public IStructureType structureType
-        {
-            get { return structure.Type; }
-        }
+        public virtual double SectionThickness => scale.Z.Value;
+        
+        public IStructureType structureType => structure.Type; 
 
         [field: NonSerialized()]
         private RTree<ulong> _RTree = null;
@@ -55,9 +47,9 @@ namespace AnnotationVizLib
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP.  Do not add directly to this collection.  Use Add/Remove Subgraph instead.
         /// </summary>
-        public ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
+        public readonly ConcurrentDictionary<ulong, MorphologyGraph> Subgraphs = new ConcurrentDictionary<ulong, MorphologyGraph>();
 
-        internal ConcurrentDictionary<ulong, ulong> NearestNodeToSubgraph = new ConcurrentDictionary<ulong, ulong>();
+        internal readonly ConcurrentDictionary<ulong, ulong> NearestNodeToSubgraph = new ConcurrentDictionary<ulong, ulong>();
 
         public MorphologyGraph(ulong subgraph_id, IScale scale)
         {

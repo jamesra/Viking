@@ -30,7 +30,7 @@ namespace WebAnnotation.View
             ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
         }
 
-        public ContextMenuGeneratorDelegate ContextMenuGenerator = null;
+        public readonly ContextMenuGeneratorDelegate ContextMenuGenerator = null;
 
         public int VisualHeight
         { get { return this.ParentDepth; } }

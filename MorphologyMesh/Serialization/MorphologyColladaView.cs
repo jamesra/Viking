@@ -91,7 +91,7 @@ namespace MorphologyMesh
         {
             get
             {
-                return string.Format("Struct-{0}", ID);
+                return $"Struct-{ID}";
             }
         }
 
@@ -99,7 +99,7 @@ namespace MorphologyMesh
         {
             get
             {
-                return string.Format("NodeID-{0}", ID);
+                return $"NodeID-{ID}";
             }
         }
 
@@ -117,11 +117,11 @@ namespace MorphologyMesh
         }
 
 
-        public IReadOnlyMesh3D<IVertex3D> Mesh;
+        public readonly IReadOnlyMesh3D<IVertex3D> Mesh;
 
-        public MaterialLighting Material;
+        public readonly MaterialLighting Material;
 
-        private SortedList<ulong, StructureModel> _ChildStructures = new SortedList<ulong, StructureModel>();
+        private readonly SortedList<ulong, StructureModel> _ChildStructures = new SortedList<ulong, StructureModel>();
 
         public IReadOnlyDictionary<ulong, StructureModel> ChildStructures
         {

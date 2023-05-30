@@ -15,7 +15,7 @@ namespace VikingXNAGraphics
         where VERTEXTYPE : struct, IVertexType
     {
         public bool WireFrame { get; set; }
-        public ObservableCollection<MeshModel<VERTEXTYPE>> models = new ObservableCollection<MeshModel<VERTEXTYPE>>();
+        public readonly ObservableCollection<MeshModel<VERTEXTYPE>> models = new ObservableCollection<MeshModel<VERTEXTYPE>>();
 
         BasicEffect effect;
 

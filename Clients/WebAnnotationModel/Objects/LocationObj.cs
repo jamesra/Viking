@@ -276,7 +276,6 @@ namespace WebAnnotationModel
                 default:
                     return shape.Centroid();
             }
-
         }
 
         /// <summary>
