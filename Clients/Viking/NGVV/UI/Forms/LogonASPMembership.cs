@@ -126,7 +126,7 @@ namespace Viking.UI.Forms
 
         protected string KeyFileFolderPath
         {
-            get { return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Viking"); }
+            get { return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Viking"); }
         }
 
         protected string KeyFileFullPath
@@ -197,9 +197,12 @@ namespace Viking.UI.Forms
                 chosen_password = password;
             }
 
-            Credentials = new NetworkCredential(chosen_username, chosen_password);
-            this.textUsername.Text = Credentials.UserName;
-            this.textPassword.Text = Credentials.Password;
+            if(cachedCredentials != null)
+            { 
+                Credentials = new NetworkCredential(chosen_username, chosen_password);
+                this.textUsername.Text = Credentials.UserName;
+                this.textPassword.Text = Credentials.Password;
+            }
 
             if (string.IsNullOrWhiteSpace(Credentials.UserName))
             {
@@ -506,6 +509,11 @@ namespace Viking.UI.Forms
 
         string createConnection()
         {
+            if (Credentials == Viking.UI.State.AnonymousCredentials)
+            {
+                return "Read";
+            }
+
             if (string.IsNullOrWhiteSpace(Credentials.UserName))
             {
                 return "Read";
@@ -529,6 +537,8 @@ namespace Viking.UI.Forms
             {
                 throw new ArgumentException("Logon UI, createConnection(): Expected to authenticate to an https URI scheme");
             }
+
+            
 
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(AuthenticationURI);
             request.Credentials = Credentials;

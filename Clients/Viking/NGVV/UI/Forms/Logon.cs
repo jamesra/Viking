@@ -139,7 +139,7 @@ namespace Viking.UI.Forms
 
         public TokenResponse BearerToken;
 
-        protected string KeyFileFolderPath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Viking");
+        protected string KeyFileFolderPath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Viking");
 
         protected string KeyFileFullPath => System.IO.Path.Combine(this.KeyFileFolderPath, this.keyFile);
 
