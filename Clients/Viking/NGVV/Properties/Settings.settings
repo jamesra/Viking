@@ -59,7 +59,7 @@
   &lt;string&gt;http://storage1.connectomes.utah.edu/&lt;/string&gt;
   &lt;string&gt;http://internal.connectomes.utah.edu/&lt;/string&gt;
   &lt;string&gt;http://openconnecto.me/ocp/ca/&lt;/string&gt;
-  &lt;string&gt;http://v0152.host.s.uw.edu/&lt;/string&gt;
+  &lt;string&gt;http://v2486.host.s.uw.edu/&lt;/string&gt;
   &lt;string&gt;http://connectomes.utah.edu/&lt;/string&gt;
   &lt;string&gt;http://storage2.connectomes.utah.edu/&lt;/string&gt;
 &lt;/ArrayOfString&gt;</Value>
@@ -72,9 +72,9 @@
 &lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
   &lt;string&gt;http://connectomes.utah.edu/Rabbit&lt;/string&gt;
   &lt;string&gt;http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML&lt;/string&gt;
-  &lt;string&gt;http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML&lt;/string&gt;
-  &lt;string&gt;http://storage1.connectomes.utah.edu/RPC1/Testing.VikingXML&lt;/string&gt;
+  &lt;string&gt;http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML &lt;/string&gt;
   &lt;string&gt;http://storage2.connectomes.utah.edu/RPC2/SliceToVolume.VikingXML&lt;/string&gt;
+  &lt;string&gt;http://storage2.connectomes.utah.edu/RPC3/SliceToVolume.VikingXML&lt;/string&gt;
   &lt;string&gt;http://storage2.connectomes.utah.edu/RC3/SliceToVolume.VikingXML&lt;/string&gt;
 &lt;/ArrayOfString&gt;</Value>
     </Setting>

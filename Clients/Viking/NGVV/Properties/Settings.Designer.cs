@@ -12,7 +12,7 @@ namespace Viking.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.8.1.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.10.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -234,7 +234,7 @@ namespace Viking.Properties {
   <string>http://storage1.connectomes.utah.edu/</string>
   <string>http://internal.connectomes.utah.edu/</string>
   <string>http://openconnecto.me/ocp/ca/</string>
-  <string>http://v0152.host.s.uw.edu/</string>
+  <string>http://v2486.host.s.uw.edu/</string>
   <string>http://connectomes.utah.edu/</string>
   <string>http://storage2.connectomes.utah.edu/</string>
 </ArrayOfString>")]
@@ -265,9 +265,9 @@ namespace Viking.Properties {
 <ArrayOfString xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
   <string>http://connectomes.utah.edu/Rabbit</string>
   <string>http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML</string>
-  <string>http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML</string>
-  <string>http://storage1.connectomes.utah.edu/RPC1/Testing.VikingXML</string>
+  <string>http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML </string>
   <string>http://storage2.connectomes.utah.edu/RPC2/SliceToVolume.VikingXML</string>
+  <string>http://storage2.connectomes.utah.edu/RPC3/SliceToVolume.VikingXML</string>
   <string>http://storage2.connectomes.utah.edu/RC3/SliceToVolume.VikingXML</string>
 </ArrayOfString>")]
         public global::System.Collections.Specialized.StringCollection VolumeURLs {
