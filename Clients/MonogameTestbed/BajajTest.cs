@@ -279,13 +279,9 @@ namespace MonogameTestbed
                 this.RegionViews.Clear();
                 this.listLineViews.Clear();
                 this.MeshViews.Clear();
-
-                triView = new TriangulationView();
-                
-
+                 
                 //Reset the average vertex position in case input changed from the last mesh
-                VertexPositionAverage = FirstPassTriangulation.CalculateAverageVertexPositionXY();
-                triView.TranslationVector = VertexPositionAverage;
+                VertexPositionAverage = FirstPassTriangulation.CalculateAverageVertexPositionXY(); 
 
                 //Create our mesh with only the verticies
                 PolyViews = new PolygonSetView(Polygons, PolygonSetView.DefaultColorMapping, 2)

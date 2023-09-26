@@ -15,6 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -252,6 +253,12 @@ namespace MonogameTestbed
             Trace.WriteLine("Begin Slice graph construction");
             SliceGraph sliceGraph = await SliceGraph.Create(graph, 2.0);
             Trace.WriteLine("End Slice graph construction");
+            
+            if(!sliceGraph.Nodes.Any())
+            { 
+                Trace.WriteLine("No nodes in Slice graph {sliceGraph}");
+                return;
+            }
 
             meshAssemblyPlan = MeshAssemblyPlanner.Create(sliceGraph);
 
@@ -291,7 +298,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window, Scene scene)
         {
-            window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
+            //window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
             StringBuilder ViewLabels = new StringBuilder();
 
             if (RegionViews != null  && ShowRegionPolygons && (iShownRegion.HasValue && iShownRegion.Value  < RegionViews.Count))
@@ -311,7 +318,7 @@ namespace MonogameTestbed
                         try
                         {
                             drawlock.Wait();
-                            MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.None);
+                            MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, window.Scene, CullMode.CullCounterClockwiseFace);
                             ViewLabels.AppendLine(MeshViews[iShownMesh.Value].Name);
                         }
                         finally
@@ -324,7 +331,7 @@ namespace MonogameTestbed
                 {
                     if (CompositeMeshView != null)
                     {
-                        CompositeMeshView.Draw(window.GraphicsDevice, window.Scene, CullMode.None);
+                        CompositeMeshView.Draw(window.GraphicsDevice, window.Scene, CullMode.CullCounterClockwiseFace);
                         ViewLabels.AppendLine(CompositeMeshView.Name);
                     }
                 }
@@ -522,7 +529,10 @@ namespace MonogameTestbed
         readonly PointSetViewCollection Points_B = new PointSetViewCollection(Color.Red, Color.Pink, Color.Plum);
         readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
         readonly Camera3DManipulator Camera3DManipulator = new Camera3DManipulator();
-        readonly List<BajajMultiOTVAssignmentView> wrapViews = new List<BajajMultiOTVAssignmentView>();
+        readonly List<BajajMultiOTVAssignmentView> wrapViews = new List<BajajMultiOTVAssignmentView>(); 
+
+        List<BoundarySurfaceViewModel> boundaryViewModels = new List<BoundarySurfaceViewModel>();
+        MeshView<VertexPositionNormalColor> boundaryView = null;
         readonly bool Draw3D = true;
 
         bool _initialized = false;
@@ -545,13 +555,25 @@ namespace MonogameTestbed
 
             Console.Write("Begin OData fetch");
 
-            if (Program.options.StructureIDs.Count > 0 && Program.options.EndpointUri != null)
+            Task<MorphologyGraph> boundary_graph_task = null;
+            if (Program.options.BoundaryIDs.Any() && Program.options.EndpointUri != null)
+            {
+                Uri endpoint = Program.options.EndpointUri;
+                boundary_graph_task = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataByTypeIDsAsync(Program.options.BoundaryIDs.ToArray(), endpoint, false);
+                var boundary_graph = await boundary_graph_task;
+                this.boundaryViewModels = BoundarySurfaceViewModel.CreateBoundarySurfaces(boundary_graph);
+
+                this.boundaryView = CreateViewsForBoundaries(this.boundaryViewModels);
+
+                Console.WriteLine(" Boundary view created");
+            }
+
+            if (Program.options.StructureIDs.Any() && Program.options.EndpointUri != null)
             {
                 Console.WriteLine(" From command line parameters");
 
                 Uri endpoint = Program.options.EndpointUri;
                 graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(Program.options.StructureIDs, false, endpoint);
-
             }
             else
             {
@@ -642,10 +664,7 @@ namespace MonogameTestbed
                 meshGenTasks.Add(task);
             }
 
-            foreach(var t in meshGenTasks)
-            {
-                await t;
-            }
+            await Task.WhenAll(meshGenTasks);
 
             //Save the output in a specific place upon request in the command line parameters
             if(string.IsNullOrWhiteSpace(Program.options.OutputPath) == false)
@@ -673,6 +692,8 @@ namespace MonogameTestbed
                     }
                 }
             }
+
+            Console.WriteLine($"All rendering complete");
 
             if (Program.options.Quiet)
             {
@@ -831,7 +852,7 @@ namespace MonogameTestbed
         public void Draw(MonoTestbed window)
         {
             window.GraphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Color.DarkGray, float.MaxValue, 0);
-
+            
             foreach (var wrapView in wrapViews)
             {
                 if (!Draw3D)
@@ -844,6 +865,14 @@ namespace MonogameTestbed
                     if (wrapView != null)
                         wrapView.Draw3D(window, scene3D);
                 }
+            }
+
+            if (boundaryView != null)
+            {
+                MeshView<VertexPositionNormalColor>.Draw(window.GraphicsDevice, scene3D,
+                                    window.basicEffect, CullMode.None, FillMode.Solid, boundaryView.models);
+                
+                //boundaryView.Draw(window.GraphicsDevice, scene, CullMode.CullCounterClockwiseFace);
             }
         }
 
@@ -874,7 +903,23 @@ namespace MonogameTestbed
             BasicColladaView ColladaView = new BasicColladaView(graph.scale.X, null)
             {
                 SceneTitle = title
-            }; 
+            };
+
+            ulong max_id = wrapViews.Max(wv => wv.Graph.StructureID);
+            ulong structure_type_id_adjustment = (ulong)Math.Pow(Math.Log10(max_id) + 2, 10);
+
+            foreach(var boundary in boundaryViewModels)
+            {
+                var color = System.Drawing.Color.FromArgb(0x7F7F7F7F);
+                ulong structure_id = boundary.Type.ID + structure_type_id_adjustment;
+                StructureModel rootModel = new StructureModel(structure_id, boundary.Mesh,
+                    new MaterialLighting(MaterialLighting.CreateKey(COLORSOURCE.STRUCTURETYPE, structure_id), color))
+                    {
+                        Translation = boundary.Center * 0.001
+                    };
+
+                ColladaView.Add(rootModel);
+            }
 
             foreach (var view in wrapViews)
             {
@@ -892,7 +937,7 @@ namespace MonogameTestbed
                     };
 
                     ColladaView.Add(rootModel);
-                }
+                } 
             }
 
             var fInfo = new System.IO.DirectoryInfo(outputDir);
@@ -927,6 +972,32 @@ namespace MonogameTestbed
             var outputFile = System.IO.Path.Combine(outputDir ?? DefaultOutputPath, $"Morphology-{structure_id}.dae");
             
             DynamicRenderMeshColladaSerializer.SerializeToFile(ColladaView, outputFile);
+        }
+
+        private static MeshView<VertexPositionNormalColor> CreateViewsForBoundaries(List<BoundarySurfaceViewModel> boundary_models)
+        {
+            MeshView<VertexPositionNormalColor> meshView = new MeshView<VertexPositionNormalColor>();
+            if(!boundary_models.Any())
+                return null;
+             
+            foreach (var bm in boundary_models)
+            { 
+                meshView.models.Add(CreateMeshModelForBoundary(bm));
+            }
+
+            return meshView;
+        }
+
+        private static PositionColorNormalMeshModel CreateMeshModelForBoundary(BoundarySurfaceViewModel bm)
+        {  
+            var color = bm.Type.Name.GetHashCode().ToXNAColor(0.1f);
+            //var verts = bm.BoundaryMarkers.Select(m => new VertexPositionNormalColor(m.ToXNAVector3(), Vector3.UnitZ, color).ToArray();
+             
+            var mesh_model = new PositionColorNormalMeshModel();
+            mesh_model.ModelMatrix = Matrix.CreateTranslation(bm.Center.ToXNAVector3());
+            mesh_model.Verticies = bm.Mesh.Verticies.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color)).ToArray();
+            mesh_model.Edges = bm.TriangulationMesh.Faces.SelectMany(f => f.iVerts).ToArray();
+            return mesh_model;
         }
     }
 }
