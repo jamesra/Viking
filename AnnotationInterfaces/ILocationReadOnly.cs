@@ -30,17 +30,39 @@ namespace Viking.AnnotationServiceTypes.Interfaces
         CLOSEDCURVE = 7 
     };
 
+    /// <summary>
+    /// An interface to an annotation that marks a location in a structure.  Locations on the same section should not overlap.  Locations on adjacent structure physically connected should be linked.
+    /// </summary>
     public interface ILocation : IEquatable<ILocation>
     {
+        /// <summary>
+        /// Unique ID of the location
+        /// </summary>
         ulong ID { get; }
 
+        /// <summary>
+        /// The structure ID the annotation belongs to
+        /// </summary>
         ulong ParentID { get; }
 
+        /// <summary>
+        /// True if the location marks where a structure process ends as part of normal biology
+        /// </summary>
         bool Terminal { get; }
+
+        /// <summary>
+        /// True if the location marks where a structure goes off the edge of a volume
+        /// </summary>
         bool OffEdge { get; }
 
+        /// <summary>
+        /// True if the location is a vericosity cap, this terminates a process in a structure
+        /// </summary>
         bool IsVericosityCap { get; }
 
+        /// <summary>
+        /// True if the location indicates a boundary beyond which the structure cannot be traced
+        /// </summary>
         bool IsUntraceable { get; }
 
         IDictionary<string, string> Attributes { get; }
@@ -49,6 +71,9 @@ namespace Viking.AnnotationServiceTypes.Interfaces
 
         string TagsXml { get; }
 
+        /// <summary>
+        /// What type of shape is used to encode this annotation
+        /// </summary>
         LocationType TypeCode { get; }
 
         /// <summary>
