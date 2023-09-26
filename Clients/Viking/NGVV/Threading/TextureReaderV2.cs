@@ -335,11 +335,36 @@ namespace Viking
             {
                 using (var client = new HttpClient())
                 {
-                    var textureResponseMessage = await client
-                        .GetAsync(textureUri, HttpCompletionOption.ResponseContentRead).ConfigureAwait(false);
+                    int nRetries = 5;
+
+                    HttpResponseMessage response = null;
+                    while (nRetries >= 0)
                     {
-                        return await TryLoadingFromHttpClientResponse(textureResponseMessage, CacheFilename, token).ConfigureAwait(false);
+                        response = await client
+                            .GetAsync(textureUri, HttpCompletionOption.ResponseContentRead).ConfigureAwait(false);
+                        if(false == response.IsSuccessStatusCode)
+                        {
+                            if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
+                                response.StatusCode == System.Net.HttpStatusCode.RequestTimeout)
+                            {
+                                nRetries--;
+                                Debug.WriteLine($"Failed to load {textureUri} : Delaying for retry");
+                                await Task.Delay(Geometry.Global.GetRandomRequestDelay());
+                                continue;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            return await TryLoadingFromHttpClientResponse(response, CacheFilename, token).ConfigureAwait(false);
+                        }
                     }
+
+                    Trace.WriteLine($"Failed to load {textureUri} : {response.StatusCode}");
+                    return null;
                 }
             }
             catch (ArgumentException e)
