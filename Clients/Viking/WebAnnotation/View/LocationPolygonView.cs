@@ -98,7 +98,13 @@ namespace WebAnnotation.View
             VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape).ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
-            this.Color = obj.Parent == null ? Color.Gray.SetAlpha(0.5f) : obj.Parent.Type.Color.ToXNAColor(0.33f);
+            if(obj.Parent == null)
+                this.Color = Color.Gray.SetAlpha(0.5f);
+            else if(obj.Parent.TypeID == 1) //Cells get a random color for polygons to help Becca see Glia
+                this.Color = obj.Parent.Color.ToXNAColor(0.33f);
+            else
+                this.Color = obj.Parent.Type.Color.ToXNAColor(0.33f);
+
             //polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);
             //polygonMesh = SmoothedVolumePolygon.CreateMeshForPolygon2D(this.HSLColor);
             //polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, this.HSLColor);
