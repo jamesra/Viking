@@ -66,8 +66,22 @@ namespace WebAnnotation.View
             }
         }
 
-        public ContextMenu ContextMenu => throw new NotImplementedException();
-
+        public ContextMenu ContextMenu  
+        {
+            get
+            { 
+                var view_model = new WebAnnotation.ViewModel.Location_ViewModelBase(this.ID);
+                var menu = new ContextMenu();
+                MenuItem simplify_item = new MenuItem("Simplify Polygon", view_model.ContextMenu_SimplifyPolygon);
+                simplify_item.Tag = new int?(this.iInnerPolygon);
+                menu.MenuItems.Add(simplify_item);
+                
+                MenuItem remove_inner_poly = new MenuItem("Remove interior hole", view_model.ContextMenu_RemoveInnerPolygon);
+                remove_inner_poly.Tag = new int?(this.iInnerPolygon);
+                menu.MenuItems.Add(remove_inner_poly);
+                return menu;
+            }
+        } 
         public bool Contains(GridVector2 Position)
         {
             return SmoothedVolumePolygon.Contains(Position);

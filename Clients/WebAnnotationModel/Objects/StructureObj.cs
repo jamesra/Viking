@@ -38,6 +38,26 @@ namespace WebAnnotationModel
             get { return Data.TypeID; }
         }
 
+        private uint? _Color;
+
+        public uint Color
+        {
+            get
+            {
+                if(_Color.HasValue == false)
+                {
+                    _Color = (uint)ID.ToString().GetHashCode() | 0xFF0707FF;
+                }
+
+                return _Color.Value;
+            }
+            set
+            {
+                _Color = value;
+            }
+        }
+
+
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.
         /// In this case make sure we always return the same hash code.  As a result this is called for each object only once.

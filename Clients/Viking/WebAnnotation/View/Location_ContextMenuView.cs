@@ -37,6 +37,7 @@ namespace WebAnnotation.View
                 this._AddTerminalOffEdgeMenus(menu);
                 this.Parent.ContextMenu_AddUnverifiedBranchTerminals(menu);
                 this._AddConvertShapeMenus(menu);
+                this._AddSimplifyPolygonMenus(menu);
                 this._AddDeleteMenu(menu);
 
                 return menu;

@@ -7,6 +7,8 @@ using System.Drawing;
 using System.Windows.Forms;
 using Viking.Common.UI;
 using WebAnnotationModel;
+using SqlGeometryUtils;
+using Geometry;
 
 namespace WebAnnotation.ViewModel
 {
@@ -271,15 +273,32 @@ namespace WebAnnotation.ViewModel
         {
             MenuItem menuShape = new MenuItem("Change Shape");
 
-            MenuItem menuOpenCurve = new MenuItem("Curve", ContextMenu_ConvertShape);
-            menuOpenCurve.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE;
-            MenuItem menuCircle = new MenuItem("Circle", ContextMenu_ConvertShape);
-            menuCircle.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+            if(this.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE)
+            { 
+                MenuItem menuOpenCurve = new MenuItem("Curve", ContextMenu_ConvertShape);
+                menuOpenCurve.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE;
+                menuShape.MenuItems.Add(menuOpenCurve);
+            }
 
-            menuShape.MenuItems.Add(menuOpenCurve);
-            menuShape.MenuItems.Add(menuCircle);
+            if(this.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
+            { 
+                MenuItem menuCircle = new MenuItem("Circle", ContextMenu_ConvertShape);
+                menuCircle.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+                menuShape.MenuItems.Add(menuCircle);
+            }
 
             menu.MenuItems.Add(menuShape);
+        }
+
+        protected void _AddSimplifyPolygonMenus(ContextMenu menu)
+        {
+            if (this.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON ||
+                this.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON)
+            {
+                MenuItem menuSimplify = new MenuItem("Simplify Shape", ContextMenu_SimplifyPolygon);
+                menuSimplify.Tag = new int?();
+                menu.MenuItems.Add(menuSimplify);
+            }
         }
 
         public override ContextMenu ContextMenu
@@ -292,6 +311,7 @@ namespace WebAnnotation.ViewModel
                 this._AddCopyLocationIDMenu(menu);
                 this._AddTerminalOffEdgeMenus(menu);
                 this._AddConvertShapeMenus(menu);
+                this._AddSimplifyPolygonMenus(menu);
                 this._AddDeleteMenu(menu);
 
                 return menu;
@@ -364,6 +384,88 @@ namespace WebAnnotation.ViewModel
                     break;
                 case Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE:
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Simplify the shape by removing verticies
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public void ContextMenu_SimplifyPolygon(object sender, EventArgs e)
+        {
+            //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
+            MenuItem item = sender as MenuItem;
+            int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
+
+            var poly = this.modelObj.MosaicShape.ToPolygon();
+
+            try { 
+                if(!innerPoly.HasValue)
+                {    
+                    var outer_poly = new GridPolygon(poly.ExteriorRing);
+                    var simple_poly = outer_poly.Simplify(Global.PenSimplifyThreshold);
+                    poly.ExteriorRing = simple_poly.ExteriorRing;
+                    this.modelObj.MosaicShape = poly.ToSqlGeometry();
+                }
+                else
+                {
+                    if(innerPoly.Value >= poly.InteriorRings.Count)
+                    {
+                        Trace.WriteLine($"Inner polygon {innerPoly.Value} does not exist");
+                        return;
+                    }
+
+                    var inner_poly = poly.InteriorPolygons[innerPoly.Value];
+                    var simple_inner_poly = inner_poly.Simplify(Global.PenSimplifyThreshold / 2.0);
+                    poly.ReplaceInteriorRing(innerPoly.Value, simple_inner_poly);
+                    this.modelObj.MosaicShape = poly.ToSqlGeometry();
+                }
+
+                Store.Locations.Save();
+            }
+            catch(Exception ex)
+            {
+                Trace.WriteLine("Could not simplify polygon");
+            }
+        }
+
+        /// <summary>
+        /// Simplify the shape by removing verticies
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public void ContextMenu_RemoveInnerPolygon(object sender, EventArgs e)
+        {
+            //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
+            MenuItem item = sender as MenuItem;
+            int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
+
+            var poly = this.modelObj.MosaicShape.ToPolygon();
+
+            try
+            {
+                if (!innerPoly.HasValue)
+                {
+                    Trace.WriteLine($"No inner polygon parameter provided");
+                }
+                else
+                {
+                    if (innerPoly.Value >= poly.InteriorRings.Count)
+                    {
+                        Trace.WriteLine($"Inner polygon {innerPoly.Value} does not exist");
+                        return;
+                    }
+
+                    poly.RemoveInteriorRing(innerPoly.Value); 
+                    this.modelObj.MosaicShape = poly.ToSqlGeometry();
+                }
+
+                Store.Locations.Save();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine("Could not simplify polygon");
             }
         }
 
