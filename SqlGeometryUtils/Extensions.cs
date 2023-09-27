@@ -67,12 +67,13 @@ namespace SqlGeometryUtils
 
         public static GridCircle ToCircle(this SqlGeometry shape)
         {
-            if (shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
+            var current_type = shape.GeometryType();
+            if (current_type != SupportedGeometryType.CURVEPOLYGON && current_type != SupportedGeometryType.POLYLINE)
                 throw new ArgumentException("SqlGeometry must be a polygon type");
 
             GridRectangle bbox = shape.BoundingBox();
-            System.Diagnostics.Debug.Assert(Math.Floor(bbox.Width) == Math.Floor(bbox.Height)); //Make sure our optimization is really getting a circle
-            return new GridCircle(bbox.Center, bbox.Width / 2.0);
+            //System.Diagnostics.Debug.Assert(Math.Floor(bbox.Width) == Math.Floor(bbox.Height)); //Make sure our optimization is really getting a circle
+            return new GridCircle(bbox.Center, Math.Max(bbox.Width, bbox.Height) / 2.0);
         }
 
 
@@ -197,7 +198,7 @@ namespace SqlGeometryUtils
         }
 
 
-        public static SqlGeometry ToSqlGeometry(this GridCircle circle, double Z)
+        public static SqlGeometry ToSqlGeometry(this GridCircle circle, double Z=0)
         {
             return ToCircle(circle.Center.X,
                             circle.Center.Y,
