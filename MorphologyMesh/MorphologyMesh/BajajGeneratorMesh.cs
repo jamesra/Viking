@@ -49,6 +49,10 @@ namespace MorphologyMesh
         /// </summary>
         public Slice Slice;
 
+        public double SliceThickness => Topology.SliceThickness;
+
+        public double SliceCenterZ => Topology.SliceCenterZ;
+
         /// <summary>
         /// A cache for failures when finding slice chords
         /// </summary>
@@ -72,7 +76,8 @@ namespace MorphologyMesh
             Slice = slice;
         }
 
-        public BajajGeneratorMesh(IReadOnlyList<GridPolygon> polygons, IReadOnlyList<double> ZLevels, IReadOnlyList<bool> IsUpperPolygon) : this(new SliceTopology(polygons, IsUpperPolygon, ZLevels))
+        public BajajGeneratorMesh(IReadOnlyList<GridPolygon> polygons, IReadOnlyList<double> ZLevels, IReadOnlyList<bool> IsUpperPolygon) : 
+            this(new SliceTopology(polygons, IsUpperPolygon, ZLevels))
         {
 
         }

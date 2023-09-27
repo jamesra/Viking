@@ -223,14 +223,7 @@ namespace MorphologyMesh
         public SliceChordTestType GetFailures(int Origin, int Target, SliceChordTestType requested)
         {
             SliceChordOriginTestResultsCache knownCandidates;
-            if (Failures.TryGetValue(Origin, out knownCandidates) == false)
-            {
-                return SliceChordTestType.None;
-            }
-            else
-            {
-                return knownCandidates.GetFailures(Target, requested);
-            }
+            return Failures.TryGetValue(Origin, out knownCandidates) == false ? SliceChordTestType.None : knownCandidates.GetFailures(Target, requested);
         }
 
         public void RecordFailure(int Origin, int Target, SliceChordTestType failures)
@@ -305,14 +298,14 @@ namespace MorphologyMesh
             List<Task<BajajGeneratorMesh>> meshGenTasks = new List<Task<BajajGeneratorMesh>>();
 
             //var SimplerPolygon = CreateSimplerPolygonLookup(graph, 2.0);
-            
+
             foreach (Slice slice in sliceGraph.Nodes.Values)
             {
                 //Trace.WriteLine(string.Format("Creating group {0}", group.ToString()));
 
-                var sliceTopology = sliceGraph.GetTopology(slice);
+                //var sliceTopology = sliceGraph.GetTopology(slice);
                 
-                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() => new BajajGeneratorMesh(sliceTopology, slice)));
+                meshGenTasks.Add(Task<BajajGeneratorMesh>.Factory.StartNew(() => new BajajGeneratorMesh(sliceGraph.GetTopology(slice), slice)));
 
 //                BajajGeneratorMesh mesh = new BajajGeneratorMesh(Polygons.Select(p => p.Simplify(1.0)).ToList(), PolyZ, IsUpper);
   //              listBajajMeshGenerators.Add(mesh);
@@ -2195,7 +2188,13 @@ namespace MorphologyMesh
 
         private static QuadTree<MorphMeshVertex> BuildQuadTreeForPolyGroup(BajajGeneratorMesh mesh,  IReadOnlyList<int> polyset)
         {
+            if(polyset.Count == 0)
+            {
+                return new QuadTree<MorphMeshVertex>();
+            }
+
             GridPolygon[] PolysOnLevel = polyset.Select(iPoly => mesh.Polygons[iPoly]).ToArray();
+            
 
             GridRectangle bbox = PolysOnLevel.BoundingBox();
             bbox = GridRectangle.Scale(bbox, 1.05);
