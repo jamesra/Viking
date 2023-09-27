@@ -129,25 +129,25 @@ namespace MonogameTestbed
 
         private static MedialAxisVertex GetOrAddVertex(MedialAxisGraph graph, GridVector2 p)
         {
-            if (!graph.Nodes.ContainsKey(p))
+            if (!graph.ContainsKey(p))
             {
                 MedialAxisVertex node = new MedialAxisVertex(p);
                 graph.AddNode(node);
             }
 
-            return graph.Nodes[p];
+            return graph[p];
         }
 
         private static MedialAxisVertex GetOrAddLineBisectorVertex(MedialAxisGraph graph, GridLineSegment line)
         {
             GridVector2 midpoint = line.Bisect();
-            if (!graph.Nodes.ContainsKey(midpoint))
+            if (!graph.ContainsKey(midpoint))
             { 
                 MedialAxisVertex node = new MedialAxisVertex(midpoint);
                 graph.AddNode(node);
             }
 
-            return graph.Nodes[midpoint];
+            return graph[midpoint];
         }
 
         private static MedialAxisGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon[] shapes)

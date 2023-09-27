@@ -183,4 +183,54 @@ namespace VikingXNAGraphics
             }
         }
     }
+
+    /// <summary>
+    /// A helper class that assumes the entire mesh model is the same color
+    /// </summary>
+    public class PositionColorNormalMeshModel : MeshModel<VertexPositionNormalColor>, IColorView
+    {
+
+        public PositionColorNormalMeshModel()
+        {
+        }
+
+        public float Alpha
+        {
+            get
+            {
+                return Verticies.First().Color.GetAlpha();
+            }
+
+            set
+            {
+                if (value != Alpha)
+                {
+                    Color newColor = this.Color.SetAlpha(value);
+                    for (int i = 0; i < Verticies.Length; i++)
+                    {
+                        Verticies[i].Color = newColor;
+                    }
+                }
+            }
+        }
+
+        public Color Color
+        {
+            get
+            {
+                return Verticies.First().Color;
+            }
+
+            set
+            {
+                if (value != Color)
+                {
+                    for (int i = 0; i < Verticies.Length; i++)
+                    {
+                        Verticies[i].Color = value;
+                    }
+                }
+            }
+        }
+    }
 }

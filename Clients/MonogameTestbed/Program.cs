@@ -1,5 +1,7 @@
 ﻿using CommandLine;
 using System;
+using System.IO;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -24,6 +26,9 @@ namespace MonogameTestbed
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FreeConsole();
 
+
+        static System.IO.StreamWriter DebugLogFile = null; 
+
         public class CommandLineOptions
         {
             /// <summary>
@@ -37,7 +42,7 @@ namespace MonogameTestbed
             /// <summary>
             /// The raw LocationID arguments
             /// </summary>
-            [Option('l', "LIDs", Required = false, HelpText = "Location IDs", Separator = ' ')]
+            [Option('i', "LIDs", Required = false, HelpText = "Location IDs", Separator = ' ')]
             public IEnumerable<string> LocationIDParams { get; set; }
 
             public List<ulong> LocationIDs { get; private set; }
@@ -79,6 +84,9 @@ namespace MonogameTestbed
                 }
             }
 
+            [Option('b', "boundaries", Required = false, HelpText="TypeID's defining surfaces boundaries to include in output", Separator = ' ', Default = null)]
+            public IEnumerable<ulong> BoundaryIDs { get; set; }
+
             /// <summary>
             /// The output file or path name
             /// </summary>
@@ -86,22 +94,36 @@ namespace MonogameTestbed
             public string OutputPath { get; set; }
 
             /// <summary>
-            /// The output file or path name
+            /// Quit the program upon completion
             /// </summary>
             [Option('q', "quiet", Required = false,
                 HelpText = "Quit program as soon as renders are generated and saved", Separator = ' ', Default = false)]
             public bool Quiet { get; set; }
 
             /// <summary>
-            /// The output file or path name
+            /// Prints additional information to the console
+            /// </summary>
+            [Option('v', "verbose", Required = false,
+                HelpText = "Print additional information to the console", Separator = ' ', Default = false)]
+            public bool Verbose { get; set; }
+
+            /// <summary>
+            /// Save a log file
+            /// </summary>
+            [Option('l', "log", Required = false,
+                HelpText = "Write a log file", Separator = ' ', Default = false)]
+            public bool Log { get; set; }
+
+            /// <summary>
+            /// Display help
             /// </summary>
             [Option('h', "help", Required = false, HelpText = "Show help", Separator = ' ', Default = false)]
             public bool ShowHelp { get; set; }
 
 
-            private static readonly Regex IntegerRegex = new Regex(@"(\d+)");
-            private static readonly Regex IntegerRangeRegex = new Regex(@"(\d+)\-(\d+)");
-            private static readonly Regex IntegerOrIntegerRangeRegex = new Regex(@"((\d+)\-(\d+))|(\d+)");
+            private static readonly Regex IntegerRegex = new Regex(@"^(\d+)$");
+            private static readonly Regex IntegerRangeRegex = new Regex(@"^(\d+)\-(\d+)$");
+            private static readonly Regex IntegerOrIntegerRangeRegex = new Regex(@"^((\d+)\-(\d+))|(\d+)$");
 
             /// <summary>
             /// Convert a number string, or a string of two integers seperated by a hyphen to a list of integers
@@ -240,16 +262,34 @@ namespace MonogameTestbed
 
         public static CommandLineOptions options;
 
+        static string LogPath;
+
+        static readonly string LogFile = DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
+
+        static string LogFullPath
+        {
+            get
+            {
+                return System.IO.Path.Combine(LogPath, LogFile);
+            }
+        }
+
+        static TextWriter SynchronizedLogWriter = null;
+        static TextWriterTraceListener LogListener = null;
+
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
         static void Main(string[] args)
         {
+
             bool HaveConsole = false;
+            ConsoleTraceListener consoleTracer = null;
             try
             {
-                HaveConsole = AllocConsole();
+                HaveConsole = AllocConsole(); 
+
 #if DEBUG
                 Console.WriteLine($"App Domain Base Directory: {AppDomain.CurrentDomain.BaseDirectory}");
                 //Console.WriteLine("Press any key to continue");
@@ -287,6 +327,26 @@ namespace MonogameTestbed
                     return;
                 }
 
+                if (Program.options.Log)
+                {
+                    LogPath = Program.options.OutputPath == null ? System.IO.Directory.GetCurrentDirectory() : System.IO.Path.Combine(Program.options.OutputPath, "Logs");
+                    CreateLogger();
+                }
+
+                if(Program.options.Verbose)
+                {
+                    consoleTracer = new ConsoleTraceListener(true)
+                    {
+                        Name = "Monogame Testbed Console Tracer"
+                    };
+
+                    Debug.Listeners.Add(consoleTracer);  
+
+                    Trace.WriteLine("Displaying trace messages");
+                    Debug.WriteLine("Displaying debug messages");
+                } 
+
+
                 if (args.Length == 0)
                     Console.WriteLine(helpText);
 
@@ -299,6 +359,46 @@ namespace MonogameTestbed
             {
                 if (HaveConsole)
                     FreeConsole();
+
+                if (Program.options.Log)
+                {
+                    StopLogger();
+                }
+
+                if(Program.options.Verbose)
+                {
+                    consoleTracer?.Flush();
+                    Debug.Listeners.Remove(consoleTracer); 
+                    consoleTracer?.Close();
+                    consoleTracer = null;
+                } 
+            }
+        }
+         
+        private static void CreateLogger()
+        {  
+            if (!Directory.Exists(LogPath))
+                Directory.CreateDirectory(LogPath);
+             
+            DebugLogFile = System.IO.File.CreateText(LogFullPath);
+
+            SynchronizedLogWriter = StreamWriter.Synchronized(DebugLogFile);
+            LogListener = new TextWriterTraceListener(SynchronizedLogWriter, "MonogameTestbed Log Listener"); 
+            Debug.Listeners.Add(LogListener); 
+             
+            Trace.UseGlobalLock = true; 
+        }
+
+        private static void StopLogger()
+        {
+            if(LogListener != null)
+            {
+                LogListener.Flush();
+                Debug.Listeners.Remove(LogListener); 
+                LogListener.Close();
+                LogListener = null;
+                SynchronizedLogWriter.Close();
+                SynchronizedLogWriter = null;
             }
         }
     }

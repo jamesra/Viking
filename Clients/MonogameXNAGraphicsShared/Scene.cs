@@ -20,8 +20,8 @@ namespace VikingXNA
         private Matrix _World;
         private Matrix _WorldViewProj;
 
-        private float _MinDrawDistance = -100f;
-        private float _MaxDrawDistance = 10f;
+        private float _MinDrawDistance = -1f;
+        private float _MaxDrawDistance = 100f;
 
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
