@@ -268,7 +268,7 @@ namespace MonogameTestbed
                 Color = ColorExtensions.Random()
             };
 
-            List<BajajGeneratorMesh> meshes = await BajajMeshGenerator.ConvertToMesh(sliceGraph, OnSliceCompleted);
+            List<BajajGeneratorMesh> meshes = await BajajMeshGenerator.ConvertToMesh(sliceGraph, OnSliceCompleted).ConfigureAwait(false);
 
             //If we have fewer region views, reset the region view index
             if(iShownRegion.HasValue && iShownRegion.Value > RegionViews.Count)
