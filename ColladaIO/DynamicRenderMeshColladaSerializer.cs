@@ -153,7 +153,7 @@ namespace ColladaIO
             List<object> NodeItems = new List<object>();
 
             instance_geometry_type instance_geometry = new instance_geometry_type();
-            instance_geometry.url = "#" + model.Name + "-geometry";
+            instance_geometry.url = $"#{model.Name}-geometry";
 
             if(ApplyTranslation)
             {
@@ -346,7 +346,7 @@ namespace ColladaIO
         private static node_type CreateVisualSceneNodes(StructureModel model)
         {
             node_type node = new node_type();
-            node.name = "node-" + model.Name;
+            node.name = $"node-{model.Name}";
 
             translate_type translation = new translate_type();
             translation.Text = model.Translation.coords;
