@@ -927,10 +927,10 @@ namespace Viking.VolumeModel
             while (ListStosTransformTasks.Count > 0)
             {  
                 Task<LoadStosResult>[] stosTasks = ListStosTransformTasks.ToArray();
-
-                int iObj = System.Threading.Tasks.Task.WaitAny(stosTasks);
-                LoadStosResult result = stosTasks[iObj].Result;
-                ListStosTransformTasks.RemoveAt(iObj);
+                 
+                var completedTask = await System.Threading.Tasks.Task.WhenAny(stosTasks);
+                LoadStosResult result = completedTask.Result;
+                ListStosTransformTasks.Remove(completedTask);
 
                 /*
                 LoadStosResult result = await stosTasks[0];
