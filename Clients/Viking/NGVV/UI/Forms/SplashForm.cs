@@ -93,14 +93,20 @@ namespace Viking.UI.Forms
         }
 
         private void backgroundWorker_DoWork(object sender, DoWorkEventArgs e)
-        { 
+        {  
             //Wait for the volume to initialize
             if(TrackedTask != null)
-                TrackedTask.Wait();
+            { 
+                while(TrackedTask.Wait(500) == false)
+                { 
+                    Application.DoEvents();
+                }
+            }
             else
             {
                 throw new ArgumentException("Running background worker without a task to wait on");
-            } 
+            }
+            
         }
 
         private void backgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
