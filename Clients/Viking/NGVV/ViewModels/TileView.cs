@@ -17,9 +17,9 @@ namespace Viking.ViewModels
     ///     A texture, which may or may not be loaded
     ///     A set of verticies to position the tile in space
     /// </summary>
-    public class TileViewModel : IDisposable
+    public class TileView : IDisposable
     {
-        readonly Tile Tile;
+        readonly TileViewModel _tileViewModel;
 
         /// <summary>
         /// Stores the verticies used for drawing
@@ -31,7 +31,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// Indicies passed to render call specifying triangle verticies
         /// </summary>
-        int[] TriangleIndicies { get { return Tile.TriangleIndicies; } }
+        int[] TriangleIndicies => _tileViewModel.TriangleIndicies;
 
         /// <summary>
         /// Size of the tile in memory
@@ -41,7 +41,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// The amount the tile has been downsampled by
         /// </summary>
-        public int Downsample { get { return Tile.Downsample; } }
+        public int Downsample => _tileViewModel.Downsample;
 
         /// <summary>
         /// Setting this to true indicates we've already asked the server for this texture and it was not found.  We should stop asking.
@@ -94,15 +94,9 @@ namespace Viking.ViewModels
 
         internal bool HasTexture => _texture != null;
 
-        internal bool TextureReadComplete
-        {
-            get { return (this._texture != null || this.ServerTextureNotFound) && this.TextureLoadCancellationTokenSource is null; }
-        }
+        internal bool TextureReadComplete => (this._texture != null || this.ServerTextureNotFound) && this.TextureLoadCancellationTokenSource is null;
 
-        internal bool TextureNeedsLoading
-        {
-            get { return this.ServerTextureNotFound == false && this.texture is null && this.TextureLoadCancellationTokenSource is null; }
-        }
+        internal bool TextureNeedsLoading => this.ServerTextureNotFound == false && this.texture is null && this.TextureLoadCancellationTokenSource is null;
 
         internal bool TextureIsLoading => TextureLoadCancellationTokenSource != null;
           
@@ -111,9 +105,9 @@ namespace Viking.ViewModels
         public readonly string TextureFileName;
         public readonly string TextureCachedFileName;
 
-        private int MipMapLevels = 1;
+        private readonly int MipMapLevels = 1;
 
-        private Color TileColor;
+        private readonly Color TileColor;
 
         //private Object thisLock = new Object();
 
@@ -124,13 +118,13 @@ namespace Viking.ViewModels
             return (ushort)value;
         }
 
-        public TileViewModel(Tile tile,
+        public TileView(TileViewModel tileViewModel,
                              string textureFileName,
                              string cachedTextureFileName,
                              int mipMapLevels,
                              int size)
         {
-            this.Tile = tile;
+            this._tileViewModel = tileViewModel;
             this.Size = size;
             this.TileID = textureFileName.GetHashCode();
             this.TextureFileName = textureFileName;
@@ -303,7 +297,7 @@ namespace Viking.ViewModels
 
                 var loadTextureTask = texReader.LoadTexture();
 
-                await loadTextureTask.ContinueWith(task => CompleteTextureReadTask(texReader, loadTextureTask), TextureLoadCancellationTokenSource.Token).ConfigureAwait(false); 
+                await loadTextureTask.ContinueWith(task => CompleteTextureReadTask(texReader, task), TextureLoadCancellationTokenSource.Token).ConfigureAwait(false); 
 
                 return texture;
             }
@@ -375,7 +369,7 @@ namespace Viking.ViewModels
                 //Create the verticies if they don't exist
                 if (this.VertBuffer == null)
                 {
-                    VertBuffer = CreateVertexBuffer(graphicsDevice, Tile.Verticies);
+                    VertBuffer = CreateVertexBuffer(graphicsDevice, _tileViewModel.Verticies);
                 }
 
                 if (VertBuffer == null || VertBuffer.VertexCount == 0)
@@ -384,7 +378,7 @@ namespace Viking.ViewModels
                 //Create Index buffer if it doesn't exist
                 if (IndBuffer == null)
                 {
-                    IndBuffer = new IndexBuffer(graphicsDevice, IndexElementSize.SixteenBits, Tile.TriangleIndicies.Length, BufferUsage.None);
+                    IndBuffer = new IndexBuffer(graphicsDevice, IndexElementSize.SixteenBits, _tileViewModel.TriangleIndicies.Length, BufferUsage.None);
                     IndBuffer.SetData<ushort>(Array.ConvertAll<int, ushort>(TriangleIndicies, new Converter<int, ushort>(IntToShort)));
                 }
             }
@@ -438,7 +432,7 @@ namespace Viking.ViewModels
 
         //int[] MeshEdges = null;
 
-        public static VertexPositionColor[] CreateMeshVerticies(Tile t, Color color)
+        public static VertexPositionColor[] CreateMeshVerticies(TileViewModel t, Color color)
         {
             VertexPositionColor[] meshVerticies = new VertexPositionColor[t.Verticies.Length];
 
@@ -464,7 +458,7 @@ namespace Viking.ViewModels
             randColorBytes[1] = randColorBytes[1] < 128 ? (byte)(randColorBytes[1] + 128) : randColorBytes[1];
             randColorBytes[2] = randColorBytes[2] < 128 ? (byte)(randColorBytes[2] + 128) : randColorBytes[2];
             Color color = new Color(randColorBytes[0], randColorBytes[1], randColorBytes[2]);
-            VertexPositionColor[] meshVerticies = TileViewModel.CreateMeshVerticies(this.Tile, color);
+            VertexPositionColor[] meshVerticies = TileView.CreateMeshVerticies(this._tileViewModel, color);
 
             vbMesh = new VertexBuffer(graphicsDevice, typeof(VertexPositionColor), meshVerticies.Length, BufferUsage.None);
             vbMesh.SetData<VertexPositionColor>(meshVerticies);
@@ -545,7 +539,7 @@ namespace Viking.ViewModels
             {
                 if (_TileLabel == null)
                 {
-                    _TileLabel = new VikingXNAGraphics.LabelView(this.Tile.TextureFullPath, this.Tile.Bounds.Center, Color.Yellow, scaleFontWithScene: true, fontSize: Math.Max(Tile.Bounds.Width, Tile.Bounds.Height) / 25.0);
+                    _TileLabel = new VikingXNAGraphics.LabelView(this._tileViewModel.TextureFullPath, this._tileViewModel.Bounds.Center, Color.Yellow, scaleFontWithScene: true, fontSize: Math.Max(_tileViewModel.Bounds.Width, _tileViewModel.Bounds.Height) / 25.0);
                 }
 
                 return _TileLabel;
