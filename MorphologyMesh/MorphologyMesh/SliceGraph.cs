@@ -52,6 +52,8 @@ namespace MorphologyMesh
     {
         readonly MorphologyGraph Graph;
 
+        public double SectionThickness => this.Graph.SectionThickness;
+
         /// <summary>
         /// Polygons with an area below this we do not bother to render in the slice graph
         /// </summary>
@@ -139,8 +141,21 @@ namespace MorphologyMesh
                 iNextKey = iNextKey + 1; 
             }
 
+            //Check nodes with no edges, and add them if they are not in the slicegraph
+            //Sanity check that the edge wasn't removed to eliminate a cycle and the node is not somehow in the slicegraph
+            foreach (var Node in graph.Nodes.Values.Where(n => !n.Edges.Any() && !MorphNodeToSliceNodes.ContainsKey(n.ID)))
+            {
+                Slice abovegroup = new Slice(iNextKey, new SortedSet<ulong>(new ulong[] { Node.ID }), new SortedSet<ulong>(), new SortedSet<MorphologyEdge>());
+                Slice belowgroup = new Slice(iNextKey+1, new SortedSet<ulong>(), new SortedSet<ulong>(new ulong[] { Node.ID }), new SortedSet<MorphologyEdge>());
+
+                MorphNodeToSliceNodes[Node.ID] = new SortedSet<ulong>(new ulong[] { iNextKey, iNextKey + 1 });
+                iNextKey = iNextKey + 2;
+                output.AddNode(abovegroup);
+                output.AddNode(belowgroup); 
+            }
+
             //Create edges between sections in the new graph to indicate how sections need to anneal in the final merged mesh
-            foreach(var morph_id in graph.Nodes.Keys)
+            foreach (var morph_id in graph.Nodes.Keys)
             {
                 bool hasKey = MorphNodeToSliceNodes.TryGetValue(morph_id, out SortedSet<ulong> SlicesForMorphNode);
                 if (false == hasKey)
@@ -496,13 +511,15 @@ namespace MorphologyMesh
             if (false == SliceToTopology.ContainsKey(sliceKey))
             {
                 //If we are taking this path there is a danger corresponding verticies won't exist across multiple slices
-                SliceToTopology[sliceKey] = GetSliceTopology(sliceKey, MorphNodeToShape);
+                var result = GetSliceTopology(sliceKey, MorphNodeToShape);
+                Debug.Assert(result.Polygons != null, "Current version only handles polygons, developer needs to figure out why they are missing here.");
+                SliceToTopology[sliceKey] = result;
             }
 
             return SliceToTopology[sliceKey];
         }
 
-        private SliceTopology GetSliceTopology(ulong sliceKey, Dictionary<ulong, IShape2D> polyLookup = null)
+        private SliceTopology GetSliceTopology(ulong sliceKey, IReadOnlyDictionary<ulong, IShape2D> polyLookup = null)
         {
             return GetSliceTopology(this[sliceKey], polyLookup);
         }
@@ -512,7 +529,7 @@ namespace MorphologyMesh
             return this.GetSliceTopology(group, this.MorphNodeToShape);
         }
 
-        internal SliceTopology GetSliceTopology(Slice group, Dictionary<ulong, IShape2D> polyLookup = null)
+        internal SliceTopology GetSliceTopology(Slice group, IReadOnlyDictionary<ulong, IShape2D> polyLookup = null)
         {
             var ShapeList = new List<IShape2D>();
             var IsUpper = new List<bool>();
@@ -529,7 +546,6 @@ namespace MorphologyMesh
                 ShapeList.AddRange(group.NodesAbove.Select(id => Graph[id].Geometry.ToShape2D()));
                 ShapeList.AddRange(group.NodesBelow.Select(id => Graph[id].Geometry.ToShape2D()));
             }
-
 
             VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesAbove);
             VertexShapeIndexToMorphNodeIndex.AddRange(group.NodesBelow);
@@ -552,7 +568,7 @@ namespace MorphologyMesh
             do
             {
                 var nudgedPoints = SliceTopology.NudgeCorrespondingVerticies(Polygons, novelCorrespondingPoints);
-                */
+            */
             GridPolygon[] Polygons = ShapeList.Where(s => s is GridPolygon).Cast<GridPolygon>().ToArray();
             SliceTopology.AddPointsBetweenAdjacentCorrespondingVerticies(Polygons, correspondingPoints);
 
@@ -567,9 +583,8 @@ namespace MorphologyMesh
             while (novelCorrespondingPoints.Count > 0);
             */
 
-            SliceTopology output = new SliceTopology(group.Key, Polygons, IsUpper, ShapeZ, VertexShapeIndexToMorphNodeIndex);
-
-            
+            SliceTopology output = new SliceTopology(group.Key, Polygons, IsUpper, ShapeZ, VertexShapeIndexToMorphNodeIndex, this.SectionThickness);
+             
             return output;
         }
     }
@@ -605,6 +620,8 @@ namespace MorphologyMesh
         /// </summary>
         public readonly SortedSet<MorphologyEdge> InternalEdges;
 
+        public readonly double SliceThickness;
+
         public bool HasSliceAbove { get; internal set; } = false;
         public bool HasSliceBelow { get; internal set; } = false;
 
@@ -616,9 +633,9 @@ namespace MorphologyMesh
             this.InternalEdges = edges;
             var allNodes = new SortedSet<ulong>(NodesAbove);
             allNodes.UnionWith(NodesBelow);
-            AllNodes = allNodes;
+            AllNodes = allNodes; 
         }
-
+         
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
@@ -709,17 +726,27 @@ namespace MorphologyMesh
         internal readonly GridPolygon[] LowerPolygons;
 
         /// <summary>
+        /// How thick this slice is
+        /// </summary>
+        public readonly double SliceThickness;
+
+        /// <summary>
+        /// Center of the slice in Z axis
+        /// </summary>
+        public readonly double SliceCenterZ;
+
+        /// <summary>
         /// The translation vector to position this slice in world space.
         /// </summary>
         //public readonly GridVector2 Offset;
 
-        public SliceTopology(ulong key, IEnumerable<GridPolygon> polygons, IEnumerable<bool> isUpper, IEnumerable<double> polyZ, IEnumerable<ulong> polyIndexToMorphNodeIndex)
-            : this(polygons, isUpper, polyZ, polyIndexToMorphNodeIndex)
+        public SliceTopology(ulong key, IEnumerable<GridPolygon> polygons, IEnumerable<bool> isUpper, IEnumerable<double> polyZ, IEnumerable<ulong> polyIndexToMorphNodeIndex, double sliceThickness = double.NaN)
+            : this(polygons, isUpper, polyZ, polyIndexToMorphNodeIndex, sliceThickness)
         {
             SliceKey = key;
         }
 
-        public SliceTopology(IEnumerable<GridPolygon> polygons, IEnumerable<bool> isUpper, IEnumerable<double> polyZ, IEnumerable<ulong> polyIndexToMorphNodeIndex=null)
+        public SliceTopology(IEnumerable<GridPolygon> polygons, IEnumerable<bool> isUpper, IEnumerable<double> polyZ, IEnumerable<ulong> polyIndexToMorphNodeIndex=null, double sliceThickness = double.NaN)
         {
             SliceKey = 0;
 
@@ -736,6 +763,39 @@ namespace MorphologyMesh
 
             //Assign polys to sets for convienience later
             CalculateUpperAndLowerPolygons(IsUpper, Polygons, out UpperPolygons, out UpperPolyIndicies, out LowerPolygons, out LowerPolyIndicies);
+
+            //Use the calculated value if we can, otherwise use the default if it is provided, if we have neither, then throw an exception
+            var calculatedThickness = CalculateSliceThickness(PolyZ);
+            SliceThickness = double.IsNaN(calculatedThickness) ? sliceThickness : calculatedThickness;
+            if(double.IsNaN(SliceThickness))
+                throw new ArgumentException("A slice thickness must be specified if it cannot be calculated");
+
+            this.SliceCenterZ = CalculateSliceCenter(SliceThickness, LowerPolyIndicies, UpperPolyIndicies, PolyZ);
+        }
+
+        private static double CalculateSliceThickness(IEnumerable<double> polyZ)
+        {
+            double MinZ = polyZ.Min(); //Pick the largest of the low-end Z values
+            double MaxZ = polyZ.Max(); //Pick the smallest of the high-end Z values
+
+            return MinZ == MaxZ ? double.NaN : Math.Abs(MaxZ - MinZ);
+        }
+
+        private static double CalculateSliceCenter(double SliceThickness, ImmutableSortedSet<int> LowerPolyIndicies, ImmutableSortedSet<int> UpperPolyIndicies, double[] PolyZ)
+        { 
+            if(LowerPolyIndicies.Count == 0) {
+                double MinZ = UpperPolyIndicies.Select(i => PolyZ[i]).Min(); //Pick the largest of the low-end Z values
+                return MinZ - (SliceThickness / 2.0);
+            }
+            else if(UpperPolyIndicies.Count == 0) {
+                double MaxZ = LowerPolyIndicies.Select(i => PolyZ[i]).Max(); //Pick the largest of the low-end Z values
+                return MaxZ + (SliceThickness / 2.0);
+            }
+            else
+            {
+                double MinZ = UpperPolyIndicies.Select(i => PolyZ[i]).Min(); //Pick the largest of the low-end Z values 
+                return MinZ + SliceThickness;
+            } 
         }
 
         /// <summary>
@@ -1158,12 +1218,7 @@ namespace MorphologyMesh
                 return false;
 
             //Do not process a slice if the adjacent slices are being processed and could change the polygons it would be compared against
-            if (node.Edges.Keys.Any(key => SlicesWithActiveTasks.Contains(key)))
-            {
-                return false;
-            }
-
-            return true; 
+            return !node.Edges.Keys.Any(key => SlicesWithActiveTasks.Contains(key));
         }
 
         /// <summary>
@@ -1175,13 +1230,13 @@ namespace MorphologyMesh
         {
             Slice slice = Graph[slice_id];
 
-            if (CanStartSlice(slice) == false)
+            if (CanStartSlice(slice) is false)
                 return null;
 
             UnprocessedSlices.Remove(slice_id);
             SlicesWithActiveTasks.Add(slice_id);
 
-            Task topologyTask = Task.Run(() =>
+            void GetTopologyTask()
             {
                 SliceTopology st;
                 try
@@ -1189,13 +1244,13 @@ namespace MorphologyMesh
                     st = Graph.GetSliceTopology(slice);
                     this.OnTopologyComplete(slice, st);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     this.OnTopologyComplete(slice, new SliceTopology());
                 }
-            });
+            }
 
-            return topologyTask;
+            return Task.Run(GetTopologyTask);
         }
 
         /// <summary>

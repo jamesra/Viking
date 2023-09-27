@@ -277,10 +277,13 @@ namespace MorphologyMesh
 
             //double MinZ = region.VertPositions.Min(v => v.Z);
             //double MaxZ = region.VertPositions.Max(v => v.Z);
+            
+            double targetZ = mesh.SliceCenterZ;
 
-            double MinZ = mesh.LowerPolyIndicies.Max(i => mesh.PolyZ[i]); //Pick the largest of the low-end Z values
+            /*double MinZ = mesh.LowerPolyIndicies.Max(i => mesh.PolyZ[i]); //Pick the largest of the low-end Z values
             double MaxZ = mesh.UpperPolyIndicies.Min(i => mesh.PolyZ[i]); //Pick the smallest of the high-end Z values
             double targetZ = (MinZ + MaxZ) / 2.0;
+            */
 
             //TODO: Adjust the Z level of the output based on the type of region and verticies we are connecting to.
             var MedialAxisMeshVerts = NewVerts.Select(mv => new MorphMeshVertex(new MedialAxisIndex(MedialAxis, mv), (mv.Key + regionPolygonCenter).ToGridVector3(targetZ))).ToArray();
@@ -351,12 +354,18 @@ namespace MorphologyMesh
         {
             GridPolygon[] polysToClose = CloseUpper ? mesh.UpperPolygons : mesh.LowerPolygons;
 
+            //double HalfThickness = mesh.SliceThickness / 2.0;
+            //double targetZ = CloseUpper ? mesh.UpperPolyIndicies.Min() + HalfThickness : mesh.LowerPolyIndicies.Max() - HalfThickness;
+            double targetZ = mesh.SliceCenterZ;
+            targetZ += CloseUpper ? mesh.SliceThickness : -mesh.SliceThickness;
+
+            /*
             double MinZ = mesh.LowerPolyIndicies.Max(i => mesh.PolyZ[i]); //Pick the largest of the low-end Z values
             double MaxZ = mesh.UpperPolyIndicies.Min(i => mesh.PolyZ[i]); //Pick the smallest of the high-end Z values
 
             double HalfThickness = (MaxZ - MinZ) / 2.0;
             double targetZ = CloseUpper ? MaxZ + HalfThickness : MinZ - HalfThickness;
-
+            */
             for(int iPoly = 0; iPoly < mesh.Polygons.Length; iPoly++)
             {
                 bool ClosePoly = CloseUpper ? mesh.IsUpperPolygon[iPoly] : !mesh.IsUpperPolygon[iPoly];
