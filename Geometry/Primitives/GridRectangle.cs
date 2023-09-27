@@ -668,8 +668,6 @@ namespace Geometry
             return new GridRectangle(this.LowerLeft, this.Width, this.Height);
         }
 
-        
-
         private static GridVector2[] CalculateCorners(double Left, double Bottom, double Right, double Top) => 
             new GridVector2[] { new GridVector2(Left, Bottom),
                 new GridVector2(Left, Top),

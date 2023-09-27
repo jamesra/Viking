@@ -159,27 +159,47 @@ namespace Geometry.Transforms
 
             int MappedSection = System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("mappedSection").Value);
             int ControlSection = System.Convert.ToInt32(elem.GetAttributeCaseInsensitive("controlSection").Value);
+
+            int nRetries = 5;
              
             using (var client = new HttpClient())
             {
-                var response = await client.GetAsync(stosURI, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-                if (false == response.IsSuccessStatusCode)
+                HttpResponseMessage response = null;
+                while (nRetries >= 0)
                 {
-                    Trace.WriteLine($"Failure loading .stos from server: {response.StatusCode}");
-                    return null;
+                    response = await client.GetAsync(stosURI, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                    if (false == response.IsSuccessStatusCode)
+                    {
+                        if(response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
+                            response.StatusCode == System.Net.HttpStatusCode.RequestTimeout)
+                        {
+                            nRetries--;
+                            Debug.WriteLine($"Failed to load {stosURI} : Delaying for retry");
+                            await Task.Delay(Global.GetRandomRequestDelay());
+                            continue;
+                        }
+                        else
+                        { 
+                            Trace.WriteLine($"Failure loading .stos from server: {response.StatusCode}");
+                            return null; 
+                        }
+                    }
+
+                    var lm = response.Content.Headers.LastModified ?? DateTime.MaxValue;
+                    var lastModified = lm.UtcDateTime;
+                    var info = new StosTransformInfo(ControlSection, MappedSection, lastModified);
+
+    #if DEBUG
+                    Trace.WriteLine($"{stosURI} Modified: {lastModified}");
+    #endif
+                    using (var memStream = new MemoryStream(await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false)))
+                    {
+                        return await ParseStos(memStream, info, pixelSpacing).ConfigureAwait(false);
+                    }
                 }
 
-                var lm = response.Content.Headers.LastModified ?? DateTime.MaxValue;
-                var lastModified = lm.UtcDateTime;
-                var info = new StosTransformInfo(ControlSection, MappedSection, lastModified);
-
-#if DEBUG
-                Trace.WriteLine($"{stosURI} Modified: {lastModified}");
-#endif
-                using (var memStream = new MemoryStream(await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false)))
-                {
-                    return await ParseStos(memStream, info, pixelSpacing).ConfigureAwait(false);
-                }
+                Trace.WriteLine($"Failure loading .stos from server: {response.StatusCode}");
+                return null;
             }
 
 
@@ -246,14 +266,15 @@ namespace Geometry.Transforms
                 case "gridtransform_double_2_2":
                     //return ParseGridTransform(parts, info, (float)pixelSpacing, iFixedParameters, iVariableParameters, ControlBounds, MappedBounds);
                     return ParseGridTransform(transform_parts, pixelSpacing, info);
-                case "legendrepolynomialtransform_double_2_2_3":
-                    throw new NotImplementedException("stos transform not supported: legendrepolynomialtransform_double_2_2_3");
-                //MapPoints = ParsePolyTransform(parts, (float)pixelSpacing, iFixedParameters, iVariableParameters, MappedBounds).ToArray();
+                case "LegendrePolynomialTransform_double_2_2_1":
+                    return ParsePolyTransform(transform_parts, info);//MapPoints = ParsePolyTransform(parts, (float)pixelSpacing, iFixedParameters, iVariableParameters, MappedBounds).ToArray();
                 case "fixedcenterofrotationaffinetransform_double_2_2":
                     throw new NotImplementedException("stos transform not supported: fixedcenterofrotationaffinetransform_double_2_2");
                 //MapPoints = ParseRotateTranslateAffineTransform(parts, (float)pixelSpacing, iFixedParameters, iVariableParameters, MappedBounds, ControlBounds).ToArray();
                 case "meshtransform_double_2_2":
                     return ParseMeshTransform(transform_parts, info, pixelSpacing);
+                case "rigid2dtransform_double_2_2":
+                    return ParseRigidTransform(transform_parts, info);
                 default:
                     Debug.Assert(false, "Trying to read stos tranform I don't understand");
                     return null;
@@ -798,7 +819,9 @@ namespace Geometry.Transforms
             if (angle != 0)
             {
                 var sourceSpaceCenterOfRotation = new GridVector2(transform.FixedParameters[0], transform.FixedParameters[1]);
-                throw new NotImplementedException("Rotation by an angle not supported yet");
+                var source_to_target_offset = new GridVector2(transform.VariableParameters[1], transform.VariableParameters[2]); 
+
+                return new RigidTransform(source_to_target_offset, sourceSpaceCenterOfRotation, angle, info);
             }
 
             return new RigidNoRotationTransform(sourceToTargetOffset, info);
