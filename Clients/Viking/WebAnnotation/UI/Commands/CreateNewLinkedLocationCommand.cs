@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 using WebAnnotationModel;
+using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -32,12 +33,20 @@ namespace WebAnnotation.UI.Commands
         {
             try
             {
+                if(!LocationLinkView.IsValidLocationLinkTarget(NewLoc, ExistingLoc))
+                {
+                    MessageBox.Show("The new linked location must be on a different section.  Location links cannot be linked on the same section.\n(Perhaps a polygon would be appropriate if it is a long thin shape?)", "Recoverable Error");
+                    this.CancelCommand();
+                    return;
+                }
+
                 LocationObj NewLocation = Store.Locations.Create(NewLoc, new long[] { ExistingLoc.ID });
                 Global.LastEditedAnnotationID = NewLocation.ID;
             }
             catch (ArgumentOutOfRangeException)
             {
                 MessageBox.Show("The chosen point is outside mappable volume space, location not created", "Recoverable Error");
+                return;    
             }
 
             base.Execute();
