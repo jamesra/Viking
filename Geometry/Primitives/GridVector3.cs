@@ -6,6 +6,141 @@ using System.Text;
 
 namespace Geometry
 {
+    public class GridVector3Comparer : IComparer<GridVector3>, IComparer<IPoint>
+    {
+        public bool XYOrder;
+
+        public GridVector3Comparer(bool xyOrder = true)
+        {
+            XYOrder = xyOrder;
+        }
+
+        public int Compare(IPoint A, IPoint B)
+        {
+            return XYOrder ? GridVector3ComparerXYZ.CompareXYZ(in A, in B) : GridVector3ComparerZYX.CompareZYX(in A, in B);
+        }
+
+        public int Compare(GridVector3 A, GridVector3 B)
+        {
+            return XYOrder ? GridVector3ComparerXYZ.CompareXYZ(A, B) : GridVector3ComparerZYX.CompareZYX(A, B);
+        }
+    }
+
+    public class GridVector3ComparerZYX : IComparer<GridVector3>, IComparer<IPoint>
+    {
+        public static int CompareZYX(in IPoint A, in IPoint B)
+        {
+            double diffZ = A.Z - B.Z;
+            if(diffZ == 0)
+            { 
+                //We need to use the same equality standard as our epsilon value
+                double diffY = A.Y - B.Y;
+
+                if (diffY == 0)//Math.Abs(diffY) <= Global.Epsilon)
+                {
+                    double diffX = A.X - B.X;
+                    //if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
+                    //return 0;
+
+                    if (diffX == 0)//Math.Abs(diffX) <= Global.Epsilon)
+                    {
+                        return 0;
+                        //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
+                        /*if (diffY == 0)
+                        {*/
+                        //    return diffX > 0 ? 1 : -1;
+                        /*}
+                        else
+                        {
+                            return diffY > 0 ? 1 : -1;
+                        }*/
+                    }
+
+                    return diffX > 0 ? 1 : -1;
+                }
+
+                return diffY > 0 ? 1 : -1;
+            }
+
+            return diffZ > 0 ? 1 : -1;
+        }
+
+        public int Compare(IPoint A, IPoint B)
+        {
+            return GridVector3ComparerZYX.CompareZYX(in A, in B);
+        }
+
+        public int Compare(GridVector3 x, GridVector3 y)
+        {
+            return GridVector3ComparerZYX.CompareZYX((IPoint)x, (IPoint)y);
+        }
+    }
+
+    public class GridVector3ComparerXYZ : IComparer<GridVector3>, IComparer<IPoint>
+    {
+        /// <summary>
+        /// Sorts points on the X-Axis first, then Y-Axis
+        /// 
+
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <returns></returns>
+        public static int CompareXYZ(in IPoint A, in IPoint B)
+        {
+            /// I struggled with how this code should behave.  For now it is the expected behaviour,
+            /// however there is a global.epsilon value that is used to limit the precision of point 
+            /// position to help with rounding errors in equality tests.  However that means two points
+            /// can be equal according to the Viking code but still sort as non-equal.  That can be 
+            /// an issue when using classes such as SortedSet to avoid duplicate points.  If we check 
+            /// for the epsilon based equality first it breaks the delaunay implementation where point
+            /// sets are divided equally into two parts. 
+            /// 
+            //We need to use the same equality standard as our epsilon value
+            double diffX = A.X - B.X;
+
+            if (diffX == 0)//Math.Abs(diffX) <= Global.Epsilon)
+            {
+                double diffY = A.Y - B.Y;
+                //if (diffX * diffX + diffY * diffY < Global.EpsilonSquared)
+                //    return 0;
+
+                if (diffY == 0)//Math.Abs(diffY) <= Global.Epsilon)
+                {
+                    double diffZ = A.Z - B.Z;
+
+                    if(diffZ == 0)
+                        return 0;   
+                    else
+                        return diffZ > 0 ? 1 : -1;
+                    //Edge case. The points aren't equal by our standard, so check again and figure out which axis isn't equal first
+                    /*if (diffX == 0)
+                    {*/
+                    //                        return diffY > 0 ? 1 : -1;
+                    /*}
+                    else
+                    {
+                        return diffX > 0 ? 1 : -1;
+                    }*/
+                }
+
+                return diffY > 0 ? 1 : -1;
+            }
+
+            return diffX > 0 ? 1 : -1;
+        }
+
+        public int Compare(IPoint A, IPoint B)
+        {
+            return GridVector3ComparerXYZ.CompareXYZ(in A, in B);
+        }
+
+        public int Compare(GridVector3 a, GridVector3 b)
+        {
+            return GridVector3ComparerXYZ.CompareXYZ((IPoint)a, (IPoint)b);
+        }
+    }
+
     [Serializable]
     public struct GridVector3 : IPoint, ICloneable, IComparable, IEquatable<GridVector3>
     {
