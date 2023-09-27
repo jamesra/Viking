@@ -186,27 +186,36 @@ namespace VikingXNAGraphics
             }
             catch(EdgesIntersectTriangulationException)
             {
-                Trace.WriteLine(string.Format("Could not triangulate polygon {0}.  Atttempting to simplify", centered_poly));
-                GridPolygon simpler_centered_poly = centered_poly.Simplify(1.0, NumInterpolations: 6);
-                if(simpler_centered_poly.TotalUniqueVerticies == centered_poly.TotalUniqueVerticies)
-                {
-                    return null;
-                }
-
-                try
-                {
-                    Mesh = simpler_centered_poly.Triangulate();
-                }
-                catch (EdgesIntersectTriangulationException)
-                {
-                    Trace.WriteLine(string.Format("Simplification failed using {0}.", simpler_centered_poly));
-                    return null; 
-                }
+                Mesh = TrySimplifyPolygon(centered_poly);
+            }
+            catch (NonconformingTriangulationException)
+            {
+                Mesh = TrySimplifyPolygon(centered_poly);
             }
 
             var mesh_model = Mesh.ToVertexPositionColorMeshModel(InputColor);
             mesh_model.ModelMatrix = Matrix.CreateTranslation((float)_Position.X, (float)_Position.Y, 0);
             return mesh_model;
+        }
+
+        private static TriangulationMesh<IVertex2D<PolygonIndex>> TrySimplifyPolygon(GridPolygon centered_poly)
+        { 
+            Trace.WriteLine(string.Format("Could not triangulate polygon {0}.  Atttempting to simplify", centered_poly));
+            GridPolygon simpler_centered_poly = centered_poly.Simplify(1.0, NumInterpolations: 6);
+            if (simpler_centered_poly.TotalUniqueVerticies == centered_poly.TotalUniqueVerticies)
+            {
+                return null;
+            }
+
+            try
+            {
+                return simpler_centered_poly.Triangulate();
+            }
+            catch (EdgesIntersectTriangulationException)
+            {
+                Trace.WriteLine(string.Format("Simplification failed using {0}.", simpler_centered_poly));
+                return null;
+            }
         }
 
         private static MeshView<VertexPositionColor> InitializeModelView(GridPolygon InputPolygon, Color InputColor)
