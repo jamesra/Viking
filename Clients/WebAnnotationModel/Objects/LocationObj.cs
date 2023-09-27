@@ -608,7 +608,9 @@ namespace WebAnnotationModel
             }
         }
 
-
+        /// <summary>
+        /// The number of locations linked to this annotation.
+        /// </summary>
         public int NumLinks
         {
             get
@@ -672,6 +674,9 @@ namespace WebAnnotationModel
             }
         }
 
+        /// <summary>
+        /// True if the location marks where a structure process ends as part of normal biology
+        /// </summary>
         public bool Terminal
         {
             get { return Data.Terminal; }
@@ -687,6 +692,9 @@ namespace WebAnnotationModel
             }
         }
 
+        /// <summary>
+        /// True if the location marks where a structure goes off the edge of a volume
+        /// </summary>
         public bool OffEdge
         {
             get { return Data.OffEdge; }
@@ -702,11 +710,17 @@ namespace WebAnnotationModel
             }
         }
 
+        /// <summary>
+        /// True if the location is a vericosity cap, this terminates a process in a structure
+        /// </summary>
         public bool VericosityCap
         {
             get { return Attributes.Any(a => a.Name == "Varicosity Cap"); }
         }
-
+        
+        /// <summary>
+        /// True if the location indicates a boundary beyond which the structure cannot be traced
+        /// </summary>
         public bool Untraceable
         {
             get { return Attributes.Any(a => a.Name == "Untraceable"); }
