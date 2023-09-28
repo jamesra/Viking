@@ -242,7 +242,7 @@ namespace TriangleNet.Tools
             }
 
             minAspect = mesh.bounds.Width + mesh.bounds.Height;
-            minAspect = minAspect * minAspect;
+            minAspect *= minAspect;
             maxAspect = 0.0;
             minEdge = minAspect;
             maxEdge = 0.0;

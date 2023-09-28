@@ -635,7 +635,7 @@ namespace TriangleNet.Meshing
                                    (eorg.y - edest.y) * (eorg.y - edest.y));
                         if ((multiplier != 0.0) && (divisor != 0.0))
                         {
-                            multiplier = multiplier / divisor;
+                            multiplier /= divisor;
                             // Watch out for NANs.
                             if (!double.IsNaN(multiplier))
                             {

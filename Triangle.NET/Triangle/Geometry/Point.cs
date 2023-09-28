@@ -107,7 +107,7 @@ namespace TriangleNet.Geometry
             }
 
             // If one is null, but not both, return false.
-            if (((object)a == null) || ((object)b == null))
+            if ((a is null) || (b is null))
             {
                 return false;
             }
@@ -130,7 +130,7 @@ namespace TriangleNet.Geometry
 
             Point p = obj as Point;
 
-            if ((object)p == null)
+            if (p is null)
             {
                 return false;
             }
@@ -141,7 +141,7 @@ namespace TriangleNet.Geometry
         public bool Equals(Point p)
         {
             // If vertex is null return false.
-            if ((object)p == null)
+            if (p is null)
             {
                 return false;
             }

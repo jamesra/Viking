@@ -199,7 +199,7 @@ namespace TriangleNet.Geometry
                         return test;
                     }
 
-                    h = h / 2;
+                    h /= 2;
                 }
             }
 

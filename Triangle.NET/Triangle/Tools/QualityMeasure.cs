@@ -302,7 +302,7 @@ namespace TriangleNet.Tools
 
                 if (area == 0.0)
                 {
-                    area_zero = area_zero + 1;
+                    area_zero++;
                 }
 
                 return area;

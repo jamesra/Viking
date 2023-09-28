@@ -539,11 +539,11 @@ namespace TriangleNet
                                     ax = myCircumcenter.x - inter_x;
                                     ay = myCircumcenter.y - inter_y;
 
-                                    ax = ax / d;
-                                    ay = ay / d;
+                                    ax /= d;
+                                    ay /= d;
                                     // now calculate the new intersection point which is perturbated towards the circumcenter
-                                    inter_x = inter_x + ax * pertConst * Math.Sqrt(shortestEdgeDist);
-                                    inter_y = inter_y + ay * pertConst * Math.Sqrt(shortestEdgeDist);
+                                    inter_x += ax * pertConst * Math.Sqrt(shortestEdgeDist);
+                                    inter_y += ay * pertConst * Math.Sqrt(shortestEdgeDist);
                                     if (IsBadTriangleAngle(middleAngleCorner.x, middleAngleCorner.y, largestAngleCorner.x, largestAngleCorner.y, inter_x, inter_y))
                                     {
                                         // go back to circumcenter
@@ -674,11 +674,11 @@ namespace TriangleNet
                                     ax = myCircumcenter.x - inter_x;
                                     ay = myCircumcenter.y - inter_y;
 
-                                    ax = ax / d;
-                                    ay = ay / d;
+                                    ax /= d;
+                                    ay /= d;
                                     // now calculate the new intersection point which is perturbated towards the circumcenter
-                                    inter_x = inter_x + ax * pertConst * Math.Sqrt(shortestEdgeDist);
-                                    inter_y = inter_y + ay * pertConst * Math.Sqrt(shortestEdgeDist);
+                                    inter_x += ax * pertConst * Math.Sqrt(shortestEdgeDist);
+                                    inter_y += ay * pertConst * Math.Sqrt(shortestEdgeDist);
                                     if (IsBadTriangleAngle(middleAngleCorner.x, middleAngleCorner.y, largestAngleCorner.x, largestAngleCorner.y, inter_x, inter_y))
                                     {
                                         // go back to circumcenter
@@ -1128,7 +1128,7 @@ namespace TriangleNet
                     }
                     else
                     {
-                        minangle = minangle + 0.5;
+                        minangle += 0.5;
                     }
                     petalRadius = Math.Sqrt(shortestEdgeDist) / (2 * Math.Sin(minangle * Math.PI / 180.0));
                     /// compute two possible centers of the petal ///
@@ -1314,11 +1314,11 @@ namespace TriangleNet
                                             ax = myCircumcenter.x - line_inter_x;
                                             ay = myCircumcenter.y - line_inter_y;
 
-                                            ax = ax / d;
-                                            ay = ay / d;
+                                            ax /= d;
+                                            ay /= d;
                                             // now calculate the new intersection point which is perturbated towards the circumcenter
-                                            line_inter_x = line_inter_x + ax * pertConst * Math.Sqrt(shortestEdgeDist);
-                                            line_inter_y = line_inter_y + ay * pertConst * Math.Sqrt(shortestEdgeDist);
+                                            line_inter_x += ax * pertConst * Math.Sqrt(shortestEdgeDist);
+                                            line_inter_y += ay * pertConst * Math.Sqrt(shortestEdgeDist);
                                             if (IsBadTriangleAngle(middleAngleCorner.x, middleAngleCorner.y, largestAngleCorner.x, largestAngleCorner.y, line_inter_x, line_inter_y))
                                             {
                                                 // go back to circumcenter
@@ -1393,11 +1393,11 @@ namespace TriangleNet
                                             ax = myCircumcenter.x - line_inter_x;
                                             ay = myCircumcenter.y - line_inter_y;
 
-                                            ax = ax / d;
-                                            ay = ay / d;
+                                            ax /= d;
+                                            ay /= d;
                                             // now calculate the new intersection point which is perturbated towards the circumcenter
-                                            line_inter_x = line_inter_x + ax * pertConst * Math.Sqrt(shortestEdgeDist);
-                                            line_inter_y = line_inter_y + ay * pertConst * Math.Sqrt(shortestEdgeDist);
+                                            line_inter_x += ax * pertConst * Math.Sqrt(shortestEdgeDist);
+                                            line_inter_y += ay * pertConst * Math.Sqrt(shortestEdgeDist);
                                             if (IsBadTriangleAngle(middleAngleCorner.x, middleAngleCorner.y, largestAngleCorner.x, largestAngleCorner.y, line_inter_x, line_inter_y))
                                             {
                                                 // go back to circumcenter
@@ -1434,11 +1434,11 @@ namespace TriangleNet
                                         ax = myCircumcenter.x - inter_x;
                                         ay = myCircumcenter.y - inter_y;
 
-                                        ax = ax / d;
-                                        ay = ay / d;
+                                        ax /= d;
+                                        ay /= d;
                                         // now calculate the new intersection point which is perturbated towards the circumcenter
-                                        inter_x = inter_x + ax * pertConst * Math.Sqrt(shortestEdgeDist);
-                                        inter_y = inter_y + ay * pertConst * Math.Sqrt(shortestEdgeDist);
+                                        inter_x += ax * pertConst * Math.Sqrt(shortestEdgeDist);
+                                        inter_y += ay * pertConst * Math.Sqrt(shortestEdgeDist);
                                         if (IsBadTriangleAngle(middleAngleCorner.x, middleAngleCorner.y, largestAngleCorner.x, largestAngleCorner.y, inter_x, inter_y))
                                         {
                                             // go back to circumcenter
@@ -1597,11 +1597,11 @@ namespace TriangleNet
                                             ax = myCircumcenter.x - line_inter_x;
                                             ay = myCircumcenter.y - line_inter_y;
 
-                                            ax = ax / d;
-                                            ay = ay / d;
+                                            ax /= d;
+                                            ay /= d;
                                             // now calculate the new intersection point which is perturbated towards the circumcenter
-                                            line_inter_x = line_inter_x + ax * pertConst * Math.Sqrt(shortestEdgeDist);
-                                            line_inter_y = line_inter_y + ay * pertConst * Math.Sqrt(shortestEdgeDist);
+                                            line_inter_x += ax * pertConst * Math.Sqrt(shortestEdgeDist);
+                                            line_inter_y += ay * pertConst * Math.Sqrt(shortestEdgeDist);
                                             if (IsBadTriangleAngle(middleAngleCorner.x, middleAngleCorner.y, largestAngleCorner.x, largestAngleCorner.y, line_inter_x, line_inter_y))
                                             {
                                                 // go back to circumcenter
@@ -1675,11 +1675,11 @@ namespace TriangleNet
                                             ax = myCircumcenter.x - line_inter_x;
                                             ay = myCircumcenter.y - line_inter_y;
 
-                                            ax = ax / d;
-                                            ay = ay / d;
+                                            ax /= d;
+                                            ay /= d;
                                             // now calculate the new intersection point which is perturbated towards the circumcenter
-                                            line_inter_x = line_inter_x + ax * pertConst * Math.Sqrt(shortestEdgeDist);
-                                            line_inter_y = line_inter_y + ay * pertConst * Math.Sqrt(shortestEdgeDist);
+                                            line_inter_x += ax * pertConst * Math.Sqrt(shortestEdgeDist);
+                                            line_inter_y += ay * pertConst * Math.Sqrt(shortestEdgeDist);
                                             if (IsBadTriangleAngle(middleAngleCorner.x, middleAngleCorner.y, largestAngleCorner.x, largestAngleCorner.y, line_inter_x, line_inter_y))
                                             {
                                                 // go back to circumcenter
@@ -1716,11 +1716,11 @@ namespace TriangleNet
                                         ax = myCircumcenter.x - inter_x;
                                         ay = myCircumcenter.y - inter_y;
 
-                                        ax = ax / d;
-                                        ay = ay / d;
+                                        ax /= d;
+                                        ay /= d;
                                         // now calculate the new intersection point which is perturbated towards the circumcenter
-                                        inter_x = inter_x + ax * pertConst * Math.Sqrt(shortestEdgeDist);
-                                        inter_y = inter_y + ay * pertConst * Math.Sqrt(shortestEdgeDist);
+                                        inter_x += ax * pertConst * Math.Sqrt(shortestEdgeDist);
+                                        inter_y += ay * pertConst * Math.Sqrt(shortestEdgeDist);
                                         if (IsBadTriangleAngle(middleAngleCorner.x, middleAngleCorner.y, largestAngleCorner.x, largestAngleCorner.y, inter_x, inter_y))
                                         {
                                             // go back to circumcenter
@@ -2539,7 +2539,7 @@ namespace TriangleNet
                 petalradiusconstant = 0.5 / Math.Sin(alpha);
             }
 
-            for (i = 0; i < numpoints * 2; i = i + 2)
+            for (i = 0; i < numpoints * 2; i += 2)
             {
                 x2 = points[i];
                 y2 = points[i + 1];
@@ -2673,7 +2673,7 @@ namespace TriangleNet
                 count = 0;
                 i = 1;
                 num = 8;
-                for (j = 0; j < 32; j = j + 4)
+                for (j = 0; j < 32; j += 4)
                 {
                     numpolypoints = HalfPlaneIntersection(num, ref initialConvexPoly, wedges[32 * s + j], wedges[32 * s + 1 + j], wedges[32 * s + 2 + j], wedges[32 * s + 3 + j]);
                     if (numpolypoints == 0)
@@ -2684,7 +2684,7 @@ namespace TriangleNet
                 count++;
                 while (count < numpoints - 1)
                 {
-                    for (j = 0; j < 32; j = j + 4)
+                    for (j = 0; j < 32; j += 4)
                     {
                         numpolypoints = HalfPlaneIntersection(num, ref initialConvexPoly, wedges[32 * (i + s * flag) + j], wedges[32 * (i + s * flag) + 1 + j], wedges[32 * (i + s * flag) + 2 + j], wedges[32 * (i + s * flag) + 3 + j]);
                         if (numpolypoints == 0)
@@ -2692,7 +2692,7 @@ namespace TriangleNet
                         else
                             num = numpolypoints;
                     }
-                    i = i + flag;
+                    i += flag;
                     flag = (flag + 1) % 2;
                     count++;
                 }
@@ -2817,7 +2817,7 @@ namespace TriangleNet
                 petalradiusconstant = 0.5 / Math.Sin(alpha);
             }
 
-            for (i = 0; i < numpoints * 2; i = i + 2)
+            for (i = 0; i < numpoints * 2; i += 2)
             {
                 // go to the next point
                 x2 = points[i];
@@ -3087,7 +3087,7 @@ namespace TriangleNet
                 count = 0;
                 i = 1;
                 num = howManyPoints;
-                for (j = 0; j < 40; j = j + 4)
+                for (j = 0; j < 40; j += 4)
                 {
                     // in order to skip non-existent lines
                     if (howManyPoints == 4 && (j == 8 || j == 12 || j == 16 || j == 24 || j == 28 || j == 32))
@@ -3115,7 +3115,7 @@ namespace TriangleNet
                 //printf("yes here\n");	
                 while (count < numpoints - 1)
                 {
-                    for (j = 0; j < 40; j = j + 4)
+                    for (j = 0; j < 40; j += 4)
                     {
                         // in order to skip non-existent lines
                         if (howManyPoints == 4 && (j == 8 || j == 12 || j == 16 || j == 24 || j == 28 || j == 32))
@@ -3139,7 +3139,7 @@ namespace TriangleNet
                         else
                             num = numpolypoints;
                     }
-                    i = i + flag;
+                    i += flag;
                     flag = (flag + 1) % 2;
                     count++;
                 }
@@ -3149,7 +3149,7 @@ namespace TriangleNet
                 if (behavior.MaxAngle != 0.0)
                 {
                     numBadTriangle = 0;
-                    for (j = 0; j < numpoints * 2 - 2; j = j + 2)
+                    for (j = 0; j < numpoints * 2 - 2; j += 2)
                     {
                         if (IsBadTriangleAngle(newloc[0], newloc[1], points[j], points[j + 1], points[j + 2], points[j + 3]))
                         {
@@ -3168,12 +3168,12 @@ namespace TriangleNet
                     }
                     n = (numpoints <= 2) ? 20 : 30;
                     // try points other than centroid
-                    for (k = 0; k < 2 * numpoints; k = k + 2)
+                    for (k = 0; k < 2 * numpoints; k += 2)
                     {
-                        for (e = 1; e < n; e = e + 1)
+                        for (e = 1; e < n; e++)
                         {
                             newloc[0] = 0.0; newloc[1] = 0.0;
-                            for (i = 0; i < 2 * numpoints; i = i + 2)
+                            for (i = 0; i < 2 * numpoints; i += 2)
                             {
                                 weight = 1.0 / numpoints;
                                 if (i == k)
@@ -3190,7 +3190,7 @@ namespace TriangleNet
 
                             }
                             numBadTriangle = 0;
-                            for (j = 0; j < numpoints * 2 - 2; j = j + 2)
+                            for (j = 0; j < numpoints * 2 - 2; j += 2)
                             {
                                 if (IsBadTriangleAngle(newloc[0], newloc[1], points[j], points[j + 1], points[j + 2], points[j + 3]))
                                 {
@@ -3356,8 +3356,8 @@ namespace TriangleNet
             else
             {
                 p[0] = 1.0;
-                u_a = u_a / denom;
-                u_b = u_b / denom;
+                u_a /= denom;
+                u_b /= denom;
                 p[1] = x1 + u_a * (x2 - x1); // not the intersection point
                 p[2] = y1 + u_a * (y2 - y1);
             }
@@ -3404,7 +3404,7 @@ namespace TriangleNet
                     max = double.MinValue;
                     // compute the minimum and maximum of the
                     // third coordinate of the cross product		
-                    for (j = 1; j <= 2 * polys[i][0] - 1; j = j + 2)
+                    for (j = 1; j <= 2 * polys[i][0] - 1; j += 2)
                     {
                         z = dx * (polys[i][j + 1] - y1) - dy * (polys[i][j] - x1);
                         min = (z < min ? z : min);
@@ -3467,7 +3467,7 @@ namespace TriangleNet
             // for debugging 
             int case1 = 0, case2 = 0, case3 = 0, case31 = 0, case32 = 0, case33 = 0, case311 = 0, case3111 = 0;
             // intersect all edges of poly with line
-            for (i = 0; i < 2 * numvertices; i = i + 2)
+            for (i = 0; i < 2 * numvertices; i += 2)
             {
                 int j = (i + 2 >= 2 * numvertices) ? 0 : i + 2;
                 LineLineSegmentIntersection(x1, y1, x2, y2, convexPoly[i], convexPoly[i + 1], convexPoly[j], convexPoly[j + 1], ref p);
@@ -3721,8 +3721,8 @@ namespace TriangleNet
             }
             else
             {
-                u_b = u_b / denom;
-                u_a = u_a / denom;
+                u_b /= denom;
+                u_a /= denom;
                 // 	    printf("u_b %.20f\n", u_b);
                 if (u_b < -compConst || u_b > 1.0 + compConst)
                 {	// check if it is on the line segment		
@@ -3751,7 +3751,7 @@ namespace TriangleNet
             //double area = 0.0;//, temp
             centroid[0] = 0.0; centroid[1] = 0.0;
 
-            for (i = 0; i < 2 * numpoints; i = i + 2)
+            for (i = 0; i < 2 * numpoints; i += 2)
             {
 
                 centroid[0] = centroid[0] + points[i];
