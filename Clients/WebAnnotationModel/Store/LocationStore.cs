@@ -16,7 +16,7 @@ namespace WebAnnotationModel
     {
         public RTree.RTree<long> SpatialSearch = new RTree.RTree<long>();
 
-        LocationStore Store = null;
+        readonly LocationStore Store = null;
 
         public LocationRTree(LocationStore store)
         {
@@ -52,7 +52,7 @@ namespace WebAnnotationModel
         /// Maps sections to a sorted list of locations on that section.
         /// This collection is not guaranteed to match the ObjectToID collection.  Adding spin-locks to the Add/Remove functions could solve this if it becomes an issue.
         /// </summary>
-        System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>>();
+        readonly System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>>();
 
         internal LocationRTree SpatialSearch;
          

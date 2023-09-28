@@ -93,7 +93,7 @@ namespace WebAnnotationModel.Objects
             }
         }
 
-        ObservableCollection<THISTYPE> _Children = new ObservableCollection<THISTYPE>();
+        readonly ObservableCollection<THISTYPE> _Children = new ObservableCollection<THISTYPE>();
 
         public THISTYPE[] Children
         {

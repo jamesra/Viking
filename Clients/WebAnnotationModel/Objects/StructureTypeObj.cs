@@ -140,7 +140,7 @@ namespace WebAnnotationModel
             return Store.StructureTypes.GetObjectByID(this.ParentID.Value, true);
         }
 
-        private object LinksLock = new object();
+        private readonly object LinksLock = new object();
         private ObservableCollection<PermittedStructureLinkObj> _PermittedLinks = null;
         public ObservableCollection<PermittedStructureLinkObj> PermittedLinks
         {

@@ -541,7 +541,7 @@ namespace WebAnnotationModel
             get { return Data.Username; }
         }
 
-        private object LinkLock = new object();
+        private readonly object LinkLock = new object();
 
         private ObservableCollection<long> _ObservableLinks = null;
         private ReadOnlyObservableCollection<long> _ReadOnlyObservableLinks = null;

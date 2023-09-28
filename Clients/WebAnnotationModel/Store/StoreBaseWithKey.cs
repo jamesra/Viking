@@ -60,13 +60,13 @@ namespace WebAnnotationModel
         /// When we query the database for objects on a section we store the query time for the section
         /// That way on the next query we only need to store the updates.
         /// </summary>
-        private ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
+        private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
 
         /// <summary>
         /// A collection of values indicating which sections have an outstanding query. 
         /// The existence of a key indicates a query is in progress
         /// </summary>
-        private ConcurrentDictionary<long, GetObjectBySectionCallbackState<INTERFACE, OBJECT>> OutstandingSectionQueries = new ConcurrentDictionary<long, GetObjectBySectionCallbackState<INTERFACE, OBJECT>>();
+        private readonly ConcurrentDictionary<long, GetObjectBySectionCallbackState<INTERFACE, OBJECT>> OutstandingSectionQueries = new ConcurrentDictionary<long, GetObjectBySectionCallbackState<INTERFACE, OBJECT>>();
 
         protected ConcurrentDictionary<KEY, OBJECT> ChangedObjects = new ConcurrentDictionary<KEY, OBJECT>();
 

@@ -24,7 +24,7 @@ namespace WebAnnotationModel
         /// </summary>
         public string debug_message;
 
-        static ConcurrentDictionary<string, string> active_requests = new ConcurrentDictionary<string, string>();
+        static readonly ConcurrentDictionary<string, string> active_requests = new ConcurrentDictionary<string, string>();
 #endif
 
 
@@ -159,10 +159,10 @@ namespace WebAnnotationModel
     {
         readonly GridCellDimensions CellDimensions;
         readonly double PowerScale;
-        static double RegionUpdateInterval = 180;
+        static readonly double RegionUpdateInterval = 180;
         readonly IRegionQuery<KEY, OBJECT> objectStore;
 
-        ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new ConcurrentDictionary<int, RegionPyramid<OBJECT>>();
+        readonly ConcurrentDictionary<int, RegionPyramid<OBJECT>> sectionPyramids = new ConcurrentDictionary<int, RegionPyramid<OBJECT>>();
 
         public RegionLoader(IRegionQuery<KEY, OBJECT> store) : this(store, new GridCellDimensions(2000, 2000), 3)
         {
