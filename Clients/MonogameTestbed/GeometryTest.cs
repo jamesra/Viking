@@ -167,12 +167,12 @@ namespace MonogameTestbed
                 if (shapeView is IViewPosition2D)
                 {
                     IViewPosition2D view = shapeView as IViewPosition2D;
-                    view.Position = view.Position + state.ThumbSticks.Left.ToGridVector2();
+                    view.Position += state.ThumbSticks.Left.ToGridVector2();
                 }
                 else if(shapeView is IViewPosition3D)
                 {
                     IViewPosition3D view = shapeView as IViewPosition3D;
-                    view.Position = view.Position + state.ThumbSticks.Left.ToGridVector3();
+                    view.Position += state.ThumbSticks.Left.ToGridVector3();
                 }
             }
 

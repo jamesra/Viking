@@ -59,7 +59,7 @@ namespace MonogameTestbed
         //List<LineView> polyRingViews = null;
         public PointSetView MeshVertsView = null;
 
-        TriangulationView triView = null;
+        readonly TriangulationView triView = null;
 
         PolygonSetView PolyViews;
         List<LineView> OTVTableView = null;
@@ -1457,7 +1457,7 @@ namespace MonogameTestbed
             {
                 if ((wrapView.VertexLabelType & (IndexLabelType.MESH | IndexLabelType.POLYGON)) == 0)
                 {
-                    wrapView.VertexLabelType = wrapView.VertexLabelType | IndexLabelType.MESH;
+                    wrapView.VertexLabelType |= IndexLabelType.MESH;
                 }
                 else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) > 0)
                 {
@@ -1465,19 +1465,19 @@ namespace MonogameTestbed
                 }
                 else if ((wrapView.VertexLabelType & IndexLabelType.MESH) == 0)
                 {
-                    wrapView.VertexLabelType = wrapView.VertexLabelType | IndexLabelType.MESH;
-                    wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.POLYGON;
+                    wrapView.VertexLabelType |= IndexLabelType.MESH;
+                    wrapView.VertexLabelType ^= IndexLabelType.POLYGON;
                 }
                 else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) == 0)
                 {
-                    wrapView.VertexLabelType = wrapView.VertexLabelType | IndexLabelType.POLYGON;
-                    wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.MESH;
+                    wrapView.VertexLabelType |= IndexLabelType.POLYGON;
+                    wrapView.VertexLabelType ^= IndexLabelType.MESH;
                 }
             }
 
             if(Gamepad.RightStick_Clicked)
             {
-                wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.POSITION;
+                wrapView.VertexLabelType ^= IndexLabelType.POSITION;
             }
 
             if(Gamepad.LeftStick_Clicked)

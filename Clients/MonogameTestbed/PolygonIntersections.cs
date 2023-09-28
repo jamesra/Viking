@@ -52,7 +52,7 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized { get { return _initialized; } }
 
-        private string JSONFile = "PolygonIntersectionRepro.json";
+        private readonly string JSONFile = "PolygonIntersectionRepro.json";
 
         Scene scene;
         readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
@@ -127,7 +127,7 @@ namespace MonogameTestbed
         }
 
 
-        AnnotationVizLib.MorphologyGraph graph;
+        readonly AnnotationVizLib.MorphologyGraph graph;
         private void PopulateFromOData()
         {
 

@@ -50,12 +50,9 @@ namespace MonogameTestbed
 
         void IRunner.OnFinished(string value1, TestResult result)
         {   
-            FsCheck.Runner.consoleRunner.OnFinished(value1, result); 
+            FsCheck.Runner.consoleRunner.OnFinished(value1, result);
 
-            if(OnFinished != null)
-            {
-                OnFinished(value1, result);
-            }
+            OnFinished?.Invoke(value1, result);
         }
 
         void IRunner.OnShrink(FSharpList<object> value1, FSharpFunc<FSharpList<object>, string> value2)
@@ -183,7 +180,7 @@ namespace MonogameTestbed
          
         Task TestTask = null;
 
-        private string JSONFile = "PolygonDelaunayRepro.json";
+        private readonly string JSONFile = "PolygonDelaunayRepro.json";
 
         public Task Init(MonoTestbed window)
         {

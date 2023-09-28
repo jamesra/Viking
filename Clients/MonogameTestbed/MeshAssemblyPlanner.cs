@@ -320,7 +320,7 @@ namespace MonogameTestbed
 
         public override bool Equals(object obj)
         {
-            if (object.ReferenceEquals(obj as IAssemblyPlannerNode, null))
+            if (obj as IAssemblyPlannerNode is null)
                 return false;
 
             IAssemblyPlannerNode other = (IAssemblyPlannerNode)obj;
@@ -383,7 +383,7 @@ namespace MonogameTestbed
         {
             this.Parent = parent;
             this.Key = NextKey;
-            NextKey = NextKey - 1;
+            NextKey--;
         }
 
         public AssemblyPlannerBranch(IAssemblyPlannerNode left=null, IAssemblyPlannerNode right=null, AssemblyPlannerBranch parent = null) : this(parent)
