@@ -23,8 +23,8 @@ namespace AnnotationVizLib
     /// </summary>
     public class StructureColorMap
     {
-        ColorMapWithLong structure_color_map = null;
-        ColorMapWithLong structureType_color_map = null;
+        readonly ColorMapWithLong structure_color_map = null;
+        readonly ColorMapWithLong structureType_color_map = null;
 
         public StructureColorMap(ColorMapWithLong structureTypeColorMap,
                                            ColorMapWithLong structureColorMap)
@@ -82,7 +82,7 @@ namespace AnnotationVizLib
 
     public class StructureMorphologyColorMap : StructureColorMap
     {
-        ColorMapWithImages LocationColorMap = null;
+        readonly ColorMapWithImages LocationColorMap = null;
 
         public StructureMorphologyColorMap(ColorMapWithLong structureTypeColorMap,
                                            ColorMapWithLong structureColorMap,

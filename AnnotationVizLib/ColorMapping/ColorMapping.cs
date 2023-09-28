@@ -45,10 +45,10 @@ namespace AnnotationVizLib
     public class ColorMapImageData
     {
         public readonly int SectionNumber;
-        Bitmap image;
-        IScale scale;
-        ColorScalars color_scalar = new ColorScalars(1, 1, 1, 1);
-        ColorImageOffset offset = new ColorImageOffset(0, 0);
+        readonly Bitmap image;
+        readonly IScale scale;
+        readonly ColorScalars color_scalar = new ColorScalars(1, 1, 1, 1);
+        readonly ColorImageOffset offset = new ColorImageOffset(0, 0);
 
         public ColorMapImageData(System.IO.Stream ImageStream, int section_number, IScale scale_data)
         {
@@ -160,7 +160,7 @@ namespace AnnotationVizLib
     /// </summary>
     public class ColorMapWithImages
     {
-        SortedList<int, List<ColorMapImageData>> ColorMapTable = new SortedList<int, List<ColorMapImageData>>();
+        readonly SortedList<int, List<ColorMapImageData>> ColorMapTable = new SortedList<int, List<ColorMapImageData>>();
 
         protected ColorMapWithImages()
         {
@@ -392,7 +392,7 @@ namespace AnnotationVizLib
     /// </summary>
     public class ColorMapWithLong
     {
-        SortedList<long, Color> ColorMapTable = new SortedList<long, Color>();
+        readonly SortedList<long, Color> ColorMapTable = new SortedList<long, Color>();
 
         private static long ConvertKey(string str)
         {

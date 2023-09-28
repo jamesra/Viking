@@ -16,7 +16,7 @@ namespace AnnotationVizLib
 
     public class MorphologyJSONView
     {
-        List<JSONStructureMorphology> StructureMorphologies = new List<JSONStructureMorphology>();
+        readonly List<JSONStructureMorphology> StructureMorphologies = new List<JSONStructureMorphology>();
 
         static MorphologyJSONView()
         {

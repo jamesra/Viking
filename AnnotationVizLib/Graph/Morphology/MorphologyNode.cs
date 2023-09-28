@@ -14,7 +14,7 @@ namespace AnnotationVizLib
     {
         public ILocation Location = null;
 
-        public ulong ID { get { return this.Location.ID; } }
+        public ulong ID => this.Location.ID;
 
         //Structure this node represents 
         public MorphologyGraph Graph;
@@ -33,20 +33,24 @@ namespace AnnotationVizLib
             {
                 if (_geometry == null)
                 {
-                    _geometry = Location.Geometry;
-                }
+                    /*if(Location.Geometry.GeometryType() == SupportedGeometryType.POLYLINE)
+                    {
+                        var bbox = Location.Geometry.BoundingBox();
+                        _geometry = Location.Geometry.ToCircle().ToSqlGeometry(); 
+                    }
+                    else
+                    {*/
+                        _geometry = Location.Geometry;
+                    //}
+                } 
+
                 return _geometry;
             }
-            set
-            {
-                _geometry = value;
-            }
+            set => _geometry = value;
+        } 
+        public double Z => Location.Z;
 
-        }
-
-        public double Z { get { return Location.Z; } }
-
-        public double UnscaledZ { get { return Location.UnscaledZ; } }
+        public double UnscaledZ => Location.UnscaledZ;
 
         public override string ToString()
         {

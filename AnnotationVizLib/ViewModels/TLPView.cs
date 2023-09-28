@@ -146,8 +146,8 @@ namespace AnnotationVizLib
         public SortedDictionary<string, string> SubgraphAttributes = new SortedDictionary<string, string>();
         public SortedDictionary<ulong, TLPViewSubgraph> SubGraphs = new SortedDictionary<ulong, TLPViewSubgraph>();
 
-        SortedSet<ulong> NodeIDs = new SortedSet<ulong>();
-        SortedSet<ulong> EdgeIDs = new SortedSet<ulong>();
+        readonly SortedSet<ulong> NodeIDs = new SortedSet<ulong>();
+        readonly SortedSet<ulong> EdgeIDs = new SortedSet<ulong>();
 
         public TLPViewSubgraph(ulong subgraph_ID, string label)
         {
@@ -283,14 +283,14 @@ namespace AnnotationVizLib
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP
         /// </summary>
-        SortedDictionary<VIEWED_KEY, ulong> KeyToIndex = new SortedDictionary<VIEWED_KEY, ulong>();
+        readonly SortedDictionary<VIEWED_KEY, ulong> KeyToIndex = new SortedDictionary<VIEWED_KEY, ulong>();
 
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP
         /// </summary>
-        SortedList<ulong, TLPViewSubgraph> Subgraphs = new SortedList<ulong, TLPViewSubgraph>();
+        readonly SortedList<ulong, TLPViewSubgraph> Subgraphs = new SortedList<ulong, TLPViewSubgraph>();
 
-        SortedDictionary<ulong, TLPViewEdge> TulipIDToEdge = new SortedDictionary<ulong, TLPViewEdge>();
+        readonly SortedDictionary<ulong, TLPViewEdge> TulipIDToEdge = new SortedDictionary<ulong, TLPViewEdge>();
 
         private ulong nextNodeIndex = 0;
 

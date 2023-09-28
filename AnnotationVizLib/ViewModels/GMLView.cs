@@ -193,8 +193,8 @@ namespace AnnotationVizLib
         public SortedDictionary<string, string> SubgraphAttributes = new SortedDictionary<string, string>();
         public SortedDictionary<ulong, GMLViewSubgraph> SubGraphs = new SortedDictionary<ulong, GMLViewSubgraph>();
 
-        SortedSet<ulong> NodeIDs = new SortedSet<ulong>();
-        SortedSet<ulong> EdgeIDs = new SortedSet<ulong>();
+        readonly SortedSet<ulong> NodeIDs = new SortedSet<ulong>();
+        readonly SortedSet<ulong> EdgeIDs = new SortedSet<ulong>();
 
         public GMLViewSubgraph(ulong subgraph_ID, string label)
         {
@@ -318,14 +318,14 @@ namespace AnnotationVizLib
         /// <summary>
         /// Map the motif label to the arbitrary id used by GML
         /// </summary>
-        SortedDictionary<VIEWED_KEY, ulong> KeyToIndex = new SortedDictionary<VIEWED_KEY, ulong>();
+        readonly SortedDictionary<VIEWED_KEY, ulong> KeyToIndex = new SortedDictionary<VIEWED_KEY, ulong>();
 
         /// <summary>
         /// Map the motif label to the arbitrary id used by GML
         /// </summary>
-        SortedList<ulong, GMLViewSubgraph> Subgraphs = new SortedList<ulong, GMLViewSubgraph>();
+        readonly SortedList<ulong, GMLViewSubgraph> Subgraphs = new SortedList<ulong, GMLViewSubgraph>();
 
-        SortedDictionary<ulong, GMLViewEdge> GML_IDToEdge = new SortedDictionary<ulong, GMLViewEdge>();
+        readonly SortedDictionary<ulong, GMLViewEdge> GML_IDToEdge = new SortedDictionary<ulong, GMLViewEdge>();
 
         private ulong nextNodeIndex = 0;
 
