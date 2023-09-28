@@ -35,7 +35,7 @@ namespace VikingXNAGraphics
             if(object.ReferenceEquals(obj, this))
                 return true; 
             
-            if(object.ReferenceEquals(obj, null))
+            if(obj is null)
                 return false;
             
             FontRenderData other = obj as FontRenderData;

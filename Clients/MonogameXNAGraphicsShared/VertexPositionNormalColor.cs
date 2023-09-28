@@ -30,18 +30,18 @@ namespace VikingXNAGraphics
 
         public Vector3 Position
         {
-            get { return vPosition; }
+            get => vPosition;
         }
 
         public Vector3 Normal
         {
-            get { return vNormal; }
+            get => vNormal;
             set { vNormal = value; }
         }
 
         public Color Color
         {
-            get { return vColor; }
+            get => vColor;
             set { vColor = value; }
         }
 
@@ -76,8 +76,8 @@ namespace VikingXNAGraphics
             if (Type.ReferenceEquals(left, right))
                 return true;
 
-            if (Type.ReferenceEquals(right, null) || Type.ReferenceEquals(left, null))
-                return false;
+            //if (right is null || left is null)
+            //    return false;
 
             return left.vPosition == right.vPosition && left.vNormal == right.vNormal && left.vColor == right.vColor;
         }

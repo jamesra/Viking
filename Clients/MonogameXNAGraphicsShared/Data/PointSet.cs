@@ -60,18 +60,12 @@ namespace VikingXNAGraphics
             {
                 GridCircle[] removedCircles = Circles.Where(c => c.Intersects(newCircle)).ToArray();
                 Circles.RemoveAll(c => c.Intersects(newCircle));
-                if(CollectionChanged != null)
-                {
-                    CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedCircles));
-                }
+                CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedCircles));
             }
             else
             {
                 Circles.Add(newCircle);
-                if (CollectionChanged != null)
-                {
-                    CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
-                }
+                CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
             }
         }
 
@@ -79,29 +73,20 @@ namespace VikingXNAGraphics
         {
             GridCircle newCircle = new GridCircle(item, PointRadius);
             Circles.Add(newCircle);
-            if (CollectionChanged != null)
-            {
-                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
-            }
+            CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newCircle));
         }
 
         public void AddRange(IEnumerable<GridVector2> items)
         {
             IEnumerable<GridCircle> circles = items.Select(i => new GridCircle(i, PointRadius));
             Circles.AddRange(circles);
-            if (CollectionChanged != null)
-            {
-                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, circles));
-            }
+            CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, circles));
         }
 
         public void Clear()
         {
             Points.Clear();
-            if (CollectionChanged != null)
-            {
-                CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-            }
+            CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
         public bool Contains(GridVector2 item)

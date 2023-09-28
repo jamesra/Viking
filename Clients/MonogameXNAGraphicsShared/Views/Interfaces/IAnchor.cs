@@ -72,10 +72,7 @@ namespace VikingXNAGraphics
                 if (_Horizontal != value)
                 {
                     _Horizontal = value;
-                    if (OnChange != null)
-                    {
-                        OnChange();
-                    }
+                    OnChange?.Invoke();
                 }
             }
         }
@@ -89,10 +86,7 @@ namespace VikingXNAGraphics
                 if (_Vertical != value)
                 {
                     _Vertical = value;
-                    if (OnChange != null)
-                    {
-                        OnChange();
-                    }
+                    OnChange?.Invoke();
                 }
             }
         }

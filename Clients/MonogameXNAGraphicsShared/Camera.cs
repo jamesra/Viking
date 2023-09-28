@@ -35,7 +35,7 @@ namespace VikingXNA
             Vector3 CameraPos = Vector3.Backward;
             Vector3 transformedPos = CameraPos;
 
-            transformedPos = transformedPos + _LookAt;
+            transformedPos += _LookAt;
 
             _View = Matrix.CreateLookAt(transformedPos, _LookAt, Vector3.UnitY);
         }
@@ -130,10 +130,7 @@ namespace VikingXNA
 
         public void CallOnPropertyChanged(PropertyChangedEventArgs e)
         {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, e);
-            }
+            PropertyChanged?.Invoke(this, e);
         }
     }
 }
