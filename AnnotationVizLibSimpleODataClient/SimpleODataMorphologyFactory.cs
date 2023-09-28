@@ -137,7 +137,7 @@ namespace AnnotationVizLib.SimpleOData
             while (hops > 0)
             {
                 SortedSet<ulong> LocationsRequestedThisHop = new SortedSet<ulong>();
-                hops = hops - 1;
+                hops--;
 
                 foreach (var ll in Parent.LocationLinks)
                 {
