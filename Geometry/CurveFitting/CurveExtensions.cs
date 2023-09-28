@@ -176,7 +176,7 @@ namespace Geometry
                     TPoints.Remove(TPointsArray[i]);
                     TPointsArray = TPointsArray.RemoveAt(i);
 
-                    i = i - 1;
+                    i--;
                 }
             } 
              

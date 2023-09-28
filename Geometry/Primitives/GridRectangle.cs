@@ -578,7 +578,7 @@ namespace Geometry
             GridVector2 center = rect.Center;
             GridVector2 directionA = rect.UpperRight - center;
 
-            directionA = directionA * scalar;
+            directionA *= scalar;
 
             GridVector2 BottomLeft = center - directionA;
             GridVector2 TopRight = center + directionA;

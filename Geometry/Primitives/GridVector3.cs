@@ -399,8 +399,8 @@ namespace Geometry
         /// <returns></returns>
         public static double ArcAngle(GridVector3 Origin, GridVector3 A, GridVector3 B)
         {
-            A = A - Origin;
-            B = B - Origin;
+            A -= Origin;
+            B -= Origin;
             return Angle(A, B);
         }
 

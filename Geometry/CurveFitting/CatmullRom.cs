@@ -25,7 +25,7 @@ namespace Geometry
                 if (GridVector2.DistanceSquared(cp[i - 1], cp[i]) < Global.EpsilonSquared)
                 {
                     cp.RemoveAt(i);
-                    i = i - 1;
+                    i--;
                 }
             }
 
@@ -561,13 +561,13 @@ namespace Geometry
 
                 if (false == point_to_ideal_curve_index.Contains(proposedCurve.First()))
                 {
-                    iProposedVertex = iProposedVertex + 1;
+                    iProposedVertex++;
                     continue;
                 }
 
                 if (false == point_to_ideal_curve_index.Contains(proposedCurve.Last()))
                 {
-                    iProposedVertex = iProposedVertex + 1;
+                    iProposedVertex++;
                     continue;
                 }
 
@@ -607,7 +607,7 @@ namespace Geometry
 #if DEBUG
                     if (simplified_inflection_points.Contains(ControlPointToAdd))
                     {
-                        iProposedVertex = iProposedVertex + 1;
+                        iProposedVertex++;
                         continue;
                     }
 #endif 
@@ -615,7 +615,7 @@ namespace Geometry
                 }
                 else
                 {
-                    iProposedVertex = iProposedVertex + 1;
+                    iProposedVertex++;
                 }
             }
 

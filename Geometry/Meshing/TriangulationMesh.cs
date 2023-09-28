@@ -182,8 +182,10 @@ namespace Geometry.Meshing
 
         public override IVertex ShallowCopy()
         {
-            TriangulationVertex newVertex = new TriangulationVertex(Position);
-            newVertex.EdgeComparer = this.EdgeComparer;
+            TriangulationVertex newVertex = new TriangulationVertex(Position)
+            {
+                EdgeComparer = this.EdgeComparer
+            };
             return newVertex;
         }
     }
@@ -203,8 +205,10 @@ namespace Geometry.Meshing
 
         public override IVertex ShallowCopy()
         {
-            TriangulationVertex<T> newVertex = new TriangulationVertex<T>(Position, Data);
-            newVertex.EdgeComparer = this.EdgeComparer;
+            TriangulationVertex<T> newVertex = new TriangulationVertex<T>(Position, Data)
+            {
+                EdgeComparer = this.EdgeComparer
+            };
             return newVertex;
         }
     }

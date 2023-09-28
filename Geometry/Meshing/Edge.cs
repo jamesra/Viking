@@ -407,8 +407,10 @@ namespace Geometry.Meshing
 
         public virtual IEdge Clone()
         {
-            var e = new Edge(this.Key);
-            e._ImmutableFaces = this.Faces.Select(f => f.Clone()).ToImmutableSortedSet();
+            var e = new Edge(this.Key)
+            {
+                _ImmutableFaces = this.Faces.Select(f => f.Clone()).ToImmutableSortedSet()
+            };
             return e;
         }
 

@@ -179,7 +179,7 @@ namespace Geometry
         public GridLineSegment ToLine(double Length)
         {
             GridVector2 endpoint = this.Direction * Length;
-            endpoint = endpoint + this.Origin;
+            endpoint += this.Origin;
             GridLineSegment output = new GridLineSegment(this.Origin, endpoint);
             System.Diagnostics.Debug.Assert(Math.Abs(output.Length - Length) < Global.Epsilon, "Created line does not match requested length");
             return output;

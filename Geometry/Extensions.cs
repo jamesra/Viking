@@ -1513,7 +1513,7 @@ namespace Geometry
                             if (p2 == segment.B)
                             {
                                 //If it is the next segment we can increment to the next segment and skip that iteration
-                                iSegment = iSegment + 1;
+                                iSegment++;
                             }
 
                             AddIntersection(output, distance, new PolygonIndex(0, iSegment, polygon.ExteriorSegments.Length));

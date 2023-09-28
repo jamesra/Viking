@@ -107,7 +107,7 @@ namespace Geometry
 
         public virtual void Add(DistanceToPoint<T> item)
         {
-            Count = Count + 1; //Increment our count
+            Count++; //Increment our count
 
             if (Data.ContainsKey(item.Distance))
             {

@@ -210,7 +210,7 @@ namespace Geometry
         /// <param name="B"></param>
         /// <param name="Epsilon"></param>
         /// <returns></returns>
-        public bool Equals(in GridVector2 B)
+        public bool Equals(GridVector2 B)
         {
             return GridVector2.Equals(this, B);
         }

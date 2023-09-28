@@ -136,8 +136,8 @@ namespace Geometry.Transforms
                 distances[i] = dist;
                 functionValues[i] = funcVal;
 
-                WeightSumX = WeightSumX + (Weights[i] * funcVal);
-                WeightSumY = WeightSumY + (Weights[i + 3 + nPoints] * funcVal);
+                WeightSumX += (Weights[i] * funcVal);
+                WeightSumY += (Weights[i + 3 + nPoints] * funcVal);
             }
 
             double X = WeightSumX + (Point.Y * Weights[nPoints]) + (Point.X * Weights[nPoints + 1]) + Weights[nPoints + 2];

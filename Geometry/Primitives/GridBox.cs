@@ -358,7 +358,7 @@ namespace Geometry
 
             foreach (var c in Center)
             {
-                hashcode = hashcode ^ c.GetHashCode();
+                hashcode ^= c.GetHashCode();
             }
 
             return hashcode;
