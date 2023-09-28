@@ -110,6 +110,20 @@ namespace VikingXNAGraphics
             new Vector3( 1, 1, 1)
         };
 
+        private static readonly int[] _unitCubeEdges = new int[] {0,1,2,
+            1,2,3, //A - Normal is -x
+            4,5,6,
+            5,6,7, //B - Normal is +x
+            0,4,1,
+            4,1,5, //C - Normal is -y
+            6,2,3,
+            6,3,7, //D - Normal is +y
+            0,4,2,
+            4,2,6, //E - Normal is -z
+            1,3,5,
+            3,5,7  //F - Normal is +z
+        };
+
         /// <summary>
         /// Generates a Model for a unit cube
         /// </summary>
@@ -121,19 +135,7 @@ namespace VikingXNAGraphics
                 Verticies = _unitCubeVerts.Select(v => new VertexPositionColor(v, color)).ToArray(),
 
                 //Add faces
-                Edges = new int[] {0,1,2,
-                                     1,2,3, //A - Normal is -x
-                                     4,5,6,
-                                     5,6,7, //B - Normal is +x
-                                     0,4,1,
-                                     4,1,5, //C - Normal is -y
-                                     6,2,3,
-                                     6,3,7, //D - Normal is +y
-                                     0,4,2,
-                                     4,2,6, //E - Normal is -z
-                                     1,3,5,
-                                     3,5,7  //F - Normal is +z
-            }
+                Edges = _unitCubeEdges 
             };
 
             return model; 
@@ -147,6 +149,14 @@ namespace VikingXNAGraphics
             new Vector3( 1,-1, 1),
             new Vector3( 1, 1,-1),
             new Vector3( 1, 1, 1) };
+
+        private static readonly int[] _unitBoundingBoxEdges = new int[] {0,1,
+            2,3, //A - Normal is -x
+            4,5,
+            6,7,
+            0,2,2,6,6,4,4,0, //The XY border for Z=-1
+            1,3,3,7,7,5,5,1, //The XY Border for Z=1 
+        };
         /// <summary>
         /// Generates a Model for a unit cube that uses edges instead of faces to represent the exterior borders.
         /// </summary>
@@ -157,13 +167,7 @@ namespace VikingXNAGraphics
             {
                 ModelMatrix = default,
                 Verticies = _unitBoundingBoxVerts.Select(v => new VertexPositionColor(v, color)).ToArray(),
-                Edges = new int[] {0,1,
-                    2,3, //A - Normal is -x
-                    4,5,
-                    6,7,
-                    0,2,2,6,6,4,4,0, //The XY border for Z=-1
-                    1,3,3,7,7,5,5,1, //The XY Border for Z=1 
-                },
+                Edges = _unitBoundingBoxEdges,
                 Primitive = PrimitiveType.LineList,
                 Position = default
             }; 
@@ -476,14 +480,14 @@ namespace VikingXNAGraphics
             switch (comp)
             {
                 case ColorComponent.ALPHA:
-                    color = color >> 24;
+                    color >>= 24;
                     return color;
                 case ColorComponent.RED:
-                    color = color >> 16;
+                    color >>= 16;
                     color &= mask;
                     return color;
                 case ColorComponent.GREEN:
-                    color = color >> 8;
+                    color >>= 8;
                     color &= mask;
                     return color;
                 case ColorComponent.BLUE:
