@@ -122,7 +122,7 @@ namespace Annotation.Identity
             foreach (var c in validation.Claims)
             { 
                 if (c.Type == "scope")
-                    foundClaim = foundClaim | c.Value.Split().Contains(scope);
+                    foundClaim |= c.Value.Split().Contains(scope);
             }
 
             return foundClaim;
