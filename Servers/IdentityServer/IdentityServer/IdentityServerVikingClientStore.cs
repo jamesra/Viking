@@ -10,10 +10,10 @@ namespace Viking.Identity
 {
     public class IdentityServerVikingClientStore : IClientStore
     {
-        ApplicationDbContext _context;
-        IResourceStore _resourceStore;
+        readonly ApplicationDbContext _context;
+        readonly IResourceStore _resourceStore;
 
-        Dictionary<string, Client> ClientCache = new Dictionary<string, Client>();
+        readonly Dictionary<string, Client> ClientCache = new Dictionary<string, Client>();
 
         public IdentityServerVikingClientStore(ApplicationDbContext context, IResourceStore resourceStore)
         {

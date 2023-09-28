@@ -86,7 +86,7 @@ namespace Viking.Identity.Authorization
 
     public class ResourcePermissionsAuthorizationHandler : AuthorizationHandler<ResourcePermissionRequirement, Resource>
     {
-        private ApplicationDbContext DbContext;
+        private readonly ApplicationDbContext DbContext;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public ResourcePermissionsAuthorizationHandler(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager)
@@ -140,7 +140,7 @@ namespace Viking.Identity.Authorization
 
     public class ResourceIdPermissionsAuthorizationHandler : AuthorizationHandler<ResourcePermissionRequirement, long>
     {
-        private ApplicationDbContext DbContext;
+        private readonly ApplicationDbContext DbContext;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public ResourceIdPermissionsAuthorizationHandler(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager)

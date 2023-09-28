@@ -12,7 +12,7 @@ namespace Viking.Identity.Models.UserViewModels
 
         public override string ToString()
         {
-            return $"{(Selected ? "[X]" : "[ ]")} {Id.ToString()}";
+            return $"{(Selected ? "[X]" : "[ ]")} {Id}";
         }
     }
 

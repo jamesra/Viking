@@ -18,7 +18,7 @@ namespace Viking.Identity.Controllers
     public class OrganizationalUnitsController : Controller
     {
         private readonly ApplicationDbContext _context;
-        IAuthorizationService _authorization;
+        readonly IAuthorizationService _authorization;
 
         public OrganizationalUnitsController(ApplicationDbContext context, IAuthorizationService authorization)
         {

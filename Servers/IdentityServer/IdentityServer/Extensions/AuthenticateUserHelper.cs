@@ -13,7 +13,7 @@ namespace Viking.Identity.Extensions
     /// </summary>
     public class AuthorizationHelper
     {
-        private ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context;
         private readonly IAuthorizationService _authorization;
         private readonly ClaimsPrincipal _principal;
 

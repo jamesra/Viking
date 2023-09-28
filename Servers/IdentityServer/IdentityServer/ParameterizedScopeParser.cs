@@ -9,7 +9,7 @@ namespace Viking.Identity
 {
     public class ParameterizedScopeParser : DefaultScopeParser
     {
-        ApplicationDbContext _context; 
+        readonly ApplicationDbContext _context; 
         public ParameterizedScopeParser(ApplicationDbContext context, ILogger<DefaultScopeParser> logger) : base(logger)
         {
             _context = context; 

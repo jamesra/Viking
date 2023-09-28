@@ -14,7 +14,7 @@ namespace Viking.Identity
 {
     public class IdentityServerCustomResourceStore : IResourceStore
     {
-        ApplicationDbContext _context;
+        readonly ApplicationDbContext _context;
         internal static ApiScope[] StandardScopes = new ApiScope[]
         {  
             new ApiScope("Viking.Annotation")

@@ -9,7 +9,7 @@ namespace Viking.Identity.Extensions
 {
     public class UserScopeTokenRequestValidator : ICustomTokenRequestValidator
     {
-        ApplicationDbContext _context;
+        readonly ApplicationDbContext _context;
 
         public UserScopeTokenRequestValidator(ApplicationDbContext context)
         {
