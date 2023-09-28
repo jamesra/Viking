@@ -69,10 +69,9 @@ namespace Viking.Common
         /// <returns></returns>
         public virtual FETCHTYPE Fetch(KEY key)
         {
-            FETCHTYPE value = default;
-            CACHEENTRY entry;
+            FETCHTYPE value = default; 
 
-            bool success = dictEntries.TryGetValue(key, out entry);
+            bool success = dictEntries.TryGetValue(key, out var entry);
             if (success == false)
                 return default;
 
@@ -139,10 +138,8 @@ namespace Viking.Common
         /// <returns></returns>
         public virtual FETCHTYPE GetOrAdd(KEY key, ADDTYPE value)
         {
-            CACHEENTRY dictEntry = null;
-
             //Check before we create an entry...
-            bool found = dictEntries.TryGetValue(key, out dictEntry);
+            bool found = dictEntries.TryGetValue(key, out var dictEntry);
             if (found)
             {
                 return Fetch(dictEntry);
@@ -168,10 +165,8 @@ namespace Viking.Common
         /// <returns></returns>
         public virtual FETCHTYPE GetOrAdd(KEY key, Func<KEY,ADDTYPE> newEntryGenerator)
         {
-            CACHEENTRY dictEntry = null;
-
             //Check before we create an entry...
-            bool found = dictEntries.TryGetValue(key, out dictEntry);
+            bool found = dictEntries.TryGetValue(key, out var dictEntry);
             if (found)
             {
                 return Fetch(dictEntry);
@@ -196,8 +191,7 @@ namespace Viking.Common
         /// <returns></returns>
         public bool Remove(KEY key)
         {
-            CACHEENTRY value;
-            bool removed = dictEntries.TryRemove(key, out value);
+            bool removed = dictEntries.TryRemove(key, out var value);
             if (removed)
             {
                 long size = value.Size;
