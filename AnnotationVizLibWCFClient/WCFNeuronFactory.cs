@@ -10,13 +10,13 @@ namespace AnnotationVizLib.WCFClient
 {
     public class WCFNeuronFactory
     {
-        SortedDictionary<ulong, IStructure> IDToStructure = new SortedDictionary<ulong, IStructure>();
+        readonly SortedDictionary<ulong, IStructure> IDToStructure = new SortedDictionary<ulong, IStructure>();
 
         static SortedDictionary<long, StructureType> IDToStructureType = null;
 
         List<ulong> NextHopNodes = new List<ulong>();
 
-        NeuronGraph graph;
+        readonly NeuronGraph graph;
 
         protected WCFNeuronFactory()
         {

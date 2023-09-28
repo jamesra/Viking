@@ -5,7 +5,7 @@ namespace AnnotationVizLib.WCFClient
 {
     class WCFStructureTypeAdapter : IStructureType
     {
-        private StructureType type;
+        private readonly StructureType type;
         public WCFStructureTypeAdapter(StructureType t)
         {
             type = t;
@@ -53,7 +53,7 @@ namespace AnnotationVizLib.WCFClient
 
         public bool Equals(IStructureType other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)
