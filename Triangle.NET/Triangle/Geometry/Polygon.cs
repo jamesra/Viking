@@ -14,11 +14,11 @@ namespace TriangleNet.Geometry
     /// </summary>
     public class Polygon : IPolygon
     {
-        List<Vertex> points;
-        List<Point> holes;
-        List<RegionPointer> regions;
+        readonly List<Vertex> points;
+        readonly List<Point> holes;
+        readonly List<RegionPointer> regions;
 
-        List<ISegment> segments;
+        readonly List<ISegment> segments;
 
         /// <inheritdoc />
         public List<Vertex> Points

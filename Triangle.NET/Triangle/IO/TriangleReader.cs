@@ -18,7 +18,7 @@ namespace TriangleNet.IO
     /// </summary>
     public class TriangleReader
     {
-        static NumberFormatInfo nfi = NumberFormatInfo.InvariantInfo;
+        static readonly NumberFormatInfo nfi = NumberFormatInfo.InvariantInfo;
 
         int startIndex = 0;
 
@@ -138,9 +138,7 @@ namespace TriangleNet.IO
         /// </summary>
         public IPolygon Read(string filename)
         {
-            Polygon geometry = null;
-
-            Read(filename, out geometry);
+            Read(filename, out var geometry);
 
             return geometry;
         }
@@ -168,12 +166,11 @@ namespace TriangleNet.IO
 
             startIndex = 0;
 
-            string[] line;
             int invertices = 0, attributes = 0, nodemarkers = 0;
 
             using (var reader = new StreamReader(nodefilename))
             {
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file.");
                 }
@@ -279,12 +276,11 @@ namespace TriangleNet.IO
 
             startIndex = 0;
 
-            string[] line;
             int invertices = 0, attributes = 0, nodemarkers = 0;
 
             using (var reader = new StreamReader(polyfilename))
             {
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file.");
                 }
@@ -446,7 +442,7 @@ namespace TriangleNet.IO
                 // Read area constraints (optional).
                 if (TryReadLine(reader, out line))
                 {
-                    int id, regions = int.Parse(line[0]);
+                    var regions = int.Parse(line[0]);
 
                     if (regions > 0)
                     {
@@ -462,7 +458,7 @@ namespace TriangleNet.IO
                                 throw new Exception("Invalid region attributes.");
                             }
 
-                            if (!int.TryParse(line[3], out id))
+                            if (!int.TryParse(line[3], out var id))
                             {
                                 id = i;
                             }
@@ -531,10 +527,9 @@ namespace TriangleNet.IO
             using (var reader = new StreamReader(elefilename))
             {
                 // Read number of elements and number of attributes.
-                string[] line;
                 bool validRegion = false;
 
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file (elements).");
                 }
@@ -580,8 +575,7 @@ namespace TriangleNet.IO
                     // Read triangle region
                     if (attributes > 0 && validRegion)
                     {
-                        int region = 0;
-                        validRegion = int.TryParse(line[4], out region);
+                        validRegion = int.TryParse(line[4], out var region);
                         tri.label = region;
                     }
 
@@ -614,9 +608,7 @@ namespace TriangleNet.IO
 
             using (var reader = new StreamReader(areafilename))
             {
-                string[] line;
-
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file (area).");
                 }
@@ -663,14 +655,12 @@ namespace TriangleNet.IO
 
             startIndex = 0;
 
-            string[] line;
-
             using (var reader = new StreamReader(edgeFile))
             {
                 // Read the edges from a .edge file.
 
                 // Read number of segments and number of boundary markers.
-                if (!TryReadLine(reader, out line))
+                if (!TryReadLine(reader, out var line))
                 {
                     throw new Exception("Can't read input file (segments).");
                 }

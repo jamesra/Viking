@@ -16,7 +16,7 @@ namespace TriangleNet.Tools
     /// </summary>
     public class TriangleQuadTree
     {
-        QuadNode root;
+        readonly QuadNode root;
 
         internal ITriangle[] triangles;
 
@@ -128,11 +128,11 @@ namespace TriangleNet.Tools
 
             static readonly byte[] BITVECTOR = { 0x1, 0x2, 0x4, 0x8 };
 
-            Rectangle bounds;
-            Point pivot;
-            TriangleQuadTree tree;
-            QuadNode[] regions;
-            List<int> triangles;
+            readonly Rectangle bounds;
+            readonly Point pivot;
+            readonly TriangleQuadTree tree;
+            readonly QuadNode[] regions;
+            readonly List<int> triangles;
 
             byte bitRegions;
 

@@ -17,9 +17,9 @@ namespace TriangleNet.Tools
     {
         private const int RANDOM_SEED = 57113;
 
-        Random rand;
+        readonly Random rand;
 
-        Vertex[] points;
+        readonly Vertex[] points;
 
         VertexSorter(Vertex[] points, int seed)
         {

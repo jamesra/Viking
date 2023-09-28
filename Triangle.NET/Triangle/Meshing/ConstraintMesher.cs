@@ -16,15 +16,15 @@ namespace TriangleNet.Meshing
 
     internal class ConstraintMesher
     {
-        IPredicates predicates;
+        readonly IPredicates predicates;
 
-        Mesh mesh;
-        Behavior behavior;
-        TriangleLocator locator;
+        readonly Mesh mesh;
+        readonly Behavior behavior;
+        readonly TriangleLocator locator;
 
-        List<Triangle> viri;
+        readonly List<Triangle> viri;
 
-        ILog<LogItem> logger;
+        readonly ILog<LogItem> logger;
 
         public ConstraintMesher(Mesh mesh, Configuration config)
         {

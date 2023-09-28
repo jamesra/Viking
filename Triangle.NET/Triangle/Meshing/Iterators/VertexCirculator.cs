@@ -7,7 +7,7 @@ namespace TriangleNet.Meshing.Iterators
 
     public class VertexCirculator
     {
-        List<Otri> cache = new List<Otri>();
+        readonly List<Otri> cache = new List<Otri>();
 
         public VertexCirculator(Mesh mesh)
         {

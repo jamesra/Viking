@@ -22,10 +22,10 @@ namespace TriangleNet
     {
         const double EPS = 1e-50;
 
-        IPredicates predicates;
+        readonly IPredicates predicates;
 
-        Mesh mesh;
-        Behavior behavior;
+        readonly Mesh mesh;
+        readonly Behavior behavior;
 
         // Work arrays for wegde intersection
         double[] petalx = new double[20];
@@ -40,9 +40,9 @@ namespace TriangleNet
         double[] points_r = new double[500];
 
         // Work arrays for convex polygon split
-        double[] poly1 = new double[100];
-        double[] poly2 = new double[100];
-        double[][] polys = new double[3][];
+        readonly double[] poly1 = new double[100];
+        readonly double[] poly2 = new double[100];
+        readonly double[][] polys = new double[3][];
 
         public NewLocation(Mesh mesh, IPredicates predicates)
         {

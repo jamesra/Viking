@@ -21,9 +21,9 @@ namespace TriangleNet.Voronoi.Legacy
     [Obsolete("Use TriangleNet.Voronoi.BoundedVoronoi class instead.")]
     public class BoundedVoronoiLegacy : IVoronoi
     {
-        IPredicates predicates = RobustPredicates.Default;
+        readonly IPredicates predicates = RobustPredicates.Default;
 
-        Mesh mesh;
+        readonly Mesh mesh;
 
         Point[] points;
         List<VoronoiRegion> regions;
@@ -34,7 +34,7 @@ namespace TriangleNet.Voronoi.Legacy
 
         Dictionary<int, SubSegment> subsegMap;
 
-        bool includeBoundary = true;
+        readonly bool includeBoundary = true;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BoundedVoronoiLegacy" /> class.

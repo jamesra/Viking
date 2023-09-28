@@ -35,10 +35,7 @@ namespace TriangleNet.IO
 
             if (ext == ".node" || ext == ".poly" || ext == ".ele")
             {
-                List<ITriangle> triangles;
-                Polygon geometry;
-
-                (new TriangleReader()).Read(filename, out geometry, out triangles);
+                (new TriangleReader()).Read(filename, out var geometry, out var triangles);
 
                 if (geometry != null && triangles != null)
                 {

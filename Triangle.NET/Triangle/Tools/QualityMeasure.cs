@@ -53,9 +53,9 @@ namespace TriangleNet.Tools
     /// </remarks>
     public class QualityMeasure
     {
-        AreaMeasure areaMeasure;
-        AlphaMeasure alphaMeasure;
-        Q_Measure qMeasure;
+        readonly AreaMeasure areaMeasure;
+        readonly AlphaMeasure alphaMeasure;
+        readonly Q_Measure qMeasure;
 
         Mesh mesh;
 

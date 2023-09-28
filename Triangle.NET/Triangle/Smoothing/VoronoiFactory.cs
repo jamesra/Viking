@@ -13,9 +13,9 @@ namespace TriangleNet.Smoothing
     /// </remarks>
     class VoronoiFactory : IVoronoiFactory
     {
-        ObjectPool<Vertex> vertices;
-        ObjectPool<HalfEdge> edges;
-        ObjectPool<Face> faces;
+        readonly ObjectPool<Vertex> vertices;
+        readonly ObjectPool<HalfEdge> edges;
+        readonly ObjectPool<Face> faces;
 
         public VoronoiFactory()
         {
@@ -58,9 +58,7 @@ namespace TriangleNet.Smoothing
 
         public Vertex CreateVertex(double x, double y)
         {
-            Vertex vertex;
-
-            if (vertices.TryGet(out vertex))
+            if (vertices.TryGet(out var vertex))
             {
                 vertex.x = x;
                 vertex.y = y;
@@ -78,9 +76,7 @@ namespace TriangleNet.Smoothing
 
         public HalfEdge CreateHalfEdge(Vertex origin, Face face)
         {
-            HalfEdge edge;
-
-            if (edges.TryGet(out edge))
+            if (edges.TryGet(out var edge))
             {
                 edge.origin = origin;
                 edge.face = face;
@@ -104,9 +100,7 @@ namespace TriangleNet.Smoothing
 
         public Face CreateFace(Geometry.Vertex vertex)
         {
-            Face face;
-
-            if (faces.TryGet(out face))
+            if (faces.TryGet(out var face))
             {
                 face.id = vertex.id;
                 face.generator = vertex;

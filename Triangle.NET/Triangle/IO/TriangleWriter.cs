@@ -18,7 +18,7 @@ namespace TriangleNet.IO
     /// </summary>
     public class TriangleWriter
     {
-        static NumberFormatInfo nfi = NumberFormatInfo.InvariantInfo;
+        static readonly NumberFormatInfo nfi = NumberFormatInfo.InvariantInfo;
 
         /// <summary>
         /// Number the vertices and write them to a .node file.

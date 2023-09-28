@@ -15,15 +15,15 @@ namespace TriangleNet.Tools
     public class AdjacencyMatrix
     {
         // Number of adjacency entries.
-        int nnz;
+        readonly int nnz;
 
         // Pointers into the actual adjacency structure adj. Information about row k is
         // stored in entries pcol(k) through pcol(k+1)-1 of adj. Size: N + 1
-        int[] pcol;
+        readonly int[] pcol;
 
         // The adjacency structure. For each row, it contains the column indices 
         // of the nonzero entries. Size: nnz
-        int[] irow;
+        readonly int[] irow;
 
         /// <summary>
         /// Gets the number of columns (nodes of the mesh).

@@ -24,14 +24,14 @@ namespace TriangleNet
     {
         #region Variables
 
-        IPredicates predicates;
+        readonly IPredicates predicates;
 
-        ILog<LogItem> logger;
+        readonly ILog<LogItem> logger;
 
         QualityMesher qualityMesher;
 
         // Stack that maintains a list of recently flipped triangles.
-        Stack<Otri> flipstack;
+        readonly Stack<Otri> flipstack;
 
         // TODO: Check if custom hashmap implementation could be faster.
 

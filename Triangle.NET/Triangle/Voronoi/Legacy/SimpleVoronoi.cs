@@ -18,9 +18,9 @@ namespace TriangleNet.Voronoi.Legacy
     [Obsolete("Use TriangleNet.Voronoi.StandardVoronoi class instead.")]
     public class SimpleVoronoi : IVoronoi
     {
-        IPredicates predicates = RobustPredicates.Default;
+        readonly IPredicates predicates = RobustPredicates.Default;
 
-        Mesh mesh;
+        readonly Mesh mesh;
 
         Point[] points;
         Dictionary<int, VoronoiRegion> regions;
@@ -194,7 +194,6 @@ namespace TriangleNet.Voronoi.Legacy
             region.Bounded = false;
 
             Vertex torg, tdest, tapex;
-            Point intersection;
             int sid, n = mesh.triangles.Count;
 
             // Find the boundary segment id (we use this id to number the endpoints of infinit rays).
@@ -207,7 +206,7 @@ namespace TriangleNet.Voronoi.Legacy
             region.AddNeighbor(f.tri.id, regions[f.Apex().id]);
 
             // Check if the intersection with the bounding box has already been computed.
-            if (!rayPoints.TryGetValue(sid, out intersection))
+            if (!rayPoints.TryGetValue(sid, out var intersection))
             {
                 torg = f.Org();
                 tapex = f.Apex();

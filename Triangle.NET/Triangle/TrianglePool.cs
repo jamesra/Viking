@@ -25,7 +25,7 @@ namespace TriangleNet
         Triangle[][] pool;
 
         // A stack of free triangles.
-        Stack<Triangle> stack;
+        readonly Stack<Triangle> stack;
 
         public TrianglePool()
         {
@@ -246,9 +246,9 @@ namespace TriangleNet
         {
             // TODO: enumerator should be able to tell if collection changed.
 
-            int count;
+            readonly int count;
 
-            Triangle[][] pool;
+            readonly Triangle[][] pool;
 
             Triangle current;
 

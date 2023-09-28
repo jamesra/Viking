@@ -17,8 +17,8 @@ namespace TriangleNet.Meshing
     /// </summary>
     public class GenericMesher
     {
-        Configuration config;
-        ITriangulator triangulator;
+        readonly Configuration config;
+        readonly ITriangulator triangulator;
 
         public GenericMesher()
             : this(new Dwyer(), new Configuration())

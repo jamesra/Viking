@@ -231,13 +231,17 @@ namespace TriangleNet
                 polygon.Add(v);
             }
 
-            ConstraintOptions constraints = new ConstraintOptions();
-            constraints.ConformingDelaunay = SteinerPoints > 0;
-            constraints.Convex = false;
+            ConstraintOptions constraints = new ConstraintOptions
+            {
+                ConformingDelaunay = SteinerPoints > 0,
+                Convex = false
+            };
 
-            QualityOptions quality = new QualityOptions();
-            quality.SteinerPoints = SteinerPoints;
-            quality.MinimumAngle = SteinerPoints > 0 ? Math.PI / 6 : -1;
+            QualityOptions quality = new QualityOptions
+            {
+                SteinerPoints = SteinerPoints,
+                MinimumAngle = SteinerPoints > 0 ? Math.PI / 6 : -1
+            };
 
             IMesh mesh = polygon.Triangulate(constraints, quality);
             return mesh;
@@ -266,9 +270,11 @@ namespace TriangleNet
                 }
             }
 
-            ConstraintOptions constraints = new ConstraintOptions();
-            constraints.ConformingDelaunay = false;
-            constraints.Convex = false;
+            ConstraintOptions constraints = new ConstraintOptions
+            {
+                ConformingDelaunay = false,
+                Convex = false
+            };
 
             QualityOptions quality = new QualityOptions();
             if (UseSteiner)
@@ -319,22 +325,28 @@ namespace TriangleNet
 
         public static TriVertex ToTriangleNetVertex(this VikingMeshing.IVertex2D vert)
         {
-            TriVertex out_v = new TriVertex(vert.Position.X, vert.Position.Y);
-            out_v.ID = vert.Index;
+            TriVertex out_v = new TriVertex(vert.Position.X, vert.Position.Y)
+            {
+                ID = vert.Index
+            };
             return out_v;
         }
 
         public static TriVertex ToTriangleNetVertex(this VikingMeshing.IVertex3D vert)
         {
-            TriVertex out_v = new TriVertex(vert.Position.X, vert.Position.Y);
-            out_v.ID = vert.Index;
+            TriVertex out_v = new TriVertex(vert.Position.X, vert.Position.Y)
+            {
+                ID = vert.Index
+            };
             return out_v;
         }
 
         public static TriVertex ToTriangleNetVertex(this GridVector2 vert, int ID)
         {
-            TriVertex out_v = new TriVertex(vert.X, vert.Y);
-            out_v.ID = ID;
+            TriVertex out_v = new TriVertex(vert.X, vert.Y)
+            {
+                ID = ID
+            };
             return out_v;
         }
 
@@ -423,9 +435,11 @@ namespace TriangleNet
             if (polygon.Points.Count < 3)
                 return null;
 
-            ConstraintOptions constraints = new ConstraintOptions();
-            constraints.ConformingDelaunay = false;
-            constraints.Convex = true;
+            ConstraintOptions constraints = new ConstraintOptions
+            {
+                ConformingDelaunay = false,
+                Convex = true
+            };
 
             TriangleNet.Meshing.IMesh mesh = TriangleNet.Geometry.ExtensionMethods.Triangulate(polygon, constraints);
 
@@ -468,12 +482,16 @@ namespace TriangleNet
         {
             TriangleNet.Geometry.IPolygon polygon = input.CreatePolygon();
 
-            ConstraintOptions constraints = new ConstraintOptions();
-            constraints.ConformingDelaunay = false;
-            constraints.Convex = false;
+            ConstraintOptions constraints = new ConstraintOptions
+            {
+                ConformingDelaunay = false,
+                Convex = false
+            };
 
-            QualityOptions quality = new QualityOptions();
-            quality.SteinerPoints = (polygon.Points.Count / 2) + 1;
+            QualityOptions quality = new QualityOptions
+            {
+                SteinerPoints = (polygon.Points.Count / 2) + 1
+            };
 
             IMesh mesh = polygon.Triangulate(constraints, quality);
             return mesh;
@@ -532,12 +550,16 @@ namespace TriangleNet
                 polygon.Add(v);
             }
 
-            ConstraintOptions constraints = new ConstraintOptions();
-            constraints.ConformingDelaunay = false;
-            constraints.Convex = false;
+            ConstraintOptions constraints = new ConstraintOptions
+            {
+                ConformingDelaunay = false,
+                Convex = false
+            };
 
-            QualityOptions quality = new QualityOptions();
-            quality.SteinerPoints = (polygon.Points.Count / 2) + 1;
+            QualityOptions quality = new QualityOptions
+            {
+                SteinerPoints = (polygon.Points.Count / 2) + 1
+            };
             Mesh mesh = (Mesh)polygon.Triangulate(constraints, quality);
 
             TriangleNet.Voronoi.VoronoiBase voronoi = null;

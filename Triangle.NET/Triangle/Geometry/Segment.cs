@@ -13,8 +13,8 @@ namespace TriangleNet.Geometry
     /// </summary>
     public class Segment : ISegment
     {
-        Vertex v0;
-        Vertex v1;
+        readonly Vertex v0;
+        readonly Vertex v1;
 
         int label;
 

@@ -37,7 +37,7 @@ namespace TriangleNet.IO
     /// </remarks>
     class DebugWriter
     {
-        static NumberFormatInfo nfi = CultureInfo.InvariantCulture.NumberFormat;
+        static readonly NumberFormatInfo nfi = CultureInfo.InvariantCulture.NumberFormat;
 
         int iteration;
         string session;

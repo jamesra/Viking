@@ -21,8 +21,8 @@ namespace TriangleNet
         // Empirically chosen factor.
         private const int samplefactor = 11;
 
-        private Random random;
-        private Mesh mesh;
+        private readonly Random random;
+        private readonly Mesh mesh;
 
         // Number of random samples for point location (at least 1).
         private int samples = 1;

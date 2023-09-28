@@ -20,7 +20,7 @@ namespace TriangleNet.Meshing.Iterators
     /// </remarks>
     public class RegionIterator
     {
-        List<Triangle> region;
+        readonly List<Triangle> region;
 
         public RegionIterator(Mesh mesh)
         {

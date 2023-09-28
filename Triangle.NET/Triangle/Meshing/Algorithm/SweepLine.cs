@@ -19,7 +19,7 @@ namespace TriangleNet.Meshing.Algorithm
     public class SweepLine : ITriangulator
     {
         static int randomseed = 1;
-        static int SAMPLERATE = 10;
+        static readonly int SAMPLERATE = 10;
 
         static int randomnation(int choices)
         {
@@ -44,8 +44,6 @@ namespace TriangleNet.Meshing.Algorithm
             // Delaunay algorithm.
             xminextreme = 10 * mesh.bounds.Left - 9 * mesh.bounds.Right;
 
-            SweepEvent[] eventheap;
-
             SweepEvent nextevent;
             SweepEvent newevent;
             SplayNode splayroot;
@@ -69,7 +67,7 @@ namespace TriangleNet.Meshing.Algorithm
             splayroot = null;
 
             heapsize = points.Count;
-            CreateHeap(out eventheap, heapsize);//, out events, out freeevents);
+            CreateHeap(out var eventheap, heapsize);//, out events, out freeevents);
 
             mesh.MakeTriangle(ref lefttri);
             mesh.MakeTriangle(ref righttri);
@@ -772,7 +770,7 @@ namespace TriangleNet.Meshing.Algorithm
         /// </summary>
         class SweepEventVertex : Vertex
         {
-            public SweepEvent evt;
+            public readonly SweepEvent evt;
 
             public SweepEventVertex(SweepEvent e)
             {

@@ -20,20 +20,20 @@ namespace TriangleNet.Meshing
     /// </summary>
     class QualityMesher
     {
-        IPredicates predicates;
+        readonly IPredicates predicates;
 
-        Queue<BadSubseg> badsubsegs;
-        BadTriQueue queue;
-        Mesh mesh;
-        Behavior behavior;
+        readonly Queue<BadSubseg> badsubsegs;
+        readonly BadTriQueue queue;
+        readonly Mesh mesh;
+        readonly Behavior behavior;
 
-        NewLocation newLocation;
+        readonly NewLocation newLocation;
 
-        ILog<LogItem> logger;
+        readonly ILog<LogItem> logger;
 
         // Stores the vertices of the triangle that contains newvertex
         // in SplitTriangle method.
-        Triangle newvertex_tri;
+        readonly Triangle newvertex_tri;
 
         public QualityMesher(Mesh mesh, Configuration config)
         {

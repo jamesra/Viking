@@ -26,9 +26,9 @@ namespace TriangleNet.Meshing.Data
 
         // Variables that maintain the bad triangle queues.  The queues are
         // ordered from 4095 (highest priority) to 0 (lowest priority).
-        BadTriangle[] queuefront;
-        BadTriangle[] queuetail;
-        int[] nextnonemptyq;
+        readonly BadTriangle[] queuefront;
+        readonly BadTriangle[] queuetail;
+        readonly int[] nextnonemptyq;
         int firstnonemptyq;
 
         int count;

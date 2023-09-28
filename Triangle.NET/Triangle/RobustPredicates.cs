@@ -57,9 +57,18 @@ namespace TriangleNet
 
         #region Static initialization
 
-        private static double epsilon, splitter, resulterrbound;
-        private static double ccwerrboundA, ccwerrboundB, ccwerrboundC;
-        private static double iccerrboundA, iccerrboundB, iccerrboundC;
+        private static readonly double epsilon;
+        private static readonly double splitter;
+        private static readonly double resulterrbound;
+        private static readonly double ccwerrboundA;
+        private static readonly double ccwerrboundB;
+        private static readonly double ccwerrboundC;
+
+        private static readonly double iccerrboundA;
+
+        private static readonly double iccerrboundB;
+
+        private static readonly double iccerrboundC;
         //private static double o3derrboundA, o3derrboundB, o3derrboundC;
 
         /// <summary>

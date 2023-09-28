@@ -22,9 +22,9 @@ namespace TriangleNet
         /// </summary>
         public static bool Verbose { get; set; }
 
-        private List<LogItem> log = new List<LogItem>();
+        private readonly List<LogItem> log = new List<LogItem>();
 
-        private LogLevel level = LogLevel.Info;
+        private readonly LogLevel level = LogLevel.Info;
 
         #region Singleton pattern
 

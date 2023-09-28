@@ -20,12 +20,12 @@ namespace TriangleNet.Smoothing
     /// </remarks>
     public class SimpleSmoother : ISmoother
     {
-        TrianglePool pool;
-        Configuration config;
+        readonly TrianglePool pool;
+        readonly Configuration config;
 
-        IVoronoiFactory factory;
+        readonly IVoronoiFactory factory;
 
-        ConstraintOptions options;
+        readonly ConstraintOptions options;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SimpleSmoother" /> class.
@@ -98,13 +98,11 @@ namespace TriangleNet.Smoothing
         {
             var voronoi = new BoundedVoronoi(mesh, factory, predicates);
 
-            double x, y;
-
             foreach (var face in voronoi.Faces)
             {
                 if (face.generator.label == 0)
                 {
-                    Centroid(face, out x, out y);
+                    Centroid(face, out var x, out var y);
 
                     face.generator.x = x;
                     face.generator.y = y;

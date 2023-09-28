@@ -15,13 +15,13 @@ namespace TriangleNet.Voronoi.Legacy
     /// </summary>
     public class VoronoiRegion
     {
-        int id;
-        Point generator;
-        List<Point> vertices;
+        readonly int id;
+        readonly Point generator;
+        readonly List<Point> vertices;
         bool bounded;
 
         // A map (vertex id) -> (neighbor across adjacent edge)
-        Dictionary<int, VoronoiRegion> neighbors;
+        readonly Dictionary<int, VoronoiRegion> neighbors;
 
         /// <summary>
         /// Gets the Voronoi region id (which is the same as the generators vertex id).
@@ -87,9 +87,7 @@ namespace TriangleNet.Voronoi.Legacy
         /// </remarks>
         public VoronoiRegion GetNeighbor(Point p)
         {
-            VoronoiRegion neighbor;
-
-            if (neighbors.TryGetValue(p.id, out neighbor))
+            if (neighbors.TryGetValue(p.id, out var neighbor))
             {
                 return neighbor;
             }

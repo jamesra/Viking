@@ -13,7 +13,7 @@ namespace TriangleNet
 
     public static class MeshValidator
     {
-        private static RobustPredicates predicates = RobustPredicates.Default;
+        private static readonly RobustPredicates predicates = RobustPredicates.Default;
 
         /// <summary>
         /// Test the mesh for topological consistency.

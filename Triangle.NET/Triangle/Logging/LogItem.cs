@@ -13,10 +13,10 @@ namespace TriangleNet.Logging
     /// </summary>
     public class LogItem : ILogItem
     {
-        DateTime time;
-        LogLevel level;
-        string message;
-        string info;
+        readonly DateTime time;
+        readonly LogLevel level;
+        readonly string message;
+        readonly string info;
 
         public DateTime Time
         {
