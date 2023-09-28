@@ -48,7 +48,7 @@ namespace VikingXNA
         public Matrix WorldViewProj => _WorldViewProj;
 
 
-        private PropertyChangedEventHandler cameraPropertyChangedEventHandler = null;
+        private readonly PropertyChangedEventHandler cameraPropertyChangedEventHandler = null;
 
         private Camera _camera;
         public Camera Camera

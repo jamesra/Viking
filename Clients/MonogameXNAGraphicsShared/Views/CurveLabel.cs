@@ -57,7 +57,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public float Max_Curve_Length_To_Use_Normalized = 1.0f;
 
-        private CurveViewControlPoints _CurveControlPoints;
+        private readonly CurveViewControlPoints _CurveControlPoints;
 
         /// <summary>
         /// How far down the length of the curve should the label start, normalized from 0 to 1

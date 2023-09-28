@@ -154,7 +154,7 @@ namespace VikingXNAGraphics
         /// </summary>
         private Color InputColor;
 
-        System.Threading.ReaderWriterLockSlim ModelRWLock = new System.Threading.ReaderWriterLockSlim();
+        readonly System.Threading.ReaderWriterLockSlim ModelRWLock = new System.Threading.ReaderWriterLockSlim();
 
         /// <summary>
         /// 

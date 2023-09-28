@@ -10,20 +10,20 @@ namespace VikingXNAGraphics
     public class TriangulationView
     {
         PointSet Points_X = new PointSet();
-        PointSetView Points_X_View = new PointSetView(Color.White);
+        readonly PointSetView Points_X_View = new PointSetView(Color.White);
 
         LabelView[] FaceLabels = null;
         LineView[] TriangulatedEdgeLineViews = null;
         LabelView[] TriangulatedEdgeLabels = null;
 
-        private SortedList<IEdgeKey, LineView> EdgeLineViews = new SortedList<IEdgeKey, LineView>();
-        private SortedList<IEdgeKey, LabelView> EdgeLineLabelsViews = new SortedList<IEdgeKey, LabelView>();
-        private SortedList<IFace, LabelView> TriFaceLabels = new SortedList<IFace, LabelView>();
+        private readonly SortedList<IEdgeKey, LineView> EdgeLineViews = new SortedList<IEdgeKey, LineView>();
+        private readonly SortedList<IEdgeKey, LabelView> EdgeLineLabelsViews = new SortedList<IEdgeKey, LabelView>();
+        private readonly SortedList<IFace, LabelView> TriFaceLabels = new SortedList<IFace, LabelView>();
 
         //double LineRadius = 1.5;
         Color LineColor = Color.Beige;
 
-        bool ShowMeshFaces = false;
+        readonly bool ShowMeshFaces = false;
 
         MeshView<VertexPositionNormalColor> meshView = new MeshView<VertexPositionNormalColor>();
 
@@ -36,7 +36,7 @@ namespace VikingXNAGraphics
         }
 
 
-        System.Threading.ReaderWriterLockSlim RWLock = new System.Threading.ReaderWriterLockSlim();
+        readonly System.Threading.ReaderWriterLockSlim RWLock = new System.Threading.ReaderWriterLockSlim();
 
         public TriangulationView()
         {

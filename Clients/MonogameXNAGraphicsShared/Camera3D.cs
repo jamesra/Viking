@@ -15,12 +15,12 @@ namespace VikingXNA
 
         private static Vector3 DefaultPositionVector = -Vector3.UnitZ * 5;
         private static Vector3 DefaultLookAtVector = Vector3.Zero;
-        private static Vector3 DefaultUpVector = Vector3.UnitZ;
+        private static readonly Vector3 DefaultUpVector = Vector3.UnitZ;
         public static Vector3 DefaultRotationVector = Vector3.Zero;
         
         private Vector3 _LookAt = new Vector3(0, 0, 0);
         private Vector3 _Position = Vector3.Backward;
-        private Vector3 _Up = DefaultUpVector;
+        private readonly Vector3 _Up = DefaultUpVector;
         private Vector3 _Rotation = Vector3.Zero;
 
         private float _Pan = MathHelper.ToRadians(0f);

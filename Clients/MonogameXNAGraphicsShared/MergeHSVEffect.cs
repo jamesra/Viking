@@ -11,16 +11,16 @@ namespace VikingXNA
     {
         public Effect effect;
 
-        private EffectParameter _WorldViewProjMatrix;
+        private readonly EffectParameter _WorldViewProjMatrix;
 
-        private EffectParameter _NumTextures;
+        private readonly EffectParameter _NumTextures;
 
-        private EffectParameter _ChannelHueAlpha;
-        private EffectParameter _ChannelHueBeta;
+        private readonly EffectParameter _ChannelHueAlpha;
+        private readonly EffectParameter _ChannelHueBeta;
 
         //Used for RGB merges
-        private EffectParameter _ChannelColors;
-        private EffectParameter _ChannelColorSum; 
+        private readonly EffectParameter _ChannelColors;
+        private readonly EffectParameter _ChannelColorSum; 
 
         public readonly int MaxChannels = 4; 
                 

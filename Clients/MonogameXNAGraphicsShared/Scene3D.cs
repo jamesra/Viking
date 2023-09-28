@@ -131,7 +131,7 @@ namespace VikingXNA
             }
         }
 
-        private PropertyChangedEventHandler cameraPropertyChangedEventHandler = null;
+        private readonly PropertyChangedEventHandler cameraPropertyChangedEventHandler = null;
 
         public Camera3D Camera
         {

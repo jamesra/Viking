@@ -103,7 +103,7 @@ namespace SqlGeometryUtils
         /// <summary>
         /// A unit circle with points along the East, North, points...
         /// </summary>
-        static private GridVector2[] circleCardinalPoints;
+        static private readonly GridVector2[] circleCardinalPoints;
 
         static Extensions()
         {

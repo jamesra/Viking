@@ -33,7 +33,7 @@ namespace RoundCurve
         private double[] _tangent_thetas; // Length of the line
         private double[] _distance_to_origin; //Distance of each control point to the origin of the line
         private double[] _distance_to_origin_normalized; //Distance of each control point to the origin of the line
-        private bool _Closed;
+        private readonly bool _Closed;
 
         public GridVector2[] ControlPoints
         {

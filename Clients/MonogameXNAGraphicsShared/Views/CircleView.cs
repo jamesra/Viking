@@ -228,7 +228,7 @@ namespace VikingXNAGraphics
         #region static
 
         //static double BeginFadeCutoff = 0.1;
-        static double InvisibleCutoff = 1.5f;
+        static readonly double InvisibleCutoff = 1.5f;
 
         #endregion
 

@@ -15,7 +15,7 @@ namespace VikingXNAGraphics
     {
         public LineStyle Style;
 
-        private CurveViewControlPoints _CurveControlPoints; 
+        private readonly CurveViewControlPoints _CurveControlPoints; 
 
         private Texture2D _ControlPointTexture;
         public Texture2D ControlPointTexture

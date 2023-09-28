@@ -10,12 +10,12 @@ namespace VikingXNA
     {
         public Effect effect;
 
-        private EffectParameter _WorldViewProjMatrix;
+        private readonly EffectParameter _WorldViewProjMatrix;
 
-        private EffectParameter _Texture;
+        private readonly EffectParameter _Texture;
 
-        private EffectParameter _TileColor;
-        private EffectParameter _TileHue;
+        private readonly EffectParameter _TileColor;
+        private readonly EffectParameter _TileHue;
 
         public Color TileColor
         {

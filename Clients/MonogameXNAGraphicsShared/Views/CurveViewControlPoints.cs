@@ -13,7 +13,7 @@ namespace VikingXNAGraphics
         /// Set to true if the order of control points was reversed during processing
         /// </summary>
         /// 
-        bool ReversedOrder = false;
+        readonly bool ReversedOrder = false;
         public CurveViewControlPoints(ICollection<GridVector2> cps, uint NumInterpolations, bool TryToClose)
         {
             if (cps.Count < 2)

@@ -14,8 +14,8 @@ namespace VikingXNAGraphics
     /// </summary>
     public class LabeledRectangleView : IRenderable, IDualColorView, IViewPosition2D, IHitTesting, IText
     {
-        VikingXNAGraphics.RectangleView BackgroundBox = null;
-        VikingXNAGraphics.LabelView Label = null;
+        readonly VikingXNAGraphics.RectangleView BackgroundBox = null;
+        readonly VikingXNAGraphics.LabelView Label = null;
 
         public string Text
         {

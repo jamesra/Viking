@@ -14,7 +14,7 @@ namespace VikingXNAGraphics
     public static class DeviceEffectsStore<T> where
         T : class, IInitEffect, new()
     {
-        private static Dictionary<GraphicsDevice, T> ManagersForDevice = new Dictionary<GraphicsDevice, T>();
+        private static readonly Dictionary<GraphicsDevice, T> ManagersForDevice = new Dictionary<GraphicsDevice, T>();
         
         public static T GetOrCreateForDevice(GraphicsDevice device, ContentManager content)
         {

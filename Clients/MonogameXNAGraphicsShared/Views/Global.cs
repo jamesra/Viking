@@ -115,7 +115,7 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Stores a unit circle/square index buffer for each device we know about.
         /// </summary>
-        private static Dictionary<GraphicsDevice, IndexBuffer> unit_circle_index_buffers = new Dictionary<GraphicsDevice, IndexBuffer>();
+        private static readonly Dictionary<GraphicsDevice, IndexBuffer> unit_circle_index_buffers = new Dictionary<GraphicsDevice, IndexBuffer>();
 
         /// <summary>
         /// Gets the index buffer for unit square built with two triangles
@@ -166,7 +166,7 @@ namespace VikingXNAGraphics
         /// <summary>
         /// Stores a unit circle vertex buffer for each device we know about
         /// </summary>
-        private static Dictionary<GraphicsDevice, VertexBuffer> unit_circle_vertex_buffers = new Dictionary<GraphicsDevice, VertexBuffer>();
+        private static readonly Dictionary<GraphicsDevice, VertexBuffer> unit_circle_vertex_buffers = new Dictionary<GraphicsDevice, VertexBuffer>();
 
 
         // <summary>

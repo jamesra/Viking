@@ -75,7 +75,7 @@ namespace VikingXNAGraphics
         /// </summary>
         //static float LabelVisibleCutoff = 7f;
 
-        static byte DefaultAlpha = 192;
+        static readonly byte DefaultAlpha = 192;
 
         public Microsoft.Xna.Framework.Color _Color = new Microsoft.Xna.Framework.Color((byte)(0),
                                                                                     (byte)(0),

@@ -21,7 +21,7 @@ namespace VikingXNA
     /// </summary>
     public class ServiceContainer : IServiceProvider
     {
-        Dictionary<Type, object> services = new Dictionary<Type, object>();
+        readonly Dictionary<Type, object> services = new Dictionary<Type, object>();
 
 
         /// <summary>

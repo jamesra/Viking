@@ -9,10 +9,10 @@ namespace VikingXNA
     {
         public Effect effect;
 
-        private EffectParameter _WorldViewProjMatrix;
+        private readonly EffectParameter _WorldViewProjMatrix;
 
-        private EffectParameter _BackgroundTexture;
-        private EffectParameter _OverlayTexture;
+        private readonly EffectParameter _BackgroundTexture;
+        private readonly EffectParameter _OverlayTexture;
 
         public Matrix WorldViewProjMatrix
         {

@@ -98,26 +98,30 @@ namespace VikingXNAGraphics
 
     public static class MeshExtensions 
     {
+        private static readonly Vector3[] _unitCubeVerts = new Vector3[]
+        {
+            new Vector3(-1,-1,-1),
+            new Vector3(-1,-1, 1),
+            new Vector3(-1, 1,-1),
+            new Vector3(-1, 1, 1),
+            new Vector3( 1,-1,-1),
+            new Vector3( 1,-1, 1),
+            new Vector3( 1, 1,-1),
+            new Vector3( 1, 1, 1)
+        };
+
         /// <summary>
         /// Generates a Model for a unit cube
         /// </summary>
         /// <returns></returns>
         public static MeshModel<VertexPositionColor> CreateUnitCube(Color color)
         {
-            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
-            Vector3[] verts = new Vector3[] {   new Vector3(-1,-1,-1),
-                                                new Vector3(-1,-1, 1),
-                                                new Vector3(-1, 1,-1),
-                                                new Vector3(-1, 1, 1),
-                                                new Vector3( 1,-1,-1),
-                                                new Vector3( 1,-1, 1),
-                                                new Vector3( 1, 1,-1),
-                                                new Vector3( 1, 1, 1) };
+            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>
+            {
+                Verticies = _unitCubeVerts.Select(v => new VertexPositionColor(v, color)).ToArray(),
 
-            model.Verticies = verts.Select(v => new VertexPositionColor(v, color)).ToArray();
-
-            //Add faces
-            model.Edges = new int[] {0,1,2,
+                //Add faces
+                Edges = new int[] {0,1,2,
                                      1,2,3, //A - Normal is -x
                                      4,5,6,
                                      5,6,7, //B - Normal is +x
@@ -129,41 +133,42 @@ namespace VikingXNAGraphics
                                      4,2,6, //E - Normal is -z
                                      1,3,5,
                                      3,5,7  //F - Normal is +z
+            }
             };
 
             return model; 
         }
 
+        private static readonly Vector3[] _unitBoundingBoxVerts = new Vector3[] {   new Vector3(-1,-1,-1),
+            new Vector3(-1,-1, 1),
+            new Vector3(-1, 1,-1),
+            new Vector3(-1, 1, 1),
+            new Vector3( 1,-1,-1),
+            new Vector3( 1,-1, 1),
+            new Vector3( 1, 1,-1),
+            new Vector3( 1, 1, 1) };
         /// <summary>
         /// Generates a Model for a unit cube that uses edges instead of faces to represent the exterior borders.
         /// </summary>
         /// <returns></returns>
         public static MeshModel<VertexPositionColor> CreateUnitBoundingBox(Color color)
-        {
-            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>();
-            model.Primitive = PrimitiveType.LineList;
-
-            Vector3[] verts = new Vector3[] {   new Vector3(-1,-1,-1),
-                                                new Vector3(-1,-1, 1),
-                                                new Vector3(-1, 1,-1),
-                                                new Vector3(-1, 1, 1),
-                                                new Vector3( 1,-1,-1),
-                                                new Vector3( 1,-1, 1),
-                                                new Vector3( 1, 1,-1),
-                                                new Vector3( 1, 1, 1) };
-
-            model.Verticies = verts.Select(v => new VertexPositionColor(v, color)).ToArray();
-
-            //Add faces
-            model.Edges = new int[] {0,1,
-                                     2,3, //A - Normal is -x
-                                     4,5,
-                                     6,7,
-                                     0,2,2,6,6,4,4,0, //The XY border for Z=-1
-                                     1,3,3,7,7,5,5,1, //The XY Border for Z=1 
-            };
-
+        {   
+            MeshModel<VertexPositionColor> model = new MeshModel<VertexPositionColor>
+            {
+                ModelMatrix = default,
+                Verticies = _unitBoundingBoxVerts.Select(v => new VertexPositionColor(v, color)).ToArray(),
+                Edges = new int[] {0,1,
+                    2,3, //A - Normal is -x
+                    4,5,
+                    6,7,
+                    0,2,2,6,6,4,4,0, //The XY border for Z=-1
+                    1,3,3,7,7,5,5,1, //The XY Border for Z=1 
+                },
+                Primitive = PrimitiveType.LineList,
+                Position = default
+            }; 
             return model;
+
         }
 
         /// <summary>
@@ -543,7 +548,7 @@ namespace VikingXNAGraphics
             return ARGB;
         }
 
-        static System.Random rgen = new System.Random();
+        static readonly System.Random rgen = new System.Random();
 
         public static Microsoft.Xna.Framework.Color Random(this Color color)
         {

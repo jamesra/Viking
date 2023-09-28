@@ -53,7 +53,7 @@ namespace VikingXNAGraphics
 
     public static class DeviceFontStore  
     {
-        private static Dictionary<GraphicsDevice, Dictionary<string, FontRenderData>> ManagersForDevice = new Dictionary<GraphicsDevice, Dictionary<string, FontRenderData>>();
+        private static readonly Dictionary<GraphicsDevice, Dictionary<string, FontRenderData>> ManagersForDevice = new Dictionary<GraphicsDevice, Dictionary<string, FontRenderData>>();
 
         public static string DefaultFont = @"Arial";
 
