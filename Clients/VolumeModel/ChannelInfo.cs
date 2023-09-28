@@ -80,12 +80,13 @@ namespace Viking.VolumeModel
 
         public object Clone()
         {
-            ChannelInfo clone = new ChannelInfo();
-
-            clone.ChannelName = this.ChannelName;
-            clone.Color = this.Color;
-            clone.FixedSectionNumber = this.FixedSectionNumber;
-            clone.SectionSource = this.SectionSource;
+            ChannelInfo clone = new ChannelInfo
+            {
+                ChannelName = this.ChannelName,
+                Color = this.Color,
+                FixedSectionNumber = this.FixedSectionNumber,
+                SectionSource = this.SectionSource
+            };
 
             return clone;
         }
@@ -167,11 +168,13 @@ namespace Viking.VolumeModel
 
                         if (CreateChannel)
                         {
-                            ChannelInfo newChannel = new ChannelInfo();
-                            newChannel.ChannelName = Channel;
-                            newChannel.Color = ChannelColor;
-                            newChannel.SectionSource = refSectionInfo;
-                            newChannel.FixedSectionNumber = SectionNumber;
+                            ChannelInfo newChannel = new ChannelInfo
+                            {
+                                ChannelName = Channel,
+                                Color = ChannelColor,
+                                SectionSource = refSectionInfo,
+                                FixedSectionNumber = SectionNumber
+                            };
                             channels.Add(newChannel);
                         }
                         break;

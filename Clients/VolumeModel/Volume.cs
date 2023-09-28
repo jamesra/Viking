@@ -72,19 +72,20 @@ namespace Viking.VolumeModel
 
         public static TileServerInfo CreateFromElement(XElement node)
         {
-            TileServerInfo info = new TileServerInfo();
+            TileServerInfo info = new TileServerInfo
+            {
+                TileXDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("TileXDim").Value),
+                TileYDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("TileYDim").Value),
+                GridXDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("GridXDim").Value),
+                GridYDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("GridYDim").Value),
+                MaxLevel = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("MaxLevel").Value),
+                FilePrefix = node.GetAttributeCaseInsensitive("FilePrefix").Value,
+                FilePostfix = node.GetAttributeCaseInsensitive("FilePostfix").Value,
+                Host = node.GetAttributeCaseInsensitive("host").Value,
+                CoordSpaceName = node.GetAttributeCaseInsensitive("coordspacename").Value,
 
-            info.TileXDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("TileXDim").Value);
-            info.TileYDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("TileYDim").Value);
-            info.GridXDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("GridXDim").Value);
-            info.GridYDim = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("GridYDim").Value);
-            info.MaxLevel = System.Convert.ToInt32(node.GetAttributeCaseInsensitive("MaxLevel").Value);
-            info.FilePrefix = node.GetAttributeCaseInsensitive("FilePrefix").Value;
-            info.FilePostfix = node.GetAttributeCaseInsensitive("FilePostfix").Value;
-            info.Host = node.GetAttributeCaseInsensitive("host").Value;
-            info.CoordSpaceName = node.GetAttributeCaseInsensitive("coordspacename").Value;
-
-            info.Channels = node.Elements().Where(e => e.Name == "Channel").Select(e => new OCPChannelInfo(e)).ToList(); 
+                Channels = node.Elements().Where(e => e.Name == "Channel").Select(e => new OCPChannelInfo(e)).ToList()
+            };
             return info;
         }
 

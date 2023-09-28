@@ -45,15 +45,21 @@ namespace Viking.VolumeModel
 
         public static async Task<LoadStosResult> LoadAsync(String localCachePath, XElement reader)
         {
-            var result = new LoadStosResult() { element = reader };
-            result.Transform = await TransformFactory.ParseStos(localCachePath).ConfigureAwait(false);
+            var result = new LoadStosResult
+            {
+                element = reader,
+                Transform = await TransformFactory.ParseStos(localCachePath).ConfigureAwait(false)
+            };
             return result;
         }
 
         public static async Task<LoadStosResult> LoadAsync(Uri ServerPath, System.Net.NetworkCredential UserCredentials, XElement element)
         {
-            var result = new LoadStosResult() { element = element };
-            result.Transform = await TransformFactory.ParseStos(ServerPath, element, UserCredentials).ConfigureAwait(false);
+            var result = new LoadStosResult
+            {
+                element = element,
+                Transform = await TransformFactory.ParseStos(ServerPath, element, UserCredentials).ConfigureAwait(false)
+            };
             return result;
         }
     } 
