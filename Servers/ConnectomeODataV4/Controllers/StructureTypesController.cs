@@ -19,7 +19,7 @@ namespace ConnectomeODataV4.Controllers
     */
     public class StructureTypesController : ODataController
     {
-        private ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities db = new ConnectomeEntities();
 
         // GET: odata/StructureTypes
         [EnableQuery(PageSize = WebApiConfig.PageSize)]

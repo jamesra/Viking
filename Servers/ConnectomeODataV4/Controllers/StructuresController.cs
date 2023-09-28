@@ -24,7 +24,7 @@ namespace ConnectomeODataV4.Controllers
     */
     public class StructuresController : ODataController
     {
-        private ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities db = new ConnectomeEntities();
 
         // GET: odata/Structures
         [EnableQuery(PageSize = 2048)]

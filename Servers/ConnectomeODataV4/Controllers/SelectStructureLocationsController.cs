@@ -19,8 +19,8 @@ namespace ConnectomeODataV4.Controllers
     */
     public class SelectStructureLocationsController : ODataController
     {
-        private ConnectomeEntities db = new ConnectomeEntities();
-        private static ODataValidationSettings _validationSettings = new ODataValidationSettings();
+        private readonly ConnectomeEntities db = new ConnectomeEntities();
+        private static readonly ODataValidationSettings _validationSettings = new ODataValidationSettings();
 
         // GET: odata/SelectStructureLocations
         [EnableQuery(PageSize = WebApiConfig.PageSize)]

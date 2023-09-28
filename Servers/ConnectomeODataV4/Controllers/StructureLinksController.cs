@@ -22,7 +22,7 @@ namespace ConnectomeODataV4.Controllers
     */
     public class StructureLinksController : ODataController
     {
-        private ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities db = new ConnectomeEntities();
 
         /// <summary>
         /// Return the ODataPath we need to set on requests when invoking functions that return collections of entities

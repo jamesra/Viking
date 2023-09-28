@@ -20,7 +20,7 @@ namespace ConnectomeODataV4.Controllers
     */
     public class LocationLinksController : ODataController
     {
-        private ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities db = new ConnectomeEntities();
 
         // GET: odata/LocationLinks
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
