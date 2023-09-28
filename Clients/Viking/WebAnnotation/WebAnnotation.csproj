@@ -49,7 +49,7 @@
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
     <DocumentationFile>
-    </DocumentationFile> 
+    </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
     <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
@@ -60,7 +60,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <PlatformTarget>x86</PlatformTarget> 
+    <PlatformTarget>x86</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithSymbols|AnyCPU'">
@@ -68,7 +68,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>full</DebugType>
-    <PlatformTarget>x86</PlatformTarget> 
+    <PlatformTarget>x86</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
@@ -191,6 +191,7 @@
     <Compile Include="UI\SplitStructuresForm.Designer.cs">
       <DependentUpon>SplitStructuresForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="ViewModel\Location_ShapeViewModel.cs" />
     <Compile Include="ViewModel\SectionLocationLinksAnnotationsViewModel.cs" />
     <Compile Include="View\LocationInteriorHoleView.cs" />
     <Compile Include="View\LocationPolygonView.cs" />

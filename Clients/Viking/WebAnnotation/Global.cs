@@ -41,7 +41,7 @@ namespace WebAnnotation
 
         static public uint NumClosedCurveInterpolationPointsForDisplay = 4;
 
-        static public int PenSimplifyThreshold = 15;
+        static public int PenSimplifyThreshold = 12;
 
         static public double DefaultClosedLineWidth = 24.0;
 
