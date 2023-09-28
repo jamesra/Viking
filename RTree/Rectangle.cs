@@ -417,12 +417,12 @@ namespace RTree
             int hashcode = 0;
             foreach(double d in min)
             {
-                hashcode = hashcode ^ d.GetHashCode();
+                hashcode ^= d.GetHashCode();
             }
 
             foreach (double d in max)
             {
-                hashcode = hashcode ^ d.GetHashCode();
+                hashcode ^= d.GetHashCode();
             }
 
             return hashcode;
