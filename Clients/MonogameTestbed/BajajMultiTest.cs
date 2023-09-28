@@ -785,7 +785,7 @@ namespace MonogameTestbed
                 {
                     if ((wrapView.VertexLabelType & (IndexLabelType.MESH | IndexLabelType.POLYGON)) == 0)
                     {
-                        wrapView.VertexLabelType = wrapView.VertexLabelType | IndexLabelType.MESH;
+                        wrapView.VertexLabelType |= IndexLabelType.MESH;
                     }
                     else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) > 0)
                     {
@@ -793,13 +793,13 @@ namespace MonogameTestbed
                     }
                     else if ((wrapView.VertexLabelType & IndexLabelType.MESH) == 0)
                     {
-                        wrapView.VertexLabelType = wrapView.VertexLabelType | IndexLabelType.MESH;
-                        wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.POLYGON;
+                        wrapView.VertexLabelType |= IndexLabelType.MESH;
+                        wrapView.VertexLabelType ^= IndexLabelType.POLYGON;
                     }
                     else if ((wrapView.VertexLabelType & IndexLabelType.POLYGON) == 0)
                     {
-                        wrapView.VertexLabelType = wrapView.VertexLabelType | IndexLabelType.POLYGON;
-                        wrapView.VertexLabelType = wrapView.VertexLabelType ^ IndexLabelType.MESH;
+                        wrapView.VertexLabelType |= IndexLabelType.POLYGON;
+                        wrapView.VertexLabelType ^= IndexLabelType.MESH;
                     }
                 }
                 /*

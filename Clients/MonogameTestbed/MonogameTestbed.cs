@@ -161,9 +161,7 @@ namespace MonogameTestbed
             //Load the default font
             var fontData = DeviceFontStore.GetOrCreateForDevice(GraphicsDevice, Content);
 
-            Camera = new VikingXNA.Camera { Downsample = 256 };
-            Camera.LookAt = new Vector2(0, 0);
-            Camera.Downsample = 0.5;
+            Camera = new VikingXNA.Camera { Downsample = 0.5, LookAt = new Vector2(0, 0) }; 
             Scene = new VikingXNA.Scene(graphics.GraphicsDevice.Viewport, Camera);
 
             lineManager.Init(GraphicsDevice, Content);
