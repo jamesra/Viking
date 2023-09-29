@@ -432,9 +432,10 @@ namespace TriangleNet.Voronoi.Legacy
             {
                 // For vertices on the domain boundaray, add the vertex. For 
                 // internal boundaries don't add it.
-                p = new Point(vertex.x, vertex.y);
-
-                p.id = n + segIndex++;
+                p = new Point(vertex.x, vertex.y)
+                {
+                    id = n + segIndex++
+                };
                 segPoints.Add(p);
                 vpoints.Add(p);
             }
@@ -442,9 +443,10 @@ namespace TriangleNet.Voronoi.Legacy
             // Add midpoint of start triangles' edge.
             torg = f.Org();
             tdest = f.Dest();
-            p = new Point((torg.x + tdest.x) / 2, (torg.y + tdest.y) / 2);
-
-            p.id = n + segIndex++;
+            p = new Point((torg.x + tdest.x) / 2, (torg.y + tdest.y) / 2)
+            {
+                id = n + segIndex++
+            };
             segPoints.Add(p);
             vpoints.Add(p);
 
@@ -466,9 +468,10 @@ namespace TriangleNet.Voronoi.Legacy
                     // been added, so post process cell to remove duplicates???)
                     torg = f.Org();
                     tapex = f.Apex();
-                    p = new Point((torg.x + tapex.x) / 2, (torg.y + tapex.y) / 2);
-
-                    p.id = n + segIndex++;
+                    p = new Point((torg.x + tapex.x) / 2, (torg.y + tapex.y) / 2)
+                    {
+                        id = n + segIndex++
+                    };
                     segPoints.Add(p);
                     vpoints.Add(p);
 

@@ -218,11 +218,12 @@ namespace TriangleNet.Meshing.Algorithm
                     lefttest = predicates.CounterClockwise(leftvertex, midvertex, rightvertex);
                     if (lefttest > 0.0)
                     {
-                        newevent = new SweepEvent();
-
-                        newevent.xkey = xminextreme;
-                        newevent.ykey = CircleTop(leftvertex, midvertex, rightvertex, lefttest);
-                        newevent.otriEvent = lefttri;
+                        newevent = new SweepEvent
+                        {
+                            xkey = xminextreme,
+                            ykey = CircleTop(leftvertex, midvertex, rightvertex, lefttest),
+                            otriEvent = lefttri
+                        };
                         HeapInsert(eventheap, heapsize, newevent);
                         heapsize++;
                         lefttri.SetOrg(new SweepEventVertex(newevent));
@@ -233,11 +234,12 @@ namespace TriangleNet.Meshing.Algorithm
                     righttest = predicates.CounterClockwise(leftvertex, midvertex, rightvertex);
                     if (righttest > 0.0)
                     {
-                        newevent = new SweepEvent();
-
-                        newevent.xkey = xminextreme;
-                        newevent.ykey = CircleTop(leftvertex, midvertex, rightvertex, righttest);
-                        newevent.otriEvent = farrighttri;
+                        newevent = new SweepEvent
+                        {
+                            xkey = xminextreme,
+                            ykey = CircleTop(leftvertex, midvertex, rightvertex, righttest),
+                            otriEvent = farrighttri
+                        };
                         HeapInsert(eventheap, heapsize, newevent);
                         heapsize++;
                         farrighttri.SetOrg(new SweepEventVertex(newevent));
@@ -391,10 +393,12 @@ namespace TriangleNet.Meshing.Algorithm
             foreach (var v in mesh.vertices.Values)
             {
                 thisvertex = v;
-                evt = new SweepEvent();
-                evt.vertexEvent = thisvertex;
-                evt.xkey = thisvertex.x;
-                evt.ykey = thisvertex.y;
+                evt = new SweepEvent
+                {
+                    vertexEvent = thisvertex,
+                    xkey = thisvertex.x,
+                    ykey = thisvertex.y
+                };
                 HeapInsert(eventheap, i++, evt);
             }
         }

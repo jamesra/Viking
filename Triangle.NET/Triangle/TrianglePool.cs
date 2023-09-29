@@ -66,8 +66,10 @@ namespace TriangleNet
             }
             else
             {
-                triangle = new Triangle();
-                triangle.hash = size;
+                triangle = new Triangle
+                {
+                    hash = size
+                };
                 triangle.id = triangle.hash;
 
                 int block = size / BLOCKSIZE;

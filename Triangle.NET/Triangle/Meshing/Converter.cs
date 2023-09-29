@@ -107,8 +107,10 @@ namespace TriangleNet.Meshing
             {
                 Otri tmp = default;
                 tmp.tri = mesh.dummytri;
-                vertexarray[i] = new List<Otri>(3);
-                vertexarray[i].Add(tmp);
+                vertexarray[i] = new List<Otri>(3)
+                {
+                    tmp
+                };
             }
 
             i = 0;
@@ -360,9 +362,11 @@ namespace TriangleNet.Meshing
 
             foreach (var v in mesh.vertices.Values)
             {
-                vertex = new HVertex(v.x, v.y);
-                vertex.id = v.id;
-                vertex.label = v.label;
+                vertex = new HVertex(v.x, v.y)
+                {
+                    id = v.id,
+                    label = v.label
+                };
 
                 vertices[v.id] = vertex;
             }
@@ -374,8 +378,10 @@ namespace TriangleNet.Meshing
 
             foreach (var t in mesh.triangles)
             {
-                face = new Face(null);
-                face.id = t.id;
+                face = new Face(null)
+                {
+                    id = t.id
+                };
 
                 faces[t.id] = face;
 

@@ -152,13 +152,14 @@ namespace TriangleNet.Meshing.Data
         public void Enqueue(ref Otri enqtri, double minedge, Vertex apex, Vertex org, Vertex dest)
         {
             // Allocate space for the bad triangle.
-            BadTriangle newbad = new BadTriangle();
-
-            newbad.poortri = enqtri;
-            newbad.key = minedge;
-            newbad.apex = apex;
-            newbad.org = org;
-            newbad.dest = dest;
+            BadTriangle newbad = new BadTriangle
+            {
+                poortri = enqtri,
+                key = minedge,
+                apex = apex,
+                org = org,
+                dest = dest
+            };
 
             Enqueue(newbad);
         }

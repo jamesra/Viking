@@ -20,8 +20,10 @@ namespace TriangleNet.Topology.DCEL
 
         static Face()
         {
-            Empty = new Face(null);
-            Empty.id = -1;
+            Empty = new Face(null)
+            {
+                id = -1
+            };
         }
 
         #endregion

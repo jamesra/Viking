@@ -609,11 +609,12 @@ namespace TriangleNet.Meshing
 #if USE_ATTRIBS
                         , mesh.nextras
 #endif
-                    );
+                    )
+                    {
+                        type = VertexType.SegmentVertex,
 
-                    newvertex.type = VertexType.SegmentVertex;
-
-                    newvertex.hash = mesh.hash_vtx++;
+                        hash = mesh.hash_vtx++
+                    };
                     newvertex.id = newvertex.hash;
 
                     mesh.vertices.Add(newvertex.hash, newvertex);
@@ -757,9 +758,10 @@ namespace TriangleNet.Meshing
 #if USE_ATTRIBS
                         , mesh.nextras
 #endif
-                        );
-
-                    newvertex.type = VertexType.FreeVertex;
+                        )
+                    {
+                        type = VertexType.FreeVertex
+                    };
 
                     // Ensure that the handle 'badotri' does not represent the longest
                     // edge of the triangle.  This ensures that the circumcenter must

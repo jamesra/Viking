@@ -127,10 +127,8 @@ namespace TriangleNet.Geometry
             {
                 return false;
             }
-
-            Point p = obj as Point;
-
-            if (p is null)
+             
+            if (!(obj is Point p))
             {
                 return false;
             }

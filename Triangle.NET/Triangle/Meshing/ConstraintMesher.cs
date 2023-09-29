@@ -707,9 +707,10 @@ namespace TriangleNet.Meshing
 #if USE_ATTRIBS
                 , mesh.nextras
 #endif
-                );
-
-            newvertex.hash = mesh.hash_vtx++;
+                )
+            {
+                hash = mesh.hash_vtx++
+            };
             newvertex.id = newvertex.hash;
 
 #if USE_ATTRIBS
