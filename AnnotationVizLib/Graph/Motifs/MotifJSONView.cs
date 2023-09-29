@@ -17,10 +17,11 @@ namespace AnnotationVizLib
         static public MotifJSONView ToJSON(MotifGraph graph)
         {
             int edgeCount = 0;
-            MotifJSONView JSONView = new MotifJSONView();
-
-            JSONView.nodesJSON = new JArray();
-            JSONView.edgesJSON = new JArray();
+            MotifJSONView JSONView = new MotifJSONView
+            {
+                nodesJSON = new JArray(),
+                edgesJSON = new JArray()
+            };
 
             foreach (MotifNode node in graph.Nodes.Values)
             {

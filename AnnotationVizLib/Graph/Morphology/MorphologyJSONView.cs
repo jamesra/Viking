@@ -36,8 +36,10 @@ namespace AnnotationVizLib
         }
         static private JSONStructureMorphology MorphologyGraphToJSONStructureMorphology(MorphologyGraph graph)
         {
-            JSONStructureMorphology JSONView = new JSONStructureMorphology();
-            JSONView.StructureID = graph.StructureID;
+            JSONStructureMorphology JSONView = new JSONStructureMorphology
+            {
+                StructureID = graph.StructureID
+            };
             foreach (MorphologyNode node in graph.Nodes.Values)
             {
                 JSONView.Nodes.Add(new
@@ -73,8 +75,10 @@ namespace AnnotationVizLib
 
             using (StringWriter fs = new StringWriter(sb))
             {
-                System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer();
-                oSerializer.MaxJsonLength = 268435456;
+                System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer
+                {
+                    MaxJsonLength = 268435456
+                };
                 fs.Write(oSerializer.Serialize(new { Morphology = this.StructureMorphologies }));
                 fs.Close();
             }

@@ -10,8 +10,10 @@ namespace AnnotationVizLib.OData
     {
         public static MorphologyGraph FromOData(ICollection<long> StructureIDs, bool include_children, Uri Endpoint)
         {
-            ODataClient.ConnectomeODataV4.Container container = new ODataClient.ConnectomeODataV4.Container(Endpoint);
-            container.MergeOption = Microsoft.OData.Client.MergeOption.NoTracking;
+            ODataClient.ConnectomeODataV4.Container container = new ODataClient.ConnectomeODataV4.Container(Endpoint)
+            {
+                MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
+            };
             var scale_retval = container.Scale();
             var scale = scale_retval.GetValue().ToGeometryScale();
 

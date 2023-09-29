@@ -75,10 +75,10 @@ namespace AnnotationVizLib
             foreach (IStructure s in node.Structures)
             {
                 if (!firstentry)
-                    ToolTipStr = ToolTipStr + ", ";
+                    ToolTipStr += ", ";
 
                 firstentry = false;
-                ToolTipStr = ToolTipStr + s.ID.ToString();
+                ToolTipStr += s.ID.ToString();
             }
 
             DotNode.Attributes.Add("tooltip", ToolTipStr);
@@ -108,11 +108,11 @@ namespace AnnotationVizLib
                 DotEdge.AddStandardizedAttributes(EdgeAttribs);
             }
 
-            arrowsize = arrowsize * (float)(Math.Sqrt(edge.Weight) * mulFactor);
+            arrowsize *= (float)(Math.Sqrt(edge.Weight) * mulFactor);
             if (arrowsize < 1)
                 arrowsize = 1;
 
-            pensize = pensize * (float)Math.Sqrt(edge.Weight);
+            pensize *= (float)Math.Sqrt(edge.Weight);
 
             DotEdge.Attributes.Add("tailclip", "true");
             //DotEdge.Attributes.Add("color", color);

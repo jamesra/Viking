@@ -19,19 +19,19 @@ namespace AnnotationVizLib
 
         public void Reverse()
         {
-            KEY temp = this.from;
-            this.from = this.to;
-            this.to = temp;
+            (this.from, this.to) = (this.to, this.from);
         }
 
         #region ICloneable Members
 
         public object Clone()
         {
-            GraphVizEdge<KEY> clone = new GraphVizEdge<KEY>();
-            clone.label = label;
-            clone.from = from;
-            clone.to = to;
+            GraphVizEdge<KEY> clone = new GraphVizEdge<KEY>
+            {
+                label = label,
+                from = from,
+                to = to
+            };
             foreach (string key in Attributes.Keys)
             {
                 clone.Attributes.Add(key, Attributes[key]);

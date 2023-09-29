@@ -93,11 +93,11 @@ namespace AnnotationVizLib
                 DotEdge.AddStandardizedAttributes(EdgeAttribs);
             }
 
-            arrowsize = arrowsize * (float)(Math.Sqrt(edge.Weight) * mulFactor);
+            arrowsize *= (float)(Math.Sqrt(edge.Weight) * mulFactor);
             if (arrowsize < 1)
                 arrowsize = 1;
 
-            pensize = pensize * (float)Math.Sqrt(edge.Weight);
+            pensize *= (float)Math.Sqrt(edge.Weight);
 
             DotEdge.Attributes.Add("tailclip", "true");
             //DotEdge.Attributes.Add("color", color);

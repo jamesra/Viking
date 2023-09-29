@@ -59,10 +59,7 @@ namespace Viking.AnnotationServiceTypes
                 OnPropertyChanging(nameof(Parent));
 
                 //Remove ourselves from our old parent's list of children
-                if (_Parent != null)
-                {
-                    _Parent.RemoveChild(this as THISTYPE);
-                }
+                _Parent?.RemoveChild(this as THISTYPE);
 
                 _Parent = value;
 
@@ -93,7 +90,7 @@ namespace Viking.AnnotationServiceTypes
             }
         }
 
-        ObservableCollection<THISTYPE> _Children = new ObservableCollection<THISTYPE>();
+        readonly ObservableCollection<THISTYPE> _Children = new ObservableCollection<THISTYPE>();
 
         public THISTYPE[] Children
         {

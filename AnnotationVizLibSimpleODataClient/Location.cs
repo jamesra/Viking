@@ -16,13 +16,7 @@ namespace AnnotationVizLib.SimpleOData
         {
         }
 
-        public IDictionary<string, string> Attributes
-        {
-            get
-            {
-                return null;
-            }
-        }
+        public IDictionary<string, string> Attributes => null;
 
         public System.Data.Entity.Spatial.DbGeometry VolumeShape { get; internal set; }
 
@@ -166,7 +160,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Equals(ILocation other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)

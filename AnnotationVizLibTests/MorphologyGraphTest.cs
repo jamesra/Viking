@@ -298,8 +298,10 @@ namespace AnnotationVizLibTests
             foreach (ulong TargetType in TargetTypes)
             {
                 double[] Distances;
-                SortedSet<ulong> T = new SortedSet<ulong>();
-                T.Add(TargetType);
+                SortedSet<ulong> T = new SortedSet<ulong>
+                {
+                    TargetType
+                };
                 Distances = MeasureDistances(graph, SourceTypes, TargetTypes);
 
                 distanceForLabel[TargetType] = Distances;

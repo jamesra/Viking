@@ -114,10 +114,9 @@ namespace AnnotationVizLib.SimpleOData
             //Wait for first set of locations to download, but start the request for structure as soon as possible. 
 
             long StructureID = 0;
-            Task<Structure> st_task = null; //This is the task that will fetch the structure once we identify it
-            Task<IEnumerable<IDictionary<string, object>>> st_loc_links_task = null;
+            //st_task is the task that will fetch the structure once we identify it
 
-            List<Location> listLocations = WaitForLocations(client, listLocationFetchTasks, scale, ref StructureID, out st_task, out st_loc_links_task);
+            List<Location> listLocations = WaitForLocations(client, listLocationFetchTasks, scale, ref StructureID, out Task<Structure> st_task, out Task<IEnumerable<IDictionary<string, object>>> st_loc_links_task);
             listLocationFetchTasks.Clear();
 
 

@@ -37,7 +37,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Equals(IStructureType other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)

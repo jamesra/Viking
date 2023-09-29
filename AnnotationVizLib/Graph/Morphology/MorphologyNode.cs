@@ -79,7 +79,7 @@ namespace AnnotationVizLib
             }
         }
 
-        private SortedSet<ulong> _Subgraphs = new SortedSet<ulong>();
+        private readonly SortedSet<ulong> _Subgraphs = new SortedSet<ulong>();
 
         internal void AddSubgraph(ulong StructureID)
         {

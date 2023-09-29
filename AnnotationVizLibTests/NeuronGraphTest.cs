@@ -10,7 +10,7 @@ namespace AnnotationVizLibTests
         public static string WCFEndpoint = "https://webdev.connectomes.utah.edu/RC1Test/Annotation/Annotate.svc";
         public static string ODataEndpoint = "https://webdev.connectomes.utah.edu/RC1Test/OData/";
         public static string ExportEndpoint = "https://webdev.connectomes.utah.edu/RC1Test/Export/";
-        private System.Net.NetworkCredential userCredentials;
+        private readonly System.Net.NetworkCredential userCredentials;
 
         public NeuronGraphTest()
         {

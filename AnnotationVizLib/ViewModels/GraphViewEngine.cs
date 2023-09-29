@@ -91,8 +91,10 @@ namespace AnnotationVizLib
             //Determine if we have an entry in our subgraph or if we need to add it.
             if (!this.subgraphs.ContainsKey(subgraphName))
             {
-                List<KEY> listSubgraphNodes = new List<KEY>();
-                listSubgraphNodes.Add(NodeID);
+                List<KEY> listSubgraphNodes = new List<KEY>
+                {
+                    NodeID
+                };
                 subgraphs.Add(subgraphName, listSubgraphNodes);
             }
             else

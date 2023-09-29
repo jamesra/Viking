@@ -53,7 +53,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Equals(IStructureLink other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.SourceID == this.SourceID &&

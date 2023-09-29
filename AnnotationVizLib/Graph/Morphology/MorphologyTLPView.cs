@@ -256,8 +256,10 @@ namespace AnnotationVizLib
         private static TLPViewSubgraph AssignNodesToSubgraphs(MorphologyTLPView view, MorphologyGraph structuregraph, StructureMorphologyColorMap colorMap)
         {
             TLPViewSubgraph subgraph_view = new TLPViewSubgraph(view.GenerateNextSubgraphID(),
-                                                                    view.LabelForStructure(structuregraph.structure));
-            subgraph_view.Color = GetStructureColor(structuregraph, colorMap);
+                                                                    view.LabelForStructure(structuregraph.structure))
+            {
+                Color = GetStructureColor(structuregraph, colorMap)
+            };
 
             foreach (MorphologyNode node in structuregraph.Nodes.Values)
             {

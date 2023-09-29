@@ -40,8 +40,7 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public virtual System.Drawing.Color GetColor(IStructure structure)
         {
-            COLORSOURCE source;
-            return GetColor(structure, out source);
+            return GetColor(structure, out COLORSOURCE source);
         }
 
         /// <summary>
@@ -109,8 +108,7 @@ namespace AnnotationVizLib
 
         public System.Drawing.Color GetColor(MorphologyGraph graph)
         {
-            COLORSOURCE source;
-            return GetColor(graph, out source);
+            return GetColor(graph, out var source);
         }
 
         /// <summary>

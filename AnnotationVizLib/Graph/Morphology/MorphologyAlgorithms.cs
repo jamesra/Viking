@@ -95,8 +95,7 @@ namespace AnnotationVizLib
 
                 SortedSet<ulong> candidates = FindNearestCandidatesFromRTree(UnionRTree, node);
 
-                double min_distance;
-                ulong nearest = NearestNode(key, candidates, out min_distance);
+                ulong nearest = NearestNode(key, candidates, out double min_distance);
                 if (min_distance < nearest_node_distance)
                 {
                     best_edge = new MorphologyEdge(this, key, nearest);
@@ -237,9 +236,8 @@ namespace AnnotationVizLib
             ulong nearest_node = ulong.MaxValue;
             //Get the bounding box for the graph, 
             foreach (MorphologyNode subgraphnode in other.Nodes.Values)
-            {
-                double node_min_distance;
-                ulong id = NearestNode(subgraphnode, out node_min_distance);
+            { 
+                ulong id = NearestNode(subgraphnode, out double node_min_distance);
                 if (node_min_distance < min_distance)
                 {
                     min_distance = node_min_distance;
@@ -291,17 +289,14 @@ namespace AnnotationVizLib
             //Find the smaller graph
             if (A.Nodes.Count > B.Nodes.Count)
             {
-                MorphologyGraph C = A;
-                A = B;
-                B = C;
+                (B, A) = (A, B);
             }
 
             double minDistance = double.MaxValue;
 
             foreach (MorphologyNode N in A.Nodes.Values)
             {
-                double node_min_distance;
-                A.NearestNode(B, out node_min_distance);
+                A.NearestNode(B, out double node_min_distance);
                 if (node_min_distance < minDistance)
                 {
                     minDistance = node_min_distance;
@@ -391,10 +386,8 @@ namespace AnnotationVizLib
 
             double path_distance = graph.PathLength(path_between);
 
-            double SourceToPathDistance;
-            ulong nearest_node_to_source = graph.NearestNode(graph.Subgraphs[SourceStructureID], out SourceToPathDistance);
-            double TargetToPathDistance;
-            ulong nearest_node_to_target = graph.NearestNode(graph.Subgraphs[TargetStructureID], out TargetToPathDistance);
+            ulong nearest_node_to_source = graph.NearestNode(graph.Subgraphs[SourceStructureID], out double SourceToPathDistance);
+            ulong nearest_node_to_target = graph.NearestNode(graph.Subgraphs[TargetStructureID], out double TargetToPathDistance);
 
             return path_distance + SourceToPathDistance + TargetToPathDistance;
         }

@@ -8,14 +8,11 @@ namespace AnnotationVizLib.OData
 {
     class ODataStructureAdapter : IStructure
     {
-        private Structure structure;
+        private readonly Structure structure;
 
         public ODataStructureAdapter(Structure s)
         {
-            if (s == null)
-                throw new ArgumentNullException();
-
-            this.structure = s;
+            this.structure = s ?? throw new ArgumentNullException();
         }
 
         public ulong ID
@@ -82,7 +79,7 @@ namespace AnnotationVizLib.OData
 
         public bool Equals(IStructure other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)

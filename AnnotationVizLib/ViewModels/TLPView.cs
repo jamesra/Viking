@@ -330,9 +330,11 @@ namespace AnnotationVizLib
         private ulong nextEdgeIndex = 0;
         protected TLPViewEdge addEdge(VIEWED_KEY source, VIEWED_KEY target)
         {
-            TLPViewEdge edge = new TLPViewEdge(nextEdgeIndex);
-            edge.to = KeyToIndex[target];
-            edge.from = KeyToIndex[source];
+            TLPViewEdge edge = new TLPViewEdge(nextEdgeIndex)
+            {
+                to = KeyToIndex[target],
+                from = KeyToIndex[source]
+            };
             base.addEdge(edge);
             nextEdgeIndex += 1;
 

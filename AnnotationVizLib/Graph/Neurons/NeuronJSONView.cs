@@ -17,10 +17,11 @@ namespace AnnotationVizLib
         static public NeuronJSONView ToJSON(NeuronGraph graph)
         {
             int edgeCount = 0;
-            NeuronJSONView JSONView = new NeuronJSONView();
-
-            JSONView.nodesJSON = new JArray();
-            JSONView.edgesJSON = new JArray();
+            NeuronJSONView JSONView = new NeuronJSONView
+            {
+                nodesJSON = new JArray(),
+                edgesJSON = new JArray()
+            };
 
             foreach (NeuronNode node in graph.Nodes.Values)
             {

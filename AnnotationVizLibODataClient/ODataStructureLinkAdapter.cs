@@ -5,7 +5,7 @@ namespace AnnotationVizLib.OData
 {
     class ODataStructureLinkAdapter : IStructureLink
     {
-        private StructureLink structureLink;
+        private readonly StructureLink structureLink;
 
         public ODataStructureLinkAdapter(StructureLink sl)
         {
@@ -38,7 +38,7 @@ namespace AnnotationVizLib.OData
 
         public bool Equals(IStructureLink other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.SourceID == this.SourceID &&

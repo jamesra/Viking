@@ -15,11 +15,12 @@ namespace AnnotationVizLib
         public GMLViewNode CreateGMLNode(NeuronNode node)
         {
             GMLViewNode GMLnode = createNode(node.Key);
-            IDictionary<string, string> NodeAttribs = new Dictionary<string, string>();
+            IDictionary<string, string> NodeAttribs = new Dictionary<string, string>
+            {
+                { "Label", LabelForNode(node) },
 
-            NodeAttribs.Add("Label", LabelForNode(node));
-
-            NodeAttribs.Add("StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key));
+                { "StructureURL", string.Format("{0}/OData/ConnectomeData.svc/Structures({1}L)", this.VolumeURL, node.Key) }
+            };
 
             GMLnode.AddStandardizedAttributes(NodeAttribs);
 
@@ -77,17 +78,18 @@ namespace AnnotationVizLib
             IDictionary<string, string> EdgeAttribs = AttributesForEdge(edge);
             GMLedge.AddStandardizedAttributes(EdgeAttribs);
 
-            if (GMLReverseEdge != null)
-                GMLReverseEdge.AddStandardizedAttributes(EdgeAttribs);
+            GMLReverseEdge?.AddStandardizedAttributes(EdgeAttribs);
 
             return;
         }
 
         protected static IDictionary<string, string> AttributesForEdge(NeuronEdge edge)
         {
-            Dictionary<string, string> EdgeAttribs = new Dictionary<string, string>();
-            EdgeAttribs.Add("edgeType", edge.SynapseType);
-            EdgeAttribs.Add("Directional", (edge.Directional).ToString());
+            Dictionary<string, string> EdgeAttribs = new Dictionary<string, string>
+            {
+                { "edgeType", edge.SynapseType },
+                { "Directional", (edge.Directional).ToString() }
+            };
             return EdgeAttribs;
         }
 

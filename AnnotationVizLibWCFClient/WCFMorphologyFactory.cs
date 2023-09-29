@@ -35,8 +35,10 @@ namespace AnnotationVizLib.WCFClient
 
             Queries.PopulateStructureTypes();
 
-            System.Threading.Tasks.ParallelOptions o = new System.Threading.Tasks.ParallelOptions();
-            o.MaxDegreeOfParallelism = 8;
+            System.Threading.Tasks.ParallelOptions o = new System.Threading.Tasks.ParallelOptions
+            {
+                MaxDegreeOfParallelism = 8
+            };
 
             // Get the nodes and build graph for numHops            
             System.Threading.Tasks.Parallel.ForEach<Structure>(structures, o, s =>

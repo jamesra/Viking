@@ -10,9 +10,9 @@ namespace AnnotationVizLib.SimpleOData
     public class SimpleODataNeuronFactory
     {
         static SortedDictionary<ulong, StructureType> IDToStructureType = null;
-        SortedDictionary<ulong, Structure> IDToStructure = new SortedDictionary<ulong, Structure>();
+        readonly SortedDictionary<ulong, Structure> IDToStructure = new SortedDictionary<ulong, Structure>();
 
-        NeuronGraph graph;
+        readonly NeuronGraph graph;
 
         private SimpleODataNeuronFactory()
         {

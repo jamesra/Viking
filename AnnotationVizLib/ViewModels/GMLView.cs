@@ -365,9 +365,11 @@ namespace AnnotationVizLib
         private ulong nextEdgeIndex = 0;
         protected GMLViewEdge addEdge(VIEWED_KEY source, VIEWED_KEY target)
         {
-            GMLViewEdge edge = new GMLViewEdge(nextEdgeIndex);
-            edge.to = KeyToIndex[target];
-            edge.from = KeyToIndex[source];
+            GMLViewEdge edge = new GMLViewEdge(nextEdgeIndex)
+            {
+                to = KeyToIndex[target],
+                from = KeyToIndex[source]
+            };
             base.addEdge(edge);
             nextEdgeIndex += 1;
 

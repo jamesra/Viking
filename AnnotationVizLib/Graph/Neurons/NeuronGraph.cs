@@ -14,8 +14,8 @@ namespace AnnotationVizLib
             if (object.ReferenceEquals(x, y))
                 return 0;
 
-            bool XIsNull = (object)x == null;
-            bool YIsNull = (object)y == null;
+            bool XIsNull = x is null;
+            bool YIsNull = y is null;
 
             if (XIsNull)
                 return -1;
@@ -179,7 +179,7 @@ namespace AnnotationVizLib
             if (comparison != 0)
                 return comparison;
 
-            if ((object)x != null && (object)y != null)
+            if (x is object && y is object)
             {
                 return string.Compare(x.SynapseType, y.SynapseType);
             }
@@ -193,7 +193,7 @@ namespace AnnotationVizLib
             if (comparison != 0)
                 return comparison;
 
-            if ((object)other != null)
+            if (other is object)
             {
                 return this.SynapseType.CompareTo(other.SynapseType);
             }
@@ -204,7 +204,7 @@ namespace AnnotationVizLib
         public bool Equals(NeuronEdge other)
         {
             bool baseEquals = base.Equals(other);
-            if (baseEquals && ((object)other != null))
+            if (baseEquals && (other is object))
             {
                 return this.SynapseType.Equals(other.SynapseType);
             }

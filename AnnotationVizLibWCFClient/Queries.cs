@@ -51,10 +51,7 @@ namespace AnnotationVizLib.WCFClient
             SortedList<string, List<Structure>> dictLabels = new SortedList<string, List<Structure>>();
             foreach (Structure structure in structures)
             {
-                string Label = BaseLabel(structure.Label);
-                if (Label == null)
-                    Label = "No Label";
-
+                string Label = BaseLabel(structure.Label) ?? "No Label";
                 if (Label.Length == 0)
                     Label = "No Label";
 
@@ -64,8 +61,10 @@ namespace AnnotationVizLib.WCFClient
                 }
                 else
                 {
-                    List<Structure> listIDs = new List<Structure>();
-                    listIDs.Add(structure);
+                    List<Structure> listIDs = new List<Structure>
+                    {
+                        structure
+                    };
                     dictLabels.Add(Label, listIDs);
                 }
             }
@@ -248,17 +247,15 @@ namespace AnnotationVizLib.WCFClient
             SortedDictionary<long, List<StructureLink>> StructIDToLinks = new SortedDictionary<long, List<StructureLink>>();
             foreach (StructureLink link in LinkedStructures)
             {
-                List<StructureLink> SourceIDList = null;
-                if (!StructIDToLinks.TryGetValue(link.SourceID, out SourceIDList))
+                if (!StructIDToLinks.TryGetValue(link.SourceID, out List<StructureLink> SourceIDList))
                 {
                     SourceIDList = new List<StructureLink>();
                 }
 
                 SourceIDList.Add(link);
                 StructIDToLinks[link.SourceID] = SourceIDList;
-
-                List<StructureLink> TargetIDList = null;
-                if (!StructIDToLinks.TryGetValue(link.TargetID, out TargetIDList))
+                 
+                if (!StructIDToLinks.TryGetValue(link.TargetID, out List<StructureLink>  TargetIDList))
                 {
                     TargetIDList = new List<StructureLink>();
                 }

@@ -208,8 +208,8 @@ namespace AnnotationVizLib
 
         public static bool operator ==(ObjAttribute A, ObjAttribute B)
         {
-            bool ANull = object.ReferenceEquals(null, A);
-            bool BNull = object.ReferenceEquals(null, B);
+            bool ANull = A is null;
+            bool BNull = B is null;
             if (ANull && BNull)
                 return true;
             if (ANull || BNull)
@@ -220,8 +220,8 @@ namespace AnnotationVizLib
 
         public static bool operator !=(ObjAttribute A, ObjAttribute B)
         {
-            bool ANull = object.ReferenceEquals(null, A);
-            bool BNull = object.ReferenceEquals(null, B);
+            bool ANull = A is null;
+            bool BNull = B is null;
             if (ANull && BNull)
                 return false;
             if (ANull || BNull)
@@ -232,8 +232,7 @@ namespace AnnotationVizLib
 
         public override bool Equals(object obj)
         {
-            ObjAttribute Other = obj as ObjAttribute;
-            if (object.ReferenceEquals(null, Other))
+            if (!(obj is ObjAttribute Other))
                 return false;
 
             return Other.Name == this.Name;

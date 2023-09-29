@@ -17,7 +17,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Equals(ILocationLink other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.A == this.A && other.B == this.B)

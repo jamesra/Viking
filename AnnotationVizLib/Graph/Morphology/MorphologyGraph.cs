@@ -74,8 +74,7 @@ namespace AnnotationVizLib
         public void AddSubgraph(MorphologyGraph subgraph)
         {
             Subgraphs.TryAdd(subgraph.StructureID, subgraph);
-            double minDistance;
-            ulong nearest_id = NearestNode(subgraph, out minDistance);
+            ulong nearest_id = NearestNode(subgraph, out double minDistance);
             if (nearest_id != ulong.MaxValue)
             {
                 MorphologyNode nearest_node_in_parent = Nodes[nearest_id];
@@ -86,10 +85,8 @@ namespace AnnotationVizLib
 
         public void RemoveSubgraph(ulong StructureID)
         {
-            MorphologyGraph value;
-            Subgraphs.TryRemove(StructureID, out value);
-            ulong nearest_node_id;
-            if (NearestNodeToSubgraph.TryRemove(StructureID, out nearest_node_id))
+            Subgraphs.TryRemove(StructureID, out MorphologyGraph value);
+            if (NearestNodeToSubgraph.TryRemove(StructureID, out ulong nearest_node_id))
             {
                 Nodes[nearest_node_id].RemoveSubgraph(StructureID);
             }
@@ -127,11 +124,10 @@ namespace AnnotationVizLib
         private SortedSet<MorphologyEdge> EdgesForRemovedNode(ulong key)
         {
             //Move all of my edges to the nearest node
-            double min_distance;
             MorphologyNode node_to_remove = Nodes[key];
             SortedSet<ulong> other_nodes = new SortedSet<ulong>(node_to_remove.Edges.Keys);
 
-            ulong nearest_id = NearestNode(key, other_nodes, out min_distance);
+            ulong nearest_id = NearestNode(key, other_nodes, out double min_distance);
 
             other_nodes.Remove(nearest_id); //Do not link nearest_node to itself
 
@@ -300,8 +296,10 @@ namespace AnnotationVizLib
 
             MorphologyGraph graph = seed.Graph;
 
-            List<ulong> listOutput = new List<ulong>();
-            listOutput.Add(seed.ID);
+            List<ulong> listOutput = new List<ulong>
+            {
+                seed.ID
+            };
 
             ulong[] linkedIDs = seed.Edges.Keys.ToArray();
             MorphologyNode rightOfSeed = graph.Nodes[linkedIDs[0]];

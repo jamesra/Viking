@@ -11,7 +11,7 @@ namespace AnnotationUtilsTests
     {
         //public string Endpoint = "https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc";
         public string Endpoint = "https://websvc1.connectomes.utah.edu/RC1/Annotation/Service.svc";
-        private System.Net.NetworkCredential userCredentials; 
+        private readonly System.Net.NetworkCredential userCredentials; 
 
         public MotifGraphTest()
         {

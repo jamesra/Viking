@@ -439,8 +439,7 @@ namespace AnnotationVizLib
 
                 try
                 {
-                    long Key;
-                    Color color = ColorMapWithLong.TryParseConfigLine(trim_line, out Key);
+                    Color color = ColorMapWithLong.TryParseConfigLine(trim_line, out long Key);
 
                     if (color != Color.Empty)
                         mapping.Add(Key, color);

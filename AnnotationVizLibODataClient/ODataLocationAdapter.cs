@@ -16,14 +16,8 @@ namespace AnnotationVizLib.OData
 
         public ODataLocationAdapter(Location l, UnitsAndScale.IScale scale)
         {
-            if (l == null)
-                throw new ArgumentNullException();
-
-            if (scale == null)
-                throw new ArgumentNullException();
-
-            this.loc = l;
-            this.scale = scale;
+            this.loc = l ?? throw new ArgumentNullException(nameof(l));
+            this.scale = scale ?? throw new ArgumentNullException(nameof(scale));
         }
 
         public IDictionary<string, string> Attributes
@@ -155,7 +149,7 @@ namespace AnnotationVizLib.OData
 
         public bool Equals(ILocation other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (other.ID == this.ID)
