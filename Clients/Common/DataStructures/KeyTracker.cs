@@ -186,9 +186,9 @@ namespace Viking.Common
     /// <typeparam name="T"></typeparam>
     public class RefCountingKeyTracker<T> where T : IComparable<T>
     {
-        private System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new System.Threading.ReaderWriterLockSlim();
+        private readonly System.Threading.ReaderWriterLockSlim rwKnownLocationsLock = new System.Threading.ReaderWriterLockSlim();
 
-        private SortedDictionary<T, int> TrackedKeys = new SortedDictionary<T, int>();
+        private readonly SortedDictionary<T, int> TrackedKeys = new SortedDictionary<T, int>();
         public bool Contains(T ID)
         {
             try

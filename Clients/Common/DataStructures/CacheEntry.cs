@@ -85,8 +85,7 @@ namespace Viking.Common
 
         public override bool Equals(object obj)
         {
-            CacheEntry<KEY> entry = obj as CacheEntry<KEY>;
-            if (entry == null)
+            if (!(obj is CacheEntry<KEY> entry))
                 return false;
 
             return entry.Key.Equals(this.Key);
@@ -105,8 +104,7 @@ namespace Viking.Common
 
         int IComparable.CompareTo(object obj)
         {
-            CacheEntry<KEY> entry = obj as CacheEntry<KEY>;
-            if (entry != null)
+            if (obj is CacheEntry<KEY> entry)
             {
                 return LastAccessed.CompareTo(entry.LastAccessed);
             }
