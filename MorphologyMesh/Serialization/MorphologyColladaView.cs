@@ -171,8 +171,10 @@ namespace MorphologyMesh
         /// <returns></returns>
         public List<StructureModel> ModelsInTree()
         {
-            List<StructureModel> listModel = new List<MorphologyMesh.StructureModel>();
-            listModel.Add(this);
+            List<StructureModel> listModel = new List<MorphologyMesh.StructureModel>
+            {
+                this
+            };
 
             listModel.AddRange(this.ChildStructures.Values.SelectMany(cs => cs.ModelsInTree()));
             return listModel; 
@@ -205,7 +207,7 @@ namespace MorphologyMesh
         public string SceneTitle = null;
 
 
-        StructureColorMap Colormap = null;
+        readonly StructureColorMap Colormap = null;
 
         public SortedDictionary<ulong, StructureModel> RootModels = new SortedDictionary<ulong, StructureModel>();
 
@@ -332,7 +334,7 @@ namespace MorphologyMesh
 
         public string SceneTitle = null;
 
-        StructureMorphologyColorMap Colormap = null;
+        readonly StructureMorphologyColorMap Colormap = null;
 
         public SortedDictionary<ulong, StructureModel> RootModels = new SortedDictionary<ulong, StructureModel>();
 
@@ -393,8 +395,7 @@ namespace MorphologyMesh
             if (structureMesh != null)
             {
                 structureMesh.Scale(0.001);
-                COLORSOURCE source; 
-                System.Drawing.Color color = Colormap.GetColor(structure, out source);
+                System.Drawing.Color color = Colormap.GetColor(structure, out COLORSOURCE source);
 
                 MaterialLighting material = GetOrAddMaterial(source, structure.structure, color);
                 model = new MorphologyMesh.StructureModel(structure.StructureID, structureMesh, material);

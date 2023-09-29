@@ -35,9 +35,10 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static MeshGraph ConvertToMeshGraph(this MorphologyGraph graph)
         {
-            MeshGraph meshGraph = new MeshGraph();
-
-            meshGraph.SectionThickness = graph.SectionThickness;
+            MeshGraph meshGraph = new MeshGraph
+            {
+                SectionThickness = graph.SectionThickness
+            };
 
             //Create a graph where each node is a set of verticies.
             ConcurrentBag<MeshNode> nodes = new ConcurrentBag<MeshNode>();
@@ -146,8 +147,10 @@ namespace MorphologyMesh
             //Build a set of all polygons in the nodes
             GridPolygon[] Polygons;
             {
-                List<GridPolygon> Polylist = new List<GridPolygon>();
-                Polylist.Add(node.CapPort.ToPolygon(node.Mesh.Verticies));
+                List<GridPolygon> Polylist = new List<GridPolygon>
+                {
+                    node.CapPort.ToPolygon(node.Mesh.Verticies)
+                };
 
                 //Need a map of verticies to Polygon/Index number
                 foreach (MeshNode branchNode in other_nodes)
@@ -164,8 +167,10 @@ namespace MorphologyMesh
                 SmoothMeshGenerator.MergeMeshes(node, other_node);
             }
 
-            List<MeshNode> AllNodes = new List<MorphologyMesh.MeshNode>();
-            AllNodes.Add(node);
+            List<MeshNode> AllNodes = new List<MorphologyMesh.MeshNode>
+            {
+                node
+            };
             AllNodes.AddRange(other_nodes);
 
             SortedList<GridVector3, long> VertexToMeshIndex = CreateVertexToMeshIndexMap(node.Mesh, AllNodes.Select(n => node.IDToCrossSection[n.Key]));
@@ -311,7 +316,7 @@ namespace MorphologyMesh
                 GridVector2 v = node.Mesh.Verticies[(int)port.ExternalBorder[iVertex]].Position.XY();
                 if (!pointToConnectedPolys.ContainsKey(v))
                 {
-                    VertexInPort[iVertex] = iVertex > 0 ? VertexInPort[iVertex - 1] : false;
+                    VertexInPort[iVertex] = iVertex > 0 && VertexInPort[iVertex - 1];
                     continue;
                 }
 
@@ -365,7 +370,7 @@ namespace MorphologyMesh
                 GridVector2 v = node.Mesh.Verticies[iMeshVertex].Position.XY();
                 if (!pointToConnectedPolys.ContainsKey(v))
                 {
-                    VertexInPort[iVertex] = iVertex > 0 ? VertexInPort[iVertex - 1] : false;
+                    VertexInPort[iVertex] = iVertex > 0 && VertexInPort[iVertex - 1];
                     continue;
                 }
 

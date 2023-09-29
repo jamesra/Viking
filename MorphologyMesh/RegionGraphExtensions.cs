@@ -166,14 +166,13 @@ namespace MorphologyMesh
         /// <param name="rTree">RTree of all existing chords</param>
         private static OTVTable TryClosingSolidRegion(this BajajGeneratorMesh mesh, MorphMeshRegion region, SliceChordRTree rTree)
         {
-            OTVTable OTVTable;
             //TODO: This appears to only select verts without faces... shouldn't we look for any vert without a chord?
             List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
 
             BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].PolyIndex.Value),
                                                               mesh.Polygons, mesh.IsUpperPolygon,
                                                               SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.Theorem4,
-                                                              out OTVTable, ref rTree);
+                                                              out OTVTable OTVTable, ref rTree);
 
             //If we can't map every vertex in the region it needs to be mapped to another region before being capped off
             if (OTVTable.Count < vertsWithoutFaces.Count)
@@ -526,10 +525,7 @@ namespace MorphologyMesh
                 {
                     triangulation.RemoveEdge(key);
 
-                    if (OnProgress != null)
-                    {
-                        OnProgress(triangulation);
-                    }
+                    OnProgress?.Invoke(triangulation);
                 }
             }
 
@@ -551,10 +547,7 @@ namespace MorphologyMesh
                 {
                     triangulation.RemoveFace(f);
 
-                    if (OnProgress != null)
-                    {
-                        OnProgress(triangulation);
-                    }
+                    OnProgress?.Invoke(triangulation);
                 }
             }
 

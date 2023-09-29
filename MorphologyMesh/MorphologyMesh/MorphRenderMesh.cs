@@ -36,7 +36,7 @@ namespace MorphologyMesh
     /// <summary>
     /// Represents where in an medial axis graph the vertex originated
     /// </summary>
-    public struct MedialAxisIndex
+    public readonly struct MedialAxisIndex
     {
         public readonly MedialAxisGraph MedialAxisGraph;
         public readonly MedialAxisVertex Vertex; 
@@ -79,7 +79,7 @@ namespace MorphologyMesh
 
         internal virtual bool[] IsUpperPolygon { get; }
 
-        private Dictionary<PolygonIndex, long> PolyIndexToVertex = new Dictionary<PolygonIndex, long>();
+        private readonly Dictionary<PolygonIndex, long> PolyIndexToVertex = new Dictionary<PolygonIndex, long>();
 
         [NonSerialized]
         private double? _avgZ = null; //Cached average Z level of polygons use only for sorting purposes
@@ -143,8 +143,10 @@ namespace MorphologyMesh
                     //Populate the correspoinding field, and ensure the positions are 100% identical
                     int corresponding_vertex = PositionToIndex[v.Position.XY()];
                     MorphMeshVertex corresponding = mesh[corresponding_vertex];
-                    v = new MorphMeshVertex(i1, corresponding.Position.XY().ToGridVector3(v.Position.Z)); //Ensure the position is identical
-                    v.Corresponding = corresponding_vertex;
+                    v = new MorphMeshVertex(i1, corresponding.Position.XY().ToGridVector3(v.Position.Z))
+                    {
+                        Corresponding = corresponding_vertex
+                    }; //Ensure the position is identical
 
                     //Add new vert to mesh with matching position and create corresponding edge
                     iV = mesh.AddVertex(v);
@@ -271,7 +273,7 @@ namespace MorphologyMesh
             return (MorphMeshVertex)Verticies[key];
         }
 
-        public int AddVertex(MorphMeshVertex v)
+        public override int AddVertex(MorphMeshVertex v)
         {
             int iVert = base.AddVertex(v);
             if(v.PolyIndex.HasValue)
@@ -399,10 +401,9 @@ namespace MorphologyMesh
         /// <returns></returns>
         private static bool IsInRegion(MorphRenderMesh mesh, MorphMeshFace face, Func<MorphRenderMesh, MorphMeshFace, bool> criteria, double? ExpectedZ)
         {
-            double? FaceZ;
             if (ExpectedZ.HasValue)
             {
-                if (face.AllVertsAtSameZ(mesh, out FaceZ))
+                if (face.AllVertsAtSameZ(mesh, out double? FaceZ))
                 {
                     if (FaceZ != ExpectedZ)
                         return false;
@@ -513,9 +514,11 @@ namespace MorphologyMesh
                         int iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
                         int iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
 
-                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2);
-                        listFaces.Add(new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }));
-                        listFaces.Add(new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] }));
+                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2)
+                        {
+                            new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }),
+                            new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] })
+                        };
                         return listFaces;
                     }
                     else
@@ -525,9 +528,11 @@ namespace MorphologyMesh
                         int iPrev = iVert - 1 < 0 ? Face.Count - 1 : iVert - 1;
                         int iNext = iVert + 2 >= Face.Count ? 0 : iVert + 2;
 
-                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2);
-                        listFaces.Add(new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }));
-                        listFaces.Add(new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] }));
+                        List<MorphMeshFace> listFaces = new List<MorphMeshFace>(2)
+                        {
+                            new MorphMeshFace(new int[] { Face[iPrev], Face[iVert], Face[iVert + 1] }),
+                            new MorphMeshFace(new int[] { Face[iVert], Face[iVert + 1], Face[iNext] })
+                        };
                         return listFaces;
                     }
                 }
@@ -755,17 +760,16 @@ namespace MorphologyMesh
                 MorphMeshFace face = (MorphMeshFace)f;
 
                 MorphMeshVertex[] faceVerts = face.iVerts.Select(i => (MorphMeshVertex)mesh.Verticies[i]).ToArray();
-                double? FaceZ;
-                
+
                 if (face.IsInUntiledRegion(mesh))
                 {
-                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInUntiledRegion,  new double?()), MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions), RegionType.UNTILED);
+                    MorphMeshRegion region = new MorphMeshRegion(mesh, mesh.FloodFillRegion(face, (m, foundFace) => IsInRegion(m, foundFace, MorphMeshFace.IsInUntiledRegion, new double?()), MorphMeshFace.AdjacentFaceDoesNotCrossContour, FacesAssignedToRegions), RegionType.UNTILED);
                     listRegions.Add(region);
                     FacesAssignedToRegions.UnionWith(region.Faces);
                     continue;
                 }
-                
-                if (!face.AllVertsAtSameZ(mesh, out FaceZ))
+
+                if (!face.AllVertsAtSameZ(mesh, out double? FaceZ))
                 {
                     //FacesAssignedToRegions.Add(face);
                     continue;
@@ -1080,8 +1084,10 @@ namespace MorphologyMesh
         /// <returns></returns>
         private SortedSet<MorphMeshFace> FloodFillRegionRecurse(MorphMeshFace f, FaceMeetsCriteriaFunction faceMeetsCriteriaFunc, EdgeMeetsCriteriaFunc EdgeMeetsCriteriaFunc, ref SortedSet<IFace> CheckedFaces)
         {
-            SortedSet<MorphMeshFace> region = new SortedSet<MorphMeshFace>();
-            region.Add(f);
+            SortedSet<MorphMeshFace> region = new SortedSet<MorphMeshFace>
+            {
+                f
+            };
             CheckedFaces.Add(f);
 
             foreach (MorphMeshFace adjacent in f.AdjacentFaces(this, EdgeMeetsCriteriaFunc))

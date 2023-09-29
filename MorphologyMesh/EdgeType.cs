@@ -15,12 +15,12 @@ namespace MorphologyMesh
 
     public static class RegionTypeExtensions
     {
-        private static Dictionary<RegionType, RegionType[]> ValidRegionPairings = new Dictionary<RegionType, RegionType[]>()
+        private static readonly Dictionary<RegionType, SortedSet<RegionType>> ValidRegionPairings = new Dictionary<RegionType, SortedSet<RegionType>>()
         {
-            { RegionType.EXPOSED, new RegionType[]{RegionType.EXPOSED} },
-            { RegionType.HOLE, new RegionType[] {RegionType.HOLE, RegionType.INVAGINATION } },
-            { RegionType.INVAGINATION, new RegionType[] {RegionType.HOLE, RegionType.INVAGINATION } },
-            { RegionType.UNTILED, new RegionType[] {} },
+            { RegionType.EXPOSED, new SortedSet<RegionType>{RegionType.EXPOSED} },
+            { RegionType.HOLE, new SortedSet<RegionType> {RegionType.HOLE, RegionType.INVAGINATION } },
+            { RegionType.INVAGINATION, new SortedSet<RegionType> {RegionType.HOLE, RegionType.INVAGINATION } },
+            { RegionType.UNTILED, new SortedSet<RegionType> {} },
         };
 
         /// <summary>

@@ -14,9 +14,9 @@ namespace MorphologyMesh
     public class MorphMeshRegion : IComparable<MorphMeshRegion>, IEquatable<MorphMeshRegion>
 
     {
-        private MorphRenderMesh ParentMesh;
+        private readonly MorphRenderMesh ParentMesh;
 
-        private ImmutableSortedSet<MorphMeshFace> _Faces;
+        private readonly ImmutableSortedSet<MorphMeshFace> _Faces;
         public ImmutableSortedSet<MorphMeshFace> Faces
         {
             get { return _Faces; }
@@ -119,9 +119,11 @@ namespace MorphologyMesh
                 //var all_exterior_edges = all_possible_edges.Where(e => this.ParentMesh.Contains(e) && ParentMesh[e].Faces.Intersect(this.Faces).Count == 1).ToList();
                 var startingedge = all_exterior_edges.First();
 
-                List<int> OrderedBoundaryVerts = new List<int>(all_exterior_edges.Count + 1);
-                OrderedBoundaryVerts.Add(all_exterior_edges[0].A);
-                OrderedBoundaryVerts.Add(all_exterior_edges[0].B);
+                List<int> OrderedBoundaryVerts = new List<int>(all_exterior_edges.Count + 1)
+                {
+                    all_exterior_edges[0].A,
+                    all_exterior_edges[0].B
+                };
                 all_exterior_edges.RemoveAt(0);
 
 
@@ -163,8 +165,10 @@ namespace MorphologyMesh
 
             List<PolygonIndex[]> listContours = new List<PolygonIndex[]>();
 
-            List<PolygonIndex> contour = new List<PolygonIndex>();
-            contour.Add(polyIndicies[0]);
+            List<PolygonIndex> contour = new List<PolygonIndex>
+            {
+                polyIndicies[0]
+            };
             for (int i = 1; i < polyIndicies.Length; i++)
             {
                 PolygonIndex lastCountourPoint = contour.Last();
@@ -173,8 +177,10 @@ namespace MorphologyMesh
                 if (!lastCountourPoint.AreAdjacent(pi))
                 {
                     listContours.Add(contour.ToArray());
-                    contour = new List<PolygonIndex>();
-                    contour.Add(pi);
+                    contour = new List<PolygonIndex>
+                    {
+                        pi
+                    };
                 }
                 else
                 {

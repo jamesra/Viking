@@ -35,7 +35,7 @@ namespace MorphologyMesh
         internal GridPolygon[] UpperPolygons { get { return Topology.UpperPolygons; } }
         internal GridPolygon[] LowerPolygons { get { return Topology.LowerPolygons; } }
 
-        private List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
+        private readonly List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
 
         public List<MorphMeshRegion> Regions { get; private set; }
 

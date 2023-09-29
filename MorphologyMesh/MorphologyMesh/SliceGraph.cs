@@ -88,10 +88,7 @@ namespace MorphologyMesh
             ulong iNextKey = 0;
             while (Edges.Count > 0)
             {
-                SortedSet<ulong> MeshGroupNodesAbove;
-                SortedSet<ulong> MeshGroupNodesBelow;
-                SortedSet<MorphologyEdge> MeshGroupEdges;
-                 
+
                 MorphologyEdge e = Edges.First();
 
                 //We remove cycles from the graph as we work, so there is a remote chance the edge has been removed, so just move on in that case
@@ -106,7 +103,7 @@ namespace MorphologyMesh
 
                 ZDirection SearchDirection = Source.Z < Target.Z ? ZDirection.Increasing : ZDirection.Decreasing;
 
-                BuildMeshingCrossSection(graph, Source, SearchDirection, out MeshGroupNodesAbove, out MeshGroupNodesBelow, out MeshGroupEdges);
+                BuildMeshingCrossSection(graph, Source, SearchDirection, out var MeshGroupNodesAbove, out SortedSet<ulong> MeshGroupNodesBelow, out SortedSet<MorphologyEdge> MeshGroupEdges);
                  
                 if (graph.Edges.ContainsKey(e)) //If the edge wasn't removed to stop a cycle it should be in the result set
                 {
@@ -138,7 +135,7 @@ namespace MorphologyMesh
 
                 Edges.ExceptWith(MeshGroupEdges);
 
-                iNextKey = iNextKey + 1; 
+                iNextKey++; 
             }
 
             //Check nodes with no edges, and add them if they are not in the slicegraph
@@ -149,7 +146,7 @@ namespace MorphologyMesh
                 Slice belowgroup = new Slice(iNextKey+1, new SortedSet<ulong>(), new SortedSet<ulong>(new ulong[] { Node.ID }), new SortedSet<MorphologyEdge>());
 
                 MorphNodeToSliceNodes[Node.ID] = new SortedSet<ulong>(new ulong[] { iNextKey, iNextKey + 1 });
-                iNextKey = iNextKey + 2;
+                iNextKey += 2;
                 output.AddNode(abovegroup);
                 output.AddNode(belowgroup); 
             }
@@ -676,7 +673,7 @@ namespace MorphologyMesh
     /// <summary>
     /// Describes the shapes and relationships for a given slice
     /// </summary>
-    public struct SliceTopology
+    public readonly struct SliceTopology
     {
         //TODO: Document limitations for shapes we know should not link to each other in the final model by using LocationLink entries.
 
@@ -824,8 +821,10 @@ namespace MorphologyMesh
                     }
                     else
                     {
-                        List<PolygonIndex> listPI = new List<PolygonIndex>();
-                        listPI.Add(pi.Reindex(iPoly));
+                        List<PolygonIndex> listPI = new List<PolygonIndex>
+                        {
+                            pi.Reindex(iPoly)
+                        };
                         pointToIndexList.Add(cp, listPI);
                     }
                 }
@@ -952,8 +951,10 @@ namespace MorphologyMesh
                 }
                 else
                 {
-                    existing = new List<PolygonIndex>(2);
-                    existing.Add(index);
+                    existing = new List<PolygonIndex>(2)
+                    {
+                        index
+                    };
                     tree.Add(p, existing);
                 }
             }
@@ -1162,16 +1163,16 @@ namespace MorphologyMesh
     /// </summary>
     internal class ConcurrentTopologyInitializer
     {
-        SliceGraph Graph;
+        readonly SliceGraph Graph;
 
-        SortedSet<ulong> UnprocessedSlices = null;
-        SortedSet<ulong> SlicesWithActiveTasks = new SortedSet<ulong>();
-        SortedSet<ulong> CompletedSlices = new SortedSet<ulong>();
+        readonly SortedSet<ulong> UnprocessedSlices = null;
+        readonly SortedSet<ulong> SlicesWithActiveTasks = new SortedSet<ulong>();
+        readonly SortedSet<ulong> CompletedSlices = new SortedSet<ulong>();
 
-        System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
-        System.Threading.ManualResetEventSlim AllDoneEvent = new System.Threading.ManualResetEventSlim();
+        readonly System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
+        readonly System.Threading.ManualResetEventSlim AllDoneEvent = new System.Threading.ManualResetEventSlim();
 
-        Dictionary<ulong, SliceTopology> SliceToTopology;
+        readonly Dictionary<ulong, SliceTopology> SliceToTopology;
 
         public ConcurrentTopologyInitializer(SliceGraph graph)
         {

@@ -801,12 +801,10 @@ namespace MorphologyMesh
 
             //Debug.Assert(lowerPoly.Contains(LowerPortCentroid));
             //Debug.Assert(upperPoly.Contains(UpperPortCentroid));
-             
-            GridVector2 LowerPortConvexHullCentroid;
-            GridVector2 UpperPortConvexHullCentroid;
 
-            long UpperStart = FirstIndex(UpperVerticies, out UpperPortConvexHullCentroid);
-            long LowerStart = FirstIndex(LowerVerticies, out LowerPortConvexHullCentroid);
+
+            long UpperStart = FirstIndex(UpperVerticies, out GridVector2 UpperPortConvexHullCentroid);
+            long LowerStart = FirstIndex(LowerVerticies, out GridVector2 LowerPortConvexHullCentroid);
 
             LowerVerticies = LowerVerticies.Translate(-LowerPortConvexHullCentroid);
             UpperVerticies = UpperVerticies.Translate(-UpperPortConvexHullCentroid);
@@ -1194,11 +1192,10 @@ namespace MorphologyMesh
         /// <returns></returns>
         public static long FirstIndex( GridVector2[] Positions2D, out GridVector2 convexHullCentroid)
         {
-            int[] original_idx;
 
             GridVector2 center = GridPolygon.CalculateCentroid(Positions2D);
             GridVector2[] adjustedPositions = Positions2D.Translate(-center);
-            GridVector2[] ConvexHullPoints = adjustedPositions.ConvexHull(out original_idx);
+            GridVector2[] ConvexHullPoints = adjustedPositions.ConvexHull(out int[] original_idx);
 
             //GridVector2[] ConvexHullPoints = Positions2D.ConvexHull(out original_idx);
 
