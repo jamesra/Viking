@@ -271,20 +271,20 @@ namespace SqlGeometryUtils
 
         public static SqlGeometry ToSqlGeometry(this IShape2D shape)
         {
-            if (shape is GridPolygon)
+            if (shape is GridPolygon polygon)
             {
-                return ((GridPolygon)shape).ToSqlGeometry();
+                return polygon.ToSqlGeometry();
             }
-            else if (shape is GridPolyline)
+            else if (shape is GridPolyline polyline)
             {
-                return ((GridPolyline)shape).ToSqlGeometry();
+                return polyline.ToSqlGeometry();
             }
-            else if (shape is GridCircle)
+            else if (shape is GridCircle circle)
             {
-                return ((GridCircle)shape).ToSqlGeometry();
+                return circle.ToSqlGeometry();
             }
 
-            throw new NotImplementedException(string.Format("Missing ToSqlGeometry implementation for {0}", shape.ShapeType.ToString()));
+            throw new NotImplementedException($"Missing ToSqlGeometry implementation for {shape.ShapeType}");
         }
 
         public static IShape2D ToIShape2D(this SqlGeometry shape)
@@ -384,8 +384,10 @@ namespace SqlGeometryUtils
 
             if (points.First() != points.Last())
             {
-                List<GridVector2> listPoints = new List<GridVector2>(points);
-                listPoints.Add(points[0]);
+                List<GridVector2> listPoints = new List<GridVector2>(points)
+                {
+                    points[0]
+                };
                 points = listPoints.ToArray();
             }
 

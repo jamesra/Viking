@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Collections.Generic;
 
 namespace WebAnnotation.UI.Forms
 {
@@ -64,9 +65,16 @@ namespace WebAnnotation.UI.Forms
 
             viewModel.FavoriteStructureTypeIDs.Add(StructureType.ID); 
         }
-
+          
+        /// <summary>
+        /// Remove the structure type from the list of favorites
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <exception cref="ArgumentException"></exception>
         private void FavoriteStructureTypes_DeleteClick(object sender, RoutedEventArgs e)
         {
+            
             Control ctrl = sender as Control;
             if (ctrl == null)
             {

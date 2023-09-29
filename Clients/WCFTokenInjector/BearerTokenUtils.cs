@@ -41,7 +41,7 @@ namespace Viking.Tokens
         
         public async Task<DiscoveryDocumentResponse> GetDiscoveryDocumentAsync()
         {
-            if (_disco == null)
+            if (_disco is null)
             {
                 _disco = new DiscoveryCache(IdentityServerURL.ToString());
             }
@@ -85,7 +85,7 @@ namespace Viking.Tokens
                 foreach (var c in validation.Claims)
                 {
                     if (c.Type == "scope")
-                        FoundClaim = FoundClaim | c.Value.Split().Contains(scope);
+                        FoundClaim |= c.Value.Split().Contains(scope);
                 }
 
                 return FoundClaim;
@@ -104,7 +104,7 @@ namespace Viking.Tokens
         /// <returns></returns>
         public async Task<ProtocolResponse> RetrieveBearerToken(string username, string password, string[] scopes = null)
         {
-            if (scopes == null)
+            if (scopes is null)
                 scopes = new string[] { "openid profile Viking.Annotation" };
 
             string scopes_string = "";
@@ -154,10 +154,7 @@ namespace Viking.Tokens
                 });
 
                 var userIdClaim = userInfo.Claims.FirstOrDefault(c => c.Type.Equals("sub"));
-                if (userIdClaim is null)
-                    throw new ArgumentException($"No sub claim found for access token {accessToken}");
-
-                return userIdClaim.Value;
+                return userIdClaim is null ? throw new ArgumentException($"No sub claim found for access token {accessToken}") : userIdClaim.Value;
             }
         }
 
