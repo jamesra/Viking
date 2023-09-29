@@ -130,8 +130,8 @@ namespace Viking.UI.Forms
         private string userName = UI.State.AnonymousCredentials.UserName;
         private string password = UI.State.AnonymousCredentials.Password;
         public string keyFile;
-        private string readUserName;
-        private int counter = 0;
+        private readonly string readUserName;
+        private readonly int counter = 0;
 
         public NetworkCredential Credentials = UI.State.AnonymousCredentials;
 
@@ -242,11 +242,11 @@ namespace Viking.UI.Forms
         void linkLabel1_Click(object sender, System.EventArgs e)
         {
             System.Diagnostics.Process.Start("https://connectomes.utah.edu/Viz/Account/Register");
-        } 
+        }
 
-        
 
-        Task LoginTask = null;
+
+        readonly Task LoginTask = null;
 
         void OnLogin(object sender, System.EventArgs e)
         {
@@ -323,9 +323,11 @@ namespace Viking.UI.Forms
                 return;
             }
 
-            List<string> list_permissions = new List<string>();
-            list_permissions.Add("openid");
-            list_permissions.Add("Viking.Annotation");
+            List<string> list_permissions = new List<string>
+            {
+                "openid",
+                "Viking.Annotation"
+            };
             list_permissions.AddRange(volumePermissions.Select(p => $"{VolumeName}.{p}"));
 
             var bearer_token_response = await TokenHelper.RetrieveBearerToken(userName, password, list_permissions.ToArray());
@@ -844,12 +846,7 @@ namespace Viking.UI.Forms
 
             XElement elem = matches.First();
             XAttribute attrib = elem.GetAttributeCaseInsensitive("authentication");
-            if (attrib != null)
-            {
-                return attrib.Value;
-            }
-
-            return null;
+            return attrib?.Value;
         }
 
 
@@ -870,7 +867,7 @@ namespace Viking.UI.Forms
             if (!NewURL.ToLower().EndsWith(".vikingxml"))
             {
                 if (NewURL.EndsWith("/") == false)
-                    NewURL = NewURL + '/';
+                    NewURL += '/';
 
                 NewURL += "volume.vikingxml";
             }

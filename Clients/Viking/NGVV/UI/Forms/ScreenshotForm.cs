@@ -6,7 +6,7 @@ namespace Viking.UI.Forms
 {
     public partial class ScreenshotForm : Form
     {
-        static bool UseViewerDownsampleChecked = true;
+        static readonly bool UseViewerDownsampleChecked = true;
         static double LastDownsampleValue = 1.0f;
         static int NextCaptureNumber = 0;
         static string LastFileNamePrefix = "ScreenShot";
@@ -21,7 +21,7 @@ namespace Viking.UI.Forms
         /// </summary>
         public double Downsample = ScreenshotForm.LastDownsampleValue;
 
-        private double ViewerDownsample;
+        private readonly double ViewerDownsample;
 
         public string Filename
         {
@@ -37,7 +37,7 @@ namespace Viking.UI.Forms
         /// 
         public bool IncludeOverlays = false;
 
-        private int _Z;
+        private readonly int _Z;
 
         public ScreenshotForm(GridRectangle myRect, double Downsample, int Z)
         {

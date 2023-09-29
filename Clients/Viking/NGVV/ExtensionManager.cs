@@ -13,29 +13,29 @@ namespace Viking.Common
     /// </summary>
     public class ExtensionManager
     {
-        private static List<System.Type> ExtensionTabList = new List<System.Type>();
+        private static readonly List<System.Type> ExtensionTabList = new List<System.Type>();
 
-        private static SortedDictionary<VikingExtensionAttribute, Assembly> ExtensionToAssemblyTable = new SortedDictionary<VikingExtensionAttribute, Assembly>();
+        private static readonly SortedDictionary<VikingExtensionAttribute, Assembly> ExtensionToAssemblyTable = new SortedDictionary<VikingExtensionAttribute, Assembly>();
 
         /// <summary>
         /// List of types that can extend the section viewer control
         /// </summary>
-        private static List<System.Type> SectionOverlayList = new List<System.Type>();
+        private static readonly List<System.Type> SectionOverlayList = new List<System.Type>();
 
         /// <summary>
         /// List of types that extend menu
         /// </summary>
-        private static List<System.Type> SectionMenuList = new List<System.Type>();
+        private static readonly List<System.Type> SectionMenuList = new List<System.Type>();
 
         /// <summary>
         /// List of objects that can extend the context menu
         /// </summary>
-        private static List<System.Type> ContextMenuProviderList = new List<System.Type>(); 
+        private static readonly List<System.Type> ContextMenuProviderList = new List<System.Type>(); 
 
         /// <summary>
         /// This maps a system.type that the user would interact with, such as a structure to a list of commands that can operate on that type 
         /// </summary>
-        private static Dictionary<System.Type, List<System.Type>> ObjectTypeToCommandTable = new Dictionary<System.Type, List<System.Type>>();
+        private static readonly Dictionary<System.Type, List<System.Type>> ObjectTypeToCommandTable = new Dictionary<System.Type, List<System.Type>>();
 
         static public Assembly[] GetExtensionAssemblies()
         {
@@ -46,7 +46,7 @@ namespace Viking.Common
         /// <summary>
         /// Maps a system.type to a set of property pages
         /// </summary>
-        private static Dictionary<System.Type, List<System.Type>> ObjectTypeToPropertyPageTable = new Dictionary<Type, List<Type>>(); 
+        private static readonly Dictionary<System.Type, List<System.Type>> ObjectTypeToPropertyPageTable = new Dictionary<Type, List<Type>>(); 
 
         static public System.Type[] GetPropertyPages(object Obj)
         {
@@ -88,8 +88,7 @@ namespace Viking.Common
             //Fetch the menu item methods
             foreach (System.Type T in SectionMenuList)
             {
-                MenuAttribute[] Attribs = T.GetCustomAttributes(typeof(Viking.Common.MenuAttribute), true) as MenuAttribute[];
-                if (Attribs == null || Attribs.Length == 0)
+                if (!(T.GetCustomAttributes(typeof(Viking.Common.MenuAttribute), true) is MenuAttribute[] Attribs) || Attribs.Length == 0)
                 {
                     continue;
                 }
@@ -101,10 +100,9 @@ namespace Viking.Common
                     ParentItem = items[0] as System.Windows.Forms.ToolStripMenuItem; 
                 }
 
-                IMenuFactory menuObj = Activator.CreateInstance(T) as IMenuFactory;
-                if (menuObj != null)
+                if (Activator.CreateInstance(T) is IMenuFactory menuObj)
                 {
-                    System.Windows.Forms.ToolStripItem ExtensionItem =  menuObj.CreateMenuItem();
+                    System.Windows.Forms.ToolStripItem ExtensionItem = menuObj.CreateMenuItem();
 
                     ParentItem = ExtensionItem as System.Windows.Forms.ToolStripMenuItem;
                     if (ParentItem != null)
@@ -118,11 +116,11 @@ namespace Viking.Common
                         //Assign a name if the user did not
                         if (ParentItem.Text == null)
                         {
-                            ParentItem.Text = Attribs[0].ParentMenuName; 
+                            ParentItem.Text = Attribs[0].ParentMenuName;
                         }
                     }
 
-                    if(ExtensionItem != null)
+                    if (ExtensionItem != null)
                         menuStrip.Items.Add(ExtensionItem);
                 }
 
@@ -137,8 +135,7 @@ namespace Viking.Common
                 MethodInfo[] methods = T.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
                 for (int i = 0; i < methods.Length; i++)
                 {
-                    MenuItemAttribute[] ItemAttribs = methods[i].GetCustomAttributes(typeof(Viking.Common.MenuItemAttribute), true) as MenuItemAttribute[];
-                    if (ItemAttribs == null || ItemAttribs.Length == 0)
+                    if (!(methods[i].GetCustomAttributes(typeof(Viking.Common.MenuItemAttribute), true) is MenuItemAttribute[] ItemAttribs) || ItemAttribs.Length == 0)
                         continue;
 
                     MenuItemAttribute ItemAttribute = ItemAttribs[0];
@@ -153,8 +150,7 @@ namespace Viking.Common
 
         static void ExtensionMenuItemCallback(object sender, EventArgs e)
         {
-            System.Windows.Forms.ToolStripItem item = sender as System.Windows.Forms.ToolStripItem;
-            if (item == null)
+            if (!(sender is System.Windows.Forms.ToolStripItem item))
                 return;
 
             MethodInfo method = item.Tag as MethodInfo;
@@ -289,11 +285,11 @@ namespace Viking.Common
                 }
                 catch(System.Reflection.ReflectionTypeLoadException e)
                 {
-                    Trace.WriteLine($"Unable to load {A.ToString()}.");
-                    progressReporter.ReportProgress(100, $"Unable to load {A.ToString()}.");
+                    Trace.WriteLine($"Unable to load {A}.");
+                    progressReporter.ReportProgress(100, $"Unable to load {A}.");
                     foreach (var loaderException in e.LoaderExceptions)
                     {
-                        Trace.WriteLine($"{loaderException.ToString()}");
+                        Trace.WriteLine($"{loaderException}");
                     }
 
                     //Remove assembly if it cannot initialize
@@ -485,8 +481,7 @@ namespace Viking.Common
         private static void FindCommands(System.Type T)
         {
             /*Find Command extensions*/
-            CommandAttribute[] Attribs = T.GetCustomAttributes(typeof(CommandAttribute), true) as CommandAttribute[];
-            if (Attribs != null && Attribs.Length > 0)
+            if (T.GetCustomAttributes(typeof(CommandAttribute), true) is CommandAttribute[] Attribs && Attribs.Length > 0)
             {
                 /*Add this type to the list for each table it supports*/
                 foreach (CommandAttribute Attrib in Attribs)
@@ -518,8 +513,7 @@ namespace Viking.Common
         private static void FindPropertyPages(System.Type T)
         {
             /*Find Property Page extensions*/
-            PropertyPageAttribute[] Attribs = T.GetCustomAttributes(typeof(Viking.Common.PropertyPageAttribute), true) as PropertyPageAttribute[];
-            if (Attribs != null && Attribs.Length > 0)
+            if (T.GetCustomAttributes(typeof(Viking.Common.PropertyPageAttribute), true) is PropertyPageAttribute[] Attribs && Attribs.Length > 0)
             {
                 /*Add this type to the list for each table it supports*/
                 foreach (PropertyPageAttribute Attrib in Attribs)
@@ -548,8 +542,7 @@ namespace Viking.Common
         private static void FindTabExtensions(System.Type T)
         {
             /*Find Property Page extensions*/
-            ExtensionTabAttribute[] Attribs = T.GetCustomAttributes(typeof(Viking.Common.ExtensionTabAttribute), true) as ExtensionTabAttribute[];
-            if (Attribs != null && Attribs.Length > 0)
+            if (T.GetCustomAttributes(typeof(Viking.Common.ExtensionTabAttribute), true) is ExtensionTabAttribute[] Attribs && Attribs.Length > 0)
             {
                 ExtensionTabList.Add(T);
             }
@@ -562,8 +555,7 @@ namespace Viking.Common
         private static void FindMenuExtensions(System.Type T)
         {
             /*Find Property Page extensions*/
-            MenuAttribute[] Attribs = T.GetCustomAttributes(typeof(Viking.Common.MenuAttribute), true) as MenuAttribute[];
-            if (Attribs != null && Attribs.Length > 0)
+            if (T.GetCustomAttributes(typeof(Viking.Common.MenuAttribute), true) is MenuAttribute[] Attribs && Attribs.Length > 0)
             {
                 SectionMenuList.Add(T);
             }
@@ -588,8 +580,7 @@ namespace Viking.Common
             List<Type> TabList = new List<Type>();
             foreach (System.Type T in ExtensionTabList)
             {
-                ExtensionTabAttribute[] Attribs = T.GetCustomAttributes(typeof(Viking.Common.ExtensionTabAttribute), true) as ExtensionTabAttribute[];
-                if (Attribs != null && Attribs.Length > 0)
+                if (T.GetCustomAttributes(typeof(Viking.Common.ExtensionTabAttribute), true) is ExtensionTabAttribute[] Attribs && Attribs.Length > 0)
                 {
                     ExtensionTabAttribute Attrib = Attribs[0];
 
@@ -608,11 +599,8 @@ namespace Viking.Common
         /// <param name="T"></param>
         private static void FindExtensionOverlays(System.Type T)
         {
-            
-
             /*Find Property Page extensions*/
-            SectionOverlayAttribute[] Attribs = T.GetCustomAttributes(typeof(Viking.Common.SectionOverlayAttribute), true) as SectionOverlayAttribute[];
-            if (Attribs != null && Attribs.Length > 0)
+            if (T.GetCustomAttributes(typeof(Viking.Common.SectionOverlayAttribute), true) is SectionOverlayAttribute[] Attribs && Attribs.Length > 0)
             {
                 /*Add this type to the list for each table it supports*/
                 /*
@@ -620,8 +608,8 @@ namespace Viking.Common
                 {
                     /*The list contains lists. If one already exists then reuse it.
                         * otherwise create a new one */
-              //  }
-                
+                //  }
+
                 ExtensionManager.SectionOverlayList.Add(T);
             }
         }
@@ -655,10 +643,7 @@ namespace Viking.Common
         {
             get
             {
-                if (_SectionOverlays != null)
-                    return _SectionOverlays.ToArray();
-
-                return null; 
+                return _SectionOverlays?.ToArray();
             }
         }
 

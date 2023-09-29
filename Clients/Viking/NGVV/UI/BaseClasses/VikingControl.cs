@@ -8,7 +8,7 @@ namespace Viking.UI.BaseClasses
         /// <summary> 
 		/// Required designer variable.
 		/// </summary>
-		private System.ComponentModel.Container components = null;
+		private readonly System.ComponentModel.Container components = null;
 
         public VikingControl()
         {
@@ -33,10 +33,7 @@ namespace Viking.UI.BaseClasses
         {
             if (disposing)
             {
-                if (components != null)
-                {
-                    components.Dispose();
-                }
+                components?.Dispose();
             }
             base.Dispose(disposing);
         }

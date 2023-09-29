@@ -90,9 +90,11 @@ namespace Viking.ViewModels
 
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
 
-            DepthStencilState newDepthState = new DepthStencilState();
-            newDepthState.DepthBufferEnable = false;
-            newDepthState.StencilEnable = false;
+            DepthStencilState newDepthState = new DepthStencilState
+            {
+                DepthBufferEnable = false,
+                StencilEnable = false
+            };
             graphicsDevice.DepthStencilState = newDepthState;
 
             graphicsDevice.SetVertexBuffer(vbMappedMesh);

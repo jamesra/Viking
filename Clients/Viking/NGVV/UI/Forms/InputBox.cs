@@ -6,7 +6,7 @@ namespace Viking.UI.Forms
 {
     public partial class InputBox : Form
     {
-        private Func<string, bool> IsServerValid;
+        private readonly Func<string, bool> IsServerValid;
 
         public string Value
         {

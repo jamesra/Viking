@@ -4,7 +4,7 @@ namespace Viking.UI
 {
     public class BackgroundThreadProgressReporter : Viking.Common.IProgressReporter
     {
-        BackgroundWorker worker;
+        readonly BackgroundWorker worker;
 
         public BackgroundThreadProgressReporter(BackgroundWorker worker)
         {

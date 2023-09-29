@@ -86,7 +86,7 @@ namespace Viking.UI.Forms
             using (SolidBrush FillBrush = new SolidBrush(Color.Blue))
             {
                 RectangleF Rect = new Rectangle(new Point(0, 0), PanelProgress.Size);
-                Rect.Width = Rect.Width * (float)(Progress / (float)MaxProgress);
+                Rect.Width *= (float)(Progress / (float)MaxProgress);
                 e.Graphics.Clear(Color.LightGray);
                 e.Graphics.FillRectangle(FillBrush, Rect);
             }

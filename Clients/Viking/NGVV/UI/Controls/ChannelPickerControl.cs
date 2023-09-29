@@ -11,10 +11,10 @@ namespace Viking.UI.Controls
     internal partial class ChannelPickerControl : UserControl
     {
         //I have to do this so the colors aren't named which messes up the default equality operator
-        private System.Drawing.Color Red = Color.FromArgb(255, 255, 0, 0);
-        private System.Drawing.Color Green = Color.FromArgb(255, 0, 255, 0);
-        private System.Drawing.Color Blue = Color.FromArgb(255, 0, 0, 255);
-        private System.Drawing.Color White = Color.FromArgb(255, 255, 255, 255);
+        private readonly System.Drawing.Color Red = Color.FromArgb(255, 255, 0, 0);
+        private readonly System.Drawing.Color Green = Color.FromArgb(255, 0, 255, 0);
+        private readonly System.Drawing.Color Blue = Color.FromArgb(255, 0, 0, 255);
+        private readonly System.Drawing.Color White = Color.FromArgb(255, 255, 255, 255);
 
         /// <summary>
         /// This is the name that we reserve to allow the user to specify the selected channel should be used 
@@ -176,15 +176,17 @@ namespace Viking.UI.Controls
         /// <summary>
         /// The indicies of the values in this list should map to the enum values
         /// </summary>
-        private List<string> SectionInfoList;
+        private readonly List<string> SectionInfoList;
 
         internal ChannelPickerControl()
         {
-            SectionInfoList = new List<string>();
-            SectionInfoList.Add("Selected");
-            SectionInfoList.Add("Above");
-            SectionInfoList.Add("Below");
-            SectionInfoList.Add("Choose...");
+            SectionInfoList = new List<string>
+            {
+                "Selected",
+                "Above",
+                "Below",
+                "Choose..."
+            };
 
             InitializeComponent();
 
@@ -208,8 +210,10 @@ namespace Viking.UI.Controls
                     //Don't launch color picker until we've been loaded.
                     if (IsUserUpdate)
                     {
-                        colorDialog = new ColorDialog();
-                        colorDialog.Color = panelColor.BackColor;
+                        colorDialog = new ColorDialog
+                        {
+                            Color = panelColor.BackColor
+                        };
                         if (colorDialog.ShowDialog() == DialogResult.OK)
                         {
                             Info.FormColor = colorDialog.Color;
@@ -298,8 +302,7 @@ namespace Viking.UI.Controls
 
         private void buttonDelete_Click(object sender, EventArgs e)
         {
-            if (OnDeleteClicked != null)
-                OnDeleteClicked(this, e);
+            OnDeleteClicked?.Invoke(this, e);
         }
 
     }

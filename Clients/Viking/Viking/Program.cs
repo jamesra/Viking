@@ -93,9 +93,7 @@ namespace Viking
                 Trace.WriteLine("Unable to load Native MKL library.  Exception text:\n" + e.Message);
             }
 
-            int workThreads;
-            int portThreads;
-            System.Threading.ThreadPool.GetMaxThreads(out workThreads, out portThreads);
+            System.Threading.ThreadPool.GetMaxThreads(out int workThreads, out int portThreads);
             System.Net.ServicePointManager.DefaultConnectionLimit = workThreads;
 
             Application.EnableVisualStyles();
@@ -256,11 +254,8 @@ namespace Viking
             context.Initialize(website);
             Application.Run(context);
 
-            if (SynchronizedDebugWriter != null)
-                SynchronizedDebugWriter.Close();
-
-            if (DebugLogFile != null)
-                DebugLogFile.Close();
+            SynchronizedDebugWriter?.Close();
+            DebugLogFile?.Close();
         }
 
         private static string TryBypassSplash(CommandLineOptions options)

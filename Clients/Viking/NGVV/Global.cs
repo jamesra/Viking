@@ -18,7 +18,7 @@ namespace Viking
 
         static public TileViewModelCache TileViewModelCache = new TileViewModelCache();
 
-        static private Dictionary<int, string> AllocatedTextures = new Dictionary<int, string>();
+        static private readonly Dictionary<int, string> AllocatedTextures = new Dictionary<int, string>();
 
         static public bool TracePenEvents = false;
 
@@ -67,7 +67,7 @@ namespace Viking
             }
         }
 
-        static private Dictionary<int, string> AllocatedTextureReaders = new Dictionary<int, string>();
+        static private readonly Dictionary<int, string> AllocatedTextureReaders = new Dictionary<int, string>();
 
         static public void AddTextureReader(object tex, string msg)
         {

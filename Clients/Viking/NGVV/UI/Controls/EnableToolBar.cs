@@ -19,9 +19,11 @@ namespace Viking.UI.Controls
 
         public void AddSeperator()
         {
-            Panel P = new Panel();
-            P.Size = this.SeperatorSize;
-            P.Dock = DockStyle.Left;
+            Panel P = new Panel
+            {
+                Size = this.SeperatorSize,
+                Dock = DockStyle.Left
+            };
 
             Controls.Add(P);
             Controls.SetChildIndex(P, 0);

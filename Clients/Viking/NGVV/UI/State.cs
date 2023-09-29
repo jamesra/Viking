@@ -23,8 +23,7 @@ namespace Viking.UI
 
         static public void InvalidateViewerControl()
         {
-            if (ViewerControl != null)
-                ViewerControl.Invalidate();
+            ViewerControl?.Invalidate();
         }
 
         /// <summary>
@@ -37,10 +36,7 @@ namespace Viking.UI
         {
             get
             {
-                if (ViewerForm == null)
-                    return null;
-
-                return ViewerForm.SectionControl;
+                return ViewerForm?.SectionControl;
             }
         }
 

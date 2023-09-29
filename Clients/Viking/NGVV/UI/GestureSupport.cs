@@ -160,12 +160,12 @@ namespace Viking.UI
         /// <summary>
         /// internally used by Windows
         /// </summary>
-        private UInt32 InstanceID;
+        private readonly UInt32 InstanceID;
 
         /// <summary>
         /// internally used by Windows
         /// </summary>
-        private UInt32 SequenceID;
+        private readonly UInt32 SequenceID;
 
         /// <summary>
         /// Arguments for gestures whose arguments fit in 8 BYTES

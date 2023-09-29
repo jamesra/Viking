@@ -13,7 +13,7 @@ namespace VikingTests
     [TestClass]
     public class LocalTextureCacheTest
     {
-        LocalTextureCache cache = new LocalTextureCache();
+        readonly LocalTextureCache cache = new LocalTextureCache();
 
         public int NumTests = 100;
 

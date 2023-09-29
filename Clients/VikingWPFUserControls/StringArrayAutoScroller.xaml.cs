@@ -70,23 +70,19 @@ namespace Viking.WPF
           
         private static void OnTextArrayChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
         {
-            StringArrayAutoScroller obj = o as StringArrayAutoScroller;
-            if (obj != null)
+            if (o is StringArrayAutoScroller obj)
             {
-                ObservableCollection<string> oldCollection = e.OldValue as ObservableCollection<string>;
-                if (oldCollection != null)
+                if (e.OldValue is ObservableCollection<string> oldCollection)
                     oldCollection.CollectionChanged -= obj.OnCollectionChanged;
 
-                ObservableCollection<string> newCollection = e.NewValue as ObservableCollection<string>;
-                if (newCollection != null)
+                if (e.NewValue is ObservableCollection<string> newCollection)
                     newCollection.CollectionChanged += obj.OnCollectionChanged;
             }
         }
 
         private static void OnTextArrayIndexChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
         {
-            StringArrayAutoScroller obj = o as StringArrayAutoScroller;
-            if(obj != null)
+            if (o is StringArrayAutoScroller obj)
             {
                 obj.SetComboText((int)e.NewValue);
             }

@@ -79,10 +79,7 @@ namespace Viking.Common
 
             if (ColumnType.IsNumericType())
             {
-                IConvertible convA = SubA.Tag as IConvertible;
-                IConvertible convB = SubB.Tag as IConvertible;
-
-                if (convA != null && convB != null)
+                if (SubA.Tag is IConvertible convA && SubB.Tag is IConvertible convB)
                 {
                     Decimal ValA = convA.ToDecimal(null);
                     Decimal ValB = convB.ToDecimal(null);

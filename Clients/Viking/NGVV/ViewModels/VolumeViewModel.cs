@@ -134,10 +134,7 @@ namespace Viking.ViewModels
                     string OldTransform = _ActiveVolumeTransform;
                     _ActiveVolumeTransform = value;
 
-                    if (TransformChanged != null)
-                    {
-                        TransformChanged(this, new Viking.Common.TransformChangedEventArgs(_ActiveVolumeTransform, OldTransform));
-                    }
+                    TransformChanged?.Invoke(this, new Viking.Common.TransformChangedEventArgs(_ActiveVolumeTransform, OldTransform));
                 }
             }
         }

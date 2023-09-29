@@ -212,15 +212,23 @@ namespace Viking.UI
         readonly System.Int32 x; //LONG in the C++ definition
         readonly System.Int32 y; //LONG in the C++ definition
 
+        public TouchPoint(System.Int32 x, System.Int32 y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+
         public bool Equals(TouchPoint other)
         {
             return other.x == this.x && other.y == this.y;
         }
 
-        public bool Equals(object other)
+        public override bool Equals(object other)
         {
-            IEquatable<TouchPoint> IOther = other as IEquatable<TouchPoint>;
-            if (IOther == null)
+            if (other is TouchPoint other_point)
+                return x == other_point.x && y == other_point.y;
+
+            if (!(other is IEquatable<TouchPoint> IOther))
                 return false;
 
             return IOther.Equals(this);
@@ -308,7 +316,7 @@ namespace Viking.UI
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder($"{flags} {pointerInfo.ptPixelLocation}");
-            sb.Append(pointerInfo.ButtonChange != PointerButtonChangeType.None ? $"{pointerInfo.ButtonChange.ToString()}" : "");
+            sb.Append(pointerInfo.ButtonChange != PointerButtonChangeType.None ? $"{pointerInfo.ButtonChange}" : "");
             sb.Append((mask & PenMask.Pressure) > 0 ? $" Pressure: {pressure}" : "");
             sb.Append((mask & PenMask.Rotation) > 0 ? $" Rotation: {rotation}" : "");
             sb.Append((mask & PenMask.TiltX) > 0 ? $" TiltX: {tiltX}" : "");

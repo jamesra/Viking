@@ -27,7 +27,7 @@ namespace Viking
 
         public static int nextid = 0;
 
-        private Action OnCompletionCallback;
+        private readonly Action OnCompletionCallback;
 
         public int ID { get; private set; }
 
@@ -35,8 +35,8 @@ namespace Viking
 
         private bool IsDisposed = false;
 
-        static System.Net.Cache.RequestCachePolicy HeaderCachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
-        static System.Net.Cache.RequestCachePolicy BodyCachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
+        static readonly System.Net.Cache.RequestCachePolicy HeaderCachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
+        static readonly System.Net.Cache.RequestCachePolicy BodyCachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
 
         private bool _TextureNotFound = false;
 
@@ -67,7 +67,7 @@ namespace Viking
         /// <summary>
         /// Set to true when the reader has been aborted
         /// </summary>
-        protected bool Aborted { get { return CancelToken != null ? CancelToken.IsCancellationRequested : false; } }
+        protected bool Aborted => CancelToken?.IsCancellationRequested ?? false;
 
         //private Object thisLock = new Object();
 
@@ -124,11 +124,8 @@ namespace Viking
         {
             CancelToken = token;
             this.OnCompletionCallback = OnCompletion;
-            this.ID = TextureReaderV2.nextid++;
-            if (graphicsDevice == null)
-                throw new ArgumentException("TextureReader: Graphics device cannot be null");
-
-            this.graphicsDevice = graphicsDevice;
+            this.ID = TextureReaderV2.nextid++;  
+            this.graphicsDevice = graphicsDevice ?? throw new ArgumentNullException(nameof(graphicsDevice));
             this.Filename = textureURI;
             this.MipMapLevels = mipMapLevels;
 
@@ -201,7 +198,6 @@ namespace Viking
 
         internal async Task<Texture2D> TryLoadingFromCacheOrServer(Uri textureUri, string CacheFilename, CancellationToken token)
         {
-            System.IO.FileStream TileStream = null;
             try
             {
                 //First, check the cache to see if it is locally available
@@ -637,7 +633,7 @@ namespace Viking
         /// <summary>
         /// Only allow loading a single texture at a time
         /// </summary>
-        SemaphoreSlim LoadTextureSemaphore = new SemaphoreSlim(1, 1);
+        readonly SemaphoreSlim LoadTextureSemaphore = new SemaphoreSlim(1, 1);
         public async Task<Texture2D> LoadTexture()
         {
             CancellationToken token = this.CancelToken.Token;
@@ -656,16 +652,11 @@ namespace Viking
                     return null;
                 }
 
-                Texture2D tex = null;
-
                 if (Filename.Scheme.ToLower() == "http" || Filename.Scheme.ToLower() == "https")
                 {
                     try
                     {
-                        var texture = await TryLoadingFromCacheOrServer(Filename, CacheFilename, token);
-                        if (texture is null)
-                            texture = await TryLoadingFromServer(this.Filename, token);
-
+                        var texture = await TryLoadingFromCacheOrServer(Filename, CacheFilename, token) ?? await TryLoadingFromServer(this.Filename, token);
                         SetTexture(texture);
                         return this._Result;
                     }
@@ -800,8 +791,7 @@ namespace Viking
 
         public override bool Equals(object obj)
         {
-            TextureReaderV2 Tobj = obj as TextureReaderV2;
-            if (Tobj == null)
+            if (!(obj is TextureReaderV2 Tobj))
                 return false;
 
             if (Tobj.Filename != this.Filename)
@@ -874,7 +864,7 @@ namespace Viking
                 }
                 catch (Exception e)
                 {
-                    Trace.WriteLine($"Exception loading texture: {this.Filename.ToString()}");
+                    Trace.WriteLine($"Exception loading texture: {this.Filename}");
                     throw;
                 }
             });

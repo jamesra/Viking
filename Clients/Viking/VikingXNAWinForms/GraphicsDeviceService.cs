@@ -55,16 +55,17 @@ namespace VikingXNAWinForms
         /// </summary>
         GraphicsDeviceService(IntPtr windowHandle, int width, int height)
         {
-            parameters = new PresentationParameters();
+            parameters = new PresentationParameters
+            {
+                BackBufferWidth = Math.Max(width, 1),
+                BackBufferHeight = Math.Max(height, 1),
+                BackBufferFormat = SurfaceFormat.Color,
+                DepthStencilFormat = DepthFormat.Depth24Stencil8,
 
-            parameters.BackBufferWidth = Math.Max(width, 1);
-            parameters.BackBufferHeight = Math.Max(height, 1);
-            parameters.BackBufferFormat = SurfaceFormat.Color;
-            parameters.DepthStencilFormat = DepthFormat.Depth24Stencil8;
-
-            parameters.DeviceWindowHandle = windowHandle;
-            parameters.RenderTargetUsage = RenderTargetUsage.DiscardContents;
-            parameters.IsFullScreen = false;
+                DeviceWindowHandle = windowHandle,
+                RenderTargetUsage = RenderTargetUsage.DiscardContents,
+                IsFullScreen = false
+            };
 
             /*PORT XNA 4
             parameters.EnableAutoDepthStencil = true;
@@ -124,8 +125,7 @@ namespace VikingXNAWinForms
                 // device, we should dispose the singleton instance.
                 if (disposing)
                 {
-                    if (DeviceDisposing != null)
-                        DeviceDisposing(this, EventArgs.Empty);
+                    DeviceDisposing?.Invoke(this, EventArgs.Empty);
 
                     graphicsDevice.Dispose();
                 }
@@ -148,8 +148,7 @@ namespace VikingXNAWinForms
                 System.Diagnostics.Trace.WriteLine("Resetting disposed graphics device, why?");
                 return;
             }
-            if (DeviceResetting != null)
-                DeviceResetting(this, EventArgs.Empty);
+            DeviceResetting?.Invoke(this, EventArgs.Empty);
 
             parameters.BackBufferWidth = Math.Max(width, 1);
             parameters.BackBufferHeight = Math.Max(1, height);
@@ -159,8 +158,7 @@ namespace VikingXNAWinForms
 
             graphicsDevice.Reset(parameters);
 
-            if (DeviceReset != null)
-                DeviceReset(this, EventArgs.Empty);
+            DeviceReset?.Invoke(this, EventArgs.Empty);
 
 
         }
@@ -199,7 +197,7 @@ namespace VikingXNAWinForms
 
 
         // Store the current device settings.
-        PresentationParameters parameters;
+        readonly PresentationParameters parameters;
 
 
         // IGraphicsDeviceService events.

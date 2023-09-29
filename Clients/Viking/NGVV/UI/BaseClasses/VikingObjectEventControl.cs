@@ -10,10 +10,10 @@
         protected Viking.Common.IUIObject DefaultContextMenuObject = null;
 
         #region Variables
-        private System.EventHandler OnNewObjectEventHandler = null;
-        private System.EventHandler BeforeAnyDeleteEventHandler = null;
-        private System.EventHandler OnAnyDeleteEventHandler = null;
-        private System.EventHandler OnAnySaveEventHandler = null;
+        private readonly System.EventHandler OnNewObjectEventHandler = null;
+        private readonly System.EventHandler BeforeAnyDeleteEventHandler = null;
+        private readonly System.EventHandler OnAnyDeleteEventHandler = null;
+        private readonly System.EventHandler OnAnySaveEventHandler = null;
 
         protected System.EventHandler BeforeAnySaveEventHandler = null;
         protected System.EventHandler BeforeDeleteEventHandler = null;

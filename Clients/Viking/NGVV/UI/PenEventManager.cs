@@ -137,7 +137,7 @@ namespace Viking.UI
         PointerPenInfo? previousPenState;
         PointerMessageData? previousPointerState;
 
-        System.Windows.Forms.Control Parent;
+        readonly System.Windows.Forms.Control Parent;
 
         public PenEventManager(Control parent)
         {
@@ -213,10 +213,11 @@ namespace Viking.UI
                 }
             }
 
-            PenEventArgs args = new PenEventArgs();
-
-            args.Location = Parent.PointToClient(new System.Drawing.Point(pointerState.X, pointerState.Y));
-            args.Pen = penState;
+            PenEventArgs args = new PenEventArgs
+            {
+                Location = Parent.PointToClient(new System.Drawing.Point(pointerState.X, pointerState.Y)),
+                Pen = penState
+            };
 
             if (pointerState.Flags.New)
             {

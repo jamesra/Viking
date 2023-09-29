@@ -78,7 +78,7 @@ namespace VikingXNAWinForms
         public Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch = null;
         public Microsoft.Xna.Framework.Graphics.SpriteFont fontArial = null;
 
-        static Dictionary<string, Vector2> LabelToSize = new Dictionary<string, Vector2>();
+        static readonly Dictionary<string, Vector2> LabelToSize = new Dictionary<string, Vector2>();
 
         public static Vector2 GetLabelSize(SpriteFont font, string label)
         {
@@ -173,25 +173,33 @@ namespace VikingXNAWinForms
         /// </summary>
         private void InitializeEffect()
         {
-            basicEffect = new BasicEffect(Device);
-            //   basicEffect.DiffuseColor = new Vector3(0.1f, 0.1f, 0.1f);
-            //   basicEffect.SpecularColor = new Vector3(0.25f, 0.25f, 0.25f);
-            //   basicEffect.SpecularPower = 5.0f;
-            basicEffect.AmbientLightColor = new Vector3(1f, 1f, 1f);
+            basicEffect = new BasicEffect(Device)
+            {
+                //   basicEffect.DiffuseColor = new Vector3(0.1f, 0.1f, 0.1f);
+                //   basicEffect.SpecularColor = new Vector3(0.25f, 0.25f, 0.25f);
+                //   basicEffect.SpecularPower = 5.0f;
+                AmbientLightColor = new Vector3(1f, 1f, 1f)
+            };
 
             Matrix WorldViewProj = Scene.WorldViewProj;
 
             Effect effectTileLayout = Content.Load<Effect>("TileLayout");
-            this.tileLayoutEffect = new TileLayoutEffect(effectTileLayout);
-            this.tileLayoutEffect.WorldViewProjMatrix = WorldViewProj;
+            this.tileLayoutEffect = new TileLayoutEffect(effectTileLayout)
+            {
+                WorldViewProjMatrix = WorldViewProj
+            };
 
             Effect effectHSVMerge = Content.Load<Effect>("MergeHSVImages");
-            this.mergeHSVImagesEffect = new MergeHSVImagesEffect(effectHSVMerge);
-            this.mergeHSVImagesEffect.WorldViewProjMatrix = WorldViewProj;
+            this.mergeHSVImagesEffect = new MergeHSVImagesEffect(effectHSVMerge)
+            {
+                WorldViewProjMatrix = WorldViewProj
+            };
 
             Effect effectChannelOverlay = Content.Load<Effect>("ChannelOverlayShader");
-            this.channelOverlayEffect = new ChannelOverlayEffect(effectChannelOverlay);
-            this.channelOverlayEffect.WorldViewProjMatrix = WorldViewProj;
+            this.channelOverlayEffect = new ChannelOverlayEffect(effectChannelOverlay)
+            {
+                WorldViewProjMatrix = WorldViewProj
+            };
 
         }
 
@@ -372,23 +380,26 @@ namespace VikingXNAWinForms
 
             if (DefaultDepthState == null || DefaultDepthState.IsDisposed)
             {
-                DefaultDepthState = new DepthStencilState();
-
-                DefaultDepthState.DepthBufferEnable = true;
-                DefaultDepthState.DepthBufferFunction = CompareFunction.LessEqual;
-                DefaultDepthState.StencilEnable = false;
-                DefaultDepthState.DepthBufferWriteEnable = true;
+                DefaultDepthState = new DepthStencilState
+                {
+                    DepthBufferEnable = true,
+                    DepthBufferFunction = CompareFunction.LessEqual,
+                    StencilEnable = false,
+                    DepthBufferWriteEnable = true
+                };
             }
 
             Device.DepthStencilState = DefaultDepthState;
 
             if (DefaultBlendState == null || DefaultBlendState.IsDisposed)
             {
-                DefaultBlendState = new BlendState();
-                DefaultBlendState.AlphaSourceBlend = Blend.SourceAlpha;
-                DefaultBlendState.AlphaDestinationBlend = Blend.InverseSourceAlpha;
-                DefaultBlendState.ColorSourceBlend = Blend.SourceAlpha;
-                DefaultBlendState.ColorDestinationBlend = Blend.InverseSourceAlpha;
+                DefaultBlendState = new BlendState
+                {
+                    AlphaSourceBlend = Blend.SourceAlpha,
+                    AlphaDestinationBlend = Blend.InverseSourceAlpha,
+                    ColorSourceBlend = Blend.SourceAlpha,
+                    ColorDestinationBlend = Blend.InverseSourceAlpha
+                };
             }
 
             Device.BlendState = DefaultBlendState;
@@ -400,9 +411,11 @@ namespace VikingXNAWinForms
             {
                 try
                 {
-                    sampleState = new SamplerState();
-                    sampleState.AddressU = TextureAddressMode.Clamp;    //Compatability with Reach
-                    sampleState.AddressV = TextureAddressMode.Clamp;
+                    sampleState = new SamplerState
+                    {
+                        AddressU = TextureAddressMode.Clamp,    //Compatability with Reach
+                        AddressV = TextureAddressMode.Clamp
+                    };
                     Device.SamplerStates[0] = sampleState;
                 }
                 catch (Exception)
@@ -426,18 +439,16 @@ namespace VikingXNAWinForms
                 RasterizerState rState = null;
                 try
                 {
-                    rState = new RasterizerState();
-                    rState.CullMode = CullMode.None;
+                    rState = new RasterizerState
+                    {
+                        CullMode = CullMode.None
+                    };
                     Device.RasterizerState = rState;
                 }
                 catch (Exception)
-                {
-                    if (rState != null)
-                    {
-                        rState.Dispose();
-                        rState = null;
-                    }
-
+                { 
+                    rState?.Dispose();
+                    rState = null; 
                     throw;
                 }
             }
@@ -446,8 +457,7 @@ namespace VikingXNAWinForms
 
             if (this.spriteBatch == null || this.spriteBatch.GraphicsDevice.IsDisposed)
             {
-                IGraphicsDeviceService IService = this.Services.GetService(typeof(IGraphicsDeviceService)) as IGraphicsDeviceService;
-                if (IService != null)
+                if (this.Services.GetService(typeof(IGraphicsDeviceService)) is IGraphicsDeviceService IService)
                 {
                     spriteBatch = new SpriteBatch(IService.GraphicsDevice);
                     fontArial = Content.Load<SpriteFont>(@"Arial");
@@ -455,8 +465,7 @@ namespace VikingXNAWinForms
             }
 
             //            GridRectangle Bounds = VisibleBounds();
-
-
+             
 #if !DEBUG
             try
             {

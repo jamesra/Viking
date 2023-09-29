@@ -32,7 +32,7 @@ namespace Viking.UI.Forms
         /// Mapping of DBObject.Row instances to property sheets. Used so we only display one property sheet
         /// for any given object
         /// </summary>
-        static private Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = new Dictionary<IUIObjectBasic, PropertySheetForm>();
+        static private readonly Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = new Dictionary<IUIObjectBasic, PropertySheetForm>();
 
         #endregion
 
@@ -152,9 +152,11 @@ namespace Viking.UI.Forms
             {
                 Size MaxTabSize = TabsProperty.MaxTabSize;
 
-                Size Margin = new Size();
-                Margin.Width = this.Width - TabsProperty.Width;
-                Margin.Height = this.Height - TabsProperty.Height;
+                Size Margin = new Size
+                {
+                    Width = this.Width - TabsProperty.Width,
+                    Height = this.Height - TabsProperty.Height
+                };
 
                 this.Width = MaxTabSize.Width + Margin.Width;
                 this.Height = MaxTabSize.Height + Margin.Height;
@@ -162,10 +164,7 @@ namespace Viking.UI.Forms
                 foreach (IPropertyPage IPage in TabsProperty.IPropertyPages)
                 {
                     IToolBarButtons IButtons = IPage as IToolBarButtons;
-                    if (IButtons != null)
-                    {
-                        IButtons.AddButtons(this.Tools);
-                    }
+                    IButtons?.AddButtons(this.Tools);
                 }
             }
         }

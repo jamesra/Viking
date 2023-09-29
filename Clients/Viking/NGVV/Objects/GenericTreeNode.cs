@@ -83,8 +83,7 @@ namespace Viking.UI.Controls
 
         protected virtual void OnObjectDelete(object sender, System.EventArgs e)
         {
-            if (this.TreeView != null)
-                this.TreeView.RemoveNode(this);
+            this.TreeView?.RemoveNode(this);
         }
 
         protected virtual GenericTreeNode[] GetChildNodes()
@@ -185,7 +184,7 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Hashtable of PropertyInfo[] by System.Type
         /// </summary>
-        static private System.Collections.Hashtable _TreeViewVisibleChildPropertiesByType = new System.Collections.Hashtable();
+        private static readonly System.Collections.Hashtable _TreeViewVisibleChildPropertiesByType = new System.Collections.Hashtable();
 
         static protected System.Reflection.PropertyInfo[] GetPropertiesForType(System.Type T)
         {

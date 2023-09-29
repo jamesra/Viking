@@ -82,13 +82,10 @@ namespace Viking.ViewModels
             { 
                 var originalTexture = Interlocked.CompareExchange(ref _texture, value, null);
 
-                if (originalTexture != null)
-                {
-                    originalTexture.DisposeAsync();
-                    //DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_texture);
-                    //ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
-                    //Global.RemoveTexture(_texture);  //Texture removed from global records within the thread
-                }  
+                originalTexture?.DisposeAsync();
+                //DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_texture);
+                //ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
+                //Global.RemoveTexture(_texture);  //Texture removed from global records within the thread
             }
         }
 
@@ -428,7 +425,7 @@ namespace Viking.ViewModels
         VertexBuffer vbMesh = null;
         IndexBuffer ibMesh = null;
         //PORT XNA 4
-        VertexPositionColor[] MeshVerticies = null;
+        readonly VertexPositionColor[] MeshVerticies = null;
 
         //int[] MeshEdges = null;
 
@@ -504,9 +501,11 @@ namespace Viking.ViewModels
 
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
 
-            DepthStencilState newDepthState = new DepthStencilState();
-            newDepthState.DepthBufferEnable = false;
-            newDepthState.StencilEnable = false;
+            DepthStencilState newDepthState = new DepthStencilState
+            {
+                DepthBufferEnable = false,
+                StencilEnable = false
+            };
             graphicsDevice.DepthStencilState = newDepthState;
 
             graphicsDevice.SetVertexBuffer(vbMesh);

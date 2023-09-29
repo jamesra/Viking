@@ -57,8 +57,7 @@ namespace Viking.UI.Controls
 
             foreach (System.Type T in Types)
             {
-                IPropertyPage IPage = Activator.CreateInstance(T) as IPropertyPage;
-                if (IPage != null)
+                if (Activator.CreateInstance(T) is IPropertyPage IPage)
                 {
                     IPageArray.Add(IPage);
 
@@ -145,8 +144,7 @@ namespace Viking.UI.Controls
                 IPage.OnSaveChanges();
             }
 
-            if (ShownObject != null)
-                ShownObject.Save();
+            ShownObject?.Save();
 
             // commit our changes
             //                Store.CommitTransaction();

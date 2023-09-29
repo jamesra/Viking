@@ -9,7 +9,7 @@ namespace Viking.UI.Controls
 {
     public partial class ObjectTreeView : System.Windows.Forms.TreeView
     {
-        private Dictionary<IUIObject, List<GenericTreeNode>> ObjectNodesTable = new Dictionary<IUIObject, List<GenericTreeNode>>();
+        private readonly Dictionary<IUIObject, List<GenericTreeNode>> ObjectNodesTable = new Dictionary<IUIObject, List<GenericTreeNode>>();
 
         public ObjectTreeView()
         {
@@ -105,10 +105,7 @@ namespace Viking.UI.Controls
         {
             get
             {
-                if (this.SelectedNode != null)
-                    return this.SelectedNode.Tag as IUIObject;
-
-                return null;
+                return this.SelectedNode?.Tag as IUIObject;
             }
             set
             {
@@ -177,11 +174,8 @@ namespace Viking.UI.Controls
             base.OnItemDrag(e);
 
             TreeNode DragNode = e.Item as TreeNode;
-            if (DragNode == null)
-                return;
 
-            IUIObject Obj = DragNode.Tag as IUIObject;
-            if (Obj == null)
+            if (!(DragNode?.Tag is IUIObject Obj))
                 return;
 
             UI.State.DragDropOrigin = new System.Drawing.Point(0, 0);
@@ -219,8 +213,7 @@ namespace Viking.UI.Controls
             }
             else
             {
-                IUIObject Target = Node.Tag as IUIObject;
-                if (Target == null)
+                if (!(Node.Tag is IUIObject Target))
                     return;
 
                 //Can't drag onto ourselves
@@ -253,9 +246,7 @@ namespace Viking.UI.Controls
             }
             else
             {
-
-                IUIObject Target = DropNode.Tag as IUIObject;
-                if (Target != null)
+                if (DropNode.Tag is IUIObject Target)
                 {
                     if (Target != DragObject)
                     {
@@ -338,10 +329,7 @@ namespace Viking.UI.Controls
         {
             Point P = PointToClient(Control.MousePosition);
             GenericTreeNode ClickNode = this.GetNodeAt(P) as GenericTreeNode;
-            if (ClickNode != null)
-            {
-                ClickNode.OnDoubleClick();
-            }
+            ClickNode?.OnDoubleClick();
         }
     }
 }

@@ -57,8 +57,7 @@ namespace MeasurementExtension
             catch (WebException)
             {
                 Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "Measurement");
-                if (response != null)
-                    response.Close();
+                response?.Close();
 
                 return true;
             }

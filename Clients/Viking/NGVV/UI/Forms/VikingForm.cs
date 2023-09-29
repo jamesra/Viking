@@ -19,7 +19,7 @@ namespace Viking.UI.Forms
         /// <summary>
         /// This table tracks which objects are already being shown so we can give those forms focus instead of launching a new one
         /// </summary>
-        private static Dictionary<object, VikingForm> ShownFormsTable = new Dictionary<object, VikingForm>();
+        private static readonly Dictionary<object, VikingForm> ShownFormsTable = new Dictionary<object, VikingForm>();
 
         public VikingForm()
         {

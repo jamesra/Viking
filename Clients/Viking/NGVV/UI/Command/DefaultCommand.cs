@@ -27,7 +27,7 @@ namespace Viking.UI.Commands
             }
         }
 
-        private ObservableCollection<string> _ObservableHelpStrings;
+        private readonly ObservableCollection<string> _ObservableHelpStrings;
 
         public virtual ObservableCollection<string> ObservableHelpStrings { get { return _ObservableHelpStrings; } }
 
@@ -39,8 +39,7 @@ namespace Viking.UI.Commands
 
             if (LastNearestObject == null)
             {
-                IHelpStrings parentHelp = Parent as IHelpStrings;
-                if (parentHelp != null)
+                if (Parent is IHelpStrings parentHelp)
                 {
                     s.AddRange(parentHelp.HelpStrings);
                 }
@@ -69,8 +68,7 @@ namespace Viking.UI.Commands
 
         private string[] GetHelpStringsFromObject(object obj)
         {
-            IHelpStrings helpStrings = obj as IHelpStrings;
-            if (helpStrings == null)
+            if (!(obj is IHelpStrings helpStrings))
                 return new string[] { };
 
             return helpStrings.HelpStrings;
@@ -82,8 +80,7 @@ namespace Viking.UI.Commands
             double distance = double.MaxValue;
             foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
             {
-                double newDistance;
-                object nearObj = overlay.ObjectAtPosition(WorldPosition, out newDistance);
+                object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
                 if (nearObj != null)
                 {
                     if (newDistance < distance)
@@ -129,8 +126,7 @@ namespace Viking.UI.Commands
                 {
                     foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
                     {
-                        double newDistance;
-                        object nearObj = overlay.ObjectAtPosition(WorldPosition, out newDistance);
+                        object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
                         if (nearObj != null)
                         {
                             if (newDistance < distance)
@@ -157,10 +153,7 @@ namespace Viking.UI.Commands
                     menu = provider.BuildMenuFor(context_obj, menu);
                 }
 
-                if (menu != null)
-                {
-                    menu.Show(Parent, new System.Drawing.Point(e.X, e.Y));
-                }
+                menu?.Show(Parent, new System.Drawing.Point(e.X, e.Y));
             }
             else
             {

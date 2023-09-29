@@ -19,8 +19,7 @@ namespace Viking.UI.BaseClasses
 
         public void SetDragDropTypes()
         {
-            SupportedUITypesAttribute[] attribs = this.GetType().GetCustomAttributes(typeof(SupportedUITypesAttribute), true) as SupportedUITypesAttribute[];
-            if (attribs == null)
+            if (!(this.GetType().GetCustomAttributes(typeof(SupportedUITypesAttribute), true) is SupportedUITypesAttribute[] attribs))
                 return;
 
             //Should only be one entry, but lets be safe and add them together

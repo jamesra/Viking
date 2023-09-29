@@ -60,10 +60,12 @@ namespace Viking.ViewModels
             {
                 if (section.ChannelInfoArray == null || section.ChannelInfoArray.Length == 0)
                 {
-                    ChannelInfo channel = new ChannelInfo();
-                    channel.ChannelName = this.ActiveChannel;
-                    channel.SectionSource = ChannelInfo.SectionInfo.FIXED;
-                    channel.FixedSectionNumber = this.section.Number;
+                    ChannelInfo channel = new ChannelInfo
+                    {
+                        ChannelName = this.ActiveChannel,
+                        SectionSource = ChannelInfo.SectionInfo.FIXED,
+                        FixedSectionNumber = this.section.Number
+                    };
                     return new ChannelInfo[] { channel };
                 }
                 return section.ChannelInfoArray;
@@ -187,7 +189,7 @@ namespace Viking.ViewModels
 
         #endregion
 
-        private VolumeViewModel _VolumeViewModel;
+        private readonly VolumeViewModel _VolumeViewModel;
         public VolumeViewModel VolumeViewModel { get { return _VolumeViewModel; } }
 
         public SectionViewModel(VolumeViewModel Volume, Section section)
@@ -379,10 +381,7 @@ namespace Viking.ViewModels
 
         private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
         {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         public Section GetSectionToDrawForChannel(ChannelInfo channel)

@@ -32,7 +32,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        private List<ChannelPickerControl> ChannelPickerList = new List<ChannelPickerControl>();
+        private readonly List<ChannelPickerControl> ChannelPickerList = new List<ChannelPickerControl>();
 
         private string[] _ChannelNames;
 
@@ -109,8 +109,7 @@ namespace Viking.UI.Controls
         {
             for (int i = 0; i < panelChannels.Controls.Count; i++)
             {
-                ChannelPickerControl Picker = panelChannels.Controls[i] as ChannelPickerControl;
-                if (Picker == null)
+                if (!(panelChannels.Controls[i] is ChannelPickerControl Picker))
                     continue;
 
                 Picker.ShowLabels = i == panelChannels.Controls.Count - 1; //Only show label for first control

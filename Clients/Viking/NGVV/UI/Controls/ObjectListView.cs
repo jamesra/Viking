@@ -48,10 +48,10 @@ namespace Viking.UI.BaseClasses
 
         private PropertyInfo[] ColumnProperties = new PropertyInfo[0];
 
-        private System.EventHandler OnObjectSaveHandler = null;
-        private System.EventHandler OnObjectDeleteHandler = null;
-        private System.ComponentModel.PropertyChangedEventHandler OnObjectValueChangedHandler = null;
-        private EventHandler OnContextColumnMenuHandler = null;
+        private readonly System.EventHandler OnObjectSaveHandler = null;
+        private readonly System.EventHandler OnObjectDeleteHandler = null;
+        private readonly System.ComponentModel.PropertyChangedEventHandler OnObjectValueChangedHandler = null;
+        private readonly EventHandler OnContextColumnMenuHandler = null;
 
         private System.Type _DisplayType = null;
 
@@ -69,7 +69,7 @@ namespace Viking.UI.BaseClasses
         /// </summary>
         private Dictionary<string, ColumnVisibilitySetting> _ColumnSettingsHashtable = null;
 
-        private int _ColumnDefaultWidth = 75;
+        private readonly int _ColumnDefaultWidth = 75;
 
         public ObjectListView()
         {
@@ -149,10 +149,7 @@ namespace Viking.UI.BaseClasses
 
         protected System.Type GetTypeForArray(object[] Objects)
         {
-            if (Objects == null)
-                return null;
-
-            return Objects.GetType().GetElementType();
+            return Objects?.GetType().GetElementType();
         }
 
         [Browsable(false)]
@@ -252,8 +249,10 @@ namespace Viking.UI.BaseClasses
 
             Debug.Assert(this.Columns.Count > 0);
 
-            SubItems[0] = new ListViewItem.ListViewSubItem();
-            SubItems[0].Text = Object.ToString();
+            SubItems[0] = new ListViewItem.ListViewSubItem
+            {
+                Text = Object.ToString()
+            };
 
             for (int iColumn = 0; iColumn < this.ColumnProperties.Length; iColumn++)
             {
@@ -261,8 +260,10 @@ namespace Viking.UI.BaseClasses
                 //TODO: Does this work if Object is cast to an interface?
                 object Value = Property.GetValue(Object, null);
 
-                SubItems[iColumn + 1] = new ListViewItem.ListViewSubItem();
-                SubItems[iColumn + 1].Text = "";
+                SubItems[iColumn + 1] = new ListViewItem.ListViewSubItem
+                {
+                    Text = ""
+                };
 
                 if (Value != null)
                 {
@@ -277,8 +278,10 @@ namespace Viking.UI.BaseClasses
 
             //Removed until I add images again
             //			ListViewItem Item = new ListViewItem(SubItems, Object.TreeImageIndex);
-            ListViewItem Item = new ListViewItem(SubItems, null);
-            Item.Tag = Object;
+            ListViewItem Item = new ListViewItem(SubItems, null)
+            {
+                Tag = Object
+            };
             this.Items.Add(Item);
 
             AddObjectEvents(Object);
@@ -497,20 +500,16 @@ namespace Viking.UI.BaseClasses
 
         private Viking.Common.IUIObject ObjectForItem(ListViewItem Item)
         {
-            if (Item == null)
-                return null;
-
-            return Item.Tag as IUIObject;
+            return Item?.Tag as IUIObject;
         }
 
         protected override void OnColumnClick(System.Windows.Forms.ColumnClickEventArgs e)
         {
-            ListViewColumnSorter Sorter = this.ListViewItemSorter as ListViewColumnSorter;
             Type ColumnType = null;
             if (e.Column > 0)
                 ColumnType = this.ColumnProperties[e.Column - 1]?.PropertyType;
 
-            if (Sorter == null)
+            if (!(this.ListViewItemSorter is ListViewColumnSorter Sorter))
             {
 
                 Sorter = new ListViewColumnSorter(e.Column, ColumnType);
@@ -734,8 +733,8 @@ namespace Viking.UI.BaseClasses
         }
 
 
-        private CancelEventHandler OnParentFormClosing = null;
-        private Form _ParentForm = null;
+        private readonly CancelEventHandler OnParentFormClosing = null;
+        private readonly Form _ParentForm = null;
 
         protected override void OnParentBindingContextChanged(EventArgs e)
         {

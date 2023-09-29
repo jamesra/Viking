@@ -22,10 +22,7 @@ namespace Viking.UI.Controls
         {
             get
             {
-                if (listServers.SelectedItem == null)
-                    return null;
-
-                return listServers.SelectedItem.ToString();
+                return listServers.SelectedItem?.ToString();
             }
         }
 

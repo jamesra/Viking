@@ -94,8 +94,7 @@ namespace Viking.UI.BaseClasses
             if (List.SelectedItems.Count > 0)
             {
                 ListViewItem SelectedItem = List.SelectedItems[0];
-                IUIObject Obj = SelectedItem.Tag as IUIObject;
-                if (Obj != null)
+                if (SelectedItem.Tag is IUIObject Obj)
                 {
                     Viking.UI.State.SelectedObject = Obj;
                     this.SelectedObject = Obj;
@@ -110,8 +109,7 @@ namespace Viking.UI.BaseClasses
 
             foreach (ListViewItem Item in ListItems.Items)
             {
-                IUIObject ItemObj = Item.Tag as IUIObject;
-                if (ItemObj != null && Obj == ItemObj)
+                if (Item.Tag is IUIObject ItemObj && Obj == ItemObj)
                     return Item;
             }
 
@@ -192,19 +190,16 @@ namespace Viking.UI.BaseClasses
         private void ListItems_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             ListViewItem item = this.ListItems.GetItemAt(e.X, e.Y);
-            if (item == null)
-                return;
 
-            IUIObject obj = item.Tag as IUIObject;
-            if (obj == null)
+            if (!(item?.Tag is IUIObject obj))
                 return;
 
             OnObjectDoubleClick(obj);
 
         }
 
-        private CancelEventHandler OnParentFormClosing = null;
-        private Form _ParentForm = null;
+        private readonly CancelEventHandler OnParentFormClosing = null;
+        private readonly Form _ParentForm = null;
 
         protected virtual void parentForm_Closing(object sender, CancelEventArgs e)
         {

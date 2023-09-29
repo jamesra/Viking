@@ -17,9 +17,9 @@ namespace MeasurementExtension
     {
         GridVector2 Origin;
         private readonly LengthMeasurement PixelSize;
-        private LabelView distanceLabel;
+        private readonly LabelView distanceLabel;
 
-        private static string[] DefaultHelpStrings = new string[]
+        private static readonly string[] DefaultHelpStrings = new string[]
         {
             "Hold SHIFT: Force horizontal measurement line"
         };
@@ -28,9 +28,11 @@ namespace MeasurementExtension
         {
             get
             {
-                List<string> s = new List<string>(MeasureCommand.DefaultHelpStrings);
-                s.Add("CTRL - Horizontal measurement");
-                s.Add("SHIFT - Vertical measurement");
+                List<string> s = new List<string>(MeasureCommand.DefaultHelpStrings)
+                {
+                    "CTRL - Horizontal measurement",
+                    "SHIFT - Vertical measurement"
+                };
                 s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
                 return s.ToArray();
             }
@@ -114,10 +116,8 @@ namespace MeasurementExtension
                 return null;
             }
 
-            GridVector2 mosaic_origin;
-            GridVector2 mosaic_target;
-            bool transformedOrigin = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(Origin, out mosaic_origin);
-            bool transformedTarget = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(target, out mosaic_target);
+            bool transformedOrigin = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(Origin, out GridVector2 mosaic_origin);
+            bool transformedTarget = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(target, out GridVector2 mosaic_target);
 
             if (transformedOrigin && transformedTarget)
             {
@@ -230,7 +230,6 @@ namespace MeasurementExtension
         {
             string volume_space_string = DistanceToString(volumeDistance);
             string mosaic_space_string = DistanceToString(mosaicDistance);
-            string output_string = null;
             if (mosaicDistance != null)
             {
                 return $"{mosaic_space_string} Mosaic\n{volume_space_string} Volume";

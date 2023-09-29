@@ -66,7 +66,7 @@ namespace Viking.UI.Controls
 
         public Viking.UI.Commands.CommandQueue CommandQueue = new CommandQueue();
 
-        static short[] indicies = { 0, 1, 2, 2, 1, 3 };
+        static readonly short[] indicies = { 0, 1, 2, 2, 1, 3 };
 
         CommandCompleteEventHandler OnCommandCompleteHandler;
 
@@ -118,7 +118,7 @@ namespace Viking.UI.Controls
         }
 
         #region Status Bar
-        private System.Windows.Forms.StatusStrip StatusBar;
+        private readonly System.Windows.Forms.StatusStrip StatusBar;
 
         protected System.Windows.Forms.ToolStripItem tsPosition;
         protected System.Windows.Forms.ToolStripItem tsSection;
@@ -164,7 +164,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        private List<ToolStripItem> _StatusChannels = new List<ToolStripItem>();
+        private readonly List<ToolStripItem> _StatusChannels = new List<ToolStripItem>();
         internal ChannelInfo[] StatusChannels
         {
             set
@@ -297,8 +297,7 @@ namespace Viking.UI.Controls
                 this.Invalidate();
 
                 //Let listeners know if we changed sections
-                if (OnSectionChanged != null)
-                    OnSectionChanged(this, new SectionChangedEventArgs(_Section, OldSection));
+                OnSectionChanged?.Invoke(this, new SectionChangedEventArgs(_Section, OldSection));
             }
         }
 
@@ -349,9 +348,11 @@ namespace Viking.UI.Controls
 
             CreateWPFControls();
 
-            StatusBar = new System.Windows.Forms.StatusStrip();
-            StatusBar.Parent = this;
-            StatusBar.Dock = System.Windows.Forms.DockStyle.Bottom;
+            StatusBar = new System.Windows.Forms.StatusStrip
+            {
+                Parent = this,
+                Dock = System.Windows.Forms.DockStyle.Bottom
+            };
 
             tsSection = new System.Windows.Forms.ToolStripLabel("Section: ");
             tsPosition = new System.Windows.Forms.ToolStripLabel("Position: ");
@@ -374,18 +375,22 @@ namespace Viking.UI.Controls
 
         private void CreateWPFControls()
         {
-            commandHelpTextScrollerHost = new ElementHost();
-            commandHelpTextScrollerHost.TabStop = false;
-            commandHelpTextScrollerHost.Dock = DockStyle.Bottom;
-            commandHelpTextScrollerHost.Visible = Viking.Properties.Settings.Default.ShowCommandHelp;
-            commandHelpTextScrollerHost.Parent = this;
+            commandHelpTextScrollerHost = new ElementHost
+            {
+                TabStop = false,
+                Dock = DockStyle.Bottom,
+                Visible = Viking.Properties.Settings.Default.ShowCommandHelp,
+                Parent = this
+            };
             menuShowCommandHelp.Checked = Viking.Properties.Settings.Default.ShowCommandHelp;
             timerHelpTextChange.Enabled = Viking.Properties.Settings.Default.ShowCommandHelp;
 
             this.Controls.Add(commandHelpTextScrollerHost);
 
-            commandHelpText = new Viking.WPF.StringArrayAutoScroller();
-            commandHelpText.DataContext = this.CurrentCommand as IHelpStrings;
+            commandHelpText = new Viking.WPF.StringArrayAutoScroller
+            {
+                DataContext = this.CurrentCommand as IHelpStrings
+            };
             //commandHelpText.TextArray = new String[] { "Hello", "world" };
             //commandHelpText.InitializeComponent();
             commandHelpTextScrollerHost.Child = commandHelpText;
@@ -525,7 +530,7 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Fired when an object is selected in the UI
         /// </summary>
-        Viking.Common.ObjectSelectedEventHandler ObjectSelectedHandler;
+        readonly Viking.Common.ObjectSelectedEventHandler ObjectSelectedHandler;
 
         /// <summary>
         /// Fires when a different section is displayed
@@ -582,7 +587,7 @@ namespace Viking.UI.Controls
         /// Called when the reference section for the current section has changed. 
         /// Fires our public ReferenceSectionChanged event
         /// </summary>
-        private ReferenceSectionChangedEventHandler InternalReferenceSectionChanged;
+        private readonly ReferenceSectionChangedEventHandler InternalReferenceSectionChanged;
 
         private void OnSelectedItemChanged(object sender, Viking.Common.ObjectSelectedEventArgs e)
         {
@@ -599,10 +604,7 @@ namespace Viking.UI.Controls
         /// <param name="e"></param>
         private void OnInternalReferenceSectionChanged(object sender, ReferenceSectionChangedEventArgs e)
         {
-            if (OnReferenceSectionChanged != null)
-            {
-                OnReferenceSectionChanged(sender, e);
-            }
+            OnReferenceSectionChanged?.Invoke(sender, e);
         }
 
         /*
@@ -657,15 +659,8 @@ namespace Viking.UI.Controls
         }
 
         private void ActivateNextCommandFromQueue()
-        {
-            Command nextCommand = this.CommandQueue.Pop();
-            if (nextCommand == null)
-            {
-                nextCommand = new DefaultCommand(this);
-            }
-
-            this.CurrentCommand = nextCommand;
-
+        { 
+            this.CurrentCommand = this.CommandQueue.Pop() ?? new DefaultCommand(this); 
         }
 
         #endregion
@@ -784,8 +779,10 @@ namespace Viking.UI.Controls
             int numTilesX = 1;
             int numTilesY = 1;
 
-            Camera camera = new Camera();
-            camera.Downsample = Downsample;
+            Camera camera = new Camera
+            {
+                Downsample = Downsample
+            };
 
             //Figure out if we can do the entire shot at once or have to divide it up
             if (CapturedTileSizeX <= 2048 && CapturedTileSizeX <= 2048)
@@ -873,12 +870,10 @@ namespace Viking.UI.Controls
             //Make sure sections are in order
             if (FirstSection > LastSection)
             {
-                int temp = FirstSection;
-                FirstSection = LastSection;
-                LastSection = temp;
+                (FirstSection, LastSection) = (LastSection, FirstSection);
             }
 
-            ExportPath = ExportPath + "/";
+            ExportPath += "/";
 
             //Capture each of the requested frames
             GenericProgressForm progressForm = new GenericProgressForm();
@@ -911,7 +906,7 @@ namespace Viking.UI.Controls
                 else
                     dirInfo = new System.IO.DirectoryInfo(Path);
 
-                dirInfo.Attributes = dirInfo.Attributes & ~System.IO.FileAttributes.ReadOnly;
+                dirInfo.Attributes &= ~System.IO.FileAttributes.ReadOnly;
 
                 //this.Section = S;
 
@@ -1112,11 +1107,13 @@ namespace Viking.UI.Controls
             {
                 if (_defaultDepthState == null || _defaultDepthState.IsDisposed)
                 {
-                    _defaultDepthState = new DepthStencilState();
-                    _defaultDepthState.DepthBufferEnable = true;
-                    _defaultDepthState.DepthBufferFunction = CompareFunction.LessEqual;
-                    _defaultDepthState.DepthBufferWriteEnable = true;
-                    _defaultDepthState.StencilEnable = false;
+                    _defaultDepthState = new DepthStencilState
+                    {
+                        DepthBufferEnable = true,
+                        DepthBufferFunction = CompareFunction.LessEqual,
+                        DepthBufferWriteEnable = true,
+                        StencilEnable = false
+                    };
                 }
 
                 return _defaultDepthState;
@@ -1130,14 +1127,16 @@ namespace Viking.UI.Controls
             {
                 if (_OverlayBackgroundDepthState == null || _OverlayBackgroundDepthState.IsDisposed)
                 {
-                    _OverlayBackgroundDepthState = new DepthStencilState();
-                    _OverlayBackgroundDepthState.DepthBufferEnable = false;
-                    _OverlayBackgroundDepthState.DepthBufferWriteEnable = true;
-                    _OverlayBackgroundDepthState.DepthBufferFunction = CompareFunction.LessEqual;
+                    _OverlayBackgroundDepthState = new DepthStencilState
+                    {
+                        DepthBufferEnable = false,
+                        DepthBufferWriteEnable = true,
+                        DepthBufferFunction = CompareFunction.LessEqual,
 
-                    _OverlayBackgroundDepthState.StencilEnable = true;
-                    _OverlayBackgroundDepthState.StencilFunction = CompareFunction.Greater;
-                    _OverlayBackgroundDepthState.ReferenceStencil = 1;
+                        StencilEnable = true,
+                        StencilFunction = CompareFunction.Greater,
+                        ReferenceStencil = 1
+                    };
                 }
 
                 return _OverlayBackgroundDepthState;
@@ -1156,15 +1155,17 @@ namespace Viking.UI.Controls
 
             if (_OverlayDepthState == null)
             {
-                _OverlayDepthState = new DepthStencilState();
-                _OverlayDepthState.DepthBufferEnable = DepthEnabled;
-                _OverlayDepthState.DepthBufferWriteEnable = true;
-                _OverlayDepthState.DepthBufferFunction = CompareFunction.LessEqual;
+                _OverlayDepthState = new DepthStencilState
+                {
+                    DepthBufferEnable = DepthEnabled,
+                    DepthBufferWriteEnable = true,
+                    DepthBufferFunction = CompareFunction.LessEqual,
 
-                _OverlayDepthState.StencilEnable = true;
-                _OverlayDepthState.StencilFunction = CompareFunction.Greater;
-                _OverlayDepthState.ReferenceStencil = StencilValue;
-                _OverlayDepthState.StencilPass = StencilOperation.Replace;
+                    StencilEnable = true,
+                    StencilFunction = CompareFunction.Greater,
+                    ReferenceStencil = StencilValue,
+                    StencilPass = StencilOperation.Replace
+                };
             }
 
             return _OverlayDepthState;
@@ -1181,15 +1182,17 @@ namespace Viking.UI.Controls
 
             if (_DrawSectionDepthState == null)
             {
-                _DrawSectionDepthState = new DepthStencilState();
-                _DrawSectionDepthState.DepthBufferEnable = true;
-                _DrawSectionDepthState.DepthBufferWriteEnable = true;
-                _DrawSectionDepthState.DepthBufferFunction = CompareFunction.LessEqual;
+                _DrawSectionDepthState = new DepthStencilState
+                {
+                    DepthBufferEnable = true,
+                    DepthBufferWriteEnable = true,
+                    DepthBufferFunction = CompareFunction.LessEqual,
 
-                _DrawSectionDepthState.StencilEnable = true;
-                _DrawSectionDepthState.StencilFunction = CompareFunction.GreaterEqual;
-                _DrawSectionDepthState.ReferenceStencil = StencilValue;
-                _DrawSectionDepthState.StencilPass = StencilOperation.Replace;
+                    StencilEnable = true,
+                    StencilFunction = CompareFunction.GreaterEqual,
+                    ReferenceStencil = StencilValue,
+                    StencilPass = StencilOperation.Replace
+                };
             }
 
             return _DrawSectionDepthState;
@@ -1202,8 +1205,10 @@ namespace Viking.UI.Controls
             {
                 if (_DepthDisabledState == null || _DepthDisabledState.IsDisposed)
                 {
-                    _DepthDisabledState = new DepthStencilState();
-                    _DepthDisabledState.DepthBufferEnable = false;
+                    _DepthDisabledState = new DepthStencilState
+                    {
+                        DepthBufferEnable = false
+                    };
                 }
                 return _DepthDisabledState;
             }
@@ -1240,8 +1245,10 @@ namespace Viking.UI.Controls
                 TextureCircleView plusView = TextureCircleView.CreatePlusCircle(new GridCircle(GridVector2.Zero, 1.0),
                                                 Microsoft.Xna.Framework.Color.Goldenrod);
 
-                upSectionButton = new VikingXNAGraphics.Controls.CircularButton(plusView, this.OnUpSectionButtonClicked);
-                upSectionButton.OnClick = this.OnUpSectionButtonClicked;
+                upSectionButton = new VikingXNAGraphics.Controls.CircularButton(plusView, this.OnUpSectionButtonClicked)
+                {
+                    OnClick = this.OnUpSectionButtonClicked
+                };
             }
 
             if (downSectionButton == null)
@@ -1249,8 +1256,10 @@ namespace Viking.UI.Controls
                 TextureCircleView minusView = TextureCircleView.CreateMinusCircle(new GridCircle(GridVector2.Zero, 1.0),
                                                 Microsoft.Xna.Framework.Color.Goldenrod);
 
-                downSectionButton = new VikingXNAGraphics.Controls.CircularButton(minusView);
-                downSectionButton.OnClick = this.OnDownSectionButtonClicked;
+                downSectionButton = new VikingXNAGraphics.Controls.CircularButton(minusView)
+                {
+                    OnClick = this.OnDownSectionButtonClicked
+                };
                 //                downSectionButton.OnClick += th
             }
         }
@@ -1756,15 +1765,13 @@ namespace Viking.UI.Controls
             {
                 ITransform transform = null;
 
-                SectionToVolumeMapping StosMapping = mapping as SectionToVolumeMapping;
-                if (StosMapping != null)
+                if (mapping is SectionToVolumeMapping StosMapping)
                 {
                     transform = StosMapping.VolumeTransform;
                 }
                 else
                 {
-                    TileGridToVolumeMapping TGStosMapping = mapping as TileGridToVolumeMapping;
-                    if (TGStosMapping != null)
+                    if (mapping is TileGridToVolumeMapping TGStosMapping)
                     {
                         transform = TGStosMapping.VolumeTransform;
                     }
@@ -2043,14 +2050,16 @@ namespace Viking.UI.Controls
             {
                 if (MergeRGBBlendState == null || MergeRGBBlendState.IsDisposed)
                 {
-                    MergeRGBBlendState = new BlendState();
-                    MergeRGBBlendState.AlphaBlendFunction = BlendFunction.Add;
-                    MergeRGBBlendState.ColorBlendFunction = BlendFunction.Add;
-                    MergeRGBBlendState.AlphaSourceBlend = Blend.One;
-                    MergeRGBBlendState.AlphaDestinationBlend = Blend.Zero;
-                    MergeRGBBlendState.ColorSourceBlend = Blend.One;
-                    MergeRGBBlendState.ColorDestinationBlend = Blend.Zero;
-                    MergeRGBBlendState.Name = "MergeRGBBlendState";
+                    MergeRGBBlendState = new BlendState
+                    {
+                        AlphaBlendFunction = BlendFunction.Add,
+                        ColorBlendFunction = BlendFunction.Add,
+                        AlphaSourceBlend = Blend.One,
+                        AlphaDestinationBlend = Blend.Zero,
+                        ColorSourceBlend = Blend.One,
+                        ColorDestinationBlend = Blend.Zero,
+                        Name = "MergeRGBBlendState"
+                    };
                 }
 
                 graphicsDevice.BlendState = MergeRGBBlendState;
@@ -2134,8 +2143,7 @@ namespace Viking.UI.Controls
             }
             finally
             {
-                if (saveFile != null)
-                    saveFile.Close();
+                saveFile?.Close();
 
                 saveFile = null;
             }
@@ -2402,8 +2410,7 @@ namespace Viking.UI.Controls
 
         private void OnSectionPyramidTransformClick(object sender, EventArgs e)
         {
-            ToolStripMenuItem menuItem = sender as ToolStripMenuItem;
-            if (menuItem == null)
+            if (!(sender is ToolStripMenuItem menuItem))
                 return;
 
             //Get the parent menu to find the pyramid name
@@ -2418,8 +2425,7 @@ namespace Viking.UI.Controls
 
         private void OnSectionTilesetClick(object sender, EventArgs e)
         {
-            ToolStripMenuItem menuItem = sender as ToolStripMenuItem;
-            if (menuItem == null)
+            if (!(sender is ToolStripMenuItem menuItem))
                 return;
 
             CurrentChannel = menuItem.Text;
@@ -2490,9 +2496,11 @@ namespace Viking.UI.Controls
             Viking.UI.Forms.GoToLocationForm form = null;
             try
             {
-                form = new GoToLocationForm();
-                form.X = Camera.LookAt.X;
-                form.Y = Camera.LookAt.Y;
+                form = new GoToLocationForm
+                {
+                    X = Camera.LookAt.X,
+                    Y = Camera.LookAt.Y
+                };
 
                 if (Section != null)
                     form.Z = Section.Number;
@@ -2552,8 +2560,7 @@ namespace Viking.UI.Controls
                 MappingBase map = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, this.Section.Number, this.CurrentChannel, this.CurrentTransform);
                 if (map != null)
                 {
-                    GridVector2 TransformedPoint;
-                    bool Mapped = map.TrySectionToVolume(new GridVector2(location.X, location.Y), out TransformedPoint);
+                    bool Mapped = map.TrySectionToVolume(new GridVector2(location.X, location.Y), out GridVector2 TransformedPoint);
 
                     if (Mapped)
                     {
@@ -2641,8 +2648,10 @@ namespace Viking.UI.Controls
 
             foreach (string VolumeTransform in Viking.UI.State.volume.TransformNames)
             {
-                ToolStripMenuItem menuItem = new ToolStripMenuItem(VolumeTransform, null, OnVolumeTransformClicked);
-                menuItem.Checked = Volume.ActiveVolumeTransform == VolumeTransform;
+                ToolStripMenuItem menuItem = new ToolStripMenuItem(VolumeTransform, null, OnVolumeTransformClicked)
+                {
+                    Checked = Volume.ActiveVolumeTransform == VolumeTransform
+                };
                 menuVolumeTransforms.DropDownItems.Add(menuItem);
             }
         }

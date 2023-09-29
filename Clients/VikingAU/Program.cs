@@ -81,8 +81,10 @@ namespace Viking.AU
             try
             {
                 long SectionNumber = System.Convert.ToInt64(input);
-                listNumbers = new List<long>();
-                listNumbers.Add(SectionNumber);
+                listNumbers = new List<long>
+                {
+                    SectionNumber
+                };
                 return listNumbers;
             }
             catch (FormatException e)
@@ -161,7 +163,7 @@ namespace Viking.AU
 
     class Program
     {
-        static CommandLineOptions options = new CommandLineOptions();
+        static readonly CommandLineOptions options = new CommandLineOptions();
         private static readonly SemaphoreSlim ConsoleLock = new SemaphoreSlim(1);
 
         static async Task Main(string[] args)
@@ -336,12 +338,7 @@ namespace Viking.AU
             {
                 Viking.VolumeModel.Section section = State.Volume.Sections[(int)SectionNumber];
 
-                MappingBase mapper = State.MappingsManager.GetMapping(State.Volume.DefaultVolumeTransform, (int)SectionNumber, section.DefaultChannel, section.DefaultPyramidTransform);
-                if (mapper == null)
-                {
-                    throw new Exception("No mapping found for section " + SectionNumber.ToString());
-                }
-
+                MappingBase mapper = State.MappingsManager.GetMapping(State.Volume.DefaultVolumeTransform, (int)SectionNumber, section.DefaultChannel, section.DefaultPyramidTransform) ?? throw new Exception("No mapping found for section " + SectionNumber.ToString());
                 await mapper.Initialize(token);
 
                 foreach (LocationObj loc in LocDict.Values)

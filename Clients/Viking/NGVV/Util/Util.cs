@@ -57,9 +57,9 @@ namespace Viking.Common
             if (!path.Contains('.'))
             {
                 if (url.EndsWith("/") == false)
-                    url = url + "/";
+                    url += "/";
 
-                url = url + "volume.vikingxml";
+                url += "volume.vikingxml";
             }
 
             return url;
@@ -72,7 +72,7 @@ namespace Viking.Common
             if (!NewURL.ToLower().EndsWith(".vikingxml"))
             {
                 if (NewURL.EndsWith("/") == false)
-                    NewURL = NewURL + '/';
+                    NewURL += '/';
 
                 NewURL += "volume.vikingxml";
             }

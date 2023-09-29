@@ -40,16 +40,18 @@ namespace Viking
             Global.PrintAllocatedTextureReaders();
         }
 
-        Thread DiskCleanupThread = null;
-        Thread TileViewModelThread = null;
-        Thread TileThread = null;
+        readonly Thread DiskCleanupThread = null;
+        readonly Thread TileViewModelThread = null;
+        readonly Thread TileThread = null;
 
         private Thread CreateThread(string name, ThreadStart ThreadStartingFunction)
         {
-            Thread T = new Thread(ThreadStartingFunction);
-            T.Name = name;
-            T.IsBackground = true;
-            T.Priority = ThreadPriority.BelowNormal;
+            Thread T = new Thread(ThreadStartingFunction)
+            {
+                Name = name,
+                IsBackground = true,
+                Priority = ThreadPriority.BelowNormal
+            };
 
             return T;
         }

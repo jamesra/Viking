@@ -141,7 +141,8 @@ namespace Viking.UI
         }
 
         public bool PenIsComplete;
-        Viking.UI.Controls.SectionViewerControl Parent;
+
+        readonly Viking.UI.Controls.SectionViewerControl Parent;
         // GridVector2[] Verticies;
 
         public bool CanPathSelfIntersect = false;
@@ -445,10 +446,7 @@ namespace Viking.UI
 
         private void FireOnProposedNextSegmentChanged(GridLineSegment? line)
         {
-            if (this.OnProposedNextSegmentChanged != null)
-            {
-                this.OnProposedNextSegmentChanged(this, line);
-            }
+            this.OnProposedNextSegmentChanged?.Invoke(this, line);
         }
 
         private void OnCameraPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs args)
@@ -550,10 +548,7 @@ namespace Viking.UI
                 if (Points.Count <= 1)
                     return;
 
-                if (OnPathCompleted != null)
-                {
-                    OnPathCompleted(this, this.Points.ToArray());
-                }
+                OnPathCompleted?.Invoke(this, this.Points.ToArray());
             }
         }
 
@@ -566,8 +561,7 @@ namespace Viking.UI
             if (IgnoringThisPenContact)
                 return;
 
-            if (OnPathCompleted != null)
-                OnPathCompleted(this, this.Points.ToArray());
+            OnPathCompleted?.Invoke(this, this.Points.ToArray());
         }
 
         /// <summary>
@@ -747,8 +741,10 @@ namespace Viking.UI
 
         protected CurveViewControlPoints AppendProposedPointToPathCurve(GridVector2 worldPos)
         {
-            List<GridVector2> listControlPoints = new List<GridVector2>(this.Points);
-            listControlPoints.Add(worldPos);
+            List<GridVector2> listControlPoints = new List<GridVector2>(this.Points)
+            {
+                worldPos
+            };
             return new CurveViewControlPoints(listControlPoints, this.NumCurveInterpolations, TryToClose: false);
         }
 

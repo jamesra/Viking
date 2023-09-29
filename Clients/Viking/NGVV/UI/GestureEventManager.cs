@@ -51,9 +51,11 @@ namespace Viking.UI
         public System.Drawing.Point Delta { 
             get
             {
-                System.Drawing.Point p = new System.Drawing.Point();
-                p.X = EndPt.X - BeginPt.X;
-                p.Y = EndPt.Y - BeginPt.Y;
+                System.Drawing.Point p = new System.Drawing.Point
+                {
+                    X = EndPt.X - BeginPt.X,
+                    Y = EndPt.Y - BeginPt.Y
+                };
                 return p;
             }
         }
@@ -90,9 +92,9 @@ namespace Viking.UI
         public event BeginGestureEventHandler OnGestureBegin;
         public event EndGestureEventHandler OnGestureEnd;
 
-        GestureInfo? PreviousGestureInfo; 
+        GestureInfo? PreviousGestureInfo;
 
-        System.Windows.Forms.Control Parent;
+        readonly System.Windows.Forms.Control Parent;
 
         System.Drawing.Point BeginPosition;
 

@@ -4,7 +4,7 @@ namespace Viking.AU
 {
     static class State
     {
-        static private string CacheSubPath = "Cache";
+        static private readonly string CacheSubPath = "Cache";
 
         static public string CachePath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\" + CacheSubPath;
 

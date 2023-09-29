@@ -117,7 +117,7 @@ namespace Viking.UI.Forms
         } 
 
         public string keyFile;
-        private string UsernameFromCache;
+        private readonly string UsernameFromCache;
         private int counter = 0;
 
         public NetworkCredential Credentials = UI.State.AnonymousCredentials;
@@ -807,12 +807,7 @@ namespace Viking.UI.Forms
 
             XElement elem = matches.First();
             XAttribute attrib = elem.GetAttributeCaseInsensitive("authentication");
-            if (attrib != null)
-            {
-                return attrib.Value;
-            }
-
-            return null;
+            return attrib?.Value;
         }
 
 
@@ -833,7 +828,7 @@ namespace Viking.UI.Forms
             if (!NewURL.ToLower().EndsWith(".vikingxml"))
             {
                 if (NewURL.EndsWith("/") == false)
-                    NewURL = NewURL + '/';
+                    NewURL += '/';
 
                 NewURL += "volume.vikingxml";
             }

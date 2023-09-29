@@ -8,11 +8,11 @@ namespace Viking.Common
     //This was added as a workaround for the SaveAsPng memory leak in XNA.Texture2D
     public class BmpWriter
     {
-        byte[] textureData;
-        Bitmap bmp;
+        readonly byte[] textureData;
+        readonly Bitmap bmp;
         BitmapData bitmapData;
         IntPtr safePtr;
-        Rectangle rect;
+        readonly Rectangle rect;
         public ImageFormat imageFormat;
         public BmpWriter(int width, int height)
         {

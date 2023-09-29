@@ -16,7 +16,7 @@ namespace Viking.UI.Commands
     /// <summary>
     /// An entry either contains an existing command object or the type and constructor parameters to create a new command
     /// </summary>
-    public struct CommandQueueEntry 
+    public readonly struct CommandQueueEntry 
     {
         public readonly System.Type CommandType;
         public readonly Object[] Args;
@@ -53,7 +53,7 @@ namespace Viking.UI.Commands
 
     public class CommandQueue
     {
-        private Queue<CommandQueueEntry> _CommandQueue = new Queue<CommandQueueEntry>();
+        private readonly Queue<CommandQueueEntry> _CommandQueue = new Queue<CommandQueueEntry>();
 
         public System.Collections.Specialized.NotifyCollectionChangedEventHandler OnQueueChanged;
         public delegate void CommandInjectedHandler(object sender, CommandInjectedEventHandler e);
@@ -537,9 +537,9 @@ namespace Viking.UI.Commands
         protected void StepCameraDistance(float multiplier)
         {
             if (multiplier > 0)
-                Parent.Downsample = Parent.Downsample * 0.86956521739130434782608695652174f;
+                Parent.Downsample *= 0.86956521739130434782608695652174f;
             else
-                Parent.Downsample = Parent.Downsample * 1.15f;
+                Parent.Downsample *= 1.15f;
 
             this.Parent.Invalidate();
         }
@@ -719,9 +719,9 @@ namespace Viking.UI.Commands
                 
            //     Parent.TakeScreenShot(); 
             }
-            else if (Command.OnUnhandledKeyPress != null)
+            else
             {
-                Command.OnUnhandledKeyPress(sender, e);
+                Command.OnUnhandledKeyPress?.Invoke(sender, e);
             }
 
             Parent.Invalidate();
