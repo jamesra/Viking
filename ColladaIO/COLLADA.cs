@@ -19,7 +19,7 @@ namespace ColladaIO
     /// </summary>
     public partial class COLLADA
     {
-        private static Regex regex = new Regex(@"\s+");
+        private static readonly Regex regex = new Regex(@"\s+");
 
         public static string ConvertFromArray<T>(IList<T> array)
         {

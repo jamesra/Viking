@@ -17,7 +17,7 @@ namespace ColladaIOTest
     [TestClass]
     public class DynamicRenderMeshColladaSerializerTest
     {
-        private static Dictionary<ENDPOINT, Uri> EndpointMap = new Dictionary<ENDPOINT, Uri> { { ENDPOINT.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
+        private static readonly Dictionary<ENDPOINT, Uri> EndpointMap = new Dictionary<ENDPOINT, Uri> { { ENDPOINT.TEST, new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData") },
                                                                                                { ENDPOINT.RC1, new Uri("http://websvc1.connectomes.utah.edu/RC1/OData") },
                                                                                                { ENDPOINT.RC2, new Uri("http://websvc1.connectomes.utah.edu/RC2/OData") },
                                                                                                { ENDPOINT.RPC1, new Uri("http://websvc1.connectomes.utah.edu/RPC1/OData") },
@@ -63,7 +63,7 @@ namespace ColladaIOTest
             }
             else
             {
-                graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(EndpointMap[endpoint], true);
+                graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(EndpointMap[endpoint], true).Result;
             }
 
             graph.ConnectIsolatedSubgraphs();
