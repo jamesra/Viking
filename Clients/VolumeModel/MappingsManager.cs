@@ -84,7 +84,7 @@ namespace Viking.VolumeModel
     /// </summary>
     public class MappingManager
     {
-        private VolumeModel.Volume volume;
+        private readonly VolumeModel.Volume volume;
 
         public SectionTransformsCache SectionMappingCache = new SectionTransformsCache();
 
@@ -121,12 +121,7 @@ namespace Viking.VolumeModel
                 return null;
             }
 
-            SectionTransformsDictionary dict = SectionMappingCache.Fetch(SectionNumber);
-            if (dict == null)
-            {
-                dict = SectionMappingCache.GetOrAdd(SectionNumber, new SectionTransformsDictionary());
-            }
-
+            SectionTransformsDictionary dict = SectionMappingCache.Fetch(SectionNumber) ?? SectionMappingCache.GetOrAdd(SectionNumber, new SectionTransformsDictionary());
             MappingBase transform = GetMappingForSection(dict, VolumeTransformName, SectionNumber, ChannelName, SectionTransformName);
             return transform;
         }
@@ -204,8 +199,7 @@ namespace Viking.VolumeModel
                 map = section.WarpedTo[SectionMapKey];
                 map = transformsForSection.GetOrAdd(key, map);
 
-                FixedTileCountMapping fixedMapping = map as FixedTileCountMapping;
-                if (fixedMapping != null)
+                if (map is FixedTileCountMapping fixedMapping)
                 {
                     Pyramid ImagePyramid = section.ImagePyramids[ChannelName];
                     fixedMapping.CurrentPyramid = ImagePyramid;
@@ -234,8 +228,7 @@ namespace Viking.VolumeModel
                 }
 
                 map = section.CreateSectionToVolumeMapping(stosTransforms[section.Number], SectionMapKey, key);
-                FixedTileCountMapping fixedMapping = map as FixedTileCountMapping;
-                if (fixedMapping != null)
+                if (map is FixedTileCountMapping fixedMapping)
                 {
                     Pyramid ImagePyramid = section.ImagePyramids[ChannelName];
                     fixedMapping.CurrentPyramid = ImagePyramid;

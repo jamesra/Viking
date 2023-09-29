@@ -111,8 +111,7 @@ namespace Viking.VolumeModel
 
             foreach (XNode node in TilesetNode.Nodes())
             {
-                XElement elem = node as XElement;
-                if (elem == null)
+                if (!(node is XElement elem))
                     continue;
 
                 //Fetch the name if we know it

@@ -16,7 +16,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// A list of downsample levels, each entry is a sorted list using the tile names as the key and the tile object as data
         /// </summary>
-        private SortedDictionary<int, SortedDictionary<string, TileViewModel>> TilesAtLevel = new SortedDictionary<int, SortedDictionary<string, TileViewModel>>();
+        private readonly SortedDictionary<int, SortedDictionary<string, TileViewModel>> TilesAtLevel = new SortedDictionary<int, SortedDictionary<string, TileViewModel>>();
 
         public TilePyramid(Geometry.GridRectangle bounds)
         {
@@ -29,8 +29,10 @@ namespace Viking.VolumeModel
 
             if (TilesAtLevel.ContainsKey(downsample) == false)
             {
-                tiles = new SortedDictionary<string, TileViewModel>();
-                tiles.Add(tileViewModel.ToString(), tileViewModel);
+                tiles = new SortedDictionary<string, TileViewModel>
+                {
+                    { tileViewModel.ToString(), tileViewModel }
+                };
                 TilesAtLevel.Add(downsample, tiles);
             }
             else

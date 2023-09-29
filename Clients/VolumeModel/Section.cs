@@ -140,7 +140,7 @@ namespace Viking.VolumeModel
         }
 
 
-        private SemaphoreSlim _PrepareTransformSemaphore = new SemaphoreSlim(1);
+        private readonly SemaphoreSlim _PrepareTransformSemaphore = new SemaphoreSlim(1);
         /// <summary>
         /// This can be called to inform the section to do the math to warp the section on a separate thread in anticipation
         /// of being used in the near future
@@ -201,8 +201,7 @@ namespace Viking.VolumeModel
         { 
             foreach (XNode node in sectionElement.Nodes())
             {
-                XElement elem = node as XElement;
-                if (elem == null)
+                if (!(node is XElement elem))
                     continue;
 
                 switch (elem.Name.LocalName.ToLower())
@@ -487,24 +486,24 @@ namespace Viking.VolumeModel
             Debug.Assert(mapBase != null);
 
             MappingBase SectionToVolumeMap = null;
-            if (mapBase is FixedTileCountMapping)
+            if (mapBase is FixedTileCountMapping ftcMapBase)
             {
                 SectionToVolumeMap = new SectionToVolumeMapping(this,
                     UniqueName,
-                    (FixedTileCountMapping)mapBase,
+                    ftcMapBase,
                     transform);
             }
-            else if (mapBase is TileGridMapping)
+            else if (mapBase is TileGridMapping mapping)
             {
                 //Mapbase is the new tilegrid system
                 SectionToVolumeMap = new TileGridToVolumeMapping(this,
                     UniqueName,
-                    (TileGridMapping)mapBase,
+                    mapping,
                     transform);
             }
-            else if (mapBase is OCPTileServerMapping)
+            else if (mapBase is OCPTileServerMapping ocpMapBase)
             {
-                SectionToVolumeMap = new OCPTileServerToVolumeMapping(this, UniqueName, (OCPTileServerMapping)mapBase, transform);
+                SectionToVolumeMap = new OCPTileServerToVolumeMapping(this, UniqueName, ocpMapBase, transform);
             }
             else
             {

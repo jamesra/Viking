@@ -106,8 +106,7 @@ namespace Viking.VolumeModel
             List<ChannelInfo> channels = new List<ChannelInfo>();
             foreach (XNode node in elemChannelInfo.Nodes())
             {
-                XElement elem = node as XElement;
-                if (elem == null)
+                if (!(node is XElement elem))
                     continue;
 
                 switch (elem.Name.LocalName)
@@ -160,8 +159,7 @@ namespace Viking.VolumeModel
                             Color = elem.GetAttributeCaseInsensitive("Color").Value;
 
                         //Convert the color to a valid value
-                        Geometry.Graphics.Color ChannelColor;
-                        if (!TryParseColor(Color, out ChannelColor))
+                        if (!TryParseColor(Color, out var ChannelColor))
                         {
                             CreateChannel = false;
                         }

@@ -79,8 +79,7 @@ namespace Viking.VolumeModel
             if (transforms == null)
                 return null;
 
-            Geometry.Transforms.TileTransformInfo info = ((ITransformInfo)transforms[number]).Info as TileTransformInfo;
-            if (info == null)
+            if (!(((ITransformInfo)transforms[number]).Info is TileTransformInfo info))
                 return null;
 
             return info.TileFileName;

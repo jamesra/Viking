@@ -153,7 +153,7 @@ namespace Viking.VolumeModel
         /// Set to true if the volume is located on the local drive
         /// False if over a network
         /// </summary>
-        private bool _IsLocal;
+        private readonly bool _IsLocal;
         public bool IsLocal
         {
             get { return _IsLocal; }
@@ -165,7 +165,7 @@ namespace Viking.VolumeModel
         /// </summary>
         public System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
-        private XElement _VolumeElement;
+        private readonly XElement _VolumeElement;
 
         /// <summary>
         /// The XML document used to initialize the volume.  Contains all configuration settings from the server.
@@ -183,7 +183,7 @@ namespace Viking.VolumeModel
         /// </summary>
         public List<string> VolumeTransformNames = new List<string>(new string[] { "None" });
 
-        private Dictionary<int, int> SectionToReferenceSectionBelow = new Dictionary<int, int>();
+        private readonly Dictionary<int, int> SectionToReferenceSectionBelow = new Dictionary<int, int>();
 
         /// <summary>
         /// Specified during loading, if the <DefaultTileset> element exists we assign all sections containing that tileset to use it as the default transform
@@ -284,7 +284,7 @@ namespace Viking.VolumeModel
             return null;
         }
 
-        private List<TileServerInfo> TileServerList = new List<TileServerInfo>();
+        private readonly List<TileServerInfo> TileServerList = new List<TileServerInfo>();
 
         private XDocument VolumeXML;
 
@@ -362,7 +362,7 @@ namespace Viking.VolumeModel
 
         //A list of all channel names found in the volume
         //TODO: Modify to a per section basis?
-        static private List<string> _ChannelNames = new List<String>();
+        static private readonly List<string> _ChannelNames = new List<String>();
 
         /// <summary>
         /// A list of all channel names found on sections in the volume
@@ -412,8 +412,7 @@ namespace Viking.VolumeModel
                 throw new ArgumentNullException(nameof(path));
             Uri uri = new Uri(path);
 
-            if(workerThread != null)
-                workerThread.ReportProgress(0, $"Requesting {path}");
+            workerThread?.ReportProgress(0, $"Requesting {path}");
 
             XDocument XMLInitData;
             if (uri.Scheme == "http" || uri.Scheme == "https")
@@ -557,9 +556,8 @@ namespace Viking.VolumeModel
         private void LoadDefaultsFromXML(XElement volumeElement)
         {
             foreach (XNode node in volumeElement.Nodes().Where(n => n.NodeType == System.Xml.XmlNodeType.Element).ToList<XNode>())
-            { 
-                XElement elem = node as XElement;
-                if (elem == null)
+            {
+                if (!(node is XElement elem))
                     continue;
 
                 //Fetch the name if we know it
@@ -668,7 +666,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Only allow one initialization at a time
         /// </summary>
-        private SemaphoreSlim InitializeLock = new SemaphoreSlim(1);
+        private readonly SemaphoreSlim InitializeLock = new SemaphoreSlim(1);
         public async Task Initialize(CancellationToken token, Viking.Common.IProgressReporter workerThread=null)
         {
             
@@ -710,8 +708,7 @@ namespace Viking.VolumeModel
                     if (node.NodeType == System.Xml.XmlNodeType.Whitespace)
                         continue;
 
-                    XElement elem = node as XElement;
-                    if (elem == null)
+                    if (!(node is XElement elem))
                         continue;
 
                     //Fetch the name if we know it
@@ -981,11 +978,7 @@ namespace Viking.VolumeModel
                 //taskArray = taskArray.RemoveAt(0);
 
                 countFinished++;
-                int Progress;
-                if (NumSections > 0)
-                    Progress = (countFinished * 100) / NumSections;
-                else
-                    Progress = 100;
+                int Progress = NumSections > 0 ? (countFinished * 100) / NumSections : 100;
 
                 OnSectionLoadComplete(Section);
                 workerThread?.ReportProgress(Progress, $"Loaded {Section}");
@@ -1174,8 +1167,7 @@ namespace Viking.VolumeModel
                         {
                             iSectionProgress++;
                             ITransform trans = TList[childSection];
-                            StosTransformInfo info = ((ITransformInfo)trans)?.Info as StosTransformInfo;
-                            if (info is null)
+                            if (!(((ITransformInfo)trans)?.Info is StosTransformInfo info))
                                 continue;
 
                             if (false == Sections.ContainsKey(info.MappedSection))
@@ -1233,9 +1225,8 @@ namespace Viking.VolumeModel
                                         Trace.WriteLine(string.Format("Exception adding transforms {0} to {1}", trans.ToString(), ControlTrans.ToString()));
                                         trans = TList[childSection];
                                     }
-                                    
-                                    IITKSerialization itkTransform = TList[childSection] as IITKSerialization;
-                                    if (itkTransform != null)
+
+                                    if (TList[childSection] is IITKSerialization itkTransform)
                                     {
                                         SaveSerializedTransformToCache(CacheSerializedPath, itkTransform);
                                         SaveStosToCache(CacheStosPath, itkTransform, ControlInfo, info);

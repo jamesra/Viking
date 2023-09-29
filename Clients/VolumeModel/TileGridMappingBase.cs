@@ -169,7 +169,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         protected virtual string TileTextureFileName(int iX, int iY)
         {
-            return $"{this.TilePrefix}X{iX.ToString("D3")}_Y{iY.ToString("D3")}{this.TilePostfix}";
+            return $"{this.TilePrefix}X{iX:D3}_Y{iY:D3}{this.TilePostfix}";
         }
 
         #endregion

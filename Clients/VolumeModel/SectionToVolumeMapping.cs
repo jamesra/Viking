@@ -46,10 +46,7 @@ namespace Viking.VolumeModel
                 await Initialize(token);
             }
 
-            var _transforms = Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null);
-            if (_transforms is null)
-                _transforms = Array.Empty<ITransform>();
-
+            var _transforms = Interlocked.CompareExchange(ref _TileTransforms, _TileTransforms, null) ?? Array.Empty<ITransform>();
             return _transforms;
             /*
             try
@@ -182,7 +179,6 @@ namespace Viking.VolumeModel
 
             var VolumeTransformInfo = ((ITransformInfo)VolumeTransform).Info;
 
-            bool LoadedFromCache = false;
             var cacheFileInfo = new System.IO.FileInfo(CachedTransformsFileName);
             if (cacheFileInfo.Exists)
             {
@@ -197,8 +193,7 @@ namespace Viking.VolumeModel
                     catch (Exception)
                     {
                         //On any error, use the traditional path
-                        this._TileTransforms = null;
-                        LoadedFromCache = false;
+                        this._TileTransforms = null; 
                         Trace.WriteLine("Deleting invalid cache file: " + this.CachedTransformsFileName);
                         try
                         {
@@ -276,7 +271,7 @@ namespace Viking.VolumeModel
 
             var result = listTiles.ToArray();
             //Try to save the transform to our cache
-            Task.Run(() => SaveToCache(CachedTransformsFileName, listTiles.ToArray()));
+            SaveToCache(CachedTransformsFileName, listTiles.ToArray());
 
             //OK, overwrite the tiles in our class
             return result;  

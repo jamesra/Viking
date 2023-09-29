@@ -252,15 +252,14 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         protected List<MappingGridVector2> VisibleBoundsCorners(GridRectangle VisibleBounds)
         {
-            GridVector2[] VolumeRectCorners = new GridVector2[] {   VisibleBounds.LowerLeft,
+            GridVector2[] volumeRectCorners = new GridVector2[] {   VisibleBounds.LowerLeft,
                                                                     VisibleBounds.LowerRight,
                                                                     VisibleBounds.UpperLeft,
                                                                     VisibleBounds.UpperRight };
-            GridVector2[] MosaicRectCorners;
-            bool[] mapped = TryVolumeToSection(VolumeRectCorners, out MosaicRectCorners);
+            var mapped = TryVolumeToSection(volumeRectCorners, out var mosaicRectCorners);
 
-            List<MappingGridVector2> MappedMosaicCorners = MosaicRectCorners.Select((p, i) => new MappingGridVector2(VolumeRectCorners[i], MosaicRectCorners[i])).Where((p, i) => mapped[i]).ToList();
-            return MappedMosaicCorners;
+            List<MappingGridVector2> mappedMosaicCorners = mosaicRectCorners.Select((p, i) => new MappingGridVector2(volumeRectCorners[i], mosaicRectCorners[i])).Where((p, i) => mapped[i]).ToList();
+            return mappedMosaicCorners;
         }
 
         /// <summary>
@@ -292,12 +291,9 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public GridVector2 SectionToVolume(GridVector2 P)
         {
-            GridVector2 transformedP;
-            bool Success = TrySectionToVolume(P, out transformedP);
-            if (!Success)
-                throw new ArgumentException("Could not map section point to volume");
-
-            return transformedP;
+            return TrySectionToVolume(P, out GridVector2 transformedP)
+                ? transformedP
+                : throw new ArgumentException("Could not map section point to volume");
         }
 
         /// <summary>
@@ -307,12 +303,9 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public GridVector2 VolumeToSection(GridVector2 P)
         {
-            GridVector2 transformedP;
-            bool Success = TryVolumeToSection(P, out transformedP);
-            if (!Success)
-                throw new ArgumentException("Could not map volume point to section");
-
-            return transformedP;
+            return TryVolumeToSection(P, out GridVector2 transformedP)
+                ? transformedP
+                : throw new ArgumentException("Could not map volume point to section");
         }
 
 

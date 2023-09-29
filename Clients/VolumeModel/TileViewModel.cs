@@ -34,8 +34,7 @@ namespace Viking.VolumeModel
 
         public override bool Equals(object obj)
         {
-            TileViewModel t = obj as TileViewModel;
-            if (t == null)
+            if (!(obj is TileViewModel t))
                 return false;
 
             //This is faster than a full string test

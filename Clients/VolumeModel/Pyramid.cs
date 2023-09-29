@@ -16,7 +16,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Maps downsample levels to the path
         /// </summary>
-        private SortedList<int, string> LevelsToPaths = new SortedList<int, string>();
+        private readonly SortedList<int, string> LevelsToPaths = new SortedList<int, string>();
 
         public UnitsAndScale.IAxisUnits XYScale { get; protected set; }
 

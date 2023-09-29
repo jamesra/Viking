@@ -158,12 +158,11 @@ namespace Viking.VolumeModel
                             MipMapLevels = 0; //Generate mipmaps for lowest res texture
 
                         //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
-                        int[] edges;
                         //                        Trace.WriteLine(TextureFileName, "VolumeModel");
                         PositionNormalTextureVertex[] verticies = CalculateVerticies(iX,
                                                                                      iY,
                                                                                      roundedDownsample,
-                                                                                     out edges);
+                                                                                     out var edges);
 
 
                         string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
@@ -255,11 +254,10 @@ namespace Viking.VolumeModel
             List<MappingGridVector2> TileCornerMappedPoints = new List<MappingGridVector2>(4);
 
             bool transformSuccess = false;
-            GridVector2 mappedVert;
             for (int i = 0; i < SectionTileCorners.Length; i++)
             {
                 GridVector2 Vert = SectionTileCorners[i];
-                transformSuccess = VolumeTransform.TryTransform(Vert, out mappedVert);
+                transformSuccess = VolumeTransform.TryTransform(Vert, out var mappedVert);
                 if (transformSuccess)
                 {
                     TileCornerMappedPoints.Add(new MappingGridVector2(mappedVert, Vert));

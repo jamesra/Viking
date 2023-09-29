@@ -11,8 +11,7 @@ namespace Viking.VolumeModel
         public static GridRectangle? ApproximateVisibleMosaicBounds(this GridRectangle VisibleWorldBounds, IVolumeToSectionTransform mapper)
         {
             GridVector2[] VolumeRectCorners = new GridVector2[] { VisibleWorldBounds.LowerLeft, VisibleWorldBounds.LowerRight, VisibleWorldBounds.UpperLeft, VisibleWorldBounds.UpperRight };
-            GridVector2[] MosaicRectCorners;
-            bool[] mapped = mapper.TryVolumeToSection(VolumeRectCorners, out MosaicRectCorners);
+            bool[] mapped = mapper.TryVolumeToSection(VolumeRectCorners, out GridVector2[] MosaicRectCorners);
 
             GridVector2[] MappedMosaicCorners = MosaicRectCorners.Where((p, i) => mapped[i]).ToArray();
 
@@ -151,9 +150,7 @@ namespace Viking.VolumeModel
 
         public static GridPolygon TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolygon shape)
         {
-            GridVector2[] VolumePositions;
-
-            bool[] mappedPosition = mapper.TrySectionToVolume(shape.ExteriorRing, out VolumePositions);
+            bool[] mappedPosition = mapper.TrySectionToVolume(shape.ExteriorRing, out var VolumePositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
                 Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
@@ -176,9 +173,7 @@ namespace Viking.VolumeModel
 
         public static GridPolygon TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolygon shape)
         {
-            GridVector2[] SectionPositions;
-
-            bool[] mappedPosition = mapper.TryVolumeToSection(shape.ExteriorRing, out SectionPositions);
+            bool[] mappedPosition = mapper.TryVolumeToSection(shape.ExteriorRing, out var SectionPositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
                 Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
@@ -201,9 +196,7 @@ namespace Viking.VolumeModel
 
         public static GridPolyline TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolyline shape)
         {
-            GridVector2[] VolumePositions;
-
-            bool[] mappedPosition = mapper.TrySectionToVolume(shape.Points, out VolumePositions);
+            bool[] mappedPosition = mapper.TrySectionToVolume(shape.Points, out var VolumePositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
                 Trace.WriteLine("TryMapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
@@ -217,9 +210,7 @@ namespace Viking.VolumeModel
 
         public static GridPolyline TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, GridPolyline shape)
         {
-            GridVector2[] SectionPositions;
-
-            bool[] mappedPosition = mapper.TryVolumeToSection(shape.Points, out SectionPositions);
+            bool[] mappedPosition = mapper.TryVolumeToSection(shape.Points, out var SectionPositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
                 Trace.WriteLine("TryMapShapeVolumeToSection: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
