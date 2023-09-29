@@ -105,7 +105,7 @@ namespace Viking.Identity.Controllers
             return View();
         }*/
 
-        private bool IsChecked(Microsoft.Extensions.Primitives.StringValues val)
+        private static bool IsChecked(Microsoft.Extensions.Primitives.StringValues val)
         {
             return val[0] != "false";
         }

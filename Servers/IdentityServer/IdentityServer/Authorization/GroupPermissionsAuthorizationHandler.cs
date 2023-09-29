@@ -9,8 +9,8 @@ namespace Viking.Identity.Authorization
 {
     public static class Operations
     {
-        public static ResourcePermissionRequirement GroupAccessManager = new ResourcePermissionRequirement(Special.Permissions.Group.AccessManager);
-        public static ResourcePermissionRequirement OrgUnitAdmin = new ResourcePermissionRequirement(Special.Permissions.OrgUnit.Admin);
+        public static readonly ResourcePermissionRequirement GroupAccessManager = new ResourcePermissionRequirement(Special.Permissions.Group.AccessManager);
+        public static readonly ResourcePermissionRequirement OrgUnitAdmin = new ResourcePermissionRequirement(Special.Permissions.OrgUnit.Admin);
     }
 
     public static class AuthorizationServiceExtensions

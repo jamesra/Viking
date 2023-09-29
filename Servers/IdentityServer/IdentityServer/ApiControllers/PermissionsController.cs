@@ -42,14 +42,8 @@ namespace Viking.Identity.Controllers
          
         private async Task<ApplicationUser> GetApplicationUser()
         { 
-            var username = User.Identity.GetUsername();
-            if (username == null)
-                throw new UnexpectedResultException(Unauthorized());
-            
-            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
-            if (appUser == null)
-                throw new UnexpectedResultException(Unauthorized());
-            
+            var username = User.Identity.GetUsername() ?? throw new UnexpectedResultException(Unauthorized());
+            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username) ?? throw new UnexpectedResultException(Unauthorized());
             return appUser;
         }
 

@@ -131,11 +131,8 @@ namespace Viking.Identity
             services.AddAntiforgery();
              
             IConfigurationSection identityServerConfig = Configuration.GetSection("IdentityServer");
-            var OAuth2ConfigurationSection = Configuration.GetSection(nameof(OAuth2IntrospectionOptions));
-            if (OAuth2ConfigurationSection is null)
-                throw new ArgumentException(
+            var OAuth2ConfigurationSection = Configuration.GetSection(nameof(OAuth2IntrospectionOptions)) ?? throw new ArgumentException(
                     $"{nameof(OAuth2IntrospectionOptions)} section missing from appsettings.json configuration");
-
             OAuth2IntrospectionOptions OAuth2Options = OAuth2ConfigurationSection.Get<OAuth2IntrospectionOptions>();
 
             services.AddAuthentication(options =>
@@ -360,9 +357,7 @@ namespace Viking.Identity
                 var cert = X509.LocalMachine.My.SerialNumber.Find(serialNumber, false)
                     .Where(o => DateTime.UtcNow >= o.NotBefore)
                     .OrderByDescending(o => o.NotAfter)
-                    .FirstOrDefault();
-                if (cert == null) throw new Exception("No valid certificates could be found.");
-
+                    .FirstOrDefault() ?? throw new Exception("No valid certificates could be found.");
                 var signingCredentials = new SigningCredentials(new X509SecurityKey(cert), "RS256");
 
                 builder.AddSigningCredential(signingCredentials);
@@ -409,13 +404,11 @@ namespace Viking.Identity
             });*/
         }
 
-        private void InitializeDatabase(IApplicationBuilder app)
+        private static void InitializeDatabase(IApplicationBuilder app)
         {
-            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
-            {
-                serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
-            }
-             
+            using var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope();
+            serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
+
             /* This should be added when I transition from keeping configuration in memory to keeping it in the database*/
                 /*
                var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
@@ -447,7 +440,6 @@ namespace Viking.Identity
                    context.SaveChanges();
                }
                */
-            
         }
     }
 }

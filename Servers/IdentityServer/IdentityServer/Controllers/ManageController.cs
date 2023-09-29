@@ -54,12 +54,7 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var model = new IndexViewModel
             {
                 Username = user.UserName,
@@ -81,12 +76,7 @@ namespace Viking.Identity.Controllers
                 return View(model);
             }
 
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var email = user.Email;
             if (model.Email != email)
             {
@@ -114,12 +104,7 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> RequestClaims()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             UserClaimRequestViewModel claimsRequest = await user.CreateUserClaimsRequest(_context);
 
             return View(claimsRequest);
@@ -209,12 +194,7 @@ namespace Viking.Identity.Controllers
                 return View(model);
             }
 
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme);
             var email = user.Email;
@@ -227,12 +207,7 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> ChangePassword()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var hasPassword = await _userManager.HasPasswordAsync(user);
             if (!hasPassword)
             {
@@ -252,12 +227,7 @@ namespace Viking.Identity.Controllers
                 return View(model);
             }
 
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var changePasswordResult = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
             if (!changePasswordResult.Succeeded)
             {
@@ -275,12 +245,7 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> SetPassword()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var hasPassword = await _userManager.HasPasswordAsync(user);
 
             if (hasPassword)
@@ -301,12 +266,7 @@ namespace Viking.Identity.Controllers
                 return View(model);
             }
 
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var addPasswordResult = await _userManager.AddPasswordAsync(user, model.NewPassword);
             if (!addPasswordResult.Succeeded)
             {
@@ -323,12 +283,7 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> ExternalLogins()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var model = new ExternalLoginsViewModel { CurrentLogins = await _userManager.GetLoginsAsync(user) };
             model.OtherLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync())
                 .Where(auth => model.CurrentLogins.All(ul => auth.Name != ul.LoginProvider))
@@ -355,18 +310,8 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> LinkLoginCallback()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
-            var info = await _signInManager.GetExternalLoginInfoAsync(user.Id);
-            if (info == null)
-            {
-                throw new ApplicationException($"Unexpected error occurred loading external login info for user with ID '{user.Id}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
+            var info = await _signInManager.GetExternalLoginInfoAsync(user.Id) ?? throw new ApplicationException($"Unexpected error occurred loading external login info for user with ID '{user.Id}'.");
             var result = await _userManager.AddLoginAsync(user, info);
             if (!result.Succeeded)
             {
@@ -384,12 +329,7 @@ namespace Viking.Identity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RemoveLogin(RemoveLoginViewModel model)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var result = await _userManager.RemoveLoginAsync(user, model.LoginProvider, model.ProviderKey);
             if (!result.Succeeded)
             {
@@ -404,12 +344,7 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> TwoFactorAuthentication()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var model = new TwoFactorAuthenticationViewModel
             {
                 HasAuthenticator = await _userManager.GetAuthenticatorKeyAsync(user) != null,
@@ -423,12 +358,7 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> Disable2faWarning()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             if (!user.TwoFactorEnabled)
             {
                 throw new ApplicationException($"Unexpected error occured disabling 2FA for user with ID '{user.Id}'.");
@@ -441,12 +371,7 @@ namespace Viking.Identity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Disable2fa()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var disable2faResult = await _userManager.SetTwoFactorEnabledAsync(user, false);
             if (!disable2faResult.Succeeded)
             {
@@ -460,12 +385,7 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> EnableAuthenticator()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             var model = new EnableAuthenticatorViewModel();
             await LoadSharedKeyAndQrCodeUriAsync(user, model);
 
@@ -476,12 +396,7 @@ namespace Viking.Identity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EnableAuthenticator(EnableAuthenticatorViewModel model)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             if (!ModelState.IsValid)
             {
                 await LoadSharedKeyAndQrCodeUriAsync(user, model);
@@ -532,12 +447,7 @@ namespace Viking.Identity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetAuthenticator()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             await _userManager.SetTwoFactorEnabledAsync(user, false);
             await _userManager.ResetAuthenticatorKeyAsync(user);
             _logger.LogInformation("User with id '{UserId}' has reset their authentication app key.", user.Id);
@@ -548,12 +458,7 @@ namespace Viking.Identity.Controllers
         [HttpGet]
         public async Task<IActionResult> GenerateRecoveryCodesWarning()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             if (!user.TwoFactorEnabled)
             {
                 throw new ApplicationException($"Cannot generate recovery codes for user with ID '{user.Id}' because they do not have 2FA enabled.");
@@ -566,12 +471,7 @@ namespace Viking.Identity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GenerateRecoveryCodes()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
-            }
-
+            var user = await _userManager.GetUserAsync(User) ?? throw new ApplicationException($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             if (!user.TwoFactorEnabled)
             {
                 throw new ApplicationException($"Cannot generate recovery codes for user with ID '{user.Id}' as they do not have 2FA enabled.");
@@ -595,18 +495,18 @@ namespace Viking.Identity.Controllers
             }
         }
 
-        private string FormatKey(string unformattedKey)
+        private static string FormatKey(string unformattedKey)
         {
             var result = new StringBuilder();
             int currentPosition = 0;
             while (currentPosition + 4 < unformattedKey.Length)
             {
-                result.Append(unformattedKey.Substring(currentPosition, 4)).Append(" ");
+                result.Append(unformattedKey.Substring(currentPosition, 4)).Append(' ');
                 currentPosition += 4;
             }
             if (currentPosition < unformattedKey.Length)
             {
-                result.Append(unformattedKey.Substring(currentPosition));
+                result.Append(unformattedKey[currentPosition..]);
             }
 
             return result.ToString().ToLowerInvariant();

@@ -155,7 +155,7 @@ namespace Viking.Identity
             public string ScopeName;
         }
 
-        private IEnumerable<ResourceScope> ParseScopeNames(IEnumerable<string> scopeNames)
+        private static IEnumerable<ResourceScope> ParseScopeNames(IEnumerable<string> scopeNames)
         {
             return scopeNames.Select(scope =>
             {
@@ -195,7 +195,7 @@ namespace Viking.Identity
             var ApiScopes = results.SelectMany(r => r.ApiScopes).ToList();
             ApiScopes.AddRange(StandardScopes);
               
-            return new Resources(new IdentityResource[] { },
+            return new Resources(Array.Empty<IdentityResource>(),
                 results.Select(r => r.ApiResource),
                 ApiScopes.ToList()
                 );

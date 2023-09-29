@@ -37,8 +37,7 @@ namespace Viking.Identity.Extensions
 
         public async Task<bool> IsOrgUnitAdminAsync(OrganizationalUnit orgUnit, ClaimsPrincipal user = null)
         {
-            if (user == null)
-                user = _principal;
+            user ??= _principal;
               
             var authResult = await _authorization.AuthorizeAsync(user, orgUnit, Operations.OrgUnitAdmin);
             return authResult.Succeeded;
@@ -56,8 +55,7 @@ namespace Viking.Identity.Extensions
 
         public async Task<bool> IsGroupAccessManagerAsync(long Id, ClaimsPrincipal user = null)
         {
-            if (user == null)
-                user = _principal;
+            user ??= _principal;
 
             Group group = _context.Group.FirstOrDefault(o => o.Id == Id);
             return await IsGroupAccessManagerAsync(group, user);
@@ -65,8 +63,7 @@ namespace Viking.Identity.Extensions
 
         public async Task<bool> IsGroupAccessManagerAsync(Group group, ClaimsPrincipal user = null)
         {
-            if (user == null)
-                user = _principal;
+            user ??= _principal;
 
             var authResult = await _authorization.AuthorizeAsync(user, group, Operations.GroupAccessManager);
             return authResult.Succeeded;
