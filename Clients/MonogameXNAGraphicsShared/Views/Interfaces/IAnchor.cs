@@ -100,10 +100,12 @@ namespace VikingXNAGraphics
 
         public override bool Equals(object obj)
         {
-            var @base = obj as AlignmentBase;
-            return @base != null &&
-                   _Horizontal == @base._Horizontal &&
-                   _Vertical == @base._Vertical;
+            if(obj is AlignmentBase alignbase) { 
+                return _Horizontal == alignbase._Horizontal &&
+                   _Vertical == alignbase._Vertical;
+            }
+
+            return base.Equals(obj);
         }
 
         public override int GetHashCode()

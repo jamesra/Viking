@@ -217,14 +217,15 @@ namespace VikingXNAGraphics
         }
 
         public static PointSetView CreateFor(IReadOnlyMesh2D<IVertex2D> mesh)
-        {    
-            PointSetView psv = new PointSetView(Color.Gray);
-
-            psv.LabelColor = Color.White;
-            psv.PointRadius = 2;
-            psv.Points = mesh.Verticies.Select(p => p.Position).ToArray();
-            psv.LabelIndex = true;
-            psv.LabelPosition = false;
+        {
+            PointSetView psv = new PointSetView(Color.Gray)
+            {
+                LabelColor = Color.White,
+                PointRadius = 2,
+                Points = mesh.Verticies.Select(p => p.Position).ToArray(),
+                LabelIndex = true,
+                LabelPosition = false
+            };
             psv.UpdateViews();
               
             return psv;
@@ -232,13 +233,14 @@ namespace VikingXNAGraphics
 
         public static PointSetView CreateFor(IReadOnlyMesh3D<IVertex3D> mesh)
         {
-            PointSetView psv = new PointSetView(Color.Gray);
-
-            psv.LabelColor = Color.White;
-            psv.PointRadius = 2;
-            psv.Points = mesh.Verticies.Select(p => p.Position.XY()).ToArray();
-            psv.LabelIndex = true;
-            psv.LabelPosition = false;
+            PointSetView psv = new PointSetView(Color.Gray)
+            {
+                LabelColor = Color.White,
+                PointRadius = 2,
+                Points = mesh.Verticies.Select(p => p.Position.XY()).ToArray(),
+                LabelIndex = true,
+                LabelPosition = false
+            };
             psv.UpdateViews();
 
             return psv;

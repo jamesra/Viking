@@ -64,16 +64,18 @@ namespace VikingXNA
                 ChannelUseCount[3] += c.W > 0 ? 1 : 0; 
             }
 
-            Vector4 ChannelWeights = new Vector4();
-            /*
-            ChannelWeights.X = ChannelUseCount[0] >  0 ? ChannelColorSum[0] / (float)ChannelUseCount[0] : 0;
-            ChannelWeights.Y = ChannelUseCount[1] > 0 ? ChannelColorSum[1] / (float)ChannelUseCount[1] : 0;
-            ChannelWeights.Z = ChannelUseCount[2] > 0 ? ChannelColorSum[2] / (float)ChannelUseCount[2] : 0; 
-             */
-            ChannelWeights.X = ChannelUseCount[0];
-            ChannelWeights.Y = ChannelUseCount[1];
-            ChannelWeights.Z = ChannelUseCount[2];
-            ChannelWeights.W = ChannelUseCount[3];
+            Vector4 ChannelWeights = new Vector4
+            {
+                /*
+   ChannelWeights.X = ChannelUseCount[0] >  0 ? ChannelColorSum[0] / (float)ChannelUseCount[0] : 0;
+   ChannelWeights.Y = ChannelUseCount[1] > 0 ? ChannelColorSum[1] / (float)ChannelUseCount[1] : 0;
+   ChannelWeights.Z = ChannelUseCount[2] > 0 ? ChannelColorSum[2] / (float)ChannelUseCount[2] : 0; 
+    */
+                X = ChannelUseCount[0],
+                Y = ChannelUseCount[1],
+                Z = ChannelUseCount[2],
+                W = ChannelUseCount[3]
+            };
 
             _ChannelColorSum.SetValue(ChannelUseCount); 
 

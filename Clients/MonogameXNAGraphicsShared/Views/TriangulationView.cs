@@ -171,19 +171,21 @@ namespace VikingXNAGraphics
 
         static MeshModel<VertexPositionNormalColor> CreateMeshModel(IReadOnlyMesh2D<IVertex2D> mesh)
         {
-            MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>();
-
-            model.Verticies = mesh.Verticies.Select(v => new VertexPositionNormalColor((v.Position).ToXNAVector3(0) , Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f))).ToArray();
-            model.Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
+            MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>
+            {
+                Verticies = mesh.Verticies.Select(v => new VertexPositionNormalColor((v.Position).ToXNAVector3(0), Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f))).ToArray(),
+                Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray()
+            };
             return model;
         }
 
         static MeshModel<VertexPositionNormalColor> CreateMeshModel(IReadOnlyMesh3D<IVertex3D> mesh)
         {
-            MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>();
-
-            model.Verticies = mesh.Verticies.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(), Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f))).ToArray();
-            model.Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray();
+            MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>
+            {
+                Verticies = mesh.Verticies.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(), Vector3.UnitZ, ColorExtensions.Random().SetAlpha(0.5f))).ToArray(),
+                Edges = mesh.Faces.SelectMany(f => f.iVerts).ToArray()
+            };
             return model;
         }
 

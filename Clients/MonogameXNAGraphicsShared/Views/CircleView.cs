@@ -208,10 +208,12 @@ namespace VikingXNAGraphics
             switch (Overlay)
             {
                 case OverlayStyle.Alpha:
-                    BasicEffect effect = new BasicEffect(device);
-                    effect.World = scene.World;
-                    effect.View = scene.View;
-                    effect.Projection = scene.Projection;
+                    BasicEffect effect = new BasicEffect(device)
+                    {
+                        World = scene.World,
+                        View = scene.View,
+                        Projection = scene.Projection
+                    };
                     TextureCircleView.Draw(device, scene, effect, new CircleView[] { this });
                     break;
                 case OverlayStyle.Luma:

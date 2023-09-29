@@ -26,12 +26,16 @@ namespace VikingXNAGraphics
 
         public static PositionColorMeshModel CreateMeshForPolygon2D(this IPolygon polygon, Color color)
         {
-            ConstraintOptions constraints = new ConstraintOptions();
-            constraints.ConformingDelaunay = false;
-            constraints.Convex = false; 
+            ConstraintOptions constraints = new ConstraintOptions
+            {
+                ConformingDelaunay = false,
+                Convex = false
+            };
 
-            QualityOptions quality = new QualityOptions();
-            quality.SteinerPoints = (polygon.Points.Count / 2) + 1;
+            QualityOptions quality = new QualityOptions
+            {
+                SteinerPoints = (polygon.Points.Count / 2) + 1
+            };
 
             IMesh mesh = polygon.Triangulate(constraints, quality); 
             return CreateMeshModel(mesh, color);

@@ -85,9 +85,7 @@ namespace VikingXNAGraphics
         private double? _ControlPointRadius;
         public double ControlPointRadius
         {
-            get {
-                return _ControlPointRadius.HasValue ? _ControlPointRadius.Value : _LineWidth;
-                }
+            get => _ControlPointRadius ?? _LineWidth;
             set
             {
                 if (value != _ControlPointRadius)

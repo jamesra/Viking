@@ -51,14 +51,15 @@ namespace VikingXNAGraphics
             
             if (ShapeRendererBlendState == null || ShapeRendererBlendState.IsDisposed)
             {
-                ShapeRendererBlendState = new BlendState();
-
-                ShapeRendererBlendState.AlphaSourceBlend = Blend.SourceAlpha;
-                ShapeRendererBlendState.AlphaDestinationBlend = Blend.InverseSourceAlpha;
-                ShapeRendererBlendState.ColorSourceBlend = Blend.SourceAlpha;
-                ShapeRendererBlendState.ColorDestinationBlend = Blend.InverseSourceAlpha;
-                ShapeRendererBlendState.Name = "BlendShapes";
-                ShapeRendererBlendState.ColorWriteChannels = colorWriteChannels;
+                ShapeRendererBlendState = new BlendState
+                {
+                    AlphaSourceBlend = Blend.SourceAlpha,
+                    AlphaDestinationBlend = Blend.InverseSourceAlpha,
+                    ColorSourceBlend = Blend.SourceAlpha,
+                    ColorDestinationBlend = Blend.InverseSourceAlpha,
+                    Name = "BlendShapes",
+                    ColorWriteChannels = colorWriteChannels
+                };
             }
 
             graphicsDevice.BlendState = ShapeRendererBlendState;
@@ -75,9 +76,11 @@ namespace VikingXNAGraphics
 
             if (ShapeRendererRasterizerState == null || ShapeRendererRasterizerState.IsDisposed)
             {
-                ShapeRendererRasterizerState = new RasterizerState();
-                ShapeRendererRasterizerState.FillMode = FillMode.Solid;
-                ShapeRendererRasterizerState.CullMode = CullMode.None;
+                ShapeRendererRasterizerState = new RasterizerState
+                {
+                    FillMode = FillMode.Solid,
+                    CullMode = CullMode.None
+                };
             }
 
             graphicsDevice.RasterizerState = ShapeRendererRasterizerState;
@@ -87,15 +90,16 @@ namespace VikingXNAGraphics
         {
             if (BackgroundRendererBlendState == null || BackgroundRendererBlendState.IsDisposed)
             {
-                BackgroundRendererBlendState = new BlendState();
+                BackgroundRendererBlendState = new BlendState
+                {
+                    AlphaSourceBlend = Blend.One,
+                    AlphaDestinationBlend = Blend.Zero,
+                    AlphaBlendFunction = BlendFunction.Add,
 
-                BackgroundRendererBlendState.AlphaSourceBlend = Blend.One;
-                BackgroundRendererBlendState.AlphaDestinationBlend = Blend.Zero;
-                BackgroundRendererBlendState.AlphaBlendFunction = BlendFunction.Add;
-
-                BackgroundRendererBlendState.ColorSourceBlend = Blend.One;
-                BackgroundRendererBlendState.ColorDestinationBlend = Blend.Zero;
-                BackgroundRendererBlendState.ColorBlendFunction = BlendFunction.Add;
+                    ColorSourceBlend = Blend.One,
+                    ColorDestinationBlend = Blend.Zero,
+                    ColorBlendFunction = BlendFunction.Add
+                };
             }
 
             graphicsDevice.BlendState = BackgroundRendererBlendState;
@@ -105,9 +109,11 @@ namespace VikingXNAGraphics
         {
             if (BackgroundRendererRasterizerState == null || BackgroundRendererRasterizerState.IsDisposed)
             {
-                BackgroundRendererRasterizerState = new RasterizerState();
-                BackgroundRendererRasterizerState.FillMode = FillMode.Solid;
-                BackgroundRendererRasterizerState.CullMode = CullMode.None;
+                BackgroundRendererRasterizerState = new RasterizerState
+                {
+                    FillMode = FillMode.Solid,
+                    CullMode = CullMode.None
+                };
             }
 
             graphicsDevice.RasterizerState = BackgroundRendererRasterizerState;

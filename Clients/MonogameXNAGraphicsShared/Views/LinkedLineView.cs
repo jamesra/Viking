@@ -15,33 +15,33 @@ namespace VikingXNAGraphics
     /// </summary>
     public class LinkedPolyLineSimpleView : IColorView
     {
-        GridVector2[] Source;
-        GridVector2[] Target;
-        public LineView[] Lines;
+        readonly GridVector2[] Source;
+        readonly GridVector2[] Target;
+        public readonly LineView[] Lines;
 
         public LineStyle Style
         {
-            get { return Lines.First().Style; }
+            get => Lines.First().Style;
             set { foreach (LineView l in Lines) { l.Style = value; } }
         }
 
 
         public float LineWidth
         {
-            get { return Lines.First().LineWidth; }
+            get => Lines.First().LineWidth;
             set { foreach (LineView l in Lines) { l.LineWidth = value; } }
         }
 
         public Microsoft.Xna.Framework.Color Color
         {
-            get { return Lines.First().Color; }
+            get => Lines.First().Color;
             set { foreach (LineView l in Lines) { l.Color = value; } }
         }
 
         public float Alpha
         {
-            get { return Color.GetAlpha(); }
-            set { Color = Color.SetAlpha(value); }
+            get => Color.GetAlpha();
+            set => Color = Color.SetAlpha(value);
         }
 
         public LinkedPolyLineSimpleView(GridVector2[] source, GridVector2[] target, float linewidth, Color color, LineStyle style)
@@ -99,8 +99,8 @@ namespace VikingXNAGraphics
     /// </summary>
     class LinkedPolyLineView
     {
-        GridVector2[] Source;
-        GridVector2[] Target;
+        readonly GridVector2[] Source;
+        readonly GridVector2[] Target;
 
         public LinkedPolyLineView(GridVector2[] source, GridVector2[] target)
         {

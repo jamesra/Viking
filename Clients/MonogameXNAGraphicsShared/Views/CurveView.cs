@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using VikingXNA;
 
@@ -307,8 +308,7 @@ namespace VikingXNAGraphics
             if (sender == null)
                 throw new ArgumentNullException("sender");
 
-            System.Collections.Specialized.NotifyCollectionChangedEventArgs CollectionChangeArgs = e as System.Collections.Specialized.NotifyCollectionChangedEventArgs;
-            if (CollectionChangeArgs != null)
+            if (e is NotifyCollectionChangedEventArgs CollectionChangeArgs)
             {
                 UpdateViews();
                 return true;

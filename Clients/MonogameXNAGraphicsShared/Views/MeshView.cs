@@ -40,17 +40,21 @@ namespace VikingXNAGraphics
             RasterizerState originalRasterizerState = device.RasterizerState;
             if (WireFrame)
             {
-                RasterizerState rstate = new RasterizerState();
-                rstate.CullMode = cullmode;
-                rstate.FillMode = FillMode.WireFrame;
+                RasterizerState rstate = new RasterizerState
+                {
+                    CullMode = cullmode,
+                    FillMode = FillMode.WireFrame
+                };
                 //rstate.DepthClipEnable = true;
                 device.RasterizerState = rstate;
             }
             else
             {
-                RasterizerState rstate = new RasterizerState();
-                rstate.CullMode = cullmode;
-                rstate.FillMode = FillMode.Solid;
+                RasterizerState rstate = new RasterizerState
+                {
+                    CullMode = cullmode,
+                    FillMode = FillMode.Solid
+                };
                 //rstate.DepthClipEnable = true;
                 device.RasterizerState = rstate; 
             }
@@ -147,9 +151,11 @@ namespace VikingXNAGraphics
 
             RasterizerState originalRasterizerState = device.RasterizerState;
 
-            RasterizerState rstate = new RasterizerState();
-            rstate.CullMode = cullmode;
-            rstate.FillMode = fillMode;
+            RasterizerState rstate = new RasterizerState
+            {
+                CullMode = cullmode,
+                FillMode = fillMode
+            };
             // rstate.DepthClipEnable = true;
             device.RasterizerState = rstate;
 
@@ -199,10 +205,12 @@ namespace VikingXNAGraphics
              
             RasterizerState originalRasterizerState = device.RasterizerState;
 
-            RasterizerState rstate = new RasterizerState();
-            rstate.CullMode = cullmode;
-            rstate.FillMode = fillMode; 
-           // rstate.DepthClipEnable = true;
+            RasterizerState rstate = new RasterizerState
+            {
+                CullMode = cullmode,
+                FillMode = fillMode
+            };
+            // rstate.DepthClipEnable = true;
             device.RasterizerState = rstate;
 
             effect.SetScene(scene);

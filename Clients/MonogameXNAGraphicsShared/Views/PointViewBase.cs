@@ -20,8 +20,7 @@ namespace VikingXNAGraphics
             get => _Points;
             set
             {
-                INotifyCollectionChanged collection = _Points as INotifyCollectionChanged;
-                if (collection != null)
+                if (_Points is INotifyCollectionChanged collection)
                 {
                     collection.CollectionChanged -= this.OnCollectionChanged;
                 }

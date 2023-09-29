@@ -621,14 +621,11 @@ namespace VikingXNAGraphics
             if (this.ScaleFontWithScene && IsLabelTooSmallToSee(fontSizeInScreenPixels / scene.Viewport.Height))
                 return;
 
-            if (font == null)
-                throw new ArgumentNullException("font");
-
-            if (spriteBatch == null)
-                throw new ArgumentNullException("spriteBatch");
+            if (spriteBatch is null)
+                throw new ArgumentNullException(nameof(spriteBatch));
             
             //Update our font, will clear the measurements if the font has changed.
-            this.font = font;
+            this.font = font ?? throw new ArgumentNullException("font");
             //Scale is used to adjust for the magnification factor of the viewer.  Otherwise text would remain at constant size regardless of mag factor.
             //offsets must be multiplied by scale before use
             double FontScaleForVolume = ScaleFontSizeToVolume(font, this.FontSize);

@@ -681,11 +681,13 @@ namespace VikingXNAGraphics
         {
             HSLColor hsl = color.GetHSL();
 
-            Microsoft.Xna.Framework.Color HSLColor = new Microsoft.Xna.Framework.Color();
-            HSLColor.R = (byte)(255.0 * (hsl.Hue / 360.0));
-            HSLColor.G = (byte)(255.0 * hsl.Saturation);
-            HSLColor.B = (byte)(255.0 * hsl.Luminance);
-            HSLColor.A = (byte)(hsl.Alpha * 255f);
+            Microsoft.Xna.Framework.Color HSLColor = new Microsoft.Xna.Framework.Color
+            {
+                R = (byte)(255.0 * (hsl.Hue / 360.0)),
+                G = (byte)(255.0 * hsl.Saturation),
+                B = (byte)(255.0 * hsl.Luminance),
+                A = (byte)(hsl.Alpha * 255f)
+            };
 
             return HSLColor;
         }
@@ -709,13 +711,15 @@ namespace VikingXNAGraphics
             HueAngle += rotation_degrees;
             if (HueAngle >= 360.0f)
                 HueAngle -= 360.0f;
-                          
-            Microsoft.Xna.Framework.Color OutputHSL = new Microsoft.Xna.Framework.Color();
-            OutputHSL.R = (byte)(255.0 * (HueAngle / 360.0));
-            OutputHSL.G = colorHSL.G;
-            OutputHSL.B = colorHSL.B;
 
-            if(alpha.HasValue)
+            Microsoft.Xna.Framework.Color OutputHSL = new Microsoft.Xna.Framework.Color
+            {
+                R = (byte)(255.0 * (HueAngle / 360.0)),
+                G = colorHSL.G,
+                B = colorHSL.B
+            };
+
+            if (alpha.HasValue)
                 OutputHSL.A = (byte)(alpha * 255f);
             else
                 OutputHSL.A = colorHSL.A;

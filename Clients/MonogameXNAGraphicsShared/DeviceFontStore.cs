@@ -25,8 +25,10 @@ namespace VikingXNAGraphics
 
         public void Init(GraphicsDevice device, ContentManager content)
         {
-            SpriteBatch = new SpriteBatch(device);
-            SpriteBatch.Name = FontName;
+            SpriteBatch = new SpriteBatch(device)
+            {
+                Name = FontName
+            };
             Font = content.Load<SpriteFont>(FontName);
         }
 
