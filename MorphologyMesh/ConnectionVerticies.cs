@@ -87,8 +87,10 @@ namespace MorphologyMesh
             IIndexSet internalVerts = InternalVerticies.IncrementStartingIndex(value);
             IIndexSet[] internalSets = InternalBorders.Select(ib => ib.IncrementStartingIndex(value)).ToArray();
 
-            ConnectionVerticies port = new ConnectionVerticies(external, internalVerts, internalSets);
-            port.Type = this.Type;
+            ConnectionVerticies port = new ConnectionVerticies(external, internalVerts, internalSets)
+            {
+                Type = this.Type
+            };
             return port;
         }
 

@@ -9,7 +9,7 @@ namespace Neo4JService.Areas.HelpPage
     {
         public TextSample(string text)
         {
-            Text = text ?? throw new ArgumentNullException("text");
+            Text = text ?? throw new ArgumentNullException(nameof(text));
         }
 
         public string Text { get; private set; }

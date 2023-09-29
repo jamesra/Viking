@@ -661,14 +661,12 @@ namespace Geometry
             //This dictionary prevents rare endless loops in conditions where we have colinear points in one or both sets.
             //TODO: This code needs to remove edges when the candidate is invalid and check in angle order.  This solution doesn't always work.
             Dictionary<int, SortedSet<int>> RejectedBaselinePairs = new Dictionary<int, SortedSet<int>>();
-
-            SortedSet<int> L_Rejected_Candidates;
+             
             EdgeAngle[] L_C;
             int[] L_Origin_Candidates;
             //int[] L_Origin_Candidates = mesh[L.Index].Edges.Select(e => e.OppositeEnd(L.Index)).ToArray();
             int[] L_Origin_Candidates_IsLeft;
-
-            SortedSet<int> R_Rejected_Candidates;
+             
             EdgeAngle[] R_C;
 
             int[] R_Origin_Candidates;
@@ -708,7 +706,9 @@ namespace Geometry
                 LR_baseline_candidate = mesh.ToGridLineSegment(L.Index, R.Index);
                 RL_baseline_candidate = mesh.ToGridLineSegment(R.Index, L.Index);
 
-                L_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(R.Index) ? RejectedBaselinePairs[R.Index] : new SortedSet<int>();
+                var L_Rejected_Found = RejectedBaselinePairs.TryGetValue(R.Index, out SortedSet<int> L_Rejected_Candidates);
+                if(!L_Rejected_Found)
+                    L_Rejected_Candidates = new SortedSet<int>();
 
 
                 L_C = EdgesByAngle(mesh, L, R.Index, false);
@@ -872,8 +872,9 @@ namespace Geometry
                 if (NewCandidateFound)
                     continue;
 
-
-                R_Rejected_Candidates = RejectedBaselinePairs.ContainsKey(L.Index) ? RejectedBaselinePairs[L.Index] : new SortedSet<int>();
+                var R_Rejected_found = RejectedBaselinePairs.TryGetValue(L.Index, out SortedSet<int> R_Rejected_Candidates);
+                if(!R_Rejected_found)
+                    R_Rejected_Candidates = new SortedSet<int>();
 
                 //Reverse the IsLeft result for the Upper->Lower line
                 R_C = EdgesByAngle(mesh, R, L.Index, true);
