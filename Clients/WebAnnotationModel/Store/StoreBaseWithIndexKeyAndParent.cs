@@ -271,48 +271,46 @@ namespace WebAnnotationModel
 
             for (int iObj = 0; iObj < updateObjs.Length; iObj++)
             {
-                OBJECT existingObj;
-                OBJECT updateObj = updateObjs[iObj];
-                bool Success = IDToObject.TryGetValue(updateObj.ID, out existingObj);
+                var updateObj = updateObjs[iObj];
+                bool Success = IDToObject.TryGetValue(updateObj.ID, out var existingObj);
 
-                if (Success)
+                if (!Success) continue;
+
+                OBJECT oldObj = existingObj.Clone() as OBJECT;
+                Debug.Assert(oldObj != null);
+
+                listOldObjs.Add(oldObj);
+
+                //Remove ourselves from the root list if we have a ParentID
+                if (false == existingObj.ParentID.Equals(updateObj.ParentID))
                 {
-                    OBJECT oldObj = existingObj.Clone() as OBJECT;
-                    Debug.Assert(oldObj != null);
-
-                    listOldObjs.Add(oldObj);
-
-                    //Remove ourselves from the root list if we have a ParentID
-                    if (false == existingObj.ParentID.Equals(updateObj.ParentID))
+                    if (existingObj.ParentID.HasValue)
                     {
-                        if (existingObj.ParentID.HasValue)
-                        {
-                            TryRemoveRootObject(existingObj.ID);
-                        }
-                        else
-                        {
-                            //Remove ourselves from our parent object
-                            existingObj.Parent = null;
-                        }
+                        TryRemoveRootObject(existingObj.ID);
                     }
-
-                    existingObj.Update(updateObj.GetData());
-
-                    listUpdatedObjs.Add(existingObj);
-
-                    //Add ourselves from the root list if we do not have a ParentID
-                    if (!existingObj.ParentID.HasValue)
+                    else
                     {
-                        TryAddRootObject(existingObj.ID);
+                        //Remove ourselves from our parent object
+                        existingObj.Parent = null;
                     }
-                    else if (LoadParent)
-                    {
-                        //Make sure the structure object points to the correct parent
-                        existingObj.Parent = GetObjectByID(existingObj.ParentID.Value);
+                }
 
-                        //If it returns null we couldn't find the parent on the server, what the hell?
-                        Debug.Assert(existingObj.Parent != null, "Couldn't locate parent of the structureType, Hit continue to reload all structure types in a panic");
-                    }
+                existingObj.Update(updateObj.GetData());
+
+                listUpdatedObjs.Add(existingObj);
+
+                //Add ourselves from the root list if we do not have a ParentID
+                if (!existingObj.ParentID.HasValue)
+                {
+                    TryAddRootObject(existingObj.ID);
+                }
+                else if (LoadParent)
+                {
+                    //Make sure the structure object points to the correct parent
+                    existingObj.Parent = GetObjectByID(existingObj.ParentID.Value);
+
+                    //If it returns null we couldn't find the parent on the server, what the hell?
+                    Debug.Assert(existingObj.Parent != null, "Couldn't locate parent of the structureType, Hit continue to reload all structure types in a panic");
                 }
             }
 
@@ -345,10 +343,8 @@ namespace WebAnnotationModel
 
 
         protected override OBJECT TryRemoveObject(KEY key)
-        {
-            OBJECT existingObj;
-            bool success = IDToObject.TryRemove(key, out existingObj);
-            if (success)
+        { 
+            if (IDToObject.TryRemove(key, out var existingObj))
             {
                 existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
                 //existingObj.Dispose(); 
@@ -373,8 +369,7 @@ namespace WebAnnotationModel
             else
             {
                 //Long winded way of removing ourselves from our parents list
-                if (obj.Parent != null)
-                    obj.Parent.RemoveChild(obj);
+                obj.Parent?.RemoveChild(obj);
             }
 
         }

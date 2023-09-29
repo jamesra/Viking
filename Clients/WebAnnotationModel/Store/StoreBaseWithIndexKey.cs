@@ -22,7 +22,7 @@ namespace WebAnnotationModel
         /// When we create an object we don't know the ID the database will give it.  We use this value on the local machine until the DB
         /// tells us the new ID on insert
         /// </summary>
-        static KEYGEN keyGenerator = new KEYGEN();
+        static readonly KEYGEN keyGenerator = new KEYGEN();
         public KEY GetTempKey()
         {
             return keyGenerator.NextKey();

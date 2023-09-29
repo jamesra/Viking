@@ -5,10 +5,10 @@ namespace Annotation.ViewModels.Commands
 {
     public class DelegateCommand : System.Windows.Input.ICommand
     {  
-        public Action<object> on_execute;
-        public Func<object, bool> can_execute;
-        private ICommand assignParentCommand;
-        private object canAssignParentCommand;
+        public readonly Action<object> on_execute;
+        public readonly Func<object, bool> can_execute;
+        private readonly ICommand assignParentCommand;
+        private readonly object canAssignParentCommand;
 
         public event EventHandler CanExecuteChanged
         {

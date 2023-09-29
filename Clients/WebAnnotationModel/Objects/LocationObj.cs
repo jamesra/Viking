@@ -819,10 +819,12 @@ namespace WebAnnotationModel
         public LocationObj(StructureObj parent,
                            int SectionNumber, LocationType shapeType)
         {
-            this.Data = new Location();
-            this.Data.DBAction = AnnotationService.Types.DBACTION.INSERT;
-            this.Data.ID = Store.Locations.GetTempKey();
-            this.Data.TypeCode = (short)shapeType;
+            this.Data = new Location
+            {
+                DBAction = AnnotationService.Types.DBACTION.INSERT,
+                ID = Store.Locations.GetTempKey(),
+                TypeCode = (short)shapeType
+            };
 
             if (shapeType == LocationType.CIRCLE)
                 this.Data.Radius = 16;
@@ -910,16 +912,13 @@ namespace WebAnnotationModel
         protected static event EventHandler OnCreate;
         protected void CallOnCreate()
         {
-            if (OnCreate != null)
-            {
-                //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
-                OnCreate(this, null);
-            }
+            //Viking.UI.State.MainThreadDispatcher.BeginInvoke(OnCreate, new object[] { this, null });
+            OnCreate?.Invoke(this, null);
         }
 
         bool IEquatable<ILocation>.Equals(ILocation other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return other.ID == (ulong)this.ID;

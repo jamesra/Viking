@@ -93,12 +93,9 @@ namespace WebAnnotationModel.Objects
 
         protected void OnPropertyChanging(string property)
         {
-            if (_PropertyChanging != null)
-            {
-                //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
-                //change state on the main thread 
-                _PropertyChanging.Invoke(this, new PropertyChangingEventArgs(property));
-            }
+            //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
+            //change state on the main thread 
+            _PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(property));
         }
 
         private event PropertyChangingEventHandler _PropertyChanging;
@@ -127,12 +124,9 @@ namespace WebAnnotationModel.Objects
 
         protected void OnPropertyChanged(string property)
         {
-            if (_PropertyChanged != null)
-            {
-                //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
-                //change state on the main thread 
-                _PropertyChanged.Invoke(this, new PropertyChangedEventArgs(property));
-            }
+            //We need to ensure these events are invoked on the main thread since UI controls listen to them and they can only 
+            //change state on the main thread 
+            _PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
         }
 
         private event PropertyChangedEventHandler _PropertyChanged;

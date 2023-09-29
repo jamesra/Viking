@@ -94,8 +94,7 @@ namespace WebAnnotationModel
 
 #if DEBUG
                 System.Threading.Interlocked.Decrement(ref RegionRequestData<OBJECT>.NumOutstandingQueries);
-                string removed_message;
-                active_requests.TryRemove(debug_message, out removed_message);
+                active_requests.TryRemove(debug_message, out string removed_message);
 
                 if (this.OnCompletionCallbacks.Count > 1)
                 {

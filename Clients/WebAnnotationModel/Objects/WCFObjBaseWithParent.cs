@@ -59,10 +59,7 @@ namespace WebAnnotationModel.Objects
                 OnPropertyChanging("Parent");
 
                 //Remove ourselves from our old parent's list of children
-                if (_Parent != null)
-                {
-                    _Parent.RemoveChild(this as THISTYPE);
-                }
+                _Parent?.RemoveChild(this as THISTYPE);
 
                 _Parent = value;
 

@@ -64,8 +64,7 @@ namespace WebAnnotationModel
                     }
                     finally
                     {
-                        if (proxy != null)
-                            proxy.Close();
+                        proxy?.Close();
                     }
                 }
 
@@ -122,8 +121,7 @@ namespace WebAnnotationModel
 
         public override ConcurrentDictionary<LocationLinkKey, LocationLinkObj> GetLocalObjectsForSection(long SectionNumber)
         {
-            ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks;
-            bool Success = SectionToLocationLinks.TryGetValue(SectionNumber, out SectionLocationLinks);
+            bool Success = SectionToLocationLinks.TryGetValue(SectionNumber, out var SectionLocationLinks);
             if (Success)
             {
                 return SectionLocationLinks;
@@ -134,8 +132,7 @@ namespace WebAnnotationModel
 
         protected override LocationLink[] ProxyGetBySection(IAnnotateLocations proxy, long SectionNumber, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
-            LocationLink[] deleted_links = null;
-            LocationLink[] links = proxy.GetLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, SectionNumber, LastQuery.Ticks);
+            LocationLink[] links = proxy.GetLocationLinksForSection(out TicksAtQueryExecute, out var deleted_links, SectionNumber, LastQuery.Ticks);
 
             if (deleted_links == null)
             {
@@ -151,8 +148,7 @@ namespace WebAnnotationModel
 
         protected override LocationLink[] ProxyGetBySectionRegion(IAnnotateLocations proxy, long SectionNumber, BoundingRectangle BBox, double MinRadius, DateTime LastQuery, out long TicksAtQueryExecute, out LocationLinkKey[] DeletedLinkKeys)
         {
-            LocationLink[] deleted_links = null;
-            LocationLink[] links = proxy.GetLocationLinksForSectionInMosaicRegion(out TicksAtQueryExecute, out deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
+            LocationLink[] links = proxy.GetLocationLinksForSectionInMosaicRegion(out TicksAtQueryExecute, out var deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
 
             if (deleted_links == null)
             {
@@ -184,8 +180,7 @@ namespace WebAnnotationModel
                                                                     GetObjectBySectionCallbackState<IAnnotateLocations, LocationLinkObj> state,
                                                                     IAsyncResult result)
         {
-            LocationLink[] deleted_links;
-            LocationLink[] links = state.Proxy.EndGetLocationLinksForSection(out TicksAtQueryExecute, out deleted_links, result);
+            LocationLink[] links = state.Proxy.EndGetLocationLinksForSection(out TicksAtQueryExecute, out var deleted_links, result);
 
             DeletedLinkKeys = deleted_links.Select(link => new LocationLinkKey(link.SourceID, link.TargetID)).ToArray();
 
@@ -212,8 +207,7 @@ namespace WebAnnotationModel
                 {
                     foreach (LocationLinkKey key in DeletedLocations)
                     {
-                        LocationLinkObj value;
-                        SectionLocationLinks.TryRemove(key, out value);
+                        SectionLocationLinks.TryRemove(key, out LocationLinkObj value);
                     }
 
                     deleted_objects = InternalDelete(DeletedLocations);
@@ -250,16 +244,10 @@ namespace WebAnnotationModel
             foreach (LocationLinkObj link in newObj)
             {
                 LocationObj AObj = Store.Locations.GetObjectByID(link.A, false);
-                if (AObj != null)
-                {
-                    AObj.AddLink(link.B);
-                }
+                AObj?.AddLink(link.B);
 
                 LocationObj BObj = Store.Locations.GetObjectByID(link.B, false);
-                if (BObj != null)
-                {
-                    BObj.AddLink(link.A);
-                }
+                BObj?.AddLink(link.A);
             }
 
             return base.InternalAdd(newObj);
@@ -296,16 +284,10 @@ namespace WebAnnotationModel
             foreach (LocationLinkObj link in deletedLinks)
             {
                 LocationObj AObj = Store.Locations.GetObjectByID(link.A, false);
-                if (AObj != null)
-                {
-                    AObj.RemoveLink(link.B);
-                }
+                AObj?.RemoveLink(link.B);
 
                 LocationObj BObj = Store.Locations.GetObjectByID(link.B, false);
-                if (BObj != null)
-                {
-                    BObj.RemoveLink(link.A);
-                }
+                BObj?.RemoveLink(link.A);
             }
 
             return deletedLinks;

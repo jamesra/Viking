@@ -52,11 +52,7 @@ namespace WebAnnotationModel.Objects
 
         public override bool Equals(object obj)
         {
-            if (obj == null)
-                return false;
-
-            IPermittedStructureLink other = obj as IPermittedStructureLink;
-            if (other == null)
+            if (!(obj is IPermittedStructureLink other))
                 return false;
 
             return ((IPermittedStructureLink)this).Equals(other);
@@ -118,7 +114,7 @@ namespace WebAnnotationModel.Objects
 
         bool IEquatable<IPermittedStructureLink>.Equals(IPermittedStructureLink other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (!this.Bidirectional == other.Directional && this.Bidirectional)

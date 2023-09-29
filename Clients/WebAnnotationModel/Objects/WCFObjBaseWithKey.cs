@@ -36,7 +36,7 @@ namespace WebAnnotationModel.Objects
                 return true;
             }
 
-            if ((object)A != null)
+            if (A is object)
                 return A.Equals(B);
 
             return false;
@@ -49,7 +49,7 @@ namespace WebAnnotationModel.Objects
                 return false;
             }
 
-            if ((object)A != null)
+            if (A is object)
                 return !A.Equals(B);
 
             return true;
@@ -77,7 +77,7 @@ namespace WebAnnotationModel.Objects
 
         public bool Equals(WCFObjBaseWithKey<KEY, T> other)
         {
-            if ((object)other == null)
+            if (other is null)
                 return false;
 
             return this.ID.Equals(other.ID);

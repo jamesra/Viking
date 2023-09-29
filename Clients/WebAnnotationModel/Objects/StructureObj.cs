@@ -444,7 +444,7 @@ namespace WebAnnotationModel
 
         public bool Equals(IStructure other)
         {
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return (long)other.ID == this.ID;

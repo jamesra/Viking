@@ -171,8 +171,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                proxy?.Close();
             }
 
             ChangeInventory<StructureObj> inventory = ParseQuery(structures, new long[0], null);
@@ -203,8 +202,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                proxy?.Close();
             }
 
             if (numLocs == 0)
@@ -276,8 +274,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                proxy?.Close();
             }
         }
 
@@ -313,8 +310,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                proxy?.Close();
             }
 
             return new StructureObj[0];
@@ -343,8 +339,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                proxy?.Close();
             }
 
             return 0;
@@ -377,8 +372,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                proxy?.Close();
             }
         }
 
@@ -400,8 +394,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                proxy?.Close();
             }
 
             if (null == data)

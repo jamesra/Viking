@@ -157,8 +157,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                proxy?.Close();
             }
 
         }

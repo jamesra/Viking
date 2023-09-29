@@ -123,8 +123,7 @@ namespace Annotation.ViewModels
 
         private void Model_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            if(this.PropertyChanged != null)
-                this.PropertyChanged(this, new PropertyChangedEventArgs("Model"));
+            this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Model"));
         }
 
         public static void PropertyChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)

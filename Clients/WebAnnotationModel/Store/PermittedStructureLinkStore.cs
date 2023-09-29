@@ -104,8 +104,7 @@ namespace WebAnnotationModel
                 StructureTypeObj SourceObj = Store.StructureTypes.GetObjectByID(link.SourceTypeID, false);
                 StructureTypeObj TargetObj = Store.StructureTypes.GetObjectByID(link.TargetTypeID, false);
 
-                if (SourceObj != null)
-                    SourceObj.TryAddPermittedLink(link);
+                SourceObj?.TryAddPermittedLink(link);
 
                 if (TargetObj != null && TargetObj != SourceObj)
                     TargetObj.TryAddPermittedLink(link);
@@ -129,11 +128,9 @@ namespace WebAnnotationModel
                 StructureTypeObj SourceObj = Store.StructureTypes.GetObjectByID(key.SourceTypeID, false);
                 StructureTypeObj TargetObj = Store.StructureTypes.GetObjectByID(key.TargetTypeID, false);
 
-                if (SourceObj != null)
-                    SourceObj.TryRemovePermittedLink(key);
+                SourceObj?.TryRemovePermittedLink(key);
 
-                if (TargetObj != null)
-                    TargetObj.TryRemovePermittedLink(key);
+                TargetObj?.TryRemovePermittedLink(key);
             }
 
             return base.InternalDelete(linkKeys);

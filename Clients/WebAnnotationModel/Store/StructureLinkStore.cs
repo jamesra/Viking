@@ -95,10 +95,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                {
-                    proxy.Close();
-                }
+                proxy?.Close();
             }
         }
 
@@ -115,11 +112,9 @@ namespace WebAnnotationModel
                 StructureObj SourceObj = Store.Structures.GetObjectByID(link.SourceID, false);
                 StructureObj TargetObj = Store.Structures.GetObjectByID(link.TargetID, false);
 
-                if (SourceObj != null)
-                    SourceObj.AddLink(link);
+                SourceObj?.AddLink(link);
 
-                if (TargetObj != null)
-                    TargetObj.AddLink(link);
+                TargetObj?.AddLink(link);
 
                 ValidObjs.Add(link);
             }
@@ -140,11 +135,9 @@ namespace WebAnnotationModel
                 StructureObj SourceObj = Store.Structures.GetObjectByID(key.SourceID, false);
                 StructureObj TargetObj = Store.Structures.GetObjectByID(key.TargetID, false);
 
-                if (SourceObj != null)
-                    SourceObj.RemoveLink(key);
+                SourceObj?.RemoveLink(key);
 
-                if (TargetObj != null)
-                    TargetObj.RemoveLink(key);
+                TargetObj?.RemoveLink(key);
             }
 
             return base.InternalDelete(linkKeys);

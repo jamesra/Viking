@@ -48,8 +48,7 @@ namespace WebAnnotationModel
             if (obj == null)
                 return false;
 
-            IStructureLink other = obj as IStructureLink;
-            if (other == null)
+            if (!(obj is IStructureLink other))
                 return false;
 
             return ((IStructureLink)this).Equals(other);
@@ -62,9 +61,6 @@ namespace WebAnnotationModel
 
         public bool Equals(StructureLinkKey other)
         {
-            if ((object)other == null)
-                return false;
-
             if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
             {
                 if (SourceID == other.SourceID &&
@@ -81,10 +77,7 @@ namespace WebAnnotationModel
         }
 
         public int CompareTo(StructureLinkKey other)
-        {
-            if ((object)other == null)
-                return -1;
-
+        { 
             if (this.Bidirectional == other.Bidirectional && this.Bidirectional)
             {
                 var A_Low = Math.Min(SourceID, TargetID);
@@ -117,7 +110,7 @@ namespace WebAnnotationModel
 
         bool IEquatable<IStructureLink>.Equals(IStructureLink other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             if (!this.Bidirectional == other.Directional && this.Bidirectional)
@@ -216,10 +209,12 @@ namespace WebAnnotationModel
         public StructureLinkObj(long sourceID, long targetID,
                                 bool Bidirectional) : base()
         {
-            this.Data = new StructureLink();
-            this.Data.SourceID = sourceID;
-            this.Data.TargetID = targetID;
-            this.Data.Bidirectional = Bidirectional;
+            this.Data = new StructureLink
+            {
+                SourceID = sourceID,
+                TargetID = targetID,
+                Bidirectional = Bidirectional
+            };
             this.DBAction = AnnotationService.Types.DBACTION.INSERT;
         }
 

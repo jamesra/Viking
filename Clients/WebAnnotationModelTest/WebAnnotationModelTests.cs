@@ -16,9 +16,9 @@ namespace WebAnnotationModelTest
     [TestClass]
     public class WebAnnotationModelTests
     {
-        string Username = "VikingUnitTests";
-        string Password = "4%W%o06";
-        string VolumeName = "RC1Test";
+        readonly string Username = "VikingUnitTests";
+        readonly string Password = "4%W%o06";
+        readonly string VolumeName = "RC1Test";
         public System.Net.NetworkCredential TestCredentials;
         //static public EndpointAddress Endpoint;
 
@@ -55,9 +55,11 @@ namespace WebAnnotationModelTest
             var permissions = await TokenHelper.RetrieveUserVolumePermissions(token as TokenResponse, VolumeName);
             Assert.IsFalse(permissions == null || permissions.Length == 0, $"No permissions found for test user {Username} in volume {VolumeName}");
 
-            List<string> list_permissions = new List<string>();
-            list_permissions.Add("openid");
-            list_permissions.Add("Viking.Annotation");
+            List<string> list_permissions = new List<string>
+            {
+                "openid",
+                "Viking.Annotation"
+            };
             list_permissions.AddRange(permissions.Select(p => $"{VolumeName}.{p}"));
 
             var bearer_token_response = await TokenHelper.RetrieveBearerToken(Username, Password, list_permissions.ToArray());
@@ -83,9 +85,11 @@ namespace WebAnnotationModelTest
             {
                 Debug.WriteLine(type.ToString()); 
             }
-            
-            StructureTypeObj test_stype = new StructureTypeObj();
-            test_stype.Name = "Test Structure";
+
+            StructureTypeObj test_stype = new StructureTypeObj
+            {
+                Name = "Test Structure"
+            };
 
             long OriginalID = test_stype.ID; 
 
@@ -104,10 +108,12 @@ namespace WebAnnotationModelTest
             Assert.IsTrue(test_stype.ID > 0);
             StructureTypeObj queryOriginalObj = Store.StructureTypes.GetObjectByID(OriginalID);
             Assert.IsNull(queryOriginalObj);
-             
+
             //Test creating a structure with a parent
-            StructureTypeObj testChildObj = new StructureTypeObj(test_stype);
-            testChildObj.Name = "Child of test structure";
+            StructureTypeObj testChildObj = new StructureTypeObj(test_stype)
+            {
+                Name = "Child of test structure"
+            };
             testChildObj = Store.StructureTypes.Create(testChildObj);
 
             EventLog.PopObjectAddedEvent(testChildObj);
@@ -158,9 +164,8 @@ namespace WebAnnotationModelTest
             testObj.Label = "Test Structure";
 
             long OriginalID = testObj.ID;
-            LocationObj created_loc; 
 
-            testObj = Store.Structures.Create(testObj, locObj, out created_loc);
+            testObj = Store.Structures.Create(testObj, locObj, out LocationObj created_loc);
             locObj = created_loc;
             StructureEventLog.PopObjectAddedEvent(testObj);
             LocationEventLog.PopObjectAddedEvent(locObj);
@@ -171,8 +176,10 @@ namespace WebAnnotationModelTest
             Assert.IsNull(queryObj);
 
             //Test creating a structure with a parent
-            StructureObj testChildObj = new StructureObj(cellType);
-            testChildObj.Parent = testObj; 
+            StructureObj testChildObj = new StructureObj(cellType)
+            {
+                Parent = testObj
+            };
             LocationObj childLocObj = NewPopulatedLocation(testChildObj); 
             testChildObj.Label = "Child of test structure";
             testChildObj = Store.Structures.Create(testChildObj, childLocObj, out created_loc);

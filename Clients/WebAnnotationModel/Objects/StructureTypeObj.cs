@@ -159,11 +159,10 @@ namespace WebAnnotationModel
                             foreach (var link in Data.PermittedLinks)
                             {
                                 Debug.Assert(link != null);
-                                bool added;
                                 //Add it if it doesn't exist, otherwise get the official version
                                 PermittedStructureLinkObj linkObj = Store.PermittedStructureLinks.GetOrAdd(new PermittedStructureLinkKey(link),
                                                                                          new Func<PermittedStructureLinkKey, PermittedStructureLinkObj>(key => { return new PermittedStructureLinkObj(link); }),
-                                                                                         out added); //This call will fire events that add the link to this.Links if it is new to the local store
+                                                                                         out bool added); //This call will fire events that add the link to this.Links if it is new to the local store
                                 Debug.Assert(linkObj != null, "If structureObj has the value the store should have the value.   Does it link to itself?");
                                 linkArray.Add(linkObj);
                             }
@@ -270,7 +269,7 @@ namespace WebAnnotationModel
 
         public bool Equals(IStructureType other)
         {
-            if (object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return other.ID == (ulong)this.ID;

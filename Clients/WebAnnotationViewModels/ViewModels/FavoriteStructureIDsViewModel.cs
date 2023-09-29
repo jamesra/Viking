@@ -21,10 +21,7 @@ namespace Annotation.ViewModels
                     return;
 
                 _FavoriteStructureTypeIDs = value;
-                if (PropertyChanged != null)
-                {
-                    PropertyChanged(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
-                }
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
             }
         }
 
@@ -41,10 +38,7 @@ namespace Annotation.ViewModels
                     return;
 
                 _RootStructureTypes = value;
-                if (PropertyChanged != null)
-                {
-                    PropertyChanged(this, new PropertyChangedEventArgs("RootStructureTypes"));
-                }
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("RootStructureTypes"));
             }
         }
 
@@ -75,10 +69,7 @@ namespace Annotation.ViewModels
         public void DeleteFavorite(object item)
         {
             FavoriteStructureTypeIDs.Remove(System.Convert.ToUInt64(item));
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
         }
 
         public bool CanAddFavorite(object item)
@@ -96,10 +87,7 @@ namespace Annotation.ViewModels
         public void AddFavorite(object item)
         {
             FavoriteStructureTypeIDs.Add(System.Convert.ToUInt64(item));
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FavoriteStructureTypeIDs"));
         }
 
 

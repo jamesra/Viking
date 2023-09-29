@@ -33,8 +33,7 @@ namespace WebAnnotationModel
 
         public void RemoveObject(long key)
         {
-            long removedID;
-            SpatialSearch.Delete(key, out removedID);
+            SpatialSearch.Delete(key, out var removedID);
             return;
         }
 
@@ -76,8 +75,7 @@ namespace WebAnnotationModel
 
         public override ConcurrentDictionary<long, LocationObj> GetLocalObjectsForSection(long SectionNumber)
         {
-            ConcurrentDictionary<long, LocationObj> SectionLocationLinks;
-            bool Success = SectionToLocations.TryGetValue(SectionNumber, out SectionLocationLinks);
+            bool Success = SectionToLocations.TryGetValue(SectionNumber, out var SectionLocationLinks);
             if (Success)
             {
                 return SectionLocationLinks;
@@ -265,8 +263,7 @@ namespace WebAnnotationModel
 
         protected override LocationObj TryRemoveObject(long key)
         {
-            LocationObj existingObj;
-            bool success = IDToObject.TryRemove(key, out existingObj);
+            bool success = IDToObject.TryRemove(key, out var existingObj);
             if (success)
             {
                 existingObj.PropertyChanged -= this.OnOBJECTPropertyChangedEventHandler;
@@ -303,12 +300,10 @@ namespace WebAnnotationModel
         private bool TryRemoveLocationFromSection(LocationObj removed_loc)
         {
             //Remove it from the mapping of sections to locations on that section
-            ConcurrentDictionary<long, LocationObj> listSectionLocations = null;
-            bool Success = SectionToLocations.TryGetValue(removed_loc.Section, out listSectionLocations);
+            bool Success = SectionToLocations.TryGetValue(removed_loc.Section, out var listSectionLocations);
             if (Success)
             {
-                LocationObj listSectionLocationsObj = null;
-                return listSectionLocations.TryRemove(removed_loc.ID, out listSectionLocationsObj);
+                return listSectionLocations.TryRemove(removed_loc.ID, out LocationObj listSectionLocationsObj);
             }
 
             return false;
@@ -332,8 +327,7 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
-                    proxy.Close();
+                proxy?.Close();
             }
 
             if (null == data)
@@ -366,8 +360,7 @@ namespace WebAnnotationModel
         public override bool RemoveSection(int SectionNumber)
         {
             //
-            ConcurrentDictionary<long, LocationObj> sectionLocations;
-            bool success = SectionToLocations.TryRemove(SectionNumber, out sectionLocations);
+            bool success = SectionToLocations.TryRemove(SectionNumber, out var sectionLocations);
             if (!success)
                 return true;
 
@@ -495,8 +488,7 @@ namespace WebAnnotationModel
             GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj> state = new GetObjectBySectionCallbackState<AnnotateLocationsClient, LocationObj>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
 
             Location[] objects = new Location[0];
-            long QueryExecutedTime;
-            long[] deleted_objects = new long[0]; 
+            long[] deleted_objects = new long[0];
             DateTime StartTime = DateTime.UtcNow;
             AnnotationSet serverAnnotations = null;
             using (var proxy = CreateProxy())
@@ -505,7 +497,7 @@ namespace WebAnnotationModel
                 {
                     var client = (IAnnotateLocations)proxy;
 
-                    serverAnnotations = client.GetAnnotationsInMosaicRegion(out QueryExecutedTime,
+                    serverAnnotations = client.GetAnnotationsInMosaicRegion(out long QueryExecutedTime,
                         out deleted_objects,
                         SectionNumber,
                         bounds.ToBoundingRectangle(),
@@ -560,7 +552,7 @@ namespace WebAnnotationModel
                 var client = (IAnnotateLocations)proxy;
 
                 //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> newState = new GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj>((IAnnotateLocations)proxy, SectionNumber, LastQueryUtc.HasValue ? LastQueryUtc.Value : DateTime.MinValue, OnLoadCompletedCallBack);
+                GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj> newState = new GetObjectBySectionCallbackState<IAnnotateLocations, LocationObj>((IAnnotateLocations)proxy, SectionNumber, LastQueryUtc ?? DateTime.MinValue, OnLoadCompletedCallBack);
 
                 //Build list of Locations to check
                 result = client.BeginGetAnnotationsInMosaicRegion(SectionNumber,
