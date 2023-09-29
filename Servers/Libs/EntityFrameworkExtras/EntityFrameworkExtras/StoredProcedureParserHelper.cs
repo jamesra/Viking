@@ -24,12 +24,11 @@ namespace EntityFrameworkExtras
             Type collectionType = GetCollectionType(propertyInfo.PropertyType);
             var attribute = Attributes.GetAttribute<UserDefinedTableTypeAttribute>(collectionType);
 
-            if (attribute == null)
-                throw new InvalidOperationException(
+            return attribute == null
+                ? throw new InvalidOperationException(
                     String.Format("{0} has not been decorated with UserDefinedTableTypeAttribute.",
-                                  propertyInfo.PropertyType));
-
-            return attribute.Name;
+                                  propertyInfo.PropertyType))
+                : attribute.Name;
         }
 
         public Type GetCollectionType(Type type)

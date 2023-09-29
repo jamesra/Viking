@@ -33,11 +33,10 @@ namespace EntityFrameworkExtras.EF6
         {
             var attribute = Attributes.GetAttribute<StoredProcedureAttribute>(storedProcedure.GetType());
 
-            if (attribute == null)
-                throw new InvalidOperationException(String.Format(
-                    "{0} is not decorated with StoredProcedureAttribute.", storedProcedure.GetType()));
-
-            return attribute.Name;
+            return attribute is null
+                ? throw new InvalidOperationException(String.Format(
+                    "{0} is not decorated with StoredProcedureAttribute.", storedProcedure.GetType()))
+                : attribute.Name;
         }
 
         public static Collection<StoredProcedureParameterInfo> BuildStoredProcedureParameterInfo(object storedProcedure)
@@ -129,10 +128,7 @@ namespace EntityFrameworkExtras.EF6
         
         private static int SetSize(int size, ParameterDirection direction)
         {
-            if (direction != ParameterDirection.Input && size == 0) //output parameter
-                return -1;
-
-            return size;
+            return direction != ParameterDirection.Input && size == 0 ? -1 : size;
         }
 
 

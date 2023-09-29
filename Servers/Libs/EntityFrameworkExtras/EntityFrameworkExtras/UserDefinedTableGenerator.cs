@@ -14,14 +14,8 @@ namespace EntityFrameworkExtras
 
         public UserDefinedTableGenerator(Type type, object value)
         {
-            if (type == null)
-                throw new ArgumentNullException("type");
-
-            if (value == null)
-                throw new ArgumentNullException("value");
-
-            _type = type;
-            _value = value;
+            _type = type ?? throw new ArgumentNullException("type");
+            _value = value ?? throw new ArgumentNullException("value");
         }
 
         
@@ -77,10 +71,12 @@ namespace EntityFrameworkExtras
 
                 if (attribute != null)
                 {
-                    var column = new ColumnInformation();
-                    column.Name = attribute.Name ?? propertyInfo.Name;
-                    column.Property = propertyInfo;
-                    column.Order = attribute.Order;
+                    var column = new ColumnInformation
+                    {
+                        Name = attribute.Name ?? propertyInfo.Name,
+                        Property = propertyInfo,
+                        Order = attribute.Order
+                    };
 
                     columns.Add(column);
                 }

@@ -70,13 +70,10 @@ namespace EntityFrameworkExtras
             {
                 PropertyInfo propertyInfo = GetMatchingProperty(storedProcedure, sqlParameter);
 
-                if (propertyInfo != null)
-                {
-                    propertyInfo.SetValue(storedProcedure,
+                propertyInfo?.SetValue(storedProcedure,
                         (sqlParameter.Value == DBNull.Value) ?
                         GetDefault(propertyInfo.PropertyType) :
                         sqlParameter.Value, null);
-                }
             }
         }
 
