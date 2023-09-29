@@ -168,8 +168,7 @@ namespace VikingXNAGraphics
                 ModelMatrix = default,
                 Verticies = _unitBoundingBoxVerts.Select(v => new VertexPositionColor(v, color)).ToArray(),
                 Edges = _unitBoundingBoxEdges,
-                Primitive = PrimitiveType.LineList,
-                Position = default
+                Primitive = PrimitiveType.LineList
             }; 
             return model;
 
