@@ -29,10 +29,12 @@ namespace AnnotationService.Types
          
         public static StructureType Create(this ConnectomeDataModel.StructureType type)
         {
-            StructureType st = new StructureType();
-            st.ID = type.ID;
-            st.ParentID = type.ParentID;
-            st.Name = type.Name.Trim();
+            StructureType st = new StructureType
+            {
+                ID = type.ID,
+                ParentID = type.ParentID,
+                Name = type.Name.Trim()
+            };
 
 
             if (type.Notes != null)

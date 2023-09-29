@@ -56,8 +56,10 @@ namespace DataExport.Tests
         [TestMethod]
         public async void TestMorphologyGraphs()
         {
-            NameValueCollection queryParams = new NameValueCollection();
-            queryParams.Add("id", "180;476");
+            NameValueCollection queryParams = new NameValueCollection
+            {
+                { "id", "180;476" }
+            };
 
             // Create mocks
             var mockedhttpContext = new Mock<HttpContextBase>();

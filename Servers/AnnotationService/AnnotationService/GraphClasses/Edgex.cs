@@ -74,8 +74,7 @@ namespace AnnotationService.Types
 
         public override bool Equals(object obj)
         {
-            Edgex E = obj as Edgex;
-            if (E == null)
+            if (!(obj is Edgex E))
                 return false;
 
             return SourceID == E.SourceID &&

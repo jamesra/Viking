@@ -4,9 +4,11 @@
     {
         public static LocationLink Create(this ConnectomeDataModel.LocationLink link)
         {
-            LocationLink ll = new LocationLink();
-            ll.SourceID = link.A;
-            ll.TargetID = link.B;
+            LocationLink ll = new LocationLink
+            {
+                SourceID = link.A,
+                TargetID = link.B
+            };
             return ll;
         }
     }

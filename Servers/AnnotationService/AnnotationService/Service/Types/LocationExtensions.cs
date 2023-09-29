@@ -8,19 +8,23 @@ namespace AnnotationService.Types
     {
         public static LocationPositionOnly Create(this ConnectomeDataModel.SelectUnfinishedStructureBranchesWithPosition_Result db)
         {
-            LocationPositionOnly lpo = new LocationPositionOnly();
-            lpo.ID = db.ID;
-            lpo.Position = new AnnotationPoint(db.X, db.Y, (double)db.Z);
-            lpo.Radius = db.Radius;
+            LocationPositionOnly lpo = new LocationPositionOnly
+            {
+                ID = db.ID,
+                Position = new AnnotationPoint(db.X, db.Y, (double)db.Z),
+                Radius = db.Radius
+            };
             return lpo;
         }
 
         public static LocationPositionOnly CreatePositionOnly(this ConnectomeDataModel.Location db)
         {
-            LocationPositionOnly lpo = new LocationPositionOnly();
-            lpo.ID = db.ID;
-            lpo.Position = new AnnotationPoint(db.X, db.Y, db.Z);
-            lpo.Radius = db.Radius;
+            LocationPositionOnly lpo = new LocationPositionOnly
+            {
+                ID = db.ID,
+                Position = new AnnotationPoint(db.X, db.Y, db.Z),
+                Radius = db.Radius
+            };
             return lpo;
         }
     }
@@ -29,17 +33,19 @@ namespace AnnotationService.Types
     {
         public static Location Create(this ConnectomeDataModel.Location db, bool LoadLinks = false)
         {
-            Location loc = new Location();
-            loc.ID = db.ID;
+            Location loc = new Location
+            {
+                ID = db.ID,
 
-            loc.ParentID = db.ParentID;
+                ParentID = db.ParentID,
 
-            loc.Section = (long)db.Z;
-            loc.Position = new AnnotationPoint(db.X, db.Y, (int)db.Z);
-            loc.VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, (int)db.Z);
-            loc.MosaicShapeWKB = db.MosaicShape.AsBinary();
-            loc.VolumeShapeWKB = db.VolumeShape.AsBinary();
-            loc.Closed = db.Closed;
+                Section = (long)db.Z,
+                Position = new AnnotationPoint(db.X, db.Y, (int)db.Z),
+                VolumePosition = new AnnotationPoint(db.VolumeX, db.VolumeY, (int)db.Z),
+                MosaicShapeWKB = db.MosaicShape.AsBinary(),
+                VolumeShapeWKB = db.VolumeShape.AsBinary(),
+                Closed = db.Closed
+            };
             if (LoadLinks)
                 loc.PopulateLinks(db);
 
@@ -159,16 +165,14 @@ namespace AnnotationService.Types
 
         public static void PopulateLinks(Dictionary<long, Location> Locations, IList<ConnectomeDataModel.LocationLink> links)
         {
-            Location A;
-            Location B;
             foreach (ConnectomeDataModel.LocationLink link in links)
             {
-                if (Locations.TryGetValue(link.A, out A))
+                if (Locations.TryGetValue(link.A, out Location A))
                 {
                     A.AddLink(link.B);
                 }
 
-                if (Locations.TryGetValue(link.B, out B))
+                if (Locations.TryGetValue(link.B, out Location B))
                 {
                     B.AddLink(link.A);
                 }
@@ -199,11 +203,13 @@ namespace AnnotationService.Types
     {
         public static LocationHistory Create(this ConnectomeDataModel.SelectStructureLocationChangeLog_Result db)
         {
-            LocationHistory loch = new LocationHistory();
-            loch.ID = db.ID.Value;
-            loch.ParentID = db.ParentID.Value;
+            LocationHistory loch = new LocationHistory
+            {
+                ID = db.ID.Value,
+                ParentID = db.ParentID.Value,
 
-            loch.Section = (long)db.Z;
+                Section = (long)db.Z
+            };
             if (db.X != null && db.Y != null)
             {
                 loch.Position = new AnnotationPoint(db.X.Value, db.Y.Value, db.Z.Value);

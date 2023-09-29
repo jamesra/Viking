@@ -123,9 +123,11 @@ namespace ConnectomeDataModel
 
         private static SqlParameter CreateSectionNumberParameter(long section)
         {
-            SqlParameter param = new SqlParameter("Z", System.Data.SqlDbType.Float);
-            param.Direction = System.Data.ParameterDirection.Input;
-            param.SqlValue = new System.Data.SqlTypes.SqlDouble((double)section);
+            SqlParameter param = new SqlParameter("Z", System.Data.SqlDbType.Float)
+            {
+                Direction = System.Data.ParameterDirection.Input,
+                SqlValue = new System.Data.SqlTypes.SqlDouble((double)section)
+            };
 
             return param;
         }
@@ -134,9 +136,11 @@ namespace ConnectomeDataModel
 
         private static SqlParameter CreateMinRadiusParameter(double MinRadius)
         {
-            SqlParameter param = new SqlParameter("MinRadius", System.Data.SqlDbType.Float);
-            param.Direction = System.Data.ParameterDirection.Input;
-            param.SqlValue = new System.Data.SqlTypes.SqlDouble((double)MinRadius);
+            SqlParameter param = new SqlParameter("MinRadius", System.Data.SqlDbType.Float)
+            {
+                Direction = System.Data.ParameterDirection.Input,
+                SqlValue = new System.Data.SqlTypes.SqlDouble((double)MinRadius)
+            };
 
             return param;
         }
@@ -145,18 +149,22 @@ namespace ConnectomeDataModel
         {
             
             System.Data.SqlDbType dbGeoType = System.Data.SqlDbType.Udt;
-            SqlParameter param = new SqlParameter("BBox", dbGeoType);
-            param.UdtTypeName = "geometry";
-            param.Direction = System.Data.ParameterDirection.Input;
-            param.SqlValue = bbox;
+            SqlParameter param = new SqlParameter("BBox", dbGeoType)
+            {
+                UdtTypeName = "geometry",
+                Direction = System.Data.ParameterDirection.Input,
+                SqlValue = bbox
+            };
 
             return param;
         }
 
         private static SqlParameter CreateDateTimeParameter(DateTime? time)
         {
-            SqlParameter param = new SqlParameter("QueryDate", System.Data.SqlDbType.DateTime);
-            param.Direction = System.Data.ParameterDirection.Input;
+            SqlParameter param = new SqlParameter("QueryDate", System.Data.SqlDbType.DateTime)
+            {
+                Direction = System.Data.ParameterDirection.Input
+            };
 
             if (!time.HasValue)
                 param.SqlValue = DBNull.Value;
@@ -589,16 +597,14 @@ namespace ConnectomeDataModel
         /// <param name="LocationLinks"></param>
         public void AppendLinksToStructures(IDictionary<long, Structure> Structures, IList<StructureLink> StructureLinks)
         {
-            Structure Source;
-            Structure Target;
             foreach (StructureLink link in StructureLinks)
             {
-                if (Structures.TryGetValue(link.SourceID, out Source))
+                if (Structures.TryGetValue(link.SourceID, out Structure Source))
                 {
                     Source.SourceOfLinks.Add(link);
                 }
 
-                if (Structures.TryGetValue(link.TargetID, out Target))
+                if (Structures.TryGetValue(link.TargetID, out Structure Target))
                 {
                     Target.TargetOfLinks.Add(link);
                 }
@@ -613,20 +619,18 @@ namespace ConnectomeDataModel
         /// <param name="LocationLinks"></param>
         public void AppendLinksToLocations(IDictionary<long, Location> Locations, IList<LocationLink> LocationLinks)
         {
-            Location A;
-            Location B;
             foreach (LocationLink link in LocationLinks)
             {
-                if (Locations.TryGetValue(link.A, out A))
+                if (Locations.TryGetValue(link.A, out Location A))
                 {
                     A.LocationLinksA.Add(link);
                 }
 
-                if (Locations.TryGetValue(link.B, out B))
+                if (Locations.TryGetValue(link.B, out Location B))
                 {
                     B.LocationLinksB.Add(link);
                 }
-            } 
+            }
         }
          
         [DbFunction("ConnectomeModel.Store", "ufnStructureArea")]
@@ -634,8 +638,10 @@ namespace ConnectomeDataModel
         {
             var objectContext = ((IObjectContextAdapter)this).ObjectContext;
 
-            var parameters = new List<ObjectParameter>();
-            parameters.Add(new ObjectParameter("Id", ID));
+            var parameters = new List<ObjectParameter>
+            {
+                new ObjectParameter("Id", ID)
+            };
 
             return objectContext.CreateQuery<string>("ConnectomeModel.Store.ufnStructureArea(@Id)", parameters.ToArray())
                  .Execute(MergeOption.NoTracking)
@@ -647,8 +653,10 @@ namespace ConnectomeDataModel
         {
             var objectContext = ((IObjectContextAdapter)this).ObjectContext;
 
-            var parameters = new List<ObjectParameter>();
-            parameters.Add(new ObjectParameter("Id", ID));
+            var parameters = new List<ObjectParameter>
+            {
+                new ObjectParameter("Id", ID)
+            };
 
             return objectContext.CreateQuery<string>("ConnectomeModel.Store.ufnStructureVolume(@Id)", parameters.ToArray())
                  .Execute(MergeOption.NoTracking)

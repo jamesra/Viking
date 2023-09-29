@@ -34,8 +34,7 @@ namespace Neo4JService.Controllers
                 throw new ArgumentException("No query found in post");
             }
 
-            string FoundKeywords; 
-            if(ContainsWritableKeywords(query, out FoundKeywords))
+            if(ContainsWritableKeywords(query, out var FoundKeywords))
             {
                 throw new ArgumentException("Found write-capable keywords in query.  Please submit only readonly queries:\n" + FoundKeywords);
             }

@@ -36,12 +36,13 @@ namespace AnnotationService.Types
         {
             ConnectomeDataModel.Structure dbStructObj = obj as ConnectomeDataModel.Structure;
 
-            Structure s = new Structure();
-
-            s.ID = dbStructObj.ID;
-            s.TypeID = dbStructObj.TypeID;
-            s.Notes = dbStructObj.Notes;
-            s.Verified = dbStructObj.Verified;
+            Structure s = new Structure
+            {
+                ID = dbStructObj.ID,
+                TypeID = dbStructObj.TypeID,
+                Notes = dbStructObj.Notes,
+                Verified = dbStructObj.Verified
+            };
 
 
             if (dbStructObj.Tags == null)

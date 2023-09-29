@@ -9,11 +9,7 @@ namespace Neo4JService.Areas.HelpPage
     {
         public InvalidSample(string errorMessage)
         {
-            if (errorMessage == null)
-            {
-                throw new ArgumentNullException("errorMessage");
-            }
-            ErrorMessage = errorMessage;
+            ErrorMessage = errorMessage ?? throw new ArgumentNullException("errorMessage");
         }
 
         public string ErrorMessage { get; private set; }

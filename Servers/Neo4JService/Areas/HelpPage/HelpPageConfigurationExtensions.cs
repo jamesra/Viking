@@ -218,9 +218,8 @@ namespace Neo4JService.Areas.HelpPage
         /// </returns>
         public static HelpPageApiModel GetHelpPageApiModel(this HttpConfiguration config, string apiDescriptionId)
         {
-            object model;
             string modelId = ApiModelPrefix + apiDescriptionId;
-            if (!config.Properties.TryGetValue(modelId, out model))
+            if (!config.Properties.TryGetValue(modelId, out var model))
             {
                 Collection<ApiDescription> apiDescriptions = config.Services.GetApiExplorer().ApiDescriptions;
                 ApiDescription apiDescription = apiDescriptions.FirstOrDefault(api => String.Equals(api.GetFriendlyId(), apiDescriptionId, StringComparison.OrdinalIgnoreCase));
@@ -446,8 +445,7 @@ namespace Neo4JService.Areas.HelpPage
             foreach (ApiDescription api in apis)
             {
                 ApiParameterDescription parameterDescription;
-                Type parameterType;
-                if (TryGetResourceParameter(api, config, out parameterDescription, out parameterType))
+                if (TryGetResourceParameter(api, config, out parameterDescription, out var parameterType))
                 {
                     modelGenerator.GetOrCreateModelDescription(parameterType);
                 }
@@ -457,8 +455,7 @@ namespace Neo4JService.Areas.HelpPage
 
         private static void LogInvalidSampleAsError(HelpPageApiModel apiModel, object sample)
         {
-            InvalidSample invalidSample = sample as InvalidSample;
-            if (invalidSample != null)
+            if (sample is InvalidSample invalidSample)
             {
                 apiModel.ErrorMessages.Add(invalidSample.ErrorMessage);
             }

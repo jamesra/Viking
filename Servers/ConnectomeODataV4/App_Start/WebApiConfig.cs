@@ -35,8 +35,10 @@ namespace ConnectomeODataV4
 
             Microsoft.OData.Edm.IEdmModel edmModel = GetModel();
 
-            ODataBatchHandler odataBatchHandler = new DefaultODataBatchHandler(GlobalConfiguration.DefaultServer);
-            odataBatchHandler.ODataRouteName = "odata";
+            ODataBatchHandler odataBatchHandler = new DefaultODataBatchHandler(GlobalConfiguration.DefaultServer)
+            {
+                ODataRouteName = "odata"
+            };
 
             config.MapODataServiceRoute(routeName: "odata",
                 routePrefix: null,
@@ -61,9 +63,10 @@ namespace ConnectomeODataV4
 
         public static Microsoft.OData.Edm.IEdmModel GetModel()
         {
-            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-
-            builder.Namespace = "ConnectomeODataV4";
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder
+            {
+                Namespace = "ConnectomeODataV4"
+            };
 
             builder.EntitySet<StructureType>("StructureTypes");
             builder.EntitySet<Structure>("Structures");
@@ -109,13 +112,15 @@ namespace ConnectomeODataV4
             var structType = structures.EntityType() as EdmEntityType;
             var locLinksType = locationLinks.EntityType() as EdmEntityType;
 
-            var structLocLinksProperty = new EdmNavigationPropertyInfo(); 
-            structLocLinksProperty.TargetMultiplicity = Microsoft.OData.Edm.EdmMultiplicity.Many;
-            structLocLinksProperty.Target = locLinksType;
-            structLocLinksProperty.ContainsTarget = true; 
-            structLocLinksProperty.OnDelete = Microsoft.OData.Edm.EdmOnDeleteAction.None;
-            structLocLinksProperty.Name = "LocationLinks";
-            
+            var structLocLinksProperty = new EdmNavigationPropertyInfo
+            {
+                TargetMultiplicity = Microsoft.OData.Edm.EdmMultiplicity.Many,
+                Target = locLinksType,
+                ContainsTarget = true,
+                OnDelete = Microsoft.OData.Edm.EdmOnDeleteAction.None,
+                Name = "LocationLinks"
+            };
+
             var navigationProperty = structType.AddUnidirectionalNavigation(structLocLinksProperty);
             structures.AddNavigationTarget(navigationProperty, locationLinks);
             
@@ -130,12 +135,14 @@ namespace ConnectomeODataV4
             var locationType = locations.EntityType() as EdmEntityType;
             var locLinksType = locationLinks.EntityType() as EdmEntityType;
 
-            var LocLinksProperty = new EdmNavigationPropertyInfo();
-            LocLinksProperty.TargetMultiplicity = Microsoft.OData.Edm.EdmMultiplicity.Many;
-            LocLinksProperty.Target = locLinksType;
-            LocLinksProperty.ContainsTarget = true;
-            LocLinksProperty.OnDelete = Microsoft.OData.Edm.EdmOnDeleteAction.None;
-            LocLinksProperty.Name = "LocationLinks";
+            var LocLinksProperty = new EdmNavigationPropertyInfo
+            {
+                TargetMultiplicity = Microsoft.OData.Edm.EdmMultiplicity.Many,
+                Target = locLinksType,
+                ContainsTarget = true,
+                OnDelete = Microsoft.OData.Edm.EdmOnDeleteAction.None,
+                Name = "LocationLinks"
+            };
 
             var navigationProperty = locationType.AddUnidirectionalNavigation(LocLinksProperty);
             locations.AddNavigationTarget(navigationProperty, locationLinks);

@@ -120,9 +120,8 @@ namespace Neo4JService.Areas.HelpPage.ModelDescriptions
                 modelType = underlyingType;
             }
 
-            ModelDescription modelDescription;
             string modelName = ModelNameHelper.GetModelName(modelType);
-            if (GeneratedModels.TryGetValue(modelName, out modelDescription))
+            if (GeneratedModels.TryGetValue(modelName, out var modelDescription))
             {
                 if (modelType != modelDescription.ModelType)
                 {
@@ -251,8 +250,7 @@ namespace Neo4JService.Areas.HelpPage.ModelDescriptions
 
         private string CreateDefaultDocumentation(Type type)
         {
-            string documentation;
-            if (DefaultTypeDocumentation.TryGetValue(type, out documentation))
+            if (DefaultTypeDocumentation.TryGetValue(type, out var documentation))
             {
                 return documentation;
             }
@@ -271,8 +269,7 @@ namespace Neo4JService.Areas.HelpPage.ModelDescriptions
             IEnumerable<Attribute> attributes = property.GetCustomAttributes();
             foreach (Attribute attribute in attributes)
             {
-                Func<object, string> textGenerator;
-                if (AnnotationTextGenerator.TryGetValue(attribute.GetType(), out textGenerator))
+                if (AnnotationTextGenerator.TryGetValue(attribute.GetType(), out var textGenerator))
                 {
                     annotations.Add(
                         new ParameterAnnotation

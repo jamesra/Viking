@@ -2940,8 +2940,10 @@ namespace Annotation
 
                 foreach (var row in result)
                 {
-                    SynapseStats temp = new SynapseStats();
-                    temp.id = row.Key.ToString();
+                    SynapseStats temp = new SynapseStats
+                    {
+                        id = row.Key.ToString()
+                    };
                     if (labelDictionary.ContainsKey(row.Key))
                     {
                         temp.id += "[" + labelDictionary[row.Key] + "]";
@@ -2969,9 +2971,10 @@ namespace Annotation
             }
 
             AnnotationService.Types.Structure[] synapses = GetStructuresByIDs(mainStructure.ChildIDs, false);
-            SortedDictionary<long, long> temp = new SortedDictionary<long, long>();
-
-            temp[1] = synapses.Count();
+            SortedDictionary<long, long> temp = new SortedDictionary<long, long>
+            {
+                [1] = synapses.Count()
+            };
 
             foreach (AnnotationService.Types.Structure child in synapses)
             {

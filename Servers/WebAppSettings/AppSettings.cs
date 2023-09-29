@@ -23,12 +23,7 @@ namespace VikingWebAppSettings
             }
 
             string setting = WebConfigurationManager.AppSettings[name];
-            if (setting == null)
-            {
-                throw new ArgumentException(name + " not configured in AppSettings");
-            }
-
-            return setting;
+            return setting ?? throw new ArgumentNullException(name + " not configured in AppSettings");
         }
 
         public static string GetDatabaseServer()
@@ -85,13 +80,7 @@ namespace VikingWebAppSettings
                 throw new ArgumentException("Connection string " + name + " has a null ConnectionStringSettings value");
             }
 
-            string conn_string = WebConfigurationManager.ConnectionStrings[name].ConnectionString;
-            if(conn_string == null)
-            {
-                throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
-            }
-
-            return conn_string;
+            return WebConfigurationManager.ConnectionStrings[name].ConnectionString ?? throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
         }
           
         public static string WebServiceURL

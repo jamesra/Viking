@@ -93,10 +93,12 @@ namespace ServiceTest
         private void PopulateLocation(Location newPos, long parentID)
         {
             newPos.ParentID = parentID;
-            AnnotationPoint P = new AnnotationPoint();
-            P.X = 0;
-            P.Y = 0;
-            P.Z = 0;
+            AnnotationPoint P = new AnnotationPoint
+            {
+                X = 0,
+                Y = 0,
+                Z = 0
+            };
             newPos.Position = P;
 
             //newPos.MosaicShape = System.Data.Entity.Spatial.DbGeometry.FromText("POINT(0 0 0)");
@@ -231,8 +233,10 @@ namespace ServiceTest
             StructureType stype = CreatePopulatedStructureType(StructureTypeName);
             stype = CreateStructureType(stype);
 
-            Structure newStruct = new Structure();
-            newStruct.TypeID = stype.ID;
+            Structure newStruct = new Structure
+            {
+                TypeID = stype.ID
+            };
 
             Location newPos = new Location();
             PopulateLocation(newPos, newStruct.ID);
@@ -389,9 +393,7 @@ namespace ServiceTest
             AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             Structure[] structures;
-            long[] deletedStructures;
-            long StructureQueryTime;
-            structures = target.GetStructuresForSection(250, 0, out StructureQueryTime, out deletedStructures);
+            structures = target.GetStructuresForSection(250, 0, out long StructureQueryTime, out long[] deletedStructures);
 
             Assert.IsTrue(structures.Length > 0);
             
@@ -408,8 +410,7 @@ namespace ServiceTest
 
 
             Location[] locations;
-            long LocationQueryTime;
-            locations = target.GetLocationsForSection(250, out LocationQueryTime);
+            locations = target.GetLocationsForSection(250, out long LocationQueryTime);
 
             Assert.IsTrue(locations.Length > 0);
         }
@@ -452,9 +453,7 @@ namespace ServiceTest
 
 
             LocationLink[] locationLinks;
-            long LocationQueryTime;
-            LocationLink[] deletedLinks;
-            locationLinks = target.GetLocationLinksForSection(250, 0, out LocationQueryTime, out deletedLinks);
+            locationLinks = target.GetLocationLinksForSection(250, 0, out long LocationQueryTime, out LocationLink[] deletedLinks);
 
             Assert.IsTrue(locationLinks.Length > 0);
         }
@@ -470,9 +469,7 @@ namespace ServiceTest
 
 
             Location[] locations;
-            long LocationQueryTime;
-            long[] deletedLocations;
-            locations = target.GetLocationChanges(250, 0, out LocationQueryTime, out deletedLocations);
+            locations = target.GetLocationChanges(250, 0, out long LocationQueryTime, out long[] deletedLocations);
 
             Assert.IsTrue(locations.Length > 0);
         }
@@ -490,9 +487,7 @@ namespace ServiceTest
             BoundingRectangle bbox = new BoundingRectangle(32000, 32000, 64000, 64000);
 
             Structure[] structures;
-            long[] deletedStructures;
-            long StructureQueryTime;
-            structures = target.GetStructuresForSectionInMosaicRegion(250, bbox, 0, 0, out StructureQueryTime, out deletedStructures);
+            structures = target.GetStructuresForSectionInMosaicRegion(250, bbox, 0, 0, out long StructureQueryTime, out long[] deletedStructures);
 
             Assert.IsTrue(structures.Length > 0);
 
@@ -511,9 +506,7 @@ namespace ServiceTest
             BoundingRectangle bbox = new BoundingRectangle(32000, 32000, 64000, 64000);
 
             Structure[] structures;
-            long[] deletedStructures;
-            long StructureQueryTime;
-            structures = target.GetStructuresForSectionInVolumeRegion(250, bbox, 0, 0, out StructureQueryTime, out deletedStructures);
+            structures = target.GetStructuresForSectionInVolumeRegion(250, bbox, 0, 0, out long StructureQueryTime, out long[] deletedStructures);
 
             Assert.IsTrue(structures.Length > 0);
 
@@ -532,9 +525,7 @@ namespace ServiceTest
 
 
             Location[] locations;
-            long LocationQueryTime;
-            long[] deletedLocations;
-            locations = target.GetLocationChangesInMosaicRegion(250, bbox,0,0, out LocationQueryTime, out deletedLocations);
+            locations = target.GetLocationChangesInMosaicRegion(250, bbox, 0, 0, out long LocationQueryTime, out long[] deletedLocations);
 
             Assert.IsTrue(locations.Length > 0);
         }
@@ -551,9 +542,7 @@ namespace ServiceTest
             BoundingRectangle bbox = new BoundingRectangle(32000, 32000, 64000, 64000);
 
             LocationLink[] locationLinks;
-            long LocationQueryTime;
-            LocationLink[] deletedLinks;
-            locationLinks = target.GetLocationLinksForSectionInMosaicRegion(250, bbox, 0, 0, out LocationQueryTime, out deletedLinks);
+            locationLinks = target.GetLocationLinksForSectionInMosaicRegion(250, bbox, 0, 0, out long LocationQueryTime, out LocationLink[] deletedLinks);
 
             Assert.IsTrue(locationLinks.Length > 0);
         }
@@ -568,9 +557,7 @@ namespace ServiceTest
 
 
             AnnotationSet Annotations;
-            long LocationQueryTime;
-            long[] deletedLocations;
-            Annotations = target.GetAnnotationsInMosaicRegion(250, bbox, 0, 0, out LocationQueryTime, out deletedLocations);
+            Annotations = target.GetAnnotationsInMosaicRegion(250, bbox, 0, 0, out long LocationQueryTime, out long[] deletedLocations);
 
             Assert.IsTrue(Annotations.Locations.Length > 0);
             Assert.IsTrue(Annotations.Structures.Length > 0);
@@ -595,8 +582,10 @@ namespace ServiceTest
 
             t = target.GetStructureTypeByID(StructureTypeID);
 
-            Structure newStruct = new Structure();
-            newStruct.TypeID = t.ID;
+            Structure newStruct = new Structure
+            {
+                TypeID = t.ID
+            };
 
             Location newPos = new Location();
             PopulateLocation(newPos, newStruct.ID);
@@ -670,12 +659,14 @@ namespace ServiceTest
 
             //CreateLocationB
             Location newPosB = new Location();
-            PopulateLocation(newPosB, newStructB.ID); 
+            PopulateLocation(newPosB, newStructB.ID);
 
-            AnnotationPoint Pb = new AnnotationPoint();
-            Pb.X = -1;
-            Pb.Y = -1;
-            Pb.Z = -1;
+            AnnotationPoint Pb = new AnnotationPoint
+            {
+                X = -1,
+                Y = -1,
+                Z = -1
+            };
             newPosA.Position = Pb;
 
             CreateStructureRetval retvalB = target.CreateStructure(newStructB, newPosB);
@@ -693,9 +684,7 @@ namespace ServiceTest
 
             StructureLink link = CreateStructureLink(retvalA.structure, retvalB.structure);
 
-            long QueryExecutedTime;
-            long[] DeletedIDs;
-            Structure[] structuresForSection = target.GetStructuresForSection((long)newPosA.Position.Z, TestStartTime, out QueryExecutedTime, out DeletedIDs);
+            Structure[] structuresForSection = target.GetStructuresForSection((long)newPosA.Position.Z, TestStartTime, out long QueryExecutedTime, out long[] DeletedIDs);
             Assert.IsTrue(structuresForSection.Length >= 0);
              
             StructureLink[] reportedLinks = target.GetLinkedStructures();
@@ -723,8 +712,7 @@ namespace ServiceTest
             target.Update(new Location[] { dbPosA, dbPosB });
 
             //Check to make sure there aren't any locations for the structure
-            long queryTimeInTicks;
-            Location[] structLocs = target.GetLocationsForSection(dbStructA.ID, out queryTimeInTicks);
+            Location[] structLocs = target.GetLocationsForSection(dbStructA.ID, out long queryTimeInTicks);
             Assert.IsTrue(structLocs.Length == 0);
 
             dbStructA.DBAction = DBACTION.DELETE;
@@ -753,9 +741,11 @@ namespace ServiceTest
             AnnotateService target = new AnnotateService(); // TODO: Initialize to an appropriate value
 
             //Link the structures
-            StructureLink link = new StructureLink();
-            link.SourceID = Source.ID;
-            link.TargetID = Target.ID;
+            StructureLink link = new StructureLink
+            {
+                SourceID = Source.ID,
+                TargetID = Target.ID
+            };
 
             target.CreateStructureLink(link);
 
@@ -800,8 +790,10 @@ namespace ServiceTest
             long StructureTypeID = IDs[0];
 
             //Create structure and location
-            Structure newStruct = new Structure();
-            newStruct.TypeID = StructureTypeID;
+            Structure newStruct = new Structure
+            {
+                TypeID = StructureTypeID
+            };
 
             Location A = new Location();
             PopulateLocation(A, newStruct.ID);
@@ -827,9 +819,7 @@ namespace ServiceTest
 
             target.CreateLocationLink(LocationAID, LocationBID);
 
-            long QueryExecutedTime;
-            long[] DeletedIDs = null;
-            Location[] locations = target.GetLocationChanges(0, TestStartTime, out QueryExecutedTime, out DeletedIDs);
+            Location[] locations = target.GetLocationChanges(0, TestStartTime, out long QueryExecutedTime, out long[] DeletedIDs);
 
             Assert.IsTrue(locations.Length >= 0);
             Dictionary<long, Location> dictLocations = locations.ToDictionary(l => l.ID);
@@ -889,8 +879,10 @@ namespace ServiceTest
             long StructureTypeID = IDs[0];
 
             //Create structure and location
-            Structure newStruct = new Structure();
-            newStruct.TypeID = StructureTypeID;
+            Structure newStruct = new Structure
+            {
+                TypeID = StructureTypeID
+            };
 
             Location newPos = new Location();
             PopulateLocation(newPos, newStruct.ID);
@@ -939,12 +931,10 @@ namespace ServiceTest
             System.Diagnostics.Debug.WriteLine("UpdateTime: " + UpdateTime.ToFileTime().ToString());
 
             //Check that location C appears when we ask for locations modified after the updatetime
-            long[] deletedIDs;
-            long queryCompletedTime;
             Location[] updatedLocations = target.GetLocationChanges(LocationA.Section,
                                                                     UpdateTime.Ticks,
-                                                                    out queryCompletedTime,
-                                                                    out deletedIDs);
+                                                                    out long queryCompletedTime,
+                                                                    out long[] deletedIDs);
 
             //Nothing was deleted, so this should be true
             foreach (long id in deletedIDs)
@@ -979,10 +969,9 @@ namespace ServiceTest
             //Just so I don't reference it again. 
             LocationB = null;
 
-            long second_queryTimeInTicks;
             updatedLocations = target.GetLocationChanges(LocationA.Section,
                                                          second_UpdateTime.Ticks,
-                                                         out second_queryTimeInTicks,
+                                                         out long second_queryTimeInTicks,
                                                          out deletedIDs);
 
             //B was deleted, so make sure it is in the results
@@ -1020,10 +1009,9 @@ namespace ServiceTest
 
             System.Diagnostics.Debug.WriteLine("UpdateTime: " + LocationA.LastModified.ToString());
 
-            long third_queryCompletedTime;
             updatedLocations = target.GetLocationChanges(LocationA.Section,
                                                          third_UpdateTime.Ticks,
-                                                         out third_queryCompletedTime,
+                                                         out long third_queryCompletedTime,
                                                          out deletedIDs);
 
             //Check to see that we find location C in deletedIDs and LocationA in the updated set
