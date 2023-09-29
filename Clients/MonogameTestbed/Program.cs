@@ -137,8 +137,10 @@ namespace MonogameTestbed
                 try
                 {
                     ulong SectionNumber = System.Convert.ToUInt64(input);
-                    listNumbers = new List<ulong>();
-                    listNumbers.Add(SectionNumber);
+                    listNumbers = new List<ulong>
+                    {
+                        SectionNumber
+                    };
                     return listNumbers;
                 }
                 catch (FormatException e)

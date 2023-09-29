@@ -785,8 +785,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         { 
-            if (wrapView != null)
-                wrapView.Draw(window, scene);
+            wrapView?.Draw(window, scene);
         }
     }
 }

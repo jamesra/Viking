@@ -1523,13 +1523,11 @@ namespace MonogameTestbed
         {
             if (!Draw3D)
             {
-                if (wrapView != null)
-                    wrapView.Draw(window, scene);
+                wrapView?.Draw(window, scene);
             }
             else
             {
-                if (wrapView != null)
-                    wrapView.Draw3D(window, scene3D);
+                wrapView?.Draw3D(window, scene3D);
             }
         }
 

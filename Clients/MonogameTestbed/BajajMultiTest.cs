@@ -717,10 +717,7 @@ namespace MonogameTestbed
 
         public void Update()
         {
-            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController();
-            if (InputSource == null)
-                InputSource = PlayerIndex.One;
-
+            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController() ?? PlayerIndex.One;
             GamePadState state = GamePad.GetState(InputSource.Value);
             Gamepad.Update(state);
             keyboard.Update(Keyboard.GetState());
@@ -857,13 +854,11 @@ namespace MonogameTestbed
             {
                 if (!Draw3D)
                 {
-                    if (wrapView != null)
-                        wrapView.Draw(window, scene);
+                    wrapView?.Draw(window, scene);
                 }
                 else
                 {
-                    if (wrapView != null)
-                        wrapView.Draw3D(window, scene3D);
+                    wrapView?.Draw3D(window, scene3D);
                 }
             }
 
@@ -880,12 +875,10 @@ namespace MonogameTestbed
         {
             foreach (var wrapView in wrapViews)
             {
-                if (wrapView != null)
-                    wrapView.OnUnloadContent();
+                wrapView?.OnUnloadContent();
             }
 
-            if(window.Scene != null)
-                window.Scene.SaveCamera(TestMode.BAJAJTEST);
+            window.Scene?.SaveCamera(TestMode.BAJAJTEST);
         }
 
         private string CleanOutputPath(string outputPath)
@@ -992,11 +985,13 @@ namespace MonogameTestbed
         {  
             var color = bm.Type.Name.GetHashCode().ToXNAColor(0.1f);
             //var verts = bm.BoundaryMarkers.Select(m => new VertexPositionNormalColor(m.ToXNAVector3(), Vector3.UnitZ, color).ToArray();
-             
-            var mesh_model = new PositionColorNormalMeshModel();
-            mesh_model.ModelMatrix = Matrix.CreateTranslation(bm.Center.ToXNAVector3());
-            mesh_model.Verticies = bm.Mesh.Verticies.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color)).ToArray();
-            mesh_model.Edges = bm.TriangulationMesh.Faces.SelectMany(f => f.iVerts).ToArray();
+
+            var mesh_model = new PositionColorNormalMeshModel
+            {
+                ModelMatrix = Matrix.CreateTranslation(bm.Center.ToXNAVector3()),
+                Verticies = bm.Mesh.Verticies.Select(v => new VertexPositionNormalColor(v.Position.ToXNAVector3(), v.Normal.ToXNAVector3(), color)).ToArray(),
+                Edges = bm.TriangulationMesh.Faces.SelectMany(f => f.iVerts).ToArray()
+            };
             return mesh_model;
         }
     }

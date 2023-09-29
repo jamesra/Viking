@@ -428,9 +428,8 @@ namespace MonogameTestbed
         private static void AddVertexAtDelaunayIntercepts(MedialAxisGraph graph, MedialAxisEdge edgeToTest, List<GridLineSegment> linesBetweenShapes, GridPolygon[] shapes)
         {
             GridLineSegment boundaryLine = edgeToTest.Line;
-
-            GridLineSegment[] intersectedDelaunayLines;
-            GridVector2[] delaunayIntersections = IntersectionPointsForLines(boundaryLine, linesBetweenShapes, out intersectedDelaunayLines);
+             
+            GridVector2[] delaunayIntersections = IntersectionPointsForLines(boundaryLine, linesBetweenShapes, out GridLineSegment[]  intersectedDelaunayLines);
 
             if (delaunayIntersections.Length == 0)
             {
@@ -478,8 +477,7 @@ namespace MonogameTestbed
 
             GridVector2[] intersections = intersectingLines.Select(Line =>
             {
-                GridVector2 intersection;
-                Line.Intersects(testLine, out intersection);
+                Line.Intersects(testLine, out GridVector2 intersection);
                 return intersection;
             }).ToArray();
 

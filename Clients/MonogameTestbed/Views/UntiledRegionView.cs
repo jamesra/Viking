@@ -136,8 +136,7 @@ namespace MonogameTestbed
             if (AllPoints.Length < 3)
                 return null;
 
-            int[] original_indicies;
-            GridVector2[] EntireSetConvexHull = AllPoints.ConvexHull(out original_indicies);
+            GridVector2[] EntireSetConvexHull = AllPoints.ConvexHull(out int[] original_indicies);
 
             TriangleNet.Geometry.Polygon poly = TriangleExtensions.CreatePolygon(EntireSetConvexHull);
 

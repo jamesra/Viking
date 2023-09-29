@@ -154,14 +154,13 @@ namespace MonogameTestbed
             double maxDistanceToIntersection = double.MinValue;
             foreach (GridLineSegment line in ScaledBranchPort.ExteriorSegments)
             {
-                GridVector2 Intersection;
-                if(line.Intersects(lineToFurthestPoint, out Intersection))
+                if (line.Intersects(lineToFurthestPoint, out GridVector2 Intersection))
                 {
                     double distance = GridVector2.Distance(Intersection, ScaledBranchPort.Centroid);
-                    if(distance > maxDistanceToIntersection)
+                    if (distance > maxDistanceToIntersection)
                     {
                         IntersectionOnLine = Intersection;
-                        maxDistanceToIntersection = distance; 
+                        maxDistanceToIntersection = distance;
                     }
                 }
             }

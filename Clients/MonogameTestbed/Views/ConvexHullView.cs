@@ -15,8 +15,7 @@ namespace MonogameTestbed
 
         public List<LineView> UpdateViews(IReadOnlyList<GridVector2> Points)
         {
-            int[] original_indicies;
-            GridVector2[] cv_points = ConvexHullExtension.ConvexHull(Points, out original_indicies);
+            GridVector2[] cv_points = ConvexHullExtension.ConvexHull(Points, out int[] original_indicies);
 
             List<LineView> listLines = new List<LineView>();
 

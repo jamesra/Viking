@@ -196,9 +196,10 @@ namespace MonogameTestbed
         /// </summary>
         private void LayoutRectangle()
         {
-            rect_views = new List<RectangleView>();
-
-            rect_views.Add(new RectangleView(new GridRectangle(-140, -120, -140, -120), Color.Aqua));
+            rect_views = new List<RectangleView>
+            {
+                new RectangleView(new GridRectangle(-140, -120, -140, -120), Color.Aqua)
+            };
         }
 
         private KeyboardState old_keyboard_state; 

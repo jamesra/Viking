@@ -79,8 +79,7 @@ namespace MonogameTestbed
 
             MeshGraph graph = StandardModels.BuildMeshGraph(this.Polys, this.ZLevels, this.Edges, 10, GridVector3.Zero);
 
-            List<GridLineSegment> addedMeshEdges;
-            Mesh3D<IVertex3D<ulong>> CompositeMesh = SmoothMeshGenerator.Generate(graph, out addedMeshEdges); 
+            Mesh3D<IVertex3D<ulong>> CompositeMesh = SmoothMeshGenerator.Generate(graph, out List<GridLineSegment> addedMeshEdges);
 
             //GridLineSegment[] lines = CompositeMesh.Edges.Values.Select(e => new GridLineSegment(CompositeMesh.Verticies[e.A].Position, CompositeMesh.Verticies[e.B].Position)).ToArray();
 
@@ -119,10 +118,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window, Scene scene)
         {
-            if(PolyViews != null)
-            {
-                PolyViews.Draw(window, scene);
-            }
+            PolyViews?.Draw(window, scene);
 
             if (TrianglesView != null && ShowFinalLines)
             {
@@ -246,10 +242,8 @@ namespace MonogameTestbed
             GridVector2[] UpperVerticies = edge.SourcePort.ExternalBorder.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
             GridVector2[] LowerVerticies = edge.TargetPort.ExternalBorder.Select(i => new GridVector2(CompositeMesh.Verticies[(int)i].Position.X, CompositeMesh.Verticies[(int)i].Position.Y)).ToArray();
 
-            GridVector2 UpperPortConvexHullCentroid;
-            GridVector2 LowerPortConvexHullCentroid; 
-            long UpperStart = SmoothMeshGenerator.FirstIndex(UpperVerticies, out UpperPortConvexHullCentroid);
-            long LowerStart = SmoothMeshGenerator.FirstIndex(LowerVerticies, out LowerPortConvexHullCentroid);
+            long UpperStart = SmoothMeshGenerator.FirstIndex(UpperVerticies, out GridVector2 UpperPortConvexHullCentroid);
+            long LowerStart = SmoothMeshGenerator.FirstIndex(LowerVerticies, out GridVector2 LowerPortConvexHullCentroid);
 
             //UpperVerticies = UpperVerticies.Translate(-UpperPortConvexHullCentroid);
             //LowerVerticies = LowerVerticies.Translate(-LowerPortConvexHullCentroid);
@@ -328,11 +322,9 @@ namespace MonogameTestbed
                 LineView.Draw(window.GraphicsDevice, window.Scene, window.lineManager, polyRingViews.ToArray());
             }
 
-            if (PolyA != null)
-                PolyA.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
+            PolyA?.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha);
 
-            if (PolyB != null)
-                PolyB.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha); 
+            PolyB?.Draw(window.GraphicsDevice, scene, OverlayStyle.Alpha); 
 
             if(StartingLine != null)
             {
@@ -499,8 +491,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         { 
-            if (wrapView != null)
-                wrapView.Draw(window, scene);
+            wrapView?.Draw(window, scene);
         }
     }
 }

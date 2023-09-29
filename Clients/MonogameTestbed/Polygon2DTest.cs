@@ -61,13 +61,14 @@ namespace MonogameTestbed
             GridVector2[] holy_cps = CreateTestPolygon();
             GridVector2[] holy_hole = CreateInteriorRing();
 
-            List<GridVector2[]> listInnerRings = new List<GridVector2[]>();
-            listInnerRings.Add(holy_hole);
+            List<GridVector2[]> listInnerRings = new List<GridVector2[]>
+            {
+                holy_hole
+            };
             MeshModel<VertexPositionColor> holy_model = TriangleNetExtensions.CreateMeshForPolygon2D(holy_cps, listInnerRings, Color.Aquamarine);
             this.meshView.models.Add(holy_model);
 
-            int[] Convex_hull_idx;
-            GridVector2[] cv_output_points = holy_cps.ConvexHull(out Convex_hull_idx);
+            GridVector2[] cv_output_points = holy_cps.ConvexHull(out int[] Convex_hull_idx);
 
             List<GridVector2> listCvPoints = new List<GridVector2>(Convex_hull_idx.Select(i => holy_cps[i]));
             GridPolygon convex_hull_poly = new GridPolygon(listCvPoints.ToArray());
@@ -100,9 +101,8 @@ namespace MonogameTestbed
         {
 
             GridVector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero).Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
-              
-            int[] cv_idx;
-            GridVector2[] cv_verticies = verts2D.ConvexHull(out cv_idx);
+
+            GridVector2[] cv_verticies = verts2D.ConvexHull(out int[] cv_idx);
 
             GridPolygon convex_hull_poly = new GridPolygon(cv_verticies);
             return TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);

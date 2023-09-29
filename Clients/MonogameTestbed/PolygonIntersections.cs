@@ -39,10 +39,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window, Scene scene)
         {
-            if(PolygonsView != null)
-            {
-                PolygonsView.Draw(window, scene);
-            }
+            PolygonsView?.Draw(window, scene);
         }
     }
 
@@ -146,9 +143,8 @@ namespace MonogameTestbed
         private MeshModel<VertexPositionColor> BuildCircleConvexHull(ICircle2D circle)
         { 
             GridVector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero).Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
-              
-            int[] cv_idx;
-            GridVector2[] cv_verticies = verts2D.ConvexHull(out cv_idx);
+
+            GridVector2[] cv_verticies = verts2D.ConvexHull(out int[] cv_idx);
 
             GridPolygon convex_hull_poly = new GridPolygon(cv_verticies);
             return TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
@@ -180,8 +176,7 @@ namespace MonogameTestbed
 
         public void Draw(MonoTestbed window)
         {
-            if(polygonSetView != null)
-                polygonSetView.Draw(window, this.scene);
+            polygonSetView?.Draw(window, this.scene);
         }
     }
 }

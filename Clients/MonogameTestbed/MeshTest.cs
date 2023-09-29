@@ -473,8 +473,7 @@ namespace MonogameTestbed
 
             GridVector2[] verts2D = verticies.Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
 
-            int[] cv_idx;
-            GridVector2[] cv_verticies = verts2D.ConvexHull(out cv_idx);
+            GridVector2[] cv_verticies = verts2D.ConvexHull(out int[] cv_idx);
 
             GridPolygon poly = new GridPolygon(cv_verticies);
             return MorphologyMesh.ShapeMeshGenerator<Vertex3D<object>,object>.CreateMeshForPolygon(poly, 0, null, GridVector3.Zero).ToVertexPositionNormalColorMeshModel(Color.Gold);

@@ -76,24 +76,20 @@ namespace MonogameTestbed
             foreach(IShape2D shape in shapes)
             {
                 IColorView view = null;
-                if(shape is GridLineSegment)
+                if (shape is GridLineSegment lineSegment)
                 {
-                    GridLineSegment lineSegment = (GridLineSegment)shape;
                     view = new LineView(lineSegment.A, lineSegment.B, 1, Color.Red, LineStyle.Standard);
                 }
-                else if(shape is GridCircle)
+                else if (shape is GridCircle circle)
                 {
-                    GridCircle circle = (GridCircle)shape;
                     view = new CircleView(circle, Color.Red);
                 }
-                else if(shape is GridTriangle)
+                else if (shape is GridTriangle triangle)
                 {
-                    GridTriangle triangle = (GridTriangle)shape;
                     view = TriangleNetExtensions.CreateMeshForPolygon2D(triangle.Points, null, Color.Red);
                 }
-                else if(shape is GridPolygon)
+                else if (shape is GridPolygon polygon)
                 {
-                    GridPolygon polygon = (GridPolygon)shape;
                     view = TriangleNetExtensions.CreateMeshForPolygon2D(polygon, Color.Red);
                 }
                 else
@@ -223,12 +219,9 @@ namespace MonogameTestbed
         {
             foreach (IShape2D shape in shapes)
             {
-                GridPolygon poly = shape as GridPolygon;
-
-                if (poly != null)
+                if (shape is GridPolygon poly)
                 {
-                    GridVector2 convexHullCentroid;
-                    long FirstIndex = MorphologyMesh.SmoothMeshGenerator.FirstIndex(poly.ExteriorRing, out convexHullCentroid);
+                    long FirstIndex = MorphologyMesh.SmoothMeshGenerator.FirstIndex(poly.ExteriorRing, out GridVector2 convexHullCentroid);
 
                     CircleView firstIndexView = new CircleView(new GridCircle(poly.ExteriorRing[FirstIndex], Math.Sqrt(poly.Area) / 10), Color.Black);
                     CircleView centroidView = new CircleView(new GridCircle(poly.Centroid, Math.Sqrt(poly.Area) / 20), Color.Yellow);

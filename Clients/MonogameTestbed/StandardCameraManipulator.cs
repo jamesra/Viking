@@ -18,10 +18,7 @@ namespace MonogameTestbed
         /// <param name="unitStepSize">How far to move the camera for a single d-pad click or input event</param>
         public static void Update(Camera3D Camera, float unitStepSize=10.0f)
         { 
-            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController();
-            if (InputSource == null)
-                InputSource = PlayerIndex.One;
-
+            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController() ?? PlayerIndex.One;
             GamePadState state = GamePad.GetState(InputSource.Value);
 
 
@@ -108,10 +105,7 @@ namespace MonogameTestbed
         {
             keyboard.Update(Keyboard.GetState());
             mouse.Update(Mouse.GetState());
-            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController();
-            if (InputSource == null)
-                InputSource = PlayerIndex.One;
-
+            PlayerIndex? InputSource = GamePadStateTracker.GetFirstConnectedController() ?? PlayerIndex.One;
             GamePadState state = GamePad.GetState(InputSource.Value);
             gamepad.Update(state);
 

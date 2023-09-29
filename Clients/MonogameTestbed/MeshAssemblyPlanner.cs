@@ -667,9 +667,8 @@ namespace MonogameTestbed
             if (node == null)
                 return;
 
-            IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
-            if (branch != null)
-            { 
+            if (node is IAssemblyPlannerBranch branch)
+            {
                 if (branch.Left != null)
                 {
                     GenerateAllBoundingBoxMeshesRecursive(branch.Left);
@@ -678,7 +677,7 @@ namespace MonogameTestbed
                 if (branch.Right != null)
                 {
                     GenerateAllBoundingBoxMeshesRecursive(branch.Right);
-                } 
+                }
             }
 
             //Generate our bounding box mesh
@@ -729,13 +728,12 @@ namespace MonogameTestbed
 
         private GridBox? CalculateBoundingBox(IAssemblyPlannerNode node, SliceGraph sliceGraph)
         {
-            IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
-            if(branch != null)
+            if (node is IAssemblyPlannerBranch branch)
             {
                 GridBox? lbox = default;
                 GridBox? rbox = default;
 
-                if(branch.Left != null)
+                if (branch.Left != null)
                 {
                     lbox = CalculateBoundingBox(branch.Left, sliceGraph);
                 }
@@ -750,11 +748,11 @@ namespace MonogameTestbed
                 {
                     result = lbox.Value.Union(rbox.Value, out _);
                 }
-                else if(lbox.HasValue)
+                else if (lbox.HasValue)
                 {
                     result = lbox.Value;
                 }
-                else if(rbox.HasValue)
+                else if (rbox.HasValue)
                 {
                     result = rbox.Value;
                 }
@@ -762,9 +760,9 @@ namespace MonogameTestbed
                 {
                     throw new ArgumentException($"Both branches have no bounding box");
                 }
-                  
+
                 NodeBoundingBox[branch.Key] = result;
-                return result; 
+                return result;
             }
             else //Is a leaf
             {
