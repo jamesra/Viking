@@ -708,13 +708,11 @@ namespace Geometry
 
         public static GridRectangle Border(in IPoint[] points)
         {
-            if (points == null)
-            {
-                throw new ArgumentNullException(nameof(points));
-            }
+            if (points is null) 
+                throw new ArgumentNullException(nameof(points)); 
 
             if (points.Length == 0)
-                throw new ArgumentException(nameof(points)); 
+                throw new ArgumentException("points must not be empty", nameof(points)); 
 
             double minX = double.MaxValue;
             double minY = double.MaxValue;

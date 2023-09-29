@@ -100,8 +100,7 @@ namespace GeometryTests
             //Start with a basic test ensuring we can find all the existing points
             for (int i = 0; i < points.Length; i++)
             {
-                double distance; 
-                bool found = tree.TryFindNearest(points[i], out var retValue, out distance);
+                bool found = tree.TryFindNearest(points[i], out var retValue, out double distance);
 
                 Assert.IsTrue(found);
                 Assert.IsTrue(retValue == i);
@@ -130,9 +129,7 @@ namespace GeometryTests
 
             //Check to see if we can return all points in a rectangle
             GridRectangle gridRect = new GridRectangle(0, 15, 0, 15);
-            List<GridVector2> intersectPoints;
-            List<int> intersectValues;
-            tree.Intersect(gridRect, out intersectPoints, out intersectValues);
+            tree.Intersect(gridRect, out List<GridVector2> intersectPoints, out List<int> intersectValues);
             Assert.IsTrue(intersectValues.Contains(0));
             Assert.IsTrue(intersectValues.Contains(1));
             Assert.IsTrue(intersectValues.Contains(7));
@@ -178,8 +175,7 @@ namespace GeometryTests
             //Remove half the points
             for (int i = 0; i < numPoints / 2; i++)
             {
-                int Value;
-                bool Success = Tree.TryRemove(i, out Value);
+                bool Success = Tree.TryRemove(i, out int Value);
                 Assert.IsTrue(Success, "Could not remove previously inserted point");
 
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed
@@ -222,8 +218,7 @@ namespace GeometryTests
             //Delete all the points
             for (int i = 0; i < numPoints; i++)
             {
-                int Value;
-                bool Success = Tree.TryRemove(i, out Value);
+                bool Success = Tree.TryRemove(i, out int Value);
                 Debug.Assert(Success, "Could not remove previously inserted point");
 
                 //Make sure if we look for the removed point we get an index higher than the ones we've already removed

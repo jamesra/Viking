@@ -84,7 +84,7 @@ namespace GeometryTests.Algorithms
                 return null;
 
             IEdgeKey nextEdge = ConstraintEdges[EdgesAdded];
-            EdgesAdded = EdgesAdded + 1;
+            EdgesAdded++;
 
             return nextEdge;
         }
@@ -248,22 +248,22 @@ namespace GeometryTests.Algorithms
 
     public class ConstrainedDelaunaySpec : ICommandGenerator<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>
     {
-        private static Arbitrary<uint> SizeGenerator = Arb.Default.UInt32();
-        private static Arbitrary<uint> NumEdgesGenerator = Arb.Default.UInt32();
-        private static Arbitrary<uint> EdgeGenerator = Arb.Default.UInt32();
+        private static readonly Arbitrary<uint> SizeGenerator = Arb.Default.UInt32();
+        private static readonly Arbitrary<uint> NumEdgesGenerator = Arb.Default.UInt32();
+        private static readonly Arbitrary<uint> EdgeGenerator = Arb.Default.UInt32();
 
         public int NumVerts { get { return InitialActual.Verticies.Count; } }
         public int NumEdges { get { return InitialModel.ConstraintEdges.Count; } }
 
         private static int NextID = 0;
-        private int ID = 0;
+        private readonly int ID = 0;
         /// <summary>
         /// False if any of the test passes failed
         /// </summary>
         public bool Pass = true;
 
-        private ConstrainedDelaunayModel OriginalModel;
-        private TriangulationMesh<IVertex2D> OriginalMesh;
+        private readonly ConstrainedDelaunayModel OriginalModel;
+        private readonly TriangulationMesh<IVertex2D> OriginalMesh;
 
         public ConstrainedDelaunaySpec(int nVerts, int nEdgesMax)
         {
@@ -282,7 +282,7 @@ namespace GeometryTests.Algorithms
             OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges);
 
             ID = NextID;
-            NextID = NextID + 1;
+            NextID++;
             //Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
         }
 
@@ -294,7 +294,7 @@ namespace GeometryTests.Algorithms
             OriginalModel = model;
 
             ID = NextID;
-            NextID = NextID + 1;
+            NextID++;
             //Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
         }
 
@@ -306,7 +306,7 @@ namespace GeometryTests.Algorithms
             OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges.Where(e => e < points.Length).Distinct().ToArray());
 
             ID = NextID;
-            NextID = NextID + 1;
+            NextID++;
             //Trace.WriteLine(string.Format("New Spec {0}:{1}", ID, InitialModel));
         }
 
@@ -413,7 +413,7 @@ namespace GeometryTests.Algorithms
             /// <summary>
             /// The constrained edge we will add to our model
             /// </summary>
-            public IEdgeKey EdgeToAdd;
+            public readonly IEdgeKey EdgeToAdd;
 
             public AddConstraint(ConstrainedDelaunayModel model)
             {

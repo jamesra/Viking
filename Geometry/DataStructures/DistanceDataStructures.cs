@@ -109,9 +109,9 @@ namespace Geometry
         {
             Count++; //Increment our count
 
-            if (Data.ContainsKey(item.Distance))
+            if (Data.TryGetValue(item.Distance, out var existing_item))
             {
-                Debug.Assert(Data[item.Distance].Any(entry => entry.Equals(item)) == false, "Item should not already exist in the distance list");
+                Debug.Assert(existing_item.Any(entry => entry.Equals(item)) == false, "Item should not already exist in the distance list");
                 Data[item.Distance].Add(item);
                 return;
             }

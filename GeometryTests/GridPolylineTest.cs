@@ -68,7 +68,7 @@ namespace GeometryTests
             {
                 Trace.WriteLine(pl);
                 bool NoSelfIntersection = pl.LineSegments.SelfIntersects(LineSetOrdering.POLYLINE) == false;
-                bool OpenShape = pl.PointCount >= 2 ? pl.Points[0] != pl.Points[pl.Points.Count - 1] : true;
+                bool OpenShape = pl.PointCount < 2 || pl.Points[0] != pl.Points[pl.Points.Count - 1];
                 bool IsLine = pl.PointCount >= 2;
                 bool pass = NoSelfIntersection && OpenShape;
                 return pass.Classify(NoSelfIntersection == false, "Self intersection")

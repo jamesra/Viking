@@ -284,8 +284,11 @@ namespace Geometry
 
         public PairedLineSearchGrid(MappingGridVector2[] _mapPoints, GridRectangle bounds, List<int>[] edges)
         {
-            if (_mapPoints == null || edges == null)
-                throw new ArgumentNullException("PairedLineSearchGrid Constructor");
+            if (_mapPoints is null)
+                throw new ArgumentNullException(nameof(_mapPoints));
+
+            if (edges is null)
+                throw new ArgumentNullException(nameof(edges));
 
             this.Bounds = bounds;
 

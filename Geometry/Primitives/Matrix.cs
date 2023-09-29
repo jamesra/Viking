@@ -105,9 +105,7 @@ namespace Geometry
                         Array.Copy(TriangleForm, iSwapRow * nCols, TriangleForm, iRow * nCols, nCols);
                         Array.Copy(TempRow, 0, TriangleForm, iSwapRow * nCols, nCols);
 
-                        double tempB = ScaledResults[iRow];
-                        ScaledResults[iRow] = ScaledResults[iSwapRow];
-                        ScaledResults[iSwapRow] = tempB;
+                        (ScaledResults[iRow], ScaledResults[iSwapRow]) = (ScaledResults[iSwapRow], ScaledResults[iRow]);
 
                         rowOrder[iRow] = iSwapRow;
                         rowOrder[iSwapRow] = iRow;

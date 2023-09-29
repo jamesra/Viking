@@ -312,8 +312,11 @@ namespace Geometry
 
         public static double Distance(IPoint A, IPoint B)
         {
-            if (A == null || B == null)
-                throw new ArgumentNullException("A or B");
+            if (A is null)
+                throw new ArgumentNullException(nameof(A));
+
+            if (B is null)
+                throw new ArgumentNullException(nameof(B));
 
             return Math.Sqrt(GridVectorN.DistanceSquared(A, B));
             /*

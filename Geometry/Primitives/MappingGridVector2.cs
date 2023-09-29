@@ -260,5 +260,16 @@ namespace Geometry
             return this.ControlPoint == other.ControlPoint &&
                    this.MappedPoint == other.MappedPoint;
         }
+
+        // Implement the == operator for MappingGridVector2.
+        public static bool operator ==(MappingGridVector2 v1, MappingGridVector2 v2)
+        {
+            return v1.Equals(v2);
+        }
+
+        public static bool operator !=(MappingGridVector2 v1, MappingGridVector2 v2)
+        {
+            return !v1.Equals(v2);
+        }
     }
 }

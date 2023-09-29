@@ -73,8 +73,7 @@ namespace GeometryTests
                 //Check edge conditions for a horizontal line
                 GridVector2 PointOnLine = new GridVector2(2, 3);
                 double Distance;
-                GridVector2 Intersection;
-                Distance = lineA.DistanceToPoint(PointOnLine, out Intersection);
+                Distance = lineA.DistanceToPoint(PointOnLine, out GridVector2 Intersection);
                 Assert.IsTrue(Distance == 0);
                 Assert.IsTrue(Intersection == PointOnLine);
 
@@ -109,8 +108,7 @@ namespace GeometryTests
 
                 GridVector2 PointOnLine = new GridVector2(3, 2);
                 double Distance;
-                GridVector2 Intersection;
-                Distance = lineB.DistanceToPoint(PointOnLine, out Intersection);
+                Distance = lineB.DistanceToPoint(PointOnLine, out GridVector2 Intersection);
                 Assert.IsTrue(Distance == 0);
                 Assert.IsTrue(Intersection == PointOnLine);
 
@@ -143,8 +141,7 @@ namespace GeometryTests
 
                 GridVector2 PointOnLine = new GridVector2(0, 0);
                 double Distance;
-                GridVector2 Intersection;
-                Distance = lineC.DistanceToPoint(PointOnLine, out Intersection);
+                Distance = lineC.DistanceToPoint(PointOnLine, out GridVector2 Intersection);
                 Assert.IsTrue(Distance == 0);
                 Assert.IsTrue(Intersection == PointOnLine);
 
@@ -165,8 +162,7 @@ namespace GeometryTests
 
                 GridVector2 PointOnLine = new GridVector2(-1, 1);
                 double Distance;
-                GridVector2 Intersection;
-                Distance = lineD.DistanceToPoint(PointOnLine, out Intersection);
+                Distance = lineD.DistanceToPoint(PointOnLine, out GridVector2 Intersection);
                 Assert.IsTrue(Distance == 0);
                 Assert.IsTrue(Intersection == PointOnLine);
 
@@ -244,9 +240,8 @@ namespace GeometryTests
 
             foreach (var test in EndpointOnlyIntersectionTests)
             {
-                IShape2D Intersection;
                 var resultNoEndpointIntersection =
-                    Primary.Intersects(test.Input, EndpointsOnRingDoNotIntersect: true, out Intersection);
+                    Primary.Intersects(test.Input, EndpointsOnRingDoNotIntersect: true, out IShape2D Intersection);
                 Assert.IsFalse(resultNoEndpointIntersection);
 
                 var resultWithEndpointIntersection =
@@ -282,8 +277,7 @@ namespace GeometryTests
             GridLineSegment lineE = new GridLineSegment(new GridVector2(-9, 8),
                                                         new GridVector2(1, -2));
 
-            IShape2D intersectShape;
-            bool result = lineA.Intersects(lineA, out intersectShape);
+            bool result = lineA.Intersects(lineA, out IShape2D intersectShape);
             Assert.IsTrue(result == true);
             Assert.IsTrue(intersectShape.ShapeType == ShapeType2D.LINE);
             GridLineSegment intersectionLine = (GridLineSegment)intersectShape;
@@ -335,15 +329,13 @@ namespace GeometryTests
 
             foreach (GridLineSegment other in IntersectingLines)
             {
-                IShape2D intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out IShape2D intersection);
                 Assert.IsTrue(result);
             }
 
             foreach (GridLineSegment other in NonIntersectingLines)
             {
-                GridVector2 intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out GridVector2 intersection);
                 Assert.IsFalse(result);
             }
 
@@ -354,15 +346,13 @@ namespace GeometryTests
 
             foreach (GridLineSegment other in IntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out GridVector2 intersection);
                 Assert.IsTrue(result);
             }
 
             foreach (GridLineSegment other in NonIntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out GridVector2 intersection);
                 Assert.IsFalse(result);
             }
         }
@@ -395,15 +385,13 @@ namespace GeometryTests
 
             foreach (GridLineSegment other in IntersectingLines)
             {
-                IShape2D intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out IShape2D intersection);
                 Assert.IsTrue(result);
             }
 
             foreach (GridLineSegment other in NonIntersectingLines)
             {
-                GridVector2 intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out GridVector2 intersection);
                 Assert.IsFalse(result);
             }
 
@@ -414,15 +402,13 @@ namespace GeometryTests
 
             foreach (GridLineSegment other in IntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out GridVector2 intersection);
                 Assert.IsTrue(result);
             }
 
             foreach (GridLineSegment other in NonIntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out GridVector2 intersection);
                 Assert.IsFalse(result);
             }
         }
@@ -455,15 +441,13 @@ namespace GeometryTests
 
             foreach (GridLineSegment other in IntersectingLines)
             {
-                IShape2D intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out IShape2D intersection);
                 Assert.IsTrue(result);
             }
 
             foreach (GridLineSegment other in NonIntersectingLines)
             {
-                GridVector2 intersection;
-                bool result = lineA.Intersects(other, out intersection);
+                bool result = lineA.Intersects(other, out GridVector2 intersection);
                 Assert.IsFalse(result);
             }
 
@@ -474,15 +458,13 @@ namespace GeometryTests
 
             foreach (GridLineSegment other in IntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out GridVector2 intersection);
                 Assert.IsTrue(result);
             }
 
             foreach (GridLineSegment other in NonIntersectingVertical)
             {
-                GridVector2 intersection;
-                bool result = vertLine.Intersects(other, out intersection);
+                bool result = vertLine.Intersects(other, out GridVector2 intersection);
                 Assert.IsFalse(result);
             }
         }
@@ -518,8 +500,7 @@ namespace GeometryTests
                                                                    new GridLineSegment(new GridVector2(0, 11), new GridVector2(10,11)), //A line that doesn't intersect
                                                                    new GridLineSegment(new GridVector2(7.5, 0), new GridVector2(7.5, 10)) };
 
-            GridVector2[] splitPoints;
-            List<GridLineSegment> intersectingLines = line.Intersections(OtherLines, out splitPoints);
+            List<GridLineSegment> intersectingLines = line.Intersections(OtherLines, out GridVector2[] splitPoints);
 
             GridVector2 ExpectedIntersectionA = new GridVector2(2.5, 0.25);
             GridVector2 ExpectedIntersectionB = new GridVector2(7.5, 0.75);
@@ -559,8 +540,7 @@ namespace GeometryTests
                                                                    new GridLineSegment(new GridVector2(0, 11), new GridVector2(10,11)), //A line that doesn't intersect
                                                                    new GridLineSegment(new GridVector2(7.5, 0), new GridVector2(7.5, 10)) };
 
-            GridVector2[] splitPoints;
-            List<GridLineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out splitPoints);
+            List<GridLineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out GridVector2[] splitPoints);
 
             GridVector2 ExpectedIntersectionA = new GridVector2(2.5, 0.25);
             GridVector2 ExpectedIntersectionB = new GridVector2(7.5, 0.75);
@@ -598,8 +578,7 @@ namespace GeometryTests
                                                                    new GridLineSegment(new GridVector2(0, 11), new GridVector2(10,11)), //A line that doesn't intersect
                                                                    new GridLineSegment(new GridVector2(10, 0), new GridVector2(10, 10)) };
 
-            GridVector2[] splitPoints;
-            List<GridLineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out splitPoints);
+            List<GridLineSegment> dividedLines = line.SubdivideAtIntersections(OtherLines, out GridVector2[] splitPoints);
 
             Assert.AreEqual(splitPoints.Length, 0);
 

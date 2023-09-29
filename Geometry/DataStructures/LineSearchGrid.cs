@@ -1036,12 +1036,12 @@ namespace Geometry
                     if (l.MaxY < TestLine.MinY)
                         continue;
 
-                    bool bIntersected = l.Intersects(in TestLine, out GridVector2 result);
-                    double distance = GridVector2.Distance(in TestLine.A, in result);
+                    bool bIntersected = l.Intersects(in TestLine, out GridVector2 intersect_result);
+                    double distance = GridVector2.Distance(in TestLine.A, in intersect_result);
                     if (distance < nearestIntersect && bIntersected)
                     {
                         nearestIntersect = distance;
-                        intersection = result;
+                        intersection = intersect_result;
                         BestLine = l;
                     }
                 }
@@ -1051,8 +1051,8 @@ namespace Geometry
 
                 potentialIntersections = null;
 
-                if (tableLineToValue.ContainsKey(BestLine))
-                    return tableLineToValue[BestLine];
+                if (tableLineToValue.TryGetValue(BestLine, out var result))
+                    return result;
 
                 return default;
             }
@@ -1102,8 +1102,8 @@ namespace Geometry
                     }
                 }
 
-                if (tableLineToValue.ContainsKey(BestLine))
-                    return tableLineToValue[BestLine];
+                if(tableLineToValue.TryGetValue(BestLine, out var result))
+                    return result;
 
                 return default;
             }

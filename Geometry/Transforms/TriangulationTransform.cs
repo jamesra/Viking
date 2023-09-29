@@ -126,12 +126,9 @@ namespace Geometry.Transforms
         public override GridVector2 Transform(in GridVector2 Point)
         {
             MappingGridTriangle t = GetTransform(Point);
-            if (t == null)
-            {
-                throw new ArgumentOutOfRangeException(nameof(Point), string.Format("Transform: Point could not be mapped {0}", Point.ToString()));
-            }
-
-            return t.Transform(Point);
+            return t == null
+                ? throw new ArgumentOutOfRangeException(nameof(Point), string.Format("Transform: Point could not be mapped {0}", Point.ToString()))
+                : t.Transform(Point);
         }
 
         /// <summary>
@@ -227,12 +224,9 @@ namespace Geometry.Transforms
         public override GridVector2 InverseTransform(in GridVector2 Point)
         {
             MappingGridTriangle t = GetInverseTransform(Point);
-            if (t == null)
-            {
-                throw new ArgumentOutOfRangeException(nameof(Point), string.Format("InverseTransform: Point could not be mapped {0}", Point.ToString()));
-            }
-
-            return t.InverseTransform(Point);
+            return t == null
+                ? throw new ArgumentOutOfRangeException(nameof(Point), string.Format("InverseTransform: Point could not be mapped {0}", Point.ToString()))
+                : t.InverseTransform(Point);
         }
 
         /// <summary>
@@ -868,7 +862,7 @@ namespace Geometry.Transforms
                 }
                 );
 
-                if (MappableFixedPoints.Count > 0)
+                if (!MappableFixedPoints.IsEmpty)
                 {
                     foreach (MappingGridVector2 newPoint in MappableFixedPoints)
                     {

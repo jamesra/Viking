@@ -41,7 +41,7 @@ namespace GeometryTests.FSCheck
 
         public LinearPolylineModel InitialModel => new LinearPolylineModel(Axis);
 
-        private AXIS Axis;  
+        private readonly AXIS Axis;  
 
         public PolylineSpec(AXIS axis)
         {
@@ -80,11 +80,11 @@ namespace GeometryTests.FSCheck
     {
         private static int NextPointID = -1;
 
-        int InsertIndex;
-        int InsertID;
-        double InterpolationFraction;
-        double OffAxisValue;
-        AXIS Axis;
+        readonly int InsertIndex;
+        readonly int InsertID;
+        readonly double InterpolationFraction;
+        readonly double OffAxisValue;
+        readonly AXIS Axis;
 
         Property InsertToActualExpectedResult;
 
@@ -225,11 +225,11 @@ namespace GeometryTests.FSCheck
     /// Checks if we can intersect the line segment of the polyline starting at the provided index
     /// </summary>
     class IntersectLineTestOperation : Command<GridPolyline, LinearPolylineModel>
-    {  
-        int TestIndex;
-        double InterpolationFraction;
-        AXIS Axis;
-        AXIS OffAxis;
+    {
+        readonly int TestIndex;
+        readonly double InterpolationFraction;
+        readonly AXIS Axis;
+        readonly AXIS OffAxis;
         GridVector2 ExpectedIntersection;
         GridLineSegment TestSegment;
 

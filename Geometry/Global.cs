@@ -23,7 +23,7 @@ namespace Geometry
 
         public const float EpsilonSquared = Global.Epsilon * Global.Epsilon;
 
-        public static Random Random = new Random();
+        public static readonly Random Random = new Random();
 
         public static int GetRandomRequestDelay() => Random.Next(800, 1200);
 

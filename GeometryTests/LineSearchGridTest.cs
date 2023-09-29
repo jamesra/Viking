@@ -78,9 +78,7 @@ namespace GeometryTests
             LineSearch.Add(lineD, "D");
             LineSearch.Add(lineE, "E");
 
-            GridVector2 intersection;
-            double distance;
-            string value = LineSearch.GetNearest(new GridVector2(-5, 3), out intersection, out distance);
+            string value = LineSearch.GetNearest(new GridVector2(-5, 3), out GridVector2 intersection, out double distance);
             Assert.IsTrue(value == "A");
 
             value = LineSearch.GetNearest(new GridVector2(-10, -10), out intersection, out distance);

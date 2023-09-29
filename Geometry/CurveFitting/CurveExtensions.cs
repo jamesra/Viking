@@ -7,7 +7,7 @@ namespace Geometry
 {
     public static class CurveExtensions
     {
-        public static double CurveSmoothingEpsilon = 1.0;
+        //private static readonly double CurveSmoothingEpsilon = 1.0;
 
         public static GridVector2[] CalculateCurvePoints(this GridVector2[] ControlPoints, uint NumInterpolations, bool closeCurve)
         {

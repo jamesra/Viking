@@ -33,7 +33,7 @@ namespace GeometryTests.FSCheck
     {
         public AXIS Axis = AXIS.X;
 
-        private IComparer<GridVector2> Comparer;
+        private readonly IComparer<GridVector2> Comparer;
 
         public PointTupleComparer(AXIS axis)
         {

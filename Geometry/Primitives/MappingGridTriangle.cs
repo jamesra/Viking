@@ -208,7 +208,7 @@ namespace Geometry
             return Control.Contains(Point);
         }
 
-        private bool BarycentricCoordIsMappable(in GridVector2 uv) =>
+        private static bool BarycentricCoordIsMappable(in GridVector2 uv) =>
             uv.X >= 0.0 && uv.Y >= 0.0 && (uv.X + uv.Y <= 1.0);
 
         public GridVector2 Transform(in GridVector2 Point)

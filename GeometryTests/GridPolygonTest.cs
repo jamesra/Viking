@@ -274,9 +274,11 @@ namespace GeometryTests
             var ExpectedCorrespondingPoints = ExpectedIntersections; //ExpectedIntersections.Where(i => AllOriginalP1Verts.Contains(i) == false).ToList();
             try
             {
-                List<IShape2D> shapes = new List<IShape2D>();
-                shapes.Add(p1.Clone() as IShape2D);
-                shapes.Add(p2.Clone() as IShape2D);
+                List<IShape2D> shapes = new List<IShape2D>
+                {
+                    p1.Clone() as IShape2D,
+                    p2.Clone() as IShape2D
+                };
                 correspondingIntersections = shapes.AddCorrespondingVerticies();
             }
             catch (ArgumentException e)
@@ -414,8 +416,7 @@ namespace GeometryTests
         {
             return A.ExteriorSegments.Intersections(B.ExteriorSegments, true).Where(result =>
             {
-                IPoint2D pt = result.Intersection as IPoint2D;
-                if (pt != null)
+                if (result.Intersection is IPoint2D pt)
                     return true;
 
                 if (result.Intersection is ILineSegment2D line)
@@ -1886,9 +1887,8 @@ namespace GeometryTests
         /// <returns></returns>
         public bool Theorem4(GridPolygon poly, GridLineSegment line)
         {
-            List<GridVector2> intersections;
 
-            return !LineIntersectionExtensions.Intersects(line, poly, true, out intersections);
+            return !LineIntersectionExtensions.Intersects(line, poly, true, out List<GridVector2> intersections);
         }
 
     }

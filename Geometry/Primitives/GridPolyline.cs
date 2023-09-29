@@ -442,11 +442,12 @@ namespace Geometry
             return this.LineSegments.Any(line => line.Intersects(shp));
         }
 
-        IShape2D IShape2D.Translate(in IPoint2D offset) => this.Translate(new GridVector2(offset.X, offset.Y));
+        IShape2D IShape2D.Translate(in IPoint2D offset) => this.Translate(offset);
 
-        public GridPolyline Translate(IPoint2D offset)
-        {  
-            var translatedPoints = this._Points.Select(p => new GridVector2(p.X + offset.X, p.Y + offset.Y)); 
+        public GridPolyline Translate(in IPoint2D offset)
+        {
+            var local_offset = new GridVector2(offset.X, offset.Y);
+            var translatedPoints = this._Points.Select(p => new GridVector2(p.X + local_offset.X, p.Y + local_offset.Y)); 
             return new GridPolyline(translatedPoints);
         }
 

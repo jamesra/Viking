@@ -680,22 +680,10 @@ namespace Geometry
 
                         if (RequestRect.Contains(Border))
                         {
-                            if (this.UpperLeft != null)
-                            {
-                                this.UpperLeft.Intersect(in RequestRect, false, ref Points, ref Values);
-                            }
-                            if (this.UpperRight != null)
-                            {
-                                this.UpperRight.Intersect(in RequestRect, false, ref Points, ref Values);
-                            }
-                            if (this.LowerLeft != null)
-                            {
-                                this.LowerLeft.Intersect(in RequestRect, false, ref Points, ref Values);
-                            }
-                            if (this.LowerRight != null)
-                            {
-                                this.LowerRight.Intersect(in RequestRect, false, ref Points, ref Values);
-                            }
+                            this.UpperLeft?.Intersect(in RequestRect, false, ref Points, ref Values);
+                            this.UpperRight?.Intersect(in RequestRect, false, ref Points, ref Values);
+                            this.LowerLeft?.Intersect(in RequestRect, false, ref Points, ref Values);
+                            this.LowerRight?.Intersect(in RequestRect, false, ref Points, ref Values);
 
                             return;
                         }
@@ -706,22 +694,10 @@ namespace Geometry
                         return;
                 }
 
-                if (this.UpperLeft != null)
-                {
-                    this.UpperLeft.Intersect(in RequestRect, true, ref Points, ref Values);
-                }
-                if (this.UpperRight != null)
-                {
-                    this.UpperRight.Intersect(in RequestRect, true, ref Points, ref Values);
-                }
-                if (this.LowerLeft != null)
-                {
-                    this.LowerLeft.Intersect(in RequestRect, true, ref Points, ref Values);
-                }
-                if (this.LowerRight != null)
-                {
-                    this.LowerRight.Intersect(in RequestRect, true, ref Points, ref Values);
-                }
+                this.UpperLeft?.Intersect(in RequestRect, true, ref Points, ref Values);
+                this.UpperRight?.Intersect(in RequestRect, true, ref Points, ref Values);
+                this.LowerLeft?.Intersect(in RequestRect, true, ref Points, ref Values);
+                this.LowerRight?.Intersect(in RequestRect, true, ref Points, ref Values);
                 return;
 
             }

@@ -213,7 +213,7 @@ namespace UtilitiesTests
         public void TestAngle3()
         {
             double Pi4 = Math.PI / 4.0;
-            double Pi2 = Math.PI / 2.0;
+            //double Pi2 = Math.PI / 2.0;
 
             GridVector2 Origin = new GridVector2(0, 0);
             GridVector2 A = new GridVector2(1, 0);
@@ -400,8 +400,7 @@ namespace UtilitiesTests
                                                        new GridVector2(10,10),
                                                        new GridVector2(10,-10)};
 
-            int[] original_idx;
-            GridVector2[] ConvexHullPoints = points.ConvexHull(out original_idx);
+            GridVector2[] ConvexHullPoints = points.ConvexHull(out int[] original_idx);
             Assert.IsTrue(ConvexHullPoints.Length == points.Length + 1);
 
             GridPolygon poly = new GridPolygon(ConvexHullPoints);
@@ -430,8 +429,7 @@ namespace UtilitiesTests
                 new GridVector2(10, 0)
             };
 
-            int[] original_idx;
-            GridVector2[] ConvexHullPoints = points.ConvexHull(out original_idx);
+            GridVector2[] ConvexHullPoints = points.ConvexHull(out int[] original_idx);
             Assert.IsTrue(ConvexHullPoints.Length == points.Length + 1);
 
             GridPolygon poly = new GridPolygon(ConvexHullPoints);

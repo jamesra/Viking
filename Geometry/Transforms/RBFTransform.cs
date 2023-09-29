@@ -115,11 +115,11 @@ namespace Geometry.Transforms
 
         public static GridVector2 Transform(GridVector2 Point, float[] Weights, GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (ControlPoints == null)
-                throw new ArgumentException(nameof(ControlPoints));
-            if (Weights == null)
-                throw new ArgumentException(nameof(Weights));
-            if(BasisFunction == null)
+            if (ControlPoints is null)
+                throw new ArgumentNullException(nameof(ControlPoints));
+            if (Weights is null)
+                throw new ArgumentNullException(nameof(Weights));
+            if(BasisFunction is null)
                 throw new ArgumentNullException(nameof(BasisFunction));
 
             int nPoints = ControlPoints.Length;

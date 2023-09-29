@@ -340,9 +340,8 @@ namespace Geometry
                 }
                 */
                 //Remove the value if it exists and is not equal to the passed point.
-                if (ValueToNodeTable.ContainsKey(value))
+                if (ValueToNodeTable.TryGetValue(value, out var node))
                 {
-                    QuadTreeNode<T> node = ValueToNodeTable[value];
                     if (GridVector2.Distance(in node.Point, in point) == 0)
                         return false;
                     else
@@ -379,7 +378,7 @@ namespace Geometry
                             this.Root = new_root;
                         }
 
-                        QuadTreeNode<T> node = this.Root.Insert(point, value);
+                        QuadTreeNode<T> new_node = this.Root.Insert(point, value);
                         return true;
                     }
                     finally

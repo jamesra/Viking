@@ -10,7 +10,7 @@ namespace GeometryTests
 
     class Foo : IFoo
     {
-        double val = 0;
+        readonly double val = 0;
 
         double IFoo.value()
         {

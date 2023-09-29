@@ -180,8 +180,10 @@ namespace GraphLib
 
             testedNodes.Add(Origin);
 
-            List<KEY> path = new List<KEY>();
-            path.Add(Origin);
+            List<KEY> path = new List<KEY>
+            {
+                Origin
+            };
             if (IsMatch(graph.Nodes[Origin]))
                 return path;
 
