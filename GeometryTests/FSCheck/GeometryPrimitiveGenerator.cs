@@ -1196,14 +1196,14 @@ namespace GeometryTests.FSCheck
                    select items[i];
         }
 
-        private static Arbitrary<NormalFloat> floatArb = Arb.Default.NormalFloat();
-        private static Arbitrary<int> intArb = Arb.Default.Int32();
+        private static readonly Arbitrary<NormalFloat> floatArb = Arb.Default.NormalFloat();
+        private static readonly Arbitrary<int> intArb = Arb.Default.Int32();
 
-        private static Gen<NormalFloat> floatGen = floatArb.Generator;
-        private static Gen<int> intGen = intArb.Generator;
+        private static readonly Gen<NormalFloat> floatGen = floatArb.Generator;
+        private static readonly Gen<int> intGen = intArb.Generator;
 
 
-        private static Gen<GridVector2> pointGen = null;
+        private static readonly Gen<GridVector2> pointGen = null;
         private static Gen<GridVector2> GenPoint()
         {
             /*

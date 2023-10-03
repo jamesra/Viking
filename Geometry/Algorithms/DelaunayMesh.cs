@@ -57,7 +57,7 @@ namespace Geometry
         /// <summary>
         /// Generates the delaunay triangulation for a list of points. 
         /// Requires the points to be sorted on the X-axis coordinate!
-        /// Every the integers in the returned array are the indicies in the passes array of triangles. 
+        /// The integers in the returned array are the indicies in the passes array of triangles. 
         /// Implemented based upon: http://local.wasp.uwa.edu.au/~pbourke/papers/triangulate/
         /// "Triangulate: Efficient Triangulation Algorithm Suitable for Terrain Modelling"
         /// by Paul Bourke
