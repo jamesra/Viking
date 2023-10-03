@@ -6,7 +6,21 @@ namespace Geometry.Meshing
 {
     public interface IVertex : IComparable<IVertex>, IEquatable<IVertex>
     {
-        int Index { get; set; }
+        /// <summary>
+        /// Index of the vertex in a mesh.  Throws InvalidOperationException if not set.
+        /// </summary>
+        int Index { get; }
+
+        /// <summary>
+        /// Sets the vertex index.  Can only be set once.  If a different index is desired use CreateShallowCopy(int).
+        /// </summary>
+        /// <param name="index"></param>
+        void SetIndex(int index);
+
+        /// <summary>
+        /// True if an index has been set for this vertex
+        /// </summary>
+        bool HasIndex { get;}
 
         ImmutableSortedSet<IEdgeKey> Edges { get; }
 
@@ -19,6 +33,13 @@ namespace Geometry.Meshing
         /// </summary>
         /// <returns></returns>
         IVertex ShallowCopy();
+
+        /// <summary>
+        /// Returns a duplicate of the vertex with a new index value assigned
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        IVertex ShallowCopy(int index);
     }
 
     public interface IVertex2D : IVertex, IComparable<IVertex2D>, IEquatable<IVertex2D>

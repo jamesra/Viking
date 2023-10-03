@@ -10,14 +10,26 @@ namespace Geometry.Meshing
     /// </summary>
     public abstract class VertexBase : IVertex, IComparable<VertexBase>, IEquatable<VertexBase>
     {
-        public virtual int Index { get; set; }
+        /// <summary>
+        /// Index of the vertex in a mesh.  Can only be set once.  If a different index is desired use CreateShallowCopy(int).
+        /// </summary>
+        public int Index => _Index ?? throw new InvalidOperationException("No index set for vertex yet");
+
+        private int? _Index = null;
+
+        public bool HasIndex => _Index.HasValue;
+
+        public void SetIndex(int index)
+        {
+            if (_Index.HasValue && index != this.Index)
+                throw new InvalidOperationException("Index already set for vertex");
+            
+            _Index = index;
+        }
 
         public IComparer<IEdgeKey> EdgeComparer
         {
-            get
-            {
-                return _Edges.Comparer;
-            }
+            get => _Edges.Comparer;
             protected set
             {
                 if (value != _Edges.Comparer)
@@ -31,17 +43,7 @@ namespace Geometry.Meshing
         protected SortedSet<IEdgeKey> _Edges;
 
         private ImmutableSortedSet<IEdgeKey> _ImmutableEdges;
-        public ImmutableSortedSet<IEdgeKey> Edges
-        {
-            get
-            {
-                if (_ImmutableEdges == null)
-                {
-                    _ImmutableEdges = _Edges.ToImmutableSortedSet(_Edges.Comparer);
-                }
-                return _ImmutableEdges;
-            }
-        }
+        public ImmutableSortedSet<IEdgeKey> Edges => _ImmutableEdges ?? (_ImmutableEdges = _Edges.ToImmutableSortedSet(_Edges.Comparer));
 
         protected VertexBase()
         {
@@ -49,6 +51,10 @@ namespace Geometry.Meshing
             _ImmutableEdges = null;
         }
 
+        protected VertexBase(int index) : this()
+        {
+            this._Index = index;
+        }
 
         protected VertexBase(IComparer<IEdgeKey> edgeComparer = null)
         {
@@ -58,7 +64,7 @@ namespace Geometry.Meshing
 
         protected VertexBase(int index, IComparer<IEdgeKey> edgeComparer = null) : this(edgeComparer)
         {
-            this.Index = index;
+            this._Index = index;
         }
 
         public virtual bool AddEdge(IEdgeKey e)
@@ -86,6 +92,8 @@ namespace Geometry.Meshing
 
         public bool Equals(IVertex other)
         {
+            if (!_Index.HasValue) throw new InvalidOperationException("Index must be set before Equals is called.");
+
             if (other is null)
                 return false;
 
@@ -94,10 +102,32 @@ namespace Geometry.Meshing
 
         public bool Equals(VertexBase other)
         {
+            if (!_Index.HasValue) throw new InvalidOperationException("Index must be set before Equals is called.");
+
             if (other is null)
                 return false;
 
             return this.Index == other.Index;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (!_Index.HasValue) throw new InvalidOperationException("Index must be set before Equals is called.");
+
+            switch (obj)
+            {
+                case VertexBase other:
+                    return this.Index == other.Index;
+                case IVertex other2:
+                    return this.Index == other2.Index;
+                default:
+                    return base.Equals(obj);
+            }
+        }
+
+        public override int GetHashCode()
+        {
+            return _Index.HasValue ? _Index.Value : throw new InvalidOperationException("Index must be set before GetHashCode is called.");
         }
 
         public virtual void RemoveEdge(IEdgeKey e)
@@ -108,6 +138,8 @@ namespace Geometry.Meshing
         }
 
         public abstract IVertex ShallowCopy();
+
+        public abstract IVertex ShallowCopy(int index);
     }
 
     /// <summary>
@@ -117,6 +149,11 @@ namespace Geometry.Meshing
     public class Vertex3D<T> : Vertex3D, IVertex3D<T>
     {
         public T Data { get; set; }
+
+        public Vertex3D(int index, GridVector3 p, GridVector3 n, T data) : base(index, p, n)
+        {
+            Data = data;
+        }
 
         public Vertex3D(GridVector3 p, GridVector3 n, T data) : base(p, n)
         {
@@ -137,6 +174,12 @@ namespace Geometry.Meshing
             Vertex3D<T> newVertex = new Vertex3D<T>(Position, Normal, Data);
             return newVertex;
         }
+
+        public override IVertex ShallowCopy(int index)
+        {
+            Vertex3D<T> newVertex = new Vertex3D<T>(index, Position, Normal, Data);
+            return newVertex;
+        }
     }
 
     /// <summary>
@@ -145,48 +188,43 @@ namespace Geometry.Meshing
     public class Vertex3D : VertexBase, IVertex3D
     {
         private GridVector3 _Position;
-        private GridVector3 _Normal;
 
         public GridVector3 Position
         {
-            get
-            {
-                return _Position;
-            }
-            set
-            {
-                _Position = value;
-            }
+            get => _Position;
+            set => _Position = value;
         }
 
-        public GridVector3 Normal
-        {
-            get
-            {
-                return _Normal;
-            }
-            set
-            {
-                _Normal = value;
-            }
-        }
+        public GridVector3 Normal { get; set; }
 
         public Vertex3D(GridVector3 p, GridVector3 n) : base()
         {
             _Position = p;
-            _Normal = n;
+            Normal = n;
         }
 
         public Vertex3D(GridVector3 p) : base()
         {
             _Position = p;
-            _Normal = GridVector3.Zero;
+            Normal = GridVector3.Zero;
+        }
+
+        public Vertex3D(int index, GridVector3 p, GridVector3 n) : base(index)
+        {
+            _Position = p;
+            Normal = n;
+        } 
+
+        public Vertex3D(int index, GridVector3 p) : base(index)
+        {
+            _Position = p;
+            Normal = GridVector3.Zero;
         }
 
 
         public override string ToString()
         {
-            return string.Format("I: {0} P: {1} N: {2}", this.Index, Position, Normal);
+            return $"I: {this.Index} P: {Position} N: {Normal}";
         }
 
         public override IVertex ShallowCopy()
@@ -194,6 +232,11 @@ namespace Geometry.Meshing
             Vertex3D v = new Vertex3D(this.Position, this.Normal);
 
             return v;
+        }
+
+        public override IVertex ShallowCopy(int index)
+        {
+            return new Vertex3D(index, this.Position, this.Normal);
         }
 
         public int CompareTo(IVertex3D other)
@@ -232,6 +275,11 @@ namespace Geometry.Meshing
     {
         public T Data { get; set; }
 
+        public Vertex2D(int index, GridVector2 p, T data, IComparer<IEdgeKey> edgeComparer = null) : base(index, p, edgeComparer)
+        {
+            Data = data;
+        }
+
         public Vertex2D(GridVector2 p, T data, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
         {
             Data = data;
@@ -246,6 +294,17 @@ namespace Geometry.Meshing
             Vertex2D<T> newVertex = new Vertex2D<T>(Position, Data, this.EdgeComparer);
             return newVertex;
         }
+
+        public override IVertex ShallowCopy(int index)
+        {
+            Vertex2D<T> newVertex = new Vertex2D<T>(index, Position, Data, this.EdgeComparer);
+            return newVertex;
+        }
+
+        public override string ToString()
+        {
+            return Data == null ? $"I: {this.Index} P: {Position}" : $"I: {this.Index} P: {Position} Data: {Data?.ToString()}";
+        }
     }
 
     /// <summary>
@@ -253,34 +312,22 @@ namespace Geometry.Meshing
     /// </summary>
     public class Vertex2D : VertexBase, IVertex2D
     {
-        private GridVector2 _Position;
-
-        public GridVector2 Position
-        {
-            get
-            {
-                return _Position;
-            }
-            set
-            {
-                _Position = value;
-            }
-        }
+        public GridVector2 Position { get; set; }
 
 
         public Vertex2D(GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(edgeComparer)
         {
-            _Position = p;
+            Position = p;
         }
 
         public Vertex2D(int index, GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(index, edgeComparer)
         {
-            _Position = p;
+            Position = p;
         }
 
         public override string ToString()
         {
-            return string.Format("I: {0} P: {1}", this.Index, Position);
+            return $"I: {this.Index} P: {Position}";
         }
 
         public int CompareTo(IVertex2D other)
@@ -296,6 +343,12 @@ namespace Geometry.Meshing
         public override IVertex ShallowCopy()
         {
             Vertex2D newVertex = new Vertex2D(Position);
+            return newVertex;
+        }
+
+        public override IVertex ShallowCopy(int index)
+        {
+            Vertex2D newVertex = new Vertex2D(index, Position);
             return newVertex;
         }
     }

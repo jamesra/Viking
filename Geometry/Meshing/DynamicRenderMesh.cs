@@ -413,8 +413,7 @@ namespace Geometry.Meshing
             int startingAppendIndex = this._Verticies.Count;
             this.AddVerticies(other.Verticies.Select(v =>
             {
-                IVertex copy = v.ShallowCopy();
-                copy.Index += startingAppendIndex;
+                IVertex copy = v.ShallowCopy(v.Index + startingAppendIndex);
                 return (VERTEX)copy;
             }).ToList());
 

@@ -45,7 +45,7 @@ namespace MorphologyMesh
             }
         }
 
-        GridVector2 IVertex2D.Position { get { return this.Position.XY(); } }
+        GridVector2 IVertex2D.Position => this.Position.XY();
 
         public MorphMeshVertex(PolygonIndex polyIndex, GridVector3 p) : base(p)
         {
@@ -57,12 +57,21 @@ namespace MorphologyMesh
             PolyIndex = polyIndex;
         }
 
+        protected MorphMeshVertex(int index, PolygonIndex polyIndex, GridVector3 p, GridVector3 n) : base(index, p, n)
+        {
+            PolyIndex = polyIndex;
+        }
+
         public MorphMeshVertex(MedialAxisIndex medialIndex, GridVector3 p) : base(p)
         {
             MedialAxisIndex = medialIndex;
         }
 
         public MorphMeshVertex(MedialAxisIndex medialIndex, GridVector3 p, GridVector3 n) : base(p, n)
+        {
+            MedialAxisIndex = medialIndex;
+        }
+        protected MorphMeshVertex(int index, MedialAxisIndex medialIndex, GridVector3 p, GridVector3 n) : base(index, p, n)
         {
             MedialAxisIndex = medialIndex;
         }
@@ -109,6 +118,32 @@ namespace MorphologyMesh
             throw new ArgumentException("Vertex must be not null");
 
             //return new Vertex3D(old.Position, old.Normal);
+        }
+
+        public override IVertex ShallowCopy()
+        {
+            switch (Type)
+            {
+                case VertexOrigin.MEDIALAXIS:
+                    return new MorphMeshVertex(Index, MedialAxisIndex.Value, Position, Normal);
+                case VertexOrigin.CONTOUR:
+                    return new MorphMeshVertex(Index, PolyIndex.Value, Position, Normal);
+                default:
+                    throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
+            }
+        }
+
+        public override IVertex ShallowCopy(int index)
+        {
+            switch (Type)
+            {
+                case VertexOrigin.MEDIALAXIS:
+                    return new MorphMeshVertex(index, MedialAxisIndex.Value, Position, Normal);
+                case VertexOrigin.CONTOUR:
+                    return new MorphMeshVertex(index, PolyIndex.Value, Position, Normal);
+                default:
+                    throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
+            }
         }
 
         /// <summary>

@@ -21,7 +21,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// A vector originating from 0,0.  It determines which edge is the first in the rotation order.
         /// </summary>
-        GridVector2 OriginVector;
+        readonly GridVector2 OriginVector;
 
 
         public MeshEdgeAngleComparer(IMesh2D<VERTEX> mesh, GridLine origin_line_vector, bool clockwise = false) :
@@ -75,7 +75,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Precalculated comparison point used to compare angles
         /// </summary>
-        private GridVector2 ComparisonPoint;
+        private readonly GridVector2 ComparisonPoint;
 
         public MeshEdgeAngleComparerFixedIndex(IMesh<VERTEX> mesh, int origin_vertex, IEdgeKey origin_line, bool clockwise = false) :
             this(mesh, origin_vertex, GridVector2.Normalize(mesh[origin_line.OppositeEnd(origin_vertex)].Position - mesh[origin_vertex].Position), clockwise)
@@ -142,6 +142,10 @@ namespace Geometry.Meshing
         {
         }
 
+        protected TriangulationVertex(int index, GridVector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(index, p, edgeComparer)
+        {
+        }
+
         /// <summary>
         /// Returns the edges of this vertex sorted by increasing angle off a line originating at this vertex and projecting towards the origin_edge vertex
         /// </summary>
@@ -182,7 +186,16 @@ namespace Geometry.Meshing
 
         public override IVertex ShallowCopy()
         {
-            TriangulationVertex newVertex = new TriangulationVertex(Position)
+            TriangulationVertex newVertex = new TriangulationVertex(this.Index, Position)
+            {
+                EdgeComparer = this.EdgeComparer
+            };
+            return newVertex;
+        }
+
+        public override IVertex ShallowCopy(int index)
+        {
+            TriangulationVertex newVertex = new TriangulationVertex(index, Position)
             {
                 EdgeComparer = this.EdgeComparer
             };
@@ -194,18 +207,18 @@ namespace Geometry.Meshing
     {
         public T Data { get; set; }
 
-        public TriangulationVertex(GridVector2 p, T data) : base(p)
+        public TriangulationVertex(int index, GridVector2 p, T data) : base(index, p)
         {
-
+            Data = data;
         }
 
-        public TriangulationVertex(GridVector2 p) : base(p)
+        public TriangulationVertex(int index, GridVector2 p) : base(index, p)
         {
         }
 
         public override IVertex ShallowCopy()
         {
-            TriangulationVertex<T> newVertex = new TriangulationVertex<T>(Position, Data)
+            TriangulationVertex<T> newVertex = new TriangulationVertex<T>(Index, Position, Data)
             {
                 EdgeComparer = this.EdgeComparer
             };

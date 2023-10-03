@@ -302,16 +302,17 @@ namespace Geometry.Meshing
                 verts = faceList.ToArray();
             }
 
-            GridVector2 faceCenter = verts.Select(v => v.Position).ToArray().Average();
+            GridVector2 shapeCenter = verts.Select(v => v.Position).ToArray().Average();
 
-            if (faceCenter.Magnitude < 100)
+            if (shapeCenter.Magnitude < 100)
             {
-                faceCenter = GridVector2.Zero; //Don't nudge if we are close to origin, prevents errors in our tests.
+                shapeCenter = GridVector2.Zero; //Don't nudge if we are close to origin, prevents errors in our tests.
             }
 
             //Center the verts on 0,0 to reduce floating point error
-            var faceVerts = verts.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
-            var interiorVerts = InteriorPoints == null ? System.Array.Empty<Vertex2D<int>>() : InteriorPoints.Select(v => new Vertex2D<int>(v.Position - faceCenter, v.Index)).ToArray();
+            //Assign the index to the new vertex to match the index into the faceVerts and interiorVerts arrays
+            var faceVerts = verts.Select((v, i) => new Vertex2D<int>(i, v.Position - shapeCenter, v.Index)).ToArray();
+            var interiorVerts = InteriorPoints == null ? System.Array.Empty<Vertex2D<int>>() : InteriorPoints.Select((v, i) => new Vertex2D<int>(i + faceVerts.Length, v.Position - shapeCenter, v.Index)).ToArray();
 
             GridPolygon centeredPoly = new GridPolygon(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
             System.Diagnostics.Debug.Assert(interiorVerts.All(v => centeredPoly.Contains(v.Position)), "Interior points must be inside Face");
@@ -325,7 +326,7 @@ namespace Geometry.Meshing
             SortedSet<IEdgeKey> expectedConstrainedEdges = new SortedSet<IEdgeKey>();
 
             //Add constrained edges to the mesh
-            SortedSet<int> FaceIndicies = new SortedSet<int>(faceVerts.Select(f => f.Index));
+            SortedSet<int> faceIndicies = new SortedSet<int>(faceVerts.Select(f => f.Index));
 
             InfiniteSequentialIndexSet FaceIndexer = new InfiniteSequentialIndexSet(0, faceVerts.Length, 0);
             for (int i = 0; i < faceVerts.Length; i++)
@@ -336,6 +337,7 @@ namespace Geometry.Meshing
                 Edge e = new ConstrainedEdge(A, B);
                 if (tri_mesh.Contains(e))
                 {
+                    //Replace the standard edge with a constrained edge
                     if (tri_mesh[e] as ConstrainedEdge == null)
                     {
                         var existing_faces = tri_mesh[e].Faces;
@@ -351,8 +353,9 @@ namespace Geometry.Meshing
                 expectedConstrainedEdges.UnionWith(added_constrained_edges.Select(ce => ce.Key));
             }
 
-            //Remove edges that are not contained in the polygon, that means any edges that connect points on the same ring which are not constrained edges
-            var EdgesToCheck = tri_mesh.Edges.Keys.Where(k => FaceIndicies.Contains(k.A) && FaceIndicies.Contains(k.B) && expectedConstrainedEdges.Contains(k) == false).ToArray();
+            //Remove edges that are not contained inside the polygon, that means any edges that connect points on the same ring which are not constrained edges. 
+            //This removes edges from concave regions and interior holes
+            var EdgesToCheck = tri_mesh.Edges.Keys.Where(k => faceIndicies.Contains(k.A) && faceIndicies.Contains(k.B) && expectedConstrainedEdges.Contains(k) == false).ToArray();
             foreach (IEdgeKey key in EdgesToCheck)
             {
                 GridLineSegment line = new GridLineSegment(tri_mesh_verts[key.A].Position, tri_mesh_verts[key.B].Position);// tri_mesh.ToGridLineSegment(key);
