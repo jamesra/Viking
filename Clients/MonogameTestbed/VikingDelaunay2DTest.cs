@@ -482,25 +482,13 @@ namespace MonogameTestbed
 
             if (Gamepad.Y_Clicked)
             {
-                if(trimesh != null)
-                {
-                    /*if(!ConstrainedEdgeStart.HasValue)
-                    {
-                        ConstrainedEdgeStart = 
-                    }*/
+                /*if(!ConstrainedEdgeStart.HasValue)
+{
+    ConstrainedEdgeStart = 
+}*/
 
-                    //trimesh.AddContrainedEdge(new Edge(1, 3 * (trimesh.Verticies.Count / 4)));
-                    trimesh.AddConstrainedEdge(new ConstrainedEdge(0,1), OnTriangulationProgress);
-                    //trimesh.AddConstrainedEdge(new ConstrainedEdge(2,3), OnTriangulationProgress);
-                    /*
-                    IEdgeKey next = model.NextConstraint();
-                    if (next != null)
-                    {
-                        trimesh.AddConstrainedEdge(new ConstrainedEdge(next), OnTriangulationProgress);
-                        UpdateTriangulationViews(trimesh);
-                    }
-                    */
-                }
+                //trimesh.AddContrainedEdge(new Edge(1, 3 * (trimesh.Verticies.Count / 4)));
+                trimesh?.AddConstrainedEdge(new ConstrainedEdge(0, 1), OnTriangulationProgress);
                 /*
                 Points_C.TogglePoint(Cursor);
                 if (Points_C.Points.Count >= 3)
@@ -563,7 +551,6 @@ namespace MonogameTestbed
                 }
                 else
                 {
-                    Mesh2D mesh = null;
                     LineSorterView = null;
                     sortedPointsByAngle = null;
                 }
