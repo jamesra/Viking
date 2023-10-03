@@ -1641,24 +1641,4 @@ namespace Geometry
             return new GridRectangle(minX, maxX, minY, maxY);
         }
     }
-
-    public static class MathHelpers
-    {
-        /// <summary>
-        /// Given a scalar value from 0 to 1, return the linearly interpolated value between min/max.
-        /// </summary>
-        /// <param name="Fraction"></param>
-        /// <param name="MinVal"></param>
-        /// <param name="MaxVal"></param>
-        /// <returns></returns>
-        public static double Interpolate(this double Fraction, double MinVal, double MaxVal)
-        {
-            if (Fraction < 0)
-                return MinVal;
-            if (Fraction > 1)
-                return MaxVal;
-
-            return ((MaxVal - MinVal) * Fraction) + MinVal;
-        }
-    }
 }
