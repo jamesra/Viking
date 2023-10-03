@@ -83,41 +83,13 @@ namespace VikingWebAppSettings
             return WebConfigurationManager.ConnectionStrings[name].ConnectionString ?? throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
         }
           
-        public static string WebServiceURL
-        {
-            get
-            {
-                return GetApplicationSetting("EndpointURL");
-            }
-        }
+        public static string WebServiceURL => GetApplicationSetting("EndpointURL");
 
-        public static string VolumeURL
-        {
-            get
-            {
-                return GetApplicationSetting("VolumeURL");
-            }
-        }
+        public static string VolumeURL => GetApplicationSetting("VolumeURL");
 
-        public static Uri VolumeURI
-        {
-            get
-            {
-                Uri uri = null;
-                if (Uri.TryCreate(VolumeURL, UriKind.Absolute, out uri))
-                    return uri;
+        public static Uri VolumeURI => Uri.TryCreate(VolumeURL, UriKind.Absolute, out var uri) ? uri : null;
 
-                return null;
-            }
-        }
-
-        public static Uri ODataURL
-        {
-            get
-            {
-                return VolumeURI.Append("OData");
-            }
-        }
+        public static Uri ODataURL => VolumeURI.Append("OData");
 
         public static System.Net.NetworkCredential EndpointCredentials
         {

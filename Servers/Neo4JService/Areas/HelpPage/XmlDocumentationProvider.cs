@@ -49,17 +49,16 @@ namespace Neo4JService.Areas.HelpPage
 
         public virtual string GetDocumentation(HttpParameterDescriptor parameterDescriptor)
         {
-            if (parameterDescriptor is ReflectedHttpParameterDescriptor reflectedParameterDescriptor)
+            if (!(parameterDescriptor is ReflectedHttpParameterDescriptor reflectedParameterDescriptor)) return null;
+
+            XPathNavigator methodNode = GetMethodNode(reflectedParameterDescriptor.ActionDescriptor);
+            if (methodNode != null)
             {
-                XPathNavigator methodNode = GetMethodNode(reflectedParameterDescriptor.ActionDescriptor);
-                if (methodNode != null)
+                string parameterName = reflectedParameterDescriptor.ParameterInfo.Name;
+                XPathNavigator parameterNode = methodNode.SelectSingleNode(String.Format(CultureInfo.InvariantCulture, ParameterExpression, parameterName));
+                if (parameterNode != null)
                 {
-                    string parameterName = reflectedParameterDescriptor.ParameterInfo.Name;
-                    XPathNavigator parameterNode = methodNode.SelectSingleNode(String.Format(CultureInfo.InvariantCulture, ParameterExpression, parameterName));
-                    if (parameterNode != null)
-                    {
-                        return parameterNode.Value.Trim();
-                    }
+                    return parameterNode.Value.Trim();
                 }
             }
 
