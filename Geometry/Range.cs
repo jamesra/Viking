@@ -18,11 +18,19 @@
         /// <summary>
         /// Return the fractional distance between min and max values in the range
         /// </summary>
+        /// <param name="clip">If true, values outside the range are clipped to 0 or 1, whichever is closer.</param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public double Normalize(double value)
+        public double Normalize(double value, bool clip = false)
         {
-            return (value - _min) / _range;
+            double fraction = (value - _min) / _range;
+            return clip ? 
+                fraction <= 0 
+                    ? 0
+                    : fraction >= 1.0 
+                        ? 1.0 
+                        : fraction
+                : fraction;
         }
 
         /// <summary>
@@ -30,14 +38,15 @@
         /// </summary>
         /// <param name="fraction"></param>
         /// <returns></returns>
-        public double Interpolate(double fraction)
-        {
-            return (fraction * _range) + _min;
-        }
+        public double Interpolate(double fraction) => (fraction * _range) + _min;
 
-        public override string ToString()
-        {
-            return $"Range({_min}, {_max})";
-        }
+        public override string ToString() => $"Range({_min}, {_max})";
+
+        /// <summary>
+        /// If the value falls outside the range, return min or max value.  Otherwise return the passed value
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public double Clip(double value) => value <= _min ? _min : value >= _max ? _max : value;
     }
 }

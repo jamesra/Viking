@@ -547,7 +547,8 @@ namespace Geometry.Meshing
                 var intersected = this.FindIntersectingEdges(e, out List<IEdgeKey> intersected_edges);
                 if (intersected_edges.Count > 0)
                 {
-                    throw new EdgesIntersectTriangulationException(e, intersected_edges.Select(edge => (IEdgeKey)edge).ToArray(), string.Format("New edge {0} intersects existing edges: {1}", e, intersected_edges[0]));
+                    throw new EdgesIntersectTriangulationException(e, intersected_edges.Select(edge => (IEdgeKey)edge).ToArray(),
+                        $"New edge {e} intersects existing edges: {intersected_edges[0]}");
                 }
             }
             catch (EdgeIntersectsVertexException)

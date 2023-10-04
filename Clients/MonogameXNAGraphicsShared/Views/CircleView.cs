@@ -69,7 +69,7 @@ namespace VikingXNAGraphics
         }
 
 
-        public static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect)
+        public new static void SetupGraphicsDevice(GraphicsDevice device, BasicEffect basicEffect)
         {
             //Note one still needs to set the texture for the effect before rendering after calling this method
             //DeviceStateManager.SaveDeviceState(device);
@@ -83,7 +83,7 @@ namespace VikingXNAGraphics
         }
 
         
-        public static void SetupGraphicsDevice(GraphicsDevice device, OverlayShaderEffect overlayEffect)
+        public new static void SetupGraphicsDevice(GraphicsDevice device, OverlayShaderEffect overlayEffect)
         {
             //Note one still needs to set the texture for the effect before rendering after calling this method
             //DeviceStateManager.SaveDeviceState(device);
@@ -92,7 +92,7 @@ namespace VikingXNAGraphics
         }
         
 
-        public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
+        public new static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
         {
             //DeviceStateManager.RestoreDeviceState(graphicsDevice);
 
@@ -101,7 +101,7 @@ namespace VikingXNAGraphics
             basicEffect.VertexColorEnabled = false;
         }
 
-        public static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, OverlayShaderEffect overlayEffect)
+        public new static void RestoreGraphicsDevice(GraphicsDevice graphicsDevice, OverlayShaderEffect overlayEffect)
         {
             //DeviceStateManager.RestoreDeviceState(graphicsDevice); 
         }

@@ -192,26 +192,11 @@ namespace Geometry
 
             if (point.X > center.X) //Right of center
             {
-
-                if (point.Y > center.Y)
-                {
-                    quad = Quadrant.UPPERRIGHT;
-                }
-                else
-                {
-                    quad = Quadrant.LOWERRIGHT;
-                }
+                quad = point.Y > center.Y ? Quadrant.UPPERRIGHT : Quadrant.LOWERRIGHT;
             }
             else //Left of center
             {
-                if (point.Y > center.Y)
-                {
-                    quad = Quadrant.UPPERLEFT;
-                }
-                else
-                {
-                    quad = Quadrant.LOWERLEFT;
-                }
+                quad = point.Y > center.Y ? Quadrant.UPPERLEFT : Quadrant.LOWERLEFT;
             }
 
             return quad;
@@ -228,7 +213,7 @@ namespace Geometry
                 }
                 else
                 {
-                    foreach (var quad in _quadrants.Where(q => q != null))
+                    foreach (var quad in _quadrants.Where(q => !(q is null)))
                     {
                         foreach (var key in quad.Keys)
                         {

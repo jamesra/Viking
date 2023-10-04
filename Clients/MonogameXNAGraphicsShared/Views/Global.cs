@@ -68,14 +68,14 @@ namespace VikingXNAGraphics
 
     public static class GlobalPrimitives
     {
-        static public Texture2D CircleTexture;
-        static public Texture2D PlusTexture;
-        static public Texture2D MinusTexture;
-        static public Texture2D UpArrowTexture;
-        static public Texture2D DownArrowTexture;
-        static public Texture2D ChainTexture;
-        static public Texture2D ConnectTexture;
-        static public Texture2D CircleXTexture;
+        public static Texture2D CircleTexture;
+        public static Texture2D PlusTexture;
+        public static Texture2D MinusTexture;
+        public static Texture2D UpArrowTexture;
+        public static Texture2D DownArrowTexture;
+        public static Texture2D ChainTexture;
+        public static Texture2D ConnectTexture;
+        public static Texture2D CircleXTexture;
 
         public static Texture2D GetTexture(this BuiltinTexture tex)
         {
@@ -104,13 +104,13 @@ namespace VikingXNAGraphics
             }
         }
 
-        static readonly public VertexPositionColorTexture[] SquareVerts = new VertexPositionColorTexture[] {
+        public static readonly VertexPositionColorTexture[] SquareVerts = new VertexPositionColorTexture[] {
             new VertexPositionColorTexture(new Vector3(-1,1,0), Color.White, Vector2.Zero), 
             new VertexPositionColorTexture(new Vector3(1,1,0), Color.White, Vector2.UnitX), 
             new VertexPositionColorTexture(new Vector3(-1,-1,0), Color.White, Vector2.UnitY), 
             new VertexPositionColorTexture(new Vector3(1,-1,0), Color.White, Vector2.One) };
 
-        static readonly public int[] SquareIndicies = new int[] { 2, 1, 0, 3, 1, 2 };
+        public static readonly int[] SquareIndicies = new int[] { 2, 1, 0, 3, 1, 2 };
 
         /// <summary>
         /// Stores a unit circle/square index buffer for each device we know about.
@@ -221,7 +221,7 @@ namespace VikingXNAGraphics
         //        static public VertexDeclaration VertexPositionColorTextureDecl = null;
 
         static VertexPositionColor[] _UpTriVerts = null;
-        static public VertexPositionColor[] UpTriVerts
+        public static VertexPositionColor[] UpTriVerts
         {
             get
             {
@@ -246,7 +246,7 @@ namespace VikingXNAGraphics
         }
 
         static VertexPositionColor[] _DownTriVerts = null;
-        static public VertexPositionColor[] DownTriVerts
+        public static VertexPositionColor[] DownTriVerts
         {
             get
             {
@@ -271,11 +271,11 @@ namespace VikingXNAGraphics
             }
         }
 
-        static public int[] CircleVertIndicies = null;
-        static public int[] CircleBorderIndicies = null;
+        public static int[] CircleVertIndicies = null;
+        public static int[] CircleBorderIndicies = null;
 
         static VertexPositionColor[] _CircleVerts = null;
-        static public VertexPositionColor[] CircleVerts
+        public static VertexPositionColor[] CircleVerts
         {
             get
             {
@@ -312,7 +312,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        static private VertexPositionColorTexture[] CircleVerticies(GridVector2 Pos, float Radius, Microsoft.Xna.Framework.Color color)
+        private static VertexPositionColorTexture[] CircleVerticies(GridVector2 Pos, float Radius, Microsoft.Xna.Framework.Color color)
         {
             VertexPositionColorTexture[] verts = new VertexPositionColorTexture[GlobalPrimitives.SquareVerts.Length];
             GlobalPrimitives.SquareVerts.CopyTo(verts, 0); 
@@ -332,7 +332,7 @@ namespace VikingXNAGraphics
         }
 
 
-        static public void DrawCircle(GraphicsDevice graphicsDevice,
+        public static void DrawCircle(GraphicsDevice graphicsDevice,
                 BasicEffect basicEffect, 
                 GridVector2 Pos,
                 double Radius,
@@ -378,7 +378,7 @@ namespace VikingXNAGraphics
         }
          
 
-        static public void DrawPolyline(RoundLineCode.RoundLineManager LineManager,
+        public static void DrawPolyline(RoundLineCode.RoundLineManager LineManager,
                                    BasicEffect basicEffect,
                                    IList<GridVector2> LineVerticies,
                                    double LineWidth,
@@ -395,7 +395,7 @@ namespace VikingXNAGraphics
         }
 
 
-        static public void DrawPoints(RoundLineCode.RoundLineManager LineManager,
+        public static void DrawPoints(RoundLineCode.RoundLineManager LineManager,
                                    BasicEffect basicEffect,
                                    IList<GridVector2> Verticies,
                                    double Radius,
@@ -411,7 +411,7 @@ namespace VikingXNAGraphics
             LineManager.Draw(points, (float)Radius, color, basicEffect.View * basicEffect.Projection, 0, "Standard");
         }
          
-        static public void AppendVertLists(IEnumerable<VertexPositionColorTexture> sourceList, List<VertexPositionColorTexture> targetList, IEnumerable<int> indicies, ref List<int> listIndicies)
+        public static void AppendVertLists(IEnumerable<VertexPositionColorTexture> sourceList, List<VertexPositionColorTexture> targetList, IEnumerable<int> indicies, ref List<int> listIndicies)
         {
             int iStartVert = targetList.Count;
             targetList.AddRange(sourceList);

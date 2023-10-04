@@ -654,8 +654,10 @@ namespace WebAnnotation.View
             }
             else
             {
-                double scalar = (ScreenFraction - MaxScreenFraction) / (MinScreenFraction - MaxScreenFraction);
-                return (float)scalar.Interpolate(0, 1);
+                Range screenFractionRange = new Range(MinScreenFraction, MaxScreenFraction);
+                double scalar = screenFractionRange.Normalize(ScreenFraction, clip: true);
+                //double scalar = (ScreenFraction - MaxScreenFraction) / (MinScreenFraction - MaxScreenFraction);
+                return (float)scalar;
             }
         }
 
