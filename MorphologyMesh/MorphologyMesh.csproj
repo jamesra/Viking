@@ -51,6 +51,7 @@
     <Compile Include="MeshGraph.cs" />
     <Compile Include="MeshGraphBuilder.cs" />
     <Compile Include="MorphologyMesh\BajajGeneratorMesh.cs" />
+    <Compile Include="MorphologyMesh\ConcurrentTopologyInitializer.cs" />
     <Compile Include="MorphologyMesh\SliceGraph.cs" />
     <Compile Include="MorphologyMesh\MorphMeshRegion.cs" />
     <Compile Include="MorphologyMesh\MorphMeshEdge.cs" />

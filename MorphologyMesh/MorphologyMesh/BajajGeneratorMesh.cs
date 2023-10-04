@@ -27,13 +27,13 @@ namespace MorphologyMesh
     /// </summary>
     public class BajajGeneratorMesh : MorphRenderMesh
     {
-        internal override bool[] IsUpperPolygon { get { return Topology.IsUpper; } }
+        internal override bool[] IsUpperPolygon => Topology.IsUpper;
 
-        public ImmutableSortedSet<int> UpperPolyIndicies { get { return Topology.UpperPolyIndicies; } }
-        public ImmutableSortedSet<int> LowerPolyIndicies { get { return Topology.LowerPolyIndicies; } }
+        public ImmutableSortedSet<int> UpperPolyIndicies => Topology.UpperPolyIndicies;
+        public ImmutableSortedSet<int> LowerPolyIndicies => Topology.LowerPolyIndicies;
 
-        internal GridPolygon[] UpperPolygons { get { return Topology.UpperPolygons; } }
-        internal GridPolygon[] LowerPolygons { get { return Topology.LowerPolygons; } }
+        internal GridPolygon[] UpperPolygons => Topology.UpperPolygons;
+        internal GridPolygon[] LowerPolygons => Topology.LowerPolygons;
 
         private readonly List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
 
