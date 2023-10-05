@@ -3073,17 +3073,18 @@ namespace Geometry
                     GridVector2 p = poly.ExteriorRing[iVertex];
                     PolygonIndex value = new PolygonIndex(iPolygon, iVertex, Polygons);
 
-                    if (pointToPoly.ContainsKey(p))
+                    if(pointToPoly.TryGetValue(p, out List<PolygonIndex> existing))
                     {
-                        pointToPoly[p].Add(value);
-                        continue;
+                        existing.Add(value);
                     }
-
-                    List<PolygonIndex> indexList = new List<Geometry.PolygonIndex>
+                    else
                     {
-                        value
-                    };
-                    pointToPoly.Add(p, indexList);
+                        List<PolygonIndex> indexList = new List<Geometry.PolygonIndex>
+                        {
+                            value
+                        };
+                        pointToPoly.Add(p, indexList);
+                    }     
                 }
 
                 for (int iInnerPoly = 0; iInnerPoly < poly.InteriorPolygons.Count; iInnerPoly++)
@@ -3095,17 +3096,17 @@ namespace Geometry
                         GridVector2 p = innerPolygon.ExteriorRing[iVertex];
 
                         PolygonIndex value = new PolygonIndex(iPolygon, iInnerPoly, iVertex, Polygons);
-                        if (pointToPoly.ContainsKey(p))
+                        if (pointToPoly.TryGetValue(p, out var existing))
                         {
-                            pointToPoly[p].Add(value);
-                            continue;
+                            existing.Add(value);
                         }
-
-                        List<PolygonIndex> indexList = new List<Geometry.PolygonIndex>
-                        {
-                            value
-                        };
-                        pointToPoly.Add(p, indexList);
+                        else { 
+                            List<PolygonIndex> indexList = new List<Geometry.PolygonIndex>
+                            {
+                                value
+                            };
+                            pointToPoly.Add(p, indexList);
+                        }
                     }
                 }
             }
