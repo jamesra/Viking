@@ -35,13 +35,7 @@ namespace MonogameTestbed
 
         public int? iShownLineView = null;
         public List<LineSetView> listLineViews = new List<LineSetView>();
-        public bool ShowLines
-        {
-            get
-            {
-                return iShownLineView.HasValue;
-            }
-        }
+        public bool ShowLines => iShownLineView.HasValue;
 
         //private LineSetView lineViews = new LineSetView();
         //private LineSetView unfiltered_lineViews = new LineSetView();
@@ -62,13 +56,7 @@ namespace MonogameTestbed
 
         public int? iShownMesh = null;
         public List<MeshView<VertexPositionColor>> MeshViews = new List<MeshView<VertexPositionColor>>();
-        public bool ShowMesh
-        {
-            get
-            {
-                return iShownMesh.HasValue;
-            }
-        } 
+        public bool ShowMesh => iShownMesh.HasValue;
 
 
         //MeshModel<VertexPositionColor> meshViewModel = null;
@@ -91,12 +79,7 @@ namespace MonogameTestbed
 
         public bool ShowFaces = false;
         public bool ShowPolygons = true;
-        public bool ShowRegionPolygons {
-            get
-            {
-                return iShownRegion.HasValue;
-            }
-        }
+        public bool ShowRegionPolygons => iShownRegion.HasValue;
 
         public bool ShowCompletedVerticies = true;
         public bool ShowAllEdges = false;
@@ -111,10 +94,7 @@ namespace MonogameTestbed
         {
             get
             {
-                if(PolyViews != null)
-                    return PolyViews.PointLabelType;
-
-                return IndexLabelType.NONE;
+                return PolyViews is null ? IndexLabelType.NONE : PolyViews.PointLabelType;
             }
             set
             {
@@ -123,30 +103,12 @@ namespace MonogameTestbed
             }
         }
         
-        public bool ShowPolyIndexLabels
-        {
-            get
-            {
-                return PolyViews.LabelPolygonIndex;
-            }
-        }
+        public bool ShowPolyIndexLabels => PolyViews.LabelPolygonIndex;
 
-        public bool ShowMeshIndexLabels
-        {
-            get
-            {
-                return PolyViews.LabelIndex;
-            }
-        }
+        public bool ShowMeshIndexLabels => PolyViews.LabelIndex;
 
 
-        public bool ShowPolyPositionLabels
-        {
-            get
-            {
-                return PolyViews.LabelPosition;
-            }
-        }
+        public bool ShowPolyPositionLabels => PolyViews.LabelPosition;
 
         public readonly MorphologyGraph Graph;
 
@@ -245,13 +207,12 @@ namespace MonogameTestbed
         {
             if (MeshViews.Count > 0)
                 ResetMesh();
-            
-            MorphologyGraph graph = this.Graph;
+             
             //CompositeMeshModel = new SliceGraphMeshModel();
             //CompositeMeshView.models.Add(CompositeMeshModel.model);
 
             Trace.WriteLine("Begin Slice graph construction");
-            SliceGraph sliceGraph = await SliceGraph.Create(graph, 2.0);
+            SliceGraph sliceGraph = await SliceGraph.Create(Graph, 2.0);
             Trace.WriteLine("End Slice graph construction");
             
             if(!sliceGraph.Nodes.Any())
@@ -263,7 +224,7 @@ namespace MonogameTestbed
             meshAssemblyPlan = MeshAssemblyPlanner.Create(sliceGraph);
 
             meshIncompleteView = new MeshAssemblyPlannerIncompleteView(meshAssemblyPlan, sliceGraph);
-            meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan, graph.BoundingBox.CenterPoint)
+            meshCompletedView = new MeshAssemblyPlannerCompletedView(meshAssemblyPlan, Graph.BoundingBox.CenterPoint)
             {
                 Color = ColorExtensions.Random()
             };
@@ -649,7 +610,7 @@ namespace MonogameTestbed
             }
             
             GridBox bbox = graph.BoundingBox;//new GridBox(wrapView.Polygons.BoundingBox(), nodes.Min(n => n.Z), nodes.Max(n => n.Z));
-            scene3D.Camera.Position = (bbox.CenterPoint - new GridVector3(bbox.Width * 3, 0, 0)).ToXNAVector3();
+            scene3D.Camera.Position = (bbox.CenterPoint - new GridVector3(bbox.Width * 2, 0, 0)).ToXNAVector3();
             scene3D.Camera.LookAt = (bbox.CenterPoint).ToXNAVector3();
 
             var meshGenTasks = new List<Task>();
@@ -883,7 +844,6 @@ namespace MonogameTestbed
 
         private string CleanOutputPath(string outputPath)
         {
-            //System.IO.P
             throw new NotImplementedException();
         }
 

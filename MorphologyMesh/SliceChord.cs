@@ -5,8 +5,10 @@ namespace MorphologyMesh
 {
     public interface ISliceChord : IEquatable<ISliceChord>
     {
+        /// <summary>
+        /// Geometric line segment of the chord
+        /// </summary>
         GridLineSegment Line { get; }
-
     }
 
     /// <summary>
@@ -53,20 +55,31 @@ namespace MorphologyMesh
     /// </summary>
     public class SliceChord : IEquatable<SliceChord>, ISliceChord
     {
+        /// <summary>
+        /// Geometric line segment of the chord
+        /// </summary>
         public readonly GridLineSegment Line;
 
         public readonly PolygonIndex Origin; //The vertex originating the slice chord
         public readonly PolygonIndex Target; //The target vertex
 
+        public double Orientation
+        {
+            get; private set;
+        }
+
+        GridLineSegment ISliceChord.Line => this.Line;
+
+
         //public SliceChordTestType PassedTests; //Tests we know this chord has passed.
         //public SliceChordTestType FailedTests; //Tests we know this chord has failed.
-         
+
         public SliceChord(PolygonIndex O, PolygonIndex T, GridPolygon[] polygons)
         {
             this.Line = new GridLineSegment(O.Point(polygons), T.Point(polygons));
             this.Origin = O;
             this.Target = T;
-            this.Orientation = EdgeTypeExtensions.Orientation(Origin, Target, polygons);
+            this.Orientation = Origin.Orientation(Target, polygons);
         }
 
         public bool Equals(SliceChord other)
@@ -96,17 +109,8 @@ namespace MorphologyMesh
             return Origin.GetHashCode() + Target.GetHashCode();
         }
 
-        public double Orientation
-        {
-            get; private set;
-        }
-
-        GridLineSegment ISliceChord.Line { get { return this.Line; } }
-
-        public override string ToString()
-        {
-            return string.Format("{0} - {1}", Origin, Target);
-        }
+        
+        public override string ToString() => $"{Origin} - {Target}";
 
         public bool Equals(ISliceChord other)
         {

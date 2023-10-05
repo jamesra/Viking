@@ -29,28 +29,40 @@ namespace MorphologyMesh
     {
         internal override bool[] IsUpperPolygon => Topology.IsUpper;
 
+        /// <summary>
+        /// Vertex indicies that belong to an upper polygon
+        /// </summary>
         public ImmutableSortedSet<int> UpperPolyIndicies => Topology.UpperPolyIndicies;
+        /// <summary>
+        /// Vertex indicies that belong to a lower polygon
+        /// </summary>
         public ImmutableSortedSet<int> LowerPolyIndicies => Topology.LowerPolyIndicies;
 
         internal GridPolygon[] UpperPolygons => Topology.UpperPolygons;
         internal GridPolygon[] LowerPolygons => Topology.LowerPolygons;
 
-        private readonly List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
+        //private readonly List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
 
         public List<MorphMeshRegion> Regions { get; private set; }
 
         /// <summary>
         /// An optional field that allows tracking of which annotations compose the mesh
         /// </summary>
-        public SliceTopology Topology;
+        public readonly SliceTopology Topology;
 
         /// <summary>
         /// An optional field that allows tracking of which annotations compose the mesh
         /// </summary>
-        public Slice Slice;
+        public readonly Slice Slice;
 
+        /// <summary>
+        /// How thick the slice is along the Z axis
+        /// </summary>
         public double SliceThickness => Topology.SliceThickness;
 
+        /// <summary>
+        /// Where the center of the slice is along the Z axis
+        /// </summary>
         public double SliceCenterZ => Topology.SliceCenterZ;
 
         /// <summary>
@@ -183,78 +195,78 @@ namespace MorphologyMesh
         /// <summary>
         /// Identify if there are faces that could be created using the specified verticies
         /// </summary>
-        /// <param name="TargetVert"></param>
+        /// <param name="targetVert"></param>
         /// <param name="current"></param>
         /// <param name="testEdge"></param>
-        /// <param name="CheckedEdges"></param>
-        /// <param name="Path"></param>
+        /// <param name="checkedEdges"></param>
+        /// <param name="path"></param>
         /// <returns></returns>
-        private List<int> FindCloseableFace(int TargetVert, IVertex current, IEdge testEdge, SortedSet<IEdgeKey> CheckedEdges = null, Stack<int> Path = null)
+        private List<int> FindCloseableFace(int targetVert, IVertex current, IEdge testEdge, SortedSet<IEdgeKey> checkedEdges = null, Stack<int> path = null)
         {
-            if (CheckedEdges == null)
+            if (checkedEdges is null)
             {
-                CheckedEdges = new SortedSet<IEdgeKey>();
+                checkedEdges = new SortedSet<IEdgeKey>();
             }
 
-            if (Path == null)
+            if (path == null)
             {
-                Path = new Stack<int>();
-                Path.Push(TargetVert);
+                path = new Stack<int>();
+                path.Push(targetVert);
             }
 
             //Make sure the face formed by the top three entries in the path is not already present in the mesh
 
-            List<int> FaceTest = StackExtensions<int>.Peek(Path, 3);
-            if (FaceTest.Count == 3)
+            List<int> faceTest = StackExtensions<int>.Peek(path, 3);
+            if (faceTest.Count == 3)
             {
-                if (this.Contains(new Face(FaceTest)))
+                if (this.Contains(new Face(faceTest)))
                     return null;
             }
 
             /////////////////////////////////////////////////////////////
 
-            CheckedEdges.Add(testEdge.Key);
-            if (Path.Count > 4) //We must return only triangles or quads, and we return closed loops
+            checkedEdges.Add(testEdge.Key);
+            if (path.Count > 4) //We must return only triangles or quads, and we return closed loops
                 return null;
 
-            if (current.Index == TargetVert)
+            if (current.Index == targetVert)
             {
-                return Path.ToList();
+                return path.ToList();
             }
             else
             {
-                Path.Push(current.Index);
+                path.Push(current.Index);
             }
 
             //Test all of the edges we have not examined yet who do not have two faces already
-            List<int> ShortestFace = null;
-            foreach (IEdge edge in current.Edges.Where(e => !CheckedEdges.Contains(e)).Select(e => this.Edges[e]).Where(e => ((MorphMeshEdge)e).FacesComplete == false))
+            List<int> shortestFace = null;
+            foreach (IEdge edge in current.Edges.Where(e => !checkedEdges.Contains(e)).Select(e => this.Edges[e]).Where(e => ((MorphMeshEdge)e).FacesComplete == false))
             {
-                List<int> Face = FindCloseableFace(TargetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(CheckedEdges), new Stack<int>(Path));
+                List<int> Face = FindCloseableFace(targetVert, this[edge.OppositeEnd(current.Index)], edge, new SortedSet<IEdgeKey>(checkedEdges), new Stack<int>(path));
 
                 if (Face != null)
                 {
-                    if (ShortestFace == null)
+                    if (shortestFace == null)
                     {
-                        ShortestFace = Face;
+                        shortestFace = Face;
                     }
                     else
                     {
-                        if (ShortestFace.Count > Face.Count)
+                        if (shortestFace.Count > Face.Count)
                         {
-                            ShortestFace = Face;
+                            shortestFace = Face;
                         }
                     }
                 }
             }
 
-            if (ShortestFace != null)
+            if (shortestFace != null)
             {
-                return ShortestFace;
+                return shortestFace;
             }
 
             //Take this index off the stack since we did not locate a path
-            Path.Pop();
+            path.Pop();
 
             return null;
         }
