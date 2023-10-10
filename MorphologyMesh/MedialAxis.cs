@@ -180,25 +180,24 @@ namespace MorphologyMesh
 
         private static MedialAxisVertex GetOrAddVertex(MedialAxisGraph graph, GridVector2 p)
         {
-            if (!graph.ContainsKey(p))
-            {
-                MedialAxisVertex node = new MedialAxisVertex(p);
-                graph.AddNode(node);
-            }
+            if (graph.TryGetValue(p, out var node)) return node;
 
-            return graph[p];
+            node = new MedialAxisVertex(p);
+            graph.AddNode(node); 
+            return node;
         }
 
         private static MedialAxisVertex GetOrAddLineBisectorVertex(MedialAxisGraph graph, GridLineSegment line)
         {
             GridVector2 midpoint = line.Bisect();
-            if (!graph.ContainsKey(midpoint))
+            if (graph.TryGetValue(midpoint, out var node))
             {
-                MedialAxisVertex node = new MedialAxisVertex(midpoint);
-                graph.AddNode(node);
+                return node; 
             }
 
-            return graph[midpoint];
+            node = new MedialAxisVertex(midpoint);
+            graph.AddNode(node); 
+            return node;
         }
     }
 

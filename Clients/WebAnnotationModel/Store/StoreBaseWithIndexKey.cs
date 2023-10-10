@@ -98,13 +98,11 @@ namespace WebAnnotationModel
                             continue;
                         }
 
-                        if (IDToObject.ContainsKey(keyObj.ID) == false)
+                        if (IDToObject.TryGetValue(keyObj.ID, out OBJECT obj) == false)
                         {
                             data.DBAction = DBACTION.NONE;
                             continue;
                         }
-
-                        OBJECT obj = IDToObject[keyObj.ID];
 
                         switch (data.DBAction)
                         {
@@ -161,13 +159,11 @@ namespace WebAnnotationModel
                 //I have to do this because WCF does not marshal the templates for the WCFObject types
                 //This should be fairly future proof
                 WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = input[iObj];
-                if (IDToObject.ContainsKey(keyObj.ID) == false)
+                if (IDToObject.TryGetValue(keyObj.ID, out OBJECT obj) == false)
                 {
                     data.DBAction = DBACTION.NONE;
                     continue;
                 }
-
-                OBJECT obj = IDToObject[keyObj.ID];
 
                 switch (data.DBAction)
                 {

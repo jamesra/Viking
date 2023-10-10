@@ -223,14 +223,7 @@ namespace Viking.Common
             try
             {
                 rwKnownLocationsLock.EnterReadLock();
-                if (!TrackedKeys.ContainsKey(ID))
-                {
-                    return 0;
-                }
-                else
-                {
-                    return TrackedKeys[ID];
-                }
+                return TrackedKeys.TryGetValue(ID, out int RefCount) ? RefCount : 0;
             }
             finally
             {
@@ -251,9 +244,9 @@ namespace Viking.Common
                 rwKnownLocationsLock.EnterWriteLock();
 
                 int RefCount;
-                if (TrackedKeys.ContainsKey(ID))
+                if (TrackedKeys.TryGetValue(ID, out var key))
                 {
-                    RefCount = TrackedKeys[ID];
+                    RefCount = key;
                 }
                 else
                 {

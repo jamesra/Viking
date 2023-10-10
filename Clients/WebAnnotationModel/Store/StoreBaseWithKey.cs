@@ -225,10 +225,7 @@ namespace WebAnnotationModel
             return inventory.ObjectsInStore;
         }
 
-        public virtual bool Contains(KEY key)
-        {
-            return this.IDToObject.ContainsKey(key);
-        }
+        public virtual bool Contains(KEY key) => this.IDToObject.ContainsKey(key);
 
         /// <summary>
         /// Remove the passed object from the store. The item will be

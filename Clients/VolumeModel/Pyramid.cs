@@ -138,17 +138,8 @@ namespace Viking.VolumeModel
             return false;
         }
 
-        public IList<int> GetLevels()
-        {
-            return LevelsToPaths.Keys;
-        }
+        public IList<int> GetLevels() => LevelsToPaths.Keys;
 
-        public string PathForLevel(int level)
-        {
-            if (LevelsToPaths.ContainsKey(level) == false)
-                return null;
-
-            return LevelsToPaths[level];
-        }
+        public string PathForLevel(int level) => LevelsToPaths.TryGetValue(level, out var result) ? result : null;
     }
 }

@@ -97,9 +97,9 @@ namespace Viking.ViewModels
             {
                 SortedList<int, ITransform> SectionTransforms = _Volume.Transforms[this.ActiveVolumeTransform];
 
-                if (SectionTransforms.ContainsKey(SectionNumber))
+                if (SectionTransforms.TryGetValue(SectionNumber, out var transform))
                     return new VolumeToSectionTransform(BuildTransformKey(this.ActiveVolumeTransform, SectionNumber),
-                                                        SectionTransforms[SectionNumber]);
+                                                        transform);
                 else
                     return new VolumeToSectionTransform(BuildTransformKey("Identity", SectionNumber),
                                                         new Geometry.Transforms.IdentityTransform());

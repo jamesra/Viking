@@ -89,8 +89,8 @@ namespace VikingXNAWinForms
             if (String.IsNullOrEmpty(label))
                 label = " ";
 
-            if (LabelToSize.ContainsKey(label))
-                return LabelToSize[label];
+            if (LabelToSize.TryGetValue(label, out var size))
+                return size;
 
             LabelToSize[label] = font.MeasureString(label);
 

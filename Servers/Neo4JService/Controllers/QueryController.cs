@@ -29,14 +29,15 @@ namespace Neo4JService.Controllers
             content.Wait();
             string query = content.Result;
             
-            if(query == null || query.Length == 0)
+            if(query is null || query.Length == 0)
             {
                 throw new ArgumentException("No query found in post");
             }
 
             if(ContainsWritableKeywords(query, out var FoundKeywords))
             {
-                throw new ArgumentException("Found write-capable keywords in query.  Please submit only readonly queries:\n" + FoundKeywords);
+                throw new ArgumentException(
+                    $"Found write-capable keywords in query.  Please submit only readonly queries:\n{FoundKeywords}");
             }
 
             string Neo4JDatabase = VikingWebAppSettings.AppSettings.GetApplicationSetting("Neo4JDatabase");

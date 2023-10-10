@@ -26,10 +26,11 @@ namespace MonogameTestbed
             //Remove the missing keys from the KeyPresStart times
             foreach(var key in removedKeys)
             {
-                if(KeyPressStart.ContainsKey(key))
+                try
                 {
                     KeyPressStart.Remove(key);
                 }
+                catch (KeyNotFoundException) { }
             }
 
             foreach(var key in CurrentState.GetPressedKeys())
@@ -43,12 +44,12 @@ namespace MonogameTestbed
 
         public TimeSpan PressDuration(Keys key)
         {
-            if(KeyPressStart.ContainsKey(key) == false)
+            if(KeyPressStart.TryGetValue(key, out var timestamp) == false)
             {
                 return TimeSpan.Zero;
             }
 
-            return DateTime.UtcNow - KeyPressStart[key];
+            return DateTime.UtcNow - timestamp;
         }
 
         /// <summary>

@@ -63,10 +63,8 @@ namespace AnnotationVizLib.SimpleOData
             //Merge the structureLinks into the structures
             foreach (StructureLink sl in listNetworkEdges)
             {
-                if (graphFactory.IDToStructure.ContainsKey(sl.SourceID))
-                {
-                    Structure Source = graphFactory.IDToStructure[sl.SourceID];
-
+                if (graphFactory.IDToStructure.TryGetValue(sl.SourceID, out var Source))
+                {  
                     if (Source.SourceOfLinks == null)
                     {
                         Source.SourceOfLinks = new List<StructureLink>();
@@ -75,10 +73,8 @@ namespace AnnotationVizLib.SimpleOData
                     Source.SourceOfLinks.Add(sl);
                 }
 
-                if (graphFactory.IDToStructure.ContainsKey(sl.TargetID))
+                if (graphFactory.IDToStructure.TryGetValue(sl.TargetID, out var Target))
                 {
-                    Structure Target = graphFactory.IDToStructure[sl.TargetID];
-
                     if (Target.TargetOfLinks == null)
                     {
                         Target.TargetOfLinks = new List<StructureLink>();
@@ -240,25 +236,21 @@ namespace AnnotationVizLib.SimpleOData
             foreach (StructureLink link in struct_links)
             {
                 //After this point both nodes are already in the graph and we can create an edge
-                if (IDToStructure.ContainsKey(link.SourceID) && IDToStructure.ContainsKey(link.TargetID))
-                {
-                    IStructure LinkSource = IDToStructure[(ulong)link.SourceID];
-                    IStructure LinkTarget = IDToStructure[(ulong)link.TargetID];
-
+                if (IDToStructure.TryGetValue(link.SourceID, out var LinkSource) && IDToStructure.TryGetValue(link.TargetID, out var LinkTarget))
+                {  
                     if (LinkTarget.ParentID.HasValue && LinkSource.ParentID.HasValue)
                     {
                         string SourceTypeName = "";
-                        if (IDToStructureType.ContainsKey(LinkSource.TypeID))
+                        if (IDToStructureType.TryGetValue(LinkSource.TypeID, out var structureType))
                         {
-                            SourceTypeName = IDToStructureType[LinkSource.TypeID].Name;
+                            SourceTypeName = structureType.Name;
                         }
 
                         NeuronEdge E = new NeuronEdge((long)LinkSource.ParentID.Value, (long)LinkTarget.ParentID.Value, link, SourceTypeName);
 
-                        if (graph.Edges.ContainsKey(E))
+                        if (graph.Edges.TryGetValue(E, out var edges))
                         {
-                            E = graph.Edges[E];
-                            E.AddLink(link);
+                            edges.AddLink(link);
                         }
                         else
                         {

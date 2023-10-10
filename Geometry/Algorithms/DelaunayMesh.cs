@@ -1175,18 +1175,20 @@ namespace Geometry
         /// <param name="AlreadyFlipped"></param>
         static void AddFacePair(Dictionary<IFace, SortedSet<IFace>> dict, IFace A, IFace B)
         {
-            if (false == dict.ContainsKey(A))
+            if (false == dict.TryGetValue(A, out var ASet))
             {
-                dict.Add(A,  new SortedSet<IFace>());
+                ASet = new SortedSet<IFace>();
+                dict.Add(A, ASet);
             }
 
-            if (false == dict.ContainsKey(B))
+            if (false == dict.TryGetValue(B, out var BSet))
             {
-                dict.Add(B, new SortedSet<IFace>());
+                BSet = new SortedSet<IFace>();
+                dict.Add(B, BSet);
             }
 
-            dict[B].Add(A);
-            dict[A].Add(B);
+            BSet.Add(A);
+            ASet.Add(B);
         }
 
         /// <summary>

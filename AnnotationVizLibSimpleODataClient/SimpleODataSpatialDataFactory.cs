@@ -76,9 +76,9 @@ namespace AnnotationVizLib.SimpleODataClient
 
                 long ID = System.Convert.ToInt64(dict["ID"]);
 
-                if (graph.Nodes.ContainsKey(ID))
+                if (graph.Nodes.TryGetValue(ID, out var node))
                 {
-                    AppendDictionaryToAttributes(graph.Nodes[ID], dict);
+                    AppendDictionaryToAttributes(node, dict);
                 }
             }
         }

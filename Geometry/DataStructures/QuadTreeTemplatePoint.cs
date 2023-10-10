@@ -43,10 +43,7 @@ namespace Geometry
             this.Root.Insert(point, value);
         }
 
-        public bool Contains(TValue value)
-        {
-            return ValueToNodeTable.ContainsKey(value);
-        }
+        public bool Contains(TValue value) => ValueToNodeTable.ContainsKey(value);
 
         public void Remove(TValue value)
         {
@@ -57,14 +54,14 @@ namespace Geometry
 
             QuadTreeNodeTemplatePoint<TPoint, TValue> node = ValueToNodeTable[value];
 
-            if (node.Parent != null)
-                node.Parent.Remove(node);
-            else
+            if (node.Parent == null)
             {
                 //We are removing the root node.  State that it has no value and return
                 node.HasValue = false;
                 ValueToNodeTable.Remove(node.Value);
             }
+            else
+                node.Parent.Remove(node);
         }
 
         private void CreateTree(TPoint[] keys, TValue[] values, in GridRectangle border)
@@ -96,14 +93,12 @@ namespace Geometry
 
         public TPoint FindPosition(TValue value)
         {
-            if (ValueToNodeTable.ContainsKey(value) == false)
+            if (ValueToNodeTable.TryGetValue(value, out var node))
             {
-                throw new ArgumentException("Quadtree does not contains requested value");
+                return node.Point;
             }
 
-            QuadTreeNodeTemplatePoint<TPoint, TValue> node = ValueToNodeTable[value];
-
-            return node.Point;
+            throw new ArgumentException("Quadtree does not contains requested value");
         }
 
         /// <summary>

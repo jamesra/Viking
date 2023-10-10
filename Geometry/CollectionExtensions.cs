@@ -7,17 +7,17 @@ namespace Geometry
     {
         public static void AddToSet(this Dictionary<int, SortedSet<int>> dict, int key, int val)
         {
-            if (dict.ContainsKey(key) == false)
+            if (dict.TryGetValue(key, out var set))
             {
-                var newset = new SortedSet<int>
-                {
-                    val
-                };
-                dict.Add(key, newset);
+                set.Add(val);
             }
             else
             {
-                dict[key].Add(val);
+                set = new SortedSet<int>
+                {
+                    val
+                };
+                dict.Add(key, set);
             }
         }
 

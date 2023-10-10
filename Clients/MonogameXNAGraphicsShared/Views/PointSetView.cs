@@ -132,8 +132,8 @@ namespace VikingXNAGraphics
             {
                 if(KnownPoints.Contains(p))
                 {
-                    if (DuplicatePointsAddedCount.ContainsKey(p))
-                        DuplicatePointsAddedCount[p] = DuplicatePointsAddedCount[p] + 1; //Increment the count
+                    if (DuplicatePointsAddedCount.TryGetValue(p, out var count))
+                        DuplicatePointsAddedCount[p] = count + 1; //Increment the count
                     else
                     {
                         DuplicatePointsAddedCount.Add(p, 0); //Set the counter to 0 for when we use it later
@@ -171,18 +171,16 @@ namespace VikingXNAGraphics
                     label.FontSize = this.PointRadius * 2.0;
                     label.Color = this.LabelColor;
 
-                    if(DuplicatePointsAddedCount.ContainsKey(point_array[i]))
+                    if(DuplicatePointsAddedCount.TryGetValue(point_array[i], out var count))
                     {
                         //label.Position = label.Position + new GridVector2(0,PointRadius * (DuplicatePointsAddedCount[point_array[i]]-1));
                         
                         //label.Position = label.Position + label.
                         string prepended_newlines = "";
-                        for (int iLine = 0; iLine < DuplicatePointsAddedCount[point_array[i]]; iLine++)
+                        for (int iLine = 0; iLine < count; iLine++)
                             prepended_newlines += "|\n\r"; 
 
                         label.Text = prepended_newlines + label.Text; //Prepend a line
-                        
-                        DuplicatePointsAddedCount[point_array[i]] = DuplicatePointsAddedCount[point_array[i]] + 1;
                     }
                 }
             }

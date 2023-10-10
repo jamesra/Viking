@@ -253,8 +253,8 @@ namespace Viking.VolumeModel
             int minSectionNumber = Sections.Keys.Min();
             while (refnumber >= minSectionNumber)
             {
-                if (Sections.ContainsKey(refnumber))
-                    return Sections[refnumber];
+                if (Sections.TryGetValue(refnumber, out var below))
+                    return below;
                 refnumber--;
             }
 
@@ -276,8 +276,8 @@ namespace Viking.VolumeModel
             int maxSectionNumber = Sections.Keys.Max();
             while (refnumber <= maxSectionNumber)
             {
-                if (Sections.ContainsKey(refnumber))
-                    return Sections[refnumber];
+                if (Sections.TryGetValue(refnumber, out var above))
+                    return above;
                 refnumber++;
             }
 
@@ -868,9 +868,9 @@ namespace Viking.VolumeModel
                     ITransform stosTransform = Transform;
                     StosTransformInfo info = (stosTransform as ITransformInfo)?.Info as StosTransformInfo;
                     SortedList<int, ITransform> transformDict = null;
-                    if (this.Transforms.ContainsKey(groupName))
+                    if (this.Transforms.TryGetValue(groupName, out var transform))
                     {
-                        transformDict = this.Transforms[groupName];
+                        transformDict = transform;
                     }
                     else
                     {
@@ -1156,11 +1156,11 @@ namespace Viking.VolumeModel
                         IContinuousTransform ContinuousControlTransform = null;
 
                         //Find the section that can map our transform
-                        if (TList.ContainsKey(ControlNode.SectionNumber))
+                        if (TList.TryGetValue(ControlNode.SectionNumber, out var value))
                         {
                             //string outString = "Loading continuous transform for control section: " + ControlSection.ToString();
                             //workerThread.ReportProgress((iSectionProgress * 100) / TList.Count, outString);
-                            ControlTrans = TList[ControlNode.SectionNumber];
+                            ControlTrans = value;
                         }
 
                         foreach (int childSection in ControlNode.Children)

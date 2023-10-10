@@ -296,8 +296,11 @@ namespace Viking.VolumeModel
             {
                 string uniqueID = TileViewModel.CreateUniqueKey(Section.Number, Name, CurrentPyramid.Name,
                     level, info.TileFileName);
-                TileViewModel tileViewModel = Global.TileCache.Fetch(uniqueID);
-                if (tileViewModel == null && Global.TileCache.ContainsKey(uniqueID) == false)
+                
+                if (Global.TileCache.TryGetValue(uniqueID, out TileViewModel tileViewModel))
+                    //Add the existing tile to the task list
+                    tileTasks.Add(Task.FromResult(tileViewModel));
+                else
                 {
                     if(T is IControlPointTriangulation T_Triangulation)
                         tileTasks.Add(Task.Run(() => CreateTile(uniqueID, level,
@@ -307,12 +310,7 @@ namespace Viking.VolumeModel
                             T_Cont, info)));
                     else
                         throw new NotImplementedException("Unknown transform type for Tiles");
-                }
-                else
-                {
-                    //Add the existing tile to the task list
-                    tileTasks.Add(Task.FromResult(tileViewModel));
-                }
+                } 
                 /*
                 if (tile != null)
                 {

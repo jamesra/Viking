@@ -129,25 +129,25 @@ namespace MonogameTestbed
 
         private static MedialAxisVertex GetOrAddVertex(MedialAxisGraph graph, GridVector2 p)
         {
-            if (!graph.ContainsKey(p))
+            if (!graph.TryGetValue(p, out var vertex))
             {
-                MedialAxisVertex node = new MedialAxisVertex(p);
-                graph.AddNode(node);
+                vertex = new MedialAxisVertex(p);
+                graph.AddNode(vertex);
             }
 
-            return graph[p];
+            return vertex;
         }
 
         private static MedialAxisVertex GetOrAddLineBisectorVertex(MedialAxisGraph graph, GridLineSegment line)
         {
             GridVector2 midpoint = line.Bisect();
-            if (!graph.ContainsKey(midpoint))
-            { 
-                MedialAxisVertex node = new MedialAxisVertex(midpoint);
-                graph.AddNode(node);
+            if (!graph.TryGetValue(midpoint, out var entry))
+            {
+                entry = new MedialAxisVertex(midpoint);
+                graph.AddNode(entry);
             }
 
-            return graph[midpoint];
+            return entry;
         }
 
         private static MedialAxisGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon[] shapes)
@@ -358,12 +358,13 @@ namespace MonogameTestbed
                   
                 foreach (GridVector2 point in points)
                 {
-                    if(!PointToShapeIndex.ContainsKey(point))
+                    if(!PointToShapeIndex.TryGetValue(point, out var sortedSet))
                     {
-                        PointToShapeIndex[point] = new SortedSet<int>();
+                        sortedSet = new SortedSet<int>();
+                        PointToShapeIndex.Add(point, sortedSet);
                     }
 
-                    PointToShapeIndex[point].Add(iShape);
+                    sortedSet.Add(iShape);
                 }
             }
 

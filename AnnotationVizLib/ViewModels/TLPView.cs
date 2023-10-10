@@ -192,7 +192,7 @@ namespace AnnotationVizLib
             using (StringWriter sw = new StringWriter())
             {
                 sw.Write("(nodes ");
-                foreach (long id in node_ids)
+                foreach (ulong id in node_ids)
                 {
                     sw.Write(string.Format("{0} ", id));
                 }
@@ -210,7 +210,7 @@ namespace AnnotationVizLib
             using (StringWriter sw = new StringWriter())
             {
                 sw.Write("(edges ");
-                foreach (long id in edge_ids)
+                foreach (ulong id in edge_ids)
                 {
                     sw.Write(string.Format("{0} ", id));
                 }

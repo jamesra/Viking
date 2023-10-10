@@ -155,7 +155,7 @@ namespace Viking.VolumeModel
 
                 SectionMapKey = ChannelName;
             }
-            else if (section.ImagePyramids.ContainsKey(ChannelName))
+            else if (section.ImagePyramids.TryGetValue(ChannelName, out var pyramid))
             {
                 //It is a pyramid + Transform
                 key = BuildKey(VolumeTransformName, section, SectionTransformName);
@@ -165,8 +165,7 @@ namespace Viking.VolumeModel
                 {
                     FixedTileCountMapping FixedTileMapping = mapping as FixedTileCountMapping;
                     //Set the image pyramid the transform is working against so we know how many levels we have available
-                    Pyramid ImagePyramid = section.ImagePyramids[ChannelName];
-                    FixedTileMapping.CurrentPyramid = ImagePyramid;
+                    FixedTileMapping.CurrentPyramid = pyramid;
 
                     return mapping;
                 }
@@ -188,15 +187,13 @@ namespace Viking.VolumeModel
                 return mapping;
 
             //We don't need a fancy mapping.  Add a reference from the section to the mapTable
-            if (false == section.WarpedTo.ContainsKey(SectionMapKey))
+            if (false == section.WarpedTo.TryGetValue(SectionMapKey, out MappingBase map))
             {
                 return null;
             }
-
-            MappingBase map = null;
+             
             if (VolumeTransformName == null)
-            {
-                map = section.WarpedTo[SectionMapKey];
+            { 
                 map = transformsForSection.GetOrAdd(key, map);
 
                 if (map is FixedTileCountMapping fixedMapping)
@@ -210,24 +207,23 @@ namespace Viking.VolumeModel
             else
             {
                 //We have to create a volume transform for the requested map 
-                if (false == volume.Transforms.ContainsKey(VolumeTransformName))
+                if (false == volume.Transforms.TryGetValue(VolumeTransformName, out SortedList<int, ITransform> stosTransforms))
                     return null;
-
-                SortedList<int, ITransform> stosTransforms = volume.Transforms[VolumeTransformName];
-                if (false == stosTransforms.ContainsKey(section.Number))
+                 
+                if (false == stosTransforms.TryGetValue(section.Number, out var transform))
                 {
                     //Maybe we are the reference section, check if there is a mapping for no transform.  This at least prevents displaying
                     //a blank screen
                     return GetMapping(null, SectionNumber, ChannelName, SectionTransformName);
                 }
 
-                if (stosTransforms[section.Number] == null)
+                if (transform is null)
                 {
                     //A transform was unable to be generated placing the section in the transform.  Use a mosaic instead
                     return GetMapping(null, SectionNumber, ChannelName, SectionTransformName);
                 }
 
-                map = section.CreateSectionToVolumeMapping(stosTransforms[section.Number], SectionMapKey, key);
+                map = section.CreateSectionToVolumeMapping(transform, SectionMapKey, key);
                 if (map is FixedTileCountMapping fixedMapping)
                 {
                     Pyramid ImagePyramid = section.ImagePyramids[ChannelName];

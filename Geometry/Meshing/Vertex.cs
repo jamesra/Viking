@@ -169,17 +169,9 @@ namespace Geometry.Meshing
             Data = data;
         }
 
-        public override IVertex ShallowCopy()
-        {
-            Vertex3D<T> newVertex = new Vertex3D<T>(Position, Normal, Data);
-            return newVertex;
-        }
+        public override IVertex ShallowCopy() => new Vertex3D<T>(Position, Normal, Data);
 
-        public override IVertex ShallowCopy(int index)
-        {
-            Vertex3D<T> newVertex = new Vertex3D<T>(index, Position, Normal, Data);
-            return newVertex;
-        }
+        public override IVertex ShallowCopy(int index) => new Vertex3D<T>(index, Position, Normal, Data);
     }
 
     /// <summary>
@@ -222,32 +214,15 @@ namespace Geometry.Meshing
         }
 
 
-        public override string ToString()
-        {
-            return $"I: {this.Index} P: {Position} N: {Normal}";
-        }
+        public override string ToString() => $"I: {this.Index} P: {Position} N: {Normal}";
 
-        public override IVertex ShallowCopy()
-        {
-            Vertex3D v = new Vertex3D(this.Position, this.Normal);
+        public override IVertex ShallowCopy() => new Vertex3D(this.Position, this.Normal);
 
-            return v;
-        }
+        public override IVertex ShallowCopy(int index) => new Vertex3D(index, this.Position, this.Normal);
 
-        public override IVertex ShallowCopy(int index)
-        {
-            return new Vertex3D(index, this.Position, this.Normal);
-        }
+        public int CompareTo(IVertex3D other) => this.Index.CompareTo(other.Index);
 
-        public int CompareTo(IVertex3D other)
-        {
-            return this.Index.CompareTo(other.Index);
-        }
-
-        public bool Equals(IVertex3D other)
-        {
-            return this.Index == other.Index;
-        }
+        public bool Equals(IVertex3D other) => this.Index == other.Index;
 
         int IComparable<IVertex3D>.CompareTo(IVertex3D other)
         {
@@ -289,22 +264,11 @@ namespace Geometry.Meshing
         {
         }
 
-        public override IVertex ShallowCopy()
-        {
-            Vertex2D<T> newVertex = new Vertex2D<T>(Position, Data, this.EdgeComparer);
-            return newVertex;
-        }
+        public override IVertex ShallowCopy() => new Vertex2D<T>(Position, Data, this.EdgeComparer);
 
-        public override IVertex ShallowCopy(int index)
-        {
-            Vertex2D<T> newVertex = new Vertex2D<T>(index, Position, Data, this.EdgeComparer);
-            return newVertex;
-        }
+        public override IVertex ShallowCopy(int index) => new Vertex2D<T>(index, Position, Data, this.EdgeComparer);
 
-        public override string ToString()
-        {
-            return Data == null ? $"I: {this.Index} P: {Position}" : $"I: {this.Index} P: {Position} Data: {Data?.ToString()}";
-        }
+        public override string ToString() => Data == null ? $"I: {this.Index} P: {Position}" : $"I: {this.Index} P: {Position} Data: {Data?.ToString()}";
     }
 
     /// <summary>
@@ -325,32 +289,15 @@ namespace Geometry.Meshing
             Position = p;
         }
 
-        public override string ToString()
-        {
-            return $"I: {this.Index} P: {Position}";
-        }
+        public override string ToString() => $"I: {this.Index} P: {Position}";
 
-        public int CompareTo(IVertex2D other)
-        {
-            return this.Index.CompareTo(other.Index);
-        }
+        public int CompareTo(IVertex2D other) => this.Index.CompareTo(other.Index);
 
-        public bool Equals(IVertex2D other)
-        {
-            return this.Index == other.Index;
-        }
+        public bool Equals(IVertex2D other) => this.Index == other.Index;
 
-        public override IVertex ShallowCopy()
-        {
-            Vertex2D newVertex = new Vertex2D(Position);
-            return newVertex;
-        }
+        public override IVertex ShallowCopy() => new Vertex2D(Position);
 
-        public override IVertex ShallowCopy(int index)
-        {
-            Vertex2D newVertex = new Vertex2D(index, Position);
-            return newVertex;
-        }
+        public override IVertex ShallowCopy(int index) => new Vertex2D(index, Position);
     }
 
 }

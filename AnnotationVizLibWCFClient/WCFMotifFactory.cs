@@ -107,10 +107,10 @@ namespace AnnotationVizLib.WCFClient
 
                         MotifEdge edge = new MotifEdge(SourceLabel, TargetLabel, ConnectionLabel);
 
-                        if (!dictEdges.ContainsKey(edge))
-                            dictEdges.Add(edge, edge);
+                        if (dictEdges.TryGetValue(edge, out var result))
+                            edge = result;
                         else
-                            edge = dictEdges[edge];
+                            dictEdges.Add(edge, edge);
 
                         edge.AddEdgeInstance(ParentOfSource.ID, link.SourceID, ParentOfTarget.ID, link.TargetID);
                     }

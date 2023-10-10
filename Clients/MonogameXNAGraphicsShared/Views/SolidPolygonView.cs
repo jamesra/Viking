@@ -213,7 +213,7 @@ namespace VikingXNAGraphics
             }
             catch (EdgesIntersectTriangulationException)
             {
-                Trace.WriteLine(string.Format("Simplification failed using {0}.", simpler_centered_poly));
+                Trace.WriteLine($"Simplification failed using {simpler_centered_poly}.");
                 return null;
             }
         }
@@ -229,7 +229,7 @@ namespace VikingXNAGraphics
 
         public Color Color
         {
-            get { return _meshModel != null ? _meshModel.Color : InputColor; }
+            get => _meshModel != null ? _meshModel.Color : InputColor;
             set
             {
                 if (_meshModel != null)
@@ -241,7 +241,7 @@ namespace VikingXNAGraphics
 
         public float Alpha
         {
-            get { return _meshModel != null ? _meshModel.Alpha : InputColor.GetAlpha(); }
+            get => _meshModel != null ? _meshModel.Alpha : InputColor.GetAlpha();
             set
             {
                 if (_meshModel != null)

@@ -369,9 +369,9 @@ namespace AnnotationVizLib.SimpleOData
                     listStructures.Add(s);
 
                     //Create a continuation on the structure location links tasks to populate our structure if we can
-                    if (st_loc_link_tasks.ContainsKey(s.ID))
+                    if (st_loc_link_tasks.TryGetValue(s.ID, out var loc_link_task))
                     {
-                        var populate_location_links_task = st_loc_link_tasks[s.ID].ContinueWith(links_task =>
+                        var populate_location_links_task = loc_link_task.ContinueWith(links_task =>
                         {
                             s.LocationLinks = links_task.Result.Select(dict => LocationLink.FromDictionary(dict)).ToArray();
                         }, TaskContinuationOptions.OnlyOnRanToCompletion);

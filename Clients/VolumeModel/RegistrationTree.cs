@@ -20,12 +20,7 @@ namespace Viking.VolumeModel
 
         public void AddPair(int ControlSection, int MappedSection)
         {
-            RegistrationTreeNode ControlNode = null;
-            if (Nodes.ContainsKey(ControlSection))
-            {
-                ControlNode = Nodes[ControlSection];
-            }
-            else
+            if (!Nodes.TryGetValue(ControlSection, out RegistrationTreeNode ControlNode))
             {
                 ControlNode = new RegistrationTreeNode(ControlSection);
                 Nodes.Add(ControlNode.SectionNumber, ControlNode);
@@ -33,14 +28,11 @@ namespace Viking.VolumeModel
             }
 
             ControlNode.Children.Add(MappedSection);
-
-            RegistrationTreeNode MappedNode = null;
-            if (Nodes.ContainsKey(MappedSection))
-            {
-                MappedNode = Nodes[MappedSection];
+             
+            if (Nodes.TryGetValue(MappedSection, out RegistrationTreeNode MappedNode))
+            { 
                 MappedNode.SetParent(new int?(ControlSection));
-                if (RootNodes.ContainsKey(MappedNode.SectionNumber))
-                    RootNodes.Remove(MappedNode.SectionNumber);
+                RootNodes.Remove(MappedNode.SectionNumber);
             }
             else
             {

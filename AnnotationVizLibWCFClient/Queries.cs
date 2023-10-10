@@ -55,9 +55,9 @@ namespace AnnotationVizLib.WCFClient
                 if (Label.Length == 0)
                     Label = "No Label";
 
-                if (dictLabels.ContainsKey(Label))
+                if (dictLabels.TryGetValue(Label, out var structs))
                 {
-                    dictLabels[Label].Add(structure);
+                    structs.Add(structure);
                 }
                 else
                 {

@@ -62,8 +62,8 @@ namespace Viking.Common
             //Ensure that we get all pages for both the object and types it inherits from
             while (ObjType != null && ObjType != typeof(object))
             {
-                if(ObjectTypeToPropertyPageTable.ContainsKey(ObjType))
-                    TypeArray.AddRange(ObjectTypeToPropertyPageTable[ObjType]);
+                if(ObjectTypeToPropertyPageTable.TryGetValue(ObjType, out var value))
+                    TypeArray.AddRange(value);
 
                 //Start next step in the loop
                 ObjType = ObjType.BaseType;
@@ -494,8 +494,8 @@ namespace Viking.Common
                         continue;
 
                     List<System.Type> List;
-                    if (ObjectTypeToCommandTable.ContainsKey(Attrib.ObjectType))
-                        List = ObjectTypeToCommandTable[Attrib.ObjectType];
+                    if (ObjectTypeToCommandTable.TryGetValue(Attrib.ObjectType, out var value))
+                        List = value;
                     else
                         List = new List<System.Type>();
 
@@ -521,8 +521,8 @@ namespace Viking.Common
                     /*The list contains lists. If one already exists then reuse it.
                         * otherwise create a new one */
                     List<System.Type> List;
-                    if (ObjectTypeToPropertyPageTable.ContainsKey(Attrib.targetType))
-                        List = ObjectTypeToPropertyPageTable[Attrib.targetType];
+                    if (ObjectTypeToPropertyPageTable.TryGetValue(Attrib.targetType, out var value))
+                        List = value;
                     else
                     {
                         List = new List<Type>();
@@ -621,9 +621,9 @@ namespace Viking.Common
             //Ensure that we get all commands for both the object and types it inherits from
             while (ObjType != null)
             {
-                if (ObjectTypeToCommandTable.ContainsKey(ObjType) == true)
+                if (ObjectTypeToCommandTable.TryGetValue(ObjType, out var value))
                 {
-                    CommandTypeList.AddRange(ObjectTypeToCommandTable[ObjType]);
+                    CommandTypeList.AddRange(value);
                 }
 
                 //Start next step in the loop

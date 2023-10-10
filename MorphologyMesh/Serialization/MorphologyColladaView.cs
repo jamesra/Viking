@@ -291,13 +291,13 @@ namespace MorphologyMesh
         private MaterialLighting GetOrAddMaterial(MaterialLighting material)
         {
             MaterialLighting matLighting = material;
-            if (!Materials.ContainsKey(matLighting.Key))
+            if (Materials.TryGetValue(matLighting.Key, out var existingMaterial))
             {
-                Materials.Add(matLighting.Key, matLighting);
+                matLighting = existingMaterial;
             }
             else
             {
-                matLighting = Materials[matLighting.Key];
+                Materials.Add(matLighting.Key, matLighting);
             }
 
             return matLighting;
@@ -312,13 +312,13 @@ namespace MorphologyMesh
         private MaterialLighting GetOrAddMaterial(COLORSOURCE source, IStructure structure, Color color)
         {
             MaterialLighting matLighting = new MorphologyMesh.MaterialLighting(source, structure, color);
-            if (!Materials.ContainsKey(matLighting.Key))
+            if (Materials.TryGetValue(matLighting.Key, out var material))
             {
-                Materials.Add(matLighting.Key, matLighting);
+                matLighting = material;
             }
             else
             {
-                matLighting = Materials[matLighting.Key];
+                Materials.Add(matLighting.Key, matLighting);
             }
 
             return matLighting;
@@ -421,13 +421,13 @@ namespace MorphologyMesh
         private MaterialLighting GetOrAddMaterial(COLORSOURCE source, IStructure structure, Color color)
         {
             MaterialLighting matLighting = new MorphologyMesh.MaterialLighting(source, structure, color);
-            if(!Materials.ContainsKey(matLighting.Key))
+            if (Materials.TryGetValue(matLighting.Key, out var material))
             {
-                Materials.Add(matLighting.Key, matLighting);
+                matLighting = material;
             }
             else
             {
-                matLighting = Materials[matLighting.Key];
+                Materials.Add(matLighting.Key, matLighting);
             }
 
             return matLighting;

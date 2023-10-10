@@ -421,60 +421,40 @@ namespace Geometry
             }
         }
 
-        public GridLineSegment[] Lines
-        {
-            get { return tableLineToValue.Keys.ToArray(); }
-        }
+        public GridLineSegment[] Lines => tableLineToValue.Keys.ToArray();
 
-        public T[] Values
-        {
-            get { return tableValueToLine.Keys.ToArray(); }
-        }
+        public T[] Values => tableValueToLine.Keys.ToArray();
 
 
         public void Add(GridLineSegment line, T value)
         {
             try
             {
-                rwLock.EnterUpgradeableReadLock();
+                rwLock.EnterWriteLock();
 
-                Debug.Assert(tableLineToValue.ContainsKey(line) == false);
+                Debug.Assert(tableLineToValue.ContainsKey(line) == false); 
+                /*
+                
                 if (tableLineToValue.ContainsKey(line))
                 {
                     tableLineToValue[line] = value;
                     return;
-                }
+                }*/
 
-                try
+                IEnumerable<Coord> coords = GetCoordsForLine(line);
+                foreach (Coord coord in coords)
                 {
-                    rwLock.EnterWriteLock();
-
-                    Debug.Assert(tableLineToValue.ContainsKey(line) == false);
-                    if (tableLineToValue.ContainsKey(line))
-                    {
-                        tableLineToValue[line] = value;
-                        return;
-                    }
-
-                    IEnumerable<Coord> coords = GetCoordsForLine(line);
-                    foreach (Coord coord in coords)
-                    {
-                        List<GridLineSegment> lines = _LineGrid[coord.iX, coord.iY];
-                        Debug.Assert(lines.Contains(line) == false);
-                        lines.Add(line);
-                    }
-
-                    tableLineToValue.Add(line, value);
-                    tableValueToLine.Add(value, line);
+                    List<GridLineSegment> lines = _LineGrid[coord.iX, coord.iY];
+                    Debug.Assert(lines.Contains(line) == false);
+                    lines.Add(line);
                 }
-                finally
-                {
-                    rwLock.ExitWriteLock();
-                }
+
+                tableLineToValue.Add(line, value);
+                tableValueToLine.Add(value, line);
             }
             finally
             {
-                rwLock.ExitUpgradeableReadLock();
+                rwLock.ExitWriteLock();
             }
         }
 

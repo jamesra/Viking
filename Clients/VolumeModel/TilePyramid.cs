@@ -27,7 +27,12 @@ namespace Viking.VolumeModel
         {
             SortedDictionary<string, TileViewModel> tiles;
 
-            if (TilesAtLevel.ContainsKey(downsample) == false)
+            if (TilesAtLevel.TryGetValue(downsample, out tiles))
+            {
+                Debug.Assert(false == tiles.ContainsKey(tileViewModel.ToString()));
+                tiles.Add(tileViewModel.ToString(), tileViewModel);
+            }
+            else
             {
                 tiles = new SortedDictionary<string, TileViewModel>
                 {
@@ -35,26 +40,20 @@ namespace Viking.VolumeModel
                 };
                 TilesAtLevel.Add(downsample, tiles);
             }
-            else
-            {
-                tiles = TilesAtLevel[downsample];
-                Debug.Assert(false == tiles.ContainsKey(tileViewModel.ToString()));
-                tiles.Add(tileViewModel.ToString(), tileViewModel);
-            }
         }
 
         public void AddTiles(int downsample, IEnumerable<TileViewModel> AddedTileArray)
         {
             SortedDictionary<string, TileViewModel> tiles;
 
-            if (TilesAtLevel.ContainsKey(downsample) == false)
+            if (TilesAtLevel.TryGetValue(downsample, out var value))
             {
-                tiles = new SortedDictionary<string, TileViewModel>();
-                TilesAtLevel.Add(downsample, tiles);
+                tiles = value;
             }
             else
             {
-                tiles = TilesAtLevel[downsample];
+                tiles = new SortedDictionary<string, TileViewModel>();
+                TilesAtLevel.Add(downsample, tiles);
             }
 
             foreach (TileViewModel t in AddedTileArray)
@@ -65,12 +64,7 @@ namespace Viking.VolumeModel
 
         public SortedDictionary<string, TileViewModel> GetTilesForLevel(int downsample)
         {
-            if (TilesAtLevel.ContainsKey(downsample) == false)
-            {
-                return new SortedDictionary<string, TileViewModel>();
-            }
-
-            return TilesAtLevel[downsample];
+            return TilesAtLevel.TryGetValue(downsample, out var level) ? level : new SortedDictionary<string, TileViewModel>();
         }
 
         public int[] AvailableLevels

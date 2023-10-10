@@ -180,11 +180,10 @@ namespace AnnotationVizLib
 
         public void AddColorMapImage(int SectionNumber, ColorMapImageData data)
         {
-            if (ColorMapTable.ContainsKey(SectionNumber))
+            if (ColorMapTable.TryGetValue(SectionNumber, out var colormap))
             {
-                Debug.Assert(!ColorMapTable[SectionNumber].Contains(data));
-                List<ColorMapImageData> listColorMapImageData = ColorMapTable[SectionNumber];
-                listColorMapImageData.Add(data);
+                Debug.Assert(!colormap.Contains(data));
+                colormap.Add(data);
             }
             else
             {
@@ -194,20 +193,13 @@ namespace AnnotationVizLib
             return;
         }
 
-        public IList<int> SectionNumbers
-        {
-            get
-            {
-                return ColorMapTable.Keys;
-            }
-        }
+        public IList<int> SectionNumbers => ColorMapTable.Keys;
 
         public Color GetColor(double X, double Y, int Z)
         {
-            if (!ColorMapTable.ContainsKey(Z))
+            if (!ColorMapTable.TryGetValue(Z, out var colormapimages))
                 return Color.Empty;
 
-            List<ColorMapImageData> colormapimages = ColorMapTable[Z];
             List<Color> colors = new List<Color>(colormapimages.Count);
 
             for (int i = 0; i < colormapimages.Count; i++)
@@ -414,6 +406,8 @@ namespace AnnotationVizLib
             return this.ColorMapTable[key];
         }
 
+        public Color this[long key] => this.ColorMapTable[key];
+
         public static ColorMapWithLong CreateFromConfigFile(string config_txt_full_path)
         {
             string full_path = System.IO.Path.GetFullPath(config_txt_full_path);
@@ -434,7 +428,7 @@ namespace AnnotationVizLib
             foreach (string line in lines)
             {
                 string trim_line = line.Trim();
-                if (trim_line.Count() == 0)
+                if (!trim_line.Any())
                     continue;
 
                 try

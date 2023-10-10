@@ -19,20 +19,21 @@ namespace AnnotationVizLib.SimpleOData
                     s.ParentID = System.Convert.ToUInt64(dict["ParentID"]);
             }
 
-            if (dict.ContainsKey("Label"))
-                s.Label = (string)dict["Label"];
+            
+            if (dict.TryGetValue("Label", out var label))
+                s.Label = (string)label;
 
-            if (dict.ContainsKey("Tags"))
-                s.Tags = (string)dict["Tags"];
+            if (dict.TryGetValue("Tags", out var tags))
+                s.Tags = (string)tags;
 
-            if (dict.ContainsKey("TypeID"))
-                s.TypeID = System.Convert.ToUInt64(dict["TypeID"]);
+            if (dict.TryGetValue("TypeID", out var typeid))
+                s.TypeID = System.Convert.ToUInt64(typeid);
 
-            if (dict.ContainsKey("SourceOfLinks"))
-                s.SourceOfLinks = (ICollection<StructureLink>)dict["SourceOfLinks"];
+            if (dict.TryGetValue("SourceOfLinks", out var sourceoflinks))
+                s.SourceOfLinks = (ICollection<StructureLink>)sourceoflinks;
 
-            if (dict.ContainsKey("TargetOfLinks"))
-                s.TargetOfLinks = (ICollection<StructureLink>)dict["TargetOfLinks"];
+            if (dict.TryGetValue("TargetOfLinks", out var targetoflinks))
+                s.TargetOfLinks = (ICollection<StructureLink>)targetoflinks;
 
             return s;
         }

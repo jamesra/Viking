@@ -461,12 +461,13 @@ namespace MorphologyMesh
                 GridTriangle tri = triangles[iTri];
                 foreach (GridLineSegment l in tri.Segments)
                 {
-                    if (!lineToTriangles.ContainsKey(l))
+                    if (!lineToTriangles.TryGetValue(l, out SortedSet<int> set))
                     {
-                        lineToTriangles.Add(l, new SortedSet<int>());
+                        set = new SortedSet<int>();
+                        lineToTriangles.Add(l, set);
                     }
 
-                    lineToTriangles[l].Add(iTri);
+                    set.Add(iTri);
                 }
             }
             bool[] KeepLine = lines.Select(l => true).ToArray();
@@ -506,12 +507,15 @@ namespace MorphologyMesh
         /// <param name="iPoly"></param>
         private static void CreateOrAddToSet(Dictionary<GridVector2, SortedSet<PolygonIndex>> dict, GridVector2 key, PolygonIndex iPoly)
         {
-            if (!dict.ContainsKey(key))
+            if (false == dict.TryGetValue(key, out var set))
             {
-                dict[key] = new SortedSet<PolygonIndex>();
+                set = new SortedSet<PolygonIndex>() {iPoly };
+                dict.Add(key, set);
             }
-
-            dict[key].Add(iPoly);
+            else
+            {
+                set.Add(iPoly);
+            }
         }
 
         internal static Dictionary<GridVector2, int> CreatePointToPolyMap(IReadOnlyList<GridPolygon> Polygons)

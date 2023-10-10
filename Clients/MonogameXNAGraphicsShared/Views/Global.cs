@@ -133,24 +133,14 @@ namespace VikingXNAGraphics
         /// <param name="device"></param>
         /// <returns></returns>
         public static IndexBuffer GetUnitCircleIndexBuffer(GraphicsDevice device)
-        {
-            IndexBuffer ib = null;
-
-            if (unit_circle_index_buffers.ContainsKey(device))
+        {  
+            if (unit_circle_index_buffers.TryGetValue(device, out IndexBuffer ib))
             {
-                ib = unit_circle_index_buffers[device];
-                if (ib.IsDisposed)
-                {
-                    unit_circle_index_buffers.Remove(device);
-                    ib = CreateUnitCircleIndexBuffer(device);
-                    unit_circle_index_buffers[device] = ib;
-                }
-
-                return ib;
+                if (!ib.IsDisposed) return ib;
             }
 
-            ib = CreateUnitCircleIndexBuffer(device);
-            unit_circle_index_buffers[device] = ib;
+            ib = CreateUnitCircleIndexBuffer(device); 
+            unit_circle_index_buffers.Add(device, ib);
             return ib;
         }
          
@@ -185,24 +175,16 @@ namespace VikingXNAGraphics
         /// <param name="device"></param>
         /// <returns></returns>
         public static VertexBuffer GetUnitCircleVertexBuffer(GraphicsDevice device)
-        {
-            VertexBuffer vb = null; 
-
-            if (unit_circle_vertex_buffers.ContainsKey(device))
+        {  
+            if (unit_circle_vertex_buffers.TryGetValue(device, out VertexBuffer vb))
             {
-                vb = unit_circle_vertex_buffers[device];
-                if (vb.IsDisposed)
-                {
-                    unit_circle_vertex_buffers.Remove(device);
-                    vb = CreateUnitCircleVertexBuffer(device);
-                    unit_circle_vertex_buffers[device] = vb;
-                }
+                if (!vb.IsDisposed) return vb;
 
-                return vb;
+                unit_circle_vertex_buffers.Remove(device);
             }
 
             vb = CreateUnitCircleVertexBuffer(device);
-            unit_circle_vertex_buffers[device] = vb;
+            unit_circle_vertex_buffers.Add(device, vb);
             return vb;
         }
           

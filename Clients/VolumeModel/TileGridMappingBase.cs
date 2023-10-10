@@ -244,14 +244,15 @@ namespace Viking.VolumeModel
                 this.MinDownsample = Downsample;
 
             GridInfo Level = new GridInfo(GridDimX, GridDimY, Downsample, LevelPath);
-            if (false == LevelToGridInfo.ContainsKey(Downsample))
-            {
-                LevelToGridInfo.Add(Downsample, Level);
-            }
-            else
+            if (LevelToGridInfo.ContainsKey(Downsample))
             {
                 System.Diagnostics.Trace.WriteLine($"Duplicate Tileset Level {Section.Number}-{LevelPath}");
             }
+            else
+            {
+                LevelToGridInfo.Add(Downsample, Level);
+            }
+
             this._AvailableLevels = null;
         }
 
@@ -360,8 +361,13 @@ namespace Viking.VolumeModel
                 {
                     string UniqueID = TileViewModel.CreateUniqueKey(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
                     string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
-                    TileViewModel tileViewModel = Global.TileCache.Fetch(UniqueID);
-                    if (tileViewModel == null && Global.TileCache.ContainsKey(UniqueID) == false)
+                    
+                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))
+                    {
+                        if(tileViewModel != null)
+                            TilesToDraw.Add(tileViewModel);
+                    }
+                    else
                     {
                         //Func<string, int, int, int, string, string,Tile> a = CreateTile;
                         int ixc = iX;
@@ -370,12 +376,7 @@ namespace Viking.VolumeModel
                         var T = Task.Run(() => CreateTile(UniqueID, ixc,  iyc, rd, TextureFileName, Name));
                         tileTasks.Add(T);
                         //TilesToDraw.Add(CreateTile(UniqueID, ixc, iyc, rd, TextureFileName, Name));
-                    }
-
-                    else if (tileViewModel != null)
-                    {
-                        TilesToDraw.Add(tileViewModel);
-                    }
+                    } 
                 }
             }
 

@@ -67,10 +67,8 @@ namespace Viking.Common
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public virtual FETCHTYPE Fetch(KEY key)
+        public FETCHTYPE Fetch(KEY key)
         {
-            FETCHTYPE value = default; 
-
             bool success = dictEntries.TryGetValue(key, out var entry);
             if (success == false)
                 return default;
@@ -79,7 +77,8 @@ namespace Viking.Common
             entry.WasUsedSinceLastCheckpoint = true;
             entry.LastAccessed = DateTime.UtcNow;
 
-            value = Fetch(entry);
+            //Call implementing class in case they need to track or modify returned value
+            return Fetch(entry);
             /*
             if(value != null)
             {
@@ -87,8 +86,24 @@ namespace Viking.Common
                 dictEntries[key] = entry; 
             }
              */
+             
+        }
 
-            return value;
+        public bool TryGetValue(KEY key, out FETCHTYPE output)
+        { 
+            output = default;
+
+            bool success = dictEntries.TryGetValue(key, out var entry);
+            if (success == false)
+                return false;
+
+            //Record the fact that someone asked for this tile
+            entry.WasUsedSinceLastCheckpoint = true;
+            entry.LastAccessed = DateTime.UtcNow;
+
+            output = Fetch(entry); 
+
+            return !(output is null);
         }
 
         /// <summary>
@@ -97,10 +112,7 @@ namespace Viking.Common
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public bool ContainsKey(KEY key)
-        {
-            return dictEntries.ContainsKey(key);
-        }
+        public bool ContainsKey(KEY key) => dictEntries.ContainsKey(key);
 
         /// <summary>
         /// Creates a file for the texture passed.

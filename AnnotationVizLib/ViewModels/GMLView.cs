@@ -257,7 +257,7 @@ namespace AnnotationVizLib
             using (StringWriter sw = new StringWriter())
             {
                 sw.Write("(edges ");
-                foreach (long id in edge_ids)
+                foreach (ulong id in edge_ids)
                 {
                     sw.Write(string.Format("{0} ", id));
                 }

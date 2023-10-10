@@ -18,9 +18,9 @@ namespace VikingXNAGraphics
         
         public static T GetOrCreateForDevice(GraphicsDevice device, ContentManager content)
         {
-            if (ManagersForDevice.ContainsKey(device))
+            if (ManagersForDevice.TryGetValue(device, out var entry))
             {
-                return ManagersForDevice[device];
+                return entry;
             }
 
             T manager = new T();
@@ -35,10 +35,7 @@ namespace VikingXNAGraphics
 
         public static T TryGet(GraphicsDevice device)
         {
-            if (!ManagersForDevice.ContainsKey(device))
-                return null;
-
-            return ManagersForDevice[device];
+            return ManagersForDevice.TryGetValue(device, out var entry) ? entry : null;
         }
 
         /*

@@ -151,10 +151,10 @@ namespace Viking.VolumeModel
             try
             {
                 await _PrepareTransformSemaphore.WaitAsync();
-                if (WarpedTo.ContainsKey(transform) == false)
+                if (WarpedTo.TryGetValue(transform, out var mapBase) == false)
                     return;
 
-                if (WarpedTo[transform] is SectionToVolumeMapping map)
+                if (mapBase is SectionToVolumeMapping map)
                 {
                     await map.Initialize(CancellationToken.None);
                 }

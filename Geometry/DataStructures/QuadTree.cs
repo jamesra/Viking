@@ -314,12 +314,8 @@ namespace Geometry
             return false;
         }
 
-        public bool ContainsKey(GridVector2 p)
-        {
-            return Contains(p);
-        }
+        public bool ContainsKey(GridVector2 p) => Contains(p);
 
-        
 
         /// <summary>
         /// Updates the position of the passed value with the new value
@@ -461,9 +457,7 @@ namespace Geometry
                 rwLock.EnterUpgradeableReadLock();
 
                 if (ValueToNodeTable.ContainsKey(value) == false)
-                {
                     return false;
-                }
 
                 try
                 {
@@ -656,15 +650,13 @@ namespace Geometry
             {
                 rwLock.EnterReadLock();
 
-                if (ValueToNodeTable.ContainsKey(value) == false)
+                if (ValueToNodeTable.TryGetValue(value, out QuadTreeNode<T> node) == false)
                 {
                     position = new GridVector2();
                     return false;
                     //throw new ArgumentException("Quadtree does not contains requested value");
                 }
-
-                QuadTreeNode<T> node = ValueToNodeTable[value];
-
+                  
                 position = node.Point;
                 return true;
             }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Viking.Common;
@@ -75,8 +76,11 @@ namespace Viking
 
             lock (Global.AllocatedTextureReaders)
             {
-                if (Global.AllocatedTextureReaders.ContainsKey(tex.GetHashCode()) == false)
+                try
+                { 
                     Global.AllocatedTextureReaders.Add(tex.GetHashCode(), msg);
+                }
+                catch (ArgumentException) { } //Ignore duplicate key                
             }
 
             _TexturesLoading = true;
