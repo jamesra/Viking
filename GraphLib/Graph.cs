@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,7 +8,7 @@ using System.Runtime.Serialization;
 namespace GraphLib
 {
     [Serializable]
-    public partial class Graph<KEY, NODETYPE, EDGETYPE> : ISerializable
+    public partial class Graph<KEY, NODETYPE, EDGETYPE> : ISerializable, IReadOnlyDictionary<KEY, NODETYPE>
         where KEY : IComparable<KEY>, IEquatable<KEY>
         where NODETYPE : Node<KEY, EDGETYPE>
         where EDGETYPE : Edge<KEY>
@@ -19,6 +20,12 @@ namespace GraphLib
         protected readonly Dictionary<KEY, NODETYPE> _Nodes;
 
         public IReadOnlyDictionary<KEY, NODETYPE> Nodes => _Nodes;
+
+        IEnumerable<KEY> IReadOnlyDictionary<KEY, NODETYPE>.Keys => _Nodes.Keys;
+
+        IEnumerable<NODETYPE> IReadOnlyDictionary<KEY, NODETYPE>.Values => _Nodes.Values;
+
+        int IReadOnlyCollection<KeyValuePair<KEY, NODETYPE>>.Count => _Nodes.Count;
 
         public bool ContainsKey(KEY key) => _Nodes.ContainsKey(key);
 
@@ -154,6 +161,19 @@ namespace GraphLib
             this._Edges.Remove(edge);
         }
 
+        public bool TryGetValue(KEY key, out NODETYPE value)
+        {
+            return _Nodes.TryGetValue(key, out value);
+        }
 
+        IEnumerator<KeyValuePair<KEY, NODETYPE>> IEnumerable<KeyValuePair<KEY, NODETYPE>>.GetEnumerator()
+        {
+            return _Nodes.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return _Nodes.GetEnumerator();
+        }
     }
 }
