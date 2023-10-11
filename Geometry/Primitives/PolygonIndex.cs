@@ -526,9 +526,9 @@ namespace Geometry
         public override string ToString()
         {
             if (IsInner)
-                return string.Format("P:{0} I:{1} iVert:{2} of {3}", this.iPoly, this.iInnerPoly, this.iVertex, this.NumUniqueInRing);
+                return $"P:{this.iPoly} I:{this.iInnerPoly} iVert:{this.iVertex} of {this.NumUniqueInRing}";
             else
-                return string.Format("P:{0} iVert:{1} of {2}", this.iPoly, this.iVertex, this.NumUniqueInRing);
+                return $"P:{this.iPoly} iVert:{this.iVertex} of {this.NumUniqueInRing}";
         }
 
         public static PolygonIndex[] SortByRing(PolygonIndex[] verts)

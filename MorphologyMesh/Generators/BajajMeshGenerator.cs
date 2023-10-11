@@ -167,19 +167,12 @@ namespace MorphologyMesh
         /// Removes a target vertex. 
         /// </summary>
         /// <param name="Origin"></param>
-        public void Remove(int Target)
-        {
-            if(KnownCandidateFailures.ContainsKey(Target))
-                KnownCandidateFailures.Remove(Target);
-        }
+        public bool Remove(int Target) => KnownCandidateFailures.Remove(Target);
 
         /// <summary>
         /// Clear all results
         /// </summary>
-        public void Clear()
-        {
-            KnownCandidateFailures.Clear();
-        }
+        public void Clear() => KnownCandidateFailures.Clear();
     }
 
     public class SliceChordsTestResultsCache
@@ -225,6 +218,12 @@ namespace MorphologyMesh
             return Failures.TryGetValue(Origin, out var knownCandidates) == false ? SliceChordTestType.None : knownCandidates.GetFailures(Target, requested);
         }
 
+        /// <summary>
+        /// Add the failure flag to the candidate slice chord between Origin and Target.  This can prevent retesting the same chord later.
+        /// </summary>
+        /// <param name="Origin"></param>
+        /// <param name="Target"></param>
+        /// <param name="failures"></param>
         public void RecordFailure(int Origin, int Target, SliceChordTestType failures)
         {
             //Don't bother if nothing failed
@@ -2509,14 +2508,12 @@ namespace MorphologyMesh
             for (int iVertex = 0; iVertex < port.ExternalBorder.Count; iVertex++)
             {
                 GridVector2 v = node.Mesh.Verticies[(int)port.ExternalBorder[iVertex]].Position.XY();
-                if (!pointToConnectedPolys.ContainsKey(v))
+                if (!pointToConnectedPolys.TryGetValue(v, out SortedSet<PolygonIndex> Connected))
                 {
                     VertexInPort[iVertex] = iVertex > 0 && VertexInPort[iVertex - 1];
                     continue;
                 }
-
-                SortedSet<PolygonIndex> Connected = pointToConnectedPolys[v];
-
+                  
                 SortedSet<ulong> ConnectedKeys = new SortedSet<ulong>(Connected.Select(i => PolygonToNodeKey[i.iPoly]));
 
                 VertexInPort[iVertex] = ConnectedKeys.Contains(edge.SourceNodeKey) && ConnectedKeys.Contains(edge.TargetNodeKey);
@@ -2558,14 +2555,12 @@ namespace MorphologyMesh
             for (int iVertex = 0; iVertex < port.ExternalBorder.Count; iVertex++)
             {
                 GridVector2 v = node.Mesh.Verticies[(int)port.ExternalBorder[iVertex]].Position.XY();
-                if (!pointToConnectedPolys.ContainsKey(v))
+                if (!pointToConnectedPolys.TryGetValue(v, out SortedSet<PolygonIndex> Connected))
                 {
                     VertexInPort[iVertex] = iVertex > 0 && VertexInPort[iVertex - 1];
                     continue;
                 }
-
-                SortedSet<PolygonIndex> Connected = pointToConnectedPolys[v];
-
+                  
                 SortedSet<ulong> ConnectedKeys = new SortedSet<ulong>(Connected.Select(i => PolygonToNodeKey[i.iPoly]));
 
                 VertexInPort[iVertex] = ConnectedKeys.Contains(edge.SourceNodeKey) && ConnectedKeys.Contains(edge.TargetNodeKey);
@@ -2651,12 +2646,13 @@ namespace MorphologyMesh
                 GridTriangle tri = triangles[iTri];
                 foreach (GridLineSegment l in tri.Segments)
                 {
-                    if (!lineToTriangles.ContainsKey(l))
+                    if (!lineToTriangles.TryGetValue(l, out var set))
                     {
-                        lineToTriangles.Add(l, new SortedSet<int>());
+                        set = new SortedSet<int>();
+                        lineToTriangles.Add(l, set);
                     }
 
-                    lineToTriangles[l].Add(iTri);
+                    set.Add(iTri);
                 }
             }
             bool[] KeepLine = lines.Select(l => true).ToArray();
@@ -2696,12 +2692,13 @@ namespace MorphologyMesh
         /// <param name="iPoly"></param>
         private static void CreateOrAddToSet(Dictionary<GridVector2, SortedSet<PolygonIndex>> dict, GridVector2 key, PolygonIndex iPoly)
         {
-            if (!dict.ContainsKey(key))
+            if (!dict.TryGetValue(key, out var set))
             {
-                dict[key] = new SortedSet<PolygonIndex>();
+                set = new SortedSet<PolygonIndex>();
+                dict[key] = set;
             }
 
-            dict[key].Add(iPoly);
+            set.Add(iPoly);
         }
 
         internal static Dictionary<GridVector2, int> CreatePointToPolyMap(IReadOnlyList<GridPolygon> Polygons)

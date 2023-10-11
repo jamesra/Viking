@@ -1038,7 +1038,7 @@ namespace MonogameTestbed
             SliceLocations = new ulong[] { A, B, C, D };
         }
 
-        public  void Initialize(double tolerance = 2.0, int hops = 1)
+        public void Initialize(double tolerance = 2.0, int hops = 1)
         {
             Morphology = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(SliceLocations.Select(id => id).ToList(), Endpoint, hops: hops);
 

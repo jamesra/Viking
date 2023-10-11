@@ -187,22 +187,22 @@ namespace Viking.VolumeModel
                 return mapping;
 
             //We don't need a fancy mapping.  Add a reference from the section to the mapTable
-            if (false == section.WarpedTo.TryGetValue(SectionMapKey, out MappingBase map))
+            if (false == section.WarpedTo.TryGetValue(SectionMapKey, out MappingBase sectionWarpedToMapValue))
             {
                 return null;
             }
              
             if (VolumeTransformName == null)
             { 
-                map = transformsForSection.GetOrAdd(key, map);
+                MappingBase output = transformsForSection.GetOrAdd(key, sectionWarpedToMapValue);
 
-                if (map is FixedTileCountMapping fixedMapping)
+                if (output is FixedTileCountMapping fixedMapping)
                 {
                     Pyramid ImagePyramid = section.ImagePyramids[ChannelName];
                     fixedMapping.CurrentPyramid = ImagePyramid;
 
                 }
-                return map;
+                return output;
             }
             else
             {
@@ -223,15 +223,15 @@ namespace Viking.VolumeModel
                     return GetMapping(null, SectionNumber, ChannelName, SectionTransformName);
                 }
 
-                map = section.CreateSectionToVolumeMapping(transform, SectionMapKey, key);
-                if (map is FixedTileCountMapping fixedMapping)
+                MappingBase output = section.CreateSectionToVolumeMapping(transform, SectionMapKey, key);
+                if (output is FixedTileCountMapping fixedMapping)
                 {
                     Pyramid ImagePyramid = section.ImagePyramids[ChannelName];
                     fixedMapping.CurrentPyramid = ImagePyramid;
                 }
 
-                map = transformsForSection.GetOrAdd(key, map);
-                return map;
+                output = transformsForSection.GetOrAdd(key, output);
+                return output;
             }
         }
     }

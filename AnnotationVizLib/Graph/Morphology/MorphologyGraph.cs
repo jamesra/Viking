@@ -31,18 +31,7 @@ namespace AnnotationVizLib
         [field: NonSerialized()]
         private RTree<ulong> _RTree = null;
 
-        private RTree<ulong> RTree
-        {
-            get
-            {
-                if (_RTree == null)
-                {
-                    _RTree = CreateRTree(this);
-                }
-
-                return _RTree;
-            }
-        }
+        private RTree<ulong> RTree => _RTree ?? (_RTree = CreateRTree(this));
 
         /// <summary>
         /// Map the motif label to the arbitrary id used by TLP.  Do not add directly to this collection.  Use Add/Remove Subgraph instead.

@@ -137,11 +137,10 @@ namespace MorphologyMesh
                 MorphMeshVertex v = new MorphMeshVertex(i1, i1.Point(mesh.Polygons).ToGridVector3(mesh.PolyZ[i1.iPoly]));
                 int iV;
 
-                if (PositionToIndex.ContainsKey(v.Position.XY()))
+                if (PositionToIndex.TryGetValue(v.Position.XY(), out int corresponding_vertex))
                 {
                     //This vertex corresponds to where the polygon overlaps another polygon on another level.
-                    //Populate the correspoinding field, and ensure the positions are 100% identical
-                    int corresponding_vertex = PositionToIndex[v.Position.XY()];
+                    //Populate the correspoinding field, and ensure the positions are 100% identical 
                     MorphMeshVertex corresponding = mesh[corresponding_vertex];
                     v = new MorphMeshVertex(i1, corresponding.Position.XY().ToGridVector3(v.Position.Z))
                     {
@@ -158,8 +157,8 @@ namespace MorphologyMesh
                 else
                 {
                     //A new vert, add to mesh
-                    iV = mesh.AddVertex(v);
-                    PositionToIndex.Add(v.Position.XY(), iV);
+                    corresponding_vertex = mesh.AddVertex(v);
+                    PositionToIndex.Add(v.Position.XY(), corresponding_vertex);
                 }
             }
 
@@ -212,15 +211,9 @@ namespace MorphologyMesh
         /// <param name="ZLevelA"></param>
         /// <param name="ZLevelB"></param>
         /// <returns></returns>
-        public Dictionary<GridVector2, List<PolygonIndex>> CreatePointToPolyMap(double ZLevelA, double ZLevelB)
-        {
-            throw new NotImplementedException();
-        }
-          
-        public new MorphMeshEdge this[IEdgeKey key]
-        {
-            get { return (MorphMeshEdge)this.Edges[key]; }
-        }
+        public Dictionary<GridVector2, List<PolygonIndex>> CreatePointToPolyMap(double ZLevelA, double ZLevelB) => throw new NotImplementedException();
+
+        public new MorphMeshEdge this[IEdgeKey key] => (MorphMeshEdge)this.Edges[key];
 
         /// <summary>
         /// Returns all of the verticies that match the indicies
@@ -229,28 +222,16 @@ namespace MorphologyMesh
         /// <returns></returns>
         public new IEnumerable<MorphMeshEdge> this[IEnumerable<IEdgeKey> keys]
         {
-            get
-            {
-                return keys.Select(e => (MorphMeshEdge)this.Edges[e]);
-            }
+            get => keys.Select(e => (MorphMeshEdge)this.Edges[e]);
         }
 
         public virtual MorphMeshVertex this[PolygonIndex key]
         {
-            get
-            {
-                return _Verticies[(int)PolyIndexToVertex[key]];
-            }
-            set
-            {
-                _Verticies[(int)PolyIndexToVertex[key]] = value;
-            }
+            get => _Verticies[(int)PolyIndexToVertex[key]];
+            set => _Verticies[(int)PolyIndexToVertex[key]] = value;
         }
 
-        public virtual bool Contains(PolygonIndex key)
-        {
-            return PolyIndexToVertex.ContainsKey(key);
-        }
+        public virtual bool Contains(PolygonIndex key) => PolyIndexToVertex.ContainsKey(key);
 
 
         /// <summary>

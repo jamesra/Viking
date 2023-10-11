@@ -70,8 +70,8 @@ namespace MorphologyMesh
         /// <summary>
         /// The center of the bounding box of all slices in the graph
         /// </summary>
-        public GridBox BoundingBox { get { return Graph.BoundingBox; } }
-        
+        public GridBox BoundingBox => Graph.BoundingBox;
+
         private SliceGraph(MorphologyGraph graph)
         {
             this.Graph = graph;
@@ -125,10 +125,13 @@ namespace MorphologyMesh
 
                 foreach(ulong id in group.AllNodes)
                 {
-                    if (MorphNodeToSliceNodes.ContainsKey(id) == false)
-                        MorphNodeToSliceNodes[id] = new SortedSet<ulong>();
+                    if (MorphNodeToSliceNodes.TryGetValue(id, out var sliceNodes) == false)
+                    {
+                        sliceNodes = new SortedSet<ulong>();
+                        MorphNodeToSliceNodes[id] = sliceNodes;
+                    }
 
-                    MorphNodeToSliceNodes[id].Add(iNextKey);
+                    sliceNodes.Add(iNextKey);
                 }
                  
                 output.AddNode(group);
@@ -139,7 +142,7 @@ namespace MorphologyMesh
             }
 
             //Check nodes with no edges, and add them if they are not in the slicegraph
-            //Sanity check that the edge wasn't removed to eliminate a cycle and the node is not somehow in the slicegraph
+            //Sanity check that the edge wasn't removed to eliminate a cycle and the node is not somehow in the slicegraph 
             foreach (var Node in graph.Nodes.Values.Where(n => !n.Edges.Any() && !MorphNodeToSliceNodes.ContainsKey(n.ID)))
             {
                 Slice abovegroup = new Slice(iNextKey, new SortedSet<ulong>(new ulong[] { Node.ID }), new SortedSet<ulong>(), new SortedSet<MorphologyEdge>());
@@ -290,7 +293,7 @@ namespace MorphologyMesh
 
             var CycleWithBelow = NodesBelow.Intersect(NewNodesAbove).ToArray();
             if(CheckForCycle(CycleWithBelow))
-                throw new CycleInGraphException(CycleWithAbove);
+                throw new CycleInGraphException(CycleWithBelow);
 
             NewNodesAbove.ExceptWith(NodesAbove);
             NewNodesBelow.ExceptWith(NodesBelow);
@@ -491,13 +494,12 @@ namespace MorphologyMesh
             if (SliceToTopology is null)
                 SliceToTopology = new Dictionary<ulong, SliceTopology>(this.Nodes.Count);
 
-            if (false == SliceToTopology.ContainsKey(slice.Key))
-            {
-                //If we are taking this path there is a danger corresponding verticies won't exist across multiple slices
-                SliceToTopology[slice.Key] = GetSliceTopology(slice, MorphNodeToShape);
-            }
+            if (SliceToTopology.TryGetValue(slice.Key, out var topology)) return topology;
 
-            return SliceToTopology[slice.Key];
+            //If we are taking this path there is a danger corresponding verticies won't exist across multiple slices
+            topology = GetSliceTopology(slice, MorphNodeToShape);
+            SliceToTopology.Add(slice.Key, topology); 
+            return topology;
         }
 
         public SliceTopology GetTopology(ulong sliceKey)
@@ -808,17 +810,17 @@ namespace MorphologyMesh
                     PolygonIndex pi = correspondingIndicies[i];
                     GridVector2 cp = pi.Point(poly);
 
-                    if (pointToIndexList.ContainsKey(cp))
+                    if (pointToIndexList.TryGetValue(cp, out var indexList))
                     {
-                        pointToIndexList[cp].Add(pi.Reindex(iPoly));
+                        indexList.Add(pi.Reindex(iPoly));
                     }
                     else
                     {
-                        List<PolygonIndex> listPI = new List<PolygonIndex>
+                        indexList = new List<PolygonIndex>
                         {
                             pi.Reindex(iPoly)
                         };
-                        pointToIndexList.Add(cp, listPI);
+                        pointToIndexList.Add(cp, indexList);
                     }
                 }
             }

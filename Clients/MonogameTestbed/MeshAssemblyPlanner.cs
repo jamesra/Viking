@@ -696,7 +696,6 @@ namespace MonogameTestbed
             IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
             if(NodeBoundingBox.TryGetValue(node.Key, out GridBox bbox))
             {
-                
                 if (node.Depth > 0)
                 {
                     //For branches we scale the bounding box visual a bit to prevent overdrawing the leaf bounding box
@@ -708,7 +707,6 @@ namespace MonogameTestbed
                 var model = bbox.ToMeshModelEdgesOnly(Color);
 
                 //Scale the bounding box slightly based on the node depth
-                
                 return model;
             }
 

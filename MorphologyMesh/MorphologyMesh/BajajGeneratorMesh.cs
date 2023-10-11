@@ -134,8 +134,8 @@ namespace MorphologyMesh
             {
                 if(g.Key == true)
                 {
-                    var UniquePoints = g.Select(v => v.Position.XY()).Distinct();
-                    points.AddRange(UniquePoints);
+                    var uniquePoints = g.Select(v => v.Position.XY()).Distinct();
+                    points.AddRange(uniquePoints);
                 }
                 else
                 {
