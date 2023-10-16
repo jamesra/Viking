@@ -2,20 +2,21 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using static Geometry.IShapeIndex;
 
 namespace Geometry
-{ 
+{
     /// <summary>
     /// Records the index of a vertex in a polygon
     /// </summary>
     [Serializable()]
-    public readonly struct PolygonIndex : IComparable<PolygonIndex>, IEquatable<PolygonIndex>, ICloneable
+    public readonly struct PolygonIndex : IComparable<PolygonIndex>, IEquatable<PolygonIndex>, ICloneable, IShapeIndex
     {
         /// <summary>
         /// The index of the polygon 
         /// </summary>
         public readonly int iPoly;
-
+          
         /// <summary>
         /// The index of the inner polygon, or no value if part of the external border
         /// </summary>
@@ -27,6 +28,17 @@ namespace Geometry
         public readonly int iVertex;
 
         public readonly int NumUniqueInRing; //The total number of verticies in the ring iVertex indexes into
+
+        int? IShapeIndex.iInnerShape => iInnerPoly.HasValue ? iInnerPoly.Value : -1;
+        int IShapeIndex.iShape => iPoly;
+        int IShapeIndex.iVertex => iVertex;
+        int IShapeIndex.NumUnique => NumUniqueInRing;  
+        IShapeIndex IShapeIndex.Next => Next;
+        IShapeIndex IShapeIndex.Previous => Previous;
+        IShapeIndex IShapeIndex.FirstVertexInShape => FirstInRing;
+        IShapeIndex IShapeIndex.LastVertexInShape => LastInRing;
+
+        ShapeType2D IShapeIndex.ShapeType => ShapeType2D.POLYGON;
 
         /// <summary>
         /// True if the vertex is part of an inner polygon
@@ -75,7 +87,8 @@ namespace Geometry
         }
 
 
-        // override object.Equals
+        
+
         public override bool Equals(object obj)
         {
             //       
@@ -87,7 +100,37 @@ namespace Geometry
             if (obj is PolygonIndex other)
                 return Equals(other);
 
+            if (obj is IShapeIndex shapeIndex)
+                return Equals(shapeIndex);
+
             return false;
+        }
+
+        // override object.Equals
+        public bool Equals(IShapeIndex other)
+        {
+            if(other.ShapeType != ShapeType2D.POLYGON)
+                return false;
+
+            if (other.iShape != this.iPoly)
+            {
+                return false;
+            }
+
+            if (other.iVertex != this.iVertex)
+            {
+                return false;
+            }
+
+            if (other.iInnerShape != this.iInnerPoly)
+            {
+                return false;
+            }
+
+            if (other.NumUnique != this.NumUniqueInRing)
+                return false;
+
+            return true;
         }
 
         public bool Equals(PolygonIndex other)
@@ -141,6 +184,37 @@ namespace Geometry
             return !(A == B);
         }
 
+        public static bool operator ==(PolygonIndex A, IShapeIndex B)
+        {
+            if(B.ShapeType != ShapeType2D.POLYGON)
+                return false;
+
+            if (A.iPoly != B.iShape)
+            {
+                return false;
+            }
+
+            if (A.iVertex != B.iVertex)
+            {
+                return false;
+            }
+
+            if (A.iInnerPoly != B.iInnerShape)
+            {
+                return false;
+            }
+
+            if (A.NumUniqueInRing != B.NumUnique)
+                return false;
+
+            return true;
+        }
+
+        public static bool operator !=(PolygonIndex A, IShapeIndex B)
+        {
+            return !(A == B);
+        }
+
         // override object.GetHashCode
         public override int GetHashCode()
         {
@@ -152,6 +226,27 @@ namespace Geometry
             {
                 return this.iVertex + (this.iPoly << 16);
             }
+        }
+
+        public int CompareTo(IShapeIndex other)
+        {
+            if (other.ShapeType != ShapeType2D.POLYGON)
+                return other.ShapeType.CompareTo(ShapeType2D.POLYGON);
+             
+            if (this.iPoly != other.iShape)
+                return this.iPoly.CompareTo(other.iShape);
+
+            if (this.iInnerPoly != other.iInnerShape)
+            {
+                if (this.iInnerPoly.HasValue && other.iInnerShape.HasValue)
+                {
+                    return this.iInnerPoly.Value.CompareTo(other.iInnerShape.Value);
+                }
+
+                return this.iInnerPoly.HasValue ? 1 : -1;
+            }
+
+            return this.iVertex.CompareTo(other.iVertex);
         }
 
         public int CompareTo(PolygonIndex other)

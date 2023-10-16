@@ -6,20 +6,74 @@ using System.Text;
 namespace Geometry
 {
     [Serializable()]
-    public readonly struct PolylineIndex : IComparable<PolylineIndex>, IEquatable<PolylineIndex>
+    public readonly struct PolylineIndex : IComparable<PolylineIndex>, IEquatable<PolylineIndex>, ICloneable, IShapeIndex
     {
         /// <summary>
         /// The index of the polygon 
         /// </summary>
         public readonly int iLine;
-          
+
         /// <summary>
         /// The index of the vertex
         /// </summary>
         public readonly int iVertex;
 
         public readonly int NumUnique; //The total number of verticies in the polyline
-          
+
+        public ShapeType2D ShapeType => ShapeType2D.POLYLINE;
+        public int iShape => iLine;
+
+        public int? iInnerShape => null;
+
+        int IShapeIndex.NumUnique => NumUnique;
+
+        public bool IsInner => false;
+
+        public IShapeIndex FirstVertexInShape => new PolylineIndex(iLine, 0, NumUnique);
+
+        public IShapeIndex LastVertexInShape => new PolylineIndex(iLine, NumUnique - 1, NumUnique);
+
+        IShapeIndex IShapeIndex.Next => iVertex + 1 < NumUnique ? (IShapeIndex)(new PolylineIndex(iLine, iVertex + 1, NumUnique)) : null;
+
+        IShapeIndex IShapeIndex.Previous => iVertex - 1 >= 0 ? (IShapeIndex)(new PolylineIndex(iLine, iVertex - 1, NumUnique)) : null;
+        public int? NextVertex => iVertex + 1 < NumUnique ? (int?)(iVertex + 1) : null;
+
+        public int? PreviousVertex => iVertex - 1 >= 0 ? (int?)(iVertex -1) : null;
+
+        /// <summary>
+        /// Return the next index after this one, staying within the same ring
+        /// </summary>
+        /// <returns></returns>
+        public PolylineIndex? Next
+        {
+            get
+            {
+                int? n = NextVertex;
+                if (n.HasValue)
+                    return new PolylineIndex(this.iLine, n.Value, this.NumUnique);
+                else
+                    return default;
+            }
+        }
+
+        /// <summary>
+        /// Return the previous index after this one, staying within the same ring
+        /// </summary>
+        /// <returns></returns>
+        public PolylineIndex? Previous
+        {
+            get
+            {
+                int? p = PreviousVertex;
+                if (p.HasValue)
+                    return new PolylineIndex(this.iLine, p.Value, this.NumUnique);
+                else
+                    return default;
+            }
+        }
+
+
+        int IShapeIndex.iVertex => iVertex;
 
         public PolylineIndex(int iV, int lineLength)
         {
@@ -32,7 +86,7 @@ namespace Geometry
 
         public PolylineIndex(int line, int iV, int lineLength)
         {
-            iLine = line; 
+            iLine = line;
             this.iVertex = iV;
             this.NumUnique = lineLength;
             Debug.Assert(NumUnique > 0, "Must have at least 1 element in a ring");
@@ -47,6 +101,8 @@ namespace Geometry
             Debug.Assert(NumUnique > 0, "Must have at least 1 element in a ring");
             Debug.Assert(iVertex < NumUnique); //Can be equal if this is the index of the last point in the ring which is a duplicate
         }
+
+        public object Clone() => new PolylineIndex(this.iLine, this.iVertex, this.NumUnique);
 
         // override object.Equals
         public override bool Equals(object obj)
@@ -78,15 +134,55 @@ namespace Geometry
             {
                 return false;
             }
-             
+
             if (other.NumUnique != this.NumUnique)
                 return false;
 
             return true;
         }
 
+        public bool Equals(IShapeIndex other)
+        {
+            if (other.ShapeType != this.ShapeType)
+                return false;
+
+            if (other.iShape != this.iShape)
+            {
+                return false;
+            }
+
+            if (other.iVertex != this.iVertex)
+            {
+                return false;
+            }
+
+            if (other.NumUnique != this.NumUnique)
+                return false;
+
+            return true;
+        }
+
+        public int CompareTo(IShapeIndex other)
+        {
+            if (other.ShapeType != ShapeType2D.POLYGON)
+                return other.ShapeType.CompareTo(ShapeType2D.POLYGON);
+
+            if (this.iLine != other.iShape)
+                return this.iLine.CompareTo(other.iShape);
+
+            return this.iVertex.CompareTo(other.iVertex);
+        }
+
+        public int CompareTo(PolylineIndex other)
+        {
+            if (this.iLine != other.iLine)
+                return this.iLine.CompareTo(other.iLine);
+
+            return this.iVertex.CompareTo(other.iVertex);
+        }
+
         public static bool operator ==(PolylineIndex A, PolylineIndex B)
-        { 
+        {
             if (A.iLine != B.iLine)
             {
                 return false;
@@ -96,11 +192,27 @@ namespace Geometry
             {
                 return false;
             }
-             
-            if (A.NumUnique != B.NumUnique)
+
+            return A.NumUnique == B.NumUnique;
+        }
+
+        public static bool operator !=(PolylineIndex A, IShapeIndex B)
+        {
+            return !(A == B);
+        }
+
+        public static bool operator ==(PolylineIndex A, IShapeIndex B)
+        {
+            if (A.ShapeType != B.ShapeType)
                 return false;
 
-            return true;
+            if (A.iShape != B.iShape)
+                return false;
+
+            if (A.iVertex != B.iVertex)
+                return false;
+
+            return A.NumUnique == B.NumUnique;
         }
 
         public static bool operator !=(PolylineIndex A, PolylineIndex B)
@@ -110,17 +222,10 @@ namespace Geometry
 
         // override object.GetHashCode
         public override int GetHashCode()
-        { 
+        {
             return this.iVertex + (this.iLine << 16);
         }
 
-        public int CompareTo(PolylineIndex other)
-        {
-            if (this.iLine != other.iLine)
-                return this.iLine.CompareTo(other.iLine);
-              
-            return this.iVertex.CompareTo(other.iVertex);
-        }
 
         /// <summary>
         /// Return true if the index is adjacent to the other index
@@ -132,7 +237,7 @@ namespace Geometry
         {
             if (this.iLine != other.iLine)
                 return false;
-             
+
             if (this.iVertex == other.iVertex)
                 return false;
 
@@ -144,81 +249,9 @@ namespace Geometry
             return false;
         }
 
-        public bool IsFirstIndex
-        {
-            get
-            {
-                return this.iVertex == 0;
-            }
-        }
+        public bool IsFirstIndex => this.iVertex == 0;
 
-        public bool IsLastIndex 
-        {
-            get
-            {
-                return this.iVertex == this.NumUnique - 1;
-            }
-        }
-
-        public int? NextVertex
-        {
-            get
-            {
-                int iNext = iVertex + 1;
-                if (iNext >= this.NumUnique)
-                {
-                    return new int?();
-                }
-
-                return iNext;
-            }
-        }
-
-        public int? PreviousVertex
-        {
-            get
-            {
-                int iPrevious = iVertex - 1;
-                if (iPrevious < 0)
-                {
-                    return new int?();
-                }
-
-                return iPrevious;
-            }
-        }
-
-        /// <summary>
-        /// Return the next index after this one, staying within the same ring
-        /// </summary>
-        /// <returns></returns>
-        public PolylineIndex? Next
-        {
-            get
-            {
-                int? n = NextVertex;
-                if (n.HasValue)
-                    return new PolylineIndex(this.iLine, this.NextVertex.Value, this.NumUnique);
-                else
-                    return default;
-            }
-        }
-
-        /// <summary>
-        /// Return the previous index after this one, staying within the same ring
-        /// </summary>
-        /// <returns></returns>
-        public PolylineIndex? Previous
-        {
-            get
-            {
-                int? p = PreviousVertex;
-                if (p.HasValue)
-                    return new PolylineIndex(this.iLine, this.PreviousVertex.Value, this.NumUnique);
-                else
-                    return default;
-            }
-        }
+        public bool IsLastIndex => this.iVertex == this.NumUnique - 1;
 
         /// <summary>
         /// Return the specified point, ignoring the iPoly attribute
@@ -226,15 +259,15 @@ namespace Geometry
         /// <param name="Polygon"></param>
         /// <returns></returns>
         public GridVector2 Point(GridPolyline line)
-        { 
+        {
             return new GridVector2(line.Points[iVertex]);
         }
 
         public GridVector2 Point(IReadOnlyList<GridPolyline> lines)
-        { 
+        {
             return new GridVector2(lines[iLine].Points[iVertex]);
         }
-         
+
         /// <summary>
         /// Return a copy of this PointIndex with iPoly value changed to point at a different polygon index
         /// </summary>
@@ -278,9 +311,8 @@ namespace Geometry
         }
 
         public override string ToString()
-        { 
-            return string.Format("L:{0} iVert:{1} of {2}", this.iLine, this.iVertex, this.NumUnique);
+        {
+            return $"L:{this.iLine} iVert:{this.iVertex} of {this.NumUnique}";
         }
-
     }
 }
