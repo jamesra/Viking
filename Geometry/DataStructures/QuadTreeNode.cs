@@ -339,7 +339,7 @@ namespace Geometry
 
                     
                     //Center the new boundary between the two points 
-                    GridVector2 Center = ((this.Point + point) / 2);
+                    GridVector2 Center = (this.Point + point) / 2;
                     GridVector2 NewBoundsOrigin = Center - (NewBoundsDims / 2);
 
                     GridRectangle Bounds = new GridRectangle(NewBoundsOrigin, NewBoundsOrigin + NewBoundsDims);
@@ -365,6 +365,7 @@ namespace Geometry
                 throw new ArgumentException("Unexpected code path reached in QuadTree ExpandBorder");
             }
 
+            //The border does not contain the point, so we need to expand it
             double ParentWidth = this.Border.Width * 2;
             double ParentHeight = this.Border.Height * 2;
             Quadrant insertquad = GetQuad(point);
@@ -392,7 +393,7 @@ namespace Geometry
                     throw new ArgumentException("Unexpected quadrant");
             }
 
-            GridRectangle parent_bounds = new GridRectangle(ParentCenter, this.Border.Width);
+            GridRectangle parent_bounds = new GridRectangle(ParentCenter - new GridVector2(this.Border.Width, this.Border.Height),  ParentWidth, ParentHeight);
 
             QuadTreeNode<T> new_parent = new QuadTreeNode<T>(this.Tree, parent_bounds);
 
@@ -400,6 +401,8 @@ namespace Geometry
             new_parent[insertquad.Opposite()] = this;
             this.Parent = new_parent;
 
+            Debug.Assert(Math.Abs(this.Border.Width - new_parent.Border.Width / 2) < Global.Epsilon, "New root node must be twice as wide as this node");
+            Debug.Assert(Math.Abs(this.Border.Height - new_parent.Border.Height / 2) < Global.Epsilon, "New root node must be twice as tall as this node");
             //Trace.WriteLine(string.Format("Expanded border from {0} to {1}", this.Border, parent_bounds));
             /*
             Debug.Assert(parent_bounds.Contains(this.Center), "New root node must include center of this quad");
@@ -420,7 +423,7 @@ namespace Geometry
             {
                 new_root = new_parent;
                 Debug.Assert((this.IsLeaf == false) || new_root.Border.Contains(Point), "New root node must include our point");
-                Debug.Assert(new_root.Border.Contains(point), "New root node must include new point");
+                Debug.Assert(new_root.Border.Contains(point), "New root node must include new point"); 
                 return true;
             }
         }
