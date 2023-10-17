@@ -162,6 +162,10 @@ namespace Geometry
         public static readonly GridVector2 UnitY = new GridVector2(0, 1);
         public static readonly GridVector2 Zero = new GridVector2(0, 0);
         public static readonly GridVector2 One = new GridVector2(1, 1);
+        /// <summary>
+        /// A NaN constant for an unintitialized point
+        /// </summary>
+        public static readonly GridVector2 NaN = new GridVector2(double.NaN, double.NaN);
 
         public double X;
         public double Y;
