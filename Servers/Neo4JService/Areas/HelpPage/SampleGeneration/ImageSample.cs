@@ -13,10 +13,13 @@ namespace Neo4JService.Areas.HelpPage
         /// <param name="src">The URL of an image.</param>
         public ImageSample(string src)
         {
-            Src = src ?? throw new ArgumentNullException(nameof(src));
+            if(src is null)
+                throw new ArgumentNullException(nameof(src));
+
+            Src = src;
         }
 
-        public string Src { get; private set; }
+        public readonly string Src;
 
         public override bool Equals(object obj)
         {

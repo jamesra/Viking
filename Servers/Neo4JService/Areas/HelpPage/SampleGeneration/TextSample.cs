@@ -8,11 +8,14 @@ namespace Neo4JService.Areas.HelpPage
     public class TextSample
     {
         public TextSample(string text)
-        {
-            Text = text ?? throw new ArgumentNullException(nameof(text));
+        { 
+            if(text == null)
+                throw new ArgumentNullException(nameof(text));
+
+            Text = text;
         }
 
-        public string Text { get; private set; }
+        public readonly string Text;
 
         public override bool Equals(object obj)
         {
