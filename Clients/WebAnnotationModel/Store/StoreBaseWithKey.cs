@@ -1,5 +1,6 @@
 ﻿using AnnotationService.Types;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -44,7 +45,7 @@ namespace WebAnnotationModel
     /// <summary>
     /// This base class implements the basic functionality to talk to a WCF Service
     /// </summary>
-    public abstract class StoreBaseWithKey<PROXY, INTERFACE, KEY, OBJECT, WCFOBJECT> : StoreBase<PROXY, INTERFACE, OBJECT, WCFOBJECT>, ISectionQuery<KEY, OBJECT>
+    public abstract class StoreBaseWithKey<PROXY, INTERFACE, KEY, OBJECT, WCFOBJECT> : StoreBase<PROXY, INTERFACE, OBJECT, WCFOBJECT>, ISectionQuery<KEY, OBJECT>, IReadOnlyDictionary<KEY, OBJECT>
         where INTERFACE : class
         where KEY : struct, IEquatable<KEY>
         where PROXY : System.ServiceModel.ClientBase<INTERFACE>
@@ -383,15 +384,24 @@ namespace WebAnnotationModel
         /// </summary>
         /// <param name="ID"></param>
         /// <returns></returns>
-        public OBJECT GetObjectByID(KEY ID)
+        public OBJECT GetObjectByID(KEY ID) => GetObjectByID(ID, true);
+
+        bool IReadOnlyDictionary<KEY, OBJECT>.ContainsKey(KEY key) => this.Contains(key);
+
+        /// <summary>
+        /// Attempt to read value from local store.  Will not request object from server if not found.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns>True if key in local store, otherwise false</returns>
+        public bool TryGetValue(KEY key, out OBJECT value)
         {
-            return GetObjectByID(ID, true);
+            return this.IDToObject.TryGetValue(key, out value);
         }
 
-        public OBJECT this[KEY index]
-        {
-            get { return IDToObject[index]; }
-        }
+        public OBJECT this[KEY index] => IDToObject[index];
+        public IEnumerable<KEY> Keys => IDToObject.Keys;
+        public IEnumerable<OBJECT> Values => IDToObject.Values;
 
         /// <summary>
         /// Gets the requested location, first checking locally, then asking the server
@@ -408,10 +418,9 @@ namespace WebAnnotationModel
                 AskServer = true;
 
             if (!ForceRefreshFromServer)
-            {
-                bool Success = IDToObject.TryGetValue(ID, out newObj);
-                if (Success)
-                    return newObj;
+            { 
+                if (IDToObject.TryGetValue(ID, out var existingObj))
+                    return existingObj;
             }
 
             if (!AskServer)
@@ -432,8 +441,10 @@ namespace WebAnnotationModel
                 Trace.WriteLine(e.Message, "WebAnnotation");
                 data = null;
             }
+            finally { 
+                proxy?.Close();
+            }
 
-            proxy?.Close();
 
             if (data != null)
             {
@@ -1383,5 +1394,16 @@ namespace WebAnnotationModel
         }
 
 
+        public IEnumerator<KeyValuePair<KEY, OBJECT>> GetEnumerator()
+        {
+            return this.IDToObject.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public int Count => this.IDToObject.Count;
     }
 }
