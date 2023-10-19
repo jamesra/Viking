@@ -47,7 +47,7 @@ namespace SqlGeometryUtils
             }
             catch (ArgumentException e)
             {
-                return new GridPolygon(ExteriorRing.RemoveAdjacentDuplicates(), InteriorRings.Select(ir => ir.RemoveAdjacentDuplicates()));
+                return new GridPolygon(ExteriorRing.RemoveAdjacentDuplicates().ToArray(), InteriorRings.Select(ir => ir.RemoveAdjacentDuplicates().ToArray()));
             }
         }
 

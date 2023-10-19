@@ -104,13 +104,14 @@ namespace Geometry
                 cp = GetControlPointsForOpenCurve(cp);
 
             //return cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations)).ToArray();
-            GridVector2[] points = cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => RecursivelyFitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations: NumInterpolations)).ToArray();
-            points = points.RemoveAdjacentDuplicates();
+            var curved_points = cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => RecursivelyFitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations: NumInterpolations));
+            GridVector2[] points = curved_points.RemoveAdjacentDuplicates(ControlPoints).ToArray(); ;
 
 #if DEBUG
             for (int i = 0; i < ControlPoints.Count; i++)
             {
-                Debug.Assert(points.Contains(ControlPoints[i]), string.Format("FitCurve output is missing control point #{0} of {1} {2}", i, ControlPoints.Count, ControlPoints[i]));
+                Debug.Assert(points.Contains(ControlPoints[i]),
+                    $"FitCurve output is missing control point #{i} of {ControlPoints.Count} {ControlPoints[i]}");
             }
 #endif
 
@@ -494,7 +495,7 @@ namespace Geometry
         public static List<GridVector2> IdentifyControlPoints(this IReadOnlyList<GridVector2> input, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         {
             //Copy the path so we don't modify the input
-            var path = input.Select(p => p.Round(Global.TransformSignificantDigits)).Distinct().ToList();
+            var path = input.Select(p => p.Round(Global.TransformSignificantDigits)).RemoveAdjacentDuplicates().ToList();
             //var path = input.ToList();
 
             //We can't simplify the already simple...
@@ -510,7 +511,7 @@ namespace Geometry
             }
 
             //GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
-            GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Global.TransformSignificantDigits)).ToArray();
+            var curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Global.TransformSignificantDigits)).ToArray(); 
             GridLineSegment[] curve_segments = curved_path.ToLineSegments();
             QuadTree<int> point_to_ideal_curve_index = new QuadTree<int>(input.BoundingBox() * 1.1);
             for (int i = 0; i < curved_path.Length; i++)
@@ -527,7 +528,8 @@ namespace Geometry
 #if DEBUG
             for (int i = 0; i < path.Count; i++)
             {
-                Debug.Assert(point_to_ideal_curve_index.Contains(path[i]), string.Format("Ideal curve dictionary is missing path point #{0} {1}", i, path[i]));
+                Debug.Assert(point_to_ideal_curve_index.Contains(path[i]),
+                    $"Ideal curve dictionary is missing path point #{i} {path[i]}");
             }
 #endif
 

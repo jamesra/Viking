@@ -648,9 +648,145 @@ namespace Geometry
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static GridVector2[] RemoveAdjacentDuplicates(this IReadOnlyList<GridVector2> points)
+        public static List<GridVector2> RemoveAdjacentDuplicates(this IEnumerable<GridVector2> points)
         {
             List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
+            var enumerator = points.GetEnumerator();
+            if(!enumerator.MoveNext())
+                throw new ArgumentException("Must have at least one point to remove adjacent duplicates");
+
+            GridVector2 p = enumerator.Current;
+            GridVector2 next = GridVector2.Zero;
+            int count = 0;
+            while(enumerator.MoveNext())
+            {
+                next = enumerator.Current;
+                if (p != next)
+                { 
+                    nonDuplicatePoints.Add(p);
+                    p = next; 
+                }
+
+                //Don't advance p every loop if values are equal.  This allows small epsilon changes to add up and eventually add a point
+
+                count++;
+            }
+
+            if(count == 0) //There was only one point and the loop didn't execute
+                nonDuplicatePoints.Add(p);
+
+            //Always preserve the last point
+            if (count > 0) //Did the loop execute at least once?  If so we need to account for the last point
+                nonDuplicatePoints.Add(next);
+            
+            //System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
+            return nonDuplicatePoints;
+        }
+
+        /// <summary>
+        /// Remove all of the adjacent duplicate points and return as a new array
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="preserved_path">These control points need to be preserved.  They appear in the same order as they appear in the input points parameter.</param>
+        /// <returns></returns>
+        public static List<GridVector2> RemoveAdjacentDuplicates(this IEnumerable<GridVector2> points, IEnumerable<GridVector2> preserved_path)
+        {
+            List<GridVector2> nonDuplicatePoints = new List<GridVector2>();
+            var enumerator = points.GetEnumerator();
+            if (!enumerator.MoveNext())
+                throw new ArgumentException("Must have at least one point to remove adjacent duplicates");
+
+            if(preserved_path is null)
+                throw new ArgumentNullException(nameof(preserved_path));
+
+            var preserved_enumerator = preserved_path.GetEnumerator();
+            GridVector2 preserved_point = preserved_enumerator.MoveNext() ? preserved_enumerator.Current : GridVector2.NaN;
+             
+            GridVector2 p = enumerator.Current;
+            GridVector2 next = GridVector2.NaN; 
+            int count = 0;
+            while (enumerator.MoveNext())
+            {
+                next = enumerator.Current;
+                if(p.X == preserved_point.X && p.Y == preserved_point.Y)
+                {
+                    //Skip further duplicates of the preserved point, use the epsilon equality operator to ensure we get far enough away to not add a psuedo-duplicate point
+                    while (next == preserved_point)
+                        next = enumerator.MoveNext() ? enumerator.Current : GridVector2.NaN;
+
+                    //Add the preserved point
+                    nonDuplicatePoints.Add(p);
+
+                    preserved_point = preserved_enumerator.MoveNext() ? preserved_enumerator.Current : GridVector2.NaN; 
+                }
+                else if (p == preserved_point) //It is close, but not the exact point, so skip it because we know the exact preserved_point will be added soon.
+                { 
+                    if(next != preserved_point) //We are moving away from the preserved point, so add it to ensure it isn't lost
+                    { 
+                        nonDuplicatePoints.Add(preserved_point);
+                        preserved_point = preserved_enumerator.MoveNext() ? preserved_enumerator.Current : GridVector2.NaN;
+                    }
+                }
+                else if (p != next)
+                {
+                    nonDuplicatePoints.Add(p);
+                }
+
+                //Advance p every loop to ensure we add the preserved the control points
+                p = next;
+
+                count++;
+            }
+
+            if (count == 0) //There was only one point and the loop didn't execute
+                nonDuplicatePoints.Add(p);
+
+            //Always preserve the last point
+            if (count > 0) //Did the loop execute at least once?  If so we need to account for the last point
+                nonDuplicatePoints.Add(next);
+
+            //System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
+            return nonDuplicatePoints;
+        }
+
+        /// <summary>
+        /// Remove all of the adjacent duplicate points and return as a new array
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static List<GridVector2> RemoveAdjacentDuplicates(this ICollection<GridVector2> points)
+        {
+            List<GridVector2> nonDuplicatePoints = new List<GridVector2>(points.Count);
+            GridVector2 p = points.First();
+            int i = 0;
+            foreach(GridVector2 next in points)
+            { 
+                if(p != next)
+                    nonDuplicatePoints.Add(p);
+
+                if (i == points.Count - 1)
+                {
+                    nonDuplicatePoints.Add(next);
+                    //This is the last pass through the loop, always preserve the last point
+                }
+
+                p = next;
+                i++;
+            }
+             
+            //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
+            return nonDuplicatePoints;
+        }
+
+        /*
+        /// <summary>
+        /// Remove all of the adjacent duplicate points and return as a new array
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
+        public static GridVector2[] RemoveAdjacentDuplicates(this IReadOnlyList<GridVector2> points)
+        {
+            List<GridVector2> nonDuplicatePoints = new List<GridVector2>(points.Count);
             for (int i = 0; i < points.Count - 1; i++)
             {
                 if (points[i] != points[i + 1])
@@ -659,11 +795,12 @@ namespace Geometry
                 }
             }
 
-            nonDuplicatePoints.Add(points[points.Count-1]);
+            nonDuplicatePoints.Add(points[points.Count-1]); //Always preserve the last point
 
             //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
             return nonDuplicatePoints.ToArray();
         }
+        */
 
         /// <summary>
         /// Remove all of the duplicate points and return as a new array

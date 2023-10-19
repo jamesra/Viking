@@ -44,7 +44,7 @@ namespace Geometry
             if (!CurveExtensions.TryAddTPointsAboveThreshold(output, ref TPoints))
                 return output;
 
-            return RecursivelyFitCurve(cp, TPoints).RemoveAdjacentDuplicates();
+            return RecursivelyFitCurve(cp, TPoints).RemoveAdjacentDuplicates().ToArray();
         }
 
 
