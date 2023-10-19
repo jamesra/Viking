@@ -115,10 +115,7 @@ namespace WebAnnotationModel
             }
         }
 
-        public override long ID
-        {
-            get { return Data.ID; }
-        }
+        public override long ID => Data.ID;
 
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.
@@ -144,10 +141,7 @@ namespace WebAnnotationModel
             }
         }
 
-        public long? ParentID
-        {
-            get { return Data.ParentID; }
-        }
+        public long? ParentID => Data.ParentID;
 
         // private StructureObj _Parent;
         public StructureObj Parent
@@ -282,10 +276,7 @@ namespace WebAnnotationModel
         /// This is readonly because changing it would break a datastructure in location store
         /// and also would require update of X,Y to the section space of the different section
         /// </summary>
-        public double Z
-        {
-            get { return Data.Position.Z; }
-        }
+        public double Z => Data.Position.Z;
 
         private Microsoft.SqlServer.Types.SqlGeometry _VolumeShape;
         public Microsoft.SqlServer.Types.SqlGeometry VolumeShape
@@ -372,10 +363,7 @@ namespace WebAnnotationModel
         /// <summary>
         /// Return true if the location's volume position has not yet been mapped by this Viking client
         /// </summary>
-        public bool VolumePositionHasBeenCalculated
-        {
-            get { return this.VolumeTransformID.HasValue; }
-        }
+        public bool VolumePositionHasBeenCalculated => this.VolumeTransformID.HasValue;
 
         public void ResetVolumePositionHasBeenCalculated()
         {
@@ -483,7 +471,7 @@ namespace WebAnnotationModel
 
         public LocationType TypeCode
         {
-            get { return (LocationType)Data.TypeCode; }
+            get => (LocationType)Data.TypeCode;
             set
             {
                 if (Data.TypeCode == (short)value)
@@ -514,32 +502,19 @@ namespace WebAnnotationModel
         /// <summary>
         /// This should return true when we know no further annotation will proceed from this point
         /// </summary>
-        public bool IsVerifiedTerminal
-        {
-            get
-            {
-                return (Terminal || OffEdge || VericosityCap || Untraceable);
-            }
-        }
-
+        public bool IsVerifiedTerminal => (Terminal || OffEdge || VericosityCap || Untraceable);
 
 
         /// <summary>
         /// This is readonly because changing it would break a datastructure in location store
         /// and also would require update of X,Y to the section space of the different section
         /// </summary>
-        public int Section
-        {
-            get { return (int)Data.Section; }
-        }
+        public int Section => (int)Data.Section;
 
         /// <summary>
         /// Name of the last user to edit the location
         /// </summary>
-        public string Username
-        {
-            get { return Data.Username; }
-        }
+        public string Username => Data.Username;
 
         private readonly object LinkLock = new object();
 
@@ -679,7 +654,7 @@ namespace WebAnnotationModel
         /// </summary>
         public bool Terminal
         {
-            get { return Data.Terminal; }
+            get => Data.Terminal;
             set
             {
                 if (Data.Terminal == value)
@@ -697,7 +672,7 @@ namespace WebAnnotationModel
         /// </summary>
         public bool OffEdge
         {
-            get { return Data.OffEdge; }
+            get => Data.OffEdge;
             set
             {
                 if (Data.OffEdge == value)
@@ -726,10 +701,7 @@ namespace WebAnnotationModel
             get { return Attributes.Any(a => a.Name == "Untraceable"); }
         }
 
-        public DateTime LastModified
-        {
-            get { return new DateTime(Data.LastModified, DateTimeKind.Utc); }
-        }
+        public DateTime LastModified => new DateTime(Data.LastModified, DateTimeKind.Utc);
 
         List<ObjAttribute> _Attributes = null;
 
@@ -926,8 +898,8 @@ namespace WebAnnotationModel
 
         public static event EventHandler Create
         {
-            add { OnCreate += value; }
-            remove { OnCreate -= value; }
+            add => OnCreate += value;
+            remove => OnCreate -= value;
         }
     }
 }

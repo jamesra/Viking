@@ -1631,14 +1631,10 @@ namespace WebAnnotation
         protected void OnLocationLinksCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             SortedSet<int> changedSections = ChangedSectionsInLocationLinkCollection(e);
-
             foreach (int section in changedSections)
             {
                 SectionAnnotationsView SLVModel = GetOrCreateAnnotationsForSection(section);
-                if (SLVModel != null)
-                {
-                    SLVModel.OnLocationLinksStoreChanged(sender, e);
-                }
+                SLVModel?.OnLocationLinksStoreChanged(sender, e);
             }
         }
 

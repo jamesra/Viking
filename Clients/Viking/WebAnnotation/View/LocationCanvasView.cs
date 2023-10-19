@@ -32,8 +32,7 @@ namespace WebAnnotation.View
 
         public readonly ContextMenuGeneratorDelegate ContextMenuGenerator = null;
 
-        public int VisualHeight
-        { get { return this.ParentDepth; } }
+        public int VisualHeight => this.ParentDepth;
 
         /// <summary>
         /// The number of parent structures until we hit a root structure
@@ -67,35 +66,17 @@ namespace WebAnnotation.View
 
         public abstract List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber);
 
-        public long ID
-        {
-            get { return modelObj.ID; }
-        }
+        public long ID => modelObj.ID;
 
-        public double Z
-        {
-            get { return modelObj.Z; }
-        }
+        public double Z => modelObj.Z;
 
-        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode
-        {
-            get { return modelObj.TypeCode; }
-        }
+        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode => modelObj.TypeCode;
 
-        public bool IsTerminal
-        {
-            get { return modelObj.Terminal; }
-        }
+        public bool IsTerminal => modelObj.Terminal;
 
-        public bool OffEdge
-        {
-            get { return modelObj.OffEdge; }
-        }
+        public bool OffEdge => modelObj.OffEdge;
 
-        public bool IsVericosityCap
-        {
-            get { return modelObj.VericosityCap; }
-        }
+        public bool IsVericosityCap => modelObj.VericosityCap;
 
         private Structure _Parent = null;
         private void ResetParentCache() { _Parent = null; }
@@ -114,10 +95,7 @@ namespace WebAnnotation.View
             }
         }
 
-        public ICollection<long> Links
-        {
-            get { return modelObj.Links; }
-        }
+        public ICollection<long> Links => modelObj.Links;
 
         public abstract ICollection<long> OverlappedLinks
         {
@@ -235,10 +213,7 @@ namespace WebAnnotation.View
             return true;
         }
 
-        public long? ParentID
-        {
-            get { return modelObj.ParentID; }
-        }
+        public long? ParentID => modelObj.ParentID;
 
         public ContextMenu ContextMenu
         {
@@ -253,13 +228,7 @@ namespace WebAnnotation.View
             }
         }
 
-        public string ToolTip
-        {
-            get
-            {
-                return this.modelObj.Label;
-            }
-        }
+        public string ToolTip => this.modelObj.Label;
 
         public bool Equals(LocationCanvasView x, LocationCanvasView y)
         {

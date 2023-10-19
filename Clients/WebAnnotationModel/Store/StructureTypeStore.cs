@@ -184,16 +184,14 @@ namespace WebAnnotationModel
             }
             finally
             {
-                if (proxy != null)
+                try
                 {
-                    try
-                    {
-                        proxy.Close();
-                    }
-                    catch (Exception)
-                    {
-                    }
+                    proxy?.Close();
                 }
+                catch (Exception)
+                {
+                }
+             
             }
             
             //Populate our cache

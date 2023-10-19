@@ -100,10 +100,7 @@ namespace WebAnnotation.ViewModel
 
         public Color Color
         {
-            get
-            {
-                return _Color;
-            }
+            get => _Color;
 
             set
             {
@@ -115,10 +112,7 @@ namespace WebAnnotation.ViewModel
 
         public float Alpha
         {
-            get
-            {
-                return _Color.GetAlpha();
-            }
+            get => _Color.GetAlpha();
 
             set
             {
@@ -133,21 +127,11 @@ namespace WebAnnotation.ViewModel
         public int MinSection { get; private set; }
         public int MaxSection { get; private set; }
 
-        public GridRectangle BoundingBox
-        {
-            get
-            {
-                return GridRectangle.Pad(LineSegment.BoundingBox, this.LineRadius);
-            }
-        }
+        protected int LinkDirection => MinSection == MaxSection ? 0 : MinSection < Z ? -1 : 1;
 
-        public Geometry.GridLineSegment LineSegment
-        {
-            get
-            {
-                return new Geometry.GridLineSegment(A.Center, B.Center);
-            }
-        }
+        public GridRectangle BoundingBox => GridRectangle.Pad(LineSegment.BoundingBox, this.LineRadius);
+
+        public Geometry.GridLineSegment LineSegment => new Geometry.GridLineSegment(A.Center, B.Center);
 
         public LocationLinkContextMenuGeneratorDelegate ContextMenuGenerator = null;
 
@@ -209,26 +193,11 @@ namespace WebAnnotation.ViewModel
             BView = B.Z == this.Z ? AnnotationViewFactory.Create(B, MapperB) : AnnotationViewFactory.CreateAdjacent(B, MapperB);
         }
 
-        int ICanvasView.VisualHeight
-        {
-            get
-            {
-                return 0;
-            }
-        }
+        int ICanvasView.VisualHeight => 0;
 
-        public double LineWidth
-        {
-            get
-            {
-                return LineRadius * 2.0;
-            }
-        }
+        public double LineWidth => LineRadius * 2.0;
 
-        public double LineRadius
-        {
-            get { return Math.Min(A.Radius, B.Radius); }
-        }
+        public double LineRadius => Math.Min(A.Radius, B.Radius);
 
         private LineView CreateView()
         {
@@ -253,8 +222,10 @@ namespace WebAnnotation.ViewModel
             if (section_span_distance == 0)
             {
                 //This is an error state, we shouldn't have a link between annotations on the same section
-                return Color.White;
+                return Color.Red;
             }
+
+            section_span_distance = section_span_distance < 0 ? -1 : 1;
 
             int red = (int)((float)((float)structure_type_color.R * .5f) + (128 * direction));
             red = 255 - (red / section_span_distance);
@@ -284,6 +255,9 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         public bool LinksOverlap()
         {
+            if(this.LinkDirection == 0) //Links on the same section never overlap, this is to ensure they are displayed and because the convention of Viking is annotations of the same structure do not overlap
+                return false;
+
             LocationCanvasView AView;
             LocationCanvasView BView;
             GetCanvasViews(this.Key, this.mapProvider, out AView, out BView);
@@ -327,18 +301,9 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public override string ToolTip
-        {
-            get { return Key.A.ToString() + " -> " + Key.B.ToString(); }
-        }
+        public override string ToolTip => Key.A.ToString() + " -> " + Key.B.ToString();
 
-        LocationLinkKey IViewLocationLink.Key
-        {
-            get
-            {
-                return this.Key;
-            }
-        }
+        LocationLinkKey IViewLocationLink.Key => this.Key;
 
         public override void Save()
         {
@@ -358,7 +323,7 @@ namespace WebAnnotation.ViewModel
 
         public static bool IsValidLocationLinkTarget(LocationObj target, LocationObj OriginObj)
         {
-            if (target == null || OriginObj == null)
+            if (target is null || OriginObj is null)
                 return false;
 
             //Check to make sure it isn't the same structure on the same section
@@ -393,9 +358,7 @@ namespace WebAnnotation.ViewModel
         public double Distance(GridVector2 Position)
         {
             double d = LineSegment.DistanceToPoint(Position) - this.LineRadius;
-            if (d < 0)
-                d = 0;
-            return d;
+            return d < 0 ? 0 : d;
         }
 
         public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape)

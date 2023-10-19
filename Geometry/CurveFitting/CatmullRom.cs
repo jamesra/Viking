@@ -105,7 +105,7 @@ namespace Geometry
 
             //return cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => FitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations)).ToArray();
             var curved_points = cp.Where((p, i) => i + 3 < cp.Count).SelectMany((p, i) => RecursivelyFitCurveSegment(cp[i], cp[i + 1], cp[i + 2], cp[i + 3], NumInterpolations: NumInterpolations));
-            GridVector2[] points = curved_points.RemoveAdjacentDuplicates(ControlPoints).ToArray(); ;
+            GridVector2[] points = curved_points.RemoveAdjacentDuplicates(ControlPoints).ToArray();
 
 #if DEBUG
             for (int i = 0; i < ControlPoints.Count; i++)

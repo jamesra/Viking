@@ -77,14 +77,10 @@ namespace WebAnnotation.ViewModel
         }
 
         protected void AddLocationLink(LocationLinkKey key, bool subscribe)
-        {
-            if (!(Store.Locations.Contains(key.A) && Store.Locations.Contains(key.B)))
+        {  
+            if(!Store.Locations.TryGetValue(key.A, out LocationObj AOBj))
                 return;
-
-            LocationObj AOBj = Store.Locations.Contains(key.A) ? Store.Locations[key.A] : null;
-            LocationObj BOBj = Store.Locations.Contains(key.B) ? Store.Locations[key.B] : null;
-
-            if (AOBj == null || BOBj == null)
+            if(!Store.Locations.TryGetValue(key.B, out LocationObj BOBj))
                 return;
 
             if (!(AOBj.Z == this.Section.Number || BOBj.Z == this.Section.Number))

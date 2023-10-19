@@ -916,23 +916,36 @@ namespace WebAnnotation.ViewModel
             });
         }
 
+        /// <summary>
+        /// Return the LocationObj for the linked location on the provided section number
+        /// </summary>
+        /// <param name="link"></param>
+        /// <param name="SectionNumber"></param>
+        /// <returns></returns>
         private static LocationObj GetLocationFromLinkOnThisSection(LocationLinkKey link, int SectionNumber)
-        {
-            LocationObj AOBj = Store.Locations.Contains(link.A) ? Store.Locations[link.A] : null;
-            LocationObj BOBj = Store.Locations.Contains(link.B) ? Store.Locations[link.B] : null;
-
-            if (AOBj == null || BOBj == null)
+        { 
+            if(!Store.Locations.TryGetValue(link.A, out LocationObj AObj))
                 return null;
 
-            Debug.Assert(AOBj.Z != BOBj.Z);
-            if (AOBj.Z == BOBj.Z)
+            if(!Store.Locations.TryGetValue(link.B, out LocationObj BObj))
                 return null;
 
-            if (AOBj.Z == SectionNumber)
-                return AOBj;
+            //If neither location is on this section the link doesn't involve us.  Move on.
+            if(AObj.Z != SectionNumber && BObj.Z != SectionNumber)
+                return null;
 
-            if (BOBj.Z == SectionNumber)
-                return BOBj;
+            //Debug.Assert(AOBj.Z != BOBj.Z);
+            if (AObj.Z == BObj.Z)
+            {
+                Trace.WriteLine($"{AObj.ID} and {BObj.ID} both link to each other on section {AObj.Z}.  Links should cross sections.");
+                return null;
+            }
+
+            if (AObj.Z == SectionNumber)
+                return AObj;
+
+            if (BObj.Z == SectionNumber)
+                return BObj;
 
             return null;
         }
@@ -951,7 +964,6 @@ namespace WebAnnotation.ViewModel
 
         private void AddOverlappedLocations(IEnumerable<LocationObj> locs)
         {
-
             foreach (LocationObj loc in locs)
             {
                 ICollection<LocationLinkKey> overlapped_links = loc.Links.Select(l => new LocationLinkKey(l, loc.ID)).Where(linkKey => SectionLocationLinks.OverlappedLinkKeys.Contains(linkKey)).ToList();
@@ -979,7 +991,7 @@ namespace WebAnnotation.ViewModel
                 if (LocationViews.ContainsKey(loc.ID))
                 {
                     LocationCanvasView locView = LocationViews[loc.ID];
-                    locView.OverlappedLinks = new long[0];
+                    locView.OverlappedLinks = Array.Empty<long>();
                 }
             }
         }
@@ -1110,7 +1122,7 @@ namespace WebAnnotation.ViewModel
             return listAnnotations.Where(o =>
             {
                 LocationCanvasView loc = o.obj as LocationCanvasView;
-                if (loc == null)
+                if (loc is null)
                     return true;
 
                 return !SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(loc.ID);
@@ -1183,7 +1195,7 @@ namespace WebAnnotation.ViewModel
             return listAnnotations.Where(o =>
             {
                 LocationCanvasView loc = o.obj as LocationCanvasView;
-                if (loc == null)
+                if (loc is null)
                     return true;
 
                 return !SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(loc.ID);
@@ -1214,7 +1226,7 @@ namespace WebAnnotation.ViewModel
             return listAnnotations.Where(o =>
             {
                 LocationCanvasView loc = o.obj as LocationCanvasView;
-                if (loc == null)
+                if (loc is null)
                     return true;
 
                 return !SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(loc.ID);
