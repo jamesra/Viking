@@ -382,6 +382,36 @@ namespace Geometry
         }
     }
 
+    public static class IShape2DExtensions
+    {
+        public static GridRectangle BoundingBox(this IEnumerable<IShape2D> shapes)
+        {
+            if (shapes is null)
+                throw new ArgumentNullException(nameof(shapes));
+
+            if (!shapes.Any())
+                throw new ArgumentException("Parameter must have at least one entry", nameof(shapes));
+
+
+            bool first = true;
+            GridRectangle bbox = new GridRectangle();
+            foreach (var s in shapes)
+            {
+                var result = s.BoundingBox;
+                if (first)
+                {
+                    bbox = result;
+                    first = false;
+                }
+                else
+                {
+                    bbox += result;
+                }
+            }
+            return bbox;
+        }
+    }
+
     public static class GridVector2Extensions
     {
         /// <summary>
@@ -583,7 +613,7 @@ namespace Geometry
                 RotationDirection result = area == 0 ? RotationDirection.COLINEAR :
                     area < 0 ? RotationDirection.CLOCKWISE : RotationDirection.COUNTERCLOCKWISE;
                 return result;
-            }  
+            }
         }
 
         /// <summary>
@@ -592,7 +622,7 @@ namespace Geometry
         /// <param name="points"></param>
         /// <returns></returns>
         public static RotationDirection Winding(this GridVector2 p1, GridVector2 p2, GridVector2 p3)
-        {                      
+        {
             // See 10th slides from following link
             // for derivation of the formula
             double val = (p2.Y - p1.Y) * (p3.X - p2.X) -
@@ -795,7 +825,7 @@ namespace Geometry
                 }
             }
 
-            nonDuplicatePoints.Add(points[points.Count-1]); //Always preserve the last point
+            nonDuplicatePoints.Add(points[points.Count - 1]);
 
             //                System.Diagnostics.Trace.WriteLine("Originally " + (ControlPoints.Count * NumInterpolations).ToString() + " now " + nonDuplicatePoints.Count.ToString());
             return nonDuplicatePoints.ToArray();
@@ -937,7 +967,7 @@ namespace Geometry
             if (points == null)
                 throw new ArgumentNullException(nameof(points));
 
-            
+
             double minX = double.MaxValue;
             double minY = double.MaxValue;
             double maxX = double.MinValue;
@@ -953,14 +983,14 @@ namespace Geometry
 
             if (minX == double.MinValue && points.Any() == false)
                 throw new ArgumentException("Empty collection", nameof(points));
-            
+
             return new double[] { minX, maxX, minY, maxY };
         }
 
         public static GridRectangle BoundingBox(this GridVector2[] points) => new GridRectangle(GetBounds(points));
 
         public static GridRectangle BoundingBox(this IEnumerable<GridVector2> points) => new GridRectangle(GetBounds(points));
-          
+
         /// <summary>
         /// Given a set of points, return the closest distance between any two points
         /// </summary>
@@ -1142,7 +1172,7 @@ namespace Geometry
             Func<TSource, GridVector2> keySelector,
             Func<TSource, TElement> elementSelector)
         {
-            var items = source.Select(item => new {Key = keySelector(item), Item = elementSelector(item)}).ToArray();
+            var items = source.Select(item => new { Key = keySelector(item), Item = elementSelector(item) }).ToArray();
             var bbox = items.Select(item => item.Key).BoundingBox();
             var output = new QuadTree<TElement>(bbox * 1.5);
             foreach (var item in items)
@@ -1335,7 +1365,7 @@ namespace Geometry
             foreach (Combo<GridPolygon> combo in polygons.CombinationPairs())
             {
                 var result = combo.A.AddPointsAtIntersections(combo.B);
-                if(result.Any())
+                if (result.Any())
                     combo.B.AddPointsAtIntersections(combo.A);
             }
         }
@@ -1353,7 +1383,7 @@ namespace Geometry
                     continue;
 
                 var result = combo.A.AddPointsAtIntersections(combo.B);
-                if(result.Any())
+                if (result.Any())
                     combo.B.AddPointsAtIntersections(combo.A);
             }
         }
@@ -1685,7 +1715,7 @@ namespace Geometry
 
         public static GridRectangle BoundingBox(this IReadOnlyList<GridPolygon> polygons)
         {
-            if(polygons is null)
+            if (polygons is null)
             {
                 throw new ArgumentNullException(nameof(polygons));
             }
@@ -1704,29 +1734,6 @@ namespace Geometry
             return bbox;
         }
 
-        public static GridRectangle BoundingBox(this IEnumerable<GridPolygon> polygons)
-        {
-            if (!polygons.Any())
-            {
-                throw new ArgumentException("No polygons in array to calculate bounding box");
-            }
-
-            bool first = true;
-            GridRectangle bbox = new GridRectangle();
-            foreach (var poly in polygons)
-            {
-                if (first)
-                {
-                    bbox = poly.BoundingBox;
-                    first = false;
-                }
-                else
-                {
-                    bbox += poly.BoundingBox;
-                }
-            }
-            return bbox;
-        }
 
     }
 

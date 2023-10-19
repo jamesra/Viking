@@ -254,7 +254,36 @@ namespace Geometry
             }
 
             return false; 
-        } 
+        }
+
+        public OverlapType ContainsExt(in IPoint2D p)
+        {  
+            if (false == BoundingBox.Contains(p))
+            {
+                //False positives can happen in cases where the points have floating point precision issues.
+                //Particularly in GridTransforms.  This should be handled by rounding the transform results. 
+                //However it may be worth the computation cost to do Barycentric calculation instead.
+                return OverlapType.NONE;
+            }
+
+            //Find out if the point is on any line segment of the triangle
+            GridVector2 uv = Barycentric(p);
+            GridVector3 uvw = new GridVector3(uv.X, uv.Y, 1 - uv.X - uv.Y);
+
+            if (uvw.X >= 0 && uvw.Y >= 0 && uvw.Z >= 0)
+            {
+                if (uvw.X + uvw.Y + uvw.Z <= 1.0f)
+                {
+                    //The point is on or inside the triangle if any barycentric coordinate is 0
+                    if(uvw.coords.Any(c => c == 0))
+                        return OverlapType.TOUCHING;
+
+                    return OverlapType.CONTAINED;
+                }
+            }
+
+            return OverlapType.NONE;
+        }
 
         public GridVector2 Barycentric(in IPoint2D p)
         {

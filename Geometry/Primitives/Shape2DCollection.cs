@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Geometry
@@ -50,6 +51,20 @@ namespace Geometry
         {
             IPoint2D pnt = p;
             return Shapes.Any(s => s.Contains(pnt));
+        }
+
+        public OverlapType ContainsExt(in IPoint2D p)
+        {
+            IPoint2D pnt = p;
+            Trace.WriteLine("ContainsExt on a Shape2DCollection is computationally expensive");
+            OverlapType output = OverlapType.NONE;
+            foreach(var s in Shapes)
+            {
+                var result = s.ContainsExt(pnt);
+                output |= result;
+            }
+           
+            return output;
         }
 
         public bool Intersects(in IShape2D shape)

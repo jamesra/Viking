@@ -123,6 +123,8 @@ namespace Geometry
         double Area { get; }
         bool Contains(in IPoint2D p);
 
+        OverlapType ContainsExt(in IPoint2D p);
+
         bool Intersects(in IShape2D shape);
 
         ShapeType2D ShapeType { get; }

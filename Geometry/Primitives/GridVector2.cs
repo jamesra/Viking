@@ -736,7 +736,15 @@ namespace Geometry
 
         bool IShape2D.Contains(in IPoint2D p)
         {
+            throw new ArgumentException("Points do not contain geometry");
             return p.X == this.X && p.Y == this.Y;
+        }
+
+        OverlapType IShape2D.ContainsExt(in Geometry.IPoint2D p)
+        {
+            throw new ArgumentException("Points do not contain geometry");
+            //Not sure if this should return TOUCHING or CONTAINED, but I think TOUCHING is more correct
+            return p.X == this.X && p.Y == this.Y ? OverlapType.TOUCHING : OverlapType.NONE;
         }
 
         bool IShape2D.Intersects(in IShape2D shape)

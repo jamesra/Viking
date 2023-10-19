@@ -40,6 +40,8 @@ namespace Geometry
 
         public int? PreviousVertex => iVertex - 1 >= 0 ? (int?)(iVertex -1) : null;
 
+        IShapeIndex IShapeIndex.Reindex(int iShape) => Reindex(iLine);
+
         /// <summary>
         /// Return the next index after this one, staying within the same ring
         /// </summary>

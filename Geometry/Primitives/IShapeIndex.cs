@@ -53,5 +53,12 @@ namespace Geometry
         /// The previous vertex in the shape
         /// </summary>
         IShapeIndex Previous { get; }
+
+        /// <summary>
+        /// Return a copy of this IShapeIndex with iShape value changed to point at a different polygon index
+        /// </summary>
+        /// <param name="old"></param>
+        /// <returns></returns>
+        IShapeIndex Reindex(int iShape);
     }
 }

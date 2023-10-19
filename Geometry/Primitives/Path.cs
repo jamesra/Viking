@@ -619,6 +619,12 @@ namespace Geometry
             return this.Segments.Any(line => line.Contains(pnt));
         }
 
+        OverlapType IShape2D.ContainsExt(in IPoint2D p)
+        {
+            IPoint2D pnt = p;
+            return this.Segments.Any(line => line.Contains(pnt)) ? OverlapType.TOUCHING : OverlapType.NONE;
+        }
+
         bool IShape2D.Intersects(in IShape2D shape)
         {
             IShape2D shp = shape;

@@ -38,6 +38,8 @@ namespace Geometry
         IShapeIndex IShapeIndex.FirstVertexInShape => FirstInRing;
         IShapeIndex IShapeIndex.LastVertexInShape => LastInRing;
 
+        IShapeIndex IShapeIndex.Reindex(int iShape) => Reindex(iShape);
+
         ShapeType2D IShapeIndex.ShapeType => ShapeType2D.POLYGON;
 
         /// <summary>

@@ -736,6 +736,11 @@ namespace Geometry
             return Contains(new GridVector2(p.X,p.Y));
         }
 
+        public OverlapType ContainsExt(in IPoint2D p)
+        {
+            return Contains(new GridVector2(p.X, p.Y)) ? OverlapType.TOUCHING : OverlapType.NONE;
+        }
+
         public IShape2D Translate(in IPoint2D offset)
         {
             return this.Translate(offset.Convert());

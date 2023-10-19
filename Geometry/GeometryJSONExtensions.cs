@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -23,6 +24,36 @@ namespace Geometry.JSON
         {
             dynamic obj = poly.ToJObject();
             return obj.ToString();
+        }
+
+        public static JArray ToJArray(this IEnumerable<IShape2D> input)
+        {
+            JArray obj = new JArray(input.Select(p => p.ToJObject()));
+            return obj;
+        }
+
+        public static JObject ToJObject(this IShape2D input)
+        {
+            if(input is GridPolygon poly) { 
+                return poly.ToJObject();
+            }
+            else if (input is GridLineSegment line)
+            {
+                return line.ToJObject();
+            }
+            else if (input is GridVector2 vec)
+            {
+                return vec.ToJObject();
+            }
+            else if (input is IPoint2D p)
+            {
+                return p.ToJObject();
+            }
+            else
+            {
+                throw new ArgumentException($"Unknown type {input.GetType().Name} cannot be converted to JSON");
+            }
+
         }
 
         public static JArray ToJArray(this IEnumerable<GridPolygon> input)
