@@ -43,11 +43,14 @@ namespace Viking.AU
         [Option('h', "help", DefaultValue = false, Required = false, HelpText = "Show help")]
         public bool ShowHelp { get; set; }
 
+        [Option('m', "translate", DefaultValue = null, Required = false, HelpText = "Translation file, json each array entry is <section #> <X> <Y> <datetime>")]
+        public string TranslateFile { get; set; }
+
         public IList<long> Sections
         {
             get
             {
-                if (this.SectionNumbersString == null)
+                if (this.SectionNumbersString is null)
                     return new List<long>();
                 else
                     return NumberRangeToList(this.SectionNumbersString);
@@ -166,6 +169,8 @@ namespace Viking.AU
         static readonly CommandLineOptions options = new CommandLineOptions();
         private static readonly SemaphoreSlim ConsoleLock = new SemaphoreSlim(1);
 
+        static SectionTranslations SectionTranslations = new SectionTranslations();
+
         static async Task Main(string[] args)
         {
             var help = HelpText.AutoBuild(Program.options);
@@ -184,6 +189,11 @@ namespace Viking.AU
                 System.Console.WriteLine(help);
                 return;
             }
+
+            if (options.TranslateFile != null)
+            {
+                SectionTranslations = SectionTranslations.CreateFromConfigFile(options.TranslateFile);
+            }   
 
             int numThreads = options.NumThreads ?? System.Environment.ProcessorCount + 1;
 
@@ -341,11 +351,15 @@ namespace Viking.AU
                 MappingBase mapper = State.MappingsManager.GetMapping(State.Volume.DefaultVolumeTransform, (int)SectionNumber, section.DefaultChannel, section.DefaultPyramidTransform) ?? throw new Exception("No mapping found for section " + SectionNumber.ToString());
                 await mapper.Initialize(token);
 
+                SectionTranslation? translationData = null;
+                if(SectionTranslations.TryGetValue(SectionNumber, out var sectionTranslationData))
+                    translationData = sectionTranslationData;
+
                 foreach (LocationObj loc in LocDict.Values)
                 {
                     try
                     {
-                        bool result = UpdateVolumeShape(loc, mapper);
+                        bool result = UpdateVolumeShape(loc, mapper, translationData);
                         if (result)
                             NumUpdated++;
                     }
@@ -390,7 +404,7 @@ namespace Viking.AU
         /// <param name="Location"></param>
         /// <param name="mapping"></param>
         /// <returns></returns>
-        static bool UpdateVolumeShape(LocationObj loc, MappingBase mapper)
+        static bool UpdateVolumeShape(LocationObj loc, MappingBase mapper, SectionTranslation? translation)
         {
             bool TypeUpdated = false;
             if (!IsLocationTypeValid(loc))
@@ -405,11 +419,22 @@ namespace Viking.AU
             }
 
             SqlGeometry updatedVolumeShape = VolumeShapeForLocation(loc, mapper);
-            if (updatedVolumeShape == null)
+            if (updatedVolumeShape is null)
             {
                 Console.WriteLine("Could not map location ID : " + loc.ID.ToString());
                 return false;
             }
+
+            //Translate if needed
+            if(!(translation is null))
+            {
+                if(loc.LastModified < translation.Value.TranslateBefore)
+                { 
+                    updatedVolumeShape = updatedVolumeShape.Translate(translation.Value.Offset);
+                    loc.MosaicShape = mapper.TryMapShapeVolumeToSection(updatedVolumeShape);
+                }
+            }
+
             if (!updatedVolumeShape.STIsValid())
             {
                 Console.WriteLine($"Location {loc.ID} invalid : {updatedVolumeShape.IsValidDetailed()} ");
@@ -456,7 +481,7 @@ namespace Viking.AU
         static SqlGeometry VolumeShapeForLocation(LocationObj loc, MappingBase mapper)
         {
             SqlGeometry UnsmoothedVolumeShape = mapper.TryMapShapeSectionToVolume(loc.MosaicShape);
-            if (UnsmoothedVolumeShape == null)
+            if (UnsmoothedVolumeShape is null)
                 return null;
 
             //Check a rare case where points are stored as circles 
@@ -571,7 +596,16 @@ namespace Viking.AU
             if (Original.Length != New.Length)
                 return true;
 
-            return Original.Where((p, i) => GridVector2.DistanceSquared(p, New[i]) > epsilonSquared).Any();
+            //Any with index is not available in this language version, so we have to do it the wordy way
+            //return Original.Any((p, i) => GridVector2.DistanceSquared(p, New[i]) > epsilonSquared);
+
+            for (int i = 0; i < New.Length; i++)
+            {
+                if (GridVector2.DistanceSquared(Original[i], New[i]) > epsilonSquared)
+                    return true;
+            }
+             
+            return false;
         }
     }
 }
