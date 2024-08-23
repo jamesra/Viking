@@ -106,6 +106,8 @@ GO
 
 USE [Test]
 GO
+
+ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 150; --Ensure we are using a recent DB version, needs to be at least 130 for STRING_SPLIT to be available
  
 --------------------------------------------
 --- CREATE MEM OPTIMIZED FILEGROUP AND FILES
@@ -302,7 +304,7 @@ BEGIN
 	
 	CREATE NONCLUSTERED INDEX [DeletedOn] ON [dbo].[DeletedLocations] 
 	(
-		[DeletedOn] ASC
+		[DeletedOn_Index_Desc] DESC
 	)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
 	
 	
@@ -7536,7 +7538,354 @@ BEGIN TRANSACTION main
 		      N'Remove temporary tables from stored procedures to facilitate EF Core migration tools ' ,getDate(),User_ID())
 	 COMMIT TRANSACTION seventyeight
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 79)))
+	begin
+     print N'Move a subset of functions to mem_integer_list to get path finding to work'
+	 BEGIN TRANSACTION seventyeight
+
+	EXEC('CREATE FUNCTION [dbo].[ufnLinkedToLocations] 
+	(	
+		-- Add the parameters for the function here
+		 @SourceLocIDs mem_integer_list READONLY --The location IDs we are starting from
+	)
+	RETURNS @Links TABLE ( 
+		SourceID bigint NOT NULL, --One of the Location IDs from @SourceLocIDs
+		TargetID bigint NOT NULL,  --The ID of a linked location
+		PRIMARY KEY CLUSTERED 
+	(
+		[SourceID] ASC,
+		[TargetID] ASC
+	) WITH (IGNORE_DUP_KEY = OFF),
+		INDEX SourceID_idx NONCLUSTERED (SourceID asc), 
+		INDEX TargetID_idx NONCLUSTERED (TargetID asc))
+	AS
+	BEGIN
+		INSERT @Links
+			select LL.B, LL.A from LocationLink LL
+			inner join @SourceLocIDs B on B.ID = LL.B
+			union
+			select LL.A, LL.B from LocationLink LL
+			inner join @SourceLocIDs A on A.ID = LL.A 
+		RETURN
+	END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end 
+
+	EXEC('CREATE FUNCTION [dbo].[MorphologyPaths]
+	(
+		-- Add the parameters for the function here
+		@SourceID bigint,
+		@TargetIDs mem_integer_list READONLY
+	)
+	RETURNS @Path TABLE
+	(
+		[StartID] [bigint] NOT NULL,				--First node of the path
+		[Path] nvarchar(max) NOT NULL DEFAULT '',	--csv of intermediate nodes along the path
+		[PathLength] [bigint] NOT NULL DEFAULT 0,	--number of entries in the path so far
+		[EndID] [bigint] NOT NULL,					-- where the path ends
+		[Completed] bit NOT NULL DEFAULT 0,			-- true if the path connects from a node in @SourceIDs to a node in @TargetIDs
+		PRIMARY KEY CLUSTERED						-- There could be N paths between start and end.  We only keep the shortest path.  This key ensures we do not have duplicate paths
+			(
+				[StartID] ASC,
+				[EndID] ASC,
+				[Completed] ASC
+			) WITH (IGNORE_DUP_KEY = OFF)
+	)
+	AS 
+		DECLARE @VisitedIDs mem_integer_list --Nodes we have already visited and checked for a path
+		DECLARE  @SourceIDs mem_integer_list
+		insert into @SourceIDs VALUES (@SourceID)
+		declare @TargetsRemaining mem_integer_list	--Lists the targets a path has not been located for
+		insert into @TargetsRemaining select ID from @TargetIDs
+
+		--Prepopulate the @Path Table
+		insert into @Path (StartID, EndID)
+			select ID as StartID, ID as EndID from @SourceIDs
+
+		--insert into @Path Values (0, @SourceID)
+
+		/*VisitedIDs is shared among all paths being searched.  If multiple sources are specified further development is required to make it specific for each path being explored*/
+		insert into @VisitedIDs 
+			select [EndID] from @Path P
+			LEFT JOIN @VisitedIDs V ON P.[EndID] = V.ID
+			WHERE V.ID IS NULL
 	 
+  
+		  /*****************************************************************************************
+		  --Search until we have no more remaining paths to check or we have no more targets to find
+		  *****************************************************************************************/ 
+ 
+		  while 0 = ANY ( Select Completed from @Path ) AND (Select COUNT(ID) from @TargetsRemaining) > 0
+		  BEGIN
+			  declare @Options mem_integer_list --Possible paths we can explore
+			  declare @PathOptions udtLinks  
+			  declare @NextStepOriginIDs mem_integer_list
+	
+			  DELETE FROM @NextStepOriginIDs
+
+			  -- Determine which nodes need to be checked for edges during this pass
+			  INSERT INTO @NextStepOriginIDs (ID)
+				select EndID from @Path P
+				where P.Completed = 0
+
+			  DELETE FROM @PathOptions
+
+			  -- List the edges
+			  INSERT INTO @PathOptions (SourceID, TargetID)
+				SELECT SourceID as SourceID, TargetID as TargetID 
+				from [dbo].ufnLinkedToLocations(@NextStepOriginIDs) ll
+				LEFT join @VisitedIDs VI ON ll.TargetID = VI.ID
+				WHERE VI.ID IS NULL
+
+			  --select COUNT(VI.ID) as [Count] from @VisitedIDs VI
+
+			  --select * FROM @PathOptions
+		 
+			  /**************************************************
+			  -- Count the number of edges available to each path
+			  **************************************************/
+			  declare @OptionCount TABLE (
+				NumOptions bigint NOT NULL,
+				OriginID bigint
+			  ) 
+			  delete from @OptionCount
+	   
+			  insert into @OptionCount
+			  --Todo: Handle NULL value being removed by COUNT operation
+				  select COUNT(TargetID) as NumOptions, OriginID as OriginID
+					from (
+						select PO.TargetID as TargetID, P.EndID as OriginID
+						from @Path P
+						LEFT JOIN @PathOptions PO ON  PO.SourceID = P.EndID
+						WHERE P.Completed = 0
+						) P
+					WHERE TargetID IS NOT NULL
+					group by P.OriginID
+				   union 
+				   select 0, EndID FROM @Path P
+					WHERE P.EndID NOT IN (Select distinct SourceID from @PathOptions) AND
+						  P.Completed = 0
+ 
+			 /*******************************************************************
+			 -- Identify which paths have reached a dead end because there are 
+			 -- no more remaining nodes to check
+			 *******************************************************************/
+			 declare @DeadPathOriginIDs mem_integer_list
+			 DELETE FROM @DeadPathOriginIDs --This line prevents listing  every dead end reached in the search, but commenting it is useful for debugging which paths were checked
+			 insert into @DeadPathOriginIDs
+				Select OriginID
+				FROM @OptionCount OC
+				where OC.NumOptions = 0
+
+			 IF EXISTS (Select * FROM @DeadPathOriginIDs)
+			 BEGIN 
+				--select ID as DeletedIDs from @DeadPathOriginIDs
+				--select * from @Path P 
+				--	inner join @DeadPathOriginIDs DP ON DP.ID = P.EndID
+
+				delete P from @Path P
+					inner join @DeadPathOriginIDs DP ON DP.ID = P.EndID
+
+				--select * from @Path
+			 END
+
+			 /*********************************************************************
+			 -- If there is only one option for a path then update the existing row 
+			 *********************************************************************/
+	  
+			  IF EXISTS (Select OriginID from @OptionCount OC where OC.NumOptions = 1)
+			  BEGIN
+				-- Trivial path with one option
+
+				/*select * from @Path as P
+					INNER JOIN @PathOptions PO ON PO.SourceID = P.EndID
+					INNER JOIN @OptionCount PC ON PC.OriginID = P.EndID
+					where PC.NumOptions = 1
+				*/
+				UPDATE @Path set [Path] = CASE WHEN [PATH] = '' THEN STR(EndID) ELSE CONCAT([Path],',',STR(EndID)) END,
+								 [EndID] = PO.TargetID,
+								 [PathLength] = [PathLength] + 1,
+								 [Completed] = 0--CASE WHEN (EndID IN (Select * from @TargetIDs)) THEN 1 ELSE 0 END
+					   from @Path P
+					   inner join @PathOptions PO ON PO.SourceID = P.EndID
+					   inner join @OptionCount PC ON PC.OriginID = P.EndID
+					   where PC.NumOptions = 1 AND
+							 PC.OriginID = P.EndID AND			 
+							 P.Completed = 0
+				/*
+				select * from @Path as P
+					INNER JOIN @PathOptions PO ON PO.SourceID = P.EndID
+					INNER JOIN @OptionCount PC ON PC.OriginID = P.EndID
+					where PC.NumOptions = 1
+					*/
+
+				DELETE FROM @PathOptions
+					   WHERE SourceID IN (SELECT SourceID from @OptionCount OC WHERE OC.NumOptions = 1)
+		
+				--select * FROM @PathOptions
+
+		 
+			 END
 	 
+			 /******************************************************************
+			 --If there are multiple paths then insert a new row for each option 
+			 --and delete the original row
+			 ******************************************************************/
+			 IF EXISTS (Select OriginID from @OptionCount OC where OC.NumOptions > 1)
+			 BEGIN
+		 
+				--Multiple options, insert a row into the path table for each option
+				INSERT INTO @Path (StartID, [Path], EndID, PathLength, Completed )
+					SELECT P.StartID as StartID,
+						   CASE WHEN P.[PATH] = '' THEN STR(EndID) ELSE CONCAT([Path],',',STR(EndID)) END, --Path
+						   PO.TargetID as EndID,
+						   [PathLength] = [PathLength] + 1,
+						   [Completed] = 0--CASE WHEN (EndID IN (Select * from @TargetIDs)) THEN 1 ELSE 0 END
+					from @Path P
+					INNER JOIN @PathOptions PO ON PO.SourceID = P.EndID
+					INNER JOIN @OptionCount PC ON PC.OriginID = P.EndID
+					where PC.NumOptions > 1 AND P.Completed = 0
+		 
+				DELETE P FROM @Path AS P
+					INNER JOIN @PathOptions PO ON PO.SourceID = P.EndID
+					INNER JOIN @OptionCount PC ON PC.OriginID = P.EndID
+					where PC.NumOptions > 1
+			  
+				DELETE FROM @PathOptions
+					   WHERE SourceID IN (SELECT OriginID from @OptionCount OC WHERE OC.NumOptions > 1)
+			    
+			 END
+
+			 /**********************************************
+			 Check for any completed paths.  Create a new row for the completed path with the completion flag set.
+			 This allows testing for more targets along the same path
+			 ***********************************************/
+	   
+			 INSERT INTO @Path (StartID, [Path], EndID, PathLength, Completed )
+					SELECT P.StartID as StartID,
+						   CASE WHEN P.[PATH] = '' THEN STR(EndID) ELSE CONCAT([Path],',',STR(EndID)) END, --Update Path to include EndID
+						   P.EndID as EndID,
+						   [PathLength] = [PathLength] + 1,
+						   [Completed] = 1
+					from @Path P
+					inner join @TargetsRemaining TR ON TR.ID = P.EndID
+					WHERE P.Completed = 0
+			 
+			 --Remove any target nodes we have located
+			 delete T FROM @TargetsRemaining T
+				inner join @Path P ON P.EndID = T.ID
+
+			 /**********************************************
+			 Record which nodes we have visited
+			 **********************************************/
+	  
+			 insert into @VisitedIDs
+				select distinct [EndID] from @Path P
+				LEFT JOIN @VisitedIDs V ON P.[EndID] = V.ID
+				WHERE V.ID IS NULL
+
+			DELETE @NextStepOriginIDs
+
+		  END
+
+		  --Remove incomplete paths to handle the case where all targets were found
+		  delete P from @Path P
+			where P.Completed = 0
+
+		  --Return all of the identified paths
+		  RETURN  
+	END')
+
+	if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end 
+
+	 INSERT INTO DBVersion values (79, 
+		      N'Added pathfinding function, altered a subset of functions to use mem_integer_list' ,getDate(),User_ID())
+	 COMMIT TRANSACTION seventynine
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 80)))
+	begin
+     print N'Add functions to list all location links and calculate distance in 3D'  
+	 BEGIN TRANSACTION eighty
+		
+	 EXEC('
+		CREATE FUNCTION [dbo].[ufnLinkedToLocations] 
+		(	
+			-- Add the parameters for the function here
+			 @SourceLocIDs mem_integer_list READONLY --The location IDs we are starting from
+		)
+		RETURNS @Links TABLE ( 
+			SourceID bigint NOT NULL, --One of the Location IDs from @SourceLocIDs
+			TargetID bigint NOT NULL,  --The ID of a linked location
+			PRIMARY KEY CLUSTERED 
+		(
+			[SourceID] ASC,
+			[TargetID] ASC
+		) WITH (IGNORE_DUP_KEY = OFF),
+			INDEX SourceID_idx NONCLUSTERED (SourceID asc), 
+			INDEX TargetID_idx NONCLUSTERED (TargetID asc))
+		AS
+		BEGIN
+			INSERT @Links
+				select LL.B, LL.A from LocationLink LL
+				inner join @SourceLocIDs B on B.ID = LL.B
+				union
+				select LL.A, LL.B from LocationLink LL
+				inner join @SourceLocIDs A on A.ID = LL.A 
+			RETURN
+		END
+	 ')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 EXEC('
+		CREATE FUNCTION [dbo].[ufnDistance3D] 
+		(
+			-- Add the parameters for the function here
+			@AX float,
+			@AY float,
+			@AZ float,
+			@BX float,
+			@BY float,
+			@BZ float
+		)
+		RETURNS FLOAT
+		AS
+		BEGIN
+			DECLARE @XYDistanceSquared FLOAT
+			DECLARE @ZDist FLOAT
+			DECLARE @XYZ_Distance FLOAT
+			set @ZDist = (@AZ - @BZ) * [dbo].ZScale()
+			set @XYDistanceSquared = POWER((@AX - @BX) * [dbo].XYScale(), 2) + POWER((@AY - @BY) * [dbo].XYScale(), 2) 
+	 
+			set @XYZ_Distance = SQRT( POWER(@ZDist,2) + @XYDistanceSquared )
+
+			return @XYZ_Distance
+		END
+	 ')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (80, 
+		      N'Add functions to list all location links and calculate distance in 3D',getDate(),User_ID())
+	 COMMIT TRANSACTION eighty
+	end
 		   
 COMMIT TRANSACTION main
