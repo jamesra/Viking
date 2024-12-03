@@ -256,14 +256,14 @@ namespace Geometry
             return false; 
         }
 
-        public OverlapType ContainsExt(in IPoint2D p)
+        public ShapeRelation GetRelation(in IPoint2D p)
         {  
             if (false == BoundingBox.Contains(p))
             {
                 //False positives can happen in cases where the points have floating point precision issues.
                 //Particularly in GridTransforms.  This should be handled by rounding the transform results. 
                 //However it may be worth the computation cost to do Barycentric calculation instead.
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
             }
 
             //Find out if the point is on any line segment of the triangle
@@ -276,14 +276,57 @@ namespace Geometry
                 {
                     //The point is on or inside the triangle if any barycentric coordinate is 0
                     if(uvw.coords.Any(c => c == 0))
-                        return OverlapType.TOUCHING;
+                        return ShapeRelation.TOUCHING;
 
-                    return OverlapType.CONTAINED;
+                    return ShapeRelation.CONTAINED;
                 }
             }
 
-            return OverlapType.NONE;
+            return ShapeRelation.NONE;
         }
+
+        public ShapeRelation GetRelation(GridLineSegment line)
+        {
+            //This is very similar to the logic for GridRectangle
+            ShapeRelation relA = this.GetRelation(line.A);
+            ShapeRelation relB = this.GetRelation(line.B);
+
+            ShapeRelation composite = relA | relB;
+
+            bool containsA = relA == ShapeRelation.CONTAINED;
+            bool containsB = relB == ShapeRelation.CONTAINED;
+
+            if (containsA && containsB)
+                return ShapeRelation.CONTAINED;
+
+            //Edge case where one end of the line is contained and the other is exactly on the edge
+            if (composite.HasFlag(ShapeRelation.TOUCHING | ShapeRelation.CONTAINED))
+                return ShapeRelation.CONTAINED;
+
+            //Edge case where the line is exactly along the edge... not sure if this should be touching or contained, if not the same edge it is contained, but if the same edge it is touching
+            if (relA.HasFlag(ShapeRelation.TOUCHING) && relB.HasFlag(ShapeRelation.TOUCHING))
+            {
+                //Check if the line is touching the same segment in two places
+                foreach (GridLineSegment e in this.Segments)
+                    if(e.Intersects(line.A) && e.Intersects(line.B))
+                        return ShapeRelation.TOUCHING;
+
+                return ShapeRelation.CONTAINED;
+            }
+
+            //Check if line crosses the bounding box but both points are outside the box
+            foreach (GridLineSegment e in this.Segments)
+                if (e.Intersects(line))
+                    return ShapeRelation.INTERSECTING;
+
+            //OK, make sure one endpoint isn't touching and the rest of the line is outside the triangle
+            if(composite.HasFlag(ShapeRelation.TOUCHING))
+               return ShapeRelation.TOUCHING;
+
+            return ShapeRelation.NONE;
+        }
+
+        ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D line) => GetRelation(line.Convert());
 
         public GridVector2 Barycentric(in IPoint2D p)
         {

@@ -190,7 +190,7 @@ namespace ColladaIO
             instance_material_type mat_instance = new instance_material_type
             {
                 symbol = model.Material.Key,
-                target = MaterialURL == null ? "#" + model.Material.Key : string.Format("{0}#{1}", MaterialURL, model.Material.Key)
+                target = MaterialURL is null ? "#" + model.Material.Key : string.Format("{0}#{1}", MaterialURL, model.Material.Key)
             };
             mat_binding.technique_common = new instance_material_type[] { mat_instance };
 

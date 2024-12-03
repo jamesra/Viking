@@ -448,7 +448,7 @@ namespace GeometryTests.FSCheck
                 path.Push(startVert);
                 var convexHull = FindNonSelfIntersectingPath(mesh, 
                                                              ref path,
-                                                            (mesh_, path_, vert_) => path_ == null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
+                                                            (mesh_, path_, vert_) => path_ is null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
                                                             (mesh_, path_) => path_.Count > 2 && path_.Peek() == targetVert);
 
                 path.Push(startVert); //Close the loop
@@ -495,7 +495,7 @@ namespace GeometryTests.FSCheck
                 path.Push(startVert); 
                 var convexHull = FindNonSelfIntersectingPath(mesh, 
                                                              ref path,
-                                                            (mesh_, path_, vert_) => path_ == null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
+                                                            (mesh_, path_, vert_) => path_ is null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
                                                             (mesh_, path_) => path_.Count > 2 && path_.Peek() == targetVert);
 
                 path.Push(startVert); //Close the loop
@@ -531,7 +531,7 @@ namespace GeometryTests.FSCheck
             {
                 //Any 3 distinct points will not intersect
                 var output = new GridPolygon(points.EnsureClosedRing());
-                if (output == null || output.Area < Geometry.Global.Epsilon)
+                if (output is null || output.Area < Geometry.Global.Epsilon)
                 {
                     return null;
                 }
@@ -543,7 +543,7 @@ namespace GeometryTests.FSCheck
             {
                 var mesh = GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(points.Select(p => new Vertex2D(p)).ToArray());
                 GridPolygon output = GenConcavePolygonFromMesh(mesh, nLines, false, out TriangulationMesh<IVertex2D> output_mesh);
-                if (output == null || output.Area < Geometry.Global.Epsilon)
+                if (output is null || output.Area < Geometry.Global.Epsilon)
                 {
                     return null;
                 }
@@ -555,7 +555,7 @@ namespace GeometryTests.FSCheck
                 while (output_mesh.Faces.Count > 0 && output.InteriorPolygons.Count < maxHoles)
                 {
                     GridPolygon inner = GenConcavePolygonFromMesh(output_mesh, maxInnerLines, true, out output_mesh);
-                    if (inner == null || inner.Area < Geometry.Global.Epsilon)
+                    if (inner is null || inner.Area < Geometry.Global.Epsilon)
                     {
                         continue;
                     }
@@ -581,7 +581,7 @@ namespace GeometryTests.FSCheck
                 path.Push(startVert); 
                 var convexHull = FindNonSelfIntersectingPath(mesh, 
                                                              ref path,
-                                                            (mesh_, path_, vert_) => path_ == null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
+                                                            (mesh_, path_, vert_) => path_ is null ? true :  mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
                                                             (mesh_, path_) => path_.Count > 2 && path_.Peek() == targetVert);
 
                 path.Push(startVert); //Close the loop
@@ -641,7 +641,7 @@ namespace GeometryTests.FSCheck
                 path.Push(startVert);
                 var convexHull = FindNonSelfIntersectingPath(mesh,
                                                              ref path,
-                                                            (mesh_, path_, vert_) => path_ == null ? true : mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
+                                                            (mesh_, path_, vert_) => path_ is null ? true : mesh[new EdgeKey(path_.Peek(), vert_)].Faces.Count == 1 && (path.Contains(vert_) == false), //Edges can be included if they have one face
                                                             (mesh_, path_) => path_.Count > 2 && path_.Peek() == targetVert);
 
                 path.Push(startVert); //Close the loop
@@ -686,7 +686,7 @@ namespace GeometryTests.FSCheck
                 if (removeVert == false)
                 {
                     //Remove exterior verticies
-                    removeVert = poly.ContainsExt(mesh[iVert].Position) != OverlapType.CONTAINED;
+                    removeVert = poly.GetRelation(mesh[iVert].Position) != ShapeRelation.CONTAINED;
                 }
 
                 if (removeVert == false)
@@ -720,7 +720,7 @@ namespace GeometryTests.FSCheck
                 if (removeVert == false)
                 {
                     //Remove  verticies inside the polygon
-                    removeVert = poly.ContainsExt(mesh[iVert].Position) != OverlapType.NONE;
+                    removeVert = poly.GetRelation(mesh[iVert].Position) != ShapeRelation.NONE;
                 }
 
                 if (removeVert == false)
@@ -1203,7 +1203,7 @@ namespace GeometryTests.FSCheck
         private static readonly Gen<int> intGen = intArb.Generator;
 
 
-        private static readonly Gen<GridVector2> pointGen = null;
+        //private static readonly Gen<GridVector2> pointGen = null;
         private static Gen<GridVector2> GenPoint()
         {
             /*
@@ -1214,7 +1214,7 @@ namespace GeometryTests.FSCheck
             */
             /*
             Trace.WriteLine(string.Format("Test: {0}", intGen.Eval(1000, Global.StdGenSeed)));
-            if(pointGen == null)
+            if(pointGen is null)
             {
                 //pointGen = Gen.Fresh<GridVector2>(() => new GridVector2((double)floatGen.Eval(maxDimValue, Global.StdGenSeed),
                 //(double)floatGen.Eval(maxDimValue, Global.StdGenSeed)));
@@ -1229,7 +1229,7 @@ namespace GeometryTests.FSCheck
 
             //Arb.Default.NormalFloat().Generator.ArrayOf(2).Select(t => new GridVector2((double)t[0], (double)t[1]));
             /*
-            if(pointGen == null)
+            if(pointGen is null)
                 pointGen = Arb.Default.NormalFloat().Generator.ArrayOf(2).Select(t => new GridVector2((double)t[0], (double)t[1]));
 
             return pointGen;

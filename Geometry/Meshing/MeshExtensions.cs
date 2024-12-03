@@ -1,10 +1,11 @@
 ﻿//#define TRACEMESH
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Geometry.Meshing
-{
+{ 
     public static class MeshExtensions
     {
         /// <summary>
@@ -166,7 +167,7 @@ namespace Geometry.Meshing
         public static Mesh2D ToDynamicRenderMesh(this ICollection<GridTriangle> triangles)
         {
             Mesh2D mesh = new Meshing.Mesh2D();
-            QuadTree<int> PointToVertexIndex = new QuadTree<int>();
+            QuadTreeWithUniqueValues<int> PointToVertexIndex = new QuadTreeWithUniqueValues<int>();
 
             foreach (GridVector2 v in triangles.SelectMany(tri => tri.Points).Distinct())
             {
@@ -201,6 +202,11 @@ namespace Geometry.Meshing
         public static bool IsQuad(this IFace face)
         {
             return face.iVerts.Length == 4;
+        }
+
+        public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this IReadOnlyList<GridPolygon> polys, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
+        {
+            throw new NotImplementedException();
         }
 
         public static TriangulationMesh<IVertex2D<PolygonIndex>> Triangulate(this GridPolygon poly, int iPoly = 0, TriangulationMesh<IVertex2D<PolygonIndex>>.ProgressUpdate OnProgress = null)
@@ -250,7 +256,7 @@ namespace Geometry.Meshing
             {
                 GridLineSegment line = mesh.ToGridLineSegment(key);
 
-                if (OverlapType.NONE == centeredPoly.ContainsExt(line.Bisect()))
+                if (ShapeRelation.NONE == centeredPoly.GetRelation(line.Bisect()))
                 {
                     mesh.RemoveEdge(key);
 
@@ -258,7 +264,7 @@ namespace Geometry.Meshing
                 }
             }
 
-            //If there are three constrained edges that form an interior polygon that is a triangle the face wont be removed.  This results
+            //If there are three constrained edges that form an interior polygon that is a triangle the face won't be removed.  This results
             //in a constrained edge with two faces.  For this case remove the interior face
             foreach (var innerPolyGroup in edgeFacesToCheck.GroupBy(i => i.Key.iInnerPoly))
             {
@@ -312,7 +318,7 @@ namespace Geometry.Meshing
             //Center the verts on 0,0 to reduce floating point error
             //Assign the index to the new vertex to match the index into the faceVerts and interiorVerts arrays
             var faceVerts = verts.Select((v, i) => new Vertex2D<int>(i, v.Position - shapeCenter, v.Index)).ToArray();
-            var interiorVerts = InteriorPoints == null ? System.Array.Empty<Vertex2D<int>>() : InteriorPoints.Select((v, i) => new Vertex2D<int>(i + faceVerts.Length, v.Position - shapeCenter, v.Index)).ToArray();
+            var interiorVerts = InteriorPoints is null ? System.Array.Empty<Vertex2D<int>>() : InteriorPoints.Select((v, i) => new Vertex2D<int>(i + faceVerts.Length, v.Position - shapeCenter, v.Index)).ToArray();
 
             GridPolygon centeredPoly = new GridPolygon(faceVerts.Select(v => v.Position).ToArray().EnsureClosedRing());
             System.Diagnostics.Debug.Assert(interiorVerts.All(v => centeredPoly.Contains(v.Position)), "Interior points must be inside Face");
@@ -338,7 +344,7 @@ namespace Geometry.Meshing
                 if (tri_mesh.Contains(e))
                 {
                     //Replace the standard edge with a constrained edge
-                    if (tri_mesh[e] as ConstrainedEdge == null)
+                    if (tri_mesh[e] as ConstrainedEdge is null)
                     {
                         var existing_faces = tri_mesh[e].Faces;
                         tri_mesh.RemoveEdge(e.Key);

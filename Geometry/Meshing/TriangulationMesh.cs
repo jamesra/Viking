@@ -467,7 +467,7 @@ namespace Geometry.Meshing
         {
             get
             {
-                if (_XSortedArrayCache == null)
+                if (_XSortedArrayCache is null)
                 {
                     _XSortedArrayCache = new long[_XSorted.Count];
                     _XSorted.CopyTo(_XSortedArrayCache);
@@ -482,7 +482,7 @@ namespace Geometry.Meshing
         {
             get
             {
-                if (_YSortedArrayCache == null)
+                if (_YSortedArrayCache is null)
                 {
                     _YSortedArrayCache = new long[_YSorted.Count];
                     _YSorted.CopyTo(_YSortedArrayCache);
@@ -548,7 +548,9 @@ namespace Geometry.Meshing
                 if (intersected_edges.Count > 0)
                 {
                     throw new EdgesIntersectTriangulationException(e, intersected_edges.Select(edge => (IEdgeKey)edge).ToArray(),
-                        $"New edge {e} intersects existing edges: {intersected_edges[0]}");
+                        $"New edge {e} intersects existing edges: {intersected_edges[0]}\n" +
+                            $"{this[e.A]} <-> {this[e.B]}\n" +
+                            $"{this[intersected_edges[0].A]} <-> {this[intersected_edges[0].B]}");
                 }
             }
             catch (EdgeIntersectsVertexException)
@@ -599,11 +601,11 @@ namespace Geometry.Meshing
             long[] candidate_indicies = this.rTree.Intersects(circle.BoundingBox).Where(c => f.iVerts.Contains((int)c) == false).ToArray();
             GridVector2[] candidates = this[candidate_indicies].Select(v => v.Position).ToArray();
 
-            OverlapType[] results = GridCircle.Contains(verts, candidates);
+            ShapeRelation[] results = GridCircle.Contains(verts, candidates);
 
             for (int i = 0; i < results.Length; i++)
             {
-                if (results[i] == OverlapType.CONTAINED)
+                if (results[i] == ShapeRelation.CONTAINED)
                 {
                     //If all points are equidistant then don't call this a failure
                     double distanceSquared = GridVector2.DistanceSquared(in circle.Center, in candidates[i]);
@@ -914,7 +916,7 @@ namespace Geometry.Meshing
 
                 int[] oppVerts = new int[] { A.OppositeVertex(edge), B.OppositeVertex(edge) };
                 int checkVert = oppVerts.Single(v => A.iVerts.Contains(v) == false);
-                if (GridCircle.Contains(this[A.iVerts].Select(v => v.Position).ToArray(), this[checkVert].Position) == OverlapType.CONTAINED)
+                if (GridCircle.Contains(this[A.iVerts].Select(v => v.Position).ToArray(), this[checkVert].Position) == ShapeRelation.CONTAINED)
                 {
 
                     //We need to ensure that the edge we are flippig is convex.  We cannot flip a concave quad along the interior edge or we get overlapping edges

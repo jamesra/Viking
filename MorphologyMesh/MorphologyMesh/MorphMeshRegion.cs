@@ -42,7 +42,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="region"></param>
         /// <returns></returns>
-        static internal bool IsValidInvagination(MorphMeshRegion region)
+        internal static bool IsValidInvagination(MorphMeshRegion region)
         {
             Debug.Assert(region.Type == RegionType.INVAGINATION);
 
@@ -67,7 +67,7 @@ namespace MorphologyMesh
                 if (Faces.Count == 0)
                     throw new ArgumentException("No faces in region");
 
-                if (_Z == null)
+                if (_Z is null)
                 {
                     var builder = new SortedSet<double>();
                     var Z = this.VertPositions.Select(v => v.Z).Distinct();
@@ -107,17 +107,19 @@ namespace MorphologyMesh
                 if (_RegionPerimeter != null)
                     return _RegionPerimeter;
 
-                PolygonIndex[] polyIndicies = Verticies.Select(v => ((MorphMeshVertex)ParentMesh.Verticies[v]).PolyIndex.Value).ToArray();
+                PolygonIndex[] polyIndicies = Verticies.Select(v => ((MorphMeshVertex)ParentMesh.Verticies[v]).ShapeIndex).Where(v => v is PolygonIndex).Cast<PolygonIndex>().ToArray();
 
                 //var all_exterior_edges = this.Faces.SelectMany(f => f.Edges).Distinct().Where(e => this.ParentMesh[e].Faces.Count == 1).Select(e => ParentMesh[e]).ToList();
                 var all_region_face_edges = this.Faces.SelectMany(f => f.Edges).ToList();
                 var all_possible_edges = all_region_face_edges.Distinct().ToList();
+#if DEBUG
                 var counts = all_possible_edges.Select(e => all_region_face_edges.Count(fe => e.Equals(fe))).ToList();
+#endif
                 var all_exterior_edges = all_possible_edges.Where(e => all_region_face_edges.Count(fe => fe.Equals(e)) == 1).ToList();
 
                 //Identify all of the edges that are already in the mesh as 
                 //var all_exterior_edges = all_possible_edges.Where(e => this.ParentMesh.Contains(e) && ParentMesh[e].Faces.Intersect(this.Faces).Count == 1).ToList();
-                var startingedge = all_exterior_edges.First();
+                //var startingedge = all_exterior_edges.First();
 
                 List<int> OrderedBoundaryVerts = new List<int>(all_exterior_edges.Count + 1)
                 {
@@ -125,15 +127,14 @@ namespace MorphologyMesh
                     all_exterior_edges[0].B
                 };
                 all_exterior_edges.RemoveAt(0);
-
-
-                while (all_exterior_edges.Count > 0)
+                 
+                while (all_exterior_edges.Any())
                 {
                     int FirstVertIndex = OrderedBoundaryVerts.First();
                     int LastVertIndex = OrderedBoundaryVerts.Last();
 
                     IEdgeKey connected_edge = all_exterior_edges.FirstOrDefault(e => e.A == LastVertIndex || e.B == LastVertIndex || e.A == FirstVertIndex || e.B == FirstVertIndex);
-                    if (connected_edge == null)
+                    if (connected_edge is null)
                     {
 #if DEBUG
                         throw new InvalidOperationException("We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges");
@@ -264,7 +265,7 @@ namespace MorphologyMesh
         {
             get
             {
-                if (_Verticies == null)
+                if (_Verticies is null)
                     _Verticies = Faces.SelectMany(f => f.iVerts).Distinct().ToArray();
 
                 return _Verticies;
@@ -285,7 +286,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         public bool IsExposed(MorphRenderMesh mesh)
         {
-            GridPolygon[] AdjacentPolys = mesh.Polygons.Where((p, i) => this.ZLevel.Contains(mesh.PolyZ[i]) == false).ToArray();
+            GridPolygon[] AdjacentPolys = mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false && p is GridPolygon).Cast<GridPolygon>().ToArray();
 
             if (AdjacentPolys.Any(p => p.Contains(this.Polygon)))
             {
@@ -301,8 +302,7 @@ namespace MorphologyMesh
         /// <returns></returns>
         public bool IsPartlyExposed(MorphRenderMesh mesh)
         {
-            GridPolygon[] AdjacentPolys = mesh.Polygons.Where((p, i) => this.ZLevel.Contains(mesh.PolyZ[i]) == false).ToArray();
-
+            GridPolygon[] AdjacentPolys = mesh.Shapes.Where((p, i) => this.ZLevel.Contains(mesh.ShapeZ[i]) == false).Cast<GridPolygon>().ToArray();
             if (AdjacentPolys.Any(p => p.Intersects(this.Polygon) && !p.Contains(this.Polygon)))
             {
                 return true;

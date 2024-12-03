@@ -37,7 +37,7 @@ namespace Geometry
 
         public static GridCircle CircleFromThreePoints(GridVector2[] points)
         {
-            if (points == null)
+            if (points is null)
             {
                 throw new ArgumentNullException(nameof(points));
 
@@ -95,7 +95,7 @@ namespace Geometry
         /// <returns></returns>
         static public void CircleFromThreePoints(GridVector2[] points, ref GridCircle circle)
         {
-            if (points == null)
+            if (points is null)
             {
                 throw new ArgumentNullException("points");
 
@@ -169,7 +169,7 @@ namespace Geometry
         /// </summary>
         /// <param name="cp"></param>
         /// <param name="p1"></param>
-        public static OverlapType Contains(GridVector2[] cp, GridVector2 p1)
+        public static ShapeRelation Contains(GridVector2[] cp, GridVector2 p1)
         {
             double[][] cmat = CreateContainsDeterminateMatrixComponents(cp);
 
@@ -182,11 +182,11 @@ namespace Geometry
             double det = matrix.Determinant();
 
             if (det >= Global.EpsilonSquared)
-                return OverlapType.CONTAINED;
+                return ShapeRelation.CONTAINED;
             else if (det > -Global.EpsilonSquared && det < Global.EpsilonSquared)
-                return OverlapType.TOUCHING;
+                return ShapeRelation.TOUCHING;
             else
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
         }
 
         /// <summary>
@@ -194,18 +194,18 @@ namespace Geometry
         /// </summary>
         /// <param name="cp"></param>
         /// <param name="p1"></param>
-        public static OverlapType[] Contains(GridVector2[] cp, IEnumerable<GridVector2> points)
+        public static ShapeRelation[] Contains(GridVector2[] cp, IEnumerable<GridVector2> points)
         {
             double[][] cmat = CreateContainsDeterminateMatrixComponents(cp);
 
-            if (points == null)
+            if (points is null)
                 return null;
 
             int numPoints = points.Count();
             if (numPoints == 0)
-                return Array.Empty<OverlapType>();
+                return Array.Empty<ShapeRelation>();
 
-            OverlapType[] results = new OverlapType[numPoints];
+            ShapeRelation[] results = new ShapeRelation[numPoints];
 
             MathNet.Numerics.LinearAlgebra.Matrix<double> matrix = MathNet.Numerics.LinearAlgebra.Matrix<double>.Build.DenseOfRowArrays(
                                 new double[][] { cmat[0],
@@ -220,11 +220,11 @@ namespace Geometry
                 double det = matrix.Determinant();
 
                 if (det < 0)
-                    results[i] = OverlapType.NONE;
+                    results[i] = ShapeRelation.NONE;
                 else if (det <= Global.EpsilonSquared)
-                    results[i] = OverlapType.TOUCHING;
+                    results[i] = ShapeRelation.TOUCHING;
                 else if (det > 0)
-                    results[i] = OverlapType.CONTAINED;
+                    results[i] = ShapeRelation.CONTAINED;
 
                 i++;
             }
@@ -232,7 +232,7 @@ namespace Geometry
             return results;
         }
 
-        public static OverlapType Contains(GridVector2 c1, GridVector2 c2, GridVector2 c3, GridVector2 p1)
+        public static ShapeRelation Contains(GridVector2 c1, GridVector2 c2, GridVector2 c3, GridVector2 p1)
         {
             return Contains(new GridVector2[] { c1, c2, c3 }, p1);
         }
@@ -295,39 +295,28 @@ namespace Geometry
             return (XDist * XDist) + (YDist * YDist) <= this.RadiusSquared;
         }
 
-        public OverlapType ContainsExt(in IPoint2D p)
+        public ShapeRelation GetRelation(in IPoint2D p)
         {
-            //return GridVector2.Distance(p, this.Center) <= this.Radius;
-
-            double XDist = p.X - this.Center.X;
-            double YDist = p.Y - this.Center.Y;
-
-            double DistanceSquared = (XDist * XDist) + (YDist * YDist);
-            if (DistanceSquared < this.RadiusSquared)
-                return OverlapType.CONTAINED;
-            if (DistanceSquared == this.RadiusSquared)
-                return OverlapType.TOUCHING;
-
-            return OverlapType.NONE;
+            return ContainsExt(p.Convert());
         }
 
-        public OverlapType ContainsExt(in GridVector2 p)
+        public ShapeRelation ContainsExt(in GridVector2 p)
         {
             double XDist = p.X - this.Center.X;
             double YDist = p.Y - this.Center.Y;
 
             double DistanceSquared = (XDist * XDist) + (YDist * YDist);
             if (DistanceSquared < this.RadiusSquared)
-                return OverlapType.CONTAINED;
+                return ShapeRelation.CONTAINED;
             if (DistanceSquared == this.RadiusSquared)
-                return OverlapType.TOUCHING;
+                return ShapeRelation.TOUCHING;
 
-            return OverlapType.NONE;
+            return ShapeRelation.NONE;
         }
 
         public bool Contains(in GridPolygon poly)
         {
-            //if (this.BoundingBox.ContainsExt(poly.BoundingBox) == OverlapType.CONTAINED)
+            //if (this.BoundingBox.GetRelation(poly.BoundingBox) == ShapeRelation.CONTAINED)
             //    return true;
 
             foreach (GridVector2 p in poly.ExteriorRing)
@@ -351,33 +340,38 @@ namespace Geometry
             return false;
         }
 
-        public OverlapType ContainsExt(in GridLineSegment line)
+        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line)
         {
-            OverlapType oA = this.ContainsExt(line.A);
-            OverlapType oB = this.ContainsExt(line.B);
+            return ContainsExt(line.Convert());
+        }
+
+        public ShapeRelation ContainsExt(in GridLineSegment line)
+        {
+            ShapeRelation oA = this.ContainsExt(line.A);
+            ShapeRelation oB = this.ContainsExt(line.B);
 
             if (oA == oB)
             {
                 switch (oA)
                 {
-                    case OverlapType.NONE:
-                        return OverlapType.NONE;
-                    case OverlapType.CONTAINED:
-                        return OverlapType.CONTAINED;
-                    case OverlapType.TOUCHING:
-                        return OverlapType.CONTAINED; //If both endpoints touch the edge of the circle the line is contained within 
+                    case ShapeRelation.NONE:
+                        return ShapeRelation.NONE;
+                    case ShapeRelation.CONTAINED:
+                        return ShapeRelation.CONTAINED;
+                    case ShapeRelation.TOUCHING:
+                        return ShapeRelation.CONTAINED; //If both endpoints touch the edge of the circle the line is contained within 
                     default:
-                        throw new ArgumentException("Unexpected ContainsExt Result for point in circle");
+                        throw new ArgumentException("Unexpected GetRelation Result for point in circle");
                 }
             }
             else
             {
-                if (oA == OverlapType.NONE || oB == OverlapType.NONE)
+                if (oA == ShapeRelation.NONE || oB == ShapeRelation.NONE)
                 {
-                    var NotNoneResult = oA == OverlapType.NONE ? oB : oA;
+                    var NotNoneResult = oA == ShapeRelation.NONE ? oB : oA;
                     //If it is touching the answer gets complicated.  We need to know if the outside endpoint is on the other side of the circle or not
-                    if (NotNoneResult == OverlapType.CONTAINED)
-                        return OverlapType.INTERSECTING;
+                    if (NotNoneResult == ShapeRelation.CONTAINED)
+                        return ShapeRelation.INTERSECTING;
 
                 }
             }

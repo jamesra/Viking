@@ -11,7 +11,7 @@ namespace Geometry
     /// </summary>
     public class GridPolyline : IPolyLine2D, IEquatable<GridPolyline>, IEquatable<IPolyLine2D>, IEquatable<ILineSegment2D>
     {
-        protected List<IPoint2D> _Points;
+        protected readonly List<IPoint2D> _Points;
 
         public readonly bool AllowsSelfIntersection = false;
 
@@ -124,7 +124,7 @@ namespace Geometry
 
         public void Add(IPoint2D next)
         {
-            if (rTree == null)
+            if (rTree is null)
                 rTree = new RTree.RTree<GridLineSegment>();
 
             if (_Points.Count == 0)
@@ -172,7 +172,7 @@ namespace Geometry
 
         public void Insert(int index, IPoint2D value)
         {
-            if (rTree == null)
+            if (rTree is null)
                 rTree = new RTree.RTree<GridLineSegment>();
 
             if (index < 0 || index > _Points.Count)
@@ -436,10 +436,29 @@ namespace Geometry
             return this.LineSegments.Any(line => line.Contains(in pnt));
         }
 
-        public OverlapType ContainsExt(in IPoint2D p)
+        public ShapeRelation GetRelation(in IPoint2D p)
         {
             IPoint2D pnt = p;
-            return this.LineSegments.Any(line => line.Contains(in pnt)) ? OverlapType.TOUCHING : OverlapType.NONE;
+            return this.LineSegments.Any(line => line.Contains(in pnt)) ? ShapeRelation.TOUCHING : ShapeRelation.NONE;
+        }
+
+        ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D line)
+        { 
+            return GetRelation(line.Convert());
+        }
+
+        public ShapeRelation GetRelation(in GridLineSegment line)
+        {
+            ShapeRelation output = ShapeRelation.NONE;
+            const ShapeRelation exitCondition = ShapeRelation.INTERSECTING | ShapeRelation.TOUCHING;
+            foreach (GridLineSegment seg in LineSegments)
+            {
+                output |= seg.GetRelation(line);
+                if(output.HasFlag(exitCondition))
+                    return output;
+            }
+
+            return output;
         }
 
         public bool Intersects(in IShape2D shape)
@@ -558,5 +577,6 @@ namespace Geometry
 
             return true;
         }
+
     }
 }

@@ -100,14 +100,9 @@ namespace Geometry
         /// </summary>
         public TValue Value;
 
-        public bool IsLeaf
-        {
-            get
-            {
-                return UpperLeft == null && UpperRight == null &&
-                        LowerLeft == null && LowerRight == null;
-            }
-        }
+        public bool IsLeaf =>
+            UpperLeft is null && UpperRight is null &&
+            LowerLeft is null && LowerRight is null;
 
         /// <summary>
         /// This constructor is used to create the root node
@@ -197,7 +192,7 @@ namespace Geometry
 
 
         /// <summary>
-        /// Inserts a point into the tree.  Returns the new QuadTreeNode the caller should point to as the root of the tree
+        /// Inserts a point into the treeWithUniqueValues.  Returns the new QuadTreeNode the caller should point to as the root of the treeWithUniqueValues
         /// </summary>
         /// <param name="Point"></param>
         /// <returns></returns>
@@ -206,8 +201,8 @@ namespace Geometry
             //If we are a leaf node, we need to divide and create new leaf nodes
             if (this.IsLeaf)
             {
-                //Check for the default point value in case this is the root of the tree
-                if (this.Parent == null && this.HasValue == false)
+                //Check for the default point value in case this is the root of the treeWithUniqueValues
+                if (this.Parent is null && this.HasValue == false)
                 {
                     this.Point = point;
                     this.Value = value;
@@ -218,7 +213,7 @@ namespace Geometry
                 //Check that the point we are being asked to insert is not a duplicate of our current point
                 else if (this.Point.Equals(point))
                 {
-                    //throw new ArgumentException("The point being inserted into the quad tree is a duplicate point: " + point.ToString(), "point");
+                    //throw new ArgumentException("The point being inserted into the quad treeWithUniqueValues is a duplicate point: " + point.ToString(), "point");
                     return null;
                 }
                 else // It is a new point.  We need to create children for this node and insert the points
@@ -247,7 +242,7 @@ namespace Geometry
                 Quadrant quad = GetQuad(point);
 
                 //If we haven't created a node for this quadrant then do so...
-                if (_quadrants[(int)quad] == null)
+                if (_quadrants[(int)quad] is null)
                 {
                     _quadrants[(int)quad] = new QuadTreeNodeTemplatePoint<TPoint, TValue>(this, quad, point, value);
                     return _quadrants[(int)quad];
@@ -290,7 +285,7 @@ namespace Geometry
                 }
                 else
                 {
-                    //Looks like we are the last node in the tree
+                    //Looks like we are the last node in the treeWithUniqueValues
                     Tree.ValueToNodeTable.Remove(this.Value);
                     this.Value = default;
                     this.HasValue = false;
@@ -302,7 +297,7 @@ namespace Geometry
         /// Returns the value associated with the point nearest to the passed input parameter point
         /// </summary>
         /// <param name="point">Query point</param>
-        /// <param name="nodePoint">Nearest point in QuadTree to query point</param>
+        /// <param name="nodePoint">Nearest point in QuadTreeWithUniqueValues to query point</param>
         /// <param name="distance">Distance from query point to nodePoint</param>
         /// <returns>Data value associated with nearest point</returns>
         public TValue FindNearest(TPoint point, out TPoint nodePoint, ref double distance)

@@ -60,8 +60,8 @@ namespace MorphologyMesh
         /// </summary>
         public readonly GridLineSegment Line;
 
-        public readonly PolygonIndex Origin; //The vertex originating the slice chord
-        public readonly PolygonIndex Target; //The target vertex
+        public readonly IShapeIndex Origin; //The vertex originating the slice chord
+        public readonly IShapeIndex Target; //The target vertex
 
         public double Orientation
         {
@@ -74,12 +74,12 @@ namespace MorphologyMesh
         //public SliceChordTestType PassedTests; //Tests we know this chord has passed.
         //public SliceChordTestType FailedTests; //Tests we know this chord has failed.
 
-        public SliceChord(PolygonIndex O, PolygonIndex T, GridPolygon[] polygons)
+        public SliceChord(IShapeIndex O, IShapeIndex T, IShape2D[] shapes)
         {
-            this.Line = new GridLineSegment(O.Point(polygons), T.Point(polygons));
+            this.Line = new GridLineSegment(O.Point(shapes), T.Point(shapes));
             this.Origin = O;
             this.Target = T;
-            this.Orientation = Origin.Orientation(Target, polygons);
+            this.Orientation = Origin.Orientation(Target, shapes);
         }
 
         public bool Equals(SliceChord other)

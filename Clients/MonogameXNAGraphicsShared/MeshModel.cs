@@ -22,8 +22,8 @@ namespace VikingXNAGraphics
         Matrix _modelMatrix = Matrix.Identity;
         public Matrix ModelMatrix
         {
-            get { return _modelMatrix; }
-            set { _modelMatrix = value; }
+            get => _modelMatrix;
+            set => _modelMatrix = value;
         }
         public VERTEXTYPE[] Verticies
         {
@@ -71,11 +71,11 @@ namespace VikingXNAGraphics
         //private static readonly VertexElement[] vertex_elements;
 
         private static readonly bool _HasNormal;
-        public bool HasNormal { get => _HasNormal; }
+        public bool HasNormal => _HasNormal;
 
         private static readonly bool _HasColor;
-        public bool HasColor { get => _HasColor; }
-          
+        public bool HasColor => _HasColor;
+
         /// <summary>
         /// Adds the passed verticies to the model, returns index at which first vertex was added
         /// </summary>
@@ -83,7 +83,7 @@ namespace VikingXNAGraphics
         /// <returns></returns>
         public int AppendVerticies(ICollection<VERTEXTYPE> input)
         {
-            if (Verticies == null)
+            if (Verticies is null)
             {
                 Verticies = input.ToArray();
                 return 0;
@@ -105,7 +105,7 @@ namespace VikingXNAGraphics
 
         public void AppendEdges(ICollection<int> newEdges)
         {
-            if (Edges == null)
+            if (Edges is null)
             {
                 Edges = newEdges.ToArray();
             }
@@ -118,15 +118,9 @@ namespace VikingXNAGraphics
 
         public GridVector3 Position
         {
-            get
-            {
-                return _modelMatrix.Translation.ToGridVector3();
-            }
+            get => _modelMatrix.Translation.ToGridVector3();
 
-            set
-            {
-                _modelMatrix.Translation = value.ToXNAVector3();
-            }
+            set => _modelMatrix.Translation = value.ToXNAVector3();
         }
 
         public MeshModel()
@@ -146,10 +140,7 @@ namespace VikingXNAGraphics
 
         public float Alpha
         {
-            get
-            {
-                return Verticies.First().Color.GetAlpha();
-            }
+            get => Verticies.First().Color.GetAlpha();
 
             set
             {
@@ -166,10 +157,7 @@ namespace VikingXNAGraphics
 
         public Color Color
         {
-            get
-            {
-                return Verticies.First().Color;
-            }
+            get => Verticies.First().Color;
 
             set
             {
@@ -196,10 +184,7 @@ namespace VikingXNAGraphics
 
         public float Alpha
         {
-            get
-            {
-                return Verticies.First().Color.GetAlpha();
-            }
+            get => Verticies.First().Color.GetAlpha();
 
             set
             {
@@ -216,10 +201,7 @@ namespace VikingXNAGraphics
 
         public Color Color
         {
-            get
-            {
-                return Verticies.First().Color;
-            }
+            get => Verticies.First().Color;
 
             set
             {

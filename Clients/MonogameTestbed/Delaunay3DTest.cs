@@ -113,9 +113,9 @@ namespace MonogameTestbed
                             break; 
                         }
 
-                        bool OnSurface = MeshGraphBuilder.IsLineOnSurface(A, B, Polygons, line.PointAlongLine(0.5));
-                        FaceOnSurface &= OnSurface;
-                        if (OnSurface)
+                        var EdgeType = EdgeTypeExtensions.GetEdgeType(A, B, Polygons, line.PointAlongLine(0.5));
+                        FaceOnSurface &= EdgeType == EdgeType.SURFACE;
+                        if (EdgeType == EdgeType.SURFACE)
                             OnSurfaceCount += 1; 
                     }
                      
@@ -380,7 +380,7 @@ namespace MonogameTestbed
          
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         //Polygons with internal polygon merging with external concavity
         readonly ulong[] TroubleIDS = new ulong[] {
@@ -437,6 +437,8 @@ namespace MonogameTestbed
         public void UnloadContent(MonoTestbed window)
         {
         }
+        
+        /*
         private ICollection<Mesh3D<IVertex3D<ulong>>> RecursivelyGenerateMeshes(AnnotationVizLib.MorphologyGraph graph)
         {
             List<Mesh3D<IVertex3D<ulong>>> listMeshes = new List<Mesh3D<IVertex3D<ulong>>>();
@@ -452,6 +454,7 @@ namespace MonogameTestbed
 
             return listMeshes;
         }
+        */
 
         public void Update()
         {

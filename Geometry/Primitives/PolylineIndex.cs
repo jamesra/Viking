@@ -260,16 +260,59 @@ namespace Geometry
         /// </summary>
         /// <param name="Polygon"></param>
         /// <returns></returns>
-        public GridVector2 Point(GridPolyline line)
+        public GridVector2 Point(in GridPolyline line)
         {
             return new GridVector2(line.Points[iVertex]);
         }
 
-        public GridVector2 Point(IReadOnlyList<GridPolyline> lines)
+        public GridVector2 Point(in IReadOnlyList<GridPolyline> lines)
         {
             return new GridVector2(lines[iLine].Points[iVertex]);
         }
 
+
+        public GridVector2 Point(in IReadOnlyDictionary<int, GridPolyline> shapes)
+        { 
+            if(shapes.TryGetValue(iLine, out var line))
+                return line.Points[iVertex].ToGridVector2();
+
+            throw new ArgumentException("Index of shape not in dictionary");
+        }
+
+        public GridVector2 Point(in IShape2D shape)
+        {
+            if (shape is GridPolyline line)
+            {
+                return Point(line);
+            }
+
+            throw new ArgumentException("Shape must be a GridPolygon to use this method");
+        }
+
+        public GridVector2 Point(in IReadOnlyList<IShape2D> shapes)
+        {
+            if (shapes[iShape] is GridPolyline line)
+            {
+                return Point(line);
+            }
+
+            throw new ArgumentException("Shape must be a GridPolygon to use this method");
+        }
+
+        public GridVector2 Point(in IReadOnlyDictionary<int, IShape2D> shapes)
+        {
+            if (shapes.TryGetValue(iShape, out var shape))
+            {
+                if (shape is GridPolyline line)
+                {
+                    return Point(line).ToGridVector2();
+                }
+            }
+            else { throw new ArgumentException("Index of shape not in dictionary"); }
+
+            throw new ArgumentException("Shape must be a GridPolygon to use this method");
+        }
+         
         /// <summary>
         /// Return a copy of this PointIndex with iPoly value changed to point at a different polygon index
         /// </summary>
@@ -312,9 +355,44 @@ namespace Geometry
             return new PolylineIndex(this.iLine, this.iVertex, lines[iLine].PointCount);
         }
 
-        public override string ToString()
+        public override string ToString() => $"L:{this.iLine} iVert:{this.iVertex} of {this.NumUnique}";
+         
+        public GridVector2 GetOrientation(in IReadOnlyList<IShape2D> Shapes)
         {
-            return $"L:{this.iLine} iVert:{this.iVertex} of {this.NumUnique}";
+            if(Shapes[iShape] is GridPolyline line)
+            {
+                return GetOrientation(line);
+            }
+
+            throw new ArgumentException("Shape must be a GridPolyline to use this method");
+        }
+
+        public GridVector2 GetOrientation(GridPolyline polyline)
+        {
+            var p1 = this.Point(polyline);
+            var prev = this.Previous;
+            var next = this.Next;
+
+            if(prev.HasValue && next.HasValue)
+            { 
+                GridLineSegment ALine = new GridLineSegment(prev.Value.Point(polyline), p1);
+                GridLineSegment BLine = new GridLineSegment(p1, next.Value.Point(polyline));
+                var normal = ALine.Normal + BLine.Normal;
+                normal.Normalize();
+                return normal;
+            }
+            else if(prev is null && next.HasValue)
+            {
+                GridLineSegment line = new GridLineSegment(p1, next.Value.Point(polyline));
+                return line.Normal;
+            }
+            else if (next is null && prev.HasValue)
+            {
+                GridLineSegment line = new GridLineSegment(prev.Value.Point(polyline), p1);
+                return line.Normal;
+            }
+            
+            throw new ArgumentException("Only one point on polyline.  Unhandled case.");
         }
     }
 }

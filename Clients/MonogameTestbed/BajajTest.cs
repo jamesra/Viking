@@ -11,9 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using TriangleNet;
-using TriangleNet.Meshing;
+using System.Threading.Tasks; 
 using VikingXNA;
 using VikingXNAGraphics;
 //using OTVTable = System.Collections.Concurrent.ConcurrentDictionary<Geometry.PointIndex, Geometry.PointIndex>;
@@ -39,20 +37,14 @@ namespace MonogameTestbed
 
     class BajajOTVAssignmentView
     {
-        public readonly GridPolygon[] Polygons = null;
-        public readonly double[] PolyZ = null;
+        public readonly IShape2D[] Shapes = null;
+        public readonly double[] ShapeZ = null;
         //public PointSetView[] PolyPointsView = null;
         public PointSetView IncompletedVertexView = null;
 
         public int? iShownLineView = null;
         public List<LineSetView> listLineViews = new List<LineSetView>();
-        public bool ShowLines
-        {
-            get
-            {
-                return iShownLineView.HasValue;
-            }
-        }
+        public bool ShowLines => iShownLineView.HasValue;
 
         //private LineSetView lineViews = new LineSetView();
         //private LineSetView unfiltered_lineViews = new LineSetView();
@@ -74,13 +66,7 @@ namespace MonogameTestbed
         public List<MeshView<VertexPositionColor>> MeshViews = new List<MeshView<VertexPositionColor>>();
 
         
-        public bool ShowMesh
-        {
-            get
-            {
-                return iShownMesh.HasValue;
-            }
-        }
+        public bool ShowMesh => iShownMesh.HasValue;
 
         readonly MeshModel<VertexPositionColor> meshViewModel = null;
 
@@ -92,12 +78,7 @@ namespace MonogameTestbed
 
         public bool ShowFaces = false;
         public bool ShowPolygons = true;
-        public bool ShowRegionPolygons {
-            get
-            {
-                return iShownRegion.HasValue;
-            }
-        }
+        public bool ShowRegionPolygons => iShownRegion.HasValue;
 
         public bool ShowCompletedVerticies = true;
         public bool ShowAllEdges = false;
@@ -106,40 +87,16 @@ namespace MonogameTestbed
 
         public IndexLabelType VertexLabelType
         {
-            get
-            {
-                return PolyViews.PointLabelType;
-            }
-            set
-            {
-                PolyViews.PointLabelType = value;
-            }
+            get => PolyViews.PointLabelType;
+            set => PolyViews.PointLabelType = value;
         }
         
-        public bool ShowPolyIndexLabels
-        {
-            get
-            {
-                return PolyViews.LabelPolygonIndex;
-            }
-        }
+        public bool ShowPolyIndexLabels => PolyViews.LabelPolygonIndex;
 
-        public bool ShowMeshIndexLabels
-        {
-            get
-            {
-                return PolyViews.LabelIndex;
-            }
-        }
+        public bool ShowMeshIndexLabels => PolyViews.LabelIndex;
 
 
-        public bool ShowPolyPositionLabels
-        {
-            get
-            {
-                return PolyViews.LabelPosition;
-            }
-        }
+        public bool ShowPolyPositionLabels => PolyViews.LabelPosition;
 
         readonly System.Threading.Tasks.Task BajajMeshGenerationTask = null;
 
@@ -155,8 +112,8 @@ namespace MonogameTestbed
 
             SliceTopology topology = sliceGraph.GetTopology(slice);
 
-            Polygons = topology.Polygons;
-            PolyZ = topology.PolyZ;
+            Shapes = topology.Shapes;
+            ShapeZ = topology.ShapeZ;
 
             //BajajGeneratorMesh.AddCorrespondingVerticies(Polygons);
 
@@ -172,11 +129,11 @@ namespace MonogameTestbed
         {
             SliceTopology topology = sliceGraph.GetTopology(slice);
 
-            Polygons = topology.Polygons;
-            PolyZ = topology.PolyZ;
+            Shapes = topology.Shapes;
+            ShapeZ = topology.ShapeZ;
             
             //Create our mesh with only the verticies
-            PolyViews = new PolygonSetView(Polygons, PolygonSetView.DefaultColorMapping)
+            PolyViews = new PolygonSetView(Shapes.Select(s => s as GridPolygon), PolygonSetView.DefaultColorMapping)
             {
                 PointLabelType = IndexLabelType.MESH
             };
@@ -191,13 +148,13 @@ namespace MonogameTestbed
             });
         }
         
-        public BajajOTVAssignmentView(GridPolygon[] polys, double[] Z)
+        public BajajOTVAssignmentView(IShape2D[] shapes, double[] Z)
         {
             ///Takes a set of polygons and Z values and generates a meshView
             //Polygons = polys.Select(p => p.Simplify(2.0)).ToArray();
-            Polygons = polys.Select(p => p).ToArray();
+            Shapes = shapes.Select(p => p).ToArray();
             double MinZ = Z.Min(); //Translate our Z values to an origin of 0 so we can render meshes in 2D easily
-            PolyZ = Z.Select(z => z - MinZ).ToArray();
+            ShapeZ = Z.Select(z => z - MinZ).ToArray();
             //Bajaj Step 3
             //Polygons.AddPointsAtAllIntersections(Z);
             //Create our mesh with only the verticies
@@ -205,7 +162,7 @@ namespace MonogameTestbed
             BajajMeshGenerationTask = System.Threading.Tasks.Task.Run(() =>
             {
                 //Create our mesh with only the verticies
-                FirstPassTriangulation = new BajajGeneratorMesh(Polygons, PolyZ, PolyZ.Select(z_ => z_ != MinZ).ToArray());
+                FirstPassTriangulation = new BajajGeneratorMesh(Shapes, ShapeZ, ShapeZ.Select(z_ => z_ != MinZ).ToArray());
                 GenerateMesh(FirstPassTriangulation);
             }); 
         }
@@ -220,19 +177,19 @@ namespace MonogameTestbed
         /// <param name="mesh"></param>
         private void OnTriangulationProgress(TriangulationMesh<Vertex2D<List<int>>> mesh)
         {
-            triView.OnTriangulationProgress(mesh);
+            triView?.OnTriangulationProgress(mesh);
             System.Threading.Thread.Sleep(0);
         }
 
         private void OnTriangulateRegionProgress(TriangulationMesh<IVertex2D<int>> mesh)
         {
-            triView.OnTriangulationProgress(mesh);
+            triView?.OnTriangulationProgress(mesh);
             System.Threading.Thread.Sleep(0);
         }
 
         private void OnSecondPassRegionProgress(TriangulationMesh<IVertex2D<PolygonIndex>> mesh)
         {
-            triView.OnTriangulationProgress(mesh);
+            triView?.OnTriangulationProgress(mesh);
             System.Threading.Thread.Sleep(0);
         }
 
@@ -271,7 +228,7 @@ namespace MonogameTestbed
 
         internal void GenerateMesh(BajajGeneratorMesh FirstPassTriangulation)
         { 
-            string JSONPolyString = Polygons.ToJArray().ToString();
+            string JSONPolyString = Shapes.ToJArray().ToString();
             Trace.WriteLine(JSONPolyString);
 
             lock (ViewsLock)
@@ -284,7 +241,7 @@ namespace MonogameTestbed
                 VertexPositionAverage = FirstPassTriangulation.CalculateAverageVertexPositionXY(); 
 
                 //Create our mesh with only the verticies
-                PolyViews = new PolygonSetView(Polygons, PolygonSetView.DefaultColorMapping, 2)
+                PolyViews = new PolygonSetView(Shapes.Select(s => s as GridPolygon), PolygonSetView.DefaultColorMapping, 2)
                 {
                     PointLabelType = IndexLabelType.MESH
                 };
@@ -330,7 +287,7 @@ namespace MonogameTestbed
             //RegionViews = new PolygonSetView(RegionPairingGraph.Nodes.Select(n => n.Value.Polygon));
             //RegionViews.LabelPolygonIndex = true;
              
-            SliceChordRTree rTree = FirstPassTriangulation.CreateChordTree(PolyZ);
+            SliceChordRTree rTree = FirstPassTriangulation.CreateChordTree(ShapeZ);
             List<OTVTable> listOTVTables = RegionPairingGraph.MergeAndCloseRegionsPass(FirstPassTriangulation, rTree, OnTriangulateRegionProgress);
 
             lock (ViewsLock)
@@ -353,7 +310,7 @@ namespace MonogameTestbed
             }
 
             //CloseRegions(FirstPassTriangulation);
-            List<MorphMeshVertex> FirstPassIncompleteVerticies = BajajMeshGenerator.FirstPassSliceChordGeneration(FirstPassTriangulation, PolyZ);
+            List<MorphMeshVertex> FirstPassIncompleteVerticies = BajajMeshGenerator.FirstPassSliceChordGeneration(FirstPassTriangulation, ShapeZ);
 
             lock (ViewsLock)
             {
@@ -425,12 +382,12 @@ namespace MonogameTestbed
                     iShownRegion = null;
                 }
 
-                if (iShownLineView == null)
+                if (iShownLineView is null)
                 {
                     iShownLineView = listLineViews.Count - 1;
                 }
 
-                if (iShownMesh == null)
+                if (iShownMesh is null)
                 {
                     iShownMesh = MeshViews.Count - 1;
                 }
@@ -441,7 +398,7 @@ namespace MonogameTestbed
 
         public static RegionView CreateRegionPolygonViews(BajajGeneratorMesh mesh, IEnumerable<MorphMeshRegion> regions = null)
         {
-            if(regions == null)
+            if(regions is null)
             {
                 regions = mesh.Regions;
             }
@@ -480,8 +437,8 @@ namespace MonogameTestbed
             //Adjust the meshViewModel Z coordinates so we can see the mesh in 2D
             
             
-            double maxZ = mesh.PolyZ.Max();
-            double minZ = mesh.PolyZ.Min();
+            double maxZ = mesh.ShapeZ.Max();
+            double minZ = mesh.ShapeZ.Min();
             double ZRange = maxZ - minZ;
             
             meshViewModel.ModelMatrix = Matrix.CreateTranslation(new Vector3(0, 0, -(float)mesh.BoundingBox.CenterPoint.Z)) * Matrix.CreateScale(1, 1, 1f/(float)ZRange);//).ToXNAVector3());
@@ -594,16 +551,16 @@ namespace MonogameTestbed
             if (v.Corresponding.HasValue)
                 return Color.DarkSlateBlue.SetAlpha(alpha);
 
-            if (v.PolyIndex.HasValue == false)
+            if (v.ShapeIndex is null)
                 return Color.Aqua.SetAlpha(alpha); //This should never happen at the time I'm writing this code.
 
             if (v.IsFaceSurfaceComplete(mesh))
-                if(mesh.IsUpperPolygon[v.PolyIndex.Value.iPoly])// Position.Z == mesh.BoundingBox.minVals[2])
+                if(mesh.IsUpperShape[v.ShapeIndex.iShape])// Position.Z == mesh.BoundingBox.minVals[2])
                     return Color.LimeGreen.SetAlpha(alpha);
                 else
                     return Color.ForestGreen.SetAlpha(alpha);
 
-            if (mesh.IsUpperPolygon[v.PolyIndex.Value.iPoly])
+            if (mesh.IsUpperShape[v.ShapeIndex.iShape])
                 return Color.Orange.SetAlpha(alpha);
             else
                 return Color.Red.SetAlpha(alpha);
@@ -612,7 +569,7 @@ namespace MonogameTestbed
 
         internal static MeshModel<VertexPositionColor> CreateFaceView(MorphRenderMesh mesh)
         {
-            if (mesh.Faces == null)
+            if (mesh.Faces is null)
                 return null;
 
 
@@ -651,6 +608,7 @@ namespace MonogameTestbed
             return model;
         }
 
+        /*
         private void BuildAPort(IMesh mesh, Dictionary<GridVector2, PolygonIndex> pointToPoly)
         {
             List<GridVector2> points = pointToPoly.Keys.ToList();
@@ -661,7 +619,7 @@ namespace MonogameTestbed
             SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PolygonIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
-                      
+          */            
 
         /*
         /// <summary>
@@ -724,7 +682,7 @@ namespace MonogameTestbed
 
         public static OTVTable IdentifyChordCandidatesForRegionPair(BajajGeneratorMesh mesh, MorphMeshRegion source, MorphMeshRegion target, SliceChordTestType Tests, SliceChordRTree rTree = null)
         {
-            if(rTree == null)
+            if(rTree is null)
             {
                 rTree = mesh.CreateChordTree(source.ZLevel.Union(target.ZLevel));
             }
@@ -741,7 +699,7 @@ namespace MonogameTestbed
 
         private void CreateChordViews(MorphRenderMesh mesh, List<OTVTable> OTVTables)
         {
-            if (this.OTVTableView == null)
+            if (this.OTVTableView is null)
                 this.OTVTableView = new List<LineView>();
 
             foreach (var OTVTable in OTVTables)
@@ -762,7 +720,7 @@ namespace MonogameTestbed
         /// <returns></returns>
         private static bool CouldAddSliceChord(BajajGeneratorMesh mesh, SliceChord sc, SliceChordRTree ChordRTree, SliceChordTestType Tests, out SliceChordTestType failures)
         {
-            return BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Polygons, mesh.GetSameLevelPolygons(sc), mesh.GetAdjacentLevelPolygons(sc), sc.Target, ChordRTree, Tests, out failures);
+            return BajajMeshGenerator.IsSliceChordValid(sc.Origin, mesh.Shapes, mesh.GetSameLevelShapes(sc), mesh.GetAdjacentLevelShapes(sc), sc.Target, ChordRTree, Tests, out failures);
         }
 
         
@@ -927,7 +885,7 @@ namespace MonogameTestbed
                 ViewLabels.AppendLine("Poly Views");
             }
 
-            LabelView label = new LabelView(ViewLabels.ToString(), scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.BottomLeft, scaleFontWithScene: false);
+            LabelView label = new LabelView(ViewLabels.ToString(), scene.VisibleWorldBounds.UpperLeft, anchor: Anchor.TopLeft, scaleFontWithScene: false);
             LabelView.Draw(window.spriteBatch, window.fontArial, scene, new LabelView[] { label }); 
         }
 
@@ -951,8 +909,8 @@ namespace MonogameTestbed
 
             if (iShownMesh.HasValue)
             {
-                double maxZ = this.PolyZ.Max();
-                double minZ = this.PolyZ.Min();
+                double maxZ = this.ShapeZ.Max();
+                double minZ = this.ShapeZ.Min();
                 double ZRange = maxZ - minZ;
 
                 Matrix oldWorld = scene.World;
@@ -1265,7 +1223,7 @@ namespace MonogameTestbed
             new BajajRepro(146420, 146425 , 146426, DataSource.EndpointMap[Endpoint.RPC1], "We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges"),
             new BajajRepro(158786, 158787, DataSource.EndpointMap[Endpoint.RPC1], "Infinite recursion in edge flip"),
             new BajajRepro(211283, 211284, DataSource.EndpointMap[Endpoint.RPC1], "New edge 0-6 intersects existing edges: 2-7"),
-            new BajajRepro(269861, 269862, DataSource.EndpointMap[Endpoint.RPC1], "QuadTree: : 'Index was out of range."),
+            new BajajRepro(269861, 269862, DataSource.EndpointMap[Endpoint.RPC1], "QuadTreeWithUniqueValues: : 'Index was out of range."),
             new BajajRepro(108279, 108280, DataSource.EndpointMap[Endpoint.RPC1], "We should always be able to find an edge to add to our perimeter until we exhaust the list of unassigned perimeter edges"),
             new BajajRepro(282225, 282226, DataSource.EndpointMap[Endpoint.RPC1], "Interior points must be inside Face"),
             new BajajRepro(269802, 269803, DataSource.EndpointMap[Endpoint.RPC1], "Exterior polygon ring must be valid"),
@@ -1286,7 +1244,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Index of the reprocase we want to display on load
         /// </summary>
-        readonly int CurrentReproCase = 40;
+        readonly int CurrentReproCase = 5;
 
         BajajRepro CurrentTestCase = null;
 
@@ -1304,7 +1262,7 @@ namespace MonogameTestbed
         bool Draw3D = false;
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         readonly AnnotationVizLib.MorphologyGraph Graph;
 
@@ -1362,12 +1320,12 @@ namespace MonogameTestbed
             
             if (window.Scene.RestoreCamera(TestMode.BAJAJTEST) == false)
             {
-                GridRectangle bRect = wrapView.Polygons.BoundingBox();
+                GridRectangle bRect = wrapView.Shapes.BoundingBox();
                 window.Scene.Camera.LookAt = bRect.Center.ToXNAVector2();
                 window.Scene.Camera.Downsample = bRect.Width / window.GraphicsDevice.Viewport.Width;
             }
 
-            GridBox bbox = new GridBox(wrapView.Polygons.BoundingBox(), Graph.Nodes.Values.Min(n => n.Z), Graph.Nodes.Values.Max(n => n.Z));
+            GridBox bbox = new GridBox(wrapView.Shapes.BoundingBox(), Graph.Nodes.Values.Min(n => n.Z), Graph.Nodes.Values.Max(n => n.Z));
             scene3D.Camera.Position = (bbox.CenterPoint.XY().ToGridVector3(0) + new GridVector3(0, 0, 10f * (float)bbox.Depth)).ToXNAVector3();
             scene3D.Camera.LookAt = new Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0); // bbox.CenterPoint.ToXNAVector3();
 
@@ -1493,9 +1451,9 @@ namespace MonogameTestbed
 
             if(Gamepad.Back_Clicked)
             {
-                GridRectangle bbox = wrapView.Polygons.BoundingBox();
-                double MinZ = wrapView.PolyZ.Min();
-                double MaxZ = wrapView.PolyZ.Max();
+                GridRectangle bbox = wrapView.Shapes.BoundingBox();
+                double MinZ = wrapView.ShapeZ.Min();
+                double MaxZ = wrapView.ShapeZ.Max();
                 double Depth = MaxZ - MinZ;
                 scene3D.Camera.Position = (bbox.Center.ToGridVector3(0) + new GridVector3(0, 0, 100f * (float)Depth)).ToXNAVector3();
                 scene3D.Camera.LookAt = new Vector3((float)bbox.Center.X, (float)bbox.Center.Y, 0); // bbox.CenterPoint.ToXNAVector3();

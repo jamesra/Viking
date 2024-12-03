@@ -13,7 +13,7 @@ namespace MorphologyMesh
         /// <summary>
         /// Verticies we add to close holes will not have a poly index.  The medial axis verticies must have faces added because at this point they will not autocomplete.
         /// </summary>
-        public readonly PolygonIndex? PolyIndex;
+        public readonly IShapeIndex ShapeIndex;
 
         public readonly MedialAxisIndex? MedialAxisIndex;
 
@@ -32,7 +32,7 @@ namespace MorphologyMesh
         {
             get
             {
-                if (PolyIndex.HasValue)
+                if (!(ShapeIndex is null))
                 {
                     return VertexOrigin.CONTOUR;
                 }
@@ -47,19 +47,19 @@ namespace MorphologyMesh
 
         GridVector2 IVertex2D.Position => this.Position.XY();
 
-        public MorphMeshVertex(PolygonIndex polyIndex, GridVector3 p) : base(p)
+        public MorphMeshVertex(IShapeIndex shapeIndex, GridVector3 p) : base(p)
         {
-            PolyIndex = polyIndex;
+            ShapeIndex = shapeIndex;
         }
 
-        public MorphMeshVertex(PolygonIndex polyIndex, GridVector3 p, GridVector3 n) : base(p, n)
+        public MorphMeshVertex(IShapeIndex shapeIndex, GridVector3 p, GridVector3 n) : base(p, n)
         {
-            PolyIndex = polyIndex;
+            ShapeIndex = shapeIndex;
         }
 
-        protected MorphMeshVertex(int index, PolygonIndex polyIndex, GridVector3 p, GridVector3 n) : base(index, p, n)
+        protected MorphMeshVertex(int index, IShapeIndex shapeIndex, GridVector3 p, GridVector3 n) : base(index, p, n)
         {
-            PolyIndex = polyIndex;
+            ShapeIndex = shapeIndex;
         }
 
         public MorphMeshVertex(MedialAxisIndex medialIndex, GridVector3 p) : base(p)
@@ -85,7 +85,7 @@ namespace MorphologyMesh
                     case VertexOrigin.MEDIALAXIS:
                         return new MorphMeshVertex(vert.MedialAxisIndex.Value, vert.Position, vert.Normal);
                     case VertexOrigin.CONTOUR:
-                        return new MorphMeshVertex(vert.PolyIndex.Value, vert.Position, vert.Normal);
+                        return new MorphMeshVertex(vert.ShapeIndex, vert.Position, vert.Normal);
                     default:
                         throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
                 }
@@ -100,7 +100,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="old"></param>
         /// <returns></returns>
-        public static MorphMeshVertex Reindex(MorphMeshVertex old, int iPoly)
+        public static MorphMeshVertex Reindex(MorphMeshVertex old, int iShape)
         {
             if (old is MorphMeshVertex vert)
             {
@@ -109,7 +109,7 @@ namespace MorphologyMesh
                     case VertexOrigin.MEDIALAXIS:
                         return new MorphMeshVertex(vert.MedialAxisIndex.Value, vert.Position, vert.Normal);
                     case VertexOrigin.CONTOUR:
-                        return new MorphMeshVertex(vert.PolyIndex.Value.Reindex(iPoly), vert.Position, vert.Normal);
+                        return new MorphMeshVertex(vert.ShapeIndex.Reindex(iShape), vert.Position, vert.Normal);
                     default:
                         throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
                 }
@@ -127,7 +127,7 @@ namespace MorphologyMesh
                 case VertexOrigin.MEDIALAXIS:
                     return new MorphMeshVertex(Index, MedialAxisIndex.Value, Position, Normal);
                 case VertexOrigin.CONTOUR:
-                    return new MorphMeshVertex(Index, PolyIndex.Value, Position, Normal);
+                    return new MorphMeshVertex(Index, ShapeIndex, Position, Normal);
                 default:
                     throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
             }
@@ -140,27 +140,27 @@ namespace MorphologyMesh
                 case VertexOrigin.MEDIALAXIS:
                     return new MorphMeshVertex(index, MedialAxisIndex.Value, Position, Normal);
                 case VertexOrigin.CONTOUR:
-                    return new MorphMeshVertex(index, PolyIndex.Value, Position, Normal);
+                    return new MorphMeshVertex(index, ShapeIndex, Position, Normal);
                 default:
                     throw new InvalidOperationException("Vertex must be either part of a contour or on a medial axis");
             }
         }
 
         /// <summary>
-        /// Return true if there are continuos faces between the two adjacent verticies along the contour this vertex is part of
+        /// Return true if there are continuous faces between the two adjacent verticies along the contour this vertex is part of
         /// </summary>
         /// <param name="mesh"></param>
         public bool IsFaceSurfaceComplete(MorphRenderMesh mesh)
         {
-            if (!PolyIndex.HasValue) //Not part of the contour of a polygon, we need to ensure we can walk faces from one of the verticies edges around in a circle back to the same edge
+            if (ShapeIndex is null) //Not part of the contour of a polygon, we need to ensure we can walk faces from one of the verticies edges around in a circle back to the same edge
                 return true;
 
             //Once we know the faces are complete for this vertex we can stop testing it
             if (FacesAreComplete)
                 return true;
 
-            PolygonIndex prev = PolyIndex.Value.Previous;
-            PolygonIndex next = PolyIndex.Value.Next;
+            IShapeIndex prev = ShapeIndex.Previous;
+            IShapeIndex next = ShapeIndex.Next;
 
             MorphMeshVertex prevVertex = mesh[prev];
             MorphMeshVertex nextVertex = mesh[next];
@@ -186,7 +186,7 @@ namespace MorphologyMesh
 
             //TODO: We probably need to ensure the path doesn't wrap all the away around the contours the long way at this step instead of later
             List<IFace> path = mesh.FindFacesInPath(start.Faces.First(), (face) => face.iVerts.Contains(this.Index), (face) => face.Edges.Contains(end));
-            if (path == null)
+            if (path is null)
                 return false;
 
             //Check that every face in the shortest path always includes the vertex we are testing.

@@ -29,14 +29,8 @@ namespace GeometryTests.Algorithms
         ///</summary>
         public TestContext TestContext
         {
-            get
-            {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
+            get => testContextInstance;
+            set => testContextInstance = value;
         }
 
         #region Additional test attributes
@@ -132,7 +126,7 @@ namespace GeometryTests.Algorithms
 
             CutDirection cutDir = LowerSubset.CutAxis;
 
-            Assert.IsFalse((LowerSubset.BoundingBox.IntersectionType(UpperSubset.BoundingBox) & (OverlapType.INTERSECTING | OverlapType.CONTAINED)) > 0);
+            Assert.IsFalse((LowerSubset.BoundingBox.IntersectionType(UpperSubset.BoundingBox) & (ShapeRelation.INTERSECTING | ShapeRelation.CONTAINED)) > 0);
 
             if (LowerSubset.CutAxis == CutDirection.HORIZONTAL)
             {

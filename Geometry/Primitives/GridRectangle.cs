@@ -77,7 +77,7 @@ namespace Geometry
 
         public readonly GridVector2[] Corners;
           
-        public GridRectangle(GridVector2 corner, GridVector2 oppositeCorner)
+        public GridRectangle(in GridVector2 corner, in GridVector2 oppositeCorner)
         {  
             GridVector2 RectOrigin = new GridVector2(Math.Min(corner.X, oppositeCorner.X), Math.Min(corner.Y, oppositeCorner.Y));
             double width = Math.Abs(corner.X - oppositeCorner.X);
@@ -103,7 +103,7 @@ namespace Geometry
         /// 
         /// </summary>
         /// <param name="borders">[MinX, MaxX, MinY, MaxY]</param>
-        public GridRectangle(double[] borders)
+        public GridRectangle(in double[] borders)
         {
             Left = borders[0];
             Right = borders[1];
@@ -124,7 +124,7 @@ namespace Geometry
             }
         }
 
-        public GridRectangle(double left, double right, double bottom, double top)
+        public GridRectangle(in double left, in double right, in double bottom, in double top)
         {  
             Left = left;
             Bottom = bottom;
@@ -145,7 +145,7 @@ namespace Geometry
             }
         }
 
-        public GridRectangle(GridVector2 position, double width, double height)
+        public GridRectangle(in GridVector2 position, double width, double height)
         {  
             Left = position.X;
             Bottom = position.Y;
@@ -163,7 +163,7 @@ namespace Geometry
             }
         }
 
-        public GridRectangle(GridVector2 position, double radius)
+        public GridRectangle(in GridVector2 position, in double radius)
         {  
             Left = position.X - radius;
             Bottom = position.Y - radius;
@@ -177,9 +177,9 @@ namespace Geometry
             Debug.Assert(Left <= Right && Bottom <= Top, "Grid Rectangle argument error");
         }
 
-        public GridRectangle(IPoint position, double width, double height)
+        public GridRectangle(in IPoint position, in double width, in double height)
         {  
-            if (position == null)
+            if (position is null)
                 throw new ArgumentNullException(nameof(position));
 
             Left = position.X;
@@ -198,9 +198,9 @@ namespace Geometry
             }
         }
 
-        public GridRectangle(IPoint position, double radius)
+        public GridRectangle(in IPoint position, in double radius)
         {  
-            if (position == null)
+            if (position is null)
                 throw new ArgumentNullException(nameof(position));
 
             Left = position.X - radius;
@@ -236,26 +236,26 @@ namespace Geometry
             return true;
         }
 
-        public OverlapType IntersectionType(in GridRectangle rect)
+        public ShapeRelation IntersectionType(in GridRectangle rect)
         {
             //Find out if the rectangles can't possibly intersect
             if (rect.Right < this.Left ||
                rect.Top < this.Bottom ||
                rect.Left > this.Right ||
                rect.Bottom > this.Top)
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
 
             if (rect.Right > this.Left &&
                rect.Top > this.Bottom &&
                rect.Left < this.Right &&
                rect.Bottom < this.Top)
-                return OverlapType.CONTAINED;
+                return ShapeRelation.CONTAINED;
 
             GridRectangle? intersectionArea = this.Intersection(rect);
 
             if (intersectionArea.Value.Area > 0)
             {
-                return OverlapType.INTERSECTING;
+                return ShapeRelation.INTERSECTING;
             }
 
             /*
@@ -264,14 +264,14 @@ namespace Geometry
                rect.Top > this.Bottom ||
                rect.Left < this.Right ||
                rect.Bottom < this.Top)
-                return OverlapType.INTERSECTING;
+                return ShapeRelation.INTERSECTING;
 
             if (rect.Right == this.Left ||
                rect.Top == this.Bottom ||
                rect.Left == this.Right ||
                rect.Bottom == this.Top)
                */
-            return OverlapType.TOUCHING;
+            return ShapeRelation.TOUCHING;
 
             //throw new ArgumentException(string.Format("Unexpected rectangle intersection case {0} {1}", rect, this));
         }
@@ -343,7 +343,7 @@ namespace Geometry
             return false;
         }
 
-        public OverlapType ContainsExt(in IPoint2D pos)
+        public ShapeRelation GetRelation(in IPoint2D pos)
         {
             //Find out if the rectangles can't possibly intersect
             if (pos.X >= this.Left &&
@@ -355,15 +355,56 @@ namespace Geometry
                     pos.Y == this.Bottom ||
                     pos.X == this.Right ||
                     pos.Y == this.Top)
-                    return OverlapType.TOUCHING;
+                    return ShapeRelation.TOUCHING;
 
-                return OverlapType.CONTAINED;
+                return ShapeRelation.CONTAINED;
             }
 
-            return OverlapType.NONE;
+            return ShapeRelation.NONE;
         }
 
-        public bool Contains(in GridVector2 pos, double epsilon = Global.Epsilon)
+        public ShapeRelation GetRelation(in ILineSegment2D line)
+        {
+            //This is very similar to the logic for GridTriangle
+            ShapeRelation relA = this.GetRelation(line.A);
+            ShapeRelation relB = this.GetRelation(line.B);
+
+            ShapeRelation composite = relA | relB;
+
+            bool containsA = relA == ShapeRelation.CONTAINED;
+            bool containsB = relB == ShapeRelation.CONTAINED;
+
+            if (containsA && containsB)
+                return ShapeRelation.CONTAINED;
+
+            //Edge case where one end of the line is contained and the other is exactly on the edge
+            if (composite.HasFlag(ShapeRelation.TOUCHING | ShapeRelation.CONTAINED))
+                return ShapeRelation.CONTAINED;
+
+            //Edge case where the line is exactly along the edge... not sure if this should be touching or contained, if not the same edge it is contained, but if the same edge it is touching
+            if (relA.HasFlag(ShapeRelation.TOUCHING) && relB.HasFlag(ShapeRelation.TOUCHING))
+            {
+                //Check if the line is touching the same segment in two places
+                foreach (GridLineSegment e in this.Segments)
+                    if (e.Intersects(line.A.Convert()) && e.Intersects(line.B.Convert()))
+                        return ShapeRelation.TOUCHING;
+
+                return ShapeRelation.CONTAINED;
+            }
+
+            //Check if line crosses the bounding box but both points are outside the box
+            foreach (GridLineSegment e in this.Segments)
+                if (e.Intersects(line))
+                    return ShapeRelation.INTERSECTING;
+
+            //OK, make sure one endpoint isn't touching and the rest of the line is outside the triangle
+            if (composite.HasFlag(ShapeRelation.TOUCHING))
+                return ShapeRelation.TOUCHING;
+
+            return ShapeRelation.NONE;
+        }
+
+        public bool Contains(in GridVector2 pos, in double epsilon = Global.Epsilon)
         {
             //Find out if the rectangles can't possibly intersect
             if (pos.X >= this.Left - epsilon &&
@@ -377,7 +418,7 @@ namespace Geometry
 
         public bool Contains(in IPoint pos)
         {
-            if (pos == null)
+            if (pos is null)
                 throw new ArgumentNullException(nameof(pos));
 
             //Find out if the rectangles can't possibly intersect
@@ -390,20 +431,20 @@ namespace Geometry
             return false;
         }
 
-        public OverlapType ContainsExt(in GridRectangle rect)
+        public ShapeRelation GetRelation(in GridRectangle rect)
         {
             //Find out if the rectangles can't possibly intersect
             if (rect.Right < this.Left ||
                rect.Top < this.Bottom ||
                rect.Left > this.Right ||
                rect.Bottom > this.Top)
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
 
             if (rect.Right <= this.Right &&
                rect.Top <= this.Top &&
                rect.Left >= this.Left &&
                rect.Bottom >= this.Bottom)
-                return OverlapType.CONTAINED;
+                return ShapeRelation.CONTAINED;
 
             bool LRIntersect = (this.Left < rect.Left && this.Right > rect.Left) ||
                                (this.Right > rect.Left && this.Right < rect.Right) ||
@@ -416,7 +457,7 @@ namespace Geometry
                                (this.Bottom > rect.Bottom && this.Bottom < rect.Top);
 
             if (LRIntersect && UDIntersect)
-                return OverlapType.INTERSECTING;
+                return ShapeRelation.INTERSECTING;
 
             bool LRTouch = this.Left == rect.Right || this.Right == rect.Left;
             bool UDTouch = this.Bottom == rect.Top || this.Top == rect.Bottom;
@@ -424,31 +465,31 @@ namespace Geometry
             if ((LRTouch && UDIntersect) ||
                 (UDTouch && LRIntersect) ||
                 (LRTouch && UDTouch))
-                return OverlapType.TOUCHING;
+                return ShapeRelation.TOUCHING;
 
             
             if (rect.Width == 0 || rect.Height == 0 || this.Width == 0 || this.Height == 0)
             {
                 //If we are dealing with a zero height rectangle then check some edge cases
                 if (LRIntersect || UDIntersect)
-                    return OverlapType.INTERSECTING;
+                    return ShapeRelation.INTERSECTING;
 
                 if (LRTouch || UDTouch)
-                    return OverlapType.TOUCHING;
+                    return ShapeRelation.TOUCHING;
             }
             else
             {
                 System.Diagnostics.Debug.Assert(false, "Every case should be handled at this point for a rectangle with non-zero width and height...");
             }
 
-            return OverlapType.NONE;
+            return ShapeRelation.NONE;
         }
 
         private readonly int _HashCode;
 
         public override int GetHashCode() => _HashCode;
 
-        private static int CalcHashCode(double left, double bottom, double right, double top)
+        private static int CalcHashCode(in double left, in double bottom, in double right, in double top)
         {
             return left.GetHashCode() ^ bottom.GetHashCode() ^ right.GetHashCode() ^ top.GetHashCode();
         }
@@ -490,7 +531,7 @@ namespace Geometry
 
         #region Static Methods
 
-        public static implicit operator RTree.Rectangle(GridRectangle rect)
+        public static implicit operator RTree.Rectangle(in GridRectangle rect)
         {
             return new RTree.Rectangle(rect.Left, rect.Bottom, rect.Right, rect.Top, 0, 0);
         }
@@ -525,7 +566,7 @@ namespace Geometry
         /// <param name="A"></param>
         /// <param name="scalar"></param>
         /// <returns></returns>
-        public static GridRectangle operator +(in GridRectangle A, GridVector2 p)
+        public static GridRectangle operator +(in GridRectangle A, in GridVector2 p)
         {
             return GridRectangle.Union(A, p);
         }
@@ -552,12 +593,12 @@ namespace Geometry
             return GridRectangle.Union(A, B);
         }
 
-        public static GridRectangle operator *(in GridRectangle A, double scalar)
+        public static GridRectangle operator *(in GridRectangle A, in double scalar)
         {
             return GridRectangle.Scale(A, scalar);
         }
 
-        public static GridRectangle operator /(in GridRectangle A, double scalar)
+        public static GridRectangle operator /(in GridRectangle A, in double scalar)
         {
             return GridRectangle.Scale(A, 1.0 / scalar);
         }
@@ -567,12 +608,12 @@ namespace Geometry
         /// </summary>
         /// <param name="Radius"></param>
         /// <returns></returns>
-        public static GridRectangle Pad(in GridRectangle rect, double radius)
+        public static GridRectangle Pad(in GridRectangle rect, in double radius)
         {
             return new GridRectangle(rect.Left - radius, rect.Right + radius, rect.Bottom - radius, rect.Top + radius);
         }
 
-        public static GridRectangle Scale(in GridRectangle rect, double scalar)
+        public static GridRectangle Scale(in GridRectangle rect, in double scalar)
         {
             //Have to cache center because it changes as we update points
             GridVector2 center = rect.Center;
@@ -628,7 +669,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <returns></returns>
-        public static GridRectangle Union(in GridRectangle rect, GridVector2 point)
+        public static GridRectangle Union(in GridRectangle rect, in GridVector2 point)
         {
             if (double.IsNaN(rect.Left))
             {
@@ -643,7 +684,7 @@ namespace Geometry
             return new GridRectangle(newLeft, newRight, newBottom, newTop);
         }
 
-        public static GridRectangle GetBoundingBox(GridVector2[] points)
+        public static GridRectangle GetBoundingBox(in GridVector2[] points)
         {
             double MinX = points.Min(v => v.X);
             double MinY = points.Min(v => v.Y);
@@ -668,13 +709,13 @@ namespace Geometry
             return new GridRectangle(this.LowerLeft, this.Width, this.Height);
         }
 
-        private static GridVector2[] CalculateCorners(double Left, double Bottom, double Right, double Top) => 
+        private static GridVector2[] CalculateCorners(in double Left, in double Bottom, in double Right, in double Top) => 
             new GridVector2[] { new GridVector2(Left, Bottom),
-                new GridVector2(Left, Top),
-                new GridVector2(Right, Top),
-                new GridVector2(Right, Bottom) };
+                                new GridVector2(Left, Top),
+                                new GridVector2(Right, Top),
+                                new GridVector2(Right, Bottom) };
          
-        private static GridLineSegment[] CalculateSegments(GridVector2[] corners)
+        private static GridLineSegment[] CalculateSegments(in GridVector2[] corners)
         {
             var size = corners[(int)Corner.UpperRight] - corners[(int)Corner.LowerLeft];
             var width = size.X;
@@ -694,6 +735,33 @@ namespace Geometry
             else
             {
                 return new GridLineSegment[] { new GridLineSegment(corners[(int)Corner.LowerLeft], corners[(int)Corner.UpperRight]) };
+            }
+        }
+
+        private static GridLineSegment[] CalculateSegments(in double left, in double right, in double bottom, in double top)
+        { 
+            var width = right - left;
+            var height = top - bottom;
+
+            GridVector2 LowerLeft = new GridVector2(left, bottom);
+            GridVector2 UpperLeft = new GridVector2(left, top);
+            GridVector2 LowerRight = new GridVector2(right, bottom);
+            GridVector2 UpperRight = new GridVector2(right, top);
+
+            if (width > Global.Epsilon && height > Global.Epsilon)
+            {
+                return new GridLineSegment[] {  new GridLineSegment(LowerLeft, UpperLeft),
+                    new GridLineSegment(UpperLeft, UpperRight),
+                    new GridLineSegment(UpperRight, LowerRight),
+                    new GridLineSegment(LowerRight, LowerLeft)};
+            }
+            else if (width < Global.Epsilon && height < Global.Epsilon)
+            {
+                return Array.Empty<GridLineSegment>();
+            }
+            else
+            {
+                return new GridLineSegment[] { new GridLineSegment(LowerLeft, UpperRight) };
             }
         }
 

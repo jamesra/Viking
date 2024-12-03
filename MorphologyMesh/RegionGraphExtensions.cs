@@ -22,7 +22,7 @@ namespace MorphologyMesh
             while (true)
             {
                 var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 0 && n.Key.Type == RegionType.UNTILED);
-                if (regionNode == null)
+                if (regionNode is null)
                     break;
 
                 try
@@ -44,7 +44,7 @@ namespace MorphologyMesh
                 graph.RemoveNode(regionNode.Key);
             }
 
-            if (rTree == null)
+            if (rTree is null)
             {
                 rTree = mesh.CreateChordTree(graph.ZLevels);
             }
@@ -57,7 +57,7 @@ namespace MorphologyMesh
             while (true)
             {
                 var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 1);
-                if (regionNode == null)
+                if (regionNode is null)
                     break;
 
                 MorphMeshRegionGraphEdge edge = regionNode.Edges.First().Value.First();
@@ -95,7 +95,7 @@ namespace MorphologyMesh
             while (true)
             {
                 var regionNode = graph.Nodes.Values.FirstOrDefault(n => n.Edges.Count == 0);
-                if (regionNode == null)
+                if (regionNode is null)
                     break;
 
                 OTVTable table = TryClosingRegion(mesh, regionNode.Key, rTree);
@@ -115,7 +115,7 @@ namespace MorphologyMesh
         public static List<OTVTable> CloseRegions(this BajajGeneratorMesh mesh, IList<MorphMeshRegion> regions, SliceChordRTree rTree = null)
         {
             //Build the lookup tree for slice-chords
-            if (rTree == null)
+            if (rTree is null)
             {
                 rTree = mesh.CreateChordTree(regions.SelectMany(r => r.ZLevel).Distinct().ToList());
             }
@@ -169,8 +169,8 @@ namespace MorphologyMesh
             //TODO: This appears to only select verts without faces... shouldn't we look for any vert without a chord?
             List<int> vertsWithoutFaces = region.Verticies.Where(v => mesh[v].Edges.SelectMany(e => mesh[e].Faces).Count() == 0).ToList();
 
-            BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].PolyIndex.Value),
-                                                              mesh.Polygons, mesh.IsUpperPolygon,
+            BajajMeshGenerator.CreateOptimalTilingVertexTable(vertsWithoutFaces.Select(v => mesh[v].ShapeIndex),
+                                                              mesh.Shapes, mesh.IsUpperShape,
                                                               SliceChordTestType.Correspondance | SliceChordTestType.ChordIntersection | SliceChordTestType.Theorem2 | SliceChordTestType.Theorem4,
                                                               out OTVTable OTVTable, ref rTree);
 
@@ -265,7 +265,7 @@ namespace MorphologyMesh
             var MedialAxis = MedialAxisFinder.ApproximateMedialAxis(centeredRegionPolygon);
             MedialAxisVertex[] NewVerts = MedialAxis.Nodes.Values.ToArray();
 
-            System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredRegionPolygon.ContainsExt(v.Key) == OverlapType.CONTAINED), "Interior points must be inside Face");   
+            System.Diagnostics.Debug.Assert(NewVerts.All(v => centeredRegionPolygon.GetRelation(v.Key) == ShapeRelation.CONTAINED), "Interior points must be inside Face");   
 
             //TODO: Split any edges with an existing face into two parts so we can better merge the medial axis with the existing shape
 
@@ -351,7 +351,7 @@ namespace MorphologyMesh
         /// <param name="OnProgress"></param>
         public static void CapMeshEnd(this BajajGeneratorMesh mesh, bool CloseUpper, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
-            GridPolygon[] polysToClose = CloseUpper ? mesh.UpperPolygons : mesh.LowerPolygons;
+            IShape2D[] polysToClose = CloseUpper ? mesh.UpperShapes : mesh.LowerShapes;
 
             //double HalfThickness = mesh.SliceThickness / 2.0;
             //double targetZ = CloseUpper ? mesh.UpperPolyIndicies.Min() + HalfThickness : mesh.LowerPolyIndicies.Max() - HalfThickness;
@@ -365,13 +365,13 @@ namespace MorphologyMesh
             double HalfThickness = (MaxZ - MinZ) / 2.0;
             double targetZ = CloseUpper ? MaxZ + HalfThickness : MinZ - HalfThickness;
             */
-            for(int iPoly = 0; iPoly < mesh.Polygons.Length; iPoly++)
+            for(int iPoly = 0; iPoly < mesh.Shapes.Length; iPoly++)
             {
-                bool ClosePoly = CloseUpper ? mesh.IsUpperPolygon[iPoly] : !mesh.IsUpperPolygon[iPoly];
+                bool ClosePoly = CloseUpper ? mesh.IsUpperShape[iPoly] : !mesh.IsUpperShape[iPoly];
                 if (ClosePoly == false)
                     continue;
 
-                GridPolygon poly = mesh.Polygons[iPoly];
+                if (mesh.Shapes[iPoly] is GridPolygon poly)
                 {
                     GridVector2 polyCenter = poly.Centroid;
                     GridPolygon centeredPolygon = poly.Translate(-polyCenter);
@@ -395,8 +395,10 @@ namespace MorphologyMesh
                     var PolygonMeshVerticies = polyVertEnum.Select(pi => mesh[pi]).ToList();
                     PolygonMeshVerticies.AddRange(MedialAxisMeshVerts);
                     
-                    var capTriangulation = TriangulateCapWithMedialAxis(PolygonMeshVerticies.Select(v => new Vertex2D<MorphMeshVertex>(v.Position.XY(), v)).ToArray(), poly, iPoly,
-                                                                               OnProgress: null);
+                    var capTriangulation = TriangulateCapWithMedialAxis(PolygonMeshVerticies.Select(v => new Vertex2D<MorphMeshVertex>(v.Position.XY(), v)).ToArray(),
+                                                                        poly, 
+                                                                        iPoly,
+                                                                        OnProgress: null);
 
                     //var polyMesh = regionPolygon.Triangulate(iPoly: 0);
                     //TriangleNet.Meshing.IMesh triangulation = regionPolygon.Triangulate(internalPoints: NewVerts.Select(v => v.Key).ToArray());
@@ -464,10 +466,10 @@ namespace MorphologyMesh
             //Ensure polygon ring is constrained in the mesh
             foreach (IVertex2D<MorphMeshVertex> vert in verts)
             {
-                if (vert.Data.PolyIndex.HasValue == false)
-                    continue;
-
-                polyIndexToTriangulationIndex.Add(vert.Data.PolyIndex.Value, vert.Index);
+                if (vert.Data.ShapeIndex is PolygonIndex polyIndex)
+                {   
+                    polyIndexToTriangulationIndex.Add(polyIndex, vert.Index);
+                }
             }
 
             HashSet<IEdge> constrainedEdges = new HashSet<IEdge>();
@@ -478,9 +480,9 @@ namespace MorphologyMesh
                 IVertex2D<MorphMeshVertex> A = triangulation[iPolyVert];
                 MorphMeshVertex MMV_A = A.Data;
 
-                IVertex2D<MorphMeshVertex> B = triangulation[polyIndexToTriangulationIndex[MMV_A.PolyIndex.Value.Next]];
+                IVertex2D<MorphMeshVertex> B = triangulation[polyIndexToTriangulationIndex[(PolygonIndex)MMV_A.ShapeIndex.Next]];
                 MorphMeshVertex MMV_B = B.Data; // polyIndexToTriangulationIndex[A.PolyIndex.Value.Next]];
-                PolygonIndex polyIndex = MMV_A.PolyIndex.Value;
+                PolygonIndex polyIndex = (PolygonIndex)MMV_A.ShapeIndex;
 
                 ConstrainedEdge edge = new ConstrainedEdge(A.Index, B.Index);
                 triangulation.AddConstrainedEdge(edge, OnProgress);
@@ -505,10 +507,12 @@ namespace MorphologyMesh
                 IVertex2D<MorphMeshVertex> B = triangulation[k.B];
                 MorphMeshVertex MMV_B = B.Data; // polyIndexToTriangulationIndex[A.PolyIndex.Value.Next]];
 
-                if (false == (MMV_A.PolyIndex.HasValue && MMV_B.PolyIndex.HasValue))
+                if(!(MMV_A.ShapeIndex is PolygonIndex i_a))
+                    return false;
+                if (!(MMV_B.ShapeIndex is PolygonIndex i_b))
                     return false;
 
-                if (MMV_A.PolyIndex.Value.AreOnSameRing(MMV_B.PolyIndex.Value))
+                if (i_a.AreOnSameRing(i_b))
                     return true;
 
                 //PointIndex polyIndex = MMV_A.PolyIndex.Value;
@@ -517,11 +521,11 @@ namespace MorphologyMesh
                 }).ToArray();
 
 
-            foreach (EdgeKey key in EdgesToCheck)
+            foreach (IEdgeKey key in EdgesToCheck)
             {
                 GridLineSegment line = triangulation.ToGridLineSegment(key);
 
-                if (OverlapType.NONE == poly.ContainsExt(line.Bisect()))
+                if (ShapeRelation.NONE == poly.GetRelation(line.Bisect()))
                 {
                     triangulation.RemoveEdge(key);
 

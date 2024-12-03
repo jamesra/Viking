@@ -28,12 +28,12 @@ namespace MonogameTestbed
         /// </summary>
         public MeshModel<VertexPositionNormalColor> model = new MeshModel<VertexPositionNormalColor>();
 
-        private readonly Dictionary<PolygonIndex, int> PolyIndexToVertex = new Dictionary<PolygonIndex, int>();
+        private readonly Dictionary<IShapeIndex, int> ShapeIndexToVertex = new Dictionary<IShapeIndex, int>();
 
         public ReaderWriterLockSlim ModelLock = new ReaderWriterLockSlim();
 
         private Color _color = Color.CornflowerBlue;
-        public Color Color { get { return _color; }
+        public Color Color { get => _color;
             set
             {
                 if(value != _color)
@@ -43,7 +43,9 @@ namespace MonogameTestbed
                 }
             }
         } 
-        public float Alpha { get { return Color.GetAlpha(); } set { Color = Color.SetAlpha(value); } }
+        public float Alpha { get => Color.GetAlpha();
+            set => Color = Color.SetAlpha(value);
+        }
 
         /// <summary>
         /// 
@@ -69,7 +71,7 @@ namespace MonogameTestbed
             {
                 MorphMeshVertex vertex = mesh[iVert];
                 
-                if(vertex.PolyIndex.HasValue == false)
+                if(vertex.ShapeIndex is null)
                 {
                     //It is not part of a polygon, so we know the vertex will not collide with another vertex and need remapping
                     var composite_vertex = MorphMeshVertex.Duplicate(vertex);
@@ -82,15 +84,14 @@ namespace MonogameTestbed
                 else
                 {
                     //Check if the PointIndex for this vertex already exists in the model
-                    ulong iPoly = mesh.Topology.PolyIndexToMorphNodeIndex[vertex.PolyIndex.Value.iPoly];
-                    var composite_vertex = MorphMeshVertex.Reindex(vertex, (int)iPoly);
+                    ulong iShape = mesh.Topology.ShapeIndexToMorphNodeIndex[vertex.ShapeIndex.iShape];
+                    var composite_vertex = MorphMeshVertex.Reindex(vertex, (int)iShape);
 
-                    bool vertFound = PolyIndexToVertex.TryGetValue(composite_vertex.PolyIndex.Value, out int iGlobalVert);
-                    if(vertFound == false)
+                    if(false == ShapeIndexToVertex.TryGetValue(composite_vertex.ShapeIndex, out int iGlobalVert))
                     {   
                         //If the vertex is not in the mesh already, then add it.
                         iGlobalVert = composite.AddVertex(composite_vertex);
-                        PolyIndexToVertex.Add(composite_vertex.PolyIndex.Value, iGlobalVert);
+                        ShapeIndexToVertex.Add(composite_vertex.ShapeIndex, iGlobalVert);
 
                         modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color));
                     }
@@ -181,7 +182,7 @@ namespace MonogameTestbed
                 model.AppendVerticies(modelVerts);
                 model.AppendEdges(NewModelEdges); //Add all new edges to our model
 
-                if (mesh_to_global == null)
+                if (mesh_to_global is null)
                     return;
 
                 //Update the normals for our model
@@ -218,7 +219,7 @@ namespace MonogameTestbed
                 MorphMeshVertex vertex = mesh[iVert];
                 var composite_vertex = MorphMeshVertex.Duplicate(vertex);
 
-                if (vertex.PolyIndex.HasValue == false)
+                if (vertex.ShapeIndex is null)
                 {
                     //It is not part of a polygon, so we know the vertex will not collide with another vertex and need remapping
                     
@@ -233,12 +234,11 @@ namespace MonogameTestbed
                     // When we merge another SliceGraphMeshModel we know the PolyIndex values for the other model match our own.  We need to create new verticies, edges, and faces into our models
 
                     //Check if the PointIndex for this vertex already exists in the model 
-                    bool vertFound = PolyIndexToVertex.TryGetValue(composite_vertex.PolyIndex.Value, out int iGlobalVert);
-                    if (vertFound == false)
+                    if (false == ShapeIndexToVertex.TryGetValue(composite_vertex.ShapeIndex, out int iGlobalVert))
                     {
                         //If the vertex is not in the mesh already, then add it.
                         iGlobalVert = composite.AddVertex(composite_vertex);
-                        PolyIndexToVertex.Add(composite_vertex.PolyIndex.Value, iGlobalVert);
+                        ShapeIndexToVertex.Add(composite_vertex.ShapeIndex, iGlobalVert);
 
                         modelVerts.Add(new VertexPositionNormalColor(composite_vertex.Position.ToXNAVector3(), Vector3.Zero, Color));
                     }

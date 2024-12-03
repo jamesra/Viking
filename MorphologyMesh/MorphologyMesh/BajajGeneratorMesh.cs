@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace MorphologyMesh
 {
@@ -27,19 +28,19 @@ namespace MorphologyMesh
     /// </summary>
     public class BajajGeneratorMesh : MorphRenderMesh
     {
-        internal override bool[] IsUpperPolygon => Topology.IsUpper;
+        internal override bool[] IsUpperShape => Topology.IsUpper;
 
         /// <summary>
         /// Vertex indicies that belong to an upper polygon
         /// </summary>
-        public ImmutableSortedSet<int> UpperPolyIndicies => Topology.UpperPolyIndicies;
+        public ImmutableSortedSet<int> UpperShapeIndicies => Topology.UpperShapeIndicies;
         /// <summary>
         /// Vertex indicies that belong to a lower polygon
         /// </summary>
-        public ImmutableSortedSet<int> LowerPolyIndicies => Topology.LowerPolyIndicies;
+        public ImmutableSortedSet<int> LowerShapeIndicies => Topology.LowerShapeIndicies;
 
-        internal GridPolygon[] UpperPolygons => Topology.UpperPolygons;
-        internal GridPolygon[] LowerPolygons => Topology.LowerPolygons;
+        internal IShape2D[] UpperShapes => Topology.UpperShapes;
+        internal IShape2D[] LowerShapes => Topology.LowerShapes;
 
         //private readonly List<MorphMeshRegion> _Regions = new List<MorphMeshRegion>();
 
@@ -72,47 +73,35 @@ namespace MorphologyMesh
 
         public override string ToString()
         {
-            string output = "";
+            StringBuilder output = new StringBuilder();
             if(Slice != null)
             {
-                output += Slice.ToString() + ":\n\t";
+                output.Append($"{Slice}:\n\t");
             }
 
-            output += base.ToString();
-            return output;
+            output.Append(base.ToString());
+            return output.ToString();
         }
 
-        public BajajGeneratorMesh(SliceTopology topology, Slice slice = null) : base(topology.Polygons, topology.PolyZ, topology.IsUpper)
+        public BajajGeneratorMesh(SliceTopology topology, Slice slice = null) : base(topology.Shapes, topology.ShapeZ, topology.IsUpper)
         {
             Topology = topology;
             Slice = slice;
         }
 
-        public BajajGeneratorMesh(IReadOnlyList<GridPolygon> polygons, IReadOnlyList<double> ZLevels, IReadOnlyList<bool> IsUpperPolygon) : 
-            this(new SliceTopology(polygons, IsUpperPolygon, ZLevels))
+        public BajajGeneratorMesh(IReadOnlyList<IShape2D> shapes, IReadOnlyList<double> ZLevels, IReadOnlyList<bool> IsUpperShape) : 
+            this(new SliceTopology(shapes, IsUpperShape, ZLevels))
         {
 
         }
 
-        public GridPolygon[] GetSameLevelPolygons(PolygonIndex key)
-        {
-            return IsUpperPolygon[key.iPoly] ? UpperPolygons : LowerPolygons;
-        }
+        public IShape2D[] GetSameLevelShapes(in IShapeIndex key) => IsUpperShape[key.iShape] ? UpperShapes : LowerShapes;
 
-        public GridPolygon[] GetAdjacentLevelPolygons(PolygonIndex key)
-        {
-            return IsUpperPolygon[key.iPoly] ? LowerPolygons : UpperPolygons;
-        }
+        public IShape2D[] GetAdjacentLevelShapes(in IShapeIndex key) => IsUpperShape[key.iShape] ? LowerShapes : UpperShapes;
 
-        public GridPolygon[] GetSameLevelPolygons(SliceChord sc)
-        {
-            return IsUpperPolygon[sc.Origin.iPoly] ? UpperPolygons : LowerPolygons;
-        }
+        public IShape2D[] GetSameLevelShapes(in SliceChord sc) => IsUpperShape[sc.Origin.iShape] ? UpperShapes : LowerShapes;
 
-        public GridPolygon[] GetAdjacentLevelPolygons(SliceChord sc)
-        {
-            return IsUpperPolygon[sc.Origin.iPoly] ? LowerPolygons : UpperPolygons;
-        }
+        public IShape2D[] GetAdjacentLevelShapes(in SliceChord sc) => IsUpperShape[sc.Origin.iShape] ? LowerShapes : UpperShapes;
 
 
         public void IdentifyRegionsViaFaces()
@@ -152,7 +141,7 @@ namespace MorphologyMesh
         /// </summary>
         public void CloseFaces(IEnumerable<IVertex> VertsToClose = null)
         {
-            if (VertsToClose == null)
+            if (VertsToClose is null)
             {
                 VertsToClose = this.Verticies;
             }
@@ -208,7 +197,7 @@ namespace MorphologyMesh
                 checkedEdges = new SortedSet<IEdgeKey>();
             }
 
-            if (path == null)
+            if (path is null)
             {
                 path = new Stack<int>();
                 path.Push(targetVert);
@@ -246,7 +235,7 @@ namespace MorphologyMesh
 
                 if (Face != null)
                 {
-                    if (shortestFace == null)
+                    if (shortestFace is null)
                     {
                         shortestFace = Face;
                     }
@@ -316,7 +305,7 @@ namespace MorphologyMesh
                     //so if the vertex is corresponding it could stil be the extra vertex of the triangle if its corresponding vertex is not part of the face.
                     MorphMeshVertex noncorresponding = verts.Where(v => v.Corresponding.HasValue == false || f.iVerts.Contains(v.Corresponding.Value) == false).First();
                     int iNonCorresponding = Array.IndexOf(verts, noncorresponding);
-                    bool NonCorrespondingIsUpper = IsUpperPolygon[noncorresponding.PolyIndex.Value.iPoly];
+                    bool NonCorrespondingIsUpper = IsUpperShape[noncorresponding.ShapeIndex.iShape];
 
                     InfiniteSequentialIndexSet faceIndexer = new InfiniteSequentialIndexSet(0, f.iVerts.Length, 0);
 
@@ -325,16 +314,16 @@ namespace MorphologyMesh
                     //Find the line segment between the two adjacent verts on the same Z level
                     GridLineSegment seg;
                     bool output; 
-                    if (nextVert.PolyIndex.Value == noncorresponding.PolyIndex.Value.Next)
+                    if (nextVert.ShapeIndex == noncorresponding.ShapeIndex.Next)
                     {
                         output = NonCorrespondingIsUpper == false;
                         //seg = new GridLineSegment(noncorresponding.Position.XY(), verts[faceIndexer[iNonCorresponding + 1]].Position.XY());
                     }
-                    else if(nextVert.PolyIndex.Value == noncorresponding.PolyIndex.Value.Previous)
+                    else if(nextVert.ShapeIndex == noncorresponding.ShapeIndex.Previous)
                     {
                         output = NonCorrespondingIsUpper;
                     }
-                    else if (prevVert.PolyIndex.Value == noncorresponding.PolyIndex.Value.Previous)
+                    else if (prevVert.ShapeIndex == noncorresponding.ShapeIndex.Previous)
                     {
                         output = NonCorrespondingIsUpper == false;
                     }
@@ -343,7 +332,7 @@ namespace MorphologyMesh
                         output = NonCorrespondingIsUpper;
                     }
                     
-                    return noncorresponding.PolyIndex.Value.IsInner ? !output : output;
+                    return noncorresponding.ShapeIndex.IsInner ? !output : output;
                 }
                 else
                 {
@@ -363,14 +352,14 @@ namespace MorphologyMesh
 
             if(CheckAgainstUpperPolygons == false)
             { 
-                if (this.LowerPolygons.Any(p => p.ContainsExt(face_center) == OverlapType.CONTAINED))
+                if (this.LowerShapes.Any(p => p.GetRelation(face_center) == ShapeRelation.CONTAINED))
                     return false;
 
                 return true;
             }
             else
             { 
-                if (this.UpperPolygons.Any(p => p.ContainsExt(face_center) == OverlapType.CONTAINED))
+                if (this.UpperShapes.Any(p => p.GetRelation(face_center) == ShapeRelation.CONTAINED))
                     return false;
 
                 return true;

@@ -10,8 +10,8 @@ namespace GeometryTests.FSCheck
 {
 
     /// <summary>
-    /// A brute-force point searching class to compare our quad-tree implementation against
-    /// Contains a tuples of Points and the associated value of the point in the quad tree
+    /// A brute-force point searching class to compare our quad-treeWithUniqueValues implementation against
+    /// Contains a tuples of Points and the associated value of the point in the quad treeWithUniqueValues
     /// </summary>
     internal class QuadTreeModel : List<PointTuple>
     {
@@ -28,13 +28,13 @@ namespace GeometryTests.FSCheck
         }
     }
 
-    internal class QuadTreeSpec : ICommandGenerator<QuadTree<int>, QuadTreeModel>
+    internal class QuadTreeWithUniqueValuesSpec : ICommandGenerator<QuadTreeWithUniqueValues<int>, QuadTreeModel>
     {  
-        public QuadTreeSpec()
+        public QuadTreeWithUniqueValuesSpec()
         {
         }
 
-        public Geometry.QuadTree<int> InitialActual => new QuadTree<int>();
+        public Geometry.QuadTreeWithUniqueValues<int> InitialActual => new QuadTreeWithUniqueValues<int>();
 
         public QuadTreeModel InitialModel => new QuadTreeModel();
 
@@ -44,14 +44,14 @@ namespace GeometryTests.FSCheck
                        .Trivial(size == 0);
         }
 
-        public static Property TestFindNearestPoint(GridVector2 Point, QuadTree<int> tree, QuadTreeModel model)
+        public static Property TestFindNearestPoint(GridVector2 Point, QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
         {
-            //Does a brute force search of the model to ensure the correct points is returned from the tree
+            //Does a brute force search of the model to ensure the correct points is returned from the treeWithUniqueValues
             var modelNearestList = model.Nearest(Point);
 
             ///////////////////////////////////////////
             ///Check that we can find the nearest point
-            bool pointFound = tree.TryFindNearest(Point, out var treeNearestIndex, out double treeDistance);
+            bool pointFound = treeWithUniqueValues.TryFindNearest(Point, out var treeNearestIndex, out double treeDistance);
 
             var modelNearest = modelNearestList.First();
 
@@ -63,13 +63,13 @@ namespace GeometryTests.FSCheck
                     .And(distanceMatched.Label("Nearest point distance matched"));
         }
 
-        public static Property TestFindNearestPoints(GridVector2 Point, int nPoints, QuadTree<int> tree, QuadTreeModel model)
+        public static Property TestFindNearestPoints(GridVector2 Point, int nPoints, QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
         {
             if (nPoints > model.Count)
                 nPoints = model.Count;
 
             var modelNearestList = model.Nearest(Point);
-            var treeNearestList = tree.FindNearestPoints(Point, nPoints);
+            var treeNearestList = treeWithUniqueValues.FindNearestPoints(Point, nPoints);
 
             bool pointsFoundCountMatched = treeNearestList.Count >= nPoints;
 
@@ -108,32 +108,32 @@ namespace GeometryTests.FSCheck
 
         }
 
-        public Gen<Command<Geometry.QuadTree<int>, QuadTreeModel>> Next(QuadTreeModel value)
+        public Gen<Command<Geometry.QuadTreeWithUniqueValues<int>, QuadTreeModel>> Next(QuadTreeModel value)
         {
             if (value.Count == 0)
-                return GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTree<int>, QuadTreeModel>);
+                return GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>);
 
             else
             {
                 /*
-                var command_generators = new Gen<Command<QuadTree<int>, QuadTreeModel>>[] { GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTree<int>, QuadTreeModel>),
-                                                                              Gen.Zip(GridVector2Generators.ArbRandomPoint().Generator, Arb.Default.Byte().Generator.Where(b => b <= value.Count)).Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTree<int>, QuadTreeModel>) };
+                var command_generators = new Gen<Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>>[] { GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>),
+                                                                              Gen.Zip(GridVector2Generators.ArbRandomPoint().Generator, Arb.Default.Byte().Generator.Where(b => b <= value.Count)).Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTreeWithUniqueValues<int>, QuadTreeModel>) };
 
                 return Gen.OneOf(command_generators);
                 */
 
                 return Gen.Frequency(
-                    Tuple.Create(3, GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTree<int>, QuadTreeModel>)),
-                    Tuple.Create(1, Gen.Choose(0, InitialModel.Count-1 < 0 ? 0 : InitialModel.Count-1).Select(i => new RemovePointOperation(value[i]) as Command<QuadTree<int>, QuadTreeModel>)),
+                    Tuple.Create(3, GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>)),
+                    Tuple.Create(1, Gen.Choose(0, InitialModel.Count-1 < 0 ? 0 : InitialModel.Count-1).Select(i => new RemovePointOperation(value[i]) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>)),
                     Tuple.Create(1, Gen.Zip(GridVector2Generators.ArbRandomPoint().Generator,
                                             Gen.Choose(0, InitialModel.Count))
-                                                                        .Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTree<int>, QuadTreeModel>)));
+                                                                        .Select((val) => new NearestPointsOperation(val.Item1, (int)val.Item2) as Command<Geometry.QuadTreeWithUniqueValues<int>, QuadTreeModel>)));
             }
 
-            //GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTree<int>, QuadTreeModel>);
+            //GridVector2Generators.ArbRandomPoint().Generator.Select(p => new AddPointOperation(p) as Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>);
         }
 
-        private class AddPointOperation : Command<QuadTree<int>, QuadTreeModel>
+        private class AddPointOperation : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
         {
             public readonly PointTuple Point;
 
@@ -146,20 +146,20 @@ namespace GeometryTests.FSCheck
                 Point = new PointTuple(point, System.Threading.Interlocked.Increment(ref NextPointID));
             }
 
-            public override Property Post(QuadTree<int> tree, QuadTreeModel model)
+            public override Property Post(QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
             {
-                bool value_found = tree.Contains(Point.Value);
-                var findPoint = QuadTreeSpec.TestFindNearestPoint(Point, tree, model);
+                bool value_found = treeWithUniqueValues.Contains(Point.Value);
+                var findPoint = QuadTreeWithUniqueValuesSpec.TestFindNearestPoint(Point, treeWithUniqueValues, model);
 
-                findPoint = QuadTreeSpec.ClassifySize(findPoint, model.Count);
+                findPoint = QuadTreeWithUniqueValuesSpec.ClassifySize(findPoint, model.Count);
 
-                var findPoints = QuadTreeSpec.TestFindNearestPoints(Point, model.Count, tree, model);
-                /*//Does a brute force search of the model to ensure the correct points is returned from the tree
+                var findPoints = QuadTreeWithUniqueValuesSpec.TestFindNearestPoints(Point, model.Count, treeWithUniqueValues, model);
+                /*//Does a brute force search of the model to ensure the correct points is returned from the treeWithUniqueValues
                 var modelNearestList = model.Nearest(Point);
 
                 ///////////////////////////////////////////
                 ///Check that we can find the nearest point
-                int treeNearestIndex = tree.FindNearest(Point, out double treeDistance);
+                int treeNearestIndex = treeWithUniqueValues.FindNearest(Point, out double treeDistance);
 
                 var modelNearest = modelNearestList.First();
 
@@ -177,8 +177,8 @@ namespace GeometryTests.FSCheck
 
                 var output = findPoint.And(findPoints)
                              .And(AddResult.Label("TryAdd result did not indicate success"))
-                             .And(value_found.Label("Inserted value not found in tree"));
-                return QuadTreeSpec.ClassifySize(output, model.Count);
+                             .And(value_found.Label("Inserted value not found in treeWithUniqueValues"));
+                return QuadTreeWithUniqueValuesSpec.ClassifySize(output, model.Count);
                 /*
                 return (correctPointFound.Label("Nearest point found"))
                         .And(distanceMatched.Label("Nearest point distance matched"))
@@ -195,7 +195,7 @@ namespace GeometryTests.FSCheck
                 return _arg1.Contains(Point.Point) == false;
             }
 
-            public override QuadTree<int> RunActual(QuadTree<int> value)
+            public override QuadTreeWithUniqueValues<int> RunActual(QuadTreeWithUniqueValues<int> value)
             {
                 AddResult = value.TryAdd(Point, Point.Value);
                 return value;
@@ -213,7 +213,7 @@ namespace GeometryTests.FSCheck
             }
         }
 
-        private class NearestPointsOperation : Command<QuadTree<int>, QuadTreeModel>
+        private class NearestPointsOperation : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
         {
             public readonly GridVector2 Point;
             public readonly int nPoints;
@@ -224,10 +224,10 @@ namespace GeometryTests.FSCheck
                 nPoints = num_points;
             }
 
-            public override Property Post(QuadTree<int> tree, QuadTreeModel model)
+            public override Property Post(QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
             {
-                //Does a brute force search of the model to ensure the correct points is returned from the tree                
-                Property result = TestFindNearestPoints(Point, nPoints, tree, model)
+                //Does a brute force search of the model to ensure the correct points is returned from the treeWithUniqueValues                
+                Property result = TestFindNearestPoints(Point, nPoints, treeWithUniqueValues, model)
                         .ClassifySize(nPoints)
                         .Trivial(nPoints == 0);
 
@@ -241,7 +241,7 @@ namespace GeometryTests.FSCheck
                 return this.nPoints <= _arg1.Count;
             }
 
-            public override QuadTree<int> RunActual(QuadTree<int> value)
+            public override QuadTreeWithUniqueValues<int> RunActual(QuadTreeWithUniqueValues<int> value)
             {
                 return value;
             }
@@ -258,9 +258,9 @@ namespace GeometryTests.FSCheck
         }
 
         /// <summary>
-        /// Removes a random point from the quad tree
+        /// Removes a random point from the quad treeWithUniqueValues
         /// </summary>
-        private class RemovePointOperation : Command<QuadTree<int>, QuadTreeModel>
+        private class RemovePointOperation : Command<QuadTreeWithUniqueValues<int>, QuadTreeModel>
         {
             /// <summary>
             /// The point being removed
@@ -269,7 +269,7 @@ namespace GeometryTests.FSCheck
              
 
             /// <summary>
-            /// The returned value when the point was removed from the quad tree
+            /// The returned value when the point was removed from the quad treeWithUniqueValues
             /// </summary>
             public bool RemovedFromQuadTree { get; private set; } = false;
 
@@ -283,20 +283,20 @@ namespace GeometryTests.FSCheck
                 return true;
             }
 
-            public override Property Post(QuadTree<int> tree, QuadTreeModel model)
+            public override Property Post(QuadTreeWithUniqueValues<int> treeWithUniqueValues, QuadTreeModel model)
             {
-                bool TreeRemovedPoint = false == tree.Contains(Point);
-                bool TreeRemovedValue = false == tree.Contains(Point.Value);
+                bool TreeRemovedPoint = false == treeWithUniqueValues.Contains(Point);
+                bool TreeRemovedValue = false == treeWithUniqueValues.Contains(Point.Value);
 
-                //Does a brute force search of the model to ensure the correct points is returned from the tree                
-                Property result = (TreeRemovedPoint.Label($"Tree contains removed point {Point}"))
-                                  .And(TreeRemovedValue.Label($"Tree contains removed value {Point}"))
+                //Does a brute force search of the model to ensure the correct points is returned from the treeWithUniqueValues                
+                Property result = (TreeRemovedPoint.Label($"treeWithUniqueValues contains removed point {Point}"))
+                                  .And(TreeRemovedValue.Label($"treeWithUniqueValues contains removed value {Point}"))
                                   .ClassifySize(model.Count); 
 
                 return result;
             }
               
-            public override QuadTree<int> RunActual(QuadTree<int> value)
+            public override QuadTreeWithUniqueValues<int> RunActual(QuadTreeWithUniqueValues<int> value)
             {
                 RemovedFromQuadTree = value.TryRemove(Point.Value, out int removed);
                 return value;

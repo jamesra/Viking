@@ -12,7 +12,7 @@ using VikingXNAGraphics;
 namespace MonogameTestbed
 {
     /// <summary>
-    /// This is a binary tree where leaves represent meshes.  Branches represent meshes that should be merged when both leaves have finished mesh generation.  Nodes are merged until only a single root leaf node exists with the final mesh
+    /// This is a binary treeWithUniqueValues where leaves represent meshes.  Branches represent meshes that should be merged when both leaves have finished mesh generation.  Nodes are merged until only a single root leaf node exists with the final mesh
     /// </summary>
     class MeshAssemblyPlanner
     {
@@ -52,9 +52,9 @@ namespace MonogameTestbed
             //AssemblyPlannerLeaf[] firstLayer = sliceGraph.Nodes.Keys.OrderBy(k => k).Select(k => new AssemblyPlannerLeaf(k)).ToArray();
             AssemblyPlannerLeaf[] firstLayer = sliceGraph.Nodes.Keys.OrderBy(k => {
                 SliceTopology t = sliceGraph.GetTopology(k);
-                return t.PolyZ != null ?
-                    t.PolyZ.Length > 0 ?
-                        Math.Round(t.PolyZ.Average())
+                return t.ShapeZ != null ?
+                    t.ShapeZ.Length > 0 ?
+                        Math.Round(t.ShapeZ.Average())
                         : -1
                     : -1;
             }).Select(k => new AssemblyPlannerLeaf(k, sliceGraph.BoundingBox.CenterPoint)).ToArray();
@@ -68,8 +68,8 @@ namespace MonogameTestbed
             }
 
             IAssemblyPlannerNode[] currentLayer = firstLayer;
-            //This isn't a true binary tree because branches do not have values.  We build our tree from the bottom up. This 
-            //always generates a balances tree.
+            //This isn't a true binary treeWithUniqueValues because branches do not have values.  We build our treeWithUniqueValues from the bottom up. This 
+            //always generates a balances treeWithUniqueValues.
             while (currentLayer.Length > 1)
             {
                 currentLayer = BuildLayer(currentLayer);
@@ -131,7 +131,7 @@ namespace MonogameTestbed
         public IAssemblyPlannerNode this[ulong id] => Nodes[id];
 
         /// <summary>
-        /// Called when a mesh is completed.  Generates a model and attempts to merge that model up the tree.
+        /// Called when a mesh is completed.  Generates a model and attempts to merge that model up the treeWithUniqueValues.
         /// Thread safe
         /// </summary>
         /// <param name="mesh"></param>
@@ -165,7 +165,7 @@ namespace MonogameTestbed
 
         public void CheckForMerge(AssemblyPlannerBranch node)
         {
-            if (node == null)
+            if (node is null)
                 return;
             
             //Check if the leaf parents can be merged.
@@ -264,7 +264,7 @@ namespace MonogameTestbed
         bool MeshComplete { get; }
 
         /// <summary>
-        /// Parent node in the tree, null if the root node
+        /// Parent node in the treeWithUniqueValues, null if the root node
         /// </summary>
         AssemblyPlannerBranch Parent { get; set; }
 
@@ -289,17 +289,14 @@ namespace MonogameTestbed
         /// This tracks whether the node has finished its role in assembling the full mesh even if we later
         /// free memory by setting MeshModel to null.
         /// </summary>
-        public SliceGraphMeshModel MeshModel { get { return _MeshModel; }
+        public SliceGraphMeshModel MeshModel { get => _MeshModel;
             set {
                 _MeshModel = value;
                 MeshComplete = true;
             }
         }
 
-        public bool CanMerge
-        {
-            get { return this.MeshModel != null; }
-        }
+        public bool CanMerge => this.MeshModel != null;
 
         /// <summary>
         /// True when this node has or has had a mesh and implies it and all children have or have had a mesh.  The merge is complete below this node.
@@ -314,7 +311,7 @@ namespace MonogameTestbed
 
 
         /// <summary>
-        /// Parent node in the tree, null if the root node
+        /// Parent node in the treeWithUniqueValues, null if the root node
         /// </summary>
         public AssemblyPlannerBranch Parent { get; set; }
 
@@ -342,13 +339,7 @@ namespace MonogameTestbed
         /// </summary>
         public override ulong Key { get; }
 
-        public override int Depth
-        {
-            get
-            {
-                return Math.Max(Left.Depth + 1, Right.Depth + 1);
-            }
-        }
+        public override int Depth => Math.Max(Left.Depth + 1, Right.Depth + 1);
 
         public override bool IsLeaf => false;
 
@@ -360,9 +351,9 @@ namespace MonogameTestbed
             {
                 if (Left != null && Right != null)
                     return Left.CanMerge && Right.CanMerge;
-                else if (Left == null && Right != null)
+                else if (Left is null && Right != null)
                     return Right.CanMerge;
-                else if (Left != null && Right == null)
+                else if (Left != null && Right is null)
                     return Left.CanMerge;
                 else
                 {
@@ -374,8 +365,10 @@ namespace MonogameTestbed
         readonly IAssemblyPlannerNode[] Children = new IAssemblyPlannerNode[2];
          
 
-        public IAssemblyPlannerNode Left { get => Children[0]; set { Children[0] = value; } }
-        public IAssemblyPlannerNode Right { get => Children[1]; set { Children[1] = value; } }
+        public IAssemblyPlannerNode Left { get => Children[0]; set => Children[0] = value;
+        }
+        public IAssemblyPlannerNode Right { get => Children[1]; set => Children[1] = value;
+        }
         
         static ulong NextKey = ulong.MaxValue;
 
@@ -394,7 +387,7 @@ namespace MonogameTestbed
 
         public override string ToString()
         {
-            return string.Format("Branch: {2}{0}{3} Parent: {1}", Key, Parent == null ? "NULL" : Parent.Key.ToString(), this.MeshModel != null ? "*" : "", this.MeshComplete ? "F" : "");
+            return string.Format("Branch: {2}{0}{3} Parent: {1}", Key, Parent is null ? "NULL" : Parent.Key.ToString(), this.MeshModel != null ? "*" : "", this.MeshComplete ? "F" : "");
         }
     }
 
@@ -406,7 +399,7 @@ namespace MonogameTestbed
         /// </summary>
         public override ulong Key { get; }
 
-        public override int Depth { get { return 0; } }
+        public override int Depth => 0;
 
         public override bool IsLeaf { get; } = true;
 
@@ -430,7 +423,7 @@ namespace MonogameTestbed
         public void OnMeshCompletion(BajajGeneratorMesh completedMesh)
         {
             SliceGraphMeshModel model = new SliceGraphMeshModel(Position.XY().ToGridVector3(0));
-            if (completedMesh == null)
+            if (completedMesh is null)
             {   
                 this.MeshModel = model;
                 return;
@@ -443,13 +436,13 @@ namespace MonogameTestbed
 
         public override string ToString()
         {
-            return string.Format("Leaf: {2}{0}{3} Parent: {1}", Key, Parent == null ? "NULL" : Parent.Key.ToString(), this.MeshModel != null ? "*" : "", this.MeshComplete ? "F" : "" );
+            return string.Format("Leaf: {2}{0}{3} Parent: {1}", Key, Parent is null ? "NULL" : Parent.Key.ToString(), this.MeshModel != null ? "*" : "", this.MeshComplete ? "F" : "" );
         }
     }
 
     abstract class MeshAssemblyPlannerViewBase
     {
-        protected MeshAssemblyPlanner Plan;
+        protected readonly MeshAssemblyPlanner Plan;
 
         public abstract void OnNodeCompleted(IAssemblyPlannerNode node, bool success);
 
@@ -469,7 +462,7 @@ namespace MonogameTestbed
         /// <summary>
         /// A mapping of all nodes with completed models we can show as part of an incremental view
         /// </summary>
-        public SortedList<ulong, SliceGraphMeshModel> ReadyModels = new SortedList<ulong, SliceGraphMeshModel>();
+        public readonly SortedList<ulong, SliceGraphMeshModel> ReadyModels = new SortedList<ulong, SliceGraphMeshModel>();
 
         private readonly ReaderWriterLockSlim ReadyModelLock = new ReaderWriterLockSlim();
 
@@ -482,7 +475,7 @@ namespace MonogameTestbed
                 {
                     ReadyModelLock.EnterReadLock();
 
-                    if (_MeshModels == null)
+                    if (_MeshModels is null)
                     {
                         _MeshModels = ReadyModels.Values.Select(rm => rm.model).ToArray();
                     }
@@ -497,7 +490,9 @@ namespace MonogameTestbed
         }
 
         public Color Color { get; set; } = Color.CornflowerBlue;
-        public float Alpha { get { return Color.GetAlpha(); } set { Color = Color.SetAlpha(value); } }
+        public float Alpha { get => Color.GetAlpha();
+            set => Color = Color.SetAlpha(value);
+        }
 
         /// <summary>
         /// The default position to translate our completed mesh model to
@@ -509,7 +504,7 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="plan"></param>
         /// <param name="position">Where in volume space the world matrix should position the model by default</param>
-        public MeshAssemblyPlannerCompletedView(MeshAssemblyPlanner plan, GridVector3 position) : base(plan)
+        public MeshAssemblyPlannerCompletedView(MeshAssemblyPlanner plan, in GridVector3 position) : base(plan)
         {
             Position = position;
         }
@@ -528,13 +523,14 @@ namespace MonogameTestbed
                 
                 if(node.IsLeaf == false)
                 {
-                    IAssemblyPlannerBranch branch = node as IAssemblyPlannerBranch;
-                    ReadyModels.Remove(branch.Left.Key);
-                    ReadyModels.Remove(branch.Right.Key);
+                    if (node is IAssemblyPlannerBranch branch)
+                    {
+                        ReadyModels.Remove(branch.Left.Key);
+                        ReadyModels.Remove(branch.Right.Key);
+                    }
                 }
 
                 _MeshModels = null;
-                
             }
             finally
             {
@@ -570,7 +566,7 @@ namespace MonogameTestbed
                 {
                     ReadyModelLock.EnterReadLock();
 
-                    if (_MeshModels == null)
+                    if (_MeshModels is null)
                     {
                         //_MeshModels = BoundingBoxModels.Values.ToArray();
                         _MeshModels = GetVisibleBoundingBoxModels().ToArray();
@@ -610,7 +606,7 @@ namespace MonogameTestbed
         /// </summary>
         private bool CanShowBoundingBoxModel(IAssemblyPlannerNode node)
         {
-            if (node.Parent == null)
+            if (node.Parent is null)
                 return !node.MeshComplete; //Only show the root bounding box if the mesh isn't done
 
             //if (node.MeshComplete)
@@ -664,7 +660,7 @@ namespace MonogameTestbed
 
         private void GenerateAllBoundingBoxMeshesRecursive(IAssemblyPlannerNode node)
         {
-            if (node == null)
+            if (node is null)
                 return;
 
             if (node is IAssemblyPlannerBranch branch)
@@ -765,16 +761,16 @@ namespace MonogameTestbed
             else //Is a leaf
             {
                 var topology = sliceGraph.GetTopology(node.Key);
-                if (topology.Polygons is null)
+                if (topology.Shapes is null)
                 {
-                    Debug.Assert(topology.Polygons != null, "Expected topology for node");
+                    Debug.Assert(topology.Shapes != null, "Expected topology for node");
                     NodeBoundingBox[node.Key] = default;
                     return default;
                 }
                 else
                 {
-                    GridRectangle boundingRect = topology.Polygons.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
-                    GridBox bbox = new GridBox(boundingRect, topology.PolyZ.Min(), topology.PolyZ.Max());
+                    GridRectangle boundingRect = topology.Shapes.BoundingBox().Translate(sliceGraph.BoundingBox.CenterPoint.XY());
+                    GridBox bbox = new GridBox(boundingRect, topology.ShapeZ.Min(), topology.ShapeZ.Max());
                     NodeBoundingBox[node.Key] = bbox;
                     return bbox;
                 }

@@ -29,7 +29,7 @@ namespace Geometry
 
         public readonly int NumUniqueInRing; //The total number of verticies in the ring iVertex indexes into
 
-        int? IShapeIndex.iInnerShape => iInnerPoly.HasValue ? iInnerPoly.Value : -1;
+        int? IShapeIndex.iInnerShape => iInnerPoly;
         int IShapeIndex.iShape => iPoly;
         int IShapeIndex.iVertex => iVertex;
         int IShapeIndex.NumUnique => NumUniqueInRing;  
@@ -284,7 +284,7 @@ namespace Geometry
         /// </summary>
         /// <param name="Polygon"></param>
         /// <returns></returns>
-        public GridVector2 Point(GridPolygon Polygon)
+        public GridVector2 Point(in GridPolygon Polygon)
         {
             if (IsInner)
             {
@@ -296,7 +296,27 @@ namespace Geometry
             }
         }
 
-        public GridVector2 Point(IReadOnlyList<GridPolygon> Polygons)
+        /// <summary>
+        /// Return the specified point, ignoring the iPoly attribute
+        /// </summary>
+        /// <param name="Polygon"></param>
+        /// <returns></returns>
+        public GridVector2 Point(in IShape2D shape)
+        {
+            if (shape is GridPolygon poly)
+            {
+                return Point(poly);
+            }
+            
+            throw new ArgumentException("Shape must be a GridPolygon to use this method");
+        }
+
+        /// <summary>
+        /// Return the point corresponding to this index
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        public GridVector2 Point(in IReadOnlyList<GridPolygon> Polygons)
         {
             if (IsInner)
             {
@@ -308,7 +328,7 @@ namespace Geometry
             }
         }
 
-        public GridVector2 Point(IReadOnlyDictionary<int, GridPolygon> Polygons)
+        public GridVector2 Point(in IReadOnlyDictionary<int, GridPolygon> Polygons)
         {
             if (IsInner)
             {
@@ -318,6 +338,30 @@ namespace Geometry
             {
                 return Polygons[iPoly].ExteriorRing[iVertex];
             }
+        }
+          
+        public GridVector2 Point(in IReadOnlyList<IShape2D> shapes)
+        {
+            if (shapes[iPoly] is GridPolygon poly)
+            {
+                return Point(poly);
+            }
+
+            throw new ArgumentException("Shape must be a GridPolygon to use this method");
+        }
+
+        public GridVector2 Point(in IReadOnlyDictionary<int, IShape2D> shapes)
+        {
+            if (shapes.TryGetValue(iPoly, out var shape))
+            {
+                if(shape is GridPolygon poly)
+                {
+                    return Point(poly);
+                }   
+            }
+            else { throw new ArgumentException("Index of shape not in dictionary"); }
+
+            throw new ArgumentException("Shape must be a GridPolygon to use this method");
         }
 
         /// <summary>
@@ -448,6 +492,16 @@ namespace Geometry
         /// </summary>
         /// <param name="polygons"></param>
         /// <returns></returns>
+        public GridVector2[] ConnectedVerticies(IReadOnlyList<IShape2D> polygons)
+        {
+            return ConnectedVerticies(GetRing(polygons));
+        }
+
+        /// <summary>
+        /// Returns the verticies before and after this index
+        /// </summary>
+        /// <param name="polygons"></param>
+        /// <returns></returns>
         public GridVector2[] ConnectedVerticies(IReadOnlyDictionary<int, GridPolygon> polygons)
         {
             return ConnectedVerticies(GetRing(polygons));
@@ -474,6 +528,30 @@ namespace Geometry
         {
             GridVector2[] ring = GetRing(polygons);
             return ConnectedSegments(ring);
+        }
+
+        /// <summary>
+        /// Get the normal of the vertex at this index, do not weight according to the relative length of the connected segments
+        /// </summary>
+        /// <param name="poly"></param>
+        /// <returns></returns>
+        public GridVector2 GetOrientation(in GridPolygon poly)
+        {
+            GridVector2[] adjacent = this.ConnectedVerticies(GetRing(poly));
+            GridLineSegment line = new GridLineSegment(adjacent[0], adjacent[1]);
+            return line.Normal;
+        }
+
+        /// <summary>
+        /// Get the normal of the vertex at this index, do not weight according to the relative length of the connected segments
+        /// </summary>
+        /// <param name="poly"></param>
+        /// <returns></returns>
+        public GridVector2 GetOrientation(in IReadOnlyList<IShape2D> Shapes)
+        { 
+            GridVector2[] adjacent = this.ConnectedVerticies(GetRing(Shapes));
+            GridLineSegment line = new GridLineSegment(adjacent[0], adjacent[1]);
+            return line.Normal;
         }
 
         /// <summary>
@@ -518,6 +596,14 @@ namespace Geometry
             }
 
             return iPrevious;
+        }
+
+        internal GridVector2[] GetRing(IReadOnlyList<IShape2D> Shapes)
+        {
+            if (Shapes[iPoly] is GridPolygon poly)
+                return this.GetRing(poly);
+
+            throw new ArgumentException("Shape must be a grid polygon.");
         }
 
         internal GridVector2[] GetRing(IReadOnlyList<GridPolygon> Polygons)

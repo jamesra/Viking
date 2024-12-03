@@ -54,7 +54,7 @@ namespace Geometry
         {
             
             //if(MinX == A.X)
-            return "A-B: " + A.X.ToString("F") + " " + A.Y.ToString("F2") + " , " + B.X.ToString("F2") + " " + B.Y.ToString("F2");
+            return $"A-B: {A.X:F2} {A.Y:F2} , {B.X:F2} {B.Y:F2}";
             //else
             //    return "B-A: " + B.X.ToString("F") + " " + B.Y.ToString("F2") + " , " + A.X.ToString("F2") + " " + A.Y.ToString("F2");            
         }
@@ -96,10 +96,7 @@ namespace Geometry
             return Compare(this,SegB); 
         }
 
-        public override int GetHashCode()
-        {
-            return (int)MinX;  
-        }
+        public override int GetHashCode() => (int)MinX;
 
         public override bool Equals(object obj)
         {
@@ -150,10 +147,7 @@ namespace Geometry
             return false; 
         }
 
-        public static bool operator !=(GridLineSegment A, GridLineSegment B)
-        {
-            return !(A == B);
-        }
+        public static bool operator !=(GridLineSegment A, GridLineSegment B) => !(A == B);
 
 
         public double Length => GridVector2.Distance(A, B);
@@ -250,10 +244,7 @@ namespace Geometry
             }
         }
 
-        public bool IsEndpoint(in IPoint2D p)
-        {
-            return A == p || B == p;
-        }
+        public bool IsEndpoint(in IPoint2D p) => A == p || B == p;
 
         /// <summary>
         /// Return true if point p is to left when standing at A looking towards B
@@ -294,10 +285,7 @@ namespace Geometry
             return Math.Sign(result);
         }
 
-        public GridVector2 OppositeEndpoint(in GridVector2 p)
-        {
-            return A == p ? B : A;
-        }
+        public GridVector2 OppositeEndpoint(in GridVector2 p) => A == p ? B : A;
 
         /// <summary>
         /// Returns the midpoint of the segment
@@ -322,20 +310,14 @@ namespace Geometry
         }
 
 
-        public bool Contains(in GridVector2 p)
-        {
-            return Math.Abs(this.DistanceToPoint(p)) < Global.Epsilon;
-        }
+        public bool Contains(in GridVector2 p) => Math.Abs(this.DistanceToPoint(p)) < Global.Epsilon;
 
         /// <summary>
         /// Project the point p onto the line
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        public double Dot(in GridVector2 p)
-        {
-            return GridVector2.Dot(p - A, B - A);
-        }
+        public double Dot(in GridVector2 p) => GridVector2.Dot(p - A, B - A);
 
         /// <summary>
         /// Return a normal to the line, the returned vector is normalized
@@ -344,8 +326,7 @@ namespace Geometry
         {
             get
             {
-                GridVector2 delta = B - A;
-
+                GridVector2 delta = B - A; 
                 GridVector2 normal = new GridVector2(-delta.Y, delta.X);
                 normal.Normalize();
                 return normal;
@@ -353,10 +334,7 @@ namespace Geometry
         }
 
 
-        public double DistanceToPoint(in GridVector2 point)
-        {
-            return DistanceToPoint(point, out GridVector2 temp);
-        }
+        public double DistanceToPoint(in GridVector2 point) => DistanceToPoint(point, out GridVector2 temp);
 
         /// <summary>
         /// The point on the segment at a fractional distance between A & B
@@ -371,10 +349,7 @@ namespace Geometry
             return A + delta;
         }
           
-        internal static bool NearlyZero(double value)
-        {
-            return (value < Global.Epsilon && value > -Global.Epsilon);
-        }
+        internal static bool NearlyZero(double value) => (value < Global.Epsilon && value > -Global.Epsilon);
 
         /// <summary>
         /// To find the nearest point to a line we project the point onto the infinite line along the line segment.  This function indicates if the point falls beyond the boundaries of the line segment.
@@ -478,15 +453,9 @@ namespace Geometry
             }
         }
 
-        public bool Intersects(in GridLineSegment seg)
-        {
-            return this.Intersects(seg, out IShape2D intersection);
-        }
+        public bool Intersects(in GridLineSegment seg) => this.Intersects(seg, out IShape2D intersection);
 
-        public bool Intersects(in GridLineSegment seg, bool EndpointsOnRingDoNotIntersect)
-        {
-            return this.Intersects(seg, EndpointsOnRingDoNotIntersect, out IShape2D intersection);
-        }
+        public bool Intersects(in GridLineSegment seg, bool EndpointsOnRingDoNotIntersect) => this.Intersects(seg, EndpointsOnRingDoNotIntersect, out IShape2D intersection);
 
         public bool Intersects(in GridLineSegment seg, bool EndpointsOnRingDoNotIntersect, out IShape2D Intersection)
         { 
@@ -536,6 +505,11 @@ namespace Geometry
 
         public bool Intersects(GridLineSegment seg, out IShape2D Intersection)
         {
+            return GetRelation(seg, out Intersection) != ShapeRelation.NONE;
+        }
+
+        public ShapeRelation GetRelation(GridLineSegment seg, out IShape2D Intersection)
+        {
             //Don't do the full check if the bounding boxes don't overlap
 
             if (this.MaxX < seg.MinX ||
@@ -543,8 +517,8 @@ namespace Geometry
                 this.MinX > seg.MaxX ||
                 this.MinY > seg.MaxY)
             {
-                Intersection = new GridVector2();
-                return false;
+                Intersection = GridVector2.NaN;
+                return ShapeRelation.NONE;
             }
 
             
@@ -574,14 +548,14 @@ namespace Geometry
             //Check if lines are parallel
             if (Math.Abs(det) < Global.EpsilonSquared)
             {
-                Intersection = GridVector2.Zero;
+                Intersection = GridVector2.NaN;
 
                 //Find the bounding box of the overlapping region
                 GridRectangle? overlapRect = this.BoundingBox.Intersection(seg.BoundingBox);
                 if (!overlapRect.HasValue)
                 {
-                    //Should never occur because we test bounding box overlap at the beginning of this function
-                    return false;
+                    //Should never occur because we test bounding box overlap at the beginning of this function                    
+                    return ShapeRelation.NONE;
                 }
 
                 //If they perfectly overlap at least two endpoints must be on the line.
@@ -599,62 +573,76 @@ namespace Geometry
                     //Debug.Assert(endpointsOnLine.Length > 0, "Must have intersecting points if the bounding boxes overlap for parallel line intersection test");
                     if (endpointsOnLineCandidates.Length == 0)
                     {
-                        return false;
+                        return ShapeRelation.NONE;
                     }
                     else if (endpointsOnLineCandidates.Length == 1)
                     {
                         Intersection = endpointsOnLineCandidates[0];
-                        return true;
+                        return ShapeRelation.TOUCHING;
                     }
                     else if (endpointsOnLineCandidates.Length == 2)
                     {
                         Intersection = new GridLineSegment(endpointsOnLineCandidates[0], endpointsOnLineCandidates[1]);
-                        return true;
+                        return ShapeRelation.INTERSECTING;
                     }
                     else
                     {
                         GridVector2[] endpointsOnOverlapRect = endpointsOnLineCandidates.Where(e => overlapRect.Value.Corners.Contains(e)).ToArray();
                         Intersection = new GridLineSegment(endpointsOnOverlapRect[0], endpointsOnOverlapRect[1]);
-                        return true;
+                        if (endpointsOnLineCandidates.Length == 4)
+                        {
+                            return ShapeRelation.CONTAINED;
+                        }
+                        else
+                            return ShapeRelation.INTERSECTING;
                     }
                 }
 
                 //Parallel lines without a zero distance measurement do not intersect
-                return false;
-                
+                return ShapeRelation.NONE; 
             }
             else
             {
                 double x = (B2 * C1 - B1 * C2) / det;
                 double y = (A1 * C2 - A2 * C1) / det;
 
-                Intersection = new GridVector2(x, y);
+                GridVector2 intersection_point = new GridVector2(x, y);
+                Intersection = intersection_point;
 
                 double minX = Math.Min(A.X, B.X) - Global.EpsilonSquared;
                 double minSegX = Math.Min(seg.A.X, seg.B.X) - Global.EpsilonSquared;
 
                 if (minX > x || minSegX > x)
-                    return false;
+                    return ShapeRelation.NONE;
 
                 double maxX = Math.Max(A.X, B.X) + Global.EpsilonSquared; 
                 double maxSegX = Math.Max(seg.A.X, seg.B.X) + Global.EpsilonSquared;
 
                 if (maxX < x || maxSegX < x)
-                    return false;
+                    return ShapeRelation.NONE;
 
                 double minY = Math.Min(A.Y, B.Y)- Global.EpsilonSquared;
                 double minSegY = Math.Min(seg.A.Y, seg.B.Y) - Global.EpsilonSquared;
 
                 if (minY > y || minSegY > y)
-                    return false;
+                    return ShapeRelation.NONE;
 
                 double maxY = Math.Max(A.Y, B.Y) + Global.EpsilonSquared;
                 double maxSegY = Math.Max(seg.A.Y, seg.B.Y) + Global.EpsilonSquared;
 
                 if (maxY < y || maxSegY < y)
-                    return false;
+                    return ShapeRelation.NONE;
 
-                return true;
+                if(intersection_point == seg.A || intersection_point == seg.B || intersection_point == this.A || intersection_point == this.B)
+                {
+                    //Contact is on the endpoint of a tested line
+                    return ShapeRelation.TOUCHING;
+                }
+                else
+                {
+                    //Contact is somewhere in the middle of the tested line
+                    return ShapeRelation.INTERSECTING;
+                } 
             }
         }
 
@@ -664,10 +652,7 @@ namespace Geometry
             return seg.Any(ls => line.Intersects(ls));
         }
 
-        public bool Intersects(in IShape2D shape)
-        {
-            return ShapeExtensions.LineIntersects(this, shape);
-        }
+        public bool Intersects(in IShape2D shape) => ShapeExtensions.LineIntersects(this, shape);
 
         public bool Intersects(in ICircle2D c)
         {
@@ -675,10 +660,7 @@ namespace Geometry
             return this.Intersects(circle);
         }
 
-        public bool Intersects(in GridCircle circle)
-        {
-            return LineIntersectionExtensions.Intersects(this, circle);
-        } 
+        public bool Intersects(in GridCircle circle) => LineIntersectionExtensions.Intersects(this, circle);
 
         public bool Intersects(in ILineSegment2D l)
         {
@@ -692,10 +674,7 @@ namespace Geometry
             return this.Intersects(tri);
         }
 
-        public bool Intersects(in GridTriangle tri)
-        {
-            return LineIntersectionExtensions.Intersects(this, tri);
-        }
+        public bool Intersects(in GridTriangle tri) => LineIntersectionExtensions.Intersects(this, tri);
 
         public bool Intersects(in IPolygon2D p)
         {
@@ -703,10 +682,7 @@ namespace Geometry
             return this.Intersects(poly);
         }
 
-        public bool Intersects(in GridPolygon poly)
-        {
-            return LineIntersectionExtensions.Intersects(this, poly);
-        }
+        public bool Intersects(in GridPolygon poly) => LineIntersectionExtensions.Intersects(this, poly);
 
         public double MinX => A.X < B.X ? A.X : B.X;
 
@@ -726,34 +702,18 @@ namespace Geometry
 
         public ShapeType2D ShapeType => ShapeType2D.LINE;
 
-        public GridLine ToLine()
-        {
-            return new GridLine(this.A, this.Direction);
-        }
+        public GridLine ToLine() => new GridLine(this.A, this.Direction);
 
-        public bool Contains(in IPoint2D p)
-        {
-            return Contains(new GridVector2(p.X,p.Y));
-        }
+        public bool Contains(in IPoint2D p) => Contains(new GridVector2(p.X,p.Y));
 
-        public OverlapType ContainsExt(in IPoint2D p)
-        {
-            return Contains(new GridVector2(p.X, p.Y)) ? OverlapType.TOUCHING : OverlapType.NONE;
-        }
+        public ShapeRelation GetRelation(in IPoint2D p) => Contains(new GridVector2(p.X, p.Y)) ? ShapeRelation.TOUCHING : ShapeRelation.NONE;
 
-        public IShape2D Translate(in IPoint2D offset)
-        {
-            return this.Translate(offset.Convert());
-        }
+        public ShapeRelation GetRelation(in ILineSegment2D l) => GetRelation(l.Convert());
 
-        public GridLineSegment Translate(in GridVector2 offset)
-        {
-            return new GridLineSegment(this.A + offset, this.B + offset);
-        }
+        public IShape2D Translate(in IPoint2D offset) => this.Translate(offset.Convert());
 
-        bool IEquatable<GridLineSegment>.Equals(GridLineSegment other)
-        {
-            return this == other;
-        }
+        public GridLineSegment Translate(in GridVector2 offset) => new GridLineSegment(this.A + offset, this.B + offset);
+
+        bool IEquatable<GridLineSegment>.Equals(GridLineSegment other) => this == other;
     }
 }

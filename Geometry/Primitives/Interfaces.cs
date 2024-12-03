@@ -15,7 +15,7 @@ namespace Geometry
     /// Over time I'd like my contains tests to return more specific results, but that is a large refactor I want to make over time.
     /// </summary>
     [Flags]
-    public enum OverlapType
+    public enum ShapeRelation
     {
         /// <summary>
         /// The tested geometry is entirely outside the shape
@@ -123,7 +123,9 @@ namespace Geometry
         double Area { get; }
         bool Contains(in IPoint2D p);
 
-        OverlapType ContainsExt(in IPoint2D p);
+        ShapeRelation GetRelation(in IPoint2D p);
+
+        ShapeRelation GetRelation(in ILineSegment2D line);
 
         bool Intersects(in IShape2D shape);
 

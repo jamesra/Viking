@@ -29,7 +29,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Insert a new point within the borders into the tree
+        /// Insert a new point within the borders into the treeWithUniqueValues
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
@@ -37,7 +37,7 @@ namespace Geometry
         {
             if (Root.Border.Contains(point) == false)
             {
-                throw new ArgumentOutOfRangeException(nameof(point), "The passed point for insertion was out of range of the QuadTree");
+                throw new ArgumentOutOfRangeException(nameof(point), "The passed point for insertion was out of range of the QuadTreeWithUniqueValues");
             }
 
             this.Root.Insert(point, value);
@@ -54,7 +54,7 @@ namespace Geometry
 
             QuadTreeNodeTemplatePoint<TPoint, TValue> node = ValueToNodeTable[value];
 
-            if (node.Parent == null)
+            if (node.Parent is null)
             {
                 //We are removing the root node.  State that it has no value and return
                 node.HasValue = false;
@@ -79,7 +79,7 @@ namespace Geometry
         public TValue FindNearest(TPoint point, out double distance)
         {
             distance = double.MaxValue;
-            if (Root == null)
+            if (Root is null)
             {
                 return default;
             }

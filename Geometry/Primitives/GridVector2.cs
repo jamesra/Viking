@@ -170,15 +170,15 @@ namespace Geometry
         public double X;
         public double Y;
 
-        public double[] coords { get { return new double[] { X,Y }; } }
+        public double[] coords { get => new double[] { X,Y }; }
 
-        public GridVector2(double x, double y)
+        public GridVector2(in double x, in double y)
         {
             this.X = x;
             this.Y = y;
         }
 
-        public GridVector2(IPoint2D p)
+        public GridVector2(in IPoint2D p)
         {
             this.X = p.X;
             this.Y = p.Y;
@@ -203,7 +203,7 @@ namespace Geometry
         }
         */
 
-        public GridVector3 ToGridVector3(double z)
+        public GridVector3 ToGridVector3(in double z)
         {
             return new GridVector3(this.X, this.Y, z);
         }
@@ -338,10 +338,7 @@ namespace Geometry
             //return '{' + string.Format("\"X\":{0:F2},\"Y\":{1:F2}", X, Y) + '}';
         }
 
-        public string ToJSON()
-        {
-            return '{' + $"\"X\":{X:F2},\"Y\":{Y:F2}" + '}';
-        }
+        public string ToJSON() => '{' + $"\"X\":{X:F2},\"Y\":{Y:F2}" + '}';
 
         public string ToLabel()
         {
@@ -350,7 +347,7 @@ namespace Geometry
 
         public static string ToMatlab(GridVector2[] array)
         {
-            if (array == null)
+            if (array is null)
                 throw new ArgumentNullException(nameof(array)); 
 
             string s = "[";
@@ -393,9 +390,9 @@ namespace Geometry
 
         public static double Distance(in IPoint A, in IPoint B)
         {
-            if(A == null)
+            if(A is null)
                 throw new ArgumentNullException(nameof(A)); 
-            if(B == null)
+            if(B is null)
                 throw new ArgumentNullException(nameof(B)); 
 
             double dX = A.X - B.X;
@@ -406,9 +403,9 @@ namespace Geometry
 
         public static double Distance(in IPoint2D A, in IPoint2D B)
         {
-            if (A == null)
+            if (A is null)
                 throw new ArgumentNullException(nameof(A));
-            if (B == null)
+            if (B is null)
                 throw new ArgumentNullException(nameof(B));
 
             double dX = A.X - B.X;
@@ -427,9 +424,9 @@ namespace Geometry
 
         public static double DistanceSquared(in IPoint2D A, in IPoint2D B)
         {
-            if (A == null)
+            if (A is null)
                 throw new ArgumentNullException(nameof(A));
-            if (B == null)
+            if (B is null)
                 throw new ArgumentNullException(nameof(B)); 
 
             double dX = A.X - B.X;
@@ -740,11 +737,16 @@ namespace Geometry
             return p.X == this.X && p.Y == this.Y;
         }
 
-        OverlapType IShape2D.ContainsExt(in Geometry.IPoint2D p)
+        ShapeRelation IShape2D.GetRelation(in Geometry.IPoint2D p)
         {
             throw new ArgumentException("Points do not contain geometry");
             //Not sure if this should return TOUCHING or CONTAINED, but I think TOUCHING is more correct
-            return p.X == this.X && p.Y == this.Y ? OverlapType.TOUCHING : OverlapType.NONE;
+            return p.X == this.X && p.Y == this.Y ? ShapeRelation.TOUCHING : ShapeRelation.NONE;
+        }
+
+        ShapeRelation IShape2D.GetRelation(in Geometry.ILineSegment2D l)
+        {
+            return l.GetRelation(this);
         }
 
         bool IShape2D.Intersects(in IShape2D shape)

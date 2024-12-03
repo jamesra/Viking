@@ -34,7 +34,7 @@ namespace Viking.AU
         [Option('o', "open_interpolation_points", DefaultValue = 3, Required = false, HelpText = "Number of open curve interpolation points")]
         public int NumOpenInterpolationPoints { get; set; }
 
-        [Option('s', "sections", DefaultValue = null, Required = false, HelpText = "Section Numbers to update")]
+        [Option('s', "sections", DefaultValue = null, Required = false,  HelpText = "Section Numbers to update")]
         public string SectionNumbersString { get; set; }
 
         [Option('t', "threads", DefaultValue = null, Required = false, HelpText = "Number of threads to process and submit updates on.  If VikingAU is reporting timeout errors lower this number.  If VikingAU isn't using 100% of the CPU you can try raising it.  Default value is the number of cores on the machine + 1")]
@@ -249,6 +249,22 @@ namespace Viking.AU
         }
         */
 
+        static void ReportTaskStatus(Task<string> task)
+        {
+            if (task.IsFaulted)
+            {
+                Console.WriteLine("Task faulted: " + task.Exception);
+            }
+            else if (task.IsCanceled)
+            {
+                Console.WriteLine("Task canceled");
+            }
+            else
+            {
+                Console.WriteLine(task.Result);
+            }
+        }   
+
         static async Task UpdateVolumePositionsAsync(IList<long> SectionNumbers, int NumThreads, CancellationToken token)
         {
             //SortedDictionary<long, Task<string>> tasks = new SortedDictionary<long, Task<string>>();
@@ -263,6 +279,7 @@ namespace Viking.AU
                     //    UpdateVolumePositions(sectionNumber);
 
                     var task = Task.Run(() => UpdateVolumePositionsOnSectionAsync(sectionNumber, concurrencySemaphore, token),token);
+                    task.ContinueWith((t) => Console.WriteLine(t.Result), TaskContinuationOptions.OnlyOnFaulted);
                     tasks.Add(task);
                     //var task = System.Threading.Tasks.Task.Run();
                     //tasks.Add(sectionNumber, task);
@@ -336,6 +353,17 @@ namespace Viking.AU
                 concurrencySemaphore.Release();
             }
         }
+
+        static string BuildSectionFeedbackString(long sectionNumber, long numUpdated, long numTotal, SectionTranslation? translation)
+        {
+            string output = $"Section {sectionNumber} : {numUpdated} of {numTotal} locations needed updates.";
+            if(translation.HasValue)
+            {
+                output += $" Translated {translation.Value.Offset.X},{translation.Value.Offset.Y} before {translation.Value.TranslateBefore}";
+            }
+
+            return output;
+        }
          
         static async Task<string> UpdateSectionPositions(long SectionNumber, CancellationToken token)
         {
@@ -344,6 +372,7 @@ namespace Viking.AU
 
             var LocDict = threadLocationStore.GetObjectsForSection(SectionNumber);
 
+            string feedback = null;
             if(LocDict.Count >= 0)
             {
                 Viking.VolumeModel.Section section = State.Volume.Sections[(int)SectionNumber];
@@ -368,34 +397,40 @@ namespace Viking.AU
                         Console.WriteLine($"Location {loc.ID} could not be updated.  {e}"); 
                     } 
                 }
+                
+                feedback = BuildSectionFeedbackString(SectionNumber, NumUpdated, LocDict.Count, translationData);
             }
-
-            var Result = $"Section {SectionNumber} : {NumUpdated} / {LocDict.Count} locations needed updates";
+            else
+            {
+                feedback = $"Section {SectionNumber} : No locations found";
+            } 
 
             if (NumUpdated > 0)
             {
                 try
                 {
                     if(threadLocationStore.Save() == false)
-                        Result = $"Section {SectionNumber} : Failed {NumUpdated} / {LocDict.Count} locations needing updates";
+                        feedback += $"\nSection {SectionNumber} : Failed to apply updates";
                 }
                 catch (System.ServiceModel.FaultException e)
                 {
-                    Trace.WriteLine($"Exception saving volume locations:\n{e}");
-                    Result = $"Section {SectionNumber} : Failed {NumUpdated} / {LocDict.Count} locations needing updates with error{e}";
+                    throw;
+                    //Trace.WriteLine($"Exception saving volume locations:\n{e}");
+                    //feedback += $"\nSection {SectionNumber} : Failed to apply updates with error{e}";
                     //Console.Write("...Locations updated");
                 }
                 catch (Exception e)
                 {
-                    Trace.WriteLine($"Exception saving volume locations:\n{e}");
-                    Result = $"Section {SectionNumber} : Failed {NumUpdated} / {LocDict.Count} locations needing updates with error{e}";
+                    throw;
+                    //Trace.WriteLine($"Exception saving volume locations:\n{e}");
+                    //feedback += $"\nSection {SectionNumber} : Failed to apply updates with error{e}";
                     //Console.Write("...Locations updated");
                 }
             } 
 
             threadLocationStore.RemoveSection((int)SectionNumber);
 
-            return Result;
+            return feedback;
         }
 
         /// <summary>
@@ -407,6 +442,7 @@ namespace Viking.AU
         static bool UpdateVolumeShape(LocationObj loc, MappingBase mapper, SectionTranslation? translation)
         {
             bool TypeUpdated = false;
+            bool Translated = false;
             if (!IsLocationTypeValid(loc))
             {
                 if (TryRepairLocationType(loc))
@@ -432,6 +468,7 @@ namespace Viking.AU
                 { 
                     updatedVolumeShape = updatedVolumeShape.Translate(translation.Value.Offset);
                     loc.MosaicShape = mapper.TryMapShapeVolumeToSection(updatedVolumeShape);
+                    Translated = true;
                 }
             }
 
@@ -451,7 +488,7 @@ namespace Viking.AU
                 return true;
             }
 
-            return TypeUpdated;
+            return TypeUpdated || Translated;
         }
 
         static GridVector2[] MosaicPointsForLocation(LocationObj loc)

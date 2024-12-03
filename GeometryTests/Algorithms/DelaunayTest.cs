@@ -491,10 +491,12 @@ namespace GeometryTests.Algorithms
 
                 interior = interior.Select(i => i - pCentroid).ToArray();
 
-                GridVector2[] qualifiedPoints = interior.Where(i => p.ContainsExt(i) == OverlapType.CONTAINED).ToArray();
+                GridVector2[] qualifiedPoints = interior.Where(i => p.GetRelation(i) == ShapeRelation.CONTAINED).ToArray();
 
                 //var mesh = p.Triangulate(p.ExteriorRing.Distinct().Select(p => new Vertex2D(p)).ToArray(),null,OnProgress);
-                var mesh = Geometry.Meshing.MeshExtensions.Triangulate(p.ExteriorRing.Distinct().Select((t, i) => new Vertex2D(i, t)).ToArray(), qualifiedPoints.Select(x => new Vertex2D(x)).ToArray(), OnProgress);
+                var mesh = Geometry.Meshing.MeshExtensions.Triangulate(p.ExteriorRing.Distinct().Select((t, i) => new Vertex2D(i, t)).ToArray(),
+                    qualifiedPoints.Select((x, i) => new Vertex2D(i, x)).ToArray(),
+                    OnProgress);
 
                 if (mesh.Verticies.Count != (p.ExteriorRing.Length - 1) + qualifiedPoints.Length)
                     return false.Label("Mesh did not contain all verticies")

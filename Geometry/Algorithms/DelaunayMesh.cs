@@ -65,7 +65,7 @@ namespace Geometry
         /// <returns>A Mesh2D whose vertex indicies match the input points</returns>
         public static TriangulationMesh<VERTEX> TriangulateToMesh(VERTEX[] verts, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
-            if (verts == null)
+            if (verts is null)
             {
                 throw new ArgumentNullException(nameof(verts),"Verticies must not be null.");
             }
@@ -137,7 +137,7 @@ namespace Geometry
         private static TriangulationMesh<VERTEX> RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut VertSet = null, IVertex2D[] verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             //The first recursion we populate variables to include all the verticies in the mesh
-            if (VertSet == null)
+            if (VertSet is null)
             {
                 VertSet = new MeshCut(mesh.XSorted, mesh.YSorted, CutDirection.HORIZONTAL, mesh.BoundingBox);
                 //VertSet = new ContinuousIndexSet(0, mesh.Verticies.Count);
@@ -145,7 +145,7 @@ namespace Geometry
                 //YSortedVerts = mesh.YSorted;
             }
 
-            if (verts == null)
+            if (verts is null)
             {
                 verts = mesh.Verticies.Cast<IVertex2D>().ToArray();
             }
@@ -268,14 +268,14 @@ namespace Geometry
                 Debug.WriteLine(string.Format("L0: {0} R0: {1}", LOrigin.Index, ROrigin.Index));
 #endif
                 //TODO: Handle case where there are no left or right candidates
-                if (LeftCandidate == null)
+                if (LeftCandidate is null)
                 {
                     LeftCandidate = TryGetNextCandidate(mesh, ref LCandidates, in LRBaseline, Clockwise: false, angle: out double LAngle, circle: out LCircle);
                     if (LeftCandidate != null)
                         Debug.Assert(LeftCandidate.Index != LOrigin.Index);
                 }
 
-                if (RightCandidate == null)
+                if (RightCandidate is null)
                 {
                     RightCandidate = TryGetNextCandidate(mesh, ref RCandidates, in RLBaseline, Clockwise: true, angle: out double RAngle, circle: out RCircle);
                     if (RightCandidate != null)
@@ -285,15 +285,15 @@ namespace Geometry
                 //If we have no candidates we are done. 
                 //If we have only one candidate that is the new edge. 
                 //If we have both candidates figure out which one creates a circle that excludes the other candidate.
-                if (LeftCandidate == null && RightCandidate == null)
+                if (LeftCandidate is null && RightCandidate is null)
                 {
                     break;
                 }
-                else if (LeftCandidate == null && RightCandidate != null)
+                else if (LeftCandidate is null && !(RightCandidate is null))
                 {
                     goto UseRight;
                 }
-                else if (RightCandidate == null && LeftCandidate != null)
+                else if (RightCandidate is null && !(LeftCandidate is null))
                 {
                     goto UseLeft;
                 }
@@ -1061,7 +1061,7 @@ namespace Geometry
 
         private static IVertex2D TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, in Baseline baseline, bool Clockwise, out double angle, out GridCircle? circle)
         {
-            if (sortedCandidates == null || sortedCandidates.Count == 0)
+            if (sortedCandidates is null || sortedCandidates.Count == 0)
             {
                 circle = new GridCircle?();
                 angle = double.MinValue;
@@ -1227,7 +1227,7 @@ namespace Geometry
                 
 
                 TriangleFace oppositeFace = mesh[edge].Faces.FirstOrDefault(face => f != face as Face) as TriangleFace;
-                if (oppositeFace == null)
+                if (oppositeFace is null)
                     continue;
 
                 //See if we've flipped this pair of faces before
@@ -1249,7 +1249,7 @@ namespace Geometry
                     continue;
 
                 //I should check angles, but have the code written to look at circles and want to test other things
-                if (GridCircle.Contains(circlePoints, mesh[other_opposite_vert].Position) == OverlapType.CONTAINED)
+                if (GridCircle.Contains(circlePoints, mesh[other_opposite_vert].Position) == ShapeRelation.CONTAINED)
                 {
                     //OK, need to flip the edge
 
@@ -1263,12 +1263,12 @@ namespace Geometry
 
                     //Sanity check: Ensure the edge endpoints will not be in the flipped triangles and we won't infinitely recurse
                     {
-                        OverlapType BInA = GridCircle.Contains(mesh[A.iVerts].Select(v => v.Position).ToArray(), mesh[edge.B].Position);
-                        OverlapType AInB = GridCircle.Contains(mesh[B.iVerts].Select(v => v.Position).ToArray(), mesh[edge.A].Position);
+                        ShapeRelation BInA = GridCircle.Contains(mesh[A.iVerts].Select(v => v.Position).ToArray(), mesh[edge.B].Position);
+                        ShapeRelation AInB = GridCircle.Contains(mesh[B.iVerts].Select(v => v.Position).ToArray(), mesh[edge.A].Position);
 
-                        if (BInA == OverlapType.CONTAINED || BInA == OverlapType.TOUCHING)
+                        if (BInA == ShapeRelation.CONTAINED || BInA == ShapeRelation.TOUCHING)
                             continue;
-                        if (AInB == OverlapType.CONTAINED || AInB == OverlapType.TOUCHING)
+                        if (AInB == ShapeRelation.CONTAINED || AInB == ShapeRelation.TOUCHING)
                             continue;
                     }
 
@@ -1317,7 +1317,7 @@ namespace Geometry
                         mesh.AddFace(A);
                         mesh.AddFace(B);
 
-                        if (AlreadyFlipped == null)
+                        if (AlreadyFlipped is null)
                             AlreadyFlipped = new Dictionary<IFace, SortedSet<IFace>>();
 
                         AddFacePair(AlreadyFlipped, f, oppositeFace);
@@ -1375,7 +1375,7 @@ namespace Geometry
                 return;
 
             //I should check angles, but have the code written to look at circles and want to test other things
-            if (GridCircle.Contains(circlePoints, mesh[other_opposite_vert].Position) == OverlapType.CONTAINED)
+            if (GridCircle.Contains(circlePoints, mesh[other_opposite_vert].Position) == ShapeRelation.CONTAINED)
             {
                 //OK, need to flip the edge
                 int face_opposite_vert = f.OppositeVertex(edge);

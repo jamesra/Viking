@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Geometry
 {
@@ -60,5 +61,34 @@ namespace Geometry
         /// <param name="old"></param>
         /// <returns></returns>
         IShapeIndex Reindex(int iShape);
+
+        /// <summary>
+        /// Return the specified point, ignoring the iPoly attribute
+        /// </summary>
+        /// <param name="Polygon"></param>
+        /// <returns></returns>
+        GridVector2 Point(in IShape2D Shape);
+
+        /// <summary>
+        /// Return the point corresponding to this index
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        GridVector2 Point(in IReadOnlyList<IShape2D> Shapes);
+
+        /// <summary>
+        /// Return the point corresponding to this index
+        /// </summary>
+        /// <param name="Polygons"></param>
+        /// <returns></returns>
+        GridVector2 Point(in IReadOnlyDictionary<int, IShape2D> Shapes);
+
+        /// <summary>
+        /// Return the normal of the index, with no weighting according to adjacent line segment length.
+        /// This is used to determine if two points have normals within 90 degrees of each other
+        /// </summary>
+        /// <param name="Shapes"></param>
+        /// <returns></returns>
+        GridVector2 GetOrientation(in IReadOnlyList<IShape2D> Shapes);
     }
 }

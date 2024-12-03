@@ -237,8 +237,8 @@ namespace WebAnnotation.UI.Actions
                     for (int iPoly = 0; iPoly < smooth_volume_polygon.InteriorPolygons.Count; iPoly++)
                     {
                         GridPolygon interiorPoly = smooth_volume_polygon.InteriorPolygons[iPoly];
-                        OverlapType interiorRelationship = closedpath.ContainsExt(interiorPoly);
-                        if (interiorRelationship == OverlapType.INTERSECTING || interiorRelationship == OverlapType.CONTAINED)
+                        ShapeRelation interiorRelationship = closedpath.GetRelation(interiorPoly);
+                        if (interiorRelationship == ShapeRelation.INTERSECTING || interiorRelationship == ShapeRelation.CONTAINED)
                         {
                             IntersectedInteriorPolygons.Add(iPoly);
                             PathContainsInteriorPoly = true;

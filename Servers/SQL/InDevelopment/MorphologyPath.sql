@@ -1,11 +1,12 @@
 
-use [Test]
+use [RC1]
+go
 
 SET NOCOUNT ON
 
-declare @SourceIDs  integer_list  --Origin of the search
-declare @TargetIDs integer_list  --Nodes we consider endpoints for a path
-declare @VisitedIDs integer_list --Nodes we've already visited and checked for a path
+declare @SourceIDs mem_integer_list  --Origin of the search
+declare @TargetIDs mem_integer_list  --Nodes we consider endpoints for a path
+declare @VisitedIDs mem_integer_list --Nodes we've already visited and checked for a path
 
 declare @Path TABLE(
 	[StartID] [bigint] NOT NULL,				--First node of the path
@@ -21,11 +22,11 @@ declare @Path TABLE(
 		) WITH (IGNORE_DUP_KEY = OFF)
 )
 
-insert into @SourceIDs values (7051)
-insert into @TargetIDs values (8770) 
-insert into @TargetIDs values (8592) 
+insert into @SourceIDs values (38152)
+insert into @TargetIDs values (1411895) 
+--insert into @TargetIDs values (51288) 
 
-declare @TargetsRemaining integer_list					--Lists the targets a path has not been located for
+declare @TargetsRemaining mem_integer_list					--Lists the targets a path has not been located for
 insert into @TargetsRemaining select ID from @TargetIDs
 
 --Prepopulate the @Path Table
@@ -47,9 +48,9 @@ insert into @VisitedIDs
  
   while 0 = ANY ( Select Completed from @Path ) AND (Select COUNT(ID) from @TargetsRemaining) > 0
   BEGIN
-	  declare @Options integer_list --Possible paths we can explore
+	  declare @Options mem_integer_list --Possible paths we can explore
 	  declare @PathOptions udtLinks  
-	  declare @NextStepOriginIDs integer_list
+	  declare @NextStepOriginIDs mem_integer_list
 	
 	  DELETE FROM @NextStepOriginIDs
 
@@ -100,7 +101,7 @@ insert into @VisitedIDs
 	 -- Identify which paths have reached a dead end because there are 
 	 -- no more remaining nodes to check
 	 *******************************************************************/
-	 declare @DeadPathOriginIDs integer_list
+	 declare @DeadPathOriginIDs mem_integer_list
 	 DELETE FROM @DeadPathOriginIDs --This line prevents listing  every dead end reached in the search, but commenting it is useful for debugging which paths were checked
 	 insert into @DeadPathOriginIDs
 		Select OriginID

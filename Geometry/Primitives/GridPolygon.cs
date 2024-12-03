@@ -88,7 +88,7 @@ namespace Geometry
         {
             get
             {
-                if (_SegmentRTree == null)
+                if (_SegmentRTree is null)
                 {
                     _SegmentRTree = CreatePointIndexSegmentBoundingBoxRTree(this);
                 }
@@ -254,7 +254,7 @@ namespace Geometry
 
             foreach (GridVector2[] interiorRing in interiorRings)
             {
-                Debug.Assert(interiorRing.Length < 1000, "This is a huge polygon, why?");
+                //Debug.Assert(interiorRing.Length < 1000, "This is a huge polygon, why?");
                 AddInteriorRing(interiorRing);
             }
         }
@@ -772,7 +772,7 @@ namespace Geometry
         /// <param name="index">The index of the vertex that was already inserted into the exterior ring</param>
         private void UpdateSegmentRTreeForInsert(PolygonIndex index)
         {
-            if (_SegmentRTree == null)
+            if (_SegmentRTree is null)
                 return;
 
             if (index.NumUniqueInRing != index.Polygon(this).ExteriorRing.Length - 1)
@@ -823,7 +823,7 @@ namespace Geometry
         /// </summary>
         private void UpdateSegmentRTreeForUpdate(PolygonIndex index)
         {
-            if (_SegmentRTree == null)
+            if (_SegmentRTree is null)
                 return;
 
             GridLineSegment newPrevSeg = new GridLineSegment(this[index.Previous], this[index]);
@@ -858,7 +858,7 @@ namespace Geometry
         /// </summary>
         private void UpdateSegmentRTreeForRemoval(PolygonIndex removed_index)
         {
-            if (_SegmentRTree == null)
+            if (_SegmentRTree is null)
                 return;
 
             GridPolygon poly = removed_index.Polygon(this);
@@ -910,7 +910,7 @@ namespace Geometry
         /// </summary>
         private void UpdateSegmentRTreeForRemoval(PointIndex index)
         {
-            if (_SegmentRTree == null)
+            if (_SegmentRTree is null)
                 return;
 
             GridLineSegment removedSegment = new GridLineSegment(this[index], this[index.Next]);
@@ -944,7 +944,7 @@ namespace Geometry
 
         private void AddRingToRTree(int iInnerRing)
         {
-            if (_SegmentRTree == null)
+            if (_SegmentRTree is null)
                 return;
 
             PolygonIndex index = new PolygonIndex(0, iInnerRing, 0, this.InteriorRings[iInnerRing].Length - 1);
@@ -958,7 +958,7 @@ namespace Geometry
 
         private void RemoveRingFromRTree(int iInnerRing)
         {
-            if (_SegmentRTree == null)
+            if (_SegmentRTree is null)
                 return;
 
             var toRemove = _SegmentRTree.Items.Where(i => i.IsInner && i.iInnerPoly == iInnerRing);
@@ -992,7 +992,7 @@ namespace Geometry
         /// <returns>True if the bounding box changed</returns>
         private bool UpdateBoundingBoxForRemove(GridVector2 removed_point)
         {
-            if (_BoundingRect.ContainsExt(removed_point) == OverlapType.TOUCHING)
+            if (_BoundingRect.GetRelation(removed_point) == ShapeRelation.TOUCHING)
             {
                 _BoundingRect = _ExteriorRing.BoundingBox();
                 return true;
@@ -1478,13 +1478,13 @@ namespace Geometry
 
         public bool Contains(in IPoint2D point_param)
         {
-            return ContainsExt(point_param) != OverlapType.NONE;
+            return GetRelation(point_param) != ShapeRelation.NONE;
         }
 
-        public OverlapType ContainsExt(in IPoint2D point_param)
+        public ShapeRelation GetRelation(in IPoint2D point_param)
         {
             if (!_BoundingRect.Contains(point_param))
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
 
             GridVector2 p = new GridVector2(point_param.X, point_param.Y);
 
@@ -1522,18 +1522,18 @@ namespace Geometry
 
             //Test all of the line segments for both interior and exterior polygons
             //return IsPointInsidePolygonByWindingTest(segmentsToTest, test_line); 
-            OverlapType result = IsPointInsidePolygonByWindingTest(segmentsToTest, test_line);
-            if (result == OverlapType.CONTAINED)
+            ShapeRelation result = IsPointInsidePolygonByWindingTest(segmentsToTest, test_line);
+            if (result == ShapeRelation.CONTAINED)
             {
                 foreach (GridPolygon inner in this.InteriorPolygons)
                 {
-                    OverlapType inner_result = inner.ContainsExt(p);
-                    //if (inner_result != OverlapType.NONE) //Including TOUCHING results probably breaks Bajaj generation, but it is correct
-                    if (inner_result == OverlapType.CONTAINED)
-                        return OverlapType.NONE; //The point is in the inner polygon, therefore not part of this polygon
+                    ShapeRelation inner_result = inner.GetRelation(p);
+                    //if (inner_result != ShapeRelation.NONE) //Including TOUCHING results probably breaks Bajaj generation, but it is correct
+                    if (inner_result == ShapeRelation.CONTAINED)
+                        return ShapeRelation.NONE; //The point is in the inner polygon, therefore not part of this polygon
 
                     //Is a point on an inner polygon touching the polygon or contained?
-                    if (inner_result == OverlapType.TOUCHING)
+                    if (inner_result == ShapeRelation.TOUCHING)
                         return inner_result;
                 }
             }
@@ -1601,7 +1601,7 @@ namespace Geometry
 
         public bool Contains(in GridLineSegment line)
         {
-            if (line.BoundingBox.ContainsExt(this.BoundingBox) == OverlapType.NONE)
+            if (line.BoundingBox.GetRelation(this.BoundingBox) == ShapeRelation.NONE)
                 return false;
 
             //Ensure both endpoints are inside and a point in the center.
@@ -1636,15 +1636,17 @@ namespace Geometry
             return true;
         }
 
-        public OverlapType ContainsExt(in GridLineSegment line)
+        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line) => GetRelation(line.Convert()); 
+
+        public ShapeRelation GetRelation(in GridLineSegment line)
         {
-            if (line.BoundingBox.ContainsExt(this.BoundingBox) == OverlapType.NONE)
-                return OverlapType.NONE;
+            if (line.BoundingBox.GetRelation(this.BoundingBox) == ShapeRelation.NONE)
+                return ShapeRelation.NONE;
 
             //Ensure both endpoints are inside and a point in the center.
             //Test the center because if the line crosses a concave region with both endpoints exactly on the exterior ring we'd not have any intersections but the poly would not contain the line.
             if (!(this.Contains(line.A) && this.Contains(line.B) && this.Contains(line.PointAlongLine(0.5))))
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
 
             IEnumerable<GridLineSegment> segmentsToTest;
 
@@ -1661,19 +1663,19 @@ namespace Geometry
             if (intersects)
             {
                 //The line intersects some of the polygon segments, but was it just the endpoint?
-                return OverlapType.INTERSECTING; //Line is not entirely inside the polygon
+                return ShapeRelation.INTERSECTING; //Line is not entirely inside the polygon
             }
 
             foreach (GridPolygon innerPoly in this.InteriorPolygons)
             {
-                var innerResult = innerPoly.ContainsExt(line);
-                if (innerResult == OverlapType.INTERSECTING || innerResult == OverlapType.TOUCHING)
+                var innerResult = innerPoly.GetRelation(line);
+                if (innerResult == ShapeRelation.INTERSECTING || innerResult == ShapeRelation.TOUCHING)
                     return innerResult;
-                else if (innerResult == OverlapType.CONTAINED)
-                    return OverlapType.NONE; //It is entirely inside the hole, so it has no overlap 
+                else if (innerResult == ShapeRelation.CONTAINED)
+                    return ShapeRelation.NONE; //It is entirely inside the hole, so it has no overlap 
             }
 
-            return OverlapType.CONTAINED;
+            return ShapeRelation.CONTAINED;
         }
 
 
@@ -1719,13 +1721,13 @@ namespace Geometry
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public OverlapType ContainsExt(in GridCircle other)
+        public ShapeRelation GetRelation(in GridCircle other)
         {
             throw new NotImplementedException();
             /*
             GridRectangle? overlap = BoundingBox.Intersection(other.BoundingBox);
             if (!overlap.HasValue)
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
 
             bool CanContain = true;
             //We cannot contain the other shape if the overlapping bounding box is not identical
@@ -1736,9 +1738,9 @@ namespace Geometry
             if(!CanContain)
             {
                 if (this.Intersects(other))
-                    return OverlapType.INTERSECTING;
+                    return ShapeRelation.INTERSECTING;
                 else
-                    return OverlapType.NONE; //TODO: TOUCHING is not supported here
+                    return ShapeRelation.NONE; //TODO: TOUCHING is not supported here
             }
 
             //We must contain the center of the circle
@@ -1782,7 +1784,7 @@ namespace Geometry
             bool HasInteriorVertex = this.Contains(other.ExteriorRing[0]);
             bool HasSegmentIntersections = GridPolygon.SegmentsIntersect(this, other);
             if (HasSegmentIntersections == false && HasInteriorVertex)
-                //return OverlapType.INTERSECTING;
+                //return ShapeRelation.INTERSECTING;
                 return true;
 
             return false;
@@ -1797,6 +1799,7 @@ namespace Geometry
             return !GridPolygon.SegmentsIntersect(this, other);
             */
         }
+         
 
 
         /// <summary>
@@ -1804,22 +1807,22 @@ namespace Geometry
         /// </summary>
         /// <param name="poly"></param>
         /// <returns></returns>
-        public OverlapType ContainsExt(in GridPolygon other)
+        public ShapeRelation GetRelation(in GridPolygon other)
         {
             GridRectangle? overlap = BoundingBox.Intersection(other.BoundingBox);
             if (!overlap.HasValue)
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
 
             bool HasSegmentIntersections = GridPolygon.SegmentsIntersect(this, other);
             if (HasSegmentIntersections)
-                return OverlapType.INTERSECTING;
+                return ShapeRelation.INTERSECTING;
 
             bool HasInteriorVertex = this.Contains(other.ExteriorRing[0]);
             if (HasInteriorVertex)
-                return OverlapType.CONTAINED;
+                return ShapeRelation.CONTAINED;
 
-            //TODO: OverlapType.Touching is not implemented
-            return OverlapType.NONE;
+            //TODO: ShapeRelation.Touching is not implemented
+            return ShapeRelation.NONE;
         }
 
         public bool InteriorPolygonContains(in GridVector2 p)
@@ -1962,7 +1965,7 @@ namespace Geometry
             return IsLeft;
         }*/
 
-        private static OverlapType IsPointInsidePolygonByWindingTest(List<GridLineSegment> polygonSegments, GridLine test_line)
+        private static ShapeRelation IsPointInsidePolygonByWindingTest(List<GridLineSegment> polygonSegments, GridLine test_line)
         {
             GridVector2 test_point = test_line.Origin;
 #if DEBUG
@@ -1978,7 +1981,7 @@ namespace Geometry
                 GridLineSegment s = polygonSegments[i];
                 if (s.IsEndpoint(test_line.Origin))
                 {
-                    return OverlapType.TOUCHING;
+                    return ShapeRelation.TOUCHING;
                 }
 
                 var seg = new SegmentIsLeftData(a_is_left: test_line.IsLeft(s.A), b_is_left: test_line.IsLeft(s.B), seg: s, is_p_left_of_seg: new int?());
@@ -1986,14 +1989,14 @@ namespace Geometry
                 {
                     //Check the case of the segment crossing, contacting, or perfectly overlapped to the line within epsilon error limit
                     if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
-                        return OverlapType.TOUCHING;
+                        return ShapeRelation.TOUCHING;
 
                 }
                 else if (seg.CrossesLine || seg.OnTheLine)
                 {
                     //Check the case of the segment crossing, contacting, or perfectly overlapped to the line within epsilon error limit
                     if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
-                        return OverlapType.TOUCHING;
+                        return ShapeRelation.TOUCHING;
                 }
 
                 if (seg.SameSideOfLine || seg.OnTheLine)
@@ -2005,7 +2008,7 @@ namespace Geometry
             }
 
             if (IsLeft.Count == 0)
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
 
             polygonSegments = IsLeft.Select(left => left.S).ToList();
 
@@ -2019,7 +2022,7 @@ namespace Geometry
                 {
                     //Check the case of the point exactly on the line
                     if (seg.S.DistanceToPoint(test_point) < Global.Epsilon)
-                        return OverlapType.TOUCHING;
+                        return ShapeRelation.TOUCHING;
 
                     continue;   //Segment does not end on the line, continue;
                 }
@@ -2066,7 +2069,7 @@ namespace Geometry
 
             //If we share endpoints then we are always inside the polygon.  Handles case where we ask if a polygon vertex is inside the polygon
             //if (cross_or_parallel_segments.Any(ps => ps.IsEndpoint(test_line.A)))
-            //    return OverlapType.TOUCHING;
+            //    return ShapeRelation.TOUCHING;
 
             int wind_count = 0;
             for (int i = 0; i < cross_or_parallel_segments.Count; i++)
@@ -2091,7 +2094,7 @@ namespace Geometry
                 {
                     if(polySeg.BoundingBox.Left <= test_point.X && polySeg.BoundingBox.Right >= test_point.X)
                     {
-                        return OverlapType.TOUCHING; //Test point is within the line segment, return true   
+                        return ShapeRelation.TOUCHING; //Test point is within the line segment, return true   
                                     //We aren't using epsilon here, perhaps we should?
                     }
                     continue;
@@ -2109,7 +2112,7 @@ namespace Geometry
                 }
             }
 
-            return wind_count != 0 ? OverlapType.CONTAINED : OverlapType.NONE;
+            return wind_count != 0 ? ShapeRelation.CONTAINED : ShapeRelation.NONE;
         }
 
         private static bool IsPointInsidePolygonByRayTest(ICollection<GridLineSegment> polygonSegments, GridLineSegment test_line)
@@ -2674,7 +2677,7 @@ namespace Geometry
 
             var vertEnumerator = new PolygonVertexEnum(this, reverse: true);
 
-            QuadTree<GridVector2> addedVertexQuad = new QuadTree<GridVector2>();
+            QuadTreeWithUniqueValues<GridVector2> addedVertexQuad = new QuadTreeWithUniqueValues<GridVector2>();
 
             //Enumerate in reverse so we do not break our index values as we insert
             //Handle an edge case where we insert at the end of the loop, but the .Next index wraps to zero which changes the index of every item in the loop.
@@ -2696,12 +2699,12 @@ namespace Geometry
                         var polyvertex = this[polyIndex];
                         addedVertexQuad.Add(polyvertex, polyvertex);
                     }
-                    catch (QuadTree<GridVector2>.DuplicateItemException)
+                    catch (QuadTreeWithUniqueValues<GridVector2>.DuplicatePointException)
                     {
                         //Ignore a duplicate insert if it already exists in the other polygon
                         Debug.Assert(other.AllVerticies.Contains(this[polyIndex]));
                     }
-                    catch (QuadTree<GridVector2>.DuplicateValueException)
+                    catch (QuadTreeWithUniqueValues<GridVector2>.DuplicateValueException)
                     {
                         //Points can be slightly different but have equivalent values.  The code below should harmonize the vertex positions to truly equal. 
                         Debug.Assert(other.AllVerticies.Contains(this[polyIndex]));
@@ -2981,10 +2984,10 @@ namespace Geometry
         /// Returns a dictionary mapping each vertex coordinate to an index
         /// </summary>
         /// <returns></returns>
-        public QuadTree<PolygonIndex> CreatePointToPolyMap()
+        public QuadTreeWithUniqueValues<PolygonIndex> CreatePointToPolyMap()
         {
             var map = CreatePointToPolyMap(new GridPolygon[] { this });
-            QuadTree<PolygonIndex> flatMap = new QuadTree<PolygonIndex>(); //The map without the possibility of multiple verticies at the same position
+            QuadTreeWithUniqueValues<PolygonIndex> flatMap = new QuadTreeWithUniqueValues<PolygonIndex>(); //The map without the possibility of multiple verticies at the same position
 
             foreach (GridVector2 p in map.Keys)
             {
@@ -2999,9 +3002,9 @@ namespace Geometry
         /// </summary>
         /// <param name="Polygons"></param>
         /// <returns></returns>
-        public static QuadTree<PolygonIndex> CreatePointToPolyMap2D(GridPolygon[] Polygons)
+        public static QuadTreeWithUniqueValues<PolygonIndex> CreatePointToPolyMap2D(GridPolygon[] Polygons)
         {
-            QuadTree<PolygonIndex> pointToPoly = new QuadTree<PolygonIndex>();
+            QuadTreeWithUniqueValues<PolygonIndex> pointToPoly = new QuadTreeWithUniqueValues<PolygonIndex>();
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
             {
                 GridPolygon poly = Polygons[iPoly];
@@ -3055,9 +3058,9 @@ namespace Geometry
         /// Polygon index instead of the position in the passed Polygons array.  This is useful when generating a map for a subset of a larger 
         /// collection of polygons. </param>
         /// <returns></returns>
-        public static QuadTree<List<PolygonIndex>> CreatePointToPolyMap(GridPolygon[] Polygons, IReadOnlyList<int> PolygonIndicies = null)
+        public static QuadTreeWithUniqueValues<List<PolygonIndex>> CreatePointToPolyMap(GridPolygon[] Polygons, IReadOnlyList<int> PolygonIndicies = null)
         {
-            QuadTree<List<PolygonIndex>> pointToPoly = new QuadTree<List<PolygonIndex>>();
+            QuadTreeWithUniqueValues<List<PolygonIndex>> pointToPoly = new QuadTreeWithUniqueValues<List<PolygonIndex>>();
             for (int iPoly = 0; iPoly < Polygons.Length; iPoly++)
             {
                 int iPolygon = iPoly; //Used to adjust polygon index if PolygonIndicies is remapping those values

@@ -53,17 +53,29 @@ namespace Geometry
             return Shapes.Any(s => s.Contains(pnt));
         }
 
-        public OverlapType ContainsExt(in IPoint2D p)
-        {
-            IPoint2D pnt = p;
-            Trace.WriteLine("ContainsExt on a Shape2DCollection is computationally expensive");
-            OverlapType output = OverlapType.NONE;
+        public ShapeRelation GetRelation(in IPoint2D p)
+        { 
+            Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");
+            ShapeRelation output = ShapeRelation.NONE;
             foreach(var s in Shapes)
             {
-                var result = s.ContainsExt(pnt);
+                var result = s.GetRelation(p);
                 output |= result;
             }
            
+            return output;
+        }
+
+        public ShapeRelation GetRelation(in ILineSegment2D line)
+        { 
+            Trace.WriteLine("GetRelation on a Shape2DCollection is computationally expensive");
+            ShapeRelation output = ShapeRelation.NONE;
+            foreach (var s in Shapes)
+            {
+                var result = s.GetRelation(line);
+                output |= result;
+            }
+
             return output;
         }
 

@@ -76,7 +76,7 @@ namespace Geometry
         {
             get
             {
-                if (_SimplifiedPath == null)
+                if (_SimplifiedPath is null)
                 {
                     try
                     {
@@ -156,7 +156,7 @@ namespace Geometry
         {
             get
             {
-                if (_SimplifiedLoop == null)
+                if (_SimplifiedLoop is null)
                 {
                     if (HasSelfIntersection)
                         this._SimplifiedLoop = this._Loop.IdentifyControlPoints(this.SimplifiedPathTolerance, true, _SimplifiedPathInterpolations).EnsureClosedRing().ToArray();
@@ -181,7 +181,7 @@ namespace Geometry
         {
             get
             {
-                if (_SimplifiedLoopSegments == null)
+                if (_SimplifiedLoopSegments is null)
                 {
                     if (HasSelfIntersection)
                     {
@@ -619,10 +619,27 @@ namespace Geometry
             return this.Segments.Any(line => line.Contains(pnt));
         }
 
-        OverlapType IShape2D.ContainsExt(in IPoint2D p)
+        ShapeRelation IShape2D.GetRelation(in IPoint2D p)
         {
             IPoint2D pnt = p;
-            return this.Segments.Any(line => line.Contains(pnt)) ? OverlapType.TOUCHING : OverlapType.NONE;
+            return this.Segments.Any(line => line.Contains(pnt)) ? ShapeRelation.TOUCHING : ShapeRelation.NONE;
+        }
+
+        ShapeRelation IShape2D.GetRelation(in ILineSegment2D line)
+        {
+            ShapeRelation output = ShapeRelation.NONE;
+            if(this.BoundingBox.GetRelation(line) == ShapeRelation.NONE)
+                return ShapeRelation.NONE;
+
+            const ShapeRelation exitCondition = ShapeRelation.INTERSECTING | ShapeRelation.TOUCHING;
+            foreach (GridLineSegment seg in this.LoopSegments)
+            {
+                output |= seg.GetRelation(line);
+                if (output.HasFlag(exitCondition))
+                    return output;
+            }
+
+            return output;
         }
 
         bool IShape2D.Intersects(in IShape2D shape)

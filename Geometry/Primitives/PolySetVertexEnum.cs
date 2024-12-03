@@ -127,14 +127,15 @@ namespace Geometry
                 //OK, we need to move on and could not move to an inner ring.  Go to the next polygon
 
                 int iNextPoly = iPoly + 1;
-                if (iNextPoly >= inputPolygons.Count)
+                while(iNextPoly < inputPolygons.Count) 
                 {
-                    return new PolygonIndex?();
+                    if (inputPolygons[iNextPoly] is GridPolygon) //Skip over non-polygons
+                        return new Geometry.PolygonIndex(iNextPoly, 0, inputPolygons[iNextPoly].ExteriorRing.Length - 1);
+
+                    iNextPoly++;
                 }
-                else
-                {
-                    return new Geometry.PolygonIndex(current.iPoly + 1, 0, inputPolygons[iNextPoly].ExteriorRing.Length - 1);
-                }
+
+                return new PolygonIndex?();
             }
         }
 

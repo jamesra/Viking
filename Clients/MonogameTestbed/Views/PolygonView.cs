@@ -20,7 +20,7 @@ namespace MonogameTestbed
         private Color _Color = Color.White;
         public Color Color
         {
-            get { return _Color; }
+            get => _Color;
             set
             {
                 _Color = value;
@@ -33,7 +33,7 @@ namespace MonogameTestbed
         private double _width = 2.0;
         public double width
         {
-            get { return _width; }
+            get => _width;
             set
             {
                 _width = value;
@@ -44,10 +44,7 @@ namespace MonogameTestbed
         private GridPolygon _Polygon;
         public GridPolygon Polygon
         {
-            get
-            {
-                return _Polygon;
-            }
+            get => _Polygon;
             set
             {
                 _Polygon = value;
@@ -57,7 +54,7 @@ namespace MonogameTestbed
 
         private void UpdateViews()
         {
-            if(_Polygon == null)
+            if(_Polygon is null)
             {
                 ExteriorRingView = null;
                 InteriorEdgeView = null;
@@ -81,7 +78,7 @@ namespace MonogameTestbed
             GridLineSegment[] MedialAxisSegments = MedialAxis.Segments;
             MedialAxisView.LineViews = MedialAxisSegments.Select(s => new LineView(s, this.width, this.Color, LineStyle.Glow)).ToList();
             var NewVerts = MedialAxis.Nodes.Values.ToArray();
-            System.Diagnostics.Debug.Assert(NewVerts.All(v => _Polygon.ContainsExt(v.Key) == OverlapType.CONTAINED), "Interior points must be inside Face");
+            System.Diagnostics.Debug.Assert(NewVerts.All(v => _Polygon.GetRelation(v.Key) == ShapeRelation.CONTAINED), "Interior points must be inside Face");
 
         }
 
@@ -107,7 +104,7 @@ namespace MonogameTestbed
         private Color _Color = Color.White;
         public Color Color
         {
-            get { return _Color; }
+            get => _Color;
             set
             {
                 _Color = value;
@@ -120,7 +117,7 @@ namespace MonogameTestbed
         private double _width = 2.0;
         public double width
         {
-            get { return _width; }
+            get => _width;
             set
             {
                 _width = value;
@@ -131,10 +128,7 @@ namespace MonogameTestbed
         private GridPolygon _Polygon;
         public GridPolygon Polygon
         {
-            get
-            {
-                return _Polygon;
-            }
+            get => _Polygon;
             set
             {
                 _Polygon = value;
@@ -144,7 +138,7 @@ namespace MonogameTestbed
 
         private void UpdateViews()
         {
-            if (_Polygon == null)
+            if (_Polygon is null)
             {
                 ExteriorRingView = null;
                 InteriorEdgeView = null;

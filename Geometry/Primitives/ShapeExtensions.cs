@@ -272,16 +272,16 @@ namespace Geometry
             }
         }
         /*
-        internal static OverlapType PolygonContainsExt(IPolygon2D p, IShape2D other)
+        internal static ShapeRelation PolygonContainsExt(IPolygon2D p, IShape2D other)
         {
             GridPolygon poly = p.Convert();
 
             switch (other.ShapeType)
             {
                 case ShapeType2D.POINT:
-                    return poly.ContainsExt(other as IPoint2D);
+                    return poly.GetRelation(other as IPoint2D);
                 case ShapeType2D.LINE:
-                    return poly.ContainsExt(other as ILineSegment2D);
+                    return poly.GetRelation(other as ILineSegment2D);
                 case ShapeType2D.CIRCLE:
                     ICircle2D other_circle = other as ICircle2D;
                     return poly.Intersects(new GridCircle(other_circle.Center, other_circle.Radius));
@@ -335,13 +335,13 @@ namespace Geometry
             for (int i = 0; i < Polygons.Count; i++)
             {
                 GridPolygon iPoly = Polygons[i];
-                if (iPoly == null)
+                if (iPoly is null)
                     continue;
 
                 for (int j = i + 1; j < Polygons.Count; j++)
                 {
                     GridPolygon jPoly = Polygons[j];
-                    if (jPoly == null)
+                    if (jPoly is null)
                         continue;
 
                     if (iPoly.Intersects(jPoly))
@@ -468,13 +468,13 @@ namespace Geometry
         /// <param name="circle"></param>
         /// <param name="poly"></param>
         /// <returns></returns>
-        public static OverlapType ContainsExt(in GridCircle circle, GridPolygon poly)
+        public static ShapeRelation ContainsExt(in GridCircle circle, GridPolygon poly)
         {
             throw new NotImplementedException();
             /*
             GridRectangle? overlap = circle.BoundingBox.Intersection(poly.BoundingBox);
             if (!overlap.HasValue)
-                return OverlapType.NONE;
+                return ShapeRelation.NONE;
 
             bool CanContain = true;
             //We cannot contain the polygon if the overlapping bounding box is not identical
@@ -486,17 +486,17 @@ namespace Geometry
             bool AtLeastOneTouching = false; 
             foreach (GridVector2 p in poly.ExteriorRing)
             {
-                OverlapType o = circle.ContainsExt(p);
-                if (o == OverlapType.CONTAINED)
+                ShapeRelation o = circle.GetRelation(p);
+                if (o == ShapeRelation.CONTAINED)
                 {
                     if (CanContain == false)
-                        return OverlapType.INTERSECTING;
+                        return ShapeRelation.INTERSECTING;
                 }
-                else if(o == OverlapType.NONE)
+                else if(o == ShapeRelation.NONE)
                 {
                     AllVertsInside = false;
                 }
-                else if(o == OverlapType.TOUCHING)
+                else if(o == ShapeRelation.TOUCHING)
                 {
 
                 }

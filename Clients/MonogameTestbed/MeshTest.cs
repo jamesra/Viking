@@ -12,6 +12,7 @@ using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
+    /*
     class MeshTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
@@ -61,7 +62,7 @@ namespace MonogameTestbed
         }
         */
 
-        
+        /*
 
         private Vertex3D[] CreateTetrahedronVerts(GridVector3 offset)
         {
@@ -112,7 +113,7 @@ namespace MonogameTestbed
 
             return mesh;
         }*/
-
+        /*
         public Task Init(MonoTestbed window)
         {
             _initialized = true;
@@ -156,7 +157,7 @@ namespace MonogameTestbed
           MeshModel<VertexPositionNormalColor> circleModel = BuildCircleConvexHull(new GridCircle(new GridVector2(20, -20), 5));
           meshViewWithLighting.models.Add(circleModel);
           */
-
+        /*
             this.Scene.Camera.Position = new Vector3(29, -13.5f, 24.75f);
             this.Scene.Camera.Rotation = new Vector3(2.5f, 2.055f, 0);
             /*
@@ -187,10 +188,10 @@ namespace MonogameTestbed
             //meshViewWithLighting.models.Add(BuildSmoothMeshTwoPolygons(GridVector3.Zero));
             //meshViewWithLighting.models.Add(BuildPolygonBranchCenter(GridVector3.Zero));
 
-            meshView.models.Add(BuildSmoothMeshFromSharedModel_ColorOnly(new GridVector3(-25, 0, 0)));
+            //meshView.models.Add(BuildSmoothMeshFromSharedModel_ColorOnly(new GridVector3(-25, 0, 0)));
 
-            meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(new GridVector3(0, 0, 0)));
-            
+            //meshViewWithLighting.models.Add(BuildSmoothMeshFromSharedModel(new GridVector3(0, 0, 0)));
+            /*
             labelCamera = new LabelView("", new GridVector2(39950, 0));
 
             return Task.CompletedTask;
@@ -201,6 +202,7 @@ namespace MonogameTestbed
             //this.Scene.SaveCamera(TestMode.MESH);
         }
 
+        /*
         private MeshModel<VertexPositionNormalColor> BuildSmoothMesh1(GridVector3 translate)
         {
             //Create three simple polygons and add them to the graph
@@ -505,12 +507,14 @@ namespace MonogameTestbed
                 DepthBufferFunction = CompareFunction.LessEqual
             };
 
+            */
             /*
             RasterizerState rState = new RasterizerState();
             rState.CullMode = CullMode.CullClockwiseFace;
             rState.DepthClipEnable = true;
             rState.FillMode = FillMode.Solid;
             */
+            /*
             window.GraphicsDevice.DepthStencilState = dstate;
             //window.GraphicsDevice.BlendState = BlendState.Opaque;
             meshView.Draw(window.GraphicsDevice, this.Scene, CullMode.CullCounterClockwiseFace);
@@ -520,8 +524,8 @@ namespace MonogameTestbed
             labelCamera.Draw(window.spriteBatch, window.fontArial, window.Scene);
             window.spriteBatch.End(); 
         }
-
-
+  
 
     }
+*/
 }

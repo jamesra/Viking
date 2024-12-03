@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Geometry
 {
-    internal enum Quadrant : System.Int32
+    public enum Quadrant : System.Int32
     {
         UPPERLEFT = 0,
         UPPERRIGHT = 1,
@@ -14,7 +14,7 @@ namespace Geometry
         LOWERRIGHT = 3
     };
 
-    internal static class QuadrantExtensions
+    public static class QuadrantExtensions
     {
         public static Quadrant Opposite(this Quadrant quad)
         {
@@ -31,16 +31,14 @@ namespace Geometry
                 default:
                     throw new ArgumentException("Unexpected quadrant");
             }
-
         }
     }
-
-
-    internal class QuadTreeNode<T>
+      
+    public class QuadTreeNode<T>
     {
-        internal readonly QuadTree<T> Tree;
+        readonly QuadTree<T> Tree;
         internal QuadTreeNode<T> Parent = null;
-
+         
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
@@ -122,7 +120,7 @@ namespace Geometry
 
         public bool IsLeaf => _quadrants.All(q => q is null);
 
-        public bool IsRoot => Parent == null;
+        public bool IsRoot => Parent is null;
 
         /// <summary>
         /// This constructor is used to create the root node
@@ -226,9 +224,10 @@ namespace Geometry
 
 
         /// <summary>
-        /// Inserts a point into the tree.  Returns the new QuadTreeNode the caller should point to as the root of the tree
+        /// Inserts a point into the treeWithUniqueValues.  Returns the new QuadTreeNode the caller should point to as the root of the treeWithUniqueValues
         /// </summary>
         /// <param name="Point"></param>
+        /// <param name="output">The node the new point was added to</param>
         /// <returns></returns>
         public QuadTreeNode<T> Insert(GridVector2 insertingPoint, T value)
         {
@@ -239,31 +238,33 @@ namespace Geometry
             //If we are a leaf node, we need to divide and create new leaf nodes
             if (this.IsLeaf)
             {
-                //Check for the default point value in case this is the root of the tree
+                //Check for the default point value in case this is the root of the treeWithUniqueValues
                 if (this.IsRoot && this.HasValue == false)
                 {
                     this.Point = insertingPoint;
                     this.Value = value;
                     this.HasValue = true;
-                    Tree.ValueToNodeTable.Add(this.Value, this);
+                    Tree.PointAdded(this, insertingPoint, value);
+                    //Tree.ValueToNodeTable.Add(this.Value, this);
                     return this;
                 }
                 //Check that the point we are being asked to insert is not a duplicate of our current point
                 else if (this.Point == insertingPoint)
                 {
-                    throw new QuadTree<T>.DuplicateItemException(insertingPoint);
+                    throw new QuadTreeWithUniqueValues<T>.DuplicatePointException(insertingPoint);
                     //return null;
                 }
                 else // It is a new point.  We need to create children for this node and insert the points
                 {
                     //First create a child for the existing point
 
-                    //Remove ourselves from the table, must be done before constructor
-                    Tree.ValueToNodeTable.Remove(this.Value);
+                    //Remove ourselves from the table, we are going to become a branch and not a leaf.  This must be done before constructor
+                    //Tree.ValueToNodeTable.Remove(this.Value);
+                    Tree.PointRemoved(this, Point, Value);
 
-                    Quadrant quad = GetQuad(this.Point);
+                    Quadrant quad = GetQuad(Point);
 
-                    TryAddNodeToQuadrant(quad, Point, Value);
+                    AddNodeToQuadrant(quad, Point, Value);
                      
                     //Erase our point just to be safe since we aren't a leaf anymore
                     this.Point = new GridVector2();
@@ -280,9 +281,9 @@ namespace Geometry
                 Quadrant quad = GetQuad(insertingPoint);
 
                 //If we haven't created a node for this quadrant then do so...
-                if (_quadrants[(int)quad] == null)
+                if (_quadrants[(int)quad] is null)
                 {
-                    TryAddNodeToQuadrant(quad, insertingPoint, value);
+                    AddNodeToQuadrant(quad, insertingPoint, value);
                     return _quadrants[(int)quad];
                 }
                 else
@@ -293,12 +294,13 @@ namespace Geometry
             }
         }
 
-        private void TryAddNodeToQuadrant(Quadrant quad, GridVector2 insertingPoint, T value)
+        private void AddNodeToQuadrant(Quadrant quad, GridVector2 insertingPoint, T value)
         { 
             var newNode = new QuadTreeNode<T>(this, quad, insertingPoint, value);
             
-            //If value already exists in the tree this will fail
-            Tree.ValueToNodeTable.Add(value, newNode);
+            //If value already exists in the treeWithUniqueValues this will fail
+            //Tree.ValueToNodeTable.Add(value, newNode);
+            Tree.PointAdded(newNode, insertingPoint, value);
             _quadrants[(int)quad] = newNode;
         }
 
@@ -362,7 +364,7 @@ namespace Geometry
                     return true;
                 }
 
-                throw new ArgumentException("Unexpected code path reached in QuadTree ExpandBorder");
+                throw new ArgumentException("Unexpected code path reached in QuadTreeWithUniqueValues ExpandBorder");
             }
 
             //The border does not contain the point, so we need to expand it
@@ -437,7 +439,10 @@ namespace Geometry
         public void Remove(QuadTreeNode<T> node)
         {
             if (node.HasValue)
-                Tree.ValueToNodeTable.Remove(node.Value);
+            { 
+                Tree.PointRemoved(node, node.Point, node.Value);
+                //Tree.ValueToNodeTable.Remove(node.Value);
+            }
 
             node.Value = default;
             node.HasValue = false;
@@ -459,11 +464,87 @@ namespace Geometry
                 }
                 else
                 {
-                    //Looks like we are the last node in the tree
-                    //Tree.ValueToNodeTable.Remove(this.Value);
+                    //Looks like we are the last node in the treeWithUniqueValues
+                    //treeWithUniqueValues.ValueToNodeTable.Remove(this.Value);
                     //this.Value = default(T);
                     //this.HasValue = false;
                 }
+            }
+        }
+
+        public void Remove(GridVector2 p, out T output)
+        {
+            if(this.IsRoot && this.HasValue && this.Point == p)
+            {
+                output = this.Value;
+                this.Value = default;
+                this.HasValue = false;
+                Tree.PointRemoved(this, p, output);
+            }
+
+            if(this.IsLeaf)
+            {
+                throw new KeyNotFoundException($"{p} not in QuadTree to remove");
+            }
+             
+            if (_quadrants[(int)GetQuad(p)] is QuadTreeNode<T> quad)
+            {
+                if(!quad.IsLeaf)
+                    quad.Remove(p, out output); //Try to find the point in the child
+                else
+                {
+                    if(quad.Point == p)
+                    {
+                        output = quad.Value;
+                        this.Remove(quad);
+                        return;
+                    }
+                    else {
+                        throw new KeyNotFoundException($"{p} not in QuadTree to remove");
+                    }
+                }
+            }
+            else { //We have no quadrant data for where the point falls
+                throw new KeyNotFoundException($"{p} not in QuadTree to remove");
+            } 
+        }
+
+        public void Update(GridVector2 point, T value)
+        {
+            if (this.IsLeaf)
+            {
+                if (this.HasValue && this.Point == point)
+                {
+                    this.Value = value;
+                    return;
+                }
+
+                throw new KeyNotFoundException($"{point} not found in QuadTree to update with value {value}");
+            }
+            else
+            {
+                var quad = GetQuad(point);
+                if (!(_quadrants[(int)quad] is null))
+                {
+                    _quadrants[(int)quad].TryUpdate(point, value);
+                }
+                else
+                {
+                    throw new KeyNotFoundException($"{point} not found in QuadTree to update with value {value}");
+                }
+            }
+        }
+
+        public bool TryUpdate(GridVector2 point, T value)
+        {
+            try
+            {
+                Update(point, value);
+                return true;
+            }
+            catch(KeyNotFoundException)
+            {
+                return false;
             }
         }
 
@@ -471,7 +552,7 @@ namespace Geometry
         /// Returns the value associated with the point nearest to the passed input parameter point
         /// </summary>
         /// <param name="point">Query point</param>
-        /// <param name="nodePoint">Nearest point in QuadTree to query point</param>
+        /// <param name="nodePoint">Nearest point in QuadTreeWithUniqueValues to query point</param>
         /// <param name="distance">Distance from query point to nodePoint</param>
         /// <returns>Data value associated with nearest point</returns>
         public T FindNearest(GridVector2 point, out GridVector2 nodePoint, ref double distance)
@@ -480,7 +561,7 @@ namespace Geometry
             {
                 if (this.IsRoot && HasValue == false)
                     throw new InvalidOperationException(
-                        $"{nameof(QuadTree<T>)} has no entries, so FindNearest cannot return a valid value");
+                        $"{nameof(QuadTreeWithUniqueValues<T>)} has no entries, so FindNearest cannot return a valid value");
 
                 Debug.Assert(this.HasValue);
                 distance = GridVector2.Distance(in this.Point, in point);
@@ -554,7 +635,7 @@ namespace Geometry
         /// Returns the value associated with the point nearest to the passed input parameter point
         /// </summary>
         /// <param name="point">Query point</param>
-        /// <param name="nodePoint">Nearest point in QuadTree to query point</param>
+        /// <param name="nodePoint">Nearest point in QuadTreeWithUniqueValues to query point</param>
         /// <param name="distance">Distance from query point to nodePoint</param>
         /// <returns>Data value associated with nearest point</returns>
         public bool FindNearestPoints(GridVector2 point, int nPoints, ref FixedSizeDistanceList<T> distanceList)

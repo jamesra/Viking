@@ -40,7 +40,7 @@ namespace Geometry
                 for (i = 0; i < c; i++)
                     keys[i] = i;
 
-                if (comparer == null)
+                if (comparer is null)
                 {
                     System.Array.Sort(rg, keys /*, ... */);
                 }
@@ -641,7 +641,7 @@ namespace Geometry
         /// <returns></returns>
         public static GridLineSegment[] ToLineSegments(this ICollection<GridVector2> points)
         {
-            if (points == null)
+            if (points is null)
                 return null;
 
             if (points.Count <= 1)
@@ -663,7 +663,7 @@ namespace Geometry
         /// <returns></returns>
         public static GridPolyline ToPolyline(this ICollection<GridVector2> points, bool AllowSelfIntersection = false)
         {
-            if (points == null)
+            if (points is null)
                 return null;
 
             if (points.Count <= 1)
@@ -939,7 +939,7 @@ namespace Geometry
         /// <returns>[MinX/Left, MaxX/Right, MinY/Bottom, MaxY/Top]</returns>
         public static double[] GetBounds(this GridVector2[] points)
         {
-            if (points == null)
+            if (points is null)
                 throw new ArgumentNullException(nameof(points));
 
             if (points.Length == 0)
@@ -964,7 +964,7 @@ namespace Geometry
         /// <returns>[MinX/Left, MaxX/Right, MinY/Bottom, MaxY/Top]</returns>
         public static double[] GetBounds(this IEnumerable<GridVector2> points)
         {
-            if (points == null)
+            if (points is null)
                 throw new ArgumentNullException(nameof(points));
 
 
@@ -1108,7 +1108,7 @@ namespace Geometry
 
         public static GridBox BoundingBox(this IReadOnlyList<GridVector3> points)
         {
-            if (points == null)
+            if (points is null)
                 throw new ArgumentNullException(nameof(points));
 
             if (points.Count == 0)
@@ -1167,14 +1167,14 @@ namespace Geometry
 
     public static class VectorExtensions
     {
-        public static QuadTree<TElement> ToQuadTree<TSource, TElement>(
+        public static QuadTreeWithUniqueValues<TElement> ToQuadTree<TSource, TElement>(
             this IEnumerable<TSource> source,
             Func<TSource, GridVector2> keySelector,
             Func<TSource, TElement> elementSelector)
         {
             var items = source.Select(item => new { Key = keySelector(item), Item = elementSelector(item) }).ToArray();
             var bbox = items.Select(item => item.Key).BoundingBox();
-            var output = new QuadTree<TElement>(bbox * 1.5);
+            var output = new QuadTreeWithUniqueValues<TElement>(bbox * 1.5);
             foreach (var item in items)
             {
                 output.Add(item.Key, item.Item);
@@ -1183,13 +1183,13 @@ namespace Geometry
             return output;
         }
 
-        public static QuadTree<TSource> ToQuadTree<TSource>(
+        public static QuadTreeWithUniqueValues<TSource> ToQuadTree<TSource>(
             this IEnumerable<TSource> source,
             Func<TSource, GridVector2> keySelector)
         {
             var items = source.Select(item => new { Key = keySelector(item), Item = item }).ToArray();
             var bbox = items.Select(item => item.Key).BoundingBox();
-            var output = new QuadTree<TSource>(bbox * 1.5);
+            var output = new QuadTreeWithUniqueValues<TSource>(bbox * 1.5);
             foreach (var item in items)
             {
                 output.Add(item.Key, item.Item);

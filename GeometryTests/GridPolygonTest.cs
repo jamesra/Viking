@@ -397,7 +397,7 @@ namespace GeometryTests
 
         public static bool PolygonContainsIntersections(GridPolygon poly, List<GridVector2> points)
         {
-            if (points == null)
+            if (points is null)
                 return true;
             if (points.Count == 0)
                 return true;
@@ -582,41 +582,41 @@ namespace GeometryTests
         public void PolygonConvexContainsExtTest()
         {
             GridPolygon box = Primitives.BoxPolygon(10);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-15, 5)), OverlapType.NONE);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-5, 5)), OverlapType.CONTAINED);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(0, 0)), OverlapType.CONTAINED);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-10, 0)), OverlapType.TOUCHING); //Point exactly on the line
-            Assert.AreEqual(box.ContainsExt(new GridVector2(10, 0)), OverlapType.TOUCHING); //Point exactly on the line
-            Assert.AreEqual(box.ContainsExt(new GridVector2(0, 10)), OverlapType.TOUCHING); //Point exactly on the line
-            Assert.AreEqual(box.ContainsExt(new GridVector2(0, -10)), OverlapType.TOUCHING); //Point exactly on the line
+            Assert.AreEqual(box.GetRelation(new GridVector2(-15, 5)), ShapeRelation.NONE);
+            Assert.AreEqual(box.GetRelation(new GridVector2(-5, 5)), ShapeRelation.CONTAINED);
+            Assert.AreEqual(box.GetRelation(new GridVector2(0, 0)), ShapeRelation.CONTAINED);
+            Assert.AreEqual(box.GetRelation(new GridVector2(-10, 0)), ShapeRelation.TOUCHING); //Point exactly on the line
+            Assert.AreEqual(box.GetRelation(new GridVector2(10, 0)), ShapeRelation.TOUCHING); //Point exactly on the line
+            Assert.AreEqual(box.GetRelation(new GridVector2(0, 10)), ShapeRelation.TOUCHING); //Point exactly on the line
+            Assert.AreEqual(box.GetRelation(new GridVector2(0, -10)), ShapeRelation.TOUCHING); //Point exactly on the line
 
             GridPolygon inner_box = Primitives.BoxPolygon(5);
-            Assert.AreEqual(box.ContainsExt(inner_box), OverlapType.CONTAINED);
+            Assert.AreEqual(box.GetRelation(inner_box), ShapeRelation.CONTAINED);
 
             //OK, add an inner ring and make sure contains works
             box.AddInteriorRing(inner_box.ExteriorRing);
 
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-15, 5)), OverlapType.NONE); //Point inside inner box
-            Assert.AreEqual(box.ContainsExt(new GridVector2(0, 0)), OverlapType.NONE); //Point inside inner box
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-7.5, 7.5)), OverlapType.CONTAINED);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-7.5, 5)), OverlapType.CONTAINED); //x-axis perfectly overlapped with inner polygon
+            Assert.AreEqual(box.GetRelation(new GridVector2(-15, 5)), ShapeRelation.NONE); //Point inside inner box
+            Assert.AreEqual(box.GetRelation(new GridVector2(0, 0)), ShapeRelation.NONE); //Point inside inner box
+            Assert.AreEqual(box.GetRelation(new GridVector2(-7.5, 7.5)), ShapeRelation.CONTAINED);
+            Assert.AreEqual(box.GetRelation(new GridVector2(-7.5, 5)), ShapeRelation.CONTAINED); //x-axis perfectly overlapped with inner polygon
 
             //Test points exactly on the inner ring
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-5, 0)), OverlapType.TOUCHING);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(5, 0)), OverlapType.TOUCHING);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(0, -5)), OverlapType.TOUCHING);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(0, 5)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(-5, 0)), ShapeRelation.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(5, 0)), ShapeRelation.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(0, -5)), ShapeRelation.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(0, 5)), ShapeRelation.TOUCHING);
 
             //Test points exactly on corners of external and inner ring
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-5, -5)), OverlapType.TOUCHING);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(5, 5)), OverlapType.TOUCHING);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(5, -5)), OverlapType.TOUCHING);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-5, 5)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(-5, -5)), ShapeRelation.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(5, 5)), ShapeRelation.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(5, -5)), ShapeRelation.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(-5, 5)), ShapeRelation.TOUCHING);
 
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-10, -10)), OverlapType.TOUCHING);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(10, 10)), OverlapType.TOUCHING);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(10, -10)), OverlapType.TOUCHING);
-            Assert.AreEqual(box.ContainsExt(new GridVector2(-10, 10)), OverlapType.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(-10, -10)), ShapeRelation.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(10, 10)), ShapeRelation.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(10, -10)), ShapeRelation.TOUCHING);
+            Assert.AreEqual(box.GetRelation(new GridVector2(-10, 10)), ShapeRelation.TOUCHING);
         }
 
         [TestMethod]

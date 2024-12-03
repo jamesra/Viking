@@ -64,9 +64,8 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="shapes"></param>
         /// <returns></returns>
-        static public MedialAxisGraph ApproximateMedialAxis(GridPolygon shape)
+        public static MedialAxisGraph ApproximateMedialAxis(GridPolygon shape)
         {
-            TriangleNet.Meshing.IMesh triangulationMesh = null;
             TriangulationMesh<IVertex2D<PolygonIndex>> mesh;
             try
             {
@@ -114,10 +113,10 @@ namespace MorphologyMesh
                 GridLineSegment line = mesh.ToGridLineSegment(edge);
 
                 //If the line is not part of the polygons outer or inner ring and falls within the polygon (In rare edge cases it can be outside the polygon even though it should have been trimmed by the triangulation) we should add it to the graph.
-                if (false == boundary.IsExteriorOrInteriorSegment(line) && boundary.ContainsExt(line.Bisect()) == OverlapType.CONTAINED)
+                if (false == boundary.IsExteriorOrInteriorSegment(line) && boundary.GetRelation(line.Bisect()) == ShapeRelation.CONTAINED)
                 {
                     MedialAxisVertex node = GetOrAddLineBisectorVertex(graph, line);
-                    System.Diagnostics.Debug.Assert(boundary.ContainsExt(node.Key) == OverlapType.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
+                    System.Diagnostics.Debug.Assert(boundary.GetRelation(node.Key) == ShapeRelation.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
 
                     foreach (IFace AdjacentFace in edge.Faces)
                     {
@@ -129,10 +128,10 @@ namespace MorphologyMesh
                             GridLineSegment ConnectedLine = mesh.ToGridLineSegment(edgeCandidates.First());
                             GridVector2 midpoint = ConnectedLine.Bisect();
                             GridLineSegment ProposedMedialLine = new GridLineSegment(node.Key, midpoint);
-                            if (boundary.Intersects(ProposedMedialLine) == false && boundary.ContainsExt(midpoint) == OverlapType.CONTAINED) //Checking for containment handles a rare edge case
+                            if (boundary.Intersects(ProposedMedialLine) == false && boundary.GetRelation(midpoint) == ShapeRelation.CONTAINED) //Checking for containment handles a rare edge case
                             {
                                 otherNode = GetOrAddLineBisectorVertex(graph, ConnectedLine);
-                                System.Diagnostics.Debug.Assert(boundary.ContainsExt(otherNode.Key) == OverlapType.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
+                                System.Diagnostics.Debug.Assert(boundary.GetRelation(otherNode.Key) == ShapeRelation.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
                             }
                             else
                             {
@@ -140,7 +139,7 @@ namespace MorphologyMesh
                                 //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
                                 GridVector2 face_centroid = tri.Centroid;
                                 otherNode = GetOrAddVertex(graph, face_centroid);
-                                System.Diagnostics.Debug.Assert(boundary.ContainsExt(face_centroid) == OverlapType.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
+                                System.Diagnostics.Debug.Assert(boundary.GetRelation(face_centroid) == ShapeRelation.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
                             }
                         }
                         else if (edgeCandidates.Count == 2 || edgeCandidates.Count == 0) ////All edges of the face are part of the medial axis.  Add a vertex at the centroid and connect them all to the centroid
@@ -150,7 +149,7 @@ namespace MorphologyMesh
                             GridVector2 face_centroid = tri.Centroid;
                             //GridVector2 face_centroid = mesh.GetCentroid(AdjacentFace);
                             otherNode = GetOrAddVertex(graph, face_centroid);
-                            System.Diagnostics.Debug.Assert(boundary.ContainsExt(face_centroid) == OverlapType.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
+                            System.Diagnostics.Debug.Assert(boundary.GetRelation(face_centroid) == ShapeRelation.CONTAINED, "Medial Axis approximate vertex must be within polygonal boundary");
                         }
 
                         if (otherNode != null)
