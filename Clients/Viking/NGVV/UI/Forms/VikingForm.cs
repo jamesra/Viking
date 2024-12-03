@@ -43,7 +43,7 @@ namespace Viking.UI.Forms
         protected static VikingForm Show(Dictionary<IUIObject, VikingForm> FormTable, System.Type FormType, IUIObject Object, System.Windows.Forms.Form ParentForm)
         {
             Debug.Assert(Object != null, "Cannot display properties for null object");
-            if (Object == null)
+            if (Object is null)
                 return null;
 
             VikingForm ShownForm;

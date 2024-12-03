@@ -181,7 +181,7 @@ namespace VikingXNAWinForms
         {
             get
             {
-                if (_Content == null)
+                if (_Content is null)
                 {
                     ServiceContainer tempContainer = new ServiceContainer();
                     tempContainer.AddService(typeof(IGraphicsDeviceService), this);

@@ -100,7 +100,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public static ChannelInfo[] FromXML(XElement elemChannelInfo)
         {
-            if (elemChannelInfo == null)
+            if (elemChannelInfo is null)
                 return new ChannelInfo[0];
 
             List<ChannelInfo> channels = new List<ChannelInfo>();

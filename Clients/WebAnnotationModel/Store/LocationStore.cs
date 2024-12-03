@@ -189,7 +189,7 @@ namespace WebAnnotationModel
             {
                 var client = (IAnnotateLocations)proxy;
                 Location created_db_location = client.CreateLocation(new_location.GetData(), linked_locations);
-                if (created_db_location == null)
+                if (created_db_location is null)
                     return null;
 
                 created_location = new LocationObj(created_db_location);

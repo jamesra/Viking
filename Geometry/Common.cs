@@ -10,7 +10,7 @@ namespace Geometry
     {
         public static string[] ToLines(this System.IO.Stream stream)
         {
-            if (stream == null)
+            if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
 
             if (stream.CanSeek)
@@ -35,7 +35,7 @@ namespace Geometry
 
         public static async Task<string[]> ToLinesAsync(this System.IO.Stream stream)
         {
-            if (stream == null)
+            if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
 
             if (stream.CanSeek)
@@ -68,7 +68,7 @@ namespace Geometry
         private static readonly Regex splitLinesRegex = new Regex(@"\r\n|\r|\n", RegexOptions.Compiled);
         public static string[] ToLines(this string input)
         {
-            if (input == null)
+            if (input is null)
                 throw new ArgumentNullException(nameof(input));
 
             var lines = splitLinesRegex.Split(input);

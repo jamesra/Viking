@@ -51,14 +51,14 @@ namespace TriangleNet.Meshing.Iterators
 
         public bool MoveNext()
         {
-            if (tri.tri == null)
+            if (tri.tri is null)
             {
                 return false;
             }
 
             current = null;
 
-            while (current == null)
+            while (current is null)
             {
                 if (tri.orient == 3)
                 {

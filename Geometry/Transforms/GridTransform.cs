@@ -198,7 +198,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                if (_TriangleIndicies == null)
+                if (_TriangleIndicies is null)
                 {
                     _TriangleIndicies = GridTransformHelper.TrianglesForGrid(GridSizeX, GridSizeY);
                 }
@@ -212,7 +212,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                if (_Edges == null)
+                if (_Edges is null)
                     _Edges = GridTransformHelper.EdgesForGrid(GridSizeX, GridSizeY);
 
                 return _Edges;
@@ -249,7 +249,7 @@ namespace Geometry.Transforms
 
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             info.AddValue("GridSizeX", GridSizeX);
@@ -308,7 +308,7 @@ namespace Geometry.Transforms
             //Fetch a list of triangles from the nearest point
             List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
 
-            if (triangles == null)
+            if (triangles is null)
                 return null;
 
             foreach (MappingGridTriangle t in triangles)

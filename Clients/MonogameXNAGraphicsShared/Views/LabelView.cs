@@ -192,8 +192,8 @@ namespace VikingXNAGraphics
             this.Text = Text;
             this.Position = VolumePosition;
             //Create copies of anchor and alignment so we can set OnChange action properly
-            this.Anchor = anchor == null ? new Anchor { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER } : new Anchor { Horizontal = anchor.Horizontal, Vertical = anchor.Vertical };
-            this.Alignment = alignment == null ? new Alignment { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER } : new Alignment { Horizontal = alignment.Horizontal, Vertical = alignment.Vertical };
+            this.Anchor = anchor is null ? new Anchor { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER } : new Anchor { Horizontal = anchor.Horizontal, Vertical = anchor.Vertical };
+            this.Alignment = alignment is null ? new Alignment { Horizontal = HorizontalAlignment.CENTER, Vertical = VerticalAlignment.CENTER } : new Alignment { Horizontal = alignment.Horizontal, Vertical = alignment.Vertical };
             this.ScaleFontWithScene = scaleFontWithScene;
         }
 
@@ -305,7 +305,7 @@ namespace VikingXNAGraphics
         /// <returns></returns>
         public double GetFontSizeToFitBounds(GridRectangle bbox, GridVector2? Padding_factor=null)
         {
-            if(Padding_factor == null)
+            if(Padding_factor is null)
             {
                 Padding_factor = new GridVector2 { X = 1, Y = 1 };
             }
@@ -361,7 +361,7 @@ namespace VikingXNAGraphics
 
         public bool IsVisible(VikingXNA.Scene scene)
         {
-            if (font == null) //The first time draw is called font is initialized.  So allow us to draw if we haven't initialized font yet.
+            if (font is null) //The first time draw is called font is initialized.  So allow us to draw if we haven't initialized font yet.
                 return true;
              
             double fontSizeInScreenPixels = ScaleForMagnification(this.FontSize, scene);
@@ -484,13 +484,13 @@ namespace VikingXNAGraphics
 
         public static void Draw(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.IScene scene, ICollection<LabelView> Labels)
         {
-            if (Labels == null)
+            if (Labels is null)
                 return;
 
             if (Labels.Count == 0)
                 return;
 
-            if (font == null)
+            if (font is null)
                 font = Global.DefaultFont;
 
             BlendState originalBlendState = spriteBatch.GraphicsDevice.BlendState;
@@ -635,7 +635,7 @@ namespace VikingXNAGraphics
                 MeasureLabel();
             }
 
-            if (this._Rows == null || this._Rows.Length == 0)
+            if (this._Rows is null || this._Rows.Length == 0)
                 return;
 
             //Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);

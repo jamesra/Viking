@@ -33,7 +33,7 @@ namespace AnnotationVizLib.OData
         {
             get
             {
-                if (_VolumeShape == null)
+                if (_VolumeShape is null)
                 {
                     if (loc.VolumeShape.Geometry.WellKnownBinary != null)
                         _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.VolumeShape.Geometry.WellKnownBinary), loc.VolumeShape.Geometry.CoordinateSystemId.Value);

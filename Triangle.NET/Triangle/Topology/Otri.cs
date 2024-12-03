@@ -31,7 +31,7 @@ namespace TriangleNet.Topology
 
         public override string ToString()
         {
-            if (tri == null)
+            if (tri is null)
             {
                 return "O-TID [null]";
             }
@@ -464,7 +464,7 @@ namespace TriangleNet.Topology
         /// </summary>
         internal static bool IsDead(Triangle tria)
         {
-            return tria.neighbors[0].tri == null;
+            return tria.neighbors[0].tri is null;
         }
 
         /// <summary>

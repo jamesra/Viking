@@ -46,7 +46,7 @@ namespace Viking.VolumeModel
         {
             get
             {
-                if (_LocalVolumeDir == null)
+                if (_LocalVolumeDir is null)
                 {
                     _LocalVolumeDir = System.IO.Path.Combine(LocalCachePath, this.Name) + System.IO.Path.DirectorySeparatorChar;
                     if (!System.IO.Directory.Exists(_LocalVolumeDir))
@@ -67,7 +67,7 @@ namespace Viking.VolumeModel
         {
             get
             {
-                if (_StosCacheDir == null)
+                if (_StosCacheDir is null)
                 {
                     _StosCacheDir = System.IO.Path.Combine(this.LocalVolumeDir, "Stos");
                     if (!System.IO.Directory.Exists(_StosCacheDir))

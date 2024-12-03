@@ -29,7 +29,7 @@ namespace VikingXNAGraphics
             get { return _ControlPoints; }
             set
             {
-                if (value == null)
+                if (value is null)
                 {
                     _ControlPoints = new List<GridVector2>();
                 }
@@ -199,7 +199,7 @@ namespace VikingXNAGraphics
         /// <param name="p"></param>
         public void Add(GridVector2 p)
         {
-            if(this.ControlPoints == null)
+            if(this.ControlPoints is null)
             {
                 this._ControlPoints = new List<GridVector2>();
             }
@@ -207,14 +207,14 @@ namespace VikingXNAGraphics
             this.ControlPoints.Add(p);
             
             //Create the view for the control point
-            List<CircleView> listControlPointViews = ControlPointViews == null ? new List<CircleView>() : ControlPointViews.ToList();
+            List<CircleView> listControlPointViews = ControlPointViews is null ? new List<CircleView>() : ControlPointViews.ToList();
             listControlPointViews.Add(CreateControlPointView(p, this.ControlPointRadius, this.Color, this.ControlPointTexture));
             this.ControlPointViews = listControlPointViews.ToArray();
 
             //Create the view for the line
             if (this.ControlPoints.Count >= 2)
             {
-                List<LineView> listLineViews = LineViews == null ? new List<LineView>() : LineViews.ToList();
+                List<LineView> listLineViews = LineViews is null ? new List<LineView>() : LineViews.ToList();
                 listLineViews.Add(new LineView(ControlPoints[ControlPoints.Count-2], ControlPoints[ControlPoints.Count - 1], LineWidth, Color, this.Style));
                 this.LineViews = listLineViews.ToArray();
             }
@@ -226,7 +226,7 @@ namespace VikingXNAGraphics
         /// <param name="p"></param>
         public void Remove()
         {
-            if (this.ControlPoints == null || this.ControlPoints.Count == 0)
+            if (this.ControlPoints is null || this.ControlPoints.Count == 0)
                 return;
 
             this.ControlPoints.RemoveAt(this.ControlPoints.Count-1);
@@ -250,7 +250,7 @@ namespace VikingXNAGraphics
         /// </summary>
         private void UpdateAllViews()
         {
-            if (_ControlPoints == null || _ControlPoints.Count == 0)
+            if (_ControlPoints is null || _ControlPoints.Count == 0)
             {
                 this.ControlPointViews = null;
                 this.LineViews = null;
@@ -275,7 +275,7 @@ namespace VikingXNAGraphics
 
         private static CircleView[] CreateControlPointViews(IList<GridVector2> ControlPoints, double Radius, Microsoft.Xna.Framework.Color color, Texture2D texture)
         {
-            if(ControlPoints == null)
+            if(ControlPoints is null)
             {
                 return new CircleView[0];
             }
@@ -294,7 +294,7 @@ namespace VikingXNAGraphics
 
         private static LineView[] CreateLineViews(IList<GridVector2> points, double LineWidth, Color color, LineStyle style)
         {
-            if (points == null || points.Count < 2)
+            if (points is null || points.Count < 2)
             {
                 return new LineView[0];
             }

@@ -82,7 +82,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         public static List<ObjAttribute> Parse(string serverXml)
         {
-            if (serverXml == null)
+            if (serverXml is null)
                 return new List<ObjAttribute>();
 
             if (serverXml.StartsWith("<"))
@@ -101,7 +101,7 @@ namespace WebAnnotationModel
             System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Load(new StringReader(XMLString));
 
             XElement structureElem = doc.Element("Structure");
-            if (structureElem == null)
+            if (structureElem is null)
                 return new List<ObjAttribute>();
 
             return ObjAttribute.ElementToAttribs(structureElem);
@@ -132,7 +132,7 @@ namespace WebAnnotationModel
 
         public static List<ObjAttribute> TagStringsToList(IEnumerable<string> tags)
         {
-            if (tags == null)
+            if (tags is null)
                 return new List<ObjAttribute>();
 
             List<ObjAttribute> listTags = new List<ObjAttribute>();

@@ -78,7 +78,7 @@ namespace Viking.UI.Forms
             //  SectionViewerForm form = new SectionViewerForm(section);
             //  form.Show();
             SectionViewerForm form = State.ViewerForm;
-            if (form == null)
+            if (form is null)
             {
                 form = new SectionViewerForm(section);
                 State.ViewerForm = form;

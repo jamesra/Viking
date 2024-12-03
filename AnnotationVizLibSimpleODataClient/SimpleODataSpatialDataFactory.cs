@@ -24,7 +24,7 @@ namespace AnnotationVizLib.SimpleODataClient
             var annotations = new ODataFeedAnnotations();
 
             string queryString = null;
-            if ((IDs == null || IDs.Count == 0) && graph.Nodes.Count > 0)
+            if ((IDs is null || IDs.Count == 0) && graph.Nodes.Count > 0)
             {
                 //If no specific ID requested and there are nodes in the graph then request everything
                 queryString = string.Format("NetworkSpatialData", IDs.ToODataArrayParameterString(), Hops);
@@ -152,7 +152,7 @@ namespace AnnotationVizLib.SimpleODataClient
             var annotations = new ODataFeedAnnotations();
 
             string queryString = null;
-            if ((IDs == null || IDs.Count == 0) && graph.Nodes.Count > 0)
+            if ((IDs is null || IDs.Count == 0) && graph.Nodes.Count > 0)
             {
                 //If no specific ID requested and there are nodes in the graph then request everything
                 queryString = string.Format("NetworkEdgeSpatialData", IDs.ToODataArrayParameterString(), Hops);

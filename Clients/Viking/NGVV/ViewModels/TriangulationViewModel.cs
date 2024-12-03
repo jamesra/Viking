@@ -72,7 +72,7 @@ namespace Viking.ViewModels
         public void DrawMesh(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
         {
 
-            if (vbMappedMesh == null)
+            if (vbMappedMesh is null)
             {
                 CreateMesh(graphicsDevice);
             }
@@ -136,7 +136,7 @@ namespace Viking.ViewModels
         {
             get
             {
-                if (_Labels == null)
+                if (_Labels is null)
                 {
                     _Labels = CreateLabels(this.MapPoints);
                 }

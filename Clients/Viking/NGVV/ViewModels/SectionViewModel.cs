@@ -58,7 +58,7 @@ namespace Viking.ViewModels
         {
             get
             {
-                if (section.ChannelInfoArray == null || section.ChannelInfoArray.Length == 0)
+                if (section.ChannelInfoArray is null || section.ChannelInfoArray.Length == 0)
                 {
                     ChannelInfo channel = new ChannelInfo
                     {
@@ -131,8 +131,8 @@ namespace Viking.ViewModels
                 if (SendEvent && OnReferenceSectionChanged != null)
                 {
                     OnReferenceSectionChanged(this, new ReferenceSectionChangedEventArgs(this,
-                                                                                         _oldReference == null ? new long?() : _oldReference.Number,
-                                                                                         value == null ? new long?() : value.Number));
+                                                                                         _oldReference is null ? new long?() : _oldReference.Number,
+                                                                                         value is null ? new long?() : value.Number));
                 }
             }
         }
@@ -181,8 +181,8 @@ namespace Viking.ViewModels
                 if (SendEvent && OnReferenceSectionChanged != null)
                 {
                     OnReferenceSectionChanged(this, new ReferenceSectionChangedEventArgs(this,
-                                                                                         _oldReference == null ? new long?() : _oldReference.Number,
-                                                                                         value == null ? new long?() : value.Number));
+                                                                                         _oldReference is null ? new long?() : _oldReference.Number,
+                                                                                         value is null ? new long?() : value.Number));
                 }
             }
         }

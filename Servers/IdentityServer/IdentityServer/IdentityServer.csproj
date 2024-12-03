@@ -11,6 +11,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Client\**" />
+    <Compile Remove="DevTestAPI\**" />
+    <Compile Remove="DevTest\**" />
+    <Content Remove="Client\**" />
+    <Content Remove="DevTestAPI\**" />
+    <Content Remove="DevTest\**" />
+    <EmbeddedResource Remove="Client\**" />
+    <EmbeddedResource Remove="DevTestAPI\**" />
+    <EmbeddedResource Remove="DevTest\**" />
+    <None Remove="Client\**" />
+    <None Remove="DevTestAPI\**" />
+    <None Remove="DevTest\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Remove="Views\Shared\UserSelected.cshtml" />
   </ItemGroup>
 

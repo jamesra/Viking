@@ -115,10 +115,10 @@ namespace VikingXNAGraphics
 
         public override void UpdateViews()
         {
-            if (Points == null)
+            if (Points is null)
             {
-                PointViews = new CircleView[0];
-                LabelViews = new LabelView[0];
+                PointViews = Array.Empty<CircleView>();
+                LabelViews = Array.Empty<LabelView>();
                 return;
             }
 

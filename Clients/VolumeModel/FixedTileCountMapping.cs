@@ -43,7 +43,7 @@ namespace Viking.VolumeModel
         {
             get
             {
-                if (CurrentPyramid == null)
+                if (CurrentPyramid is null)
                     throw new InvalidOperationException("No image pyramid set in FixedTileCountMapping, not using mapping manager?");
 
                 return CurrentPyramid.GetLevels().ToArray();
@@ -57,7 +57,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         protected override double AdjustDownsampleForScale(double input)
         {
-            if (this.CurrentPyramid.XYScale == null)
+            if (this.CurrentPyramid.XYScale is null)
                 return input;
 
             double relative_scale = this.CurrentPyramid.XYScale.Value / this.Section.XYScale.Value;
@@ -76,7 +76,7 @@ namespace Viking.VolumeModel
         internal string TileTextureFileName(int number)
         {
             ITransform[] transforms = GetLoadedTransformsOrNull();
-            if (transforms == null)
+            if (transforms is null)
                 return null;
 
             if (!(((ITransformInfo)transforms[number]).Info is TileTransformInfo info))
@@ -136,7 +136,7 @@ namespace Viking.VolumeModel
             //The corrupted memory error disappeared when I stopped using the cache.  There are also 
             //memory leak issues documented on MSDN regarding BinaryFormatters
             //return;
-            if (transforms == null)
+            if (transforms is null)
                 return Task.CompletedTask;
 
             using (FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
@@ -209,7 +209,7 @@ namespace Viking.VolumeModel
 
             //TODO: Need a flag to indicate if transforms are loaded so we can skip
             ITransform[] Tranforms = GetLoadedTransformsOrNull();
-            if (Tranforms == null)
+            if (Tranforms is null)
                 return VisibleTiles;
 
             int ExpectedTileCount = Tranforms.Length;
@@ -253,7 +253,7 @@ namespace Viking.VolumeModel
                     if (T_Triangulation.MapPoints.Length < 3)
                         continue;
 
-                    if (T_Triangulation.TriangleIndicies == null)
+                    if (T_Triangulation.TriangleIndicies is null)
                         continue;
 
                     if (T is ITransformControlPoints T_ControlPoints)

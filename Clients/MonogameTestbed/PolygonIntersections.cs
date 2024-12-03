@@ -47,7 +47,7 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         private readonly string JSONFile = "PolygonIntersectionRepro.json";
 
@@ -140,6 +140,7 @@ namespace MonogameTestbed
             
         }
 
+        /*
         private MeshModel<VertexPositionColor> BuildCircleConvexHull(ICircle2D circle)
         { 
             GridVector2[] verts2D = MorphologyMesh.ShapeMeshGenerator<Geometry.Meshing.IVertex3D<object>,object>.CreateVerticiesForCircle(circle, 0, 16, null, GridVector3.Zero).Select(v => new GridVector2(v.Position.X, v.Position.Y)).ToArray();
@@ -149,6 +150,7 @@ namespace MonogameTestbed
             GridPolygon convex_hull_poly = new GridPolygon(cv_verticies);
             return TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
         }
+        */
 
         public void Update()
         {
@@ -165,7 +167,7 @@ namespace MonogameTestbed
                     TestTask = null;
                 }
 
-                if (TestTask == null)
+                if (TestTask is null)
                 {
                     TestTask = PopulateTestTask();
                 }

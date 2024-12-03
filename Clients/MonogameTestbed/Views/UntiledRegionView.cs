@@ -29,7 +29,7 @@ namespace MonogameTestbed
 
         public Color Color
         {
-            get { return BoundaryView.color; }
+            get => BoundaryView.color;
             set
             {
                 BoundaryView.color = value;
@@ -100,7 +100,7 @@ namespace MonogameTestbed
 
             //List<GridLineSegment> LinesBetweenShapes = SelectLinesBetweenShapes(mesh, Shapes);
 
-            if (mesh == null)
+            if (mesh is null)
                 DelaunayView.UpdateViews(new GridVector2[0]);
             else
                 DelaunayView.UpdateViews(mesh.ToLines());
@@ -142,7 +142,7 @@ namespace MonogameTestbed
 
             foreach (GridVector2[] points in PointSets)
             {
-                if (points == null || points.Length < 4)
+                if (points is null || points.Length < 4)
                     continue;
 
                 poly.AppendCountour(points);
@@ -161,13 +161,13 @@ namespace MonogameTestbed
             for (int i = 0; i < shapes.Count; i++)
             {
                 GridPolygon iPoly = shapes[i];
-                if (iPoly == null)
+                if (iPoly is null)
                     continue;
 
                 for (int j = i + 1; j < shapes.Count; j++)
                 {
                     GridPolygon jPoly = shapes[j];
-                    if (jPoly == null)
+                    if (jPoly is null)
                         continue;
 
                     double minDistance = iPoly.Distance(jPoly);

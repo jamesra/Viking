@@ -26,13 +26,13 @@ namespace AnnotationVizLib.SimpleOData
             var scale = client.GetScale();
             SimpleODataNeuronFactory graphFactory = new SimpleODataNeuronFactory();
 
-            if (StructureIDs == null)
+            if (StructureIDs is null)
                 return graphFactory.graph;
 
             if (StructureIDs.Count == 0)
                 return graphFactory.graph;
 
-            if (IDToStructureType == null)
+            if (IDToStructureType is null)
             {
                 Task<IEnumerable<StructureType>> t = client.For<StructureType>().FindEntriesAsync();
                 t.Wait();
@@ -50,7 +50,7 @@ namespace AnnotationVizLib.SimpleOData
                 //Find the parent in the dictionary
                 Structure parent = NetworkStructures[child.ParentID.Value];
 
-                if (parent.Children == null)
+                if (parent.Children is null)
                 {
                     parent.Children = new List<Structure>();
                 }
@@ -65,7 +65,7 @@ namespace AnnotationVizLib.SimpleOData
             {
                 if (graphFactory.IDToStructure.TryGetValue(sl.SourceID, out var Source))
                 {  
-                    if (Source.SourceOfLinks == null)
+                    if (Source.SourceOfLinks is null)
                     {
                         Source.SourceOfLinks = new List<StructureLink>();
                     }
@@ -75,7 +75,7 @@ namespace AnnotationVizLib.SimpleOData
 
                 if (graphFactory.IDToStructure.TryGetValue(sl.TargetID, out var Target))
                 {
-                    if (Target.TargetOfLinks == null)
+                    if (Target.TargetOfLinks is null)
                     {
                         Target.TargetOfLinks = new List<StructureLink>();
                     }

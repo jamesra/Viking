@@ -104,7 +104,7 @@ namespace AnnotationVizLib
                 }
             }
 
-            if (best_edge == null)
+            if (best_edge is null)
                 throw new ArgumentException("Unexpected error in MergeSubgraph.  Could not find an edge between subgraphs.");
 
             this.AddEdge(best_edge);
@@ -329,7 +329,7 @@ namespace AnnotationVizLib
             foreach (var node_with_sourceType in nodes_with_sourceType_subgraphs)
             {
                 IList<ulong> path_to_targetType = MorphologyGraph.ShortestPath(cell_graph, node_with_sourceType.Node, (n) => n.NodeContainsStructureOfType(TargetTypeIDs));
-                if (path_to_targetType == null)
+                if (path_to_targetType is null)
                     continue;
 
                 //Find the substructure on the final node of the path

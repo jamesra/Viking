@@ -49,7 +49,7 @@ namespace WebAnnotationModel
         /// <param name="args"></param>
         public static void RaiseEventOnUIThread(this Delegate theEvent, object[] args)
         {
-            if (theEvent == null)
+            if (theEvent is null)
                 return;
 
             foreach (Delegate d in theEvent.GetInvocationList())

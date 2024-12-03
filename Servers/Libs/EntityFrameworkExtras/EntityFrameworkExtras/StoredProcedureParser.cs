@@ -33,7 +33,7 @@ namespace EntityFrameworkExtras
         {
             var attribute = Attributes.GetAttribute<StoredProcedureAttribute>(storedProcedure.GetType());
 
-            return attribute == null
+            return attribute is null
                 ? throw new InvalidOperationException(String.Format(
                     "{0} is not decorated with StoredProcedureAttribute.", storedProcedure.GetType()))
                 : attribute.Name;

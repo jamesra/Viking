@@ -21,7 +21,7 @@ namespace MonogameTestbed
         private  PointSet _BranchPoints = null;
         public PointSet BranchPoints
         {
-            get { return _BranchPoints; }
+            get => _BranchPoints;
             set
             {
                 if(_BranchPoints != null)
@@ -118,7 +118,7 @@ namespace MonogameTestbed
 
         public void CalculateBranchPorts()
         {
-            if (BranchShape == null)
+            if (BranchShape is null)
                 return;
 
             GridPolygon[] UseableShapes = Shapes.Where(s => s != null).ToArray();
@@ -235,7 +235,7 @@ namespace MonogameTestbed
         static readonly double PointRadius = 2.0;
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {

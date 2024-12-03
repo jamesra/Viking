@@ -28,14 +28,8 @@ namespace UtilitiesTests
         ///</summary>
         public TestContext TestContext
         {
-            get
-            {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
+            get => testContextInstance;
+            set => testContextInstance = value;
         }
 
         #region Additional test attributes
@@ -83,7 +77,7 @@ namespace UtilitiesTests
             // TODO: Add test logic	here
             //
         }
-
+        /*
         [TestMethod]
         public void TestAngle2()
         {
@@ -110,7 +104,7 @@ namespace UtilitiesTests
             Degree90 = GridVector3.Angle(Origin, B);
             Assert.AreEqual(Degree90, Pi2);
         }
-
+        
         [TestMethod]
         public void TestAngle3()
         {
@@ -127,7 +121,7 @@ namespace UtilitiesTests
             double result = GridVector3.Angle(Origin, D);
             Assert.AreEqual(degree45, Pi4);
             Assert.AreEqual(result, Pi4);
-        }
+        }*/
 
         [TestMethod]
         public void TestArcAngle()

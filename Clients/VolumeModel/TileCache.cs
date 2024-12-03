@@ -12,7 +12,7 @@ namespace Viking.VolumeModel
         {
             TileViewModel = T;
             LastAccessed = DateTime.UtcNow;
-            Size = T == null ? 1 : T.Size;
+            Size = T is null ? 1 : T.Size;
         }
 
         public override sealed void Dispose()

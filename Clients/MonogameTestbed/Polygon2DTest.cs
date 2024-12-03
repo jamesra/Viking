@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VikingXNAGraphics;
+using TriangleNet;
 
 namespace MonogameTestbed
 {
@@ -12,7 +13,7 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public static GridVector2[] CreateTestPolygon(GridVector2? offset = new GridVector2?())
         {
@@ -77,7 +78,7 @@ namespace MonogameTestbed
 
             MeshModel<VertexPositionColor> cv_model = TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
             this.meshView.models.Add(cv_model);
-            
+            /*
             MeshModel<VertexPositionColor> circle_cv_model = BuildCircleConvexHull(new GridCircle(new GridVector2(35, -35), 25));
             this.meshView.models.Add(circle_cv_model);
 
@@ -86,6 +87,7 @@ namespace MonogameTestbed
             
             MeshModel<VertexPositionColor> circle_cv_model3 = BuildCircleConvexHull(new GridCircle(new GridVector2(-100, 0), 40));
             this.meshView.models.Add(circle_cv_model3);
+            */
 
             meshView.WireFrame = false;
 
@@ -97,6 +99,7 @@ namespace MonogameTestbed
             
         }
 
+        /*
         private MeshModel<VertexPositionColor> BuildCircleConvexHull(ICircle2D circle)
         {
 
@@ -107,6 +110,7 @@ namespace MonogameTestbed
             GridPolygon convex_hull_poly = new GridPolygon(cv_verticies);
             return TriangleNetExtensions.CreateMeshForPolygon2D(convex_hull_poly, Color.Blue);
         }
+        */
 
         public void Update()
         {

@@ -114,7 +114,7 @@ namespace Geometry
             public bool MoveNext()
             {
                 iGridIndex++;
-                if (currentCell == null)
+                if (currentCell is null)
                 {
                     bool success = coordEnum.MoveNext();
                     if (!success)

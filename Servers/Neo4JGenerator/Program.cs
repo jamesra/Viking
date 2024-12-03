@@ -58,12 +58,12 @@ namespace Neo4JGenerator
                 json = DeserializeFromStream(response); 
             }
 
-            if(json == null)
+            if(json is null)
             {
                 Console.WriteLine("Unable to load JSON data");
             }
 
-            if (Program.options.ODataEndpoint == null)
+            if (Program.options.ODataEndpoint is null)
             {
                 ClearAndImportDatabase(json);
             }

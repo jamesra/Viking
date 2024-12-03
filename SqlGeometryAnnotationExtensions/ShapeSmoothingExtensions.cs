@@ -87,7 +87,7 @@ namespace Viking.VolumeModel
 
         private static List<GridVector2[]> InnerRingPointsToCurvedRingPoints(ICollection<GridVector2[]> innerRingPoints)
         {
-            if (innerRingPoints == null)
+            if (innerRingPoints is null)
                 return null;
 
             List<GridVector2[]> curved_innerRingPoints = new List<GridVector2[]>(innerRingPoints.Count);

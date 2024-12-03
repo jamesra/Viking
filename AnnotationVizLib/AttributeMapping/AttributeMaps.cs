@@ -41,7 +41,7 @@ namespace AnnotationVizLib
 
             SortedDictionary<string, string> entity_attributes = new SortedDictionary<string, string>();
 
-            if (label == null)
+            if (label is null)
                 return entity_attributes;
 
             label = label.ToUpper();

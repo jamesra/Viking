@@ -2,8 +2,7 @@
 using Geometry.JSON;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using System.Threading.Tasks;
-using TriangleNet;
+using System.Threading.Tasks; 
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -34,7 +33,7 @@ namespace MonogameTestbed
         public double PointRadius = 2.0;
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public string Title => this.GetType().Name;
 

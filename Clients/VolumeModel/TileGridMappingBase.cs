@@ -60,7 +60,7 @@ namespace Viking.VolumeModel
         {
             get
             {
-                if (_AvailableLevels == null)
+                if (_AvailableLevels is null)
                 {
                     _AvailableLevels = new int[LevelToGridInfo.Keys.Count];
                     LevelToGridInfo.Keys.CopyTo(_AvailableLevels, 0);

@@ -118,7 +118,7 @@ namespace Viking.Common
 
         bool IEquatable<CacheEntry<KEY>>.Equals(CacheEntry<KEY> other)
         {
-            if (other == null)
+            if (other is null)
                 return false;
 
             return this.Key.Equals(other.Key);

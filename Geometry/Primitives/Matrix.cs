@@ -51,7 +51,7 @@ namespace Geometry
 
             System.DateTime StartTime = System.DateTime.UtcNow;
 
-            if (A == null || B == null)
+            if (A is null || B is null)
                 throw new System.ArgumentException("Null parameter passed to LinSolve");
 
             int[] dimsA = matrixA.Size;

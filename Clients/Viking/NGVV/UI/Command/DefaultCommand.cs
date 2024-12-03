@@ -29,7 +29,7 @@ namespace Viking.UI.Commands
 
         private readonly ObservableCollection<string> _ObservableHelpStrings;
 
-        public virtual ObservableCollection<string> ObservableHelpStrings { get { return _ObservableHelpStrings; } }
+        public virtual ObservableCollection<string> ObservableHelpStrings => _ObservableHelpStrings; 
 
         private object LastNearestObject = null;
 
@@ -37,7 +37,7 @@ namespace Viking.UI.Commands
         {
             List<string> s = new List<string>();
 
-            if (LastNearestObject == null)
+            if (LastNearestObject is null)
             {
                 if (Parent is IHelpStrings parentHelp)
                 {

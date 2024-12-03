@@ -34,7 +34,7 @@ namespace AnnotationVizLib.WCFClient
         {
             get
             {
-                if (structure.Links == null)
+                if (structure.Links is null)
                     return new IStructureLink[0];
 
                 return structure.Links.Select(l => new WCFStructureLinkAdapter(l)).ToArray();

@@ -34,7 +34,7 @@ namespace AnnotationVizLib
         {
             string nodelabel = node.Structure.Label;
 
-            if (node.Structure.Label == null)
+            if (node.Structure.Label is null)
             {
                 nodelabel = node.Key.ToString();
             }
@@ -47,7 +47,7 @@ namespace AnnotationVizLib
 
             string label = node.Key.ToString() + " " + node.Structure.Label;
 
-            if (AttribsForLabel == null)
+            if (AttribsForLabel is null)
             {
                 if (label.Length > 0)
                     DotNode.Attributes.Add("fillcolor", "grey");
@@ -84,7 +84,7 @@ namespace AnnotationVizLib
             IDictionary<string, string> EdgeAttribs = AttributeMapper.AttribsForLabel(edge.SynapseType.ToUpper(),
                                                                                      DOTAttributes.StandardEdgeSourceLabelToDOTAppearance);
 
-            if (EdgeAttribs == null)
+            if (EdgeAttribs is null)
             {
                 return null;
             }

@@ -73,7 +73,7 @@ namespace Geometry.Meshing
 
         protected override void UpdateBoundingBox(VERTEX v)
         {
-            if (BoundingBox.minVals == null)
+            if (BoundingBox.minVals is null)
                 BoundingBox = new GridBox(v.Position, 0);
             else
             {
@@ -84,7 +84,7 @@ namespace Geometry.Meshing
         protected override void UpdateBoundingBox(IEnumerable<VERTEX> verts)
         {
             GridVector3[] points = verts.Select(v => v.Position).ToArray();
-            if (BoundingBox.minVals == null)
+            if (BoundingBox.minVals is null)
                 BoundingBox = points.BoundingBox();
             else
             {
@@ -147,7 +147,7 @@ namespace Geometry.Meshing
         /// <param name="FaceDuplicator">Constructor to use when replacing the original face with the new split face</param>
         public void ConvertAllFacesToTriangles()
         {
-            if (CreateOffsetFace == null)
+            if (CreateOffsetFace is null)
                 throw new InvalidOperationException("No duplication method in DynamicRenderMesh specified for faces");
 
             IEnumerable<IFace> quadFaces = this.Faces.Where(f => !f.IsTriangle()).ToList();

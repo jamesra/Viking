@@ -40,7 +40,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (this.AsyncResult == null)
+                if (this.AsyncResult is null)
                     return false;
 
                 return AsyncResult.IsCompleted;
@@ -77,7 +77,7 @@ namespace WebAnnotationModel
 
         public void AddCallback(Action<ICollection<OBJECT>> callback)
         {
-            if (callback == null)
+            if (callback is null)
                 return;
 
             lock (this)

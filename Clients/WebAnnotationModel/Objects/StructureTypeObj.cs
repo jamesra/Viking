@@ -96,7 +96,7 @@ namespace WebAnnotationModel
 
         public StructureTypeObj()
         {
-            if (this.Data == null)
+            if (this.Data is null)
                 this.Data = new StructureType();
 
             this.Data.DBAction = AnnotationService.Types.DBACTION.INSERT;
@@ -126,7 +126,7 @@ namespace WebAnnotationModel
 
         public StructureTypeObj(StructureTypeObj parent) : this()
         {
-            if (this.Data == null)
+            if (this.Data is null)
                 this.Data = new StructureType();
 
             if (parent != null)
@@ -148,7 +148,7 @@ namespace WebAnnotationModel
             {
                 lock (LinksLock)
                 {
-                    if (_PermittedLinks == null)
+                    if (_PermittedLinks is null)
                     {
                         if (Data.PermittedLinks != null)
                         {
@@ -259,7 +259,7 @@ namespace WebAnnotationModel
             lock (LinksLock)
             {
                 PermittedStructureLinkObj LinkToRemove = PermittedLinks.FirstOrDefault(link => link.SourceTypeID == key.SourceTypeID && link.TargetTypeID == key.TargetTypeID);
-                if (LinkToRemove == null)
+                if (LinkToRemove is null)
                     return false;
 
                 PermittedLinks.Remove(LinkToRemove);

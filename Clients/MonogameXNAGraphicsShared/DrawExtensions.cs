@@ -48,7 +48,7 @@ namespace VikingXNA
 
             VertexDeclaration oldVertexDeclaration = graphicsDevice.VertexDeclaration;
 
-            if (DrawExtensions.VertexPositionColorDeclaration == null)
+            if (DrawExtensions.VertexPositionColorDeclaration is null)
             {
                 DrawExtensions.VertexPositionColorDeclaration = new VertexDeclaration(
                     graphicsDevice,

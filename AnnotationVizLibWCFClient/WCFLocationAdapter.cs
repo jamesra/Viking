@@ -33,7 +33,7 @@ namespace AnnotationVizLib.WCFClient
         {
             get
             {
-                if (_VolumeShape == null)
+                if (_VolumeShape is null)
                 {
                     if (loc.VolumeShape.WellKnownValue.WellKnownBinary != null)
                         _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.VolumeShape.WellKnownValue.WellKnownBinary), loc.VolumeShape.CoordinateSystemId);
@@ -59,7 +59,7 @@ namespace AnnotationVizLib.WCFClient
         {
             get
             {
-                if (_MosaicShape == null)
+                if (_MosaicShape is null)
                 {
                     if (loc.MosaicShape.WellKnownValue.WellKnownBinary != null)
                         _VolumeShape = Microsoft.SqlServer.Types.SqlGeometry.STGeomFromWKB(new System.Data.SqlTypes.SqlBytes(loc.MosaicShape.WellKnownValue.WellKnownBinary), loc.MosaicShape.CoordinateSystemId);

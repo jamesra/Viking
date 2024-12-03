@@ -175,7 +175,7 @@ namespace GraphLib
         /// <returns></returns>
         internal static IList<KEY> RecursePath(ref SortedSet<KEY> testedNodes, Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch, Func<KEY, EDGETYPE, bool> CanTravelEdge = null)
         {
-            if (CanTravelEdge == null)
+            if (CanTravelEdge is null)
                 CanTravelEdge = CanTravelPath;
 
             testedNodes.Add(Origin);
@@ -208,7 +208,7 @@ namespace GraphLib
 
                 //Optimization, avoids copying the testedNodes set if there is only one path
                 IList<KEY> result = RecursePath(ref testedNodes, graph, linked_Keys.First(), IsMatch);
-                if (result == null)
+                if (result is null)
                     return null;
 
                 path.AddRange(result);
@@ -225,7 +225,7 @@ namespace GraphLib
 
                     SortedSet<KEY> testedNodesCopy = new SortedSet<KEY>(testedNodes);
                     IList<KEY> result = RecursePath(ref testedNodesCopy, graph, linked_Key, IsMatch);
-                    if (result == null)
+                    if (result is null)
                         continue;
 
                     listPotentialPaths.Add(result);

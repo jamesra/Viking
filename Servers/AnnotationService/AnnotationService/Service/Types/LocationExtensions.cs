@@ -55,7 +55,7 @@ namespace AnnotationService.Types
             loc.Radius = db.Radius;
             loc.Width = db.Width;
 
-            if (db.Tags == null)
+            if (db.Tags is null)
             {
                 //_Tags = new string[0];
                 loc.AttributesXml = null;
@@ -92,23 +92,23 @@ namespace AnnotationService.Types
             UpdateUserName |= db.Z != loc.Position.Z;
             db.Z = (int)loc.Position.Z;
 
-            if (loc.MosaicShape == null)
+            if (loc.MosaicShape is null)
             {
                 System.Data.Entity.Spatial.DbGeometry new_geom = loc.Radius > 0 ? Extensions.ToCircle(loc.Position.X, loc.Position.Y, loc.Position.Z, loc.Radius).ToDbGeometry() :
                                                                                   Extensions.ToGeometryPoint(loc.Position.X, loc.Position.Y).ToDbGeometry();
 
-                UpdateUserName |= db.MosaicShape == null ? true : !db.MosaicShape.SpatialEquals(loc.MosaicShape);
+                UpdateUserName |= db.MosaicShape is null ? true : !db.MosaicShape.SpatialEquals(loc.MosaicShape);
                 db.MosaicShape = new_geom;
             }
             else
             {
-                UpdateUserName |= db.MosaicShape == null ? true : !db.MosaicShape.SpatialEquals(loc.MosaicShape);
+                UpdateUserName |= db.MosaicShape is null ? true : !db.MosaicShape.SpatialEquals(loc.MosaicShape);
                 db.MosaicShape = loc.MosaicShape;
             }
 
             //See above comment before adding UpdateUserName test...
             //UpdateUserName |= db.VolumeShape != loc.VolumeShape;
-            if (loc.VolumeShape == null)
+            if (loc.VolumeShape is null)
                 db.VolumeShape = loc.Radius > 0 ? Extensions.ToCircle(loc.VolumePosition.X, loc.VolumePosition.Y, loc.VolumePosition.Z, loc.Radius).ToDbGeometry() :
                                                   Extensions.ToGeometryPoint(loc.VolumePosition.X, loc.VolumePosition.Y).ToDbGeometry();
             else
@@ -148,13 +148,13 @@ namespace AnnotationService.Types
             UpdateUserName |= db.Width != loc.Width;
             db.Width = loc.Width;
 
-            UpdateUserName |= db.Username == null;
+            UpdateUserName |= db.Username is null;
 
             if (UpdateUserName)
             {
                 db.Username = Annotation.ServiceModelUtil.GetUserForCall();
             }
-            else if (db.Username == null)
+            else if (db.Username is null)
             {
                 if (loc.Username != null)
                     db.Username = loc.Username;
@@ -237,7 +237,7 @@ namespace AnnotationService.Types
             loch.ChangedColumnMask = 0; //TODO: System.Convert.ToUInt64(db.___update_mask); 
 
 
-            if (db.Tags == null)
+            if (db.Tags is null)
             {
                 //_Tags = new string[0];
                 loch.AttributesXml = null;

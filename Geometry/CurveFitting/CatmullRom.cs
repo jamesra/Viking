@@ -499,7 +499,7 @@ namespace Geometry
             //var path = input.ToList();
 
             //We can't simplify the already simple...
-            if (path == null || path.Count <= 2)
+            if (path is null || path.Count <= 2)
                 return path;
 
             if (path.Count <= 4 && IsClosed)
@@ -513,7 +513,7 @@ namespace Geometry
             //GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
             var curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Global.TransformSignificantDigits)).ToArray(); 
             GridLineSegment[] curve_segments = curved_path.ToLineSegments();
-            QuadTree<int> point_to_ideal_curve_index = new QuadTree<int>(input.BoundingBox() * 1.1);
+            QuadTreeWithUniqueValues<int> point_to_ideal_curve_index = new QuadTreeWithUniqueValues<int>(input.BoundingBox() * 1.1);
             for (int i = 0; i < curved_path.Length; i++)
             {
                 if (IsClosed && i == curved_path.Length - 1)

@@ -305,7 +305,7 @@ namespace VikingXNAGraphics
 
         public bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
         {
-            if (sender == null)
+            if (sender is null)
                 throw new ArgumentNullException("sender");
 
             if (e is NotifyCollectionChangedEventArgs CollectionChangeArgs)

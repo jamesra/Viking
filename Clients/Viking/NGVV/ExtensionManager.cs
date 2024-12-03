@@ -108,13 +108,13 @@ namespace Viking.Common
                     if (ParentItem != null)
                     {
                         //Trying not to stomp user extension info if it exists
-                        if (ParentItem.Tag == null)
+                        if (ParentItem.Tag is null)
                         {
                             ParentItem.Tag = T.ToString();
                         }
 
                         //Assign a name if the user did not
-                        if (ParentItem.Text == null)
+                        if (ParentItem.Text is null)
                         {
                             ParentItem.Text = Attribs[0].ParentMenuName;
                         }
@@ -125,7 +125,7 @@ namespace Viking.Common
                 }
 
                 //Create a menu item if we haven't yet
-                if (ParentItem == null)
+                if (ParentItem is null)
                 {
                     
                     ParentItem = new System.Windows.Forms.ToolStripMenuItem(Attribs[0].ParentMenuName);
@@ -154,7 +154,7 @@ namespace Viking.Common
                 return;
 
             MethodInfo method = item.Tag as MethodInfo;
-            if (method == null)
+            if (method is null)
                 return;
 
             method.Invoke(null, new object[] { sender, e }); 
@@ -224,7 +224,7 @@ namespace Viking.Common
                     Assembly A = Assembly.LoadFrom(FileName);
 
                     VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                    if (Extension == null)
+                    if (Extension is null)
                         continue;
 
                     Trace.WriteLine("Found extension: " + Extension.Name, "ExtMan");
@@ -339,7 +339,7 @@ namespace Viking.Common
                 }
             }
 
-            if (types == null || types.Length == 0)
+            if (types is null || types.Length == 0)
                 return false;
 
             foreach (System.Type type in types)
@@ -348,7 +348,7 @@ namespace Viking.Common
                     continue;
 
                 System.Type interfaceType = type.GetInterface("Viking.Common.IInitExtensions");
-                if (interfaceType == null)
+                if (interfaceType is null)
                     continue;
 
                 try
@@ -490,7 +490,7 @@ namespace Viking.Common
                         * otherwise create a new one */
 
                     //The Default Command has a NULL Object Type
-                    if (Attrib.ObjectType == null)
+                    if (Attrib.ObjectType is null)
                         continue;
 
                     List<System.Type> List;

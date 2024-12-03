@@ -84,7 +84,7 @@ namespace Viking
             try
             {
                 rwResultLock.EnterUpgradeableReadLock();
-                if (_Result == null)
+                if (_Result is null)
                     return null;
 
                 try
@@ -219,7 +219,7 @@ namespace Viking
                         return null;
                     }
 
-                    if (textureUri == null)
+                    if (textureUri is null)
                         return null;
 
                     try
@@ -427,7 +427,7 @@ namespace Viking
             {
                 //Trace.WriteLine("HandleWebResponse on thread #" + Thread.CurrentThread.ManagedThreadId.ToString());
 
-                if (response == null)
+                if (response is null)
                 {
                     return null;
                 }
@@ -493,7 +493,7 @@ namespace Viking
                             if (Aborted)
                                 return null;
 
-                            if (stream == null)
+                            if (stream is null)
                                 return null;
 
                             stream.ReadTimeout = 60000;
@@ -814,7 +814,7 @@ namespace Viking
         protected Texture2D TextureFromStream(GraphicsDevice device, Byte[] streamdata, bool UseMipMaps)
         {
             TextureData data = TextureReaderV2.TextureDataFromStream(streamdata);
-            if (data == null)
+            if (data is null)
             { 
                 return null;
             }
@@ -978,13 +978,13 @@ namespace Viking
 
         public static Texture2D TextureFromData(GraphicsDevice graphicsDevice, in TextureData texdata, bool mipmap)
         {
-            if (graphicsDevice == null)
+            if (graphicsDevice is null)
                 return null;
 
             if (graphicsDevice.IsDisposed)
                 return null;
 
-            if (texdata.pixelBytes == null)
+            if (texdata.pixelBytes is null)
                 return null;
 
             //Trace.WriteLine("TextureFromData: " + this.Filename.ToString()); 
@@ -1032,7 +1032,7 @@ namespace Viking
                 //Trace.WriteLine("Dispose TextureReader: " + this.Filename.ToString());
                 IsDisposed = true;
 
-                //Debug.Assert(_Result == null);
+                //Debug.Assert(_Result is null);
                 if (_Result != null)
                 {
                     _Result.Dispose();

@@ -12,8 +12,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using TriangleNet;
-using TriangleNet.Meshing;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -45,11 +43,8 @@ namespace MonogameTestbed
 
         public Color Color
         {
-            get { return TrianglesView.color; }
-            set
-            {
-                TrianglesView.color = value;
-            }
+            get => TrianglesView.color;
+            set => TrianglesView.color = value;
         }
 
         public PolyBranchAssignmentView(GridPolygon[] polys, double[] Z)
@@ -61,7 +56,7 @@ namespace MonogameTestbed
             UpdatePolyViews();
 
             //UpdateTriangulation();
-            UpdateMeshView();
+            //UpdateMeshView();
         }
         
         public void UpdatePolyViews()
@@ -96,6 +91,7 @@ namespace MonogameTestbed
             PolyPointsView = listPointSetView.ToArray();
         }
 
+        /*
         private void BuildAPort(IMesh mesh, Dictionary<GridVector2, PolygonIndex> pointToPoly)
         {
             List<GridVector2> points = pointToPoly.Keys.ToList();
@@ -106,164 +102,14 @@ namespace MonogameTestbed
             SearchMesh.AddVerticies(pointToPoly.Keys.Select(v => new Vertex3D<PolygonIndex>(v.ToGridVector3(0), pointToPoly[v])).ToArray());
             SearchMesh.AddFaces(mesh.Triangles.Select(t => new Face(t.GetVertexID(0), t.GetVertexID(1), t.GetVertexID(2)) as IFace).ToArray()); 
         }
-        
+        */
         //Returns the line type for a line with a given midpoint.  The Polygons A & B must be different
         
-
-        public void UpdateTriangulation3D()
-        {
-            List<MIVector3> listPoints = new List<MIVector3>();
-            for(int iPoly = 0; iPoly < Polygons.Length; iPoly++)
-            {
-                var map = Polygons[iPoly].CreatePointToPolyMap();
-                double Z = PolyZ[iPoly];  
-                listPoints.AddRange(map.Keys.Select((Func<GridVector2, MIVector3>)(k => new MIVector3((GridVector3)k.ToGridVector3(Z), (PolygonIndex)new PolygonIndex((int)iPoly, (int?)map[(GridVector2)k].iInnerPoly, (int)map[(GridVector2)k].iVertex, (IReadOnlyList<GridPolygon>)Polygons)))));
-            }
-
-            var tri = MIConvexHull.DelaunayTriangulation<MIConvexHullExtensions.MIVector3, DefaultTriangulationCell<MIVector3>>.Create(listPoints, 1e-10);
-
-            List<DefaultTriangulationCell<MIVector3>> listCells = new List<DefaultTriangulationCell<MIVector3>>(tri.Cells.Count());
-            //DynamicRenderMesh<GridVector3> mesh = new DynamicRenderMesh<GridVector3>();
-
-            List<GridLineSegment> surfaceLines = new List<GridLineSegment>();
-            List<Color> Colors = new List<Color>();
-
-            //mesh.AddVertex(listPoints.Select(p => new Vertex(p.P)));
-
-            foreach(var cell in tri.Cells)
-            {
-                //For each face, determine if any of the edges are invalid lines.  If all lines are valid then add the face to the output
-                bool AllOnSurface = true;
-                List<GridLineSegment> FaceLines = new List<GridLineSegment>();
-                List<Color> FaceColors = new List<Color>();
-
-                List<GridLineSegment> tetraLines = new List<GridLineSegment>(6);
-                bool SkipCell = false; 
-                foreach(Combo<MIVector3> combo in cell.Vertices.CombinationPairs())
-                {
-                    GridLineSegment line = new GridLineSegment(combo.A.P, combo.B.P);
-
-                    PolygonIndex A = cell.Vertices[combo.iA].PolyIndex;
-                    PolygonIndex B = cell.Vertices[combo.iB].PolyIndex;
-
-                    tetraLines.Add(line);
-
-                    if(DelaunayTetrahedronView.LineCrossesEmptySpace(A,B, Polygons, line.PointAlongLine(0.5), PolyZ))
-                    {
-                        SkipCell = true;
-                        break;
-                    }
-                }
-
-                if(SkipCell)
-                {
-                    continue; 
-                }
-
-                int[][] faceIndicies = new int[][] { new int[] {0, 1, 2},
-                                             new int[] {0, 1, 3},
-                                             new int[] {0, 2, 3},
-                                             new int[] {1, 2, 3}};
-
-                bool NeedBreak = false;
-
-                foreach(int[] face in faceIndicies)
-                {
-                    //All edges of the triangle must be on the surface or we ignore the face.
-                    
-                    bool FaceOnSurface = true; 
-                    foreach (Combo<int> combo in face.CombinationPairs())
-                    {
-                        var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
-                        PolygonIndex A = cell.Vertices[combo.A].PolyIndex;
-                        PolygonIndex B = cell.Vertices[combo.B].PolyIndex;
-
-                        bool OnSurface = MeshGraphBuilder.IsLineOnSurface(A, B, Polygons, line.PointAlongLine(0.5));
-                        if (!surfaceLines.Contains(line))
-                        {
-                            surfaceLines.Add(line);
-                            Colors.Add(GetColorForLine(A, B, Polygons, line.PointAlongLine(0.5)));
-                        }
-                        FaceOnSurface &= OnSurface;
-                    }
-                    /*
-                    if(!FaceOnSurface)
-                    {
-                        NeedBreak = true; 
-
-                        foreach (Combo<int> combo in face.CombinationPairs())
-                        {
-                            var line = new GridLineSegment(cell.Vertices[combo.A].P, cell.Vertices[combo.B].P);
-                            PointIndex A = cell.Vertices[combo.A].PolyIndex;
-                            PointIndex B = cell.Vertices[combo.B].PolyIndex;
-
-                            if (!surfaceLines.Contains(line))
-                            {
-                                surfaceLines.Add(line);
-                                Colors.Add(GetColorForLine(A, B, Polygons, line.PointAlongLine(0.5)));
-                            }
-                        }    
-                    } 
-                    */
-                }
-
-                //if(NeedBreak)
-//                    break;
-                                                        
-                 
-                 /*
-                        //Wraparound to zero to close the cycle for the face
-                        //int next = i + 1 == cell.Vertices.Length ? 0 : i + 1;
-
-                        var line = new GridLineSegment(cell.Vertices[i].P, cell.Vertices[j].P);
-                        PointIndex A = cell.Vertices[i].PolyIndex;
-                        PointIndex B = cell.Vertices[j].PolyIndex;
-
-                        bool OnSurface = MeshGraphBuilder.IsLineOnSurface(A, B, Polygons, line.PointAlongLine(0.5));
-
-                        //AllOnSurface &= OnSurface;
-
-                        //if (!AllOnSurface)
-                        //{
-                        //    //No need to check any other parts of the face
-                        //    break;
-                        //}
-
-                        //Only add the line if the entire face is on the surface
-                        if (!surfaceLines.Contains(line))
-                        {
-                            surfaceLines.Add(line);
-                            Colors.Add(GetColorForLine(A, B, Polygons, line.PointAlongLine(0.5)));
-                        }
-                    }
-
-                    
-                    
-                }
-
-                break;
-
-                //if(AllOnSurface)
-                //{
-                //    surfaceLines.AddRange(FaceLines);
-                //    Colors.AddRange(FaceColors);
-                //}
-                */
-            }
-            
-            TrianglesView.color = Color.Red;
-            TrianglesView.UpdateViews(surfaceLines);
-            lineViews = TrianglesView.LineViews.ToArray();
-
-            for(int iLine = 0; iLine < lineViews.Length;iLine++)
-            {
-                lineViews[iLine].Color = Colors[iLine];
-            }
-        }
-
+         
+        /*
         public void UpdateMeshView()
         { 
-            IMesh mesh = Polygons.Triangulate();
+            var mesh = Polygons.Triangulate();
             FirstPassTriangulation = PolyBranchAssignmentView.ToMorphRenderMesh(mesh, Polygons, PolyZ);
             MeshVertsView = PointSetView.CreateFor(FirstPassTriangulation);
             FirstPassTriangulation.ClassifyMeshEdges();
@@ -279,6 +125,7 @@ namespace MonogameTestbed
             meshView = new MeshView<VertexPositionColor>();
             meshView.models.Add(meshViewModel);
         }
+        */
 
         /// <summary>
         /// Creates a MeshModel for the mesh
@@ -309,7 +156,7 @@ namespace MonogameTestbed
 
         internal static MeshModel<VertexPositionColor> CreateRegionView(BajajGeneratorMesh mesh)
         {
-            if (mesh.Regions == null)
+            if (mesh.Regions is null)
                 return null;
 
             if (mesh.Regions.Count == 0)
@@ -438,14 +285,15 @@ namespace MonogameTestbed
 
 
         
-
-        public static BajajGeneratorMesh ToMorphRenderMesh(TriangleNet.Meshing.IMesh mesh, GridPolygon[] Polygons, double[] PolyZ)
+        /*
+        public static BajajGeneratorMesh ToMorphRenderMesh(IMesh3D<IVertex3D> mesh, IShape2D[] Shapes, double[] ShapeZ)
         {
-            double MinZ = PolyZ.Min();
-            BajajGeneratorMesh output = new BajajGeneratorMesh(Polygons, PolyZ, IsUpperPolygon: PolyZ.Select(Z => Z != MinZ).ToArray());
+            double MinZ = ShapeZ.Min();
+            BajajGeneratorMesh output = new BajajGeneratorMesh(Shapes, ShapeZ, IsUpperShape: ShapeZ.Select(Z => Z != MinZ).ToArray());
             BajajMeshGenerator.AddTriangulationEdgesToMesh(mesh, output);
             return output;
         }
+        */
          
 
         private Color GetColorForLine(PolygonIndex APoly, PolygonIndex BPoly, GridPolygon[] Polygons, GridVector2 midpoint)
@@ -700,8 +548,8 @@ namespace MonogameTestbed
         PolyBranchAssignmentView wrapView = null;
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
-         
+        public bool Initialized => _initialized;
+
         public Task Init(MonoTestbed window)
         {
             _initialized = true;

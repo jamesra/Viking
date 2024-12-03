@@ -61,7 +61,7 @@ namespace MonogameTestbed
 
         public void UpdateViews(GridPolygon polygon)
         {
-            if (polygon == null)
+            if (polygon is null)
             {
                 LineViews = new List<LineView>();
             }

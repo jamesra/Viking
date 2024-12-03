@@ -62,7 +62,7 @@ namespace AnnotationVizLib.SimpleOData
             Debug.Assert(scale != null);
 
             MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
-            if (StructureIDs == null)
+            if (StructureIDs is null)
             {
                 //TODO: Retrieve the full network if no structureID's are passed
                 return rootGraph;
@@ -104,7 +104,7 @@ namespace AnnotationVizLib.SimpleOData
             /////////////////////////////////////////////////////////////////////////////////////
             //Check if any work was actually requested, if not return empty graph with scale data
             MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
-            if (LocationIDs == null || LocationIDs.Count() == 0)
+            if (LocationIDs is null || LocationIDs.Count() == 0)
             {
                 //TODO: Retrieve the full network if no structureID's are passed
                 return rootGraph;
@@ -322,7 +322,7 @@ namespace AnnotationVizLib.SimpleOData
         {
             List<Structure> listStructures = new List<Structure>();
 
-            if (StructureIDs == null)
+            if (StructureIDs is null)
             {
                 return listStructures;
             }
@@ -395,7 +395,7 @@ namespace AnnotationVizLib.SimpleOData
         {
             //SortedList<ulong, Task<IEnumerable<IDictionary<string, object>>>> tasks = new SortedList<ulong, Task<IEnumerable<IDictionary<string, object>>>>();
             /*
-            ulong[] StructuresToRequest = structures.Where(s => s.LocationLinks == null).Select(s => s.ID).Distinct().ToArray();
+            ulong[] StructuresToRequest = structures.Where(s => s.LocationLinks is null).Select(s => s.ID).Distinct().ToArray();
             tasks = CreateLoadStructureLocationLinksTasks(client, StructuresToRequest);
 
             foreach (Structure s in structures)
@@ -419,7 +419,7 @@ namespace AnnotationVizLib.SimpleOData
             List<Task> tasks = new List<Task>(structures.Count);
             foreach(Structure s in structures)
             {
-                if (s.LocationLinks == null)
+                if (s.LocationLinks is null)
                 {
                     
                     var t = client.ExecuteFunctionAsArrayAsync<LocationLink>("StructureLocationLinks", new Dictionary<string, object>() { { "StructureID", System.Convert.ToInt64(s.ID) } })
@@ -494,7 +494,7 @@ namespace AnnotationVizLib.SimpleOData
             foreach (Structure s in Structures)
             {
                 MorphologyGraph graph = MorphologyGraphForStructure(s, scale);
-                if (graph == null)
+                if (graph is null)
                     return;
 
                 rootGraph.AddSubgraph(graph);
@@ -518,7 +518,7 @@ namespace AnnotationVizLib.SimpleOData
 
         private static MorphologyGraph MorphologyGraphForStructure(Structure s, UnitsAndScale.IScale scale)
         {
-            if (s.Locations == null)
+            if (s.Locations is null)
                 return null;
 
             Location[] locations = s.Locations.ToArray();
@@ -544,7 +544,7 @@ namespace AnnotationVizLib.SimpleOData
 
         private static void AddLocationEdges(MorphologyGraph graph, LocationLink[] location_links)
         {
-            if (location_links == null)
+            if (location_links is null)
                 return;
 
             foreach (LocationLink loc_link in location_links)

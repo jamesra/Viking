@@ -70,7 +70,7 @@ namespace AnnotationVizLib.WCFClient
                         Debug.Assert(IDToStructure.ContainsKey(ParentID));
                         Structure Parent = IDToStructure[ParentID];
                         ChildIDToParent[s.ID] = Parent;
-                        List<long> children = Parent.ChildIDs == null ? new List<long>() : new List<long>(Parent.ChildIDs);
+                        List<long> children = Parent.ChildIDs is null ? new List<long>() : new List<long>(Parent.ChildIDs);
                         children.Add(s.ID);
                         Parent.ChildIDs = children.ToArray();
                     }

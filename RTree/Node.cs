@@ -51,7 +51,7 @@ namespace RTree
             ids[entryCount] = id;
             entries[entryCount] = r.copy();
             entryCount++;
-            if (mbr == null)
+            if (mbr is null)
             {
                 mbr = r.copy();
             }
@@ -66,7 +66,7 @@ namespace RTree
             ids[entryCount] = id;
             entries[entryCount] = r;
             entryCount++;
-            if (mbr == null)
+            if (mbr is null)
             {
                 mbr = r.copy();
             }
@@ -149,9 +149,9 @@ namespace RTree
             int countdownIndex = rtree.maxNodeEntries - 1;
             for (int index = 0; index < entryCount; index++)
             {
-                if (entries[index] == null)
+                if (entries[index] is null)
                 {
-                    while (entries[countdownIndex] == null && countdownIndex > index)
+                    while (entries[countdownIndex] is null && countdownIndex > index)
                     {
                         countdownIndex--;
                     }

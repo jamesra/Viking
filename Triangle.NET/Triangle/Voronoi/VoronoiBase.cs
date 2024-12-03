@@ -63,7 +63,7 @@ namespace TriangleNet.Voronoi
             var vertices = new Vertex[mesh.triangles.Count + mesh.hullsize];
             var faces = new Face[mesh.vertices.Count];
 
-            if (factory == null)
+            if (factory is null)
             {
                 factory = new DefaultVoronoiFactory();
             }
@@ -273,7 +273,7 @@ namespace TriangleNet.Voronoi
                 var twin = edge.twin;
 
                 // Report edge only once.
-                if (twin == null)
+                if (twin is null)
                 {
                     edges.Add(new Edge(edge.origin.id, edge.next.origin.id));
                 }

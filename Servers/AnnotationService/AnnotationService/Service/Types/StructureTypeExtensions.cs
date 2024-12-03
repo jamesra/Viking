@@ -41,12 +41,12 @@ namespace AnnotationService.Types
                 st.Notes = type.Notes.TrimEnd();
             st.MarkupType = type.MarkupType;
 
-            if (type.Tags == null)
+            if (type.Tags is null)
                 st.Tags = new string[0];
             else
                 st.Tags = type.Tags.Split(';');
 
-            if (type.StructureTags == null)
+            if (type.StructureTags is null)
                 st.StructureTags = new string[0];
             else
                 st.StructureTags = type.StructureTags.Split(';');

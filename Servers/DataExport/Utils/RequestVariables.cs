@@ -74,8 +74,8 @@ namespace DataExport.Controllers
 
         public static ICollection<long> GetIDsFromRequestFiles(HttpFileCollectionBase files)
         {
-            if (files == null)
-                return new long[0];
+            if (files is null)
+                return Array.Empty<long>();
 
             List<long> ids = new List<long>();
 
@@ -101,7 +101,7 @@ namespace DataExport.Controllers
         public static ICollection<long> GetIDsFromQueryData(NameValueCollection  QueryData)
         {
             //A hack, but should only occur in unit testing
-            if (QueryData == null)
+            if (QueryData is null)
                 return new long[] { 180, 476, 514 };
 
             SortedSet<long> IDs = new SortedSet<long>();
@@ -128,7 +128,7 @@ namespace DataExport.Controllers
 
         public static ICollection<long> ParseIDString(string idListstr)
         {
-            if (idListstr == null)
+            if (idListstr is null)
                 return new long[0]; 
 
             string[] parts = idListstr.Split(new char[] {';', '\n'}, StringSplitOptions.RemoveEmptyEntries);
@@ -136,7 +136,7 @@ namespace DataExport.Controllers
             var query_tasks = new List<Task<ICollection<long>>>();
             foreach (string id in parts)
             {
-                if (id == null)
+                if (id is null)
                     continue;
 
                 try

@@ -55,7 +55,7 @@ namespace VikingXNAGraphics
         {
             get
             {
-                if (_BackgroundVerts == null)
+                if (_BackgroundVerts is null)
                 {
                     _BackgroundVerts = CircleView.VerticiesForCircle(this.Circle);
                     for(int i = 0; i < _BackgroundVerts.Length; i++)
@@ -349,7 +349,7 @@ namespace VikingXNAGraphics
         {
             get
             {
-                if (_BackgroundVerts == null)
+                if (_BackgroundVerts is null)
                 {
                     _BackgroundVerts = VerticiesForCircle(this.Circle);
                 }
@@ -441,13 +441,13 @@ namespace VikingXNAGraphics
             for (int iObj = 0; iObj < listToDraw.Length; iObj++)
             {
                 CircleView locToDraw = listToDraw[iObj];
-                if (locToDraw == null)
+                if (locToDraw is null)
                     continue; 
 
                 int[] locIndicies;
                 VertexPositionColorTexture[] objVerts = locToDraw.GetCircleBackgroundVerts(locToDraw.HSLColor, out locIndicies);
 
-                if (objVerts == null)
+                if (objVerts is null)
                     continue;
 
                 Array.Copy(objVerts, 0, VertArray, iNextVert, objVerts.Length);
@@ -478,7 +478,7 @@ namespace VikingXNAGraphics
             TextureCircleView.Draw(device, scene, basicEffect, arrayTextureCircles);
 
             //Draw untextured circles in the array
-            listToDraw = listToDraw.Where(c => c as TextureCircleView == null).ToArray();
+            listToDraw = listToDraw.Where(c => c as TextureCircleView is null).ToArray();
             if (listToDraw.Length == 0)
                 return;
 
@@ -518,11 +518,11 @@ namespace VikingXNAGraphics
             TextureCircleView.Draw(device, scene, overlayEffect, arrayTextureCircles);
 
             //Draw untextured circles in the array
-            listToDraw = listToDraw.Where(c => c as TextureCircleView == null).ToArray();
+            listToDraw = listToDraw.Where(c => c as TextureCircleView is null).ToArray();
             if (listToDraw.Length == 0)
                 return;
 
-            CircleView[] arraySolidCircles = listToDraw.Where(c => c as TextureCircleView == null).ToArray();
+            CircleView[] arraySolidCircles = listToDraw.Where(c => c as TextureCircleView is null).ToArray();
 
             //CircleView.SetupGraphicsDevice(device, overlayEffect);
             //overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorAlphaOverlayEffect;

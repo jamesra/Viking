@@ -20,7 +20,7 @@ namespace Geometry.Transforms
                 continuousTransform = LoadSerializedTransformFromCache(SerializerCacheFullPath) as IContinuousTransform;
             }
 
-            if (continuousTransform == null)
+            if (continuousTransform is null)
             {
                 continuousTransform = new DiscreteTransformWithContinuousFallback(discreteTransform,
                                                                                     new RBFTransform(IcPoints.MapPoints, info), info);

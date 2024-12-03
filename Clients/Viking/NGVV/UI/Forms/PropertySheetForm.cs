@@ -48,7 +48,7 @@ namespace Viking.UI.Forms
             PropertySheetForm PropertyForm;
 
             Debug.Assert(Object != null, "Cannot display properties for null object");
-            if (Object == null)
+            if (Object is null)
                 return null;
 
             //return PropertySheetForm.Show(Object.Row, ParentForm);

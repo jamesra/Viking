@@ -123,7 +123,7 @@ namespace TriangleNet.Geometry
         public override bool Equals(object obj)
         {
             // If parameter is null return false.
-            if (obj == null)
+            if (obj is null)
             {
                 return false;
             }

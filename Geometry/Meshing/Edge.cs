@@ -179,7 +179,7 @@ namespace Geometry.Meshing
         {
             get
             {
-                if (_ImmutableFaces == null)
+                if (_ImmutableFaces is null)
                 {
                     _ImmutableFaces = _Faces.ToImmutableSortedSet();
                 }
@@ -358,15 +358,9 @@ namespace Geometry.Meshing
             return false;
         }
 
-        public override int GetHashCode()
-        {
-            return Key.GetHashCode();
-        }
+        public override int GetHashCode() => Key.GetHashCode();
 
-        public override string ToString()
-        {
-            return Key.ToString();
-        }
+        public override string ToString() => Key.ToString();
 
         public int OppositeEnd(int end)
         {
@@ -382,15 +376,9 @@ namespace Geometry.Meshing
             return end == A ? B : A;
         }
 
-        public bool Contains(int endpoint)
-        {
-            return endpoint == A || endpoint == B;
-        }
+        public bool Contains(int endpoint) => endpoint == A || endpoint == B;
 
-        public bool Contains(long endpoint)
-        {
-            return endpoint == A || endpoint == B;
-        }
+        public bool Contains(long endpoint) => endpoint == A || endpoint == B;
 
         /// <summary>
         /// True if the edges share a vertex, but are not identical

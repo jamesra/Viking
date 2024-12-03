@@ -24,13 +24,7 @@ namespace GeometryTests.Algorithms
         /// <summary>
         /// A list of EdgeKeys for the constraints added to the mesh so far
         /// </summary>
-        public List<EdgeKey> AddedConstraintEdges
-        {
-            get
-            {
-                return ConstraintEdges.GetRange(0, EdgesAdded);
-            }
-        }
+        public List<EdgeKey> AddedConstraintEdges => ConstraintEdges.GetRange(0, EdgesAdded);
 
         /// <summary>
         /// Original input to model
@@ -252,8 +246,8 @@ namespace GeometryTests.Algorithms
         private static readonly Arbitrary<uint> NumEdgesGenerator = Arb.Default.UInt32();
         private static readonly Arbitrary<uint> EdgeGenerator = Arb.Default.UInt32();
 
-        public int NumVerts { get { return InitialActual.Verticies.Count; } }
-        public int NumEdges { get { return InitialModel.ConstraintEdges.Count; } }
+        public int NumVerts => InitialActual.Verticies.Count;
+        public int NumEdges => InitialModel.ConstraintEdges.Count;
 
         private static int NextID = 0;
         private readonly int ID = 0;
@@ -330,16 +324,16 @@ namespace GeometryTests.Algorithms
             OriginalModel = new ConstrainedDelaunayModel(InitialActual, Edges);
         }
 
-        public ConstrainedDelaunayModel InitialModel { get { return OriginalModel.Clone(); } }
+        public ConstrainedDelaunayModel InitialModel => OriginalModel.Clone();
 
-        public TriangulationMesh<IVertex2D> InitialActual { get { return OriginalMesh.Clone(); } }
+        public TriangulationMesh<IVertex2D> InitialActual => OriginalMesh.Clone();
 
         public Gen<Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>> Next(ConstrainedDelaunayModel value)
         {
             //If we don't have any more items then don't return a generator
             Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel> result;
 
-            if (value.PeekConstraint() == null)
+            if (value.PeekConstraint() is null)
                 result = new NoOperation();
             //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { });
             //return Gen.Elements(new Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>[] { new NoOperation() });
@@ -370,7 +364,7 @@ namespace GeometryTests.Algorithms
         /*
         public static IEnumerable<Command<TriangulationMesh<IVertex2D> Shrinker(Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel> values)
         {
-            List<Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>> listOutput = values.Where(v => v as NoOperation == null).ToList();
+            List<Command<TriangulationMesh<IVertex2D>, ConstrainedDelaunayModel>> listOutput = values.Where(v => v as NoOperation is null).ToList();
 
             for(int i = 0; i < listOutput.Count; i++)
             {

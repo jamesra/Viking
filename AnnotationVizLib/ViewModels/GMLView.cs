@@ -167,7 +167,7 @@ namespace AnnotationVizLib
 
             string Element = string.Format("<key id=\"{0}\" for=\"{1}\" attr.name=\"{0}\" attr.type=\"{2}\"", attribName, forType, attribType);
 
-            if (attribDefault == null)
+            if (attribDefault is null)
                 Element += "/>";
             else
                 Element += string.Format(">\n\t<default>{0}</default>\n</key>", attribDefault);

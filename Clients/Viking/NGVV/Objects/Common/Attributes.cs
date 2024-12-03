@@ -116,7 +116,7 @@ namespace Viking.Common
         public SupportedUITypesAttribute(System.Type[] types)
         {
             this.Types = types;
-            if (this.Types == null)
+            if (this.Types is null)
                 this.Types = new Type[0];
         }
     }
@@ -180,7 +180,7 @@ namespace Viking.Common
         public int CompareTo(object obj)
         {
             VikingExtensionAttribute attrib = obj as VikingExtensionAttribute;
-            if (obj == null)
+            if (obj is null)
                 return -1;
 
             return Name.CompareTo(attrib.Name);

@@ -193,7 +193,7 @@ namespace Viking.VolumeModel
                 ? sectionElement.GetAttributeCaseInsensitive("name").Value
                 : null;
             this.Number = System.Convert.ToInt32(sectionElement.GetAttributeCaseInsensitive("number").Value);
-            if (this.Name == null)
+            if (this.Name is null)
                 this.Name = this.Number.ToString("D4");
         }
 
@@ -250,7 +250,7 @@ namespace Viking.VolumeModel
                         */
 
                         Pyramid pyramid = Pyramid.CreateFromElement(elem, this);
-                        if (pyramid == null) //Do not add the pyramid if it has no levels or was invalid for some reason
+                        if (pyramid is null) //Do not add the pyramid if it has no levels or was invalid for some reason
                         {
                             System.Diagnostics.Trace.WriteLine(
                                 $"Unable to parse TilePyramid element of Section #{this.Number}");
@@ -264,7 +264,7 @@ namespace Viking.VolumeModel
                             Debug.WriteLine($"Duplicate Image Pyramid Level {this.Number}-{pyramid.Path}");
                         }
 
-                        if (DefaultPyramid == null || DefaultPyramid.Length == 0)
+                        if (DefaultPyramid is null || DefaultPyramid.Length == 0)
                             DefaultPyramid = pyramid.Name;
                         else
                         {
@@ -277,7 +277,7 @@ namespace Viking.VolumeModel
                     case "tileset":
                         //Load a pre-transformed pyramid whose tiles have a fixed size
                         TileGridMapping tilegridmapping = TileGridMapping.CreateFromTilesetElement(elem, this);
-                        if (tilegridmapping == null)
+                        if (tilegridmapping is null)
                         {
                             System.Diagnostics.Trace.WriteLine($"Unable to parse Tileset element of Section #{this.Number}");
                             continue;

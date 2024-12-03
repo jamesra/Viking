@@ -88,7 +88,7 @@ namespace Viking.ViewModels
 
         public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber)
         {
-            if (this.ActiveVolumeTransform == null)
+            if (this.ActiveVolumeTransform is null)
             {
                 return new VolumeToSectionTransform(BuildTransformKey("Identity", SectionNumber),
                                                     new Geometry.Transforms.IdentityTransform());

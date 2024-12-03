@@ -49,7 +49,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             Location location = await db.Locations.FindAsync(key);
-            if (location == null)
+            if (location is null)
             {
                 return NotFound();
             }
@@ -101,7 +101,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             Location location = await db.Locations.FindAsync(key);
-            if (location == null)
+            if (location is null)
             {
                 return NotFound();
             }
@@ -131,7 +131,7 @@ namespace ConnectomeODataV4.Controllers
         public async Task<IHttpActionResult> Delete([FromODataUri] long key)
         {
             Location location = await db.Locations.FindAsync(key);
-            if (location == null)
+            if (location is null)
             {
                 return NotFound();
             }

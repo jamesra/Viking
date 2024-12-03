@@ -49,7 +49,7 @@ namespace Viking.UI.Controls
                 if (null != _SourceObject)
                     SourceType = _SourceObject.GetType();
 
-                if (_SourceObject == null)
+                if (_SourceObject is null)
                 {
                     this.Text = "";
                     this.Pict.Visible = false;
@@ -96,7 +96,7 @@ namespace Viking.UI.Controls
         {
             get
             {
-                if (_SourceObject == null)
+                if (_SourceObject is null)
                     return base.ContextMenu;
                 ContextMenu CMenu = ((IUIObject)_SourceObject).ContextMenu;
                 CMenu.MenuItems.Add("Clear Link", new EventHandler(ContextMenuOnClear));
@@ -116,7 +116,7 @@ namespace Viking.UI.Controls
 
         protected void EnableControls()
         {
-            if (_Type == null || _ReadOnly)
+            if (_Type is null || _ReadOnly)
             {
                 btnBrowse.Visible = false;
                 this.AllowDrop = false;
@@ -139,7 +139,7 @@ namespace Viking.UI.Controls
 
         protected override void OnDragOver(System.Windows.Forms.DragEventArgs e)
         {
-            if (_Type == null)
+            if (_Type is null)
                 e.Effect = DragDropEffects.None;
             else if (_ReadOnly == false && _Type.IsAssignableFrom(UI.State.DragDropObject.GetType()))
                 e.Effect = DragDropEffects.All;

@@ -45,7 +45,7 @@ namespace Viking.UI.Controls
         {
             _ChannelNames = channelNames;
 
-            if (ChannelsToAdd == null)
+            if (ChannelsToAdd is null)
             {
                 radioGreyscale.Checked = true;
                 groupChannels.Enabled = false;

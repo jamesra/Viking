@@ -397,7 +397,7 @@ namespace RoundLineCode
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
 
-            if (techniqueName == null)
+            if (techniqueName is null)
                 effect.CurrentTechnique = effect.Techniques["Standard"];
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];
@@ -421,7 +421,7 @@ namespace RoundLineCode
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
 
-            if (techniqueName == null)
+            if (techniqueName is null)
                 effect.CurrentTechnique = effect.Techniques["Standard"];
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];
@@ -489,7 +489,7 @@ namespace RoundLineCode
             lineRadiusParameter.SetValue(lineRadius);
             blurThresholdParameter.SetValue(DefaultBlurThreshold);
 
-            if (techniqueName == null)
+            if (techniqueName is null)
                 effect.CurrentTechnique = effect.Techniques["Standard"];
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];

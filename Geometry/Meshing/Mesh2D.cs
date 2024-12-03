@@ -45,7 +45,7 @@ namespace Geometry.Meshing
 
         protected override void UpdateBoundingBox(VERTEX vert)
         {
-            if (_BoundingBox == null)
+            if (_BoundingBox is null)
                 _BoundingBox = new GridRectangle(vert.Position, 0);
             else
             {
@@ -56,7 +56,7 @@ namespace Geometry.Meshing
         protected override void UpdateBoundingBox(IEnumerable<VERTEX> verts)
         {
             var points = verts.Select(v => v.Position);
-            if (_BoundingBox == null)
+            if (_BoundingBox is null)
                 _BoundingBox = points.BoundingBox();
             else
             {

@@ -48,7 +48,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Structures == null))
+                if ((this._Structures is null))
                 {
                     this._Structures = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.Structure>(GetPath("Structures"));
                 }
@@ -70,7 +70,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Children == null))
+                if ((this._Children is null))
                 {
                     this._Children = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.StructureType>(GetPath("Children"));
                 }
@@ -92,7 +92,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Parent == null))
+                if ((this._Parent is null))
                 {
                     this._Parent = new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(this.Context, GetPath("Parent"));
                 }
@@ -114,7 +114,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._SourceOfLinks == null))
+                if ((this._SourceOfLinks is null))
                 {
                     this._SourceOfLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink>(GetPath("SourceOfLinks"));
                 }
@@ -136,7 +136,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._TargetOfLinks == null))
+                if ((this._TargetOfLinks is null))
                 {
                     this._TargetOfLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink>(GetPath("TargetOfLinks"));
                 }
@@ -690,7 +690,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Locations == null))
+                if ((this._Locations is null))
                 {
                     this._Locations = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.Location>(GetPath("Locations"));
                 }
@@ -712,7 +712,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Children == null))
+                if ((this._Children is null))
                 {
                     this._Children = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.Structure>(GetPath("Children"));
                 }
@@ -734,7 +734,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Parent == null))
+                if ((this._Parent is null))
                 {
                     this._Parent = new global::ODataClient.ConnectomeDataModel.StructureSingle(this.Context, GetPath("Parent"));
                 }
@@ -756,7 +756,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Type == null))
+                if ((this._Type is null))
                 {
                     this._Type = new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(this.Context, GetPath("Type"));
                 }
@@ -778,7 +778,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._SourceOfLinks == null))
+                if ((this._SourceOfLinks is null))
                 {
                     this._SourceOfLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.StructureLink>(GetPath("SourceOfLinks"));
                 }
@@ -800,7 +800,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._TargetOfLinks == null))
+                if ((this._TargetOfLinks is null))
                 {
                     this._TargetOfLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.StructureLink>(GetPath("TargetOfLinks"));
                 }
@@ -822,7 +822,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._LocationLinks == null))
+                if ((this._LocationLinks is null))
                 {
                     this._LocationLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.LocationLink>(GetPath("LocationLinks"));
                 }
@@ -1360,7 +1360,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Parent == null))
+                if ((this._Parent is null))
                 {
                     this._Parent = new global::ODataClient.ConnectomeDataModel.StructureSingle(this.Context, GetPath("Parent"));
                 }
@@ -1382,7 +1382,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._LocationLinksA == null))
+                if ((this._LocationLinksA is null))
                 {
                     this._LocationLinksA = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.LocationLink>(GetPath("LocationLinksA"));
                 }
@@ -1404,7 +1404,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._LocationLinksB == null))
+                if ((this._LocationLinksB is null))
                 {
                     this._LocationLinksB = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.LocationLink>(GetPath("LocationLinksB"));
                 }
@@ -1426,7 +1426,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._LocationLinks == null))
+                if ((this._LocationLinks is null))
                 {
                     this._LocationLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.LocationLink>(GetPath("LocationLinks"));
                 }
@@ -2126,7 +2126,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Source == null))
+                if ((this._Source is null))
                 {
                     this._Source = new global::ODataClient.ConnectomeDataModel.StructureSingle(this.Context, GetPath("Source"));
                 }
@@ -2148,7 +2148,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._Target == null))
+                if ((this._Target is null))
                 {
                     this._Target = new global::ODataClient.ConnectomeDataModel.StructureSingle(this.Context, GetPath("Target"));
                 }
@@ -2451,7 +2451,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._SourceType == null))
+                if ((this._SourceType is null))
                 {
                     this._SourceType = new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(this.Context, GetPath("SourceType"));
                 }
@@ -2473,7 +2473,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._TargetType == null))
+                if ((this._TargetType is null))
                 {
                     this._TargetType = new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(this.Context, GetPath("TargetType"));
                 }
@@ -2679,7 +2679,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._LocationA == null))
+                if ((this._LocationA is null))
                 {
                     this._LocationA = new global::ODataClient.ConnectomeDataModel.LocationSingle(this.Context, GetPath("LocationA"));
                 }
@@ -2701,7 +2701,7 @@ namespace ODataClient.ConnectomeDataModel
                 {
                     throw new global::System.NotSupportedException("The previous function is not composable.");
                 }
-                if ((this._LocationB == null))
+                if ((this._LocationB is null))
                 {
                     this._LocationB = new global::ODataClient.ConnectomeDataModel.LocationSingle(this.Context, GetPath("LocationB"));
                 }
@@ -3149,17 +3149,17 @@ namespace ODataClient.Geometry
         public static Scale CreateScale(global::ODataClient.Geometry.AxisUnits x, global::ODataClient.Geometry.AxisUnits y, global::ODataClient.Geometry.AxisUnits z)
         {
             Scale scale = new Scale();
-            if ((x == null))
+            if ((x is null))
             {
                 throw new global::System.ArgumentNullException("x");
             }
             scale.X = x;
-            if ((y == null))
+            if ((y is null))
             {
                 throw new global::System.ArgumentNullException("y");
             }
             scale.Y = y;
-            if ((z == null))
+            if ((z is null))
             {
                 throw new global::System.ArgumentNullException("z");
             }
@@ -3501,7 +3501,7 @@ namespace ODataClient.ConnectomeODataV4
         {
             get
             {
-                if ((this._StructureTypes == null))
+                if ((this._StructureTypes is null))
                 {
                     this._StructureTypes = base.CreateQuery<global::ODataClient.ConnectomeDataModel.StructureType>("StructureTypes");
                 }
@@ -3519,7 +3519,7 @@ namespace ODataClient.ConnectomeODataV4
         {
             get
             {
-                if ((this._Structures == null))
+                if ((this._Structures is null))
                 {
                     this._Structures = base.CreateQuery<global::ODataClient.ConnectomeDataModel.Structure>("Structures");
                 }
@@ -3537,7 +3537,7 @@ namespace ODataClient.ConnectomeODataV4
         {
             get
             {
-                if ((this._Locations == null))
+                if ((this._Locations is null))
                 {
                     this._Locations = base.CreateQuery<global::ODataClient.ConnectomeDataModel.Location>("Locations");
                 }
@@ -3555,7 +3555,7 @@ namespace ODataClient.ConnectomeODataV4
         {
             get
             {
-                if ((this._StructureLinks == null))
+                if ((this._StructureLinks is null))
                 {
                     this._StructureLinks = base.CreateQuery<global::ODataClient.ConnectomeDataModel.StructureLink>("StructureLinks");
                 }
@@ -3573,7 +3573,7 @@ namespace ODataClient.ConnectomeODataV4
         {
             get
             {
-                if ((this._PermittedStructureLinks == null))
+                if ((this._PermittedStructureLinks is null))
                 {
                     this._PermittedStructureLinks = base.CreateQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink>("PermittedStructureLinks");
                 }
@@ -3591,7 +3591,7 @@ namespace ODataClient.ConnectomeODataV4
         {
             get
             {
-                if ((this._LocationLinks == null))
+                if ((this._LocationLinks is null))
                 {
                     this._LocationLinks = base.CreateQuery<global::ODataClient.ConnectomeDataModel.LocationLink>("LocationLinks");
                 }

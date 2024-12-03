@@ -31,7 +31,7 @@ namespace AnnotationVizLib
         {
             get
             {
-                if (_geometry == null)
+                if (_geometry is null)
                 {
                     /*if(Location.Geometry.GeometryType() == SupportedGeometryType.POLYLINE)
                     {
@@ -117,7 +117,7 @@ namespace AnnotationVizLib
         /// </summary>
         public ulong[] GetEdgesAbove(MorphologyGraph graph = null)
         {
-            if (graph == null)
+            if (graph is null)
             {
                 graph = this.Graph;
             }
@@ -130,7 +130,7 @@ namespace AnnotationVizLib
         /// </summary>
         public ulong[] GetEdgesBelow(MorphologyGraph graph = null)
         {
-            if (graph == null)
+            if (graph is null)
             {
                 graph = this.Graph;
             }
@@ -143,7 +143,7 @@ namespace AnnotationVizLib
         /// </summary>
         public IEnumerable<IGrouping<double, MorphologyNode>> GetConnectedNodesGroupedByZ(MorphologyGraph graph = null)
         {
-            if (graph == null)
+            if (graph is null)
             {
                 graph = this.Graph;
             }

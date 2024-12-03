@@ -18,13 +18,16 @@ namespace MonogameTestbed
         POLYGON = 0x04, //The polygon indicies, with polygon index and vertex inside the polygon index
     }
 
+    /// <summary>
+    /// Displays a set of polygons with indicies labeled.  If there are null values in the polygon array they are skipped, but the index number of the shape is still advanced.s
+    /// </summary>
     class PolygonSetView
     {
         private PointSetView[] PolyPointsView = null;
         private LineView[] PolyRingViews = null;
-        private LabelView[] PolyIndexLabels = new LabelView[0];
+        private LabelView[] PolyIndexLabels = Array.Empty<LabelView>();
 
-        private readonly List<GridPolygon> _Polygons = new List<GridPolygon>();
+        private readonly List<GridPolygon> _Polygons;
 
         public Color[] PolyLineColors;
         public Color[] PolyVertexColors;
@@ -32,10 +35,7 @@ namespace MonogameTestbed
         private double _PointRadius;
         public double PointRadius
         {
-            get
-            {
-                return _PointRadius;
-            }
+            get => _PointRadius;
             set {
 
                 if (_PointRadius != value)
@@ -53,10 +53,7 @@ namespace MonogameTestbed
         private IndexLabelType _PointLabelTypes = IndexLabelType.NONE;
         public IndexLabelType PointLabelType
         {
-            get
-            {
-                return _PointLabelTypes;
-            }
+            get => _PointLabelTypes;
             set
             {
                 _PointLabelTypes = value; 
@@ -68,10 +65,7 @@ namespace MonogameTestbed
 
         public bool LabelIndex
         {
-            get
-            {
-                return (_PointLabelTypes & IndexLabelType.MESH) > 0;
-            }
+            get => (_PointLabelTypes & IndexLabelType.MESH) > 0;
             private set
             {
                 foreach (PointSetView psv in PolyPointsView)
@@ -83,10 +77,7 @@ namespace MonogameTestbed
 
         public bool LabelPosition
         {
-            get
-            {
-                return (_PointLabelTypes & IndexLabelType.POSITION) > 0;
-            }
+            get => (_PointLabelTypes & IndexLabelType.POSITION) > 0;
             private set
             {
                 foreach (PointSetView psv in PolyPointsView)
@@ -98,10 +89,7 @@ namespace MonogameTestbed
 
         public bool LabelPolygonIndex
         {
-            get
-            {
-                return (_PointLabelTypes & IndexLabelType.POLYGON) > 0;
-            }
+            get => (_PointLabelTypes & IndexLabelType.POLYGON) > 0;
             private set
             {
                 if(true == value)
@@ -195,6 +183,9 @@ namespace MonogameTestbed
             for (int iPoly = 0; iPoly < _Polygons.Count; iPoly++)
             {
                 GridPolygon p = _Polygons[iPoly];
+                if(p is null)
+                    continue;
+
                 PointSetView psv = new PointSetView();
 
                 List<GridVector2> points = p.ExteriorRing.ToList();

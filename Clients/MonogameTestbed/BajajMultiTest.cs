@@ -92,10 +92,7 @@ namespace MonogameTestbed
 
         public IndexLabelType VertexLabelType
         {
-            get
-            {
-                return PolyViews is null ? IndexLabelType.NONE : PolyViews.PointLabelType;
-            }
+            get => PolyViews is null ? IndexLabelType.NONE : PolyViews.PointLabelType;
             set
             {
                 if(PolyViews != null)
@@ -144,7 +141,7 @@ namespace MonogameTestbed
         /// </summary>
         public void OnUnloadContent()
         {
-            if (BuildCompositeThread == null)
+            if (BuildCompositeThread is null)
                 return;
 
             BuildCompositeThread.Abort();
@@ -237,12 +234,12 @@ namespace MonogameTestbed
                 iShownRegion = null; 
             }
 
-            if(iShownLineView == null)
+            if(iShownLineView is null)
             {
                 iShownLineView = listLineViews.Count - 1;
             }
 
-            if (iShownMesh == null)
+            if (iShownMesh is null)
             {
                 try
                 {
@@ -497,8 +494,8 @@ namespace MonogameTestbed
         readonly bool Draw3D = true;
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
-         
+        public bool Initialized => _initialized;
+
         public async Task Init(MonoTestbed window)
         {
             _initialized = true;
@@ -876,7 +873,7 @@ namespace MonogameTestbed
 
             foreach (var view in wrapViews)
             {
-                if (view.meshAssemblyPlan == null || view.Graph == null)
+                if (view.meshAssemblyPlan is null || view.Graph is null)
                     continue;
 
                 ulong structure_id = view.Graph.StructureID;

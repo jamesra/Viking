@@ -203,9 +203,9 @@ namespace TriangleNet.IO
                 p2 = tri.Dest();
                 p3 = tri.Apex();
 
-                h1 = (p1 == null) ? -1 : p1.id;
-                h2 = (p2 == null) ? -1 : p2.id;
-                h3 = (p3 == null) ? -1 : p3.id;
+                h1 = (p1 is null) ? -1 : p1.id;
+                h2 = (p2 is null) ? -1 : p2.id;
+                h3 = (p3 is null) ? -1 : p3.id;
 
                 // Triangle number, indices for three vertices.
                 stream.Write("{0} {1} {2} {3}", tri.tri.hash, h1, h2, h3);
@@ -229,7 +229,7 @@ namespace TriangleNet.IO
 
         private bool VerticesChanged(Mesh mesh)
         {
-            if (vertices == null || mesh.Vertices.Count != vertices.Length)
+            if (vertices is null || mesh.Vertices.Count != vertices.Length)
             {
                 return true;
             }
@@ -248,7 +248,7 @@ namespace TriangleNet.IO
 
         private void HashVertices(Mesh mesh)
         {
-            if (vertices == null || mesh.Vertices.Count != vertices.Length)
+            if (vertices is null || mesh.Vertices.Count != vertices.Length)
             {
                 vertices = new int[mesh.Vertices.Count];
             }

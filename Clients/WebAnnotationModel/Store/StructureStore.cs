@@ -183,7 +183,7 @@ namespace WebAnnotationModel
         public void CheckForOrphan(long ID)
         {
             StructureObj obj = GetObjectByID(ID);
-            if (obj == null)
+            if (obj is null)
                 return;
 
             long numLocs = 0;
@@ -251,7 +251,7 @@ namespace WebAnnotationModel
                 CreateStructureRetval retval = ((IAnnotateStructures)proxy).CreateStructure(newStruct.GetData(), newLocation.GetData());
 
                 //We should not insert created objects into the store before they are created on the server
-                Debug.Assert(this.GetObjectByID(newStruct.ID, false) == null);
+                Debug.Assert(this.GetObjectByID(newStruct.ID, false) is null);
 
                 StructureObj created_struct = new StructureObj(retval.structure);
 

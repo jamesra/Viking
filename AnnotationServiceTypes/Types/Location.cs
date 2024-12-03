@@ -101,7 +101,7 @@ namespace AnnotationService.Types
         {
             get
             {
-                if (_MosaicShape == null && _MosaicShapeWKB != null)
+                if (_MosaicShape is null && _MosaicShapeWKB != null)
                 {
                     _MosaicShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(_MosaicShapeWKB);
                 }
@@ -116,7 +116,7 @@ namespace AnnotationService.Types
         {
             get
             {
-                if (_VolumeShape == null && _VolumeShapeWKB != null)
+                if (_VolumeShape is null && _VolumeShapeWKB != null)
                 {
                     _VolumeShape = System.Data.Entity.Spatial.DbGeometry.FromBinary(_VolumeShapeWKB);
                 }
@@ -174,24 +174,14 @@ namespace AnnotationService.Types
         {
             get
             {
-                if (_Links == null)
+                if (_Links is null)
                     return null;
                 if (_Links.Count == 0)
                     return null;
                 else
                     return _Links.ToArray();
             }
-            set
-            {
-                if (value == null)
-                {
-                    _Links = null;
-                }
-                else
-                {
-                    _Links = new SortedSet<Int64>(value);
-                }
-            }
+            set { _Links = value is null ? null : new SortedSet<Int64>(value); }
         }
 
         [ProtoMember(12)]
@@ -259,7 +249,7 @@ namespace AnnotationService.Types
 
         public void AddLink(Int64 linkedID)
         {
-            if (this._Links == null)
+            if (this._Links is null)
                 _Links = new SortedSet<Int64>();
             if (linkedID == this.ID)
             {
@@ -271,7 +261,7 @@ namespace AnnotationService.Types
 
         public void AddLinks(SortedSet<Int64> linkIDs)
         {
-            if (this._Links == null)
+            if (this._Links is null)
                 _Links = new SortedSet<Int64>();
 
             if (linkIDs.Contains(this.ID))

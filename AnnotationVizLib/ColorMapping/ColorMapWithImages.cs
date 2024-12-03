@@ -1,159 +1,15 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
-using Geometry;
-using SqlGeometryUtils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using Geometry;
+using SqlGeometryUtils;
 using UnitsAndScale;
-
+using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace AnnotationVizLib
 {
-    public class ColorScalars
-    {
-        public double alpha = 1.0;
-        public double red = 1.0;
-        public double green = 1.0;
-        public double blue = 1.0;
-
-        public ColorScalars(double a, double r, double g, double b)
-        {
-            this.alpha = a;
-            this.red = r;
-            this.green = g;
-            this.blue = b;
-        }
-    }
-
-    /// <summary>
-    /// Used to store offsets into color map images
-    /// </summary>
-    public class ColorImageOffset
-    {
-        public double X = 0.0;
-        public double Y = 0.0;
-
-        public ColorImageOffset(double x, double y)
-        {
-            this.X = x;
-            this.Y = y;
-        }
-    }
-
-    public class ColorMapImageData
-    {
-        public readonly int SectionNumber;
-        readonly Bitmap image;
-        readonly IScale scale;
-        readonly ColorScalars color_scalar = new ColorScalars(1, 1, 1, 1);
-        readonly ColorImageOffset offset = new ColorImageOffset(0, 0);
-
-        public ColorMapImageData(System.IO.Stream ImageStream, int section_number, IScale scale_data)
-        {
-            this.SectionNumber = section_number;
-            this.image = new Bitmap(ImageStream);
-            this.scale = scale_data;
-        }
-
-        public ColorMapImageData(System.IO.Stream ImageStream, int section_number, IScale scale_data, ColorScalars color_scalars, ColorImageOffset offset)
-            : this(ImageStream, section_number, scale_data)
-        {
-            this.color_scalar = color_scalars;
-            this.offset = offset;
-        }
-
-        public Color GetColor(double X, double Y)
-        {
-            X += offset.X;
-            Y += offset.Y;
-
-            int bmp_X = (int)Math.Round(X / scale.X.Value);
-            int bmp_Y = (int)Math.Round(Y / scale.Y.Value);
-            Color color = Color.Empty;
-
-            if (bmp_X < 0 || bmp_X >= image.Size.Width)
-                return Color.Empty;
-
-            if (bmp_Y < 0 || bmp_Y >= image.Size.Height)
-                return Color.Empty;
-
-            try
-            {
-                color = image.GetPixel(bmp_X, bmp_Y);
-            }
-            catch (ArgumentException)
-            {
-                return Color.Empty;
-            }
-
-            //Convert to a scalar, multiply, and convert back to color...
-            return Color.FromArgb(ScaleColor(color.A, color_scalar.alpha),
-                                  ScaleColor(color.R, color_scalar.red),
-                                  ScaleColor(color.G, color_scalar.green),
-                                  ScaleColor(color.B, color_scalar.blue));
-        }
-
-        private int ScaleColor(int color, double scalar)
-        {
-            int scaled_color = (int)Math.Floor((double)color * scalar);
-            scaled_color = scaled_color > 255 ? 255 : scaled_color;
-            scaled_color = scaled_color < 0 ? 0 : scaled_color;
-            return scaled_color;
-        }
-    }
-
-    class ConfigStringHelper
-    {
-        /// <summary>
-        /// Strip whitespace and ensure the line starts with a number
-        /// </summary>
-        /// <param name="line"></param>
-        /// <returns></returns>
-        public static bool StartsWithNumber(string str)
-        {
-            if (str.Length == 0)
-                return false;
-
-            return char.IsDigit(str.Trim()[0]);
-        }
-
-        /// <summary>
-        /// We use the % to indicate comments
-        /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        public static bool StartsWithComment(string str)
-        {
-            if (str.Length == 0)
-                return false;
-
-            string trimmed = str.TrimStart();
-            if (trimmed.Length == 0)
-                return false;
-
-            return trimmed[0] == '%';
-        }
-
-        /// <summary>
-        /// Convert a string with a floating point number from 0 to 1 into a 0-255 value for building Colors
-        /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        public static int NormalizedStringToByte(string str)
-        {
-            double val = System.Convert.ToDouble(str);
-            if (val < 0.0 || val > 1.0)
-            {
-                throw new ArgumentException("String value must fall between 0 and 1.");
-            }
-
-            return System.Convert.ToInt32(Math.Floor(val * 255.0));
-        }
-
-    }
-
     /// <summary>
     /// Maps a position in the volume to an RGB color based on the X,Y,Z coordinates.
     /// Averages color values when multiple images overlap the target coordinates
@@ -351,9 +207,9 @@ namespace AnnotationVizLib
             Scale scale = new Scale(X_Scale, Y_Scale, Z_Scale);
 
             ColorScalars scalars = new ColorScalars(ConfigStringHelper.NormalizedStringToByte(parts[5]),
-                                                    ConfigStringHelper.NormalizedStringToByte(parts[6]),
-                                                    ConfigStringHelper.NormalizedStringToByte(parts[7]),
-                                                    ConfigStringHelper.NormalizedStringToByte(parts[8]));
+                ConfigStringHelper.NormalizedStringToByte(parts[6]),
+                ConfigStringHelper.NormalizedStringToByte(parts[7]),
+                ConfigStringHelper.NormalizedStringToByte(parts[8]));
 
             string Filename = parts[9];
             if (ImageDir != null)
@@ -378,111 +234,4 @@ namespace AnnotationVizLib
             throw new ArgumentException("Could not open file: " + Filename);
         }
     }
-
-    /// <summary>
-    /// Return a color based on a key value
-    /// </summary>
-    public class ColorMapWithLong
-    {
-        readonly SortedList<long, Color> ColorMapTable = new SortedList<long, Color>();
-
-        private static long ConvertKey(string str)
-        {
-            return System.Convert.ToInt64(str);
-        }
-
-        public void Add(long key, Color color)
-        {
-            this.ColorMapTable.Add(key, color);
-        }
-
-        public bool ContainsKey(long key)
-        {
-            return this.ColorMapTable.ContainsKey(key);
-        }
-
-        public Color GetColor(long key)
-        {
-            return this.ColorMapTable[key];
-        }
-
-        public Color this[long key] => this.ColorMapTable[key];
-
-        public static ColorMapWithLong CreateFromConfigFile(string config_txt_full_path)
-        {
-            string full_path = System.IO.Path.GetFullPath(config_txt_full_path);
-            if (!System.IO.File.Exists(full_path))
-            {
-                throw new System.IO.FileNotFoundException("Color mapping file not found " + full_path);
-            }
-
-            string config = System.IO.File.ReadAllText(full_path);
-            return ColorMapWithLong.Create(config);
-        }
-
-        public static ColorMapWithLong Create(string config_data)
-        {
-            ColorMapWithLong mapping = new ColorMapWithLong();
-
-            string[] lines = config_data.Split(new char[] { '\n' });
-            foreach (string line in lines)
-            {
-                string trim_line = line.Trim();
-                if (!trim_line.Any())
-                    continue;
-
-                try
-                {
-                    Color color = ColorMapWithLong.TryParseConfigLine(trim_line, out long Key);
-
-                    if (color != Color.Empty)
-                        mapping.Add(Key, color);
-
-                }
-                catch (System.FormatException)
-                {
-                    System.Diagnostics.Trace.WriteLine("Unable to parse Color Map Config line: " + line);
-                }
-                catch (System.ArgumentException e)
-                {
-                    Trace.WriteLine(e.Message);
-                    continue;
-                }
-            }
-
-            return mapping;
-        }
-
-        private static Color TryParseConfigLine(string line, out long Key)
-        {
-            if (ConfigStringHelper.StartsWithComment(line))
-                throw new ArgumentException("Skipping comment");
-
-            if (!ConfigStringHelper.StartsWithNumber(line))
-                throw new FormatException("Attempting to parse header row");
-
-            line = line.Trim();
-            string[] parts = line.Split();
-
-            if (parts.Length < 4)
-                throw new ArgumentException("Not enough parameters in line:\n" + line);
-
-            Key = ConvertKey(parts[0]);
-
-            try
-            {
-                Color color = Color.FromArgb(ConfigStringHelper.NormalizedStringToByte(parts[4]),
-                                             ConfigStringHelper.NormalizedStringToByte(parts[1]),
-                                             ConfigStringHelper.NormalizedStringToByte(parts[2]),
-                                             ConfigStringHelper.NormalizedStringToByte(parts[3]));
-
-                return color;
-            }
-            catch (FormatException e)
-            {
-                throw new FormatException("Unable to parse line:\n" + line, e);
-            }
-        }
-    }
-
 }

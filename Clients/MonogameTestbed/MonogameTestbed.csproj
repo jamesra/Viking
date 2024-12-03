@@ -76,10 +76,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <DefineConstants>WINDOWS</DefineConstants>
+    <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget>x86</PlatformTarget>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\x86\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="BajajMultiTest.cs" />
-    <Compile Include="BoundaryFinder.cs" />
     <Compile Include="BajajTest.cs" />
     <Compile Include="Views\BoundarySurfaceView.cs" />
     <Compile Include="BranchPortTest.cs" />
@@ -104,8 +107,6 @@
     <Compile Include="GeometryTest.cs" />
     <Compile Include="IGraphicsTest.cs" />
     <Compile Include="MeshingExperimentExtensions.cs" />
-    <Compile Include="MorphologyTest.cs" />
-    <Compile Include="MeshTest.cs" />
     <Compile Include="MonogameTestbed.cs" />
     <Compile Include="Persistance.cs" />
     <Compile Include="Polygon2DTest.cs" />
@@ -124,7 +125,6 @@
     <Compile Include="Views\ConvexHullView.cs" />
     <Compile Include="Views\PointSetViewCollection.cs" />
     <Compile Include="Views\PolygonView.cs" />
-    <Compile Include="Views\UntiledRegionView.cs" />
     <None Include="PolygonDelaunayRepro.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -136,7 +136,6 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <None Include="_PointPlacementTestTemplate.cs" />
-    <Compile Include="TriangleAlgorithmTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />

@@ -27,9 +27,9 @@ namespace VikingXNA
 
             if (Background != null && ColorOverlay != null)
                 effect.CurrentTechnique = effect.Techniques["HSOverBackgroundValueOverlayEffect"];
-            else if (Background == null)
+            else if (Background is null)
                 effect.CurrentTechnique = effect.Techniques["HSVOnlyOverlayEffect"];
-            else if (ColorOverlay == null)
+            else if (ColorOverlay is null)
                 effect.CurrentTechnique = effect.Techniques["BackgroundOnlyOverlayEffect"]; 
         }
            

@@ -11,10 +11,7 @@ namespace MonogameTestbed
     {
         public PointSet Points
         {
-            get
-            {
-                return _Points;
-            }
+            get => _Points;
             set
             {
                 if (_Points != null)

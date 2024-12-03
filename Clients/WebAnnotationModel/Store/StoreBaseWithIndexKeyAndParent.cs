@@ -201,7 +201,7 @@ namespace WebAnnotationModel
                         //Added the false for dynamic structure loading change, may cause bugs
                         OBJECT parent = GetObjectByID(newObj.ParentID.Value, false);
                         //Don't use newObj.Parent in if test because get method will fetch parent
-                        if (parent == null)
+                        if (parent is null)
                         {
                             //If it is a new parentID then add it
                             if (listMissingParents.Contains(newObj.ParentID.Value) == false)

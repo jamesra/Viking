@@ -130,9 +130,9 @@ namespace Viking.VolumeModel
         {
             Section section = volume.Sections[SectionNumber];
 
-            if (SectionTransformName == null)
+            if (SectionTransformName is null)
                 SectionTransformName = section.DefaultPyramidTransform;
-            if (ChannelName == null)
+            if (ChannelName is null)
             {
                 ChannelName = "";
             }
@@ -192,7 +192,7 @@ namespace Viking.VolumeModel
                 return null;
             }
              
-            if (VolumeTransformName == null)
+            if (VolumeTransformName is null)
             { 
                 MappingBase output = transformsForSection.GetOrAdd(key, sectionWarpedToMapValue);
 

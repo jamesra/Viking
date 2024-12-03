@@ -44,12 +44,12 @@ namespace Geometry
         /// </summary>
         public static int[] Triangulate(GridVector2[] points, GridVector2[] BoundingPoints)
         {
-            if (BoundingPoints == null)
+            if (BoundingPoints is null)
             {
                 throw new ArgumentNullException(nameof(BoundingPoints));
             }
 
-            if (points == null)
+            if (points is null)
             {
                 throw new ArgumentNullException(nameof(points));
             }

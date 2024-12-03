@@ -41,7 +41,7 @@ namespace VikingXNAGraphics
                 return false;
             
             FontRenderData other = obj as FontRenderData;
-            if (obj == null)
+            if (obj is null)
                 return false;
 
             return other.FontName == this.FontName;
@@ -61,7 +61,7 @@ namespace VikingXNAGraphics
 
         public static FontRenderData GetOrCreateForDevice(GraphicsDevice device, ContentManager content, string FontName=null)
         {
-            if (FontName == null)
+            if (FontName is null)
                 FontName = DefaultFont;
 
             Dictionary<string, FontRenderData> fontDict = null;
@@ -92,7 +92,7 @@ namespace VikingXNAGraphics
 
         public static FontRenderData TryGet(GraphicsDevice device, string FontName = null)
         {
-            if (FontName == null)
+            if (FontName is null)
                 FontName = DefaultFont;
 
             Dictionary<string, FontRenderData> fontDict = null;

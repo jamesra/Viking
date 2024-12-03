@@ -38,11 +38,11 @@ namespace TriangleNet
         {
             get
             {
-                if (_default == null)
+                if (_default is null)
                 {
                     lock (creationLock)
                     {
-                        if (_default == null)
+                        if (_default is null)
                         {
                             _default = new RobustPredicates();
                         }

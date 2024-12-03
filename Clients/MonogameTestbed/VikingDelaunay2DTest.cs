@@ -165,7 +165,7 @@ namespace MonogameTestbed
         public double PointRadius = 2.0;
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public string Title => this.GetType().Name;
 
@@ -457,7 +457,7 @@ namespace MonogameTestbed
             bool UpdatePoints = Gamepad.A_Clicked || Gamepad.B_Clicked || Gamepad.Y_Clicked;
             if (Gamepad.A_Clicked)
             {
-                if (TestTask == null)
+                if (TestTask is null)
                     ResetTestTask();
                 
                 //Allows us to position the window before launching the FSCheck tests
@@ -671,7 +671,7 @@ namespace MonogameTestbed
             {
                 //PolyXView.Polygon = new GridPolygon(Points_C.Points.Points.EnsureClosedRing());
 
-                if (TriangulationTask == null)
+                if (TriangulationTask is null)
                 {
                     TriangulationTask = new Task<TriangulationMesh<IVertex2D>>(() => GenericDelaunayMeshGenerator2D<IVertex2D>.TriangulateToMesh(Points_X.Points.Select(p => new TriangulationVertex(p)).ToArray(), OnTriangulationProgress));
                     TriangulationTask.Start();

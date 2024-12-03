@@ -134,7 +134,7 @@ namespace WebAnnotationModel
         {
             LocationLink[] links = proxy.GetLocationLinksForSection(out TicksAtQueryExecute, out var deleted_links, SectionNumber, LastQuery.Ticks);
 
-            if (deleted_links == null)
+            if (deleted_links is null)
             {
                 DeletedLinkKeys = new LocationLinkKey[0];
             }
@@ -150,7 +150,7 @@ namespace WebAnnotationModel
         {
             LocationLink[] links = proxy.GetLocationLinksForSectionInMosaicRegion(out TicksAtQueryExecute, out var deleted_links, SectionNumber, BBox, MinRadius, LastQuery.Ticks);
 
-            if (deleted_links == null)
+            if (deleted_links is null)
             {
                 DeletedLinkKeys = new LocationLinkKey[0];
             }
@@ -303,7 +303,7 @@ namespace WebAnnotationModel
             List<LocationLinkKey> links = new List<LocationLinkKey>();
             foreach (LocationObj obj in delObjs)
             {
-                if (obj == null)
+                if (obj is null)
                     continue;
 
                 foreach (long linkID in obj.LinksCopy)

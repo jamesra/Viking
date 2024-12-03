@@ -136,7 +136,7 @@ namespace Geometry.Transforms
 
         protected ReferencePointBasedTransform(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             _mapPoints = info.GetValue("_mapPoints", typeof(MappingGridVector2[])) as MappingGridVector2[];
@@ -147,7 +147,7 @@ namespace Geometry.Transforms
 
         public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             info.AddValue("_mapPoints", _mapPoints);
@@ -179,7 +179,7 @@ namespace Geometry.Transforms
 
         public static GridRectangle CalculateControlBounds(ITransformControlPoints[] transforms)
         {
-            if (transforms == null || transforms.Length == 0)
+            if (transforms is null || transforms.Length == 0)
                 return new GridRectangle();
 
             double minX = double.MaxValue;
@@ -206,7 +206,7 @@ namespace Geometry.Transforms
 
         public static GridRectangle CalculateMappedBounds(ITransformControlPoints[] transforms)
         {
-            if (transforms == null || transforms.Length == 0)
+            if (transforms is null || transforms.Length == 0)
                 return new GridRectangle();
 
             double minX = double.MaxValue;
@@ -280,7 +280,7 @@ namespace Geometry.Transforms
                 try
                 {
                     rwLockTriangles.EnterUpgradeableReadLock();
-                    if (_mappedPointsRTree == null)
+                    if (_mappedPointsRTree is null)
                         BuildPointRTree(); //Locks internally
 
                     Debug.Assert(_mappedPointsRTree != null);
@@ -322,7 +322,7 @@ namespace Geometry.Transforms
                 try
                 {
                     rwLockTriangles.EnterUpgradeableReadLock();
-                    if (_controlPointsRTree == null)
+                    if (_controlPointsRTree is null)
                         BuildPointRTree(); //Locks internally
 
                     Debug.Assert(_controlPointsRTree != null);
@@ -366,7 +366,7 @@ namespace Geometry.Transforms
         /// <param name="stream"></param>
         public virtual void WriteITKTransform(System.IO.StreamWriter stream)
         {
-            if (stream == null)
+            if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
 
             double Downsample = 1.0;

@@ -357,7 +357,7 @@ namespace TriangleNet.Voronoi.Legacy
 
                 foreach (var pt in region.Vertices)
                 {
-                    if (first == null)
+                    if (first is null)
                     {
                         first = pt;
                         last = pt;

@@ -83,7 +83,7 @@ namespace WebAnnotationModel
             if (e.PropertyName.ToLower() == "dbaction")
             {
                 OBJECT obj = sender as OBJECT;
-                if (obj == null)
+                if (obj is null)
                     return;
 
                 if (obj.DBAction == DBACTION.NONE)
@@ -869,7 +869,7 @@ namespace WebAnnotationModel
         /// <param name="serverDeletedObjects">Objects which have been deleted since the last query</param>
         public virtual ChangeInventory<OBJECT> ParseQuery(WCFOBJECT[] serverObjects, KEY[] serverDeletedObjects, GetObjectBySectionCallbackState<INTERFACE, OBJECT> state)
         {
-            if (serverObjects == null)
+            if (serverObjects is null)
                 return new ChangeInventory<OBJECT>();
 
             OBJECT[] listObj = new OBJECT[0];
@@ -912,16 +912,16 @@ namespace WebAnnotationModel
 
         private static int CompareCallbacksByTime(GetObjectBySectionCallbackState<INTERFACE, OBJECT> x, GetObjectBySectionCallbackState<INTERFACE, OBJECT> y)
         {
-            if (x == null)
+            if (x is null)
             {
-                if (y == null)
+                if (y is null)
                     return 0;
                 else
                     return -1;
             }
             else
             {
-                if (y == null)
+                if (y is null)
                     return 1;
                 else
                 {
@@ -1061,7 +1061,7 @@ namespace WebAnnotationModel
                 catch (Exception e)
                 {
                     Trace.WriteLine("An error occurred during the update:\n" + e.Message);
-                    return false;
+                    throw;
                 }
                 finally
                 {
@@ -1080,7 +1080,7 @@ namespace WebAnnotationModel
                     data.DBAction = DBACTION.NONE;
 
                     WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = data as WCFObjBaseWithKey<KEY, WCFOBJECT>;
-                    if (keyObj == null)
+                    if (keyObj is null)
                         continue;
 
                     OBJECT obj = IDToObject[keys[iObj]];
@@ -1125,7 +1125,7 @@ namespace WebAnnotationModel
                         if (data.DBAction == DBACTION.INSERT)
                         {
                             WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = data as WCFObjBaseWithKey<KEY, WCFOBJECT>;
-                            if (keyObj == null)
+                            if (keyObj is null)
                                 continue;
 
                             InternalDelete(keyObj.ID);

@@ -50,9 +50,9 @@ namespace GeometryTests.FSCheck
             if (ReferenceEquals(x,y))
                 return 0;
 
-            if (x == null)
+            if (x is null)
                 return -1;
-            if (y == null)
+            if (y is null)
                 return 1;
 
             return Comparer.Compare(x.Point, y.Point);

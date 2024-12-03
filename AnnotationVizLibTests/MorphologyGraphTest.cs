@@ -40,7 +40,7 @@ namespace AnnotationVizLibTests
             foreach (var desmosome in nodes_with_desmosome_subgraphs)
             {
                 IList<ulong> path_to_synapse = MorphologyGraph.ShortestPath(cell_graph, desmosome.Node, (n) => n.NodeContainsStructureOfType(TypesToMatch));
-                if (path_to_synapse == null)
+                if (path_to_synapse is null)
                     continue;
 
                 //Find the substructure on the final node of the path
@@ -281,7 +281,7 @@ namespace AnnotationVizLibTests
         public static IDictionary<ulong, double[]> BulkMeasureForLabel(string Label)
         {
             Dictionary<ulong, double[]> distanceForLabel = new Dictionary<ulong, double[]>();
-            if (Label == null)
+            if (Label is null)
                 return distanceForLabel;
 
             string LowerLabel = Label.ToLower();

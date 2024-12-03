@@ -41,7 +41,7 @@ namespace TriangleNet.Meshing
             Osub subseg = default;
             int i = 0;
 
-            int elements = triangles == null ? 0 : triangles.Length;
+            int elements = triangles is null ? 0 : triangles.Length;
             int segments = polygon.Segments.Count;
 
             // TODO: Configuration should be a function argument.

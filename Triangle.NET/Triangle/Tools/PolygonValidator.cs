@@ -34,7 +34,7 @@ namespace TriangleNet.Tools
 
             foreach (var p in points)
             {
-                if (p == null)
+                if (p is null)
                 {
                     horrors++;
                     logger.Warning(String.Format("Point {0} is null.", i), "PolygonValidator.IsConsistent()");
@@ -57,7 +57,7 @@ namespace TriangleNet.Tools
 
             foreach (var seg in poly.Segments)
             {
-                if (seg == null)
+                if (seg is null)
                 {
                     horrors++;
                     logger.Warning(String.Format("Segment {0} is null.", i), "PolygonValidator.IsConsistent()");

@@ -83,7 +83,7 @@ namespace TriangleNet.Smoothing
                 edge.next = null;
                 edge.twin = null;
 
-                if (face != null && face.edge == null)
+                if (face != null && face.edge is null)
                 {
                     face.edge = edge;
                 }

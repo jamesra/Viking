@@ -121,7 +121,7 @@ namespace WebAnnotationModel
             {
                 /*
                 PermittedStructureLinkObj link = Store.StructureLinks.GetObjectByID(key, false);
-                if (link == null)
+                if (link is null)
                     continue; 
                 */
 

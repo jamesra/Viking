@@ -10,7 +10,7 @@
         public readonly int width;
         public readonly int height;
 
-        public bool IsEmpty => pixelBytes == null;
+        public bool IsEmpty => pixelBytes is null;
         
         public TextureData(byte[] data, int width, int height)
         {

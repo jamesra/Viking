@@ -129,7 +129,7 @@ namespace MorphologyMesh
         /// </summary>
         public ulong[] GetEdgesAbove(MeshGraph graph = null)
         {
-            if(graph == null)
+            if(graph is null)
             {
                 graph = this.MeshGraph;
             }
@@ -142,7 +142,7 @@ namespace MorphologyMesh
         /// </summary>
         public ulong[] GetEdgesBelow(MeshGraph graph = null)
         {
-            if (graph == null)
+            if (graph is null)
             {
                 graph = this.MeshGraph;
             }

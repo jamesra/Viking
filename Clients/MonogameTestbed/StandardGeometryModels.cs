@@ -79,7 +79,7 @@ namespace MonogameTestbed
         Custom
     }
 
-
+    /*
     public static class StandardModels
     {
         static StandardModels()
@@ -91,7 +91,7 @@ namespace MonogameTestbed
 
         public static StandardModel SharedModel
         {
-            get { return _SharedModel; }
+            get => _SharedModel;
             set
             {
                 _SharedModel = value;
@@ -101,43 +101,19 @@ namespace MonogameTestbed
 
         private static GridPolygon[] _SharedModelPolygons;
 
-        public static GridPolygon[] SharedModelPolygons
-        {
-            get{
-                return _SharedModelPolygons;
-            }
-        }
+        public static GridPolygon[] SharedModelPolygons => _SharedModelPolygons;
 
         private static double[] _SharedModelZ;
 
-        public static double[] SharedModelZ
-        {
-            get
-            {
-                return _SharedModelZ;
-            }
-        }
+        public static double[] SharedModelZ => _SharedModelZ;
 
         private static GraphLib.Edge<ulong>[] _SharedModelEdges;
 
-        public static GraphLib.Edge<ulong>[] SharedModelEdges
-        {
-            get
-            {
-                return _SharedModelEdges;
-            }
-        }
+        public static GraphLib.Edge<ulong>[] SharedModelEdges => _SharedModelEdges;
 
         private static MeshGraph _sharedGraph;
 
-        public static MeshGraph SharedGraph
-        {
-            get
-            {
-                return _sharedGraph;
-            }
-
-        }
+        public static MeshGraph SharedGraph => _sharedGraph;
 
         private static void UpdateSharedModel(StandardModel selection)
         {
@@ -158,7 +134,7 @@ namespace MonogameTestbed
                     break; 
             }
 
-            if(_sharedGraph == null)
+            if(_sharedGraph is null)
                 _sharedGraph = BuildMeshGraph(_SharedModelPolygons, _SharedModelZ, _SharedModelEdges, 10, GridVector3.Zero);
         } 
 
@@ -269,5 +245,5 @@ namespace MonogameTestbed
         }
     }
 
-     
+     */
 }

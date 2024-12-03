@@ -17,7 +17,7 @@ namespace EntityFrameworkExtras
         /// <param name="storedProcedure">The stored procedure to execute.</param>
         public static void ExecuteStoredProcedure(this ObjectContext context, object storedProcedure)
         {
-            if (storedProcedure == null)
+            if (storedProcedure is null)
                 throw new ArgumentNullException("storedProcedure");
 
             var info = StoredProcedureParser.BuildStoredProcedureInfo(storedProcedure);
@@ -37,7 +37,7 @@ namespace EntityFrameworkExtras
         /// <returns></returns>
         public static IEnumerable<T> ExecuteStoredProcedure<T>(this ObjectContext context, object storedProcedure)
         {
-            if (storedProcedure == null)
+            if (storedProcedure is null)
                 throw new ArgumentNullException("storedProcedure");
 
             var info = StoredProcedureParser.BuildStoredProcedureInfo(storedProcedure);

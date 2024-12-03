@@ -288,7 +288,7 @@ namespace Viking
         public virtual async Task<bool> AddAsync(string key, Stream value)
         {
             var entry = await CreateEntryAsync(key,value);
-            if (entry == null)
+            if (entry is null)
                 return false;
 
             return AddEntry(entry);

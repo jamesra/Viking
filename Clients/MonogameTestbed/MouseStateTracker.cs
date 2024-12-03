@@ -72,17 +72,19 @@ namespace MonogameTestbed
             this.State = state; 
         }
 
-        public int X { get => State.X; }
+        public int X => State.X;
+
         //
         // Summary:
         //     Gets vertical position of the cursor.
-        public int Y { get => State.Y; }
+        public int Y => State.Y;
+
         //
         // Summary:
         //     Gets cursor position.
-        public Point Position { get => State.Position; }
+        public Point Position => State.Position;
 
-        public int ScrollWheelValue { get => State.ScrollWheelValue; }
+        public int ScrollWheelValue => State.ScrollWheelValue;
 
         public ButtonState this[MouseButton index]
         {
@@ -127,14 +129,8 @@ namespace MonogameTestbed
 
         public T this[MouseButton index]
         {
-            get
-            {
-                return this[(int)index];
-            }
-            set
-            {
-                this[(int)index] = value; 
-            }
+            get => this[(int)index];
+            set => this[(int)index] = value;
         }
          
     }
@@ -179,23 +175,24 @@ namespace MonogameTestbed
         public MouseButtonList<DateTime> ButtonStateStartTime = new MouseButtonList<DateTime>(NumButtons);
 
 
-        public Point Positon { get => CurrentState.Position; }
-        public int X { get => CurrentState.X; }
-        public int Y { get => CurrentState.Y; }
+        public Point Positon => CurrentState.Position;
+        public int X => CurrentState.X;
+        public int Y => CurrentState.Y;
 
-        public int ScrollWheelValue { get => CurrentState.ScrollWheelValue; }
+        public int ScrollWheelValue => CurrentState.ScrollWheelValue;
 
-        public int ScrollWheelValueDelta { get => LastState.ScrollWheelValue - CurrentState.ScrollWheelValue; }
+        public int ScrollWheelValueDelta => LastState.ScrollWheelValue - CurrentState.ScrollWheelValue;
 
-        public Point PositionDelta { get => new Point(LastState.X - CurrentState.X, 
-                                              LastState.Y - CurrentState.Y); }
+        public Point PositionDelta =>
+            new Point(LastState.X - CurrentState.X, 
+                LastState.Y - CurrentState.Y);
 
         public void Update(MouseState state)
         {
             LastState = CurrentState;
             CurrentState = new MouseStateHelper(state);
 
-            if (LastState == null)
+            if (LastState is null)
                 LastState = CurrentState;
 
             foreach (var idx in Enum.GetValues(typeof(MouseButton)))

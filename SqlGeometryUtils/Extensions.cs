@@ -863,6 +863,12 @@ namespace SqlGeometryUtils
             return shape.CalculateInscribedCircle(ControlPoints);
         }
 
+        /// <summary>
+        /// Determines the centroid of the shape to find center of circle and nearest point to centroid to determine radius
+        /// </summary>
+        /// <param name="shape"></param>
+        /// <param name="ControlPoints"></param>
+        /// <returns></returns>
         public static GridCircle CalculateInscribedCircle(this SqlGeometry shape, ICollection<GridVector2> ControlPoints)
         {
             GridVector2 center = shape.Centroid();

@@ -28,7 +28,7 @@ namespace MonogameTestbed
         public double PointRadius = 2.0;
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {

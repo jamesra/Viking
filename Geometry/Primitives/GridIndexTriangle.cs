@@ -45,7 +45,7 @@ namespace Geometry
 
         public static implicit operator GridTriangle(GridIndexTriangle t)
         {
-            if (t == null)
+            if (t is null)
                 throw new ArgumentNullException(nameof(t));
 
 

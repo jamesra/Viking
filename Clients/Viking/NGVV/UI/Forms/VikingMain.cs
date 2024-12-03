@@ -74,7 +74,7 @@ namespace Viking
 
 
             /*
-            if (DiskCleanupThread == null)
+            if (DiskCleanupThread is null)
             {
                 DiskCleanupThread = CreateThread("Disk Texture Cleanup", new ThreadStart(Global.TextureCache.ReduceCacheFootprint));
                 DiskCleanupThread.Start(); 
@@ -90,7 +90,7 @@ namespace Viking
             
             
             //Fire off a thread to clean tiles
-            if (TileViewModelThread == null)
+            if (TileViewModelThread is null)
             {
                 TileViewModelThread = CreateThread("TileViewModel Cleanup", new ThreadStart(Global.TileViewModelCache.ReduceCacheFootprint));
                 TileViewModelThread.Start();
@@ -106,7 +106,7 @@ namespace Viking
             
             
             //Fire off a thread to clean tiles
-            if (TileThread == null)
+            if (TileThread is null)
             {
                 TileThread = CreateThread("Tile Cleanup", new ThreadStart(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint));
                 TileThread.Start();
@@ -131,7 +131,7 @@ namespace Viking
         /// <param name="e"></param>
         private void VikingMain_Load(object sender, EventArgs e)
         {
-            if (UI.State.volume == null)
+            if (UI.State.volume is null)
             {
                 return;
             }
@@ -152,7 +152,7 @@ namespace Viking
             this.Text = UI.State.volume.Name;
              
             /* PORT
-            if (UI.State.volume.Sections == null)
+            if (UI.State.volume.Sections is null)
                 return;
 
             if (UI.State.volume.Sections.Length == 0)
@@ -174,7 +174,7 @@ namespace Viking
                     string strY = UI.State.StartupArguments["Y"];
                     string strZ = UI.State.StartupArguments["Z"];
                     
-                    if (strX == null || strY == null || strZ == null)
+                    if (strX is null || strY is null || strZ is null)
                         UseDefaultPosition = true;
                     else
                     {

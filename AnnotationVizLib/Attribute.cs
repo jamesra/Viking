@@ -86,7 +86,7 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public static List<ObjAttribute> Parse(string serverXml)
         {
-            if (serverXml == null)
+            if (serverXml is null)
                 return new List<ObjAttribute>();
 
             if (serverXml.StartsWith("<"))
@@ -105,7 +105,7 @@ namespace AnnotationVizLib
             System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Load(new StringReader(XMLString));
 
             XElement structureElem = doc.Element("Structure");
-            if (structureElem == null)
+            if (structureElem is null)
                 return new List<ObjAttribute>();
 
             return ObjAttribute.ElementToAttribs(structureElem);
@@ -160,7 +160,7 @@ namespace AnnotationVizLib
 
         public static List<ObjAttribute> TagStringsToList(IEnumerable<string> tags)
         {
-            if (tags == null)
+            if (tags is null)
                 return new List<ObjAttribute>();
 
             List<ObjAttribute> listTags = new List<ObjAttribute>();

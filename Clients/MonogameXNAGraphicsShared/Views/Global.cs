@@ -22,7 +22,7 @@ namespace VikingXNAGraphics
         {
             get
             {
-                if (_DefaultFont == null)
+                if (_DefaultFont is null)
                 {
                     _DefaultFont = Content.Load<SpriteFont>(@"Arial");
                 }

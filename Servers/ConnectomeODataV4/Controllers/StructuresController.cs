@@ -66,7 +66,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             Structure structure = await db.Structures.FindAsync(key);
-            if (structure == null)
+            if (structure is null)
             {
                 return NotFound();
             }
@@ -118,7 +118,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             Structure structure = await db.Structures.FindAsync(key);
-            if (structure == null)
+            if (structure is null)
             {
                 return NotFound();
             }
@@ -148,7 +148,7 @@ namespace ConnectomeODataV4.Controllers
         public async Task<IHttpActionResult> Delete([FromODataUri] long key)
         {
             Structure structure = await db.Structures.FindAsync(key);
-            if (structure == null)
+            if (structure is null)
             {
                 return NotFound();
             }

@@ -245,7 +245,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public Section GetReferenceSectionBelow(Section section)
         {
-            if (section == null)
+            if (section is null)
                 return null;
 
             //Optimistic implementation that looks at section immediately above
@@ -268,7 +268,7 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public Section GetReferenceSectionAbove(Section section)
         {
-            if (section == null)
+            if (section is null)
                 return null;
 
             //Optimistic implementation that looks at section immediately above
@@ -630,7 +630,7 @@ namespace Viking.VolumeModel
             {
                 /* PORT
                 System.Windows.Forms.MessageBox.Show("Could locate path attribute for volume.  Chances are the XML definitation for this volume has not been updated. Contact administrator to update the VikingXML file.", "Error", System.Windows.Forms.MessageBoxButtons.OK);
-                if (this._Host == null) //If we don't know a path throw an exception to kill the process
+                if (this._Host is null) //If we don't know a path throw an exception to kill the process
                     throw new ArgumentException("Could locate path attribute for volume.  Chances are the XML definitation for this volume has not been updated. Contact administrator to update the VikingXML file.");
                  */
             }
@@ -804,7 +804,7 @@ namespace Viking.VolumeModel
                 }
 
                 //Load from server if it is not in the zip
-                if (result == null)
+                if (result is null)
                 {
                     //    Trace.WriteLine("Loading " + StosFileName + " from HTTP Server", "VolumeModel");
                     try
@@ -859,7 +859,7 @@ namespace Viking.VolumeModel
                     VolumeTransformNames.Add(groupName);
                 }
 
-                if (this.DefaultVolumeTransform == null || this.DefaultVolumeTransform == "None")
+                if (this.DefaultVolumeTransform is null || this.DefaultVolumeTransform == "None")
                     this.DefaultVolumeTransform = groupName;
 
                 if (Transform != null)
@@ -901,7 +901,7 @@ namespace Viking.VolumeModel
 
         private IContinuousTransform EnsureTransformIsContinuous(ITransform transform)
         {
-            if(transform as IContinuousTransform == null)
+            if(transform as IContinuousTransform is null)
             {
                 Geometry.Transforms.StosTransformInfo info = ((ITransformInfo)transform).Info as Geometry.Transforms.StosTransformInfo;
                 string SerializerCacheFullPath = System.IO.Path.Combine(this.Paths.StosCacheDir, info.GetCacheFilename(".stos_bin")); 
@@ -943,7 +943,7 @@ namespace Viking.VolumeModel
                 else
                     Progress = 100;
 
-                if (result.Transform == null)
+                if (result.Transform is null)
                 {
                     workerThread?.ReportProgress(Progress, $"Failed Loading {result.element}");
                     continue;
@@ -1195,9 +1195,9 @@ namespace Viking.VolumeModel
                                 TList[childSection] = LoadSerializedTransformFromCache(CacheSerializedPath, ControlInfo, info);
 
                                 //CalculateSliceToVolume = true; 
-                                if (TList[childSection] == null)
+                                if (TList[childSection] is null)
                                 {
-                                    if(ContinuousControlTransform == null)
+                                    if(ContinuousControlTransform is null)
                                     {
                                         //This line creating continuous transforms can be slow.
                                         ContinuousControlTransform = EnsureTransformIsContinuous(ControlTrans);

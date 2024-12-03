@@ -72,7 +72,7 @@ namespace WebAnnotation.UI.Commands
 
         private static async Task<PositionColorMeshModel> CreateView(GridPolygon poly, Color color, CancellationToken token)
         {
-            return await Task.Run(() => TriangleNetExtensions.CreateMeshForPolygon2D(poly.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay), color), token);
+            return await Task.Run(() => poly.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay).CreateMeshForPolygon2D(color), token);
         }
 
         protected void PopulateControlPointIndexIfNeeded(GridVector2 WorldPosition)

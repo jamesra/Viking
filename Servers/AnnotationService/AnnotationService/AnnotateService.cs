@@ -151,7 +151,7 @@ namespace Annotation
                 } 
             }
 
-            if (_db == null)
+            if (_db is null)
             { 
                 _db = new ConnectomeEntities();
             } 
@@ -271,7 +271,7 @@ namespace Annotation
                 try
                 {
                     ConnectomeDataModel.StructureType type = db.StructureTypes.Find(ID);
-                    if (type == null)
+                    if (type is null)
                         return null;
 
                     AnnotationService.Types.StructureType newType = type.Create();
@@ -310,8 +310,8 @@ namespace Annotation
                                                                            where s.TypeID == TypeID
                                                                            select s;
 
-                    if (structObjs == null)
-                        return new AnnotationService.Types.Structure[0];
+                    if (structObjs is null)
+                        return Array.Empty<AnnotationService.Types.Structure>();
 
                     var structObjList = structObjs.ToList<ConnectomeDataModel.Structure>();
 
@@ -361,7 +361,7 @@ namespace Annotation
                                                                                              s.ID <= maxIDValue &&
                                                                                              ShorterListIDs.Contains(s.ID)
                                                                                        select s;
-                        if (structTypeObjs == null)
+                        if (structTypeObjs is null)
                             return null;
 
                         return structTypeObjs.ToList().Select(stype => stype.Create()).ToArray();
@@ -694,7 +694,7 @@ namespace Annotation
                 try
                 {
                     ConnectomeDataModel.Structure structObj = db.Structures.Find(ID);
-                    if (structObj == null)
+                    if (structObj is null)
                         return null;
 
                     AnnotationService.Types.Structure newStruct = structObj.Create(IncludeChildren);
@@ -774,7 +774,7 @@ namespace Annotation
                         }
                     }
 
-                    if (structObjs == null)
+                    if (structObjs is null)
                         return new List<AnnotationService.Types.Structure>();
 
                     ListStructures.AddRange(selected_structures.Values);
@@ -1440,7 +1440,7 @@ namespace Annotation
                 using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
                 {
                     ConnectomeDataModel.Location obj = db.Locations.Find(ID);
-                    if (obj == null)
+                    if (obj is null)
                         return null;
                     AnnotationService.Types.Location retLoc = obj.Create();
                     return retLoc;
@@ -1498,7 +1498,7 @@ namespace Annotation
                     }
 
 
-                    if (locObjs == null)
+                    if (locObjs is null)
                         return null;
 
                     ListLocations.AddRange(locObjs.Select(l => l.Create(IncludeLinks)));
@@ -1568,7 +1568,7 @@ namespace Annotation
                     }
 
 
-                    if (locObjs == null)
+                    if (locObjs is null)
                         return null;
 
                     ListLocations.AddRange(locObjs); 
@@ -2167,7 +2167,7 @@ namespace Annotation
                     for (int iObj = 0; iObj < locations.Length; iObj++)
                     {
                         AnnotationService.Types.Location t = locations[iObj];
-                        if (t == null)
+                        if (t is null)
                         {
                             Debug.WriteLine("Null passed to location update.");
                             continue;
@@ -2283,7 +2283,7 @@ namespace Annotation
 
         private ConnectomeDataModel.LocationLink _CreateLocationLink(ConnectomeEntities db, long SourceID, long TargetID, string username)
         {
-            if (username == null)
+            if (username is null)
                 username = ServiceModelUtil.GetUserForCall();
 
             ConnectomeDataModel.LocationLink newLink = db.LocationLinks.Create();
@@ -2300,7 +2300,7 @@ namespace Annotation
                 throw new ArgumentException("CreateLocationLink: The specified source or target does not exist", e);
             }
 
-            if (Source == null || Target == null)
+            if (Source is null || Target is null)
             {
                 throw new ArgumentException("CreateLocationLink: The specified source or target does not exist");
             }
@@ -2583,7 +2583,7 @@ namespace Annotation
 
                 foreach (var result in structLocations)
                 {
-                    if (result == null)
+                    if (result is null)
                         continue;
 
                     if (graph.NodeList.ContainsKey(result.ParentID))
@@ -2657,7 +2657,7 @@ namespace Annotation
 
             foreach (AnnotationService.Types.Structure structure in MissingStructures)
             {
-                if (structure.ChildIDs == null)
+                if (structure.ChildIDs is null)
                     continue;
 
                 foreach (long childID in structure.ChildIDs)
@@ -2678,7 +2678,7 @@ namespace Annotation
             foreach (AnnotationService.Types.Structure child in ChildStructObjs)
             {
                 //Temp Hack to skip desmosomes
-                if (child.Links == null)
+                if (child.Links is null)
                     continue;
 
                 foreach (AnnotationService.Types.StructureLink link in child.Links)
@@ -2703,7 +2703,7 @@ namespace Annotation
             //Find missing structures and populate the list
             foreach (AnnotationService.Types.Structure child in ChildStructObjs)
             {
-                if (child.Links == null)
+                if (child.Links is null)
                     continue;
 
                 foreach (AnnotationService.Types.StructureLink link in child.Links)
@@ -2790,7 +2790,7 @@ namespace Annotation
 
                     foreach (var row in results)
                     {
-                        string type = (row.Label == null || String.IsNullOrEmpty(row.Label)) ? "[None]" : "[" + row.Label + "]";
+                        string type = (row.Label is null || String.IsNullOrEmpty(row.Label)) ? "[None]" : "[" + row.Label + "]";
                         answer.Add(type + "~" + row.StructureID + "~" + row.NumConnections);
                     }
                 }
@@ -2820,7 +2820,7 @@ namespace Annotation
 
                     foreach (var row in res)
                     {
-                        string type = (row.label == null || String.IsNullOrEmpty(row.label)) ? "[None]" : "[" + row.label + "]";
+                        string type = (row.label is null || String.IsNullOrEmpty(row.label)) ? "[None]" : "[" + row.label + "]";
                         answer.Add(row.id + "~" + type + "~" + row.count);
                     }
 
@@ -2858,7 +2858,7 @@ namespace Annotation
 
             /*
              * 
-        var res = from s in db.ConnectomeDataModel.Structures where s.ParentID == null select s.ID;
+        var res = from s in db.ConnectomeDataModel.Structures where s.ParentID is null select s.ID;
         var res2 = from a in db.ConnectomeDataModel.Structures where res.Contains(a.ID) select new { label = a.Label, id = a.ID };
 
         foreach (var item in res2)
@@ -2965,9 +2965,9 @@ namespace Annotation
         public string[] getSynapses(int cellID)
         {
             AnnotationService.Types.Structure mainStructure = GetStructureByID(cellID, true);
-            if (mainStructure.ChildIDs == null)
+            if (mainStructure.ChildIDs is null)
             {
-                return new string[0];
+                return Array.Empty<String>();
             }
 
             AnnotationService.Types.Structure[] synapses = GetStructuresByIDs(mainStructure.ChildIDs, false);

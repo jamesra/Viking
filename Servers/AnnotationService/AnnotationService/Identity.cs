@@ -66,7 +66,7 @@ namespace Annotation.Identity
 
         public static async Task<DiscoveryDocumentResponse> GetDiscoveryDocumentAsync()
         {
-            if (_disco == null)
+            if (_disco is null)
             {
                 string IdentityServerEndpoint = VikingWebAppSettings.AppSettings.GetIdentityServerURLString();
                 _disco = new DiscoveryCache(IdentityServerEndpoint);
@@ -172,7 +172,7 @@ namespace Annotation.Identity
                 }
 
                 var userNameClaim = validation.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
-                if (userNameClaim == null)
+                if (userNameClaim is null)
                 {
                     message.Properties["Principal"] = CreateAnonymousUser();
                     return authPolicy;

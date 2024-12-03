@@ -53,7 +53,7 @@ namespace WebAnnotationModelTest
             Assert.IsFalse(token.IsError, token.Error);
 
             var permissions = await TokenHelper.RetrieveUserVolumePermissions(token as TokenResponse, VolumeName);
-            Assert.IsFalse(permissions == null || permissions.Length == 0, $"No permissions found for test user {Username} in volume {VolumeName}");
+            Assert.IsFalse(permissions is null || permissions.Length == 0, $"No permissions found for test user {Username} in volume {VolumeName}");
 
             List<string> list_permissions = new List<string>
             {

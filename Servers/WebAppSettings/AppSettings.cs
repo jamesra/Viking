@@ -59,7 +59,7 @@ namespace VikingWebAppSettings
         public static string[] GetStringList(string name)
         {
             string setting = GetApplicationSetting(name);
-            if (setting == null)
+            if (setting is null)
                 return new string[0];
 
             return setting.Split(';').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray();
@@ -67,7 +67,7 @@ namespace VikingWebAppSettings
 
         public static string GetConnectionString(string name)
         { 
-            if (WebConfigurationManager.ConnectionStrings == null)
+            if (WebConfigurationManager.ConnectionStrings is null)
             {
                 throw new ArgumentException("WebConfigurationManager.ConnectionStrings is null");
             }
@@ -75,7 +75,7 @@ namespace VikingWebAppSettings
             {
                 throw new ArgumentException("Connection string " + name + " not configured.");
             }
-            if (WebConfigurationManager.ConnectionStrings[name] == null)
+            if (WebConfigurationManager.ConnectionStrings[name] is null)
             {
                 throw new ArgumentException("Connection string " + name + " has a null ConnectionStringSettings value");
             }

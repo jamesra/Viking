@@ -168,7 +168,7 @@ namespace DataExport.Controllers
         private ColorMapWithImages GetColorMapImage()
         {
             string ColorMapImagePath = AppSettings.GetApplicationSetting("DefaultLocationColorMapsPath");
-            if (ColorMapImagePath == null || ColorMapImagePath.Length == 0)
+            if (ColorMapImagePath is null || ColorMapImagePath.Length == 0)
                 return null;
 
 
@@ -189,7 +189,7 @@ namespace DataExport.Controllers
         private ColorMapWithLong GetStructureColorMap()
         {
             string ColorMapPath = AppSettings.GetApplicationSetting("DefaultStructureColorsPath");
-            if (ColorMapPath == null || ColorMapPath.Length == 0)
+            if (ColorMapPath is null || ColorMapPath.Length == 0)
                 return null;  
 
             return ColorMapWithLong.CreateFromConfigFile(ColorMapPath); 
@@ -198,7 +198,7 @@ namespace DataExport.Controllers
         private ColorMapWithLong GetStructureTypeColorMap()
         {
             string ColorMapPath = AppSettings.GetApplicationSetting("DefaultStructureTypeColorsPath");
-            if (ColorMapPath == null || ColorMapPath.Length == 0)
+            if (ColorMapPath is null || ColorMapPath.Length == 0)
                 return null; 
             
             return ColorMapWithLong.CreateFromConfigFile(ColorMapPath);
@@ -225,7 +225,7 @@ namespace DataExport.Controllers
         {
             AnnotationVizLib.WCFClient.ConnectionFactory.SetConnection(AppSettings.WebServiceURL , AppSettings.EndpointCredentials);
 
-            if (requestIDs == null || requestIDs.Count == 0)
+            if (requestIDs is null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs();
 
             return WCFMorphologyFactory.FromWCF(requestIDs, true, AppSettings.WebServiceURL, AppSettings.EndpointCredentials);
@@ -234,10 +234,10 @@ namespace DataExport.Controllers
         private bool RequestedStickFigure()
         {
             string hopstr = Request.RequestContext.HttpContext.Request.QueryString["stick"];
-            if (hopstr == null)
+            if (hopstr is null)
             {
                 hopstr = Request.RequestContext.HttpContext.Request.QueryString["Stick"];
-                if (hopstr == null)
+                if (hopstr is null)
                 {
                     return false;
                 }

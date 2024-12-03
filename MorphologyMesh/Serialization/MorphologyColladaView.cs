@@ -3,9 +3,13 @@ using AnnotationVizLib;
 using Geometry;
 using Geometry.Meshing;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using UnitsAndScale;
+using MathNet.Numerics;
+using System;
 
 namespace MorphologyMesh
 {
@@ -113,7 +117,7 @@ namespace MorphologyMesh
         /// </summary>
         public string InstanceURL
         {
-            get { return GeometryURL == null ? "#" + NodeName : string.Format("{0}#{1}", GeometryURL, NodeName); }
+            get { return GeometryURL is null ? "#" + NodeName : string.Format("{0}#{1}", GeometryURL, NodeName); }
         }
 
 
@@ -231,7 +235,7 @@ namespace MorphologyMesh
         public BasicColladaView(IAxisUnits scale, StructureMorphologyColorMap colormap)
         {
             Colormap = colormap;
-            if (Colormap == null)
+            if (Colormap is null)
                 Colormap = new StructureColorMap(null, null);
 
             this.Scale = scale;
@@ -358,7 +362,7 @@ namespace MorphologyMesh
         public MorphologyColladaView(UnitsAndScale.IScale scale, StructureMorphologyColorMap colormap)
         {
             Colormap = colormap;
-            if (Colormap == null)
+            if (Colormap is null)
                 Colormap = new StructureMorphologyColorMap(null, null, null);
 
             Scale = scale;
@@ -386,10 +390,15 @@ namespace MorphologyMesh
 
         private StructureModel AddModel(MorphologyGraph structure)
         {
+            throw new NotImplementedException("Look at BajajMultiTest.SaveMeshes before putting this in production.");
+            /*
             //MeshGraph meshGraph = structure.ConvertToMeshGraph();
             //SmoothMeshGenerator.Generate(meshGraph);
             //DynamicRenderMesh<ulong> structureMesh = TopologyMeshGenerator.Generate(meshGraph);
-            Mesh3D<IVertex3D<ulong>> structureMesh = TopologyMeshGenerator.Generate(structure);
+            SliceGraph graph = await SliceGraph.Create(structure);
+            var bajaj_mesh = await BajajMeshGenerator.ConvertToMesh(graph, null);
+            Debug.Assert(bajaj_mesh.Count == 1);
+            var structureMesh = bajaj_mesh[0];
             StructureModel model = null;
 
             if (structureMesh != null)
@@ -405,11 +414,12 @@ namespace MorphologyMesh
 
             foreach(var child in structure.Subgraphs.Values)
             {
-                StructureModel childModel = AddModel(child);
-                model.AddChild(childModel);
+                StructureModel childModel = await AddModel(child);
+                model?.AddChild(childModel);
             } 
 
             return model;
+            */
         }
 
         /// <summary>

@@ -22,7 +22,7 @@ namespace MorphologyMesh
         {
         }
 
-        public static new IFace Create(IEnumerable<int> vertex_indicies)
+        public new static IFace Create(IEnumerable<int> vertex_indicies)
         {
             return new MorphMeshFace(vertex_indicies);
         }
@@ -57,7 +57,7 @@ namespace MorphologyMesh
             return Adjacent.Select(f => (MorphMeshFace)f).ToArray();
             */
 
-            if (MeetsEdgeCriteriaFunction == null)
+            if (MeetsEdgeCriteriaFunction is null)
                 return this.AdjacentFaces(mesh);
             else
                 return this.Edges.SelectMany(e => mesh.Edges[e].Faces.Where(f => f != (IFace)this && MeetsEdgeCriteriaFunction(mesh, this, (MorphMeshFace)f, (MorphMeshEdge)mesh.Edges[e]))).Select(f => (MorphMeshFace)f);

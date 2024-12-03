@@ -74,7 +74,7 @@ namespace TriangleNet
 
                 int block = size / BLOCKSIZE;
 
-                if (pool[block] == null)
+                if (pool[block] is null)
                 {
                     pool[block] = new Triangle[BLOCKSIZE];
 

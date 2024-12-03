@@ -30,7 +30,7 @@ namespace TriangleNet.Topology
 
         public override string ToString()
         {
-            if (seg == null)
+            if (seg is null)
             {
                 return "O-TID [null]";
             }
@@ -239,7 +239,7 @@ namespace TriangleNet.Topology
         /// </summary>
         internal static bool IsDead(SubSegment sub)
         {
-            return sub.subsegs[0].seg == null;
+            return sub.subsegs[0].seg is null;
         }
 
         /// <summary>

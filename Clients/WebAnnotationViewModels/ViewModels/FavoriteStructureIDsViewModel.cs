@@ -93,7 +93,7 @@ namespace Annotation.ViewModels
 
         public FavoriteStructureIDsViewModel(ObservableCollection<ulong> Favorites = null, ObservableCollection<ulong> root_types = null) : this()
         {
-            if (root_types == null)
+            if (root_types is null)
                 _RootStructureTypes = new ObservableCollection<IStructureType>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true));
 
             FavoriteStructureTypeIDs = Favorites;

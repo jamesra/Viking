@@ -64,7 +64,7 @@ namespace Viking.UI.Controls
         {
             get
             {
-                if (comboChannel == null)
+                if (comboChannel is null)
                 {
                     return new string[0];
                 }
@@ -73,12 +73,12 @@ namespace Viking.UI.Controls
             }
             set
             {
-                if (comboChannel == null)
+                if (comboChannel is null)
                     return;
 
                 comboChannel.Items.Clear();
 
-                if (value == null)
+                if (value is null)
                 {
                     comboChannel.Text = "";
                     return;
@@ -115,7 +115,7 @@ namespace Viking.UI.Controls
             get { return _Info; }
             set
             {
-                if (value == null)
+                if (value is null)
                     throw new ArgumentException("Expecting non-null ChannelInfo in ChannelPickerControl.Info");
 
                 _Info = (ChannelInfo)value.Clone();

@@ -1071,7 +1071,7 @@ namespace RTree
                 if (entryStatus[i] == ENTRY_STATUS_UNASSIGNED)
                 {
 
-                    if (n.entries[i] == null)
+                    if (n.entries[i] is null)
                     {
                         log.Error("Error: Node<T> " + n.nodeId + ", entry " + i + " is null");
                     }
@@ -1322,7 +1322,7 @@ namespace RTree
             // CL2 [Leaf check] If N is a leaf, return N
             while (true)
             {
-                if (n == null)
+                if (n is null)
                 {
                     log.Error("Could not get root Node<T> (" + rootNodeId + ")");
                 }
@@ -1434,7 +1434,7 @@ namespace RTree
             // the tree are not corrupted.    
             Node<T> n = getNode(nodeId);
 
-            if (n == null)
+            if (n is null)
             {
                 log.Error("Error: Could not read Node<T> " + nodeId);
             }
@@ -1464,7 +1464,7 @@ namespace RTree
 
             for (int i = 0; i < n.entryCount; i++)
             {
-                if (n.entries[i] == null)
+                if (n.entries[i] is null)
                 {
                     log.Error("Error: Node<T> " + nodeId + ", Entry " + i + " is null");
                 }

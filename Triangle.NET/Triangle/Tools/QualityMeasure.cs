@@ -237,7 +237,7 @@ namespace TriangleNet.Tools
         /// </remarks>
         public int Bandwidth()
         {
-            if (mesh == null) return 0;
+            if (mesh is null) return 0;
 
             // Lower and upper bandwidth of the matrix
             int ml = 0, mu = 0;

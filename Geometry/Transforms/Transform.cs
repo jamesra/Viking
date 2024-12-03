@@ -114,7 +114,7 @@ namespace Geometry.Transforms
 
         protected TransformBase(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             this.Info = info.GetValue("Info", typeof(TransformBasicInfo)) as TransformBasicInfo;
@@ -122,7 +122,7 @@ namespace Geometry.Transforms
 
         public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             info.AddValue("Info", this.Info);

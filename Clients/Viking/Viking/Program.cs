@@ -44,7 +44,7 @@ namespace Viking
         {
             Microsoft.Win32.RegistryKey FrameworkKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(baseKeyName);
 
-            if (FrameworkKey == null)
+            if (FrameworkKey is null)
             {
                 return false;
             }
@@ -65,6 +65,8 @@ namespace Viking
         [STAThread]
         static void Main(string[] args)
         {
+            Application.EnableVisualStyles();
+
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();
             CreateDebugListener();
 
@@ -252,6 +254,7 @@ namespace Viking
 
             VikingApplicationContext context = new VikingApplicationContext(website);
             context.Initialize(website);
+            
             Application.Run(context);
 
             SynchronizedDebugWriter?.Close();

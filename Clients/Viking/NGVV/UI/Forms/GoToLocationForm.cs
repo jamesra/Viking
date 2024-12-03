@@ -48,7 +48,7 @@ namespace Viking.UI.Forms
 
                 string Data = Clipboard.GetText();
 
-                if (Data == null)
+                if (Data is null)
                     return;
 
                 if (Data.Length == 0)

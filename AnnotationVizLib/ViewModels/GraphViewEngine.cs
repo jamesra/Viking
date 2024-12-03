@@ -24,7 +24,7 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public void AddStandardizedAttributes(System.Collections.Generic.IDictionary<string, string> attribs)
         {
-            if (attribs == null)
+            if (attribs is null)
                 return;
 
             foreach (string key in attribs.Keys)

@@ -33,7 +33,7 @@ namespace MeasurementExtension
             //If the scale can't be found we won't
             VolumeViewModel volume = Viking.UI.State.volume;
 
-            if (volume == null)
+            if (volume is null)
                 return false;
 
             if (GetScaleFromXML(volume.VolumeElement))
@@ -98,13 +98,13 @@ namespace MeasurementExtension
                     XElement MappingElement = MappingElements.First();
 
                     XAttribute EndpointAttribute = MappingElement.Attribute("UnitsPerPixel");
-                    if (EndpointAttribute == null)
+                    if (EndpointAttribute is null)
                         break;
 
                     Global._UnitsPerPixel = System.Convert.ToDouble(EndpointAttribute.Value);
 
                     EndpointAttribute = MappingElement.Attribute("UnitsOfMeasure");
-                    if (EndpointAttribute == null)
+                    if (EndpointAttribute is null)
                         break;
 
                     try

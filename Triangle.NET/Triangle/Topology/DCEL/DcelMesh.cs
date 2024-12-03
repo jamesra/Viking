@@ -86,7 +86,7 @@ namespace TriangleNet.Topology.DCEL
                     continue;
                 }
 
-                if (vertex.leaving == null)
+                if (vertex.leaving is null)
                 {
                     return false;
                 }
@@ -105,7 +105,7 @@ namespace TriangleNet.Topology.DCEL
                     continue;
                 }
 
-                if (face.edge == null)
+                if (face.edge is null)
                 {
                     return false;
                 }
@@ -124,22 +124,22 @@ namespace TriangleNet.Topology.DCEL
                     continue;
                 }
 
-                if (edge.twin == null)
+                if (edge.twin is null)
                 {
                     return false;
                 }
 
-                if (edge.origin == null)
+                if (edge.origin is null)
                 {
                     return false;
                 }
 
-                if (edge.face == null)
+                if (edge.face is null)
                 {
                     return false;
                 }
 
-                if (closed && edge.next == null)
+                if (closed && edge.next is null)
                 {
                     return false;
                 }
@@ -222,7 +222,7 @@ namespace TriangleNet.Topology.DCEL
             // TODO: parallel?
             foreach (var edge in this.edges)
             {
-                if (edge.twin == null)
+                if (edge.twin is null)
                 {
                     var twin = edge.twin = new HalfEdge(edge.next.origin, Face.Empty);
                     twin.twin = edge;

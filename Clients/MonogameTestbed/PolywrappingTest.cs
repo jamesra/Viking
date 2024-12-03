@@ -16,8 +16,8 @@ using VikingXNA;
 using VikingXNAGraphics;
 
 namespace MonogameTestbed
-{
-
+{ 
+    /*
     class MeshMergeIncrementalView
     {
         public GridPolygon[] Polys;
@@ -91,7 +91,7 @@ namespace MonogameTestbed
 
         private void UpdateLinesToDraw()
         {
-            if (TrianglesView == null)
+            if (TrianglesView is null)
             {
                 lineViewsToDraw = null;
             }
@@ -139,8 +139,8 @@ namespace MonogameTestbed
             //    StartingIndexView.Draw(window, scene);
         }
     }
-
-
+    */
+    /*
     class TriangulationShapeWrapView
     {
         public GridPolygon A;
@@ -280,7 +280,7 @@ namespace MonogameTestbed
 
         private void UpdateLinesToDraw()
         {
-            if (TrianglesView == null)
+            if (TrianglesView is null)
             {
                 lineViewsToDraw = null;
             }
@@ -335,7 +335,8 @@ namespace MonogameTestbed
             //    StartingIndexView.Draw(window, scene);
         }
     }
-
+    */
+    /*
     class PolywrapView
     {
         public GridPolygon A;
@@ -494,4 +495,5 @@ namespace MonogameTestbed
             wrapView?.Draw(window, scene);
         }
     }
+    */
 }

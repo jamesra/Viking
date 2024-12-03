@@ -129,7 +129,7 @@ namespace VikingXNAGraphics
 
         protected Texture2D GetOrCreateLabelTexture(GraphicsDevice device, SpriteBatch spritebatch, SpriteFont font)
         {
-            if (_LabelTexture == null)
+            if (_LabelTexture is null)
             {
                 BeginInvokeGenerateTexture(device, spritebatch, font);
             }
@@ -215,7 +215,7 @@ namespace VikingXNAGraphics
                                 RoundCurve.CurveManager CurveManager)
         {
             Texture2D labelTexture = GetOrCreateLabelTexture(device, spriteBatch, font);
-            if (labelTexture == null) //Happens when the label text is null or empty
+            if (labelTexture is null) //Happens when the label text is null or empty
                 return;
 
             CurveManager.DrawLabel(this.Curve, (float)this.LineWidth / 2.0f, this.Color, ViewProj, 0, labelTexture, this.Alignment, this.Max_Curve_Length_To_Use_Normalized);

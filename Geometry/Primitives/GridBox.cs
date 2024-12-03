@@ -154,7 +154,7 @@ namespace Geometry
 
         public GridBox(IPoint position, double[] dimensions)
         {
-            if (position == null)
+            if (position is null)
                 throw new ArgumentNullException(nameof(position));
 
             minVals = new double[] { position.X, position.Y, position.Z };
@@ -166,7 +166,7 @@ namespace Geometry
 
         public GridBox(IPoint position, double radius)
         {
-            if (position == null)
+            if (position is null)
                 throw new ArgumentNullException(nameof(position));
 
             minVals = new double[] { position.X - radius, position.Y - radius, position.Z - radius };
@@ -344,7 +344,7 @@ namespace Geometry
 
         public bool Contains(IPoint pos)
         {
-            if (pos == null)
+            if (pos is null)
                 throw new ArgumentNullException(nameof(pos));
 
             return this.Contains(new double[] { pos.X, pos.Y, pos.Z });
@@ -425,7 +425,7 @@ namespace Geometry
 
         public static GridBox GetBoundingBox(IEnumerable<GridVector3> points)
         {
-            if (points == null)
+            if (points is null)
                 throw new ArgumentException("Bounding box cannot be created for null points collection");
 
             if (points.Any() == false || points.First() == null)

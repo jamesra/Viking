@@ -92,11 +92,10 @@ namespace Neo4JService.Areas.HelpPage.Models
             }
 
             if (modelDescription is CollectionModelDescription collectionModelDescription)
-            {
-                complexTypeModelDescription = collectionModelDescription.ElementDescription as ComplexTypeModelDescription;
-                if (complexTypeModelDescription != null)
+            { 
+                if (collectionModelDescription.ElementDescription is ComplexTypeModelDescription collectionComplexTypeModelDescription)
                 {
-                    return complexTypeModelDescription.Properties;
+                    return collectionComplexTypeModelDescription.Properties;
                 }
             }
 

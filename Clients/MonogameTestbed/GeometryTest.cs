@@ -4,7 +4,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Threading.Tasks;  
+using TriangleNet;
 using VikingXNAGraphics;
 
 namespace MonogameTestbed
@@ -27,8 +28,8 @@ namespace MonogameTestbed
         GamePadState LastGamepadState;
          
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
-         
+        public bool Initialized => _initialized;
+
         public void InitGeometry()
         { 
             GridLineSegment lineSegment;
@@ -215,6 +216,7 @@ namespace MonogameTestbed
         */
         }
 
+        /*
         private void DrawCentroidsAndIndicies(MonoTestbed window)
         {
             foreach (IShape2D shape in shapes)
@@ -229,10 +231,11 @@ namespace MonogameTestbed
                 }
             }
         }
+        */
 
         public void DrawViews(MonoTestbed window, ICollection<IColorView> listViews)
         {
-            DrawCentroidsAndIndicies(window);
+            //DrawCentroidsAndIndicies(window);
 
             MeshView<VertexPositionColor> meshView = new MeshView<VertexPositionColor>();
             foreach(IColorView view in listViews)

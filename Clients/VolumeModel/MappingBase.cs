@@ -164,10 +164,10 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         protected virtual double AdjustDownsampleForScale(double input)
         {
-            if (this.XYScale == null)
+            if (this.XYScale is null)
                 return input;
 
-            if (this.Section.XYScale == null)
+            if (this.Section.XYScale is null)
                 return input;
 
             double relative_scale = this.XYScale.Value / this.Section.XYScale.Value;

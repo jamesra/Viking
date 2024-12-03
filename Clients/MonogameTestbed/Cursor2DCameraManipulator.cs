@@ -39,7 +39,7 @@ namespace MonogameTestbed
         {
             GamePadState state = GamePad.GetState(PlayerIndex.One);
 
-            if (Gamepad == null)
+            if (Gamepad is null)
             {
                 Gamepad = new MonogameTestbed.GamePadStateTracker();
                 Gamepad.Update(state);

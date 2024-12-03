@@ -51,7 +51,7 @@ namespace Viking.VolumeModel
             /*
             try
             { 
-                if (_TileTransforms == null || token.IsCancellationRequested)
+                if (_TileTransforms is null || token.IsCancellationRequested)
                     return Array.Empty<ITransform>();
 
                 return _TileTransforms;
@@ -248,7 +248,7 @@ namespace Viking.VolumeModel
                     newTransform = TriangulationTransform.Transform(this.VolumeTransform, T, info);
                 }
 
-                if (newTransform == null)
+                if (newTransform is null)
                     continue;
 
                 //Don't include the tile if the mapped version doesn't have any triangles

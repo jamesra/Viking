@@ -434,7 +434,7 @@ namespace RoundCurve
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
 
-            if (techniqueName == null)
+            if (techniqueName is null)
                 effect.CurrentTechnique = effect.Techniques["Standard"];
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];
@@ -458,7 +458,7 @@ namespace RoundCurve
             viewProjMatrixParameter.SetValue(viewProjMatrix);
             timeParameter.SetValue(time);
 
-            if (techniqueName == null)
+            if (techniqueName is null)
                 effect.CurrentTechnique = effect.Techniques["Standard"];
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];
@@ -599,7 +599,7 @@ namespace RoundCurve
             blurThresholdParameter.SetValue(DefaultBlurThreshold);
 
 
-            if (techniqueName == null)
+            if (techniqueName is null)
                 effect.CurrentTechnique = effect.Techniques["Standard"];
             else
                 effect.CurrentTechnique = effect.Techniques[techniqueName];

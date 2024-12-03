@@ -25,7 +25,7 @@ namespace MorphologyMesh
             //Debug.Assert(this.Faces.Count < 3, string.Format("{0} was extra face on {1}", f, this));
         }
 
-        public static new IEdge Create(int A, int B)
+        public new static IEdge Create(int A, int B)
         {
             return new MorphMeshEdge(EdgeType.UNKNOWN, A, B);
         }

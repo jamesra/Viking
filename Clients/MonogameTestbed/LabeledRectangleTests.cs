@@ -21,7 +21,7 @@ namespace MonogameTestbed
     {
         public string Title => this.GetType().Name;
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         /// <summary>
         /// When true we draw two lines of text to ensure the layout is reasonable

@@ -92,7 +92,7 @@ namespace Viking.UI.Controls
 
             foreach (IPropertyPage IPage in this.IPropertyPages)
             {
-                if (Obj == null)
+                if (Obj is null)
                 {
                     IPage.Enable(false);
                 }

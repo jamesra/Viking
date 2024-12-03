@@ -270,7 +270,7 @@ namespace TriangleNet
 
             Reset();
 
-            if (qualityMesher == null)
+            if (qualityMesher is null)
             {
                 qualityMesher = new QualityMesher(this, new Configuration());
             }
@@ -426,7 +426,7 @@ namespace TriangleNet
 
 #if USE_ATTRIBS
             // Check attributes.
-            this.nextras = v.attributes == null ? 0 : v.attributes.Length;
+            this.nextras = v.attributes is null ? 0 : v.attributes.Length;
 #endif
 
             // Simple heuristic to check if ids are already set.  We assume that if the
@@ -614,7 +614,7 @@ namespace TriangleNet
             bool mirrorflag;
             bool enq;
 
-            if (splitseg.seg == null)
+            if (splitseg.seg is null)
             {
                 // Find the location of the vertex to be inserted.  Check if a good
                 // starting triangle has already been provided by the caller.
@@ -654,7 +654,7 @@ namespace TriangleNet
             if ((intersect == LocateResult.OnEdge) || (intersect == LocateResult.Outside))
             {
                 // The vertex falls on an edge or boundary.
-                if (checksegments && (splitseg.seg == null))
+                if (checksegments && (splitseg.seg is null))
                 {
                     // Check whether the vertex falls on a subsegment.
                     horiz.Pivot(ref brokensubseg);
@@ -1684,7 +1684,7 @@ namespace TriangleNet
                     TriangleDealloc(botleft.tri);
                     TriangleDealloc(botright.tri);
                 }
-                else if (flipstack.Peek().tri == null) // Dummy flip
+                else if (flipstack.Peek().tri is null) // Dummy flip
                 {
                     // Restore two triangles that were split into four triangles,
                     // so they are again two triangles.

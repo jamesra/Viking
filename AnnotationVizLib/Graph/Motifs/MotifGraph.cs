@@ -73,12 +73,12 @@ namespace AnnotationVizLib
 
         public int Compare(MotifEdge x, MotifEdge y)
         {
-            if (x == null && y == null)
+            if (x is null && y is null)
                 return 0;
 
-            if (x == null)
+            if (x is null)
                 return -1;
-            if (y == null)
+            if (y is null)
                 return 1;
 
             return x.CompareTo(y);

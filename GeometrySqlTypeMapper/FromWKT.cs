@@ -65,7 +65,7 @@ namespace Geometry
 
         public static IShape2D ParseWKT(this string input)
         {
-            if (input == null)
+            if (input is null)
                 throw new FormatException("Input WKT must not be null");
                
             var m = WKT_regex.Match(input);
@@ -167,7 +167,7 @@ namespace Geometry
             foreach (var coordList in matchedParenthesis)
             {
                 var p = ParsePointsFromParameters(coordList);
-                if (poly == null)
+                if (poly is null)
                     poly = new GridPolygon(p);
                 else
                     poly.AddInteriorRing(p);

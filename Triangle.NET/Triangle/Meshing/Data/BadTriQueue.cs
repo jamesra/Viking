@@ -104,7 +104,7 @@ namespace TriangleNet.Meshing.Data
             }
 
             // Are we inserting into an empty queue?
-            if (queuefront[queuenumber] == null)
+            if (queuefront[queuenumber] is null)
             {
                 // Yes, we are inserting into an empty queue.
                 // Will this become the highest-priority queue?
@@ -119,7 +119,7 @@ namespace TriangleNet.Meshing.Data
                     // No, this is not the highest-priority queue.
                     // Find the queue with next higher priority.
                     i = queuenumber + 1;
-                    while (queuefront[i] == null)
+                    while (queuefront[i] is null)
                     {
                         i++;
                     }

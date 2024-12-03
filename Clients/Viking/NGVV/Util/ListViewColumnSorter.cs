@@ -24,7 +24,7 @@ namespace Viking.Common
 
         public static bool IsNumericType(this Type t)
         {
-            if (t == null)
+            if (t is null)
                 return false;
 
             if (GetTypeExtensions.NumericTypes.Contains(t))
@@ -60,21 +60,21 @@ namespace Viking.Common
             ItemA = A as ListViewItem;
             ItemB = B as ListViewItem;
 
-            if (ItemA == null && ItemB == null)
+            if (ItemA is null && ItemB is null)
                 return 0;
-            if (ItemA == null)
+            if (ItemA is null)
                 return 1;
-            if (ItemB == null)
+            if (ItemB is null)
                 return -1;
 
             ListViewItem.ListViewSubItem SubA = ItemA.SubItems[SortIndex];
             ListViewItem.ListViewSubItem SubB = ItemB.SubItems[SortIndex];
 
-            if (SubA == null && SubB == null)
+            if (SubA is null && SubB is null)
                 return 0;
-            if (SubA == null)
+            if (SubA is null)
                 return 1;
-            if (SubB == null)
+            if (SubB is null)
                 return -1;
 
             if (ColumnType.IsNumericType())

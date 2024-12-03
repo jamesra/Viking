@@ -20,7 +20,7 @@ namespace AnnotationVizLib.WCFClient
 
         protected WCFNeuronFactory()
         {
-            if (IDToStructureType == null)
+            if (IDToStructureType is null)
                 IDToStructureType = Queries.GetStructureTypes();
 
             graph = new NeuronGraph();
@@ -195,7 +195,7 @@ namespace AnnotationVizLib.WCFClient
 
                 IDToStructure[(ulong)s.ID] = adapter;
 
-                if (s.ChildIDs == null)
+                if (s.ChildIDs is null)
                     continue;
 
                 //Find all of the details on child synapses, which we probably do not have
@@ -224,7 +224,7 @@ namespace AnnotationVizLib.WCFClient
                     IDToStructure.Add((ulong)child.ID, child);
                 }
 
-                if (child.Links == null)
+                if (child.Links is null)
                     continue;
 
                 foreach (IStructureLink link in child.Links)

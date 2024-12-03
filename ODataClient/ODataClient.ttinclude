@@ -324,7 +324,7 @@ private void ApplyParametersFromConfigurationClass()
 /// </summary>
 private void ApplyParametersFromCommandLine()
 {
-    if (this.Host == null)
+    if (this.Host is null)
     {
         return;
     }
@@ -471,7 +471,7 @@ public class CodeGenerationContext
     {
         get
         {
-            if (this.edmModel == null)
+            if (this.edmModel is null)
             {
                 Debug.Assert(this.edmx != null, "this.edmx != null");
 
@@ -529,13 +529,13 @@ public class CodeGenerationContext
             {
                 using (XmlReader reader = GetReferencedModelReaderFunc(uri))
                 {
-                    if (reader == null)
+                    if (reader is null)
                     {
                         return null;
                     }
 
                     XElement element = XElement.Load(reader);
-                    if (this.ReferencesMap == null)
+                    if (this.ReferencesMap is null)
                     {
                         this.ReferencesMap = new Dictionary<Uri, XElement>();
                     }
@@ -563,7 +563,7 @@ public class CodeGenerationContext
     {
         get
         {
-            if (this.namespacesInModel == null)
+            if (this.namespacesInModel is null)
             {
                 Debug.Assert(this.EdmModel != null, "this.EdmModel != null");
                 this.namespacesInModel = GetElementsFromModelTree(this.EdmModel, (m) => m.SchemaElements.Select(e => e.Namespace)).Distinct().ToArray();
@@ -622,14 +622,14 @@ public class CodeGenerationContext
     {
         get
         {
-            if (this.namespaceMap == null)
+            if (this.namespaceMap is null)
             {
                 if (!string.IsNullOrEmpty(this.namespacePrefix))
                 {
                     if (this.NamespacesInModel.Count() == 1)
                     {
                         IEdmEntityContainer container = this.EdmModel.EntityContainer;
-                        string containerNamespace = container == null ? null : container.Namespace;
+                        string containerNamespace = container is null ? null : container.Namespace;
                         this.namespaceMap = this.NamespacesInModel
                             .Distinct()
                             .ToDictionary(
@@ -717,7 +717,7 @@ public class CodeGenerationContext
     /// </summary>
     public bool UseKeyAsSegmentUrlConvention(IEdmEntityContainer currentContainer)
     {
-        if (this.keyAsSegmentContainers == null)
+        if (this.keyAsSegmentContainers is null)
         {
             this.keyAsSegmentContainers = new HashSet<string>();
             Debug.Assert(this.EdmModel != null, "this.EdmModel != null");
@@ -763,7 +763,7 @@ public class CodeGenerationContext
     /// <returns>The namespace qualified name for the given <paramref name="schemaElement"/> with the namespace prefix applied if this.NamespacePrefix is specified.</returns>
     public string GetPrefixedFullName(IEdmSchemaElement schemaElement, string schemaElementFixedName, ODataClientTemplate template, bool needGlobalPrefix = true)
     {
-        if (schemaElement == null)
+        if (schemaElement is null)
         {
             return null;
         }
@@ -781,7 +781,7 @@ public class CodeGenerationContext
     /// <returns>The prefixed namespace for the given <paramref name="ns"/>.</returns>
     public string GetPrefixedNamespace(string ns, ODataClientTemplate template, bool needFix, bool needGlobalPrefix)
     {
-        if (ns == null)
+        if (ns is null)
         {
             return null;
         }
@@ -1062,7 +1062,7 @@ public abstract class ODataClientTemplate : TemplateBase
     #endregion Language specific write methods.
 
     internal HashSet<EdmPrimitiveTypeKind> ClrReferenceTypes { get { 
-        if (clrReferenceTypes == null)
+        if (clrReferenceTypes is null)
         {
             clrReferenceTypes = new HashSet<EdmPrimitiveTypeKind>()
             {
@@ -1655,7 +1655,7 @@ public abstract class ODataClientTemplate : TemplateBase
         this.WriteTypeStaticCreateMethod(entityType.Name, entityType);
         this.WritePropertiesForStructuredType(entityType.DeclaredProperties);
 
-        if (entityType.BaseType == null && this.context.UseDataServiceCollection)
+        if (entityType.BaseType is null && this.context.UseDataServiceCollection)
         {
             this.WriteINotifyPropertyChangedImplementation();
         }
@@ -1673,7 +1673,7 @@ public abstract class ODataClientTemplate : TemplateBase
         this.WriteTypeStaticCreateMethod(complexType.Name, complexType);
         this.WritePropertiesForStructuredType(complexType.DeclaredProperties);
 
-        if (complexType.BaseType == null && this.context.UseDataServiceCollection)
+        if (complexType.BaseType is null && this.context.UseDataServiceCollection)
         {
             this.WriteINotifyPropertyChangedImplementation();
         }
@@ -1814,12 +1814,12 @@ public abstract class ODataClientTemplate : TemplateBase
 
     internal void WriteStructurdTypeDeclaration(IEdmStructuredType structuredType, string baseEntityType, string typeNameSuffix = null)
     {
-        string abstractModifier = structuredType.IsAbstract && typeNameSuffix == null ? this.AbstractModifier : string.Empty;
+        string abstractModifier = structuredType.IsAbstract && typeNameSuffix is null ? this.AbstractModifier : string.Empty;
         string baseTypeName = baseEntityType;
 
-        if (typeNameSuffix == null)
+        if (typeNameSuffix is null)
         {
-            if (structuredType.BaseType == null)
+            if (structuredType.BaseType is null)
             {
                 if (this.context.UseDataServiceCollection)
                 {
@@ -2221,7 +2221,7 @@ public abstract class TemplateBase
     {
         get
         {
-            if ((this.generationEnvironmentField == null))
+            if ((this.generationEnvironmentField is null))
             {
                 this.generationEnvironmentField = new global::System.Text.StringBuilder();
             }
@@ -2239,7 +2239,7 @@ public abstract class TemplateBase
     {
         get
         {
-            if ((this.errorsField == null))
+            if ((this.errorsField is null))
             {
                 this.errorsField = new global::System.CodeDom.Compiler.CompilerErrorCollection();
             }
@@ -2253,7 +2253,7 @@ public abstract class TemplateBase
     {
         get
         {
-            if ((this.indentLengthsField == null))
+            if ((this.indentLengthsField is null))
             {
                 this.indentLengthsField = new global::System.Collections.Generic.List<int>();
             }
@@ -2381,7 +2381,7 @@ public abstract class TemplateBase
     /// </summary>
     public void PushIndent(string indent)
     {
-        if ((indent == null))
+        if ((indent is null))
         {
             throw new global::System.ArgumentNullException("indent");
         }
@@ -2444,14 +2444,14 @@ public abstract class TemplateBase
         /// </summary>
         public string ToStringWithCulture(object objectToConvert)
         {
-            if ((objectToConvert == null))
+            if ((objectToConvert is null))
             {
                 throw new global::System.ArgumentNullException("objectToConvert");
             }
             System.Type t = objectToConvert.GetType();
             System.Reflection.MethodInfo method = t.GetMethod("ToString", new System.Type[] {
                         typeof(System.IFormatProvider)});
-            if ((method == null))
+            if ((method is null))
             {
                 return objectToConvert.ToString();
             }
@@ -2724,7 +2724,7 @@ internal static class Utils
     {
         IEdmTypeReference edmTypeReference = property.Type;
         IEdmCollectionTypeReference edmCollectionTypeReference = edmTypeReference as IEdmCollectionTypeReference;
-        if (edmCollectionTypeReference == null)
+        if (edmCollectionTypeReference is null)
         {
             IEdmStructuralProperty structuredProperty = property as IEdmStructuralProperty;
             if (structuredProperty != null)
@@ -3083,7 +3083,7 @@ public sealed class ODataClientCSharpTemplate : ODataClientTemplate
     internal override string ParameterDeclarationTemplate { get { return "{0} {1}"; } }
     internal override string DictionaryItemConstructor { get { return "{{ {0}, {1} }}"; } }
     internal override HashSet<string> LanguageKeywords { get {
-        if (CSharpKeywords == null)
+        if (CSharpKeywords is null)
         {
             CSharpKeywords = new HashSet<string>(StringComparer.Ordinal)
             {
@@ -3338,7 +3338,7 @@ namespace <#= fullNamespace #>
 <#+
         }
 #>
-                if ((this._<#= entitySetName #> == null))
+                if ((this._<#= entitySetName #> is null))
                 {
                     this._<#= entitySetName #> = <#= inContext ? "base" : "Context" #>.CreateQuery<<#= entitySetElementTypeName #>>(<#= inContext ? "\"" + originalEntitySetName + "\"" : "GetPath(\"" + originalEntitySetName + "\")" #>);
                 }
@@ -3380,7 +3380,7 @@ namespace <#= fullNamespace #>
 <#+
         }
 #>
-                if ((this._<#= singletonName #> == null))
+                if ((this._<#= singletonName #> is null))
                 {
                     this._<#= singletonName #> = new <#= singletonElementTypeName #>(<#= inContext ? "this" : "this.Context" #>, <#= inContext ? "\"" + originalSingletonName + "\"" : "GetPath(\"" + originalSingletonName + "\")" #>);
                 }
@@ -3605,7 +3605,7 @@ namespace <#= fullNamespace #>
     internal override void  WriteParameterNullCheckForStaticCreateMethod(string parameterName)
     {
 #>
-            if ((<#= parameterName #> == null))
+            if ((<#= parameterName #> is null))
             {
                 throw new global::System.ArgumentNullException("<#= parameterName #>");
             }
@@ -3877,7 +3877,7 @@ namespace <#= fullNamespace #>
         public <#= hideBaseMethod ? this.OverloadsModifier : string.Empty #><#= returnTypeName #> <#= actionName #>(<#= parameters #>)
         {
             global::Microsoft.OData.Client.EntityDescriptor resource = Context.EntityTracker.TryGetEntityDescriptor(this);
-            if (resource == null)
+            if (resource is null)
             {
                 throw new global::System.Exception("cannot find entity");
             }
@@ -4122,7 +4122,7 @@ public sealed class ODataClientVBTemplate : ODataClientTemplate
     internal override string ParameterDeclarationTemplate { get { return "{1} As {0}"; } }
     internal override string DictionaryItemConstructor { get { return "{{ {0}, {1} }}"; } }
     internal override HashSet<string> LanguageKeywords { get { 
-        if (VBKeywords == null)
+        if (VBKeywords is null)
         {
             VBKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {

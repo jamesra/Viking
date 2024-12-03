@@ -45,7 +45,7 @@ namespace AnnotationService.Types
             };
 
 
-            if (dbStructObj.Tags == null)
+            if (dbStructObj.Tags is null)
             {
                 //_Tags = new string[0];
                 s.AttributesXml = "";

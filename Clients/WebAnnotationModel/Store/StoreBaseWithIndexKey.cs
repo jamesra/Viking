@@ -92,7 +92,7 @@ namespace WebAnnotationModel
                     {
                         WCFOBJECT data = changedDBObj[iObj];
                         WCFObjBaseWithKey<KEY, WCFOBJECT> keyObj = data as WCFObjBaseWithKey<KEY, WCFOBJECT>;
-                        if (keyObj == null)
+                        if (keyObj is null)
                         {
                             Debug.Fail("Could not convert WCFOBJECT template to proper type, StoreBaseWithIndexKey.cs");
                             continue;

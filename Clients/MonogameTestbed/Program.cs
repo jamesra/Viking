@@ -268,13 +268,7 @@ namespace MonogameTestbed
 
         static readonly string LogFile = DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
 
-        static string LogFullPath
-        {
-            get
-            {
-                return System.IO.Path.Combine(LogPath, LogFile);
-            }
-        }
+        static string LogFullPath => System.IO.Path.Combine(LogPath, LogFile);
 
         static TextWriter SynchronizedLogWriter = null;
         static TextWriterTraceListener LogListener = null;
@@ -331,7 +325,7 @@ namespace MonogameTestbed
 
                 if (Program.options.Log)
                 {
-                    LogPath = Program.options.OutputPath == null ? System.IO.Directory.GetCurrentDirectory() : System.IO.Path.Combine(Program.options.OutputPath, "Logs");
+                    LogPath = Program.options.OutputPath is null ? System.IO.Directory.GetCurrentDirectory() : System.IO.Path.Combine(Program.options.OutputPath, "Logs");
                     CreateLogger();
                 }
 

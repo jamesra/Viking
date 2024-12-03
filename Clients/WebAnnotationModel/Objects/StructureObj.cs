@@ -121,7 +121,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (_AttributesCache == null)
+                if (_AttributesCache is null)
                 {
                     _AttributesCache = ObjAttribute.Parse(Data.AttributesXml).ToList();
                 }
@@ -129,7 +129,7 @@ namespace WebAnnotationModel
             }
             set
             {
-                if (Data.AttributesXml == null && value == null)
+                if (Data.AttributesXml is null && value is null)
                     return;
 
                 _AttributesCache = value;
@@ -191,7 +191,7 @@ namespace WebAnnotationModel
             {
                 lock (LinksLock)
                 {
-                    if (_Links == null)
+                    if (_Links is null)
                     {
                         if (Data.Links != null)
                         {
@@ -231,7 +231,7 @@ namespace WebAnnotationModel
             {
                 lock (LinksLock)
                 {
-                    return Data.Links == null ? 0 : Data.Links.Length;
+                    return Data.Links is null ? 0 : Data.Links.Length;
                 }
             }
         }
@@ -303,7 +303,7 @@ namespace WebAnnotationModel
             lock (LinksLock)
             {
                 StructureLinkObj LinkToRemove = Links.FirstOrDefault(link => link.SourceID == key.SourceID && link.TargetID == key.TargetID);
-                if (LinkToRemove == null)
+                if (LinkToRemove is null)
                     return;
 
                 Links.Remove(LinkToRemove);
@@ -392,7 +392,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (_Type == null)
+                if (_Type is null)
                 {
                     _Type = Store.StructureTypes.GetObjectByID(Data.TypeID);
                 }

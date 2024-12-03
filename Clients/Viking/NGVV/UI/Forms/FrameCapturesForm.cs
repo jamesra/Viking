@@ -35,7 +35,7 @@ namespace Viking.UI.Forms
 
         private void FrameCapturesForm_Load(object sender, EventArgs e)
         {
-            if (Prefix == null)
+            if (Prefix is null)
             {
                 this.textPrefix.Text = "";
             }

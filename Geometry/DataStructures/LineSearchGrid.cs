@@ -153,7 +153,7 @@ namespace Geometry
                         searchGrid.rwLock.EnterReadLock();
 
                     iGridIndex++;
-                    if (currentCell == null)
+                    if (currentCell is null)
                     {
                         bool success = coordEnum.MoveNext();
                         if (!success)

@@ -87,7 +87,7 @@ namespace Viking.VolumeModel
             {
                 //rwLockObj.EnterReadLock();
 
-                if (_TileTransforms == null || token.IsCancellationRequested)
+                if (_TileTransforms is null || token.IsCancellationRequested)
                     return Array.Empty<ITransform>();
 
                 return _TileTransforms;

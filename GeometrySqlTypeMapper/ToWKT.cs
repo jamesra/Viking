@@ -102,7 +102,7 @@ namespace Geometry
                 sb.Append($"{p.X:F2} {p.Y:F2}");
             }
 
-            if (first == null)
+            if (first is null)
                 throw new ArgumentException("points parameter must not be empty");
 
             if (closed && first.Equals(last) == false)

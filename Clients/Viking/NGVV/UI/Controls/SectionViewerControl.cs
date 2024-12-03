@@ -169,7 +169,7 @@ namespace Viking.UI.Controls
         {
             set
             {
-                if (value == null || value.Length == 0)
+                if (value is null || value.Length == 0)
                 {
                     value = new ChannelInfo[] { new ChannelInfo() };
                 }
@@ -322,7 +322,7 @@ namespace Viking.UI.Controls
         {
             get
             {
-                if (Section == null)
+                if (Section is null)
                     return new ChannelInfo[0];
 
                 ChannelInfo[] Channelset = Section.ChannelInfoArray;
@@ -635,7 +635,7 @@ namespace Viking.UI.Controls
         {
             if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
             {
-                if (this.CurrentCommand == null || this.CurrentCommand is DefaultCommand)
+                if (this.CurrentCommand is null || this.CurrentCommand is DefaultCommand)
                 {
                     this.ActivateNextCommandFromQueue();
                 }
@@ -691,7 +691,7 @@ namespace Viking.UI.Controls
 
         public string[] ExtensionOverlayTitles()
         {
-            if (this.listOverlays == null)
+            if (this.listOverlays is null)
                 return new string[0];
 
             List<string> names = new List<string>(this.listOverlays.Count());
@@ -699,7 +699,7 @@ namespace Viking.UI.Controls
             foreach (ISectionOverlayExtension IOverlay in this.listOverlays)
             {
                 string name = IOverlay.Name();
-                if (name == null)
+                if (name is null)
                     continue;
                 if (name.Length == 0)
                     continue;
@@ -1105,7 +1105,7 @@ namespace Viking.UI.Controls
         {
             get
             {
-                if (_defaultDepthState == null || _defaultDepthState.IsDisposed)
+                if (_defaultDepthState is null || _defaultDepthState.IsDisposed)
                 {
                     _defaultDepthState = new DepthStencilState
                     {
@@ -1125,7 +1125,7 @@ namespace Viking.UI.Controls
         {
             get
             {
-                if (_OverlayBackgroundDepthState == null || _OverlayBackgroundDepthState.IsDisposed)
+                if (_OverlayBackgroundDepthState is null || _OverlayBackgroundDepthState.IsDisposed)
                 {
                     _OverlayBackgroundDepthState = new DepthStencilState
                     {
@@ -1153,7 +1153,7 @@ namespace Viking.UI.Controls
                 _OverlayDepthState = null;
             }
 
-            if (_OverlayDepthState == null)
+            if (_OverlayDepthState is null)
             {
                 _OverlayDepthState = new DepthStencilState
                 {
@@ -1180,7 +1180,7 @@ namespace Viking.UI.Controls
                 _DrawSectionDepthState = null;
             }
 
-            if (_DrawSectionDepthState == null)
+            if (_DrawSectionDepthState is null)
             {
                 _DrawSectionDepthState = new DepthStencilState
                 {
@@ -1203,7 +1203,7 @@ namespace Viking.UI.Controls
         {
             get
             {
-                if (_DepthDisabledState == null || _DepthDisabledState.IsDisposed)
+                if (_DepthDisabledState is null || _DepthDisabledState.IsDisposed)
                 {
                     _DepthDisabledState = new DepthStencilState
                     {
@@ -1240,7 +1240,7 @@ namespace Viking.UI.Controls
 
         protected void CreateSectionButtons()
         {
-            if (upSectionButton == null)
+            if (upSectionButton is null)
             {
                 TextureCircleView plusView = TextureCircleView.CreatePlusCircle(new GridCircle(GridVector2.Zero, 1.0),
                                                 Microsoft.Xna.Framework.Color.Goldenrod);
@@ -1251,7 +1251,7 @@ namespace Viking.UI.Controls
                 };
             }
 
-            if (downSectionButton == null)
+            if (downSectionButton is null)
             {
                 TextureCircleView minusView = TextureCircleView.CreateMinusCircle(new GridCircle(GridVector2.Zero, 1.0),
                                                 Microsoft.Xna.Framework.Color.Goldenrod);
@@ -1299,7 +1299,7 @@ namespace Viking.UI.Controls
         protected override void Draw(Scene scene)
         {
             //graphicsDevice.Clear(Microsoft.Xna.Framework.Color.Black);
-            if (Section == null)
+            if (Section is null)
                 return;
 
             GraphicsDevice graphicsDevice = Device;
@@ -1554,7 +1554,7 @@ namespace Viking.UI.Controls
             {
                 Section section = visibleSection.GetSectionToDrawForChannel(channel);
                 MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
-                if (Mapping == null)
+                if (Mapping is null)
                     continue;
 
                 await Mapping.Initialize(token);
@@ -1601,7 +1601,7 @@ namespace Viking.UI.Controls
                                                                                                         SectionViewerControl.TileCacheFullPath(section, t.TextureCacheFilePath),
                                                                                                         Mapping.Name,
                                                                                                         0);
-                        if (tileView == null)
+                        if (tileView is null)
                             continue;
 
                         //Don't request and draw a bunch of levels that cover the entire screen.  Saves time if we are at high magnification
@@ -1656,7 +1656,7 @@ namespace Viking.UI.Controls
             //                                          new Microsoft.Xna.Framework.Color(0,0,1f)};
 
             MappingBase mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel, this.CurrentTransform); 
-            if (mapping == null)
+            if (mapping is null)
                 return null;
 
             if (mapping.Initialized == false)
@@ -1833,7 +1833,7 @@ namespace Viking.UI.Controls
             graphicsDevice.Textures[0] = null;
             graphicsDevice.SetRenderTargets(null);
 
-            if (renderedTargets == null)
+            if (renderedTargets is null)
                 return null;
 
             if (renderedTargets.Length > 0)
@@ -1846,7 +1846,7 @@ namespace Viking.UI.Controls
 
         protected int[] CalculateDownsamplesToRender(MappingBase Mapping, double downsample)
         {
-            if (Mapping == null)
+            if (Mapping is null)
             {
                 Trace.WriteLine("CalculateDownsamplesToRender Mapping parameter is null");
                 return new int[0];
@@ -1930,7 +1930,7 @@ namespace Viking.UI.Controls
                 Section sectionToDraw = this.Section.GetSectionToDrawForChannel(channel);
 
                 //Can't draw if the section doesn't exist
-                if (sectionToDraw == null)
+                if (sectionToDraw is null)
                     continue;
 
                 string ChannelName = channel.ChannelName;
@@ -1945,7 +1945,7 @@ namespace Viking.UI.Controls
                                                                 ChannelName,
                                                                 Section.DefaultPyramidTransform);
 
-                if (mapping == null)
+                if (mapping is null)
                     continue;
 
                 if (mapping.Initialized == false)
@@ -2048,7 +2048,7 @@ namespace Viking.UI.Controls
 
             try
             {
-                if (MergeRGBBlendState == null || MergeRGBBlendState.IsDisposed)
+                if (MergeRGBBlendState is null || MergeRGBBlendState.IsDisposed)
                 {
                     MergeRGBBlendState = new BlendState
                     {
@@ -2129,7 +2129,7 @@ namespace Viking.UI.Controls
 
         private void SaveTexture(Texture2D texture, string filename)
         {
-            if (texture == null)
+            if (texture is null)
                 return;
 
             System.IO.FileStream saveFile = null;
@@ -2177,7 +2177,7 @@ namespace Viking.UI.Controls
                 case Keys.C:
                     if (e.Control == true)
                     {
-                        if (Section == null)
+                        if (Section is null)
                             break;
 
                         //On Ctrl+C, copy current mouse position to keyboard
@@ -2328,7 +2328,7 @@ namespace Viking.UI.Controls
             menuSectionShowMesh.Checked = State.ShowStosMesh;
             menuSectionShowTileMesh.Checked = State.ShowTileMesh;
 
-            if (State.volume == null)
+            if (State.volume is null)
                 return;
 
             List<ToolStripItem> items = new List<ToolStripItem>();
@@ -2374,7 +2374,7 @@ namespace Viking.UI.Controls
             else
             {
                 Debug.Assert(menuChannelPyramid != null);
-                if (menuChannelPyramid == null)
+                if (menuChannelPyramid is null)
                     return;
 
                 List<ToolStripItem> items = new List<ToolStripItem>();

@@ -49,7 +49,7 @@ namespace Viking.Common
 
         public static string AppendDefaultVolumeFilenameIfMissing(string url)
         {
-            if (url == null)
+            if (url is null)
                 return null;
 
             Uri WebsiteURI = new Uri(url);

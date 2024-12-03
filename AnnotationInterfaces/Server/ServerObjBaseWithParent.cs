@@ -25,7 +25,7 @@ namespace Viking.AnnotationServiceTypes
         {
             get
             {
-                if (_Parent == null && ParentID.HasValue)
+                if (_Parent is null && ParentID.HasValue)
                     _Parent = OnMissingParent();
 
                 return _Parent;
@@ -35,7 +35,7 @@ namespace Viking.AnnotationServiceTypes
                 //Do nothing if the parent isn't changed
                 if (_Parent == value)
                 {
-                    if (_Parent == null)
+                    if (_Parent is null)
                         return;
 
                     //When replacing a new object created in the database we can have deleted ourselves from the parent but need to add ourselves again.
@@ -67,7 +67,7 @@ namespace Viking.AnnotationServiceTypes
                 bool SetUpdateFlag = false;
                 if (_Parent != null)
                 {
-                    if (ParentID == null)
+                    if (ParentID is null)
                         SetUpdateFlag = true;
                     else if (!_Parent.ID.Equals(ParentID.Value))
                         SetUpdateFlag = true;

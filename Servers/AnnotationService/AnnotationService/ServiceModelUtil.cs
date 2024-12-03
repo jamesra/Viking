@@ -13,19 +13,19 @@ namespace Annotation
         /// <returns></returns>
         public static string GetUserForCall()
         {
-            if(ServiceSecurityContext.Current == null)
+            if(ServiceSecurityContext.Current is null)
                 return GetIPForCall(); 
 
             if(ServiceSecurityContext.Current.IsAnonymous)
                 return GetIPForCall(); 
 
             IIdentity identity = ServiceSecurityContext.Current.PrimaryIdentity;
-            if (identity == null)
+            if (identity is null)
                 return GetIPForCall(); 
 
             string Username = identity.Name; 
 
-            if(Username == null)
+            if(Username is null)
                 return GetIPForCall();
 
             if (Username.Length == 0 || Username.ToLower() == "anonymous")

@@ -19,7 +19,7 @@ namespace Geometry
             double[] YValues = cp.Select(p => p.Y).ToArray();
 
             //Linearly space space the t values along the array
-            if (TPoints == null)
+            if (TPoints is null)
             {
                 TPoints = GenerateTPoints(TValues, TValues.Length * 2);
             }

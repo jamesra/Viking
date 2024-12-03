@@ -50,7 +50,7 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public virtual System.Drawing.Color GetColor(IStructure structure, out COLORSOURCE source)
         {
-            if (structure == null)
+            if (structure is null)
             {
                 source = COLORSOURCE.NONE;
                 return System.Drawing.Color.Gray;
@@ -92,7 +92,7 @@ namespace AnnotationVizLib
 
         private System.Drawing.Color GetStructureColorFromMorphology(ICollection<ILocation> locations)
         {
-            if (LocationColorMap == null)
+            if (LocationColorMap is null)
                 return System.Drawing.Color.Empty;
 
             return LocationColorMap.GetColor(locations);
@@ -100,7 +100,7 @@ namespace AnnotationVizLib
 
         private System.Drawing.Color GetStructureColorFromMorphology(ICollection<Geometry.GridVector3> points)
         {
-            if (LocationColorMap == null)
+            if (LocationColorMap is null)
                 return System.Drawing.Color.Empty;
 
             return LocationColorMap.GetColor(points);
@@ -122,7 +122,7 @@ namespace AnnotationVizLib
         /// <returns></returns>
         public System.Drawing.Color GetColor(MorphologyGraph graph, out COLORSOURCE source)
         {
-            if (graph.structure == null)
+            if (graph.structure is null)
             {
                 source = COLORSOURCE.NONE;
                 return Color.Gray;
@@ -135,7 +135,7 @@ namespace AnnotationVizLib
                 return color;
             }
 
-            if (LocationColorMap == null)
+            if (LocationColorMap is null)
             {
                 source = COLORSOURCE.NONE;
                 return Color.Gray;

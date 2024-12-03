@@ -99,7 +99,7 @@ namespace Viking.UI.Controls
         {
             listVolumes.Clear();
 
-            if (listServers.SelectedItem == null)
+            if (listServers.SelectedItem is null)
             {
                 return;
             }

@@ -415,7 +415,7 @@ namespace TriangleNet.Meshing.Algorithm
             Vertex checkvertex;
             bool rightofroot, rightofchild;
 
-            if (splaytree == null)
+            if (splaytree is null)
             {
                 return null;
             }
@@ -432,7 +432,7 @@ namespace TriangleNet.Meshing.Algorithm
                 {
                     child = splaytree.lchild;
                 }
-                if (child == null)
+                if (child is null)
                 {
                     return splaytree;
                 }
@@ -440,7 +440,7 @@ namespace TriangleNet.Meshing.Algorithm
                 if (checkvertex != child.keydest)
                 {
                     child = Splay(child, searchpoint, ref searchtri);
-                    if (child == null)
+                    if (child is null)
                     {
                         if (rightofroot)
                         {
@@ -465,7 +465,7 @@ namespace TriangleNet.Meshing.Algorithm
                     grandchild = Splay(child.lchild, searchpoint, ref searchtri);
                     child.lchild = grandchild;
                 }
-                if (grandchild == null)
+                if (grandchild is null)
                 {
                     if (rightofroot)
                     {
@@ -517,21 +517,21 @@ namespace TriangleNet.Meshing.Algorithm
                 righttree = Splay(splaytree.rchild, searchpoint, ref searchtri);
 
                 splaynodes.Remove(splaytree);
-                if (lefttree == null)
+                if (lefttree is null)
                 {
                     return righttree;
                 }
-                else if (righttree == null)
+                else if (righttree is null)
                 {
                     return lefttree;
                 }
-                else if (lefttree.rchild == null)
+                else if (lefttree.rchild is null)
                 {
                     lefttree.rchild = righttree.lchild;
                     righttree.lchild = lefttree;
                     return righttree;
                 }
-                else if (righttree.lchild == null)
+                else if (righttree.lchild is null)
                 {
                     righttree.lchild = lefttree.rchild;
                     lefttree.rchild = righttree;
@@ -559,7 +559,7 @@ namespace TriangleNet.Meshing.Algorithm
             splaynodes.Add(newsplaynode);
             newkey.Copy(ref newsplaynode.keyedge);
             newsplaynode.keydest = newkey.Dest();
-            if (splayroot == null)
+            if (splayroot is null)
             {
                 newsplaynode.lchild = null;
                 newsplaynode.rchild = null;

@@ -84,7 +84,7 @@ namespace Viking.VolumeModel
 
         private static ICollection<GridVector2[]> VolumeInnerRingPointsToSection(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> volume_innerRingPoints)
         {
-            if (volume_innerRingPoints == null)
+            if (volume_innerRingPoints is null)
                 return null;
 
             List<GridVector2[]> mosaic_innerRingPoints = new List<GridVector2[]>(volume_innerRingPoints.Count);
@@ -98,7 +98,7 @@ namespace Viking.VolumeModel
 
         private static ICollection<GridVector2[]> SectionInnerRingPointsToVolume(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<GridVector2[]> section_innerRingPoints)
         {
-            if (section_innerRingPoints == null)
+            if (section_innerRingPoints is null)
                 return null;
 
             List<GridVector2[]> volume_innerRingPoints = new List<GridVector2[]>(section_innerRingPoints.Count);

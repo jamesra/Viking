@@ -65,12 +65,11 @@ namespace MonogameTestbed
         readonly CurveSimplificationTest curveSimplificationTest = new CurveSimplificationTest();
         readonly ClosedCurveViewTest closedCurveTest = new ClosedCurveViewTest();
         readonly Polygon2DTest polygon2DTest = new Polygon2DTest();
-        readonly MeshTest meshTest = new MeshTest();
+        //readonly MeshTest meshTest = new MeshTest();
         readonly GeometryTest geometryTest = new GeometryTest();
-        readonly MorphologyTest morphologyTest = new MorphologyTest();
-        readonly TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
-        readonly BranchPointTest branchTest = new BranchPointTest();
-        readonly PolywrappingTest polyWrapTest = new PolywrappingTest();
+        //readonly MorphologyTest morphologyTest = new MorphologyTest();
+        //readonly TriangleAlgorithmTest triangleTest = new TriangleAlgorithmTest();
+        readonly BranchPointTest branchTest = new BranchPointTest(); 
         readonly BranchAssignmentTest brachAssignmentTest = new BranchAssignmentTest();
         readonly Delaunay2DTest delaunay2DTest = new Delaunay2DTest();
         readonly Delaunay3DTest delaunay3DTest = new Delaunay3DTest();
@@ -84,7 +83,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Test to run at startup
         /// </summary>
-        private TestMode Mode = TestMode.BAJAJMULTITEST;
+        private TestMode Mode = TestMode.BAJAJTEST;
 
         LabelView testLabel = null;
 
@@ -186,12 +185,11 @@ namespace MonogameTestbed
             listTests.Add(TestMode.CURVESTYLES, curveStyleTest);
             listTests.Add(TestMode.CLOSEDCURVE, closedCurveTest);
             listTests.Add(TestMode.POLYGON2D, polygon2DTest);
-            listTests.Add(TestMode.MESH, meshTest);
+            //listTests.Add(TestMode.MESH, meshTest);
             listTests.Add(TestMode.GEOMETRY, geometryTest);
-            listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
-            listTests.Add(TestMode.TRIANGLEALGORITHM, triangleTest);
-            listTests.Add(TestMode.BRANCHPORT, branchTest);
-            listTests.Add(TestMode.POLYWRAPPING, polyWrapTest);
+            //listTests.Add(TestMode.MORPHOLOGY, morphologyTest);
+            //listTests.Add(TestMode.TRIANGLEALGORITHM, triangleTest);
+            listTests.Add(TestMode.BRANCHPORT, branchTest); 
             listTests.Add(TestMode.BRANCHASSIGNMENT, brachAssignmentTest);
             listTests.Add(TestMode.DELAUNAY2D, delaunay2DTest);
             listTests.Add(TestMode.DELAUNAY3D, delaunay3DTest);
@@ -438,7 +436,7 @@ namespace MonogameTestbed
 
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
@@ -544,7 +542,7 @@ namespace MonogameTestbed
 
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
@@ -643,7 +641,7 @@ namespace MonogameTestbed
 
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
@@ -718,7 +716,7 @@ namespace MonogameTestbed
         readonly List<LabelView> listLabelViews = new List<LabelView>();
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
@@ -781,7 +779,7 @@ namespace MonogameTestbed
 
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {
@@ -842,7 +840,7 @@ namespace MonogameTestbed
         CurveView curveView;
         CurveLabel curveLabel;
         bool _initialized = false; 
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         public Task Init(MonoTestbed window)
         {

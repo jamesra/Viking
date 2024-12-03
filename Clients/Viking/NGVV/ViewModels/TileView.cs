@@ -253,8 +253,8 @@ namespace Viking.ViewModels
 #if DEBUG
                 {
                     //Don't know how this could happen, but we should not have a texture if the server does not.  This indicates the code will leak resources
-                    //Debug.Assert(TexReader == null);
-                    Debug.Assert(texture == null);
+                    //Debug.Assert(TexReader is null);
+                    Debug.Assert(texture is null);
                 }
 #endif
 
@@ -305,7 +305,7 @@ namespace Viking.ViewModels
         private void CompleteTextureReadTask(TextureReaderV2 texReader, Task<Texture2D> texTask)
         {
             var tokenSource = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
-            if (tokenSource == null || tokenSource.IsCancellationRequested)
+            if (tokenSource is null || tokenSource.IsCancellationRequested)
                 return;
 
             this.ServerTextureNotFound = texReader.TextureNotFound;
@@ -323,7 +323,7 @@ namespace Viking.ViewModels
 
         public void Draw(GraphicsDevice graphicsDevice, VikingXNA.TileLayoutEffect effect, bool AsynchTextureLoad, bool UseColor)
         {
-            if (TriangleIndicies == null)
+            if (TriangleIndicies is null)
             {
 #if DEBUG
                 if (!NullGridWarningPrinted)
@@ -364,16 +364,16 @@ namespace Viking.ViewModels
                     return;
 
                 //Create the verticies if they don't exist
-                if (this.VertBuffer == null)
+                if (this.VertBuffer is null)
                 {
                     VertBuffer = CreateVertexBuffer(graphicsDevice, _tileViewModel.Verticies);
                 }
 
-                if (VertBuffer == null || VertBuffer.VertexCount == 0)
+                if (VertBuffer is null || VertBuffer.VertexCount == 0)
                     return;
 
                 //Create Index buffer if it doesn't exist
-                if (IndBuffer == null)
+                if (IndBuffer is null)
                 {
                     IndBuffer = new IndexBuffer(graphicsDevice, IndexElementSize.SixteenBits, _tileViewModel.TriangleIndicies.Length, BufferUsage.None);
                     IndBuffer.SetData<ushort>(Array.ConvertAll<int, ushort>(TriangleIndicies, new Converter<int, ushort>(IntToShort)));
@@ -478,11 +478,11 @@ namespace Viking.ViewModels
 
         public void DrawMesh(GraphicsDevice graphicsDevice, BasicEffect basicEffect)
         {
-            if (vbMesh == null)
+            if (vbMesh is null)
             {
                 CreateMesh(graphicsDevice);
                 //If this tile has no verticies vbMesh can be null even after a call to CreateMesh
-                if (vbMesh == null)
+                if (vbMesh is null)
                     return;
             }
 
@@ -536,7 +536,7 @@ namespace Viking.ViewModels
         {
             get
             {
-                if (_TileLabel == null)
+                if (_TileLabel is null)
                 {
                     _TileLabel = new VikingXNAGraphics.LabelView(this._tileViewModel.TextureFullPath, this._tileViewModel.Bounds.Center, Color.Yellow, scaleFontWithScene: true, fontSize: Math.Max(_tileViewModel.Bounds.Width, _tileViewModel.Bounds.Height) / 25.0);
                 }

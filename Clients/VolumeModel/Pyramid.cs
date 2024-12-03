@@ -109,7 +109,7 @@ namespace Viking.VolumeModel
             foreach (XNode node in PyramidElement.Nodes())
             {
                 XElement elem = node as XElement;
-                if (elem == null)
+                if (elem is null)
                     continue;
 
                 //Fetch the name if we know it

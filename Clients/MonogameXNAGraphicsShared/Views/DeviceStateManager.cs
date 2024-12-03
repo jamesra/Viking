@@ -49,7 +49,7 @@ namespace VikingXNAGraphics
                 ShapeRendererBlendState = null;
             }
             
-            if (ShapeRendererBlendState == null || ShapeRendererBlendState.IsDisposed)
+            if (ShapeRendererBlendState is null || ShapeRendererBlendState.IsDisposed)
             {
                 ShapeRendererBlendState = new BlendState
                 {
@@ -74,7 +74,7 @@ namespace VikingXNAGraphics
                 ShapeRendererRasterizerState = null;
             }
 
-            if (ShapeRendererRasterizerState == null || ShapeRendererRasterizerState.IsDisposed)
+            if (ShapeRendererRasterizerState is null || ShapeRendererRasterizerState.IsDisposed)
             {
                 ShapeRendererRasterizerState = new RasterizerState
                 {
@@ -88,7 +88,7 @@ namespace VikingXNAGraphics
 
         public static void SetRenderStateForBackgrounds(GraphicsDevice graphicsDevice)
         {
-            if (BackgroundRendererBlendState == null || BackgroundRendererBlendState.IsDisposed)
+            if (BackgroundRendererBlendState is null || BackgroundRendererBlendState.IsDisposed)
             {
                 BackgroundRendererBlendState = new BlendState
                 {
@@ -107,7 +107,7 @@ namespace VikingXNAGraphics
 
         public static void SetRasterizerStateForBackgrounds(GraphicsDevice graphicsDevice)
         {
-            if (BackgroundRendererRasterizerState == null || BackgroundRendererRasterizerState.IsDisposed)
+            if (BackgroundRendererRasterizerState is null || BackgroundRendererRasterizerState.IsDisposed)
             {
                 BackgroundRendererRasterizerState = new RasterizerState
                 {
@@ -128,7 +128,7 @@ namespace VikingXNAGraphics
                 depthstencilState = null;
             }
 
-            if (depthstencilState == null || depthstencilState.IsDisposed)
+            if (depthstencilState is null || depthstencilState.IsDisposed)
             {
                 depthstencilState = new DepthStencilState();
                 CopyStencilSettings(depthstencilState, device.DepthStencilState);
@@ -149,7 +149,7 @@ namespace VikingXNAGraphics
                 depthstencilState = null;
             }
 
-            if (depthstencilState == null || depthstencilState.IsDisposed)
+            if (depthstencilState is null || depthstencilState.IsDisposed)
             {
                 depthstencilState = new DepthStencilState();
 
@@ -171,7 +171,7 @@ namespace VikingXNAGraphics
 
         private static void CopyDepthSettings(DepthStencilState DestState, DepthStencilState SrcState)
         {
-            if (SrcState == null)
+            if (SrcState is null)
             {
                 depthstencilState.DepthBufferEnable = true;
                 depthstencilState.DepthBufferWriteEnable = true;
@@ -190,7 +190,7 @@ namespace VikingXNAGraphics
 
         private static void CopyStencilSettings(DepthStencilState DestState, DepthStencilState SrcState)
         {
-            if (SrcState == null)
+            if (SrcState is null)
                 return;
 
             DestState.StencilDepthBufferFail = SrcState.StencilDepthBufferFail;

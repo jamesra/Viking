@@ -3,8 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using TriangleNet;
+using System.Threading.Tasks; 
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -16,7 +15,7 @@ namespace MonogameTestbed
         Scene scene;
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
         readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
         readonly Cursor2DCameraManipulator CameraManipulator = new Cursor2DCameraManipulator();
@@ -41,14 +40,8 @@ namespace MonogameTestbed
 
         bool IsClosed = false;
 
-        public double PointIntervalOnDrag
-        {
-            get
-            {
-                return scene.Camera.Downsample * 16.0;
-            }
-        }
-        
+        public double PointIntervalOnDrag => scene.Camera.Downsample * 16.0;
+
         public void Draw(MonoTestbed window)
         {
             PolyLineView.Draw(window.GraphicsDevice,
@@ -86,7 +79,7 @@ namespace MonogameTestbed
 
         public void UpdateViews()
         {
-            if (path == null || path.Count == 0)
+            if (path is null || path.Count == 0)
             {
                 RawPolyLine.ControlPoints = null;
             }

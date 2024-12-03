@@ -25,7 +25,7 @@ namespace AnnotationVizLib.SimpleOData
         {
             get
             {
-                if (_VolumeShape == null)
+                if (_VolumeShape is null)
                 {
                     _VolumeShape = this.VolumeShape.ToSqlGeometry();
                     _VolumeShape = _VolumeShape.Scale(scale);
@@ -47,7 +47,7 @@ namespace AnnotationVizLib.SimpleOData
         {
             get
             {
-                if (_MosaicShape == null)
+                if (_MosaicShape is null)
                 {
                     _MosaicShape = this.MosaicShape.ToSqlGeometry();
                     _MosaicShape = _MosaicShape.Scale(scale);
@@ -140,7 +140,7 @@ namespace AnnotationVizLib.SimpleOData
             get
             {
 
-                if (VolumeShape == null)
+                if (VolumeShape is null)
                     return default;
 
                 if (_BoundingBox == default)

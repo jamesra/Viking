@@ -85,7 +85,7 @@ namespace Geometry
             //Ax + By = C
             Intersection = new GridVector2();
 
-            //if (seg == null)
+            //if (seg is null)
             //    throw new ArgumentNullException("seg");
 
             if (this.Direction == seg.Direction)
@@ -132,10 +132,7 @@ namespace Geometry
             //Function for each line
             //Ax + By = C
             Intersection = new GridVector2();
-
-            if (seg == null)
-                throw new ArgumentNullException(nameof(seg));
-
+              
             if (this.Direction == seg.Direction)
                 return false;
 

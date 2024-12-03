@@ -125,10 +125,10 @@ namespace AnnotationVizLib
 
         public string LabelForStructure(IStructure s)
         {
-            if (s == null)
+            if (s is null)
                 return "";
 
-            if (s.Label == null || s.Label.Length == 0)
+            if (s.Label is null || s.Label.Length == 0)
             {
                 //TODO: Return StructureTypeID
                 return string.Format("{0} #{1}", s.TypeID, s.ID);
@@ -204,7 +204,7 @@ namespace AnnotationVizLib
 
         public static System.Drawing.Color GetStructureColor(MorphologyGraph graph, StructureMorphologyColorMap colorMap)
         {
-            if (colorMap == null)
+            if (colorMap is null)
                 return System.Drawing.Color.Empty;
 
             return colorMap.GetColor(graph);

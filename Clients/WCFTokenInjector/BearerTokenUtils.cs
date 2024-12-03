@@ -60,7 +60,7 @@ namespace Viking.Tokens
              
             var disco = disco_response;
 
-            if (disco.IntrospectionEndpoint == null)
+            if (disco.IntrospectionEndpoint is null)
                 throw new ArgumentException($"No discovery endpoint found at {IdentityServerURL}");
 
             using (var client = new System.Net.Http.HttpClient())

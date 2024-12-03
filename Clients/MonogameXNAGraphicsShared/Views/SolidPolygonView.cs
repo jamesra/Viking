@@ -24,9 +24,9 @@ namespace VikingXNAGraphics
                 {
                     ModelRWLock.EnterUpgradeableReadLock();
 
-                    if (_meshModel == null)
+                    if (_meshModel is null)
                     {
-                        if (_modelTask == null)
+                        if (_modelTask is null)
                         {
                             _modelTask = Task<PositionColorMeshModel>.Run(() => InitializeModel(InputPolygon, InputColor));
                         }
@@ -86,9 +86,9 @@ namespace VikingXNAGraphics
                 {
                     ModelRWLock.EnterUpgradeableReadLock();
 
-                    if (_modelView == null)
+                    if (_modelView is null)
                     {
-                        if(_modelViewTask == null)
+                        if(_modelViewTask is null)
                         {
                             _modelViewTask = Task<MeshView<VertexPositionColor>>.Run(() => InitializeModelView(InputPolygon, InputColor) );
                         }

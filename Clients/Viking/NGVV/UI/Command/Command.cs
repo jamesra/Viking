@@ -175,7 +175,7 @@ namespace Viking.UI.Commands
                     newCommand = Activator.CreateInstance(nextCommand.CommandType, nextCommand.Args) as Command;
             }
 
-            if (Obj != null && newCommand == null)
+            if (Obj != null && newCommand is null)
             {
                 System.Type[] Commands = Viking.Common.ExtensionManager.GetCommandsForType(Obj.GetType());
 
@@ -186,7 +186,7 @@ namespace Viking.UI.Commands
                 }
             }
 
-            if (newCommand == null)
+            if (newCommand is null)
             {
                 newCommand = new DefaultCommand(Parent);
             }
@@ -551,7 +551,7 @@ namespace Viking.UI.Commands
 
             bool TranslateButtonDown = e.Button.Right();
             bool RotateButtonDown = e.Button.Middle();
-            if (oldMouse == null)
+            if (oldMouse is null)
             {
                 oldMouse = e;
                 return;

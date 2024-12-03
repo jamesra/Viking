@@ -58,13 +58,7 @@ namespace MonogameTestbed
         /// <param name="key"></param>
         /// <returns></returns>
         public bool Pressed(Keys key)
-        {
-            if (CurrentState == null)
-                return false; 
-
-            if (LastState == null)
-                return CurrentState.IsKeyDown(key);
-
+        {  
             if(LastState.IsKeyDown(key) == false && CurrentState.IsKeyDown(key) == true )
             {
                 return true;
@@ -80,9 +74,6 @@ namespace MonogameTestbed
         /// <returns></returns>
         public bool Down(Keys key)
         {
-            if (CurrentState == null)
-                return false;
-
             return CurrentState.IsKeyDown(key);
         }
     }

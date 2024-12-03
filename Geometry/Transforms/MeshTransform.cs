@@ -68,7 +68,7 @@ namespace Geometry.Transforms
         protected MeshTransform(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             this._edges = info.GetValue("_Edges", typeof(List<int>[])) as List<int>[];
@@ -76,7 +76,7 @@ namespace Geometry.Transforms
 
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             info.AddValue("_Edges", _edges);
@@ -144,7 +144,7 @@ namespace Geometry.Transforms
             //double distance;
             List<MappingGridTriangle> triangles = mapTrianglesRTree.Intersects(Point.ToRTreeRect(0));//mapTriangles.FindNearest(Point, out distance);
 
-            if (triangles == null)
+            if (triangles is null)
                 return null;
              
             foreach (MappingGridTriangle t in triangles)
@@ -178,7 +178,7 @@ namespace Geometry.Transforms
             //Fetch a list of triangles from the nearest point
             List<MappingGridTriangle> triangles = controlTrianglesRTree.Intersects(Point.ToRTreeRect(0));
 
-            if (triangles == null)
+            if (triangles is null)
                 return null;
 
 

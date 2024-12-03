@@ -12,7 +12,7 @@ namespace AnnotationVizLib.WCFClient
         {
             get
             {
-                if (_IDToStructureType == null)
+                if (_IDToStructureType is null)
                     _IDToStructureType = Queries.GetStructureTypes();
 
                 return _IDToStructureType;
@@ -24,7 +24,7 @@ namespace AnnotationVizLib.WCFClient
         /// </summary>
         public static void PopulateStructureTypes()
         {
-            if (_IDToStructureType == null)
+            if (_IDToStructureType is null)
                 _IDToStructureType = Queries.GetStructureTypes();
         }
 
@@ -274,7 +274,7 @@ namespace AnnotationVizLib.WCFClient
         /// <param name="label"></param>
         public static string BaseLabel(string Label)
         {
-            if (Label == null)
+            if (Label is null)
             {
                 return "Unlabeled";
             }

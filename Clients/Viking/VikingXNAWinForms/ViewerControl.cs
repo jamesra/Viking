@@ -82,7 +82,7 @@ namespace VikingXNAWinForms
 
         public static Vector2 GetLabelSize(SpriteFont font, string label)
         {
-            if (font == null)
+            if (font is null)
                 throw new ArgumentNullException("font");
 
             //Label can't be empty or the offset measured is zero
@@ -236,7 +236,7 @@ namespace VikingXNAWinForms
         /// <returns></returns>
         public Geometry.GridRectangle RenderTargetBounds()
         {
-            if (Device == null)
+            if (Device is null)
                 return new GridRectangle(0, 0, 10, 10);
 
             //For debugging
@@ -378,7 +378,7 @@ namespace VikingXNAWinForms
             }
 #endif
 
-            if (DefaultDepthState == null || DefaultDepthState.IsDisposed)
+            if (DefaultDepthState is null || DefaultDepthState.IsDisposed)
             {
                 DefaultDepthState = new DepthStencilState
                 {
@@ -391,7 +391,7 @@ namespace VikingXNAWinForms
 
             Device.DepthStencilState = DefaultDepthState;
 
-            if (DefaultBlendState == null || DefaultBlendState.IsDisposed)
+            if (DefaultBlendState is null || DefaultBlendState.IsDisposed)
             {
                 DefaultBlendState = new BlendState
                 {
@@ -406,7 +406,7 @@ namespace VikingXNAWinForms
 
             SamplerState sampleState = Device.SamplerStates[0];
 
-            if (sampleState == null || sampleState.IsDisposed ||
+            if (sampleState is null || sampleState.IsDisposed ||
                 (sampleState.AddressU != TextureAddressMode.Clamp || sampleState.AddressV != TextureAddressMode.Clamp))
             {
                 try
@@ -432,7 +432,7 @@ namespace VikingXNAWinForms
 
             Device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
 
-            if (Device.RasterizerState == null ||
+            if (Device.RasterizerState is null ||
                 Device.RasterizerState.IsDisposed ||
                 Device.RasterizerState.CullMode != CullMode.None)
             {
@@ -455,7 +455,7 @@ namespace VikingXNAWinForms
 
             UpdateEffectMatricies(drawnScene);
 
-            if (this.spriteBatch == null || this.spriteBatch.GraphicsDevice.IsDisposed)
+            if (this.spriteBatch is null || this.spriteBatch.GraphicsDevice.IsDisposed)
             {
                 if (this.Services.GetService(typeof(IGraphicsDeviceService)) is IGraphicsDeviceService IService)
                 {
@@ -534,7 +534,7 @@ namespace VikingXNAWinForms
                 return;
             }
 
-            if (Device == null)
+            if (Device is null)
             {
                 return;
             }

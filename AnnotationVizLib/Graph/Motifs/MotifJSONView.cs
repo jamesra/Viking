@@ -39,7 +39,7 @@ namespace AnnotationVizLib
 
             foreach (MotifEdge edge in graph.Edges.Values)
             {
-                if (edge.SourceNodeKey == null || edge.TargetNodeKey == null)
+                if (edge.SourceNodeKey is null || edge.TargetNodeKey is null)
                     continue;
 
                 MotifNode SourceNode = graph.Nodes[edge.SourceNodeKey];

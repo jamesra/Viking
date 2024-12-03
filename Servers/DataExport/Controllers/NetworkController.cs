@@ -177,7 +177,7 @@ namespace DataExport.Controllers
             
             ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
              
-            if (requestIDs == null || requestIDs.Count == 0)
+            if (requestIDs is null || requestIDs.Count == 0)
                 requestIDs = Queries.GetLinkedStructureParentIDs(); 
 
             return WCFNeuronFactory.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
@@ -186,7 +186,7 @@ namespace DataExport.Controllers
         private uint GetNumHops()
         {
             string hopstr = Request.RequestContext.HttpContext.Request.QueryString["hops"];
-            if (hopstr == null)
+            if (hopstr is null)
             {
                 return 1;
             }

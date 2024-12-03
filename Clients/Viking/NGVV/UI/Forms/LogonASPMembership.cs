@@ -177,7 +177,7 @@ namespace Viking.UI.Forms
 
             string chosen_username = null; 
             //Populate our login based on arguments if passed, cached credentials if not
-            if (username == null)
+            if (username is null)
             {
                 chosen_username = cachedCredentials != null ? cachedCredentials.UserName : "";
             }
@@ -188,7 +188,7 @@ namespace Viking.UI.Forms
 
             string chosen_password = null;
 
-            if (password == null)
+            if (password is null)
             {
                 chosen_password = cachedCredentials != null ? cachedCredentials.Password : "";
             }
@@ -222,14 +222,14 @@ namespace Viking.UI.Forms
 
         private void Logon_Load(object sender, EventArgs e)
         {
-            if (Settings.Default.VolumeURLs == null)
+            if (Settings.Default.VolumeURLs is null)
             {
                 Settings.Default.VolumeURLs = new System.Collections.Specialized.StringCollection();
             }
 
             for (int i = Settings.Default.VolumeURLs.Count - 1; i >= 0; i--)
             {
-                if (Settings.Default.VolumeURLs[0] == null)
+                if (Settings.Default.VolumeURLs[0] is null)
                     Settings.Default.VolumeURLs.RemoveAt(i);
             }
 
@@ -255,7 +255,7 @@ namespace Viking.UI.Forms
                 comboVolumeURL.Text = "http://connectomes.utah.edu/Rabbit/Volume.VikingXML";
             }
 
-            if (VolumeURL == null)
+            if (VolumeURL is null)
             {
                 VolumeURL = comboVolumeURL.Text;
             }
@@ -556,7 +556,7 @@ namespace Viking.UI.Forms
             {
                 using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
                 {
-                    if (response == null)
+                    if (response is null)
                         SetUpdateText("Null response");
                     else if (response.StatusCode != HttpStatusCode.OK)
                         SetUpdateText(response.StatusDescription);
@@ -767,7 +767,7 @@ namespace Viking.UI.Forms
 
         private void OnAuthenticationServiceURLChanged(string service)
         {
-            if (service == null)
+            if (service is null)
             {
                 DisableLogins();
                 if (VolumeDocument != null)
@@ -838,7 +838,7 @@ namespace Viking.UI.Forms
 
         private void AddToDefaultVolumeURLs(string NewURL)
         {
-            if (NewURL == null)
+            if (NewURL is null)
                 return;
 
             if (Settings.Default.VolumeURLs.Contains(NewURL))

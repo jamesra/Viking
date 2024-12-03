@@ -350,7 +350,7 @@ namespace Geometry.Meshing
             if (this.Contains(e))
                 return;
 
-            if (CreateEdge == null)
+            if (CreateEdge is null)
                 throw new InvalidOperationException(string.Format("Adding {0}: DuplicateEdge function not specified for DynamicRenderMesh", e));
             /*
             if (e.A >= _Verticies.Count || e.A < 0)
@@ -553,7 +553,7 @@ namespace Geometry.Meshing
                 }
 
                 List<IFace> result = RecurseFacePath(ref testedFaces, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
-                if (result == null)
+                if (result is null)
                     return null;
 
                 path.AddRange(result);
@@ -578,7 +578,7 @@ namespace Geometry.Meshing
 
                     SortedSet<IFace> testedFacesCopy = new SortedSet<IFace>(testedFaces);
                     List<IFace> result = RecurseFacePath(ref testedFacesCopy, mesh, adjacentFace, CanBePartOfPath, IsMatch, PathCache);
-                    if (result == null)
+                    if (result is null)
                     {
                         //We know none of the faces lead to the target so don't bother checking them again
                         testedFaces.UnionWith(testedFacesCopy);
@@ -689,7 +689,7 @@ namespace Geometry.Meshing
                 }
 
                 List<IEdge> result = RecurseEdgePath(ref testedEdges, mesh, adjacentEdge, CanBePartOfPath, IsMatch, PathCache);
-                if (result == null)
+                if (result is null)
                     return null;
 
                 path.AddRange(result);
@@ -714,7 +714,7 @@ namespace Geometry.Meshing
 
                     SortedSet<IEdgeKey> testedEdgesCopy = new SortedSet<IEdgeKey>(testedEdges);
                     List<IEdge> result = RecurseEdgePath(ref testedEdgesCopy, mesh, adjacentEdge, CanBePartOfPath, IsMatch, PathCache);
-                    if (result == null)
+                    if (result is null)
                     {
                         //We know none of the faces lead to the target so don't bother checking them again
                         testedEdges.UnionWith(testedEdgesCopy);

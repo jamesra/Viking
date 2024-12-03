@@ -28,7 +28,7 @@ namespace AnnotationVizLib.WCFClient
         /// <param name="StructureIDs"></param>
         private static void MorphologyForStructures(MorphologyGraph rootGraph, ICollection<long> StructureIDs, bool include_children, UnitsAndScale.IScale scale)
         {
-            if (StructureIDs == null)
+            if (StructureIDs is null)
                 return;
 
             Structure[] structures = Queries.GetStructuresByIDs(StructureIDs.ToArray(), include_children);
@@ -45,7 +45,7 @@ namespace AnnotationVizLib.WCFClient
             //foreach(Structure s in structures)
             {
                 MorphologyGraph graph = MorphologyForStructure(s, scale);
-                if (graph == null)
+                if (graph is null)
                     return;
 
                 rootGraph.AddSubgraph(graph);
@@ -77,7 +77,7 @@ namespace AnnotationVizLib.WCFClient
 
         private static MorphologyGraph BuildGraphFromLocations(Structure s, Location[] locations, UnitsAndScale.IScale scale)
         {
-            if (locations == null)
+            if (locations is null)
                 return null;
 
             if (locations.Length <= 0)
@@ -102,7 +102,7 @@ namespace AnnotationVizLib.WCFClient
 
         private static void AddLocationEdges(MorphologyGraph graph, Location Loc)
         {
-            if (Loc.Links == null)
+            if (Loc.Links is null)
                 return;
 
             foreach (long loc_link in Loc.Links)

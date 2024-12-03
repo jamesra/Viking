@@ -23,7 +23,7 @@ namespace ColladaIO
 
         public static string ConvertFromArray<T>(IList<T> array)
         {
-            if (array == null)
+            if (array is null)
                 return null;
 
             StringBuilder text = new StringBuilder();

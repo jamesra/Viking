@@ -235,7 +235,7 @@ namespace Viking.UI.BaseClasses
         public ListViewItem AddObject(object Object)
         {
             Debug.Assert(Object != null);
-            if (Object == null)
+            if (Object is null)
                 return null;
 
             //If we haven't initialized the columns then do so.
@@ -292,11 +292,11 @@ namespace Viking.UI.BaseClasses
         public void RemoveObject(Viking.Common.IUIObject Object)
         {
             Debug.Assert(Object != null);
-            if (Object == null)
+            if (Object is null)
                 return;
 
             ListViewItem Item = ItemForObject(Object);
-            if (Item == null)
+            if (Item is null)
             {
                 Debug.Write("Calling DataObjectListView::RemoveObject for object not in list");
                 return;
@@ -366,7 +366,7 @@ namespace Viking.UI.BaseClasses
         {
             get
             {
-                if (_ContextMenu == null)
+                if (_ContextMenu is null)
                     _ContextMenu = new ContextMenu();
 
                 // clear our menu items so they don't get added twice
@@ -421,7 +421,7 @@ namespace Viking.UI.BaseClasses
             }
             set
             {
-                if (value == null)
+                if (value is null)
                 {
                     _ContextMenu = new ContextMenu();
                 }
@@ -438,7 +438,7 @@ namespace Viking.UI.BaseClasses
         {
             get
             {
-                if (_ColumnSettingsHashtable == null)
+                if (_ColumnSettingsHashtable is null)
                     return null;
 
                 // a list to sort our columns
@@ -534,7 +534,7 @@ namespace Viking.UI.BaseClasses
             IUIObject Obj = sender as IUIObject;
             Debug.Assert(Obj != null);
 
-            if (this.ItemForObject(Obj) == null)
+            if (this.ItemForObject(Obj) is null)
                 return;
 
             this.BeginUpdate();
@@ -552,7 +552,7 @@ namespace Viking.UI.BaseClasses
             IUIObject Obj = sender as IUIObject;
             Debug.Assert(Obj != null);
 
-            if (this.ItemForObject(Obj) == null)
+            if (this.ItemForObject(Obj) is null)
                 return;
 
             this.BeginUpdate();
@@ -739,12 +739,12 @@ namespace Viking.UI.BaseClasses
         protected override void OnParentBindingContextChanged(EventArgs e)
         {
             // do we have a parent?
-            if (this.Parent == null)
+            if (this.Parent is null)
                 return;
 
             // walk up parents looking for a form
             Control currentControl = this;
-            while (currentControl != null && (currentControl as Form) == null)
+            while (currentControl != null && (currentControl as Form) is null)
                 currentControl = currentControl.Parent;
 
             // did we find a form?

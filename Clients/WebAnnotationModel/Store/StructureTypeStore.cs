@@ -146,7 +146,7 @@ namespace WebAnnotationModel
             {
                 proxy = CreateProxy();
                 StructureType created_db_structuretype = ((IAnnotateStructureTypes)proxy).CreateStructureType(new_type.GetData());
-                if (created_db_structuretype == null)
+                if (created_db_structuretype is null)
                     return null;
 
                 created_structuretype = new StructureTypeObj(created_db_structuretype);
@@ -174,7 +174,7 @@ namespace WebAnnotationModel
                 proxy = CreateProxy();
                 proxy.Open();
                 types = ((IAnnotateStructureTypes)proxy).GetStructureTypes();
-                if (types == null)
+                if (types is null)
                     return;
             } 
             catch (Exception e)

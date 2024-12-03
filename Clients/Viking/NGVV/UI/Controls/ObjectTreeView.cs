@@ -66,7 +66,7 @@ namespace Viking.UI.Controls
 
         public GenericTreeNode[] GetNodesForObject(IUIObject Obj)
         {
-            if (Obj == null)
+            if (Obj is null)
                 return new GenericTreeNode[0];
 
             if (ObjectNodesTable.ContainsKey(Obj))
@@ -138,7 +138,7 @@ namespace Viking.UI.Controls
         {
             GenericTreeNode NewNode = Obj.CreateNode();
 
-            if (Parent == null)
+            if (Parent is null)
                 this.Nodes.Add(NewNode);
             else
                 Parent.Nodes.Add(NewNode);
@@ -163,7 +163,7 @@ namespace Viking.UI.Controls
             set
             {
                 _ValidDragDropTypes = value;
-                if (_ValidDragDropTypes == null)
+                if (_ValidDragDropTypes is null)
                     _ValidDragDropTypes = new Type[0];
             }
         }
@@ -195,7 +195,7 @@ namespace Viking.UI.Controls
             IUIObject DragObject = UI.State.DragDropObject;
 
             //This means we are dragging over an empty region and we should ask the control which drag targets it supports
-            if (Node == null)
+            if (Node is null)
             {
                 //Find out if the object being dragged can be assigned to the control
                 //This is a little reversed because in the rest of the code we ask the drag object who its parents
@@ -240,7 +240,7 @@ namespace Viking.UI.Controls
             TreeNode DropNode = this.GetNodeAt(DragPoint);
             IUIObject DragObject = UI.State.DragDropObject;
             //We are dragging onto the control, but not a node in particular
-            if (DropNode == null)
+            if (DropNode is null)
             {
                 DragObject.SetParent(null);
             }

@@ -35,7 +35,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                if (_ControlToMappedSpaceWeights == null)
+                if (_ControlToMappedSpaceWeights is null)
                 {
                     lock (this)
                     {
@@ -57,11 +57,11 @@ namespace Geometry.Transforms
         {
             get
             {
-                if (_MappedToControlSpaceWeights == null)
+                if (_MappedToControlSpaceWeights is null)
                 {
                     lock (this)
                     {
-                        if (_MappedToControlSpaceWeights != null)
+                        if (!(_MappedToControlSpaceWeights is null))
                             return _MappedToControlSpaceWeights;
 
                         //double[,] BetaMatrixControlToMapped = CreateBetaMatrixWithLinear(MappingGridVector2.MappedPoints(this.MapPoints), this.BasisFunction);
@@ -92,7 +92,7 @@ namespace Geometry.Transforms
 
         protected RBFTransform(SerializationInfo info, StreamingContext context) : base(info, context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             _ControlToMappedSpaceWeights = info.GetValue("_ControlToMappedSpaceWeights", typeof(float[])) as float[];
@@ -198,7 +198,7 @@ namespace Geometry.Transforms
 
         public static float[] CreateSolutionMatrixWithLinear(GridVector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
@@ -216,7 +216,7 @@ namespace Geometry.Transforms
 
         public static Vector<float> CreateSolutionMatrix_X_WithLinear(GridVector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
@@ -234,7 +234,7 @@ namespace Geometry.Transforms
         /*
         public static float[] CreateSolutionMatrix_X_WithLinear(GridVector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException();
 
             int NumPts = ControlPoints.Length;
@@ -252,7 +252,7 @@ namespace Geometry.Transforms
 
         public static Vector<float> CreateSolutionMatrix_Y_WithLinear(GridVector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
@@ -270,7 +270,7 @@ namespace Geometry.Transforms
         /*
         public static float[] CreateSolutionMatrix_Y_WithLinear(GridVector2[] ControlPoints)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException();
 
             int NumPts = ControlPoints.Length;
@@ -294,7 +294,7 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public static Matrix<float> CreateBetaMatrixWithLinear(GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction = null)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             int NumPts = ControlPoints.Length;
@@ -347,7 +347,7 @@ namespace Geometry.Transforms
         /// <returns></returns>
         public static float[,] CreateBetaMatrixWithLinear(GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (ControlPoints == null)
+            if (ControlPoints is null)
                 throw new ArgumentNullException(); 
 
             int NumPts = ControlPoints.Length;
@@ -394,9 +394,9 @@ namespace Geometry.Transforms
 
         public static float[] CalculateRBFWeights(GridVector2[] MappedPoints, GridVector2[] ControlPoints, BasisFunctionDelegate BasisFunction)
         {
-            if (MappedPoints == null)
+            if (MappedPoints is null)
                 throw new ArgumentNullException(nameof(MappedPoints));
-            if(ControlPoints == null)
+            if(ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));
 
             Debug.Assert(MappedPoints.Length == ControlPoints.Length);

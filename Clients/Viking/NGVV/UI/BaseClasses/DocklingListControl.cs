@@ -104,7 +104,7 @@ namespace Viking.UI.BaseClasses
 
         public ListViewItem FindItem(IUIObject Obj)
         {
-            if (Obj == null)
+            if (Obj is null)
                 return null;
 
             foreach (ListViewItem Item in ListItems.Items)
@@ -156,7 +156,7 @@ namespace Viking.UI.BaseClasses
             {
                 ListViewItem Item = ListItems.GetItemAt(e.X, e.Y);
                 IUIObject ContextObj = null;
-                if (Item == null)
+                if (Item is null)
                     ContextObj = this.DefaultContextMenuObject;
                 else
                     ContextObj = Item.Tag as IUIObject;
@@ -209,12 +209,12 @@ namespace Viking.UI.BaseClasses
         protected override void OnParentBindingContextChanged(EventArgs e)
         {
             // do we have a parent?
-            if (this.Parent == null)
+            if (this.Parent is null)
                 return;
 
             // walk up parents looking for a form
             Control currentControl = this;
-            while (currentControl != null && (currentControl as Form) == null)
+            while (currentControl != null && (currentControl as Form) is null)
                 currentControl = currentControl.Parent;
 
             // did we find a form?

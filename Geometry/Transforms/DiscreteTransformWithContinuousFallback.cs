@@ -85,7 +85,7 @@ namespace Geometry.Transforms
 
         protected DiscreteTransformWithContinuousFallback(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             DiscreteTransform = info.GetValue("DiscreetTransform", typeof(IDiscreteTransform)) as IDiscreteTransform;
@@ -94,7 +94,7 @@ namespace Geometry.Transforms
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            if (info == null)
+            if (info is null)
                 throw new ArgumentNullException(nameof(info));
 
             info.AddValue("DiscreetTransform", DiscreteTransform);

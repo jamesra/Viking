@@ -40,7 +40,7 @@ namespace MonogameTestbed
                 var XObj = Properties.Settings.Default.Properties[lookatXkey];
                 var YObj = Properties.Settings.Default.Properties[lookatYkey];
 
-                if (XObj == null || YObj == null)
+                if (XObj is null || YObj is null)
                     return false; 
 
                 float X = (float)XObj.DefaultValue;
@@ -76,7 +76,7 @@ namespace MonogameTestbed
 
             try
             {
-                if (scene == null)
+                if (scene is null)
                     return false; 
 
                 string lookatXkey = test.ToString() + "_lookat_X";

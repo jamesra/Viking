@@ -72,7 +72,7 @@ namespace VikingXNAGraphics
             //BillboardViewBase.SetupGraphicsDevice(device, basicEffect, overlayEffect);
 
             OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
-            if (overlayEffect == null)
+            if (overlayEffect is null)
                 return;
             
             BlendState originalState = device.BlendState;

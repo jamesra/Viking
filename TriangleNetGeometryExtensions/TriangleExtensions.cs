@@ -35,7 +35,7 @@ namespace TriangleNet
 
         public static List<GridLineSegment> ToLines(this TriangleNet.Topology.DCEL.DcelMesh mesh)
         {
-            if (mesh == null)
+            if (mesh is null)
                 return null;
 
             List<GridLineSegment> listLines = new List<GridLineSegment>();
@@ -53,7 +53,7 @@ namespace TriangleNet
 
         public static GridPolygon ToPolygon(this TriangleNet.Topology.DCEL.Face face)
         {
-            if (face == null)
+            if (face is null)
                 return null;
 
             GridVector2[] verts = face.EnumerateEdges().Select(edge => edge.Origin.ToGridVector2()).ToArray();
@@ -64,7 +64,7 @@ namespace TriangleNet
 
         public static List<GridPolygon> ToPolygons(this TriangleNet.Topology.DCEL.DcelMesh mesh)
         {
-            if (mesh == null)
+            if (mesh is null)
                 return null;
 
             List<GridPolygon> listTriangles = new List<GridPolygon>();
@@ -73,7 +73,7 @@ namespace TriangleNet
 
         public static List<GridLineSegment> ToLines(this TriangleNet.Meshing.IMesh mesh)
         {
-            if (mesh == null)
+            if (mesh is null)
                 return null;
 
             SortedSet<GridLineSegment> listLines = new SortedSet<GridLineSegment>();
@@ -93,7 +93,7 @@ namespace TriangleNet
 
         public static List<GridTriangle> ToTriangles(this TriangleNet.Meshing.IMesh mesh)
         {
-            if (mesh == null)
+            if (mesh is null)
                 return null;
 
             List<GridTriangle> listTriangles = new List<GridTriangle>();
@@ -521,7 +521,7 @@ namespace TriangleNet
             for (int i = 0; i < Shapes.Count; i++)
             {
                 GridPolygon shape = Shapes[i];
-                if (shape == null)
+                if (shape is null)
                     continue;
 
                 GridVector2[] points = shape.ExteriorRing.EnsureOpenRing();

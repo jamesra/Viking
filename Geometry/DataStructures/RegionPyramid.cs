@@ -384,7 +384,7 @@ namespace Geometry
         {
             lock (this.Cells)
             {
-                if (this.Cells[key.X, key.Y] == null)
+                if (this.Cells[key.X, key.Y] is null)
                     this.Cells[key.X, key.Y] = valueFactory(key);
 
                 return this.Cells[key.X, key.Y];
@@ -395,7 +395,7 @@ namespace Geometry
         {
             lock (this.Cells)
             {
-                if (this.Cells[key.X, key.Y] == null)
+                if (this.Cells[key.X, key.Y] is null)
                     this.Cells[key.X, key.Y] = addValue;
                 else
                     this.Cells[key.X, key.Y] = updateFunction(key, this.Cells[key.X, key.Y]);
@@ -408,7 +408,7 @@ namespace Geometry
         {
             lock (this.Cells)
             {
-                if (this.Cells[key.X, key.Y] == null)
+                if (this.Cells[key.X, key.Y] is null)
                     this.Cells[key.X, key.Y] = addFunction(key);
                 else
                     this.Cells[key.X, key.Y] = updateFunction(key, this.Cells[key.X, key.Y]);

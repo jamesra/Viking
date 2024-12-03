@@ -27,13 +27,13 @@ namespace AnnotationVizLib.OData
 
             ODataNeuronFactory graphFactory = new ODataNeuronFactory();
 
-            if (StructureIDs == null)
+            if (StructureIDs is null)
                 return graphFactory.graph;
 
             if (StructureIDs.Count == 0)
                 return graphFactory.graph;
 
-            if (IDToStructureType == null)
+            if (IDToStructureType is null)
             {
                 ODataNeuronFactory.PopulateStructureTypeDictionary(container.StructureTypes.ToList());
             }

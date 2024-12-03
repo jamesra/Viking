@@ -122,7 +122,7 @@ namespace Viking.Common
         public virtual bool Add(KEY key, ADDTYPE value)
         {
             CACHEENTRY entry = CreateEntry(key, value);
-            if (entry == null)
+            if (entry is null)
                 return false;
 
             return AddEntry(entry);
@@ -136,7 +136,7 @@ namespace Viking.Common
         public virtual async Task<bool> AddAsync(KEY key, ADDTYPE value)
         {
             var entry = await CreateEntryAsync(key, value);
-            if (entry == null)
+            if (entry is null)
                 return false;
 
             return AddEntry(entry);
@@ -310,10 +310,10 @@ namespace Viking.Common
             for (int iEntry = 0; iEntry < EntryListCopy.Length; iEntry++)
             {
                 CACHEENTRY entry = EntryListCopy[iEntry];
-                if (entry == null)
+                if (entry is null)
                     continue;
 
-                if (entry == null)
+                if (entry is null)
                     continue;
 
                 if (entry.WasUsedSinceLastCheckpoint)

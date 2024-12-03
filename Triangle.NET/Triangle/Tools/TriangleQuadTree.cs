@@ -170,7 +170,7 @@ namespace TriangleNet.Tools
             public List<int> FindTriangles(Point searchPoint)
             {
                 int region = FindRegion(searchPoint);
-                if (regions[region] == null)
+                if (regions[region] is null)
                 {
                     return triangles;
                 }

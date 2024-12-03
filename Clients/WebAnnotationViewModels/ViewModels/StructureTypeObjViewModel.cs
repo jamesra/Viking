@@ -17,7 +17,7 @@ namespace Annotation.ViewModels
         public bool CanExecute(object item)
         {
             StructureTypeObj obj = item as StructureTypeObj;
-            if (obj == null)
+            if (obj is null)
             {
                 long ID;
                 try
@@ -33,7 +33,7 @@ namespace Annotation.ViewModels
                 obj = Store.StructureTypes.GetObjectByID(ID);
             }
 
-            if (obj == null)
+            if (obj is null)
                 return false;
 
             return obj.ParentID.HasValue;
@@ -42,7 +42,7 @@ namespace Annotation.ViewModels
         public void Execute(object item)
         {
             StructureTypeObj obj = item as StructureTypeObj;
-            if (obj == null)
+            if (obj is null)
             {
                 long ID;
                 try
@@ -58,7 +58,7 @@ namespace Annotation.ViewModels
                 obj = Store.StructureTypes.GetObjectByID(ID);
             }
 
-            if (obj == null)
+            if (obj is null)
                 return;
 
             obj.ParentID = null;
@@ -183,7 +183,7 @@ namespace Annotation.ViewModels
         private bool CanAssignParent(StructureTypeObj arg)
         {
             
-            if (arg == null)
+            if (arg is null)
                 return true;  //We can make it a root node
 
             //Make sure we don't create a cycle with this assignment where a type is its own parent

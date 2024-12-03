@@ -116,7 +116,7 @@ namespace Geometry.JSON
 
         public static GridVector2[] PointsFromJSON(string json)
         {
-            if (json == null)
+            if (json is null)
                 return null;
 
             JArray obj = JArray.Parse(json);
@@ -132,7 +132,7 @@ namespace Geometry.JSON
 
         public static GridPolygon PolygonFromJSON(string json)
         {
-            if (json == null)
+            if (json is null)
                 return null;
 
             JObject obj = JObject.Parse(json);
@@ -151,7 +151,7 @@ namespace Geometry.JSON
 
         public static GridPolygon PolygonFromJSON(JObject obj)
         {
-            if (obj == null)
+            if (obj is null)
                 return null;
 
             var ExteriorRing = obj["ExteriorRing"];
@@ -168,7 +168,7 @@ namespace Geometry.JSON
 
         public static GridPolygon[] PolygonsFromJSON(string json)
         {
-            if (json == null)
+            if (json is null)
                 return null;
 
             JArray array = JArray.Parse(json);

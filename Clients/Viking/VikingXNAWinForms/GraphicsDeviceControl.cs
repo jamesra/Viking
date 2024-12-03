@@ -61,7 +61,7 @@ namespace VikingXNAWinForms
         {
             get
             {
-                /*if (_Content == null)
+                /*if (_Content is null)
                 {
                     _Content = new Microsoft.Xna.Framework.Content.ContentManager(this.Services);
                     _Content.RootDirectory = "Content";
@@ -82,7 +82,7 @@ namespace VikingXNAWinForms
         {
             get
             {
-                if (graphicsDeviceService == null)
+                if (graphicsDeviceService is null)
                     return null;
 
                 return graphicsDeviceService.GraphicsDevice;
@@ -202,7 +202,7 @@ namespace VikingXNAWinForms
         string BeginDraw()
         {
             // If we have no graphics device, we must be running in the designer.
-            if (graphicsDeviceService == null)
+            if (graphicsDeviceService is null)
             {
                 return Text + "\n\n" + GetType();
             }

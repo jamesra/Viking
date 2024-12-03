@@ -19,7 +19,7 @@ namespace AnnotationVizLib.OData
 
             MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
 
-            if (StructureIDs == null)
+            if (StructureIDs is null)
                 return rootGraph;
 
             List<Structure> listStructures = new List<Structure>();
@@ -65,7 +65,7 @@ namespace AnnotationVizLib.OData
             //foreach (Structure s in Structures)
             {
                 MorphologyGraph graph = MorphologyForStructure(s, scale);
-                if (graph == null)
+                if (graph is null)
                     return;
 
                 rootGraph.AddSubgraph(graph);
@@ -107,7 +107,7 @@ namespace AnnotationVizLib.OData
 
         private static void AddLocationEdges(MorphologyGraph graph, LocationLink[] location_links)
         {
-            if (location_links == null)
+            if (location_links is null)
                 return;
 
             foreach (LocationLink loc_link in location_links)

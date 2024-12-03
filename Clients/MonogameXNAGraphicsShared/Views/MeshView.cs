@@ -29,10 +29,10 @@ namespace VikingXNAGraphics
             IScene scene, 
             CullMode cullmode = CullMode.CullCounterClockwiseFace)
         {
-            if (models == null)
+            if (models is null)
                 return;
 
-            if(effect == null || effect.IsDisposed)
+            if(effect is null || effect.IsDisposed)
             {
                 effect = new BasicEffect(device);
             }
@@ -114,7 +114,7 @@ namespace VikingXNAGraphics
             FillMode fillMode = FillMode.Solid,
             IEnumerable < MeshView<VERTEXTYPE>> meshViews = null)
         {
-            if (meshViews == null)
+            if (meshViews is null)
                 return;
 
             IEnumerable<MeshModel<VERTEXTYPE>> all_models = meshViews.SelectMany(mv => mv.models);
@@ -139,10 +139,10 @@ namespace VikingXNAGraphics
             FillMode fillMode = FillMode.Solid,
             IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
         {
-            if (effect == null)
+            if (effect is null)
             {
                 effect = DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device);
-                if (effect == null)
+                if (effect is null)
                     return;
 
                 effect.InputLumaAlphaValue = 0.0f;
@@ -164,7 +164,7 @@ namespace VikingXNAGraphics
             foreach (MeshModel<VERTEXTYPE> model in meshmodels)
             {
                 //This can occur if LazyInitialization has not occurred.
-                if (model == null)
+                if (model is null)
                     continue; 
 
                 effect.WorldViewProjMatrix = (model.ModelMatrix * scene.World) * scene.ViewProj ;
@@ -195,10 +195,10 @@ namespace VikingXNAGraphics
             FillMode fillMode = FillMode.Solid,
             IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
         {
-            if (meshmodels == null)
+            if (meshmodels is null)
                 return;
 
-            if (effect == null || effect.IsDisposed)
+            if (effect is null || effect.IsDisposed)
             {
                 effect = new BasicEffect(device);
             }

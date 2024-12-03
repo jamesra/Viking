@@ -13,7 +13,7 @@ namespace AnnotationVizLib.SimpleOData
 
             if (dict.ContainsKey("ParentID"))
             {
-                if (dict["ParentID"] == null)
+                if (dict["ParentID"] is null)
                     s.ParentID = new ulong?();
                 else
                     s.ParentID = System.Convert.ToUInt64(dict["ParentID"]);

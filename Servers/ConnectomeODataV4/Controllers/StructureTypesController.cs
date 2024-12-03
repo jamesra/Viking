@@ -47,7 +47,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             StructureType structureType = await db.StructureTypes.FindAsync(key);
-            if (structureType == null)
+            if (structureType is null)
             {
                 return NotFound();
             }
@@ -102,7 +102,7 @@ namespace ConnectomeODataV4.Controllers
             }
 
             StructureType structureType = await db.StructureTypes.FindAsync(key);
-            if (structureType == null)
+            if (structureType is null)
             {
                 return NotFound();
             }
@@ -132,7 +132,7 @@ namespace ConnectomeODataV4.Controllers
         public async Task<IHttpActionResult> Delete([FromODataUri] long key)
         {
             StructureType structureType = await db.StructureTypes.FindAsync(key);
-            if (structureType == null)
+            if (structureType is null)
             {
                 return NotFound();
             }

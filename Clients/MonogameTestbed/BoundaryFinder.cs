@@ -3,8 +3,7 @@ using Geometry.Meshing;
 using MorphologyMesh;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using TriangleNet;
+using System.Linq; 
 
 namespace MonogameTestbed
 {
@@ -35,7 +34,7 @@ namespace MonogameTestbed
             List<GridTriangle> TrianglesBetweenShapes = SelectTrianglesBetweenShapes(triangulationMesh, shapes);
 
             TriangleNet.Voronoi.VoronoiBase voronoi = shapes.Voronoi();
-            if (voronoi == null)
+            if (voronoi is null)
                 return new List<GridLineSegment>(0);
 
             //List<GridLineSegment> listVoronoiBetweenShapes = StripNonBoundaryLines(voronoi, shapes);
@@ -203,14 +202,14 @@ namespace MonogameTestbed
                 throw new ArgumentException("TriangulatePolygons expects non overlapping polygons as input");
 
             GridPolygon EntireSetConvexHull = Polygons.ConvexHull();
-            if (EntireSetConvexHull == null)
+            if (EntireSetConvexHull is null)
                 return null; 
 
             TriangleNet.Geometry.Polygon EntireSetConvexHullPoly = TriangleExtensions.CreatePolygon(EntireSetConvexHull);
 
             foreach (GridVector2[] points in Polygons.Select(poly => poly.ExteriorRing))
             {
-                if (points == null || points.Length < 4)
+                if (points is null || points.Length < 4)
                     continue;
 
                 //Record the borders of each polygon in the aggregate polygon.  These restrict the delaunay triangulation to keep those edges
@@ -234,11 +233,11 @@ namespace MonogameTestbed
         /// <returns></returns>
         private static List<GridLineSegment> SelectLinesBetweenShapes(TriangleNet.Meshing.IMesh mesh, GridPolygon[] Polygons)
         {
-            if (mesh == null)
+            if (mesh is null)
                 return null;
 
             List<GridLineSegment> lines = mesh.ToLines();
-            if (lines == null)
+            if (lines is null)
                 return null;
 
             if (lines.Count == 0)
@@ -272,11 +271,11 @@ namespace MonogameTestbed
         /// <returns></returns>
         private static List<GridTriangle> SelectTrianglesBetweenShapes(TriangleNet.Meshing.IMesh mesh, GridPolygon[] Polygons)
         {
-            if (mesh == null)
+            if (mesh is null)
                 return null;
 
             List<GridTriangle> triangles = mesh.ToTriangles();
-            if (triangles == null)
+            if (triangles is null)
                 return null;
 
             if (triangles.Count == 0)
@@ -316,11 +315,11 @@ namespace MonogameTestbed
 
             for (int iShape = 0; iShape < Shapes.Length; iShape++)
             {
-                if (Shapes[iShape] == null)
+                if (Shapes[iShape] is null)
                     continue;
 
                 GridVector2[] points = Shapes[iShape].ExteriorRing;
-                if (points == null || points.Length == 0)
+                if (points is null || points.Length == 0)
                     continue;
 
                 points = points.EnsureOpenRing();
@@ -353,7 +352,7 @@ namespace MonogameTestbed
                     continue;
 
                 GridVector2[] points = Shapes[iShape].Points;
-                if (points == null || points.Length == 0)
+                if (points is null || points.Length == 0)
                     continue;
                   
                 foreach (GridVector2 point in points)
@@ -385,7 +384,7 @@ namespace MonogameTestbed
                      GridLineSegment line = new GridLineSegment(StartingVertex.Key, v.Key);
                      return !shapes.Any(shape => shape.Intersects(line));
                      });
-            if (validDestinations == null)
+            if (validDestinations is null)
                 return;
 
             bool EdgeAdded = false; 
@@ -492,7 +491,7 @@ namespace MonogameTestbed
         /// <returns></returns>
         internal static List<GridLineSegment> StripNonBoundaryLines(TriangleNet.Voronoi.VoronoiBase voronoi, GridPolygon[] shapes)
         {
-            if (voronoi == null)
+            if (voronoi is null)
                 return null;
 
             //Build a set of LineSegments
@@ -539,7 +538,7 @@ namespace MonogameTestbed
             for (int iShape = 0; iShape < shapeVerticies.Count; iShape++)
             {
                 GridVector2[] points = shapeVerticies[iShape];
-                if (points == null || points.Length == 0)
+                if (points is null || points.Length == 0)
                     continue;
 
                 points = shapeVerticies[iShape].EnsureOpenRing();

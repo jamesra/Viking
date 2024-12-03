@@ -131,10 +131,10 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (Parent == null)
+                if (Parent is null)
                     return "";
 
-                if (Parent.Type == null)
+                if (Parent.Type is null)
                     return "";
 
                 return Parent.Type.Code + " " + Parent.ID.ToString();
@@ -157,7 +157,7 @@ namespace WebAnnotationModel
                 StructureObj _Parent = Store.Structures.GetObjectByID(ParentID.Value, false);
 
                 //Queue a request for later
-                if (_Parent == null)
+                if (_Parent is null)
                 {
                     System.Threading.Tasks.Task.Factory.StartNew(() => Store.Structures.GetObjectByID(ParentID.Value));
                     //Action<long> request = new Action<long>((ID) => Store.Structures.GetObjectByID(ID));
@@ -283,7 +283,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (_VolumeShape == null && Data.VolumeShapeWKB != null)
+                if (_VolumeShape is null && Data.VolumeShapeWKB != null)
                 {
                     //_VolumeShape = Data.VolumeShape.ToSqlGeometry();
                     _VolumeShape = Data.VolumeShapeWKB.ToSqlGeometry();
@@ -293,7 +293,7 @@ namespace WebAnnotationModel
             set
             {
                 Debug.Assert(value != null);
-                if (value == null)
+                if (value is null)
                     return;
 
                 //                DbGeometry newValue = value.ToDbGeometry();
@@ -320,7 +320,7 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (_MosaicShape == null && Data.MosaicShapeWKB != null)
+                if (_MosaicShape is null && Data.MosaicShapeWKB != null)
                 {
                     _MosaicShape = Data.MosaicShapeWKB.ToSqlGeometry();
                 }
@@ -329,7 +329,7 @@ namespace WebAnnotationModel
             set
             {
                 Debug.Assert(value != null);
-                if (value == null)
+                if (value is null)
                     return;
 
                 //DbGeometry newValue = value.ToDbGeometry();
@@ -527,7 +527,7 @@ namespace WebAnnotationModel
             {
                 lock (LinkLock)
                 {
-                    if (_ObservableLinks == null)
+                    if (_ObservableLinks is null)
                         return new long[0];
 
                     return _ObservableLinks.ToArray();
@@ -545,7 +545,7 @@ namespace WebAnnotationModel
             {
                 lock (LinkLock)
                 {
-                    if (_ObservableLinks == null)
+                    if (_ObservableLinks is null)
                     {
                         if (Data.Links != null)
                         {
@@ -562,10 +562,10 @@ namespace WebAnnotationModel
                     return _ReadOnlyObservableLinks;
                     /*
                     return new ReadOnlyObservableCollection<long>(_Links); 
-                    if (_Links == null)
+                    if (_Links is null)
                     {
                         //Initialize from the Data object
-                        if (Data.Links == null)
+                        if (Data.Links is null)
                         {
                             _Links = new ObservableCollection<long>();
                             _Links.CollectionChanged += this.OnLinksChanged;
@@ -590,9 +590,9 @@ namespace WebAnnotationModel
         {
             get
             {
-                if (_ObservableLinks == null)
+                if (_ObservableLinks is null)
                 {
-                    if (Data.Links == null)
+                    if (Data.Links is null)
                         return 0;
                     else
                         return Data.Links.Length;
@@ -710,7 +710,7 @@ namespace WebAnnotationModel
             get
             {
 
-                if (_Attributes == null)
+                if (_Attributes is null)
                 {
                     _Attributes = ObjAttribute.Parse(Data.AttributesXml);
                 }
@@ -719,7 +719,7 @@ namespace WebAnnotationModel
             }
             set
             {
-                if (Data.AttributesXml == null && value == null)
+                if (Data.AttributesXml is null && value is null)
                     return;
 
                 string xmlstring = ObjAttribute.ToXml(value);

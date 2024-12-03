@@ -244,7 +244,7 @@ namespace Neo4JGenerator
         private static string ValueToString(object value)
         {
             
-            if (value == null)
+            if (value is null)
                 return "null";
 
             if(value is IDictionary<string, object>)

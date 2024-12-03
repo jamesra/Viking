@@ -260,7 +260,7 @@ namespace Geometry
 
         public static int[] InflectionPointIndicies(this IList<GridVector2> input)
         {
-            if (input == null)
+            if (input is null)
                 return null;
 
             if (input.Count == 1)
@@ -284,7 +284,7 @@ namespace Geometry
         /// <returns></returns>
         private static int[] InflectionPointIndicies(this double[] input)
         {
-            if (input == null)
+            if (input is null)
                 return null;
 
             if (input.Length == 1)
@@ -352,7 +352,7 @@ namespace Geometry
         public static List<GridVector2> DouglasPeuckerReduction
         (this IList<GridVector2> Points, Double Tolerance, IEnumerable<int> PointsToPreserveIndicies = null)
         {
-            if (Points == null || Points.Count < 3)
+            if (Points is null || Points.Count < 3)
                 return Points.ToList();
 
             Int32 firstPoint = 0;

@@ -375,7 +375,7 @@ namespace RTree
 
         internal bool CompareArrays(double[] a1, double[] a2)
         {
-            if ((a1 == null) || (a2 == null))
+            if ((a1 is null) || (a2 is null))
                 return false;
             if (a1.Length != a2.Length)
                 return false;

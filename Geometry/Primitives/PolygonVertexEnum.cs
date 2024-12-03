@@ -71,7 +71,7 @@ namespace Geometry
         {
             if (!curIndex.HasValue)
             {
-                if (polygon == null)
+                if (polygon is null)
                     return false;
 
                 if (polygon.ExteriorRing.Length == 0)
