@@ -635,7 +635,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Create line segments between adjacent points in the collection
+        /// Create line segments between adjacent points in the collection.  Identical adjacent points are ignored.
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
@@ -648,10 +648,32 @@ namespace Geometry
                 throw new ArgumentException("Must have two points to create line segments");
 
             GridLineSegment[] segments = new GridLineSegment[points.Count - 1];
+            int iLine = 0;
             for (int iPoint = 0; iPoint < points.Count - 1; iPoint++)
             {
-                segments[iPoint] = new GridLineSegment(points.ElementAt(iPoint), points.ElementAt(iPoint + 1));
+                try
+                {
+                    segments[iLine] = new GridLineSegment(points.ElementAt(iPoint), points.ElementAt(iPoint + 1));
+                    iLine++;
+                }
+                catch(ArgumentException)
+                { 
+                    //If points are identical, do not add them to the result set
+                    if(points.ElementAt(iPoint) == points.ElementAt(iPoint+1))
+                        continue;
+                    else
+                        throw;
+                }
             }
+
+            //Resize the array if we omitted any identical point pairs
+            if (iLine < segments.Length)
+            {  
+                var shortened_array = new GridLineSegment[iLine];
+                Array.Copy(segments, shortened_array, iLine);
+                return shortened_array;
+            }
+                
 
             return segments;
         }
