@@ -62,15 +62,30 @@ namespace WebAnnotation.UI.Actions
             }
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            LocationObj locObj = Store.Locations[locID];
+            var Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
-            GridPolygon PolyToCut = OriginalVolumePolygon;
+            GridPolygon PolyToCut = OriginalVolumePolygon.Clone() as GridPolygon;
             if (FirstIntersection.IsInner)
             {
                 PolyToCut = OriginalVolumePolygon.InteriorPolygons[FirstIntersection.iInnerPoly.Value];
             }
+            else if(PolyToCut.HasInteriorRings)
+            {
+                //If we have a polygon with multiple rings, then all rings have been smoothed by Viking and only the exterior ring of the new polygon will be smoothed by the code below.
+                //We don't want to change the interior rings, so replace the smooth versions with the originals from the LocationObj
+                var unsmooth_mosaic_poly = locObj.MosaicShape.ToPolygon();
 
+                for(int i = 0; i < PolyToCut.InteriorRings.Count; i++)
+                {
+                    var unsmooth_volume_inner_poly = Transform.TryMapShapeSectionToVolume(unsmooth_mosaic_poly.InteriorPolygons[i]);
+                    PolyToCut.ReplaceInteriorRing(i, unsmooth_volume_inner_poly);
+                }
+            }
+
+             
             //Condition Check to make sure pen path exists and is valid
-            if (subpath == null || subpath.Length < 2 || OriginalVolumePolygon.TotalVerticies <= 3)
+            if (subpath is null || subpath.Length < 2 || OriginalVolumePolygon.TotalVerticies <= 3)
             {
                 return output;
             }
@@ -92,16 +107,19 @@ namespace WebAnnotation.UI.Actions
                 return output;
             }
 
+           
+
+
             RetraceCommandAction cutType = GetRetraceCommandAction(FirstIntersection.IsInner, StartEntry.Interaction == AnnotationRegionInteraction.ENTER);
 
-            var Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            
 
             var mosaic_clockwise_poly = Transform.TryMapShapeVolumeToSection(clockwise_poly);
             var mosaic_counter_clockwise_poly = Transform.TryMapShapeVolumeToSection(counter_clockwise_poly);
 
 
-            LocationObj locObj = Store.Locations[locID];
 
+            //Create actions for the path
             {
                 Change2DContourAction grow_action;
                 Change2DContourAction counter_clockwise_action;

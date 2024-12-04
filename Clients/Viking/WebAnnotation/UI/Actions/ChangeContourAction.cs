@@ -80,7 +80,7 @@ namespace WebAnnotation.UI.Actions
 
             this.NewMosaicPolygon = newMosaicPolygon;
 
-            this.NewVolumePolygon = newVolumePolygon == null ? Transform.TryMapShapeSectionToVolume(newMosaicPolygon) : newVolumePolygon;
+            this.NewVolumePolygon = newVolumePolygon is null ? Transform.TryMapShapeSectionToVolume(newMosaicPolygon) : newVolumePolygon;
             this.NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
         }
 
