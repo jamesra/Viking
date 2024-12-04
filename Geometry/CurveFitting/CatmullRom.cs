@@ -511,7 +511,7 @@ namespace Geometry
             }
 
             //GridVector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
-            var curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Global.TransformSignificantDigits)).ToArray(); 
+            var curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Global.TransformSignificantDigits)).RemoveAdjacentDuplicates().ToArray(); 
             GridLineSegment[] curve_segments = curved_path.ToLineSegments();
             QuadTreeWithUniqueValues<int> point_to_ideal_curve_index = new QuadTreeWithUniqueValues<int>(input.BoundingBox() * 1.1);
             for (int i = 0; i < curved_path.Length; i++)
