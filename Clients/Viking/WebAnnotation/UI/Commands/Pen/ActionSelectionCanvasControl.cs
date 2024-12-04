@@ -421,10 +421,10 @@ namespace WebAnnotation.UI.Commands
 
             foreach (var actionInteractables in ActionInteractables.Values)
             {
-                foreach (var interactable in actionInteractables)
+                foreach (var interactable in actionInteractables.Where(ai => ai is IClickable).Where(ai => ai.Contains(WorldPosition)))
                 {
                     IClickable clickable = interactable as IClickable;
-                    if (clickable != null && clickable.Contains(WorldPosition) && clickable.OnClick(clickable, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
+                    if(clickable.OnClick(clickable, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
                     {
                         this.Deactivated = true;
                         return;
