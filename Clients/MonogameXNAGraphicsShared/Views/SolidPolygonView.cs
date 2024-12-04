@@ -187,11 +187,15 @@ namespace VikingXNAGraphics
             catch(EdgesIntersectTriangulationException)
             {
                 Mesh = TrySimplifyPolygon(centered_poly);
+                if (Mesh is null)
+                    throw;
             }
             catch (NonconformingTriangulationException)
             {
                 Mesh = TrySimplifyPolygon(centered_poly);
-            }
+                if(Mesh is null)
+                    throw;
+            } 
 
             var mesh_model = Mesh.ToVertexPositionColorMeshModel(InputColor);
             mesh_model.ModelMatrix = Matrix.CreateTranslation((float)_Position.X, (float)_Position.Y, 0);
