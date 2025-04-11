@@ -194,10 +194,7 @@ namespace Viking.VolumeModel
         /// The server the volume transforms and image data is located on
         /// </summary>
         private string _Host;
-        public string Host
-        {
-            get { return _Host; }
-        }
+        public string Host => _Host;
 
 
         /// <summary>
@@ -580,48 +577,55 @@ namespace Viking.VolumeModel
         {
             this.Name = volumeElement.GetAttributeCaseInsensitive("Name").Value;
 
-            XAttribute defaulttileset = volumeElement.GetAttributeCaseInsensitive("defaulttileset");
-            if (defaulttileset != null)
+            try
             {
-                this.DefaultTileset = defaulttileset.Value;
+                this.DefaultTileset = volumeElement.GetAttributeCaseInsensitive("defaulttileset").Value; 
             }
+            catch(XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
-            XAttribute defaultimagepyramid = volumeElement.GetAttributeCaseInsensitive("defaultimagepyramid");
-            if (defaultimagepyramid != null)
+            try
             {
-                this.DefaultImagePyramid = defaultimagepyramid.Value;
+                this.DefaultImagePyramid = volumeElement.GetAttributeCaseInsensitive("defaultimagepyramid").Value;
+                
             }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
-            XAttribute defaultmosaictransform = volumeElement.GetAttributeCaseInsensitive("defaultmosaictransform");
-            if (defaultmosaictransform != null)
+            try
             {
-                this.DefaultMosaicTransform = defaultmosaictransform.Value;
+                this.DefaultMosaicTransform = volumeElement.GetAttributeCaseInsensitive("defaultmosaictransform").Value;
             }
-
-            XAttribute defaultstosgroup = volumeElement.GetAttributeCaseInsensitive("defaultstosgroup");
-            if (defaultstosgroup != null)
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); } 
+             
+            try
             {
-                this.DefaultTileset = defaultstosgroup.Value;
+                XAttribute defaultstosgroup = volumeElement.GetAttributeCaseInsensitive("defaultstosgroup");
+                this.DefaultStosGroup = defaultstosgroup.Value;
             }
-
-            XAttribute updateVolumePositions = volumeElement.GetAttributeCaseInsensitive("updateservervolumepositions");
-            if (updateVolumePositions != null)
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
+             
+            try
             {
+                XAttribute updateVolumePositions = volumeElement.GetAttributeCaseInsensitive("updateservervolumepositions");
                 this.UpdateServerVolumePositions = Convert.ToBoolean(updateVolumePositions.Value);
             }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
-            XAttribute defaultsection = volumeElement.GetAttributeCaseInsensitive("defaultsection");
-            if (defaultsection != null)
+            try
             {
-                try
+                XAttribute defaultsection = volumeElement.GetAttributeCaseInsensitive("defaultsection");
+                if (defaultsection != null)
                 {
-                    this.DefaultSectionNumber = new int?(Convert.ToInt32(defaultsection.Value));
-                }
-                catch (FormatException)
-                {
-                    Trace.WriteLine($"Unable to parse default section: {defaultsection.Value}");
+                    try
+                    {
+                        this.DefaultSectionNumber = new int?(Convert.ToInt32(defaultsection.Value));
+                    }
+                    catch (FormatException)
+                    {
+                        Trace.WriteLine($"Unable to parse default section: {defaultsection.Value}");
+                    }
                 }
             }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
             XAttribute VolumePathAttrib = volumeElement.GetAttributeCaseInsensitive("path");
             if (VolumePathAttrib != null)
@@ -639,8 +643,12 @@ namespace Viking.VolumeModel
             if (this._Host.EndsWith("/"))
                 this._Host = this._Host.TrimEnd('/');
 
-            if (volumeElement.GetAttributeCaseInsensitive("UniqueID") != null)
+            try
+            {
+                if (volumeElement.GetAttributeCaseInsensitive("UniqueID") != null)
                 this._UniqueID = volumeElement.GetAttributeCaseInsensitive("UniqueID").Value;
+            }
+            catch (XMLMissingDataException e) { Trace.WriteLine($"Optional {e}"); }
 
             return;
         }
@@ -688,11 +696,18 @@ namespace Viking.VolumeModel
                 var ListStosLoadingTasks = new List<Task<LoadStosResult>>(NumStosFiles);
 
                 bool HaveStosZip = false;
-                if (VolumeElement.GetAttributeCaseInsensitive("StosZip") != null)
+                try
                 {
-                    string StosZipFileName = VolumeElement.GetAttributeCaseInsensitive("StosZip").Value;
-                    workerThread?.ReportProgress(0, $"Loading compressed transform file {StosZipFileName}");
-                    HaveStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath);
+                    if (VolumeElement.HasAttributeCaseInsensitive("StosZip") != null)
+                    {
+                        string StosZipFileName = VolumeElement.GetAttributeCaseInsensitive("StosZip").Value;
+                        workerThread?.ReportProgress(0, $"Loading compressed transform file {StosZipFileName}");
+                        HaveStosZip = await FetchStosZip(new Uri($"{Host}/{StosZipFileName}"), this.UserCredentials, this.Paths.ServerStosCachePath);
+                    }
+                }
+                catch (XMLMissingDataException e)
+                {
+                    Trace.WriteLine($"Optional {e.Message}");
                 }
 
                 int countStos = 0;

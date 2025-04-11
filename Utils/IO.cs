@@ -1,32 +1,44 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Xml.Linq;
 
 namespace Utils
 {
-    public static class IO
+    public static class LinqXMLExtensions
     {
-        public static XAttribute GetAttributeCaseInsensitive(this XElement element, string AttribName)
+        public static XAttribute GetAttributeCaseInsensitive(this XElement element, string attribName)
         {
+            XAttribute attrib = null;
             try
             {
-                return element.Attributes().SingleOrDefault(a => string.Compare(a.Name.ToString().ToLower(), AttribName.ToLower()) == 0);
+                attrib = element.Attributes().SingleOrDefault(a => string.Compare(a.Name.ToString().ToLower(), attribName.ToLower()) == 0);
+                
             }
             catch (Exception e)
             {
-                System.Diagnostics.Trace.WriteLine(string.Format("Could not get {0} attribute from <{1}> Element", AttribName, element.Name));
+                System.Diagnostics.Trace.WriteLine(
+                    $"Could not get {attribName} attribute from <{element.Name}> Element");
                 System.Diagnostics.Trace.WriteLine(e.Message);
 
                 throw;
             }
+
+            if (attrib is null)
+            {
+                throw new XMLMissingDataException(element.Parent?.Name.ToString(), element.Name.ToString(), attribName);
+            }
+
+            return attrib;
         }
 
         public static bool HasAttributeCaseInsensitive(this XElement element, string AttribName)
         {
             return element.Attributes().Any(a => string.Compare(a.Name.ToString().ToLower(), AttribName.ToLower()) == 0);
-        }
+        } 
 
         /// <summary>
         /// Loads a URI into an XDocument, determines whether path refers to XML file or a local directory
@@ -80,5 +92,53 @@ namespace Utils
 
             return reader;
         }
+
+        /// <summary>
+        /// Return a list, in order, starting with the root element down to the passed element
+        /// </summary>
+        /// <param name=""></param>
+        /// <returns></returns>
+        public static List<XElement> GetRootToElementList(this XElement input)
+        {
+            List<XElement> output = new List<XElement>();
+            var parent = input.Parent;
+            while(!(parent is null))
+            {
+                output.Insert(0, parent);
+                parent = parent.Parent;
+            }
+
+            output.Add(input);
+            return output;
+        }
+
+        public static string PrintVikingXMLElementList(this List<XElement> list)
+        {
+            int tablevel = 0;
+            StringBuilder sb = new StringBuilder();
+            foreach (XElement elem in list)
+            {
+                sb.Append('\t' * tablevel);
+                sb.Append('<');
+                sb.Append(elem.Name);
+                if(elem.HasAttributeCaseInsensitive("name"))
+                {
+                    var attrib = elem.GetAttributeCaseInsensitive("name");
+                    sb.Append(" name=");
+                    sb.Append(attrib);
+                }
+                if (elem.HasAttributeCaseInsensitive("path"))
+                {
+                    var attrib = elem.GetAttributeCaseInsensitive("path");
+                    sb.Append(" path=");
+                    sb.Append(attrib);
+                }
+                sb.Append(">\n");
+            }
+
+            return sb.ToString();
+
+        }
     }
+
 }

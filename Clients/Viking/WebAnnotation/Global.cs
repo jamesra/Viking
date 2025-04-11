@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Xml.Linq;
 using Viking.Common;
+using Utils;
 //using WebAnnotation.AuthenticationService;
 
 namespace WebAnnotation
@@ -178,6 +179,10 @@ namespace WebAnnotation
                     {
                         return new Uri(UriAttrib.Value);
                     }
+                    else
+                    {
+                        throw new XMLMissingDataException("The <DefaultWebAnnotationUserSettings> element under the <Volume> element is missing the uri attribute.");
+                    }
                 }
 
                 return null;
@@ -345,6 +350,10 @@ namespace WebAnnotation
                     {
                         UserSettingsElement = SettingsElements.First();
                     }
+                    else
+                    {
+                        throw new XMLMissingDataException("The Volume Element is missing the <DefaultWebAnnotationUserSettings> element");
+                    }
 
                     IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
 
@@ -405,18 +414,30 @@ namespace WebAnnotation
         {
             try
             {
+                bool LoadFromServer = false;
                 if (false == System.IO.Directory.Exists(WebAnnotationPath))
                 {
                     System.IO.Directory.CreateDirectory(WebAnnotationPath);
-                    LoadServerUserSettings();
+                    LoadFromServer = true;
                 }
 
                 if (!CachedResourceIsValid(UserSettingsFilePath, UserSettingsUri))
                 {
-                    LoadServerUserSettings();  
+                    LoadFromServer = true;
                 }
- 
-                UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
+
+                if(LoadFromServer)
+                { 
+                    var success = LoadServerUserSettings();
+                    if(!success)
+                    {
+                        return;
+                    }
+                }
+                    
+
+                if(System.IO.File.Exists(UserSettingsFilePath))
+                    UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
             }
             catch (Xml.Schema.Linq.LinqToXsdException )
             {
@@ -455,7 +476,7 @@ namespace WebAnnotation
 
             HttpWebRequest headerRequest = HttpWebRequest.CreateHttp(uri);
             headerRequest.Method = "HEAD";
-            headerRequest.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore); 
+            headerRequest.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate); 
             using (HttpWebResponse headerResponse = headerRequest.GetResponse() as HttpWebResponse)
             {
                 bool valid = headerResponse.LastModified.ToUniversalTime() <= System.IO.File.GetLastWriteTimeUtc(CacheFilename);
@@ -470,55 +491,54 @@ namespace WebAnnotation
             if(uri != null)
             {
                 System.Net.WebRequest request = null;
-                WebResponse response = null;
-                Stream stream = null;
-                FileStream file = null;
+                //WebResponse response = null;
+                //Stream stream = null;
+                //FileStream file = null;
 
                 try
                 {
                     request = HttpWebRequest.CreateHttp(uri);
-                    response = request.GetResponse();
-                    stream = response.GetResponseStream();
-                    byte[] data = new Byte[response.ContentLength];
-                    DateTime loopStart = DateTime.UtcNow; 
-                    TimeSpan elapsed;
-                    long BytesRead = 0;
 
-                    do
-                    {
-                        BytesRead += stream.Read(data, (int)BytesRead, (int)data.Length - (int)BytesRead);
-                        elapsed = new TimeSpan(DateTime.UtcNow.Ticks - loopStart.Ticks);
-                    }
-                    while (BytesRead < response.ContentLength && elapsed.TotalSeconds < 60);
+                    using(WebResponse response = request.GetResponse())
+                    { 
+                        using(Stream stream = response.GetResponseStream())
+                        { 
+                            byte[] data = new Byte[response.ContentLength];
+                            DateTime loopStart = DateTime.UtcNow; 
+                            TimeSpan elapsed;
+                            long BytesRead = 0;
 
-                    try
-                    {
-                        if(System.IO.File.Exists(UserSettingsFilePath))
-                        {
-                            System.IO.File.Delete(UserSettingsFilePath);
+                            do
+                            {
+                                BytesRead += stream.Read(data, (int)BytesRead, (int)data.Length - (int)BytesRead);
+                                elapsed = new TimeSpan(DateTime.UtcNow.Ticks - loopStart.Ticks);
+                            }
+                            while (BytesRead < response.ContentLength && elapsed.TotalSeconds < 60);
+
+                            try
+                            {
+                                if(System.IO.File.Exists(UserSettingsFilePath))
+                                {
+                                    System.IO.File.Delete(UserSettingsFilePath);
+                                }
+                            }
+                            catch(System.IO.IOException)
+                            {
+
+                            } 
+
+                            using(FileStream file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+                            { 
+                                file.Write(data, 0, data.Length);
+                            }
                         }
                     }
-                    catch(System.IO.IOException)
-                    {
-
-                    }
-
-                    file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-                    file.Write(data, 0, data.Length);
                 }
                 catch (Exception)
                 {
                     Trace.WriteLine("Could not load server user settings: " + uri.ToString());
                     return false; 
-                }
-                finally
-                {
-                    if (response != null)
-                        response.Close();
-
-                    if (file != null)
-                        file.Close();
-                }
+                } 
 
                 return true; 
 
