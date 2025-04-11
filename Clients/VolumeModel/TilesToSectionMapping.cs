@@ -29,6 +29,7 @@ namespace Viking.VolumeModel
 
         public override GridRectangle? VolumeBounds => _VolumeBounds;
 
+        internal static HttpClient HttpClient => Viking.Common.SharedResources.HttpClient;
         /// <summary>
         /// Starts as false since we don't load transforms from the disk by default.  Once we do this it is set to true. 
         /// </summary>
@@ -188,7 +189,8 @@ namespace Viking.VolumeModel
 
         private static HttpClient CreateRequest()
         {
-            var request = new HttpClient();
+            //var request = new HttpClient();
+            var request = Viking.Common.SharedResources.HttpClient;
             
             //if (uri.Scheme.ToLower() == "https")
             //    request.Credentials = this.Section.volume.UserCredentials;

@@ -59,6 +59,12 @@ namespace Viking
             this.MainForm.Show();
         }
 
+        protected override void OnMainFormClosed(object sender, EventArgs e)
+        {
+            base.OnMainFormClosed(sender, e);
+            Global.HttpClient.CancelPendingRequests();
+        }
+
         private async Task BackgroundLoading(string VolumeURL, Viking.Common.IProgressReporter progressReporter, CancellationToken token)
         {
             if (VolumeURL is null)

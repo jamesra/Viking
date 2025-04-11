@@ -39,6 +39,12 @@ namespace Viking
         static readonly System.Net.Cache.RequestCachePolicy BodyCachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
 
         private bool _TextureNotFound = false;
+         
+
+        static TextureReaderV2()
+        {
+            
+        }
 
         /// <summary>
         /// TextureNotFound is set to true when we successfully communicated with the server and it did not have the requested texture
@@ -224,7 +230,7 @@ namespace Viking
 
                     try
                     {
-                        using (HttpClient client = new HttpClient())
+                        HttpClient client = Global.HttpClient;
                         {
                             CancellationTokenSource stopReadingFromServerToken = new CancellationTokenSource();
 
@@ -329,7 +335,7 @@ namespace Viking
             //Trace.WriteLine("Checking server: " + textureUri.ToString() + " thread #" + Thread.CurrentThread.ManagedThreadId.ToString());
             try
             {
-                using (var client = new HttpClient())
+                HttpClient client = Global.HttpClient;
                 {
                     int nRetries = 5;
 

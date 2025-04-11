@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using Viking.Common;
 
 namespace Viking
@@ -11,8 +12,14 @@ namespace Viking
     /// public global variables are stored in the UI.State class, but that is not consistent with naming 
     /// conventions used in all extension modules I've written. 
     /// </summary>
-    internal class Global
+    internal static class Global
     {
+        /// <summary>
+        /// Shared instance of an HttpClient, using this facilitates KeepAlive use for reusing TCP connections
+        /// </summary>
+        static public HttpClient HttpClient => Viking.Common.SharedResources.HttpClient;
+
+
         static public Defaults Default = new Defaults();
 
         static public LocalTextureCache TextureCache = new LocalTextureCache();

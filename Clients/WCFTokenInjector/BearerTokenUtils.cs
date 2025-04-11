@@ -63,7 +63,8 @@ namespace Viking.Tokens
             if (disco.IntrospectionEndpoint is null)
                 throw new ArgumentException($"No discovery endpoint found at {IdentityServerURL}");
 
-            using (var client = new System.Net.Http.HttpClient())
+            //using (var client = new System.Net.Http.HttpClient())
+            var client = Viking.Common.SharedResources.HttpClient;
             {
                 var validation = await client.IntrospectTokenAsync(new TokenIntrospectionRequest()
                 {
@@ -124,7 +125,7 @@ namespace Viking.Tokens
 
             //The url must match and is case-sensitive
             //var discoTask = DiscoveryClient.GetAsync("http://localhost:5000");
-            using (var client = new System.Net.Http.HttpClient())
+            var client = Viking.Common.SharedResources.HttpClient;
             {
                 // request token
                 PasswordTokenRequest request = new PasswordTokenRequest()
@@ -145,7 +146,7 @@ namespace Viking.Tokens
         public async Task<string> GetUserId(string accessToken)
         {
             var disco = await GetDiscoveryDocumentAsync();
-            using (var client = new System.Net.Http.HttpClient())
+            var client = Viking.Common.SharedResources.HttpClient;
             {
                 var userInfo = await client.GetUserInfoAsync(new UserInfoRequest()
                 {
