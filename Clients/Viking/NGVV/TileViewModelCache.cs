@@ -18,6 +18,11 @@ namespace Viking
             Size = T.Size;
         }
 
+        public override string ToString()
+        {
+            return $"{LastAccessed} - {TileView.TextureFileName}";
+        }
+
         public override void Dispose()
         {
         }
