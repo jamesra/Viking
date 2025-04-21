@@ -52,30 +52,21 @@ namespace WebAnnotationModel
                 {
                     changedDBObj.Add(dbObj.GetData());
                 }
-
-                IClientChannel proxy = null;
+                 
 
                 KEY[] newIDs = new KEY[0];
-                try
-                {
-                    proxy = CreateProxy();
-
-                    newIDs = ProxyUpdate(proxy as INTERFACE, changedDBObj.ToArray());
+                try { 
+                    var proxy = CreateProxy();
+                    {
+                        newIDs = ProxyUpdate((INTERFACE)proxy, changedDBObj.ToArray());
+                    }
                 }
                 catch (Exception e)
                 {
                     Trace.WriteLine("An error occurred during the update:\n" + e.Message);
                     return false;
                 }
-                finally
-                {
-                    if (proxy != null)
-                    {
-                        proxy.Close();
-                        proxy = null;
-                    }
-                }
-
+                
                 Debug.Assert(changedDBObj.Count == newIDs.Length);
 
                 inventory = ProcessUpdateResults(newIDs, input, changedDBObj);

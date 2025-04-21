@@ -297,7 +297,15 @@ namespace Viking.UI.Controls
                 this.Invalidate();
 
                 //Let listeners know if we changed sections
-                OnSectionChanged?.Invoke(this, new SectionChangedEventArgs(_Section, OldSection));
+                if(!(OnSectionChangedEventInvokeTask is null) && !(OnSectionChangedEventInvokeTask.IsCompleted || OnSectionChangedEventInvokeTask.IsFaulted))
+                {
+                    OnSectionChangedEventCancellationTokenSource.Cancel();       
+                }
+
+                OnSectionChangedEventCancellationTokenSource = new CancellationTokenSource();
+
+                OnSectionChangedEventInvokeTask = Task.Run( () => OnSectionChanged?.Invoke(this, new SectionChangedEventArgs(_Section, OldSection), OnSectionChangedEventCancellationTokenSource.Token), OnSectionChangedEventCancellationTokenSource.Token);
+                //OnSectionChanged?.(this, new SectionChangedEventArgs(_Section, OldSection));
             }
         }
 
@@ -536,6 +544,15 @@ namespace Viking.UI.Controls
         /// Fires when a different section is displayed
         /// </summary>
         public event SectionChangedEventHandler OnSectionChanged;
+
+        /// <summary>
+        /// This token is used to cancel a previous section change notification if we change sections again before the first is done processing
+        /// </summary>
+        private CancellationTokenSource OnSectionChangedEventCancellationTokenSource = null;
+
+        private Task OnSectionChangedEventInvokeTask = null;
+
+        
 
         /// <summary>
         /// Fires when one of the reference sections has changed

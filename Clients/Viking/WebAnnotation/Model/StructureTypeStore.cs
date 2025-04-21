@@ -144,19 +144,13 @@ namespace WebAnnotation
             AnnotateStructureTypesClient proxy = null;
             try
             {
-                proxy = CreateProxy();
-                proxy.Open();
+                proxy = CreateProxy(); 
                 types = proxy.GetStructureTypes();
             }
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-            }
-            finally
-            {
-                if(proxy != null)
-                    proxy.Close();
-            }
+            } 
             //Populate our cache
             //List<StructureTypeObj> objList = new List<StructureTypeObj>(types.Length); 
             //Dictionary<long, StructureType> TypesTable = new Dictionary<long, StructureType>(types.Length);

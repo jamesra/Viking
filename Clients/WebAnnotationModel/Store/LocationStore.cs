@@ -160,7 +160,7 @@ namespace WebAnnotationModel
 
         public LocationObj GetLastModifiedLocation()
         {
-            using (var proxy = CreateProxy())
+            var proxy = CreateProxy();
             {
                 var client = (IAnnotateLocations)proxy;
                 Location loc = client.GetLastModifiedLocation();
@@ -185,7 +185,7 @@ namespace WebAnnotationModel
         public LocationObj Create(LocationObj new_location, long[] linked_locations = null)
         { 
             LocationObj created_location = null;
-            using (var proxy = CreateProxy())
+            var proxy = CreateProxy();
             {
                 var client = (IAnnotateLocations)proxy;
                 Location created_db_location = client.CreateLocation(new_location.GetData(), linked_locations);
@@ -312,23 +312,19 @@ namespace WebAnnotationModel
         public ICollection<LocationObj> GetLocationsForStructure(long StructureID)
         {
             Location[] data = null;
-            IClientChannel proxy = null;
             try
             {
-                proxy = CreateProxy();
-                proxy.Open();
+                IClientChannel proxy = CreateProxy();
+                {  
 
-                data = ((IAnnotateLocations)proxy).GetLocationsForStructure(StructureID);
+                    data = ((IAnnotateLocations)proxy).GetLocationsForStructure(StructureID);
+                }
             }
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
                 data = null;
-            }
-            finally
-            {
-                proxy?.Close();
-            }
+            } 
 
             if (null == data)
                 return new LocationObj[0];
@@ -375,7 +371,7 @@ namespace WebAnnotationModel
         public List<LocationObj> GetStructureLocationChangeLog(long structureid)
         { 
             List<LocationObj> listLocations = new List<LocationObj>();
-            using (var proxy = CreateProxy())
+            var proxy = CreateProxy();
             {
                 var client = (IAnnotateLocations)proxy;
                 LocationHistory[] history = client.GetLocationChangeLog(structureid, new DateTime?(), new DateTime?());
@@ -576,11 +572,7 @@ namespace WebAnnotationModel
                     proxy.Close();
                     proxy = null;
                 }
-            }
-            finally
-            {
-                //Do not free the proxy.  The callback function handles that
-            }
+            } 
 
             return new MixedLocalAndRemoteQueryResults<long, LocationObj>(result, SpatialSearch.Intersects(bounds, SectionNumber));
         }
@@ -621,12 +613,7 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 return;
-            }
-            finally
-            {
-                if (proxy is IClientChannel channel)
-                    channel.Close();
-            }
+            } 
 
             ChangeInventory<LocationObj> location_inventory = ProcessAnnotationSet(serverAnnotations, DeletedLocations, state.StartTime, state.SectionNumber);
 

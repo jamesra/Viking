@@ -1,4 +1,7 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
 using System.Windows.Forms;
 using Viking.Common;
 using Viking.ViewModels;
@@ -41,14 +44,17 @@ namespace Viking.UI.Forms
 
         }
 
-        public void OnSectionChanged(object sender, SectionChangedEventArgs e)
+        public async Task OnSectionChanged(object sender, SectionChangedEventArgs e, CancellationToken token)
         {
+            if(token.IsCancellationRequested)
+                return;
+
             if (e.NewSection != null)
             {
-                this.Text = this.BuildTitleString(e.NewSection.ToString());
+                this.Invoke(new Action(() => Text = this.BuildTitleString(e.NewSection.ToString())));
             }
 
-            this.Invalidate();
+            this.Invoke(new Action(() => this.Invalidate()));
         }
 
 

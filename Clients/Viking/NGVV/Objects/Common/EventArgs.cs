@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Viking.ViewModels;
 
 namespace Viking.Common
@@ -31,7 +33,7 @@ namespace Viking.Common
             this.OldSection = oldSection;
         }
     }
-    public delegate void SectionChangedEventHandler(object sender, SectionChangedEventArgs e);
+    public delegate Task SectionChangedEventHandler(object sender, SectionChangedEventArgs e, CancellationToken token);
 
     public class ReferenceSectionChangedEventArgs : System.EventArgs
     {

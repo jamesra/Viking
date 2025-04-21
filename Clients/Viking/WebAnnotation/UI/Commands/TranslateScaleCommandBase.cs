@@ -1,6 +1,8 @@
 ﻿using Geometry;
 using System;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.UI;
 using VikingXNAWinForms;
@@ -102,9 +104,13 @@ namespace WebAnnotation.UI.Commands
             ScaleOrigin = OriginalVolumePosition;
         }
 
-        protected void OnSectionChanged(object sender, Viking.Common.SectionChangedEventArgs e)
+        protected Task OnSectionChanged(object sender, Viking.Common.SectionChangedEventArgs e, CancellationToken token)
         {
+            if(token.IsCancellationRequested)
+                return Task.CompletedTask;
+
             mapping = Parent.Section.ActiveSectionToVolumeTransform;
+            return Task.CompletedTask;
         }
 
         protected override void OnDeactivate()

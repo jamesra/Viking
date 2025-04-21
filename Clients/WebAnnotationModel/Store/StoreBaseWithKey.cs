@@ -427,24 +427,22 @@ namespace WebAnnotationModel
                 return null;
 
             //If not check if the server knows what we're asking for
-            WCFOBJECT data = null;
-            var proxy = CreateProxy();
+            WCFOBJECT data = null; 
             try
             {
-                Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
-                var client = (INTERFACE)proxy;
-                data = ProxyGetByID(client, ID);
+                var proxy = CreateProxy();
+                { 
+                    Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
+                    var client = (INTERFACE)proxy;
+                    data = ProxyGetByID(client, ID);
+                }
             }
             catch (Exception e)
             {
                 Trace.WriteLine(e.ToString(), "WebAnnotation");
                 Trace.WriteLine(e.Message, "WebAnnotation");
                 data = null;
-            }
-            finally { 
-                proxy?.Close();
-            }
-
+            } 
 
             if (data != null)
             {
@@ -493,29 +491,22 @@ namespace WebAnnotationModel
             }
 
             //If not check if the server knows what we're asking for
-            WCFOBJECT[] listServerObjs = null;
-            IClientChannel proxy = null;
+            WCFOBJECT[] listServerObjs = null; 
             try
             {
-                proxy = CreateProxy();
-                //Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
+                var proxy = CreateProxy();
+                { 
+                    //Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
 
-                listServerObjs = ProxyGetByIDs((INTERFACE)proxy, listRemoteObjs.ToArray());
+                    listServerObjs = ProxyGetByIDs((INTERFACE)proxy, listRemoteObjs.ToArray());
+                }
             }
             catch (Exception e)
             {
                 Trace.WriteLine(e.ToString(), "WebAnnotation");
                 Trace.WriteLine(e.Message, "WebAnnotation");
                 listServerObjs = null;
-            }
-            finally
-            {
-                if (proxy != null)
-                {
-                    proxy.Close();
-                    proxy = null;
-                }
-            }
+            } 
 
             ChangeInventory<OBJECT> server_inventory = ParseQuery(listServerObjs, new KEY[0], null);
 
@@ -560,20 +551,21 @@ namespace WebAnnotationModel
             GetObjectBySectionCallbackState<INTERFACE, OBJECT> state = new GetObjectBySectionCallbackState<INTERFACE, OBJECT>(null, SectionNumber, GetLastQueryTimeForSection(SectionNumber), null);
 
             WCFOBJECT[] objects = new WCFOBJECT[0];
-            KEY[] deleted_objects = new KEY[0];
-            IClientChannel proxy = null;
+            KEY[] deleted_objects = new KEY[0]; 
             DateTime StartTime = DateTime.UtcNow;
 
             try
             {
 
-                proxy = CreateProxy();
+                var proxy = CreateProxy();
+                { 
                 
-                objects = ProxyGetBySection((INTERFACE)proxy,
+                    objects = ProxyGetBySection((INTERFACE)proxy,
                                                         SectionNumber,
                                                         state.LastQueryExecutedTime,
                                                         out long QueryExecutedTime,
                                                         out deleted_objects);
+                } 
             }
             catch (EndpointNotFoundException e)
             {
@@ -582,15 +574,7 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-            }
-            finally
-            {
-                if (proxy != null)
-                {
-                    proxy.Close();
-                    proxy = null;
-                }
-            }
+            } 
 
             DateTime TraceQueryEnd = DateTime.UtcNow;
 
@@ -627,27 +611,26 @@ namespace WebAnnotationModel
             if (OutstandingRequest)
             {
                 return new MixedLocalAndRemoteQueryResults<KEY, OBJECT>(null, knownObjects.Values);
-            }
-
-            IClientChannel proxy = null;
+            } 
 
             IAsyncResult result = null;
             try
             {
-                proxy = CreateProxy(); 
+                var proxy = CreateProxy();
+                { 
+                    //                WCFOBJECT[] locations = new WCFOBJECT[0];
+                    GetObjectBySectionCallbackState<INTERFACE, OBJECT> newState = new GetObjectBySectionCallbackState<INTERFACE, OBJECT>((INTERFACE)proxy, SectionNumber, GetLastQueryTimeForSection(SectionNumber), OnLoadCompletedCallBack);
+                    bool NoOutstandingRequest = OutstandingSectionQueries.TryAdd(SectionNumber, newState);
+                    if (NoOutstandingRequest)
+                    {
 
-                //                WCFOBJECT[] locations = new WCFOBJECT[0];
-                GetObjectBySectionCallbackState<INTERFACE, OBJECT> newState = new GetObjectBySectionCallbackState<INTERFACE, OBJECT>((INTERFACE)proxy, SectionNumber, GetLastQueryTimeForSection(SectionNumber), OnLoadCompletedCallBack);
-                bool NoOutstandingRequest = OutstandingSectionQueries.TryAdd(SectionNumber, newState);
-                if (NoOutstandingRequest)
-                {
-
-                    //Build list of Locations to check
-                    result = ProxyBeginGetBySection((INTERFACE)proxy,
-                                            SectionNumber,
-                                            newState.LastQueryExecutedTime,
-                                            new AsyncCallback(GetObjectsBySectionCallback),
-                                            newState);
+                        //Build list of Locations to check
+                        result = ProxyBeginGetBySection((INTERFACE)proxy,
+                                                SectionNumber,
+                                                newState.LastQueryExecutedTime,
+                                                new AsyncCallback(GetObjectsBySectionCallback),
+                                                newState);
+                    }
                 }
             }
 
@@ -658,11 +641,6 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-                if (proxy != null)
-                {
-                    proxy.Close();
-                    proxy = null;
-                }
             }
             finally
             {
@@ -1051,22 +1029,16 @@ namespace WebAnnotationModel
                     changedDBObj.Add(dbObj.GetData());
                 }
 
-
-                IClientChannel proxy = null;
                 try
                 {
-                    proxy = CreateProxy(); 
+                    IClientChannel proxy = CreateProxy(); 
                     keys = ProxyUpdate((INTERFACE)proxy, changedDBObj.ToArray());
                 }
                 catch (Exception e)
                 {
                     Trace.WriteLine("An error occurred during the update:\n" + e.Message);
                     throw;
-                }
-                finally
-                {
-                    proxy?.Close();
-                }
+                } 
 
                 List<OBJECT> addObjList = new List<OBJECT>(changedDBObj.Count);
                 List<OBJECT> updateObjList = new List<OBJECT>(changedDBObj.Count);

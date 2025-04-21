@@ -142,24 +142,16 @@ namespace WebAnnotationModel
         {
             IClientChannel proxy = null;
             StructureTypeObj created_structuretype = null;
-            try
-            {
-                proxy = CreateProxy();
-                StructureType created_db_structuretype = ((IAnnotateStructureTypes)proxy).CreateStructureType(new_type.GetData());
-                if (created_db_structuretype is null)
-                    return null;
+            proxy = CreateProxy();
+            StructureType created_db_structuretype = ((IAnnotateStructureTypes)proxy).CreateStructureType(new_type.GetData());
+            if (created_db_structuretype is null)
+                return null;
 
-                created_structuretype = new StructureTypeObj(created_db_structuretype);
+            created_structuretype = new StructureTypeObj(created_db_structuretype);
 
-                Add(created_structuretype);
+            Add(created_structuretype);
 
-                return created_structuretype;
-            }
-            finally
-            {
-                proxy?.Close();
-            }
-
+            return created_structuretype;
         }
 
         /// <summary>
@@ -171,8 +163,7 @@ namespace WebAnnotationModel
             IClientChannel proxy = null;
             try
             {
-                proxy = CreateProxy();
-                proxy.Open();
+                proxy = CreateProxy(); 
                 types = ((IAnnotateStructureTypes)proxy).GetStructureTypes();
                 if (types is null)
                     return;
@@ -181,19 +172,8 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 throw;
-            }
-            finally
-            {
-                try
-                {
-                    proxy?.Close();
-                }
-                catch (Exception)
-                {
-                }
-             
-            }
-            
+            } 
+
             //Populate our cache
             StructureTypeObj[] objList = new StructureTypeObj[types.Length];
             //Dictionary<long, StructureType> TypesTable = new Dictionary<long, StructureType>(types.Length);

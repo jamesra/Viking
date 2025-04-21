@@ -132,8 +132,7 @@ namespace WebAnnotation
                 PROXY proxy = CreateProxy();
                 try
                 {
-                    Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation");
-                    proxy.Open();
+                    Trace.WriteLine("Going to server to retrieve " + this.ToString() + " parent with ID: " + ID.ToString(), "WebAnnotation"); 
                     data = ProxyGetByID(proxy, ID);
                 }
                 catch (Exception e)
@@ -193,8 +192,7 @@ namespace WebAnnotation
                     if (changed.Count == 0)
                         return true;
 
-                    PROXY proxy = CreateProxy();
-                    proxy.Open();
+                    PROXY proxy = CreateProxy(); 
 
                     long[] newIDs = new long[0];
                     try
@@ -205,11 +203,7 @@ namespace WebAnnotation
                     {
                         System.Windows.Forms.MessageBox.Show("An error occurred during the update:\n" + e.Message);
                         return false;
-                    }
-                    finally
-                    {
-                        proxy.Close();
-                    }
+                    } 
 
                     Debug.Assert(changed.Count == newIDs.Length);
 

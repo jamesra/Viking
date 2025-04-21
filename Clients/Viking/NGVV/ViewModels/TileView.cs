@@ -292,28 +292,27 @@ namespace Viking.ViewModels
                                                         TextureLoadCancellationTokenSource);
                 }
 
-                var loadTextureTask = texReader.LoadTexture();
-
-                await loadTextureTask.ContinueWith(task => CompleteTextureReadTask(texReader, task), TextureLoadCancellationTokenSource.Token).ConfigureAwait(false); 
-
-                return texture;
+                return await texReader.LoadTexture().ContinueWith(task => CompleteTextureReadTask(texReader, task), TextureLoadCancellationTokenSource.Token).ConfigureAwait(false); 
             }
 
             return null;
         }
 
-        private void CompleteTextureReadTask(TextureReaderV2 texReader, Task<Texture2D> texTask)
+        private Texture2D CompleteTextureReadTask(TextureReaderV2 texReader, Task<Texture2D> texTask)
         {
             var tokenSource = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
             if (tokenSource is null || tokenSource.IsCancellationRequested)
-                return;
+                return null;
 
             this.ServerTextureNotFound = texReader.TextureNotFound;
 
             if (texTask.IsFaulted == false && texTask.IsCanceled == false && texReader.HasTexture)
             { 
                 this.texture = texTask.Result;
+                return this.texture;
             }
+
+            return null;
         }
 
 

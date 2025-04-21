@@ -62,7 +62,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         public long[] GetUnfinishedBranches(long structureID)
         {
-            using (var proxy = CreateProxy())
+            var proxy = CreateProxy();
             {
                 long[] ids = ((IAnnotateStructures)proxy).GetUnfinishedLocations(structureID);
                 return ids;
@@ -75,7 +75,7 @@ namespace WebAnnotationModel
         /// <returns></returns>
         public LocationPositionOnly[] GetUnfinishedBranchesWithPosition(long structureID)
         {
-            using (var proxy = CreateProxy())
+            var proxy = CreateProxy();
             {
                 return ((IAnnotateStructures)proxy).GetUnfinishedLocationsWithPosition(structureID);
             }
@@ -155,23 +155,19 @@ namespace WebAnnotationModel
             Trace.WriteLine("GetAllStructures, Begin", "WebAnnotation");
 
             Structure[] structures = new Structure[0];
-
-            IClientChannel proxy = null;
+             
             try
             {
-                proxy = CreateProxy();
-
-                //Cache all the structures at startup
-                structures = ((IAnnotateStructures)proxy).GetStructures();
+                IClientChannel proxy = CreateProxy();
+                { 
+                    //Cache all the structures at startup
+                    structures = ((IAnnotateStructures)proxy).GetStructures();
+                }
             }
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
                 return;
-            }
-            finally
-            {
-                proxy?.Close();
             }
 
             ChangeInventory<StructureObj> inventory = ParseQuery(structures, new long[0], null);
@@ -187,22 +183,18 @@ namespace WebAnnotationModel
                 return;
 
             long numLocs = 0;
-
-            IClientChannel proxy = null;
             try
             {
-                proxy = CreateProxy();
+                IClientChannel proxy = CreateProxy();
+                { 
 
-                numLocs = ((IAnnotateStructures)proxy).NumberOfLocationsForStructure(ID);
+                    numLocs = ((IAnnotateStructures)proxy).NumberOfLocationsForStructure(ID);
+                }
             }
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
                 return;
-            }
-            finally
-            {
-                proxy?.Close();
             }
 
             if (numLocs == 0)
@@ -240,28 +232,29 @@ namespace WebAnnotationModel
         }
 
         public StructureObj Create(StructureObj newStruct, LocationObj newLocation, out LocationObj created_loc)
-        {
-            IClientChannel proxy = null;
+        { 
 
             created_loc = null;
             try
             {
-                proxy = CreateProxy();
+                var proxy = CreateProxy();
+                { 
                 
-                CreateStructureRetval retval = ((IAnnotateStructures)proxy).CreateStructure(newStruct.GetData(), newLocation.GetData());
+                    CreateStructureRetval retval = ((IAnnotateStructures)proxy).CreateStructure(newStruct.GetData(), newLocation.GetData());
 
-                //We should not insert created objects into the store before they are created on the server
-                Debug.Assert(this.GetObjectByID(newStruct.ID, false) is null);
+                    //We should not insert created objects into the store before they are created on the server
+                    Debug.Assert(this.GetObjectByID(newStruct.ID, false) is null);
 
-                StructureObj created_struct = new StructureObj(retval.structure);
+                    StructureObj created_struct = new StructureObj(retval.structure);
 
-                ChangeInventory<StructureObj> inventory = InternalAdd(created_struct);
-                created_loc = new LocationObj(retval.location);
+                    ChangeInventory<StructureObj> inventory = InternalAdd(created_struct);
+                    created_loc = new LocationObj(retval.location);
 
-                CallOnCollectionChangedForAdd(new StructureObj[] { created_struct });
-                Store.Locations.AddFromFriend(new LocationObj[] { created_loc });
+                    CallOnCollectionChangedForAdd(new StructureObj[] { created_struct });
+                    Store.Locations.AddFromFriend(new LocationObj[] { created_loc });
 
-                return created_struct;
+                    return created_struct;
+                }
             }
             catch (Exception e)
             {
@@ -271,11 +264,7 @@ namespace WebAnnotationModel
                     CallOnCollectionChangedForDelete(new StructureObj[] { deletedObj });
 
                 return null;
-            }
-            finally
-            {
-                proxy?.Close();
-            }
+            } 
         }
 
         public override bool Remove(StructureObj obj)
@@ -307,11 +296,7 @@ namespace WebAnnotationModel
             catch (Exception e)
             {
                 ShowStandardExceptionMessage(e);
-            }
-            finally
-            {
-                proxy?.Close();
-            }
+            } 
 
             return new StructureObj[0];
         }
@@ -336,11 +321,7 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 throw;
-            }
-            finally
-            {
-                proxy?.Close();
-            }
+            } 
 
             return 0;
         }
@@ -369,11 +350,7 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 throw;
-            }
-            finally
-            {
-                proxy?.Close();
-            }
+            } 
         }
 
 
@@ -391,11 +368,7 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 data = null;
-            }
-            finally
-            {
-                proxy?.Close();
-            }
+            } 
 
             if (null == data)
                 return new StructureObj[0];

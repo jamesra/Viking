@@ -65,12 +65,19 @@ namespace Viking
         {
             //Fire off a thread to clean the disk
 
-            ThreadPool.QueueUserWorkItem(Global.TextureCache.ReduceCacheFootprint, null);
-            ThreadPool.QueueUserWorkItem(Global.TileViewModelCache.ReduceCacheFootprint, null);
-            ThreadPool.QueueUserWorkItem(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint, null);
+            Global.TextureCache.ReduceCacheFootprint(null);
+            Global.TileViewModelCache.ReduceCacheFootprint(null);
+            Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint(null);
+
+            //ThreadPool.QueueUserWorkItem(Global.TextureCache.ReduceCacheFootprint, null);
+            //ThreadPool.QueueUserWorkItem(, Global.TileViewModelCache.ReduceCacheFootprint, null);
+            //ThreadPool.QueueUserWorkItem(Viking.VolumeModel.Global.TileCache.ReduceCacheFootprint, null);
 
             if (Viking.UI.State.volume != null)
-                ThreadPool.QueueUserWorkItem(Viking.UI.State.volume.ReduceCacheFootprint, null);
+            {
+                Viking.UI.State.volume.ReduceCacheFootprint(null);
+                //ThreadPool.QueueUserWorkItem(Viking.UI.State.volume.ReduceCacheFootprint, null);
+            }
 
 
             /*

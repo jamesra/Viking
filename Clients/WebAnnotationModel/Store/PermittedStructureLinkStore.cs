@@ -84,7 +84,7 @@ namespace WebAnnotationModel
 
         public PermittedStructureLinkObj Create(PermittedStructureLinkObj link)
         {
-            using(var proxy = CreateProxy())
+            var proxy = CreateProxy();
             {
                 var client = (IAnnotatePermittedStructureLinks)proxy;
                 PermittedStructureLink dblink = client.CreatePermittedStructureLink(link.GetData());

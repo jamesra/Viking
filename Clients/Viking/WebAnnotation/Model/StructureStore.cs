@@ -53,8 +53,7 @@ namespace WebAnnotation
             AnnotateStructuresClient proxy = null;
             try
             {
-                proxy = CreateProxy();
-                proxy.Open();
+                proxy = CreateProxy(); 
 
                 //Cache all the structures at startup
                 structures = proxy.GetStructures();
@@ -63,12 +62,7 @@ namespace WebAnnotation
             {
                 ShowStandardExceptionMessage(e);
                 return;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
-            }
+            } 
 
             foreach (Structure s in structures)
             {
@@ -106,8 +100,7 @@ namespace WebAnnotation
             List<StructureObj> listStructures = new List<StructureObj>(listIDs.Count); 
             try
             {
-                proxy = this.CreateProxy();
-                proxy.Open();
+                proxy = this.CreateProxy(); 
 
                 structures = proxy.GetStructuresByIDs(listIDs.ToArray(), false);
             }
@@ -115,12 +108,7 @@ namespace WebAnnotation
             {
                 ShowStandardExceptionMessage(e);
                 return listStructures;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
-            }
+            } 
 
             System.TimeSpan elapsed = new TimeSpan(DateTime.Now.Ticks - StartTime.Ticks); 
             Trace.WriteLine("Fetching Structures by ID, Returned from server + " + elapsed.ToString(), "WebAnnotation");
@@ -154,8 +142,7 @@ namespace WebAnnotation
             AnnotateStructuresClient proxy = null;
             try
             {
-                proxy = CreateProxy();
-                proxy.Open();
+                proxy = CreateProxy(); 
 
                 numLocs = proxy.NumberOfLocationsForStructure(ID);
             }
@@ -163,12 +150,7 @@ namespace WebAnnotation
             {
                 ShowStandardExceptionMessage(e);
                 return;
-            }
-            finally
-            {
-                if(proxy != null)
-                    proxy.Close();
-            }
+            } 
             
             if (numLocs == 0)
             {
@@ -204,8 +186,7 @@ namespace WebAnnotation
             try
             {
 
-                proxy = CreateProxy();
-                proxy.Open();
+                proxy = CreateProxy(); 
 
                 long[] newIDs = proxy.CreateStructure(newStruct.GetData(), newLocation.GetData());
 
@@ -226,12 +207,7 @@ namespace WebAnnotation
                 ShowStandardExceptionMessage(e);
                 Remove(newStruct.ID);
                 return;
-            }
-            finally
-            {
-                if(proxy != null)
-                    proxy.Close();
-            }
+            } 
         }
 
         internal override StructureObj Update(StructureObj updateObj)
@@ -332,8 +308,7 @@ namespace WebAnnotation
             AnnotateStructuresClient proxy = null;
             try
             {
-                proxy = CreateProxy();
-                proxy.Open();
+                proxy = CreateProxy(); 
 
                 data = proxy.GetLocationsForStructure(StructureID);
             }
@@ -341,12 +316,7 @@ namespace WebAnnotation
             {
                 ShowStandardExceptionMessage(e);
                 data = null;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
-            }
+            } 
 
             if (null == data)
                 return new LocationObj[0]; 

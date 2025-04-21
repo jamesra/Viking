@@ -48,11 +48,10 @@ namespace WebAnnotationModel
         {
             //lock (LockObject)
             {
-                using (IClientChannel proxy = (IClientChannel)CreateProxy())
+                IClientChannel proxy = (IClientChannel)CreateProxy();
                 {
                     try
-                    {
-                        proxy.Open();
+                    { 
                         var client = (IAnnotateLocations)proxy;
                         client.CreateLocationLink(A, B);
                     }
@@ -61,10 +60,6 @@ namespace WebAnnotationModel
                         //TODO: Better message
                         Trace.WriteLine("Error creating link between locations, link not created: " + e.Message);
                         throw;
-                    }
-                    finally
-                    {
-                        proxy?.Close();
                     }
                 }
 
@@ -82,12 +77,12 @@ namespace WebAnnotationModel
                 //                LocationObj AObj = Store.Locations.GetObjectByID(A);
                 //                LocationObj BObj = Store.Locations.GetObjectByID(B);
 
-                using (IClientChannel proxy = CreateProxy())
+                
                 {
                     try
-                    { 
-                        var client = (IAnnotateLocations)proxy;
-                        client.DeleteLocationLink(A, B);
+                    {
+                        var client = CreateProxy();
+                        ((IAnnotateLocations)client).DeleteLocationLink(A, B);
 
                         deletedLink = InternalDelete(new LocationLinkKey(A, B));
                     }

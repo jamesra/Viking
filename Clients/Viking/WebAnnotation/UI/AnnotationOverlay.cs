@@ -1468,8 +1468,11 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected void OnSectionChanged(object sender, SectionChangedEventArgs e)
+        protected async Task OnSectionChanged(object sender, SectionChangedEventArgs e, CancellationToken token)
         {
+            if(token.IsCancellationRequested)
+                return;
+
             e.OldSection.TransformChanged -= this.OnSectionTransformChanged;
             e.NewSection.TransformChanged += this.OnSectionTransformChanged;
 
@@ -1477,8 +1480,13 @@ namespace WebAnnotation
             if (_Parent.ShowOverlays)
             {
                 loadSectionAnnotationsCancellationTokenSource?.Cancel();
-                loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
+                 
+                loadSectionAnnotationsCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
                 LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
+
+                if(loadSectionAnnotationsCancellationTokenSource.IsCancellationRequested)
+                    return;
+
                 Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading));
             }
         }
@@ -1656,12 +1664,12 @@ namespace WebAnnotation
             }
         }
 
-            /// <summary>
-            /// When this occurs we should update the positions we draw the locations at. 
-            /// </summary>
-            /// <param name="sender"></param>
-            /// <param name="e"></param>
-            public void OnSectionTransformChanged(object sender, TransformChangedEventArgs e)
+        /// <summary>
+        /// When this occurs we should update the positions we draw the locations at. 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public void OnSectionTransformChanged(object sender, TransformChangedEventArgs e)
         {
             loadSectionAnnotationsCancellationTokenSource?.Cancel();
             loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();

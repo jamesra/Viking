@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.ServiceModel;
+using System.Threading;
 using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
@@ -114,6 +115,67 @@ namespace WebAnnotationModel
         }
     }
 
+    public class ThreadLocalProxyFactory<IService>
+    {
+        private readonly ChannelFactory<IService> _factory;
+
+        public ThreadLocalProxyFactory(ChannelFactory<IService> factory)
+        {
+            this._factory = factory;
+        }
+
+        static ThreadLocalProxyFactory()
+        {
+            // Subscribe to the ProcessExit event
+            AppDomain.CurrentDomain.ProcessExit += (sender, e) => DisposeChannel();
+        }
+
+        private static readonly ThreadLocal<IClientChannel> Channel = new ThreadLocal<IClientChannel>();
+
+        public IClientChannel GetProxy()
+        {
+            var channel = Channel.Value as IClientChannel;
+
+            if (!(channel is null) && channel.State == CommunicationState.Faulted)
+            {
+                // Abort the faulted channel
+                channel.Abort();
+                channel = null;
+            }
+
+            if(channel is null || 
+                (channel.State == CommunicationState.Closed || 
+                 channel.State == CommunicationState.Closing))
+            {
+                // Create a new channel and open it
+                Channel.Value = this._factory.CreateChannel(State.EndpointAddress) as IClientChannel;
+                Channel.Value?.Open();
+            }
+
+            return (IClientChannel)Channel.Value;
+        }
+
+        static void DisposeChannel()
+        {
+            if (Channel.IsValueCreated)
+            {
+                var channel = Channel.Value as IClientChannel;
+                if (channel != null)
+                {
+                    try
+                    {
+                        channel.Close();
+                    }
+                    catch
+                    {
+                        channel.Abort();
+                    }
+                }
+                Channel.Dispose();
+            }
+        }
+    }
+
     /// <summary>
     /// This base class implements the basic functionality to talk to a WCF Service
     /// </summary>
@@ -125,13 +187,20 @@ namespace WebAnnotationModel
     {
 
         protected ChannelFactory<INTERFACE> channelFactory;
+        protected ThreadLocalProxyFactory<INTERFACE> proxyFactory;
 
         //Perform any required initialization
         public abstract void Init();
 
         protected virtual IClientChannel CreateProxy()
         {
-            return (IClientChannel)channelFactory.CreateChannel(State.EndpointAddress);
+            if(proxyFactory is null)
+            {
+                proxyFactory = new ThreadLocalProxyFactory<INTERFACE>(channelFactory);
+            }
+
+            //return (IClientChannel)channelFactory.CreateChannel(State.EndpointAddress);
+            return proxyFactory.GetProxy();
         } 
 
         #region Public Creation/Removal methods

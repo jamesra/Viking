@@ -126,8 +126,7 @@ namespace WebAnnotation
         /// <returns></returns>
         private LocationObj[] GetAllLocationsForSection(long SectionNumber)
         {
-            AnnotateLocationsClient proxy = CreateProxy();
-            proxy.Open();
+            AnnotateLocationsClient proxy = CreateProxy(); 
 
             Location[] locations = new Location[0];
             try
@@ -167,8 +166,7 @@ namespace WebAnnotation
         /// <returns></returns>
         private LocationObj[] GetUpdatedLocationsForSection(long SectionNumber)
         {
-            AnnotateLocationsClient proxy = CreateProxy();
-            proxy.Open();
+            AnnotateLocationsClient proxy = CreateProxy(); 
 
             Location[] locations = new Location[0];            
 
@@ -213,8 +211,7 @@ namespace WebAnnotation
                 AnnotateLocationsClient proxy = CreateProxy();
 
                 try
-                {
-                    proxy.Open();
+                { 
                     proxy.CreateLocationLink(A.ID, B.ID);
                     A.AddLink(B.ID);
                     B.AddLink(A.ID);
@@ -224,12 +221,7 @@ namespace WebAnnotation
                 catch (Exception e)
                 {
                     System.Windows.Forms.MessageBox.Show("Error creating link between locations, link not created: " + e.Message, "Error", System.Windows.Forms.MessageBoxButtons.OK);
-                }
-                finally
-                {
-                    if(proxy != null)
-                        proxy.Close();
-                }
+                } 
             }
         }
 
@@ -243,8 +235,7 @@ namespace WebAnnotation
                 LocationObj BObj = GetObjectByID(B);
 
                 try
-                {
-                    proxy.Open();
+                { 
                     proxy.DeleteLocationLink(A, B);
 
                     if (AObj != null)
@@ -262,12 +253,7 @@ namespace WebAnnotation
                 catch (Exception e)
                 {
                     System.Windows.Forms.MessageBox.Show("Error deleting link between locations, link not created: " + e.Message, "Error", System.Windows.Forms.MessageBoxButtons.OK);
-                }
-                finally
-                {
-                    if(proxy != null)
-                        proxy.Close();
-                }
+                } 
             }
         }
 

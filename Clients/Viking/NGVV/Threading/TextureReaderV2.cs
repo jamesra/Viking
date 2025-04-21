@@ -679,7 +679,7 @@ namespace Viking
                     }
                     catch (System.Threading.Tasks.TaskCanceledException)
                     {
-                        Trace.WriteLine($"Aborted loading {Filename}");
+                        //Trace.WriteLine($"Aborted loading {Filename}");
                         return null;
                     }
                     catch (Exception e)

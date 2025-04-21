@@ -250,6 +250,11 @@ namespace Viking.Common
         }
 
         /// <summary>
+        /// This tracks if there is a current cleaning task.
+        /// </summary>
+        private Task CleaningTask = null;
+
+        /// <summary>
         /// This should be called periodically to reduce the disk footprint
         /// </summary>
         public void ReduceCacheFootprint(object state)
@@ -257,6 +262,15 @@ namespace Viking.Common
             if (TotalCacheSize <= MaxCacheSize)
                 return;
 
+            //If there is another cleaning task already running do nothing
+            if (!(CleaningTask is null) && !(CleaningTask.IsCompleted || CleaningTask.IsCanceled ||CleaningTask.IsFaulted))
+                return;
+
+            this.CleaningTask = Task.Run(() => ReduceCacheFootprintAsync(state));
+        }
+
+        private async Task ReduceCacheFootprintAsync(object state)
+        { 
             int RemoveCount = 0;
             int LostCount = 0;
             long FreedCount = 0;
