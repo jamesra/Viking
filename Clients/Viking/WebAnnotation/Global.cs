@@ -427,29 +427,40 @@ namespace WebAnnotation
                 }
 
                 if(LoadFromServer)
-                { 
+                {  
                     var success = LoadServerUserSettings();
                     if(!success)
                     {
                         return;
                     }
                 }
-                    
-
+                     
                 if(System.IO.File.Exists(UserSettingsFilePath))
                     UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
             }
-            catch (Xml.Schema.Linq.LinqToXsdException )
+            catch (Xml.Schema.Linq.LinqToXsdException e)
             {
-                //We found it, but could not parse it
-//                HandleIncorrectXSDMessage();
-//                LoadBookmarksFromBackup();
+                //We found it locally, but could not parse it
+                var success = LoadServerUserSettings();
+                if (!success)
+                {
+                    throw;
+                }
+
+                if (System.IO.File.Exists(UserSettingsFilePath))
+                    UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
             }
-            catch (System.Xml.XmlException )
+            catch (System.Xml.XmlException e)
             {
-                //We found it, but could not parse it
- //               HandleIncorrectXSDMessage();
- //               LoadBookmarksFromBackup();
+                //We found it locally, but could not parse it
+                var success = LoadServerUserSettings();
+                if (!success)
+                {
+                    throw;
+                }
+
+                if (System.IO.File.Exists(UserSettingsFilePath))
+                    UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
             }
             /*
             catch (Exception )
