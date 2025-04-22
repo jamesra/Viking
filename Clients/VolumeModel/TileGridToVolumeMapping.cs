@@ -201,6 +201,10 @@ namespace Viking.VolumeModel
             {
                 for (int iY = iMinY; iY < iMaxY; iY++)
                 {
+                    var tilekey = new TileKey(iX, iY, roundedDownsample);
+                    if (TileTasks.ContainsKey(tilekey))
+                        continue; //We are already getting this tile, so continue
+                     
                     //Figure out if the tile would be visible
                     GridRectangle tileBorder = TileBoundingBox(iX, iY, (int)roundedDownsample);
                     if (tileBorder.Intersects(SectionVisibleBounds) == false)
@@ -217,40 +221,67 @@ namespace Viking.VolumeModel
 
                     //                   Trace.WriteLine(TextureFileName, "VolumeModel"); 
                     ;
-                    if (!Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))
+                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel) && tileViewModel != null)
                     {
-                        //First create a new tile
-                        int MipMapLevels = 1; //No mip maps
-                        if (roundedDownsample == this.AvailableLevels[AvailableLevels.Length - 1])
-                            MipMapLevels = 0; //Generate mipmaps for lowest res texture
-
-                        //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
-                        //                        Trace.WriteLine(TextureFileName, "VolumeModel");
-                        PositionNormalTextureVertex[] verticies = CalculateVerticies(iX,
-                                                                                     iY,
-                                                                                     roundedDownsample,
-                                                                                     out int[] edges);
-
-
-                        string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
-
-                        tileViewModel = Global.TileCache.ConstructTile(UniqueID,
-                                                            verticies,
-                                                            edges,
-                                                            TextureFileName,
-                                                            this.TileFullPath(iX, iY, roundedDownsample),
-                                                            //PORT: TextureCacheFileName,
-                                                            this.Name,
-                                                            (int)roundedDownsample,
-                                                            MipMapLevels);
-                    }
-
-                    if (tileViewModel != null)
                         TilesToDraw.Add(tileViewModel);
+                    }
+                    else
+                    {
+                        //Create a task to fetch the tile
+                        Task<CreateTileTaskResult> tileTask = Task.Run<CreateTileTaskResult>(() =>
+                            CreateTile(UniqueID, tilekey, this.Name));
+                        TileTasks.TryAdd(tilekey, tileTask);
+                        tileTask.ContinueWith(previousTask => OnTileCreated(previousTask.Result));
+                    }
                 }
             }
 
             return TilesToDraw;
+        }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="uniqueID"></param>
+        /// <param name="tileKey"></param>
+        /// <param name="textureFilename"></param>
+        /// <param name="name"></param>
+        /// <param name="MipMapLevels">Ignored, lowest res texture gets mipmaps.  No others do (They are covered by lower-res textures)</param>
+        /// <returns></returns>
+        private async Task<CreateTileTaskResult> CreateTile(string uniqueID, TileKey tileKey, string name)
+        {
+            int mipMapLevels;
+            //First create a new tile 
+            int roundedDownsample = tileKey.Downsample;
+            int iX = tileKey.X;
+            int iY = tileKey.Y;
+            
+            if (roundedDownsample == this.AvailableLevels[AvailableLevels.Length - 1])
+                mipMapLevels = 0; //Generate mipmaps for lowest res texture
+            else
+                mipMapLevels = 1; //No mipmaps
+
+            //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
+            //                        Trace.WriteLine(TextureFileName, "VolumeModel");
+            PositionNormalTextureVertex[] verticies = CalculateVerticies(iX,
+                iY,
+                roundedDownsample,
+                out int[] edges);
+
+
+            string textureFileName = TileFullPath(iX, iY, roundedDownsample);
+
+            var tileViewModel = Global.TileCache.ConstructTile(uniqueID,
+                verticies,
+                edges,
+                textureFileName,
+                textureFileName,
+                //PORT: TextureCacheFileName,
+                this.Name,
+                (int)roundedDownsample,
+                mipMapLevels);
+            
+            return new CreateTileTaskResult(tileViewModel, tileKey);
         }
 
         /// <summary>

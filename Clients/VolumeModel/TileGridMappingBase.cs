@@ -1,5 +1,6 @@
 ﻿using Geometry;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,6 +13,63 @@ namespace Viking.VolumeModel
     /// </summary>
     public abstract class TileGridMappingBase : MappingBase
     {
+        protected readonly struct TileKey : IEquatable<TileKey>
+        {
+            
+            public readonly int X;
+            public readonly int Y;
+            public readonly int Downsample;
+            
+            public TileKey(int x, int y, int downsample)
+            {
+                this.X = x;
+                this.Y = y;
+                this.Downsample =downsample;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if(!(obj is TileKey))
+                    return false; 
+                
+                TileKey tk = (TileKey)obj;
+                
+                return this.X == tk.X && this.Y == tk.Y &&
+                       this.Downsample == tk.Downsample;
+            }
+
+            public bool Equals(TileKey tk)
+            {
+                return this.X == tk.X && this.Y == tk.Y &&
+                       this.Downsample == tk.Downsample;
+            }
+
+            public override int GetHashCode()
+            {
+                // Simple prime number multiplication approach
+                unchecked // Allow arithmetic overflow, wrapping without exceptions
+                {
+                    int hash = 17; // Prime number starting value
+                    hash = hash * 23 + X;
+                    hash = hash * 23 + Y;
+                    hash = hash * 23 + Downsample;
+                    return hash;
+                }
+            }
+        }
+        
+        protected readonly struct CreateTileTaskResult
+        {
+            public readonly TileViewModel Tile; 
+            public readonly TileKey Key;
+            
+            public CreateTileTaskResult(TileViewModel tile, TileKey key)
+            {
+                Key = key;
+                Tile = tile; 
+            }
+        }
+        
         protected readonly struct GridInfo
         {
             public readonly int GridXDim;
@@ -36,8 +94,8 @@ namespace Viking.VolumeModel
 
         private int _MaxDownsample = int.MinValue;
         private int _MinDownsample = int.MaxValue;
-
-
+        
+        protected ConcurrentDictionary<TileKey, Task<CreateTileTaskResult>> TileTasks = new ConcurrentDictionary<TileKey, Task<CreateTileTaskResult>>();
 
         public int MaxDownsample
         {
@@ -353,47 +411,61 @@ namespace Viking.VolumeModel
 
             int ExpectedTileCount = (iMaxX - iMinX) * (iMaxY - iMinY);
             List<TileViewModel> TilesToDraw = new List<TileViewModel>(ExpectedTileCount);
-            List<Task<TileViewModel>> tileTasks = new List<Task<TileViewModel>>(ExpectedTileCount);
+            //List<Task<TileViewModel>> tileTasks = new List<Task<TileViewModel>>(ExpectedTileCount);
 
             for (int iX = iMinX; iX <= iMaxX; iX++)
             {
                 for (int iY = iMinY; iY <= iMaxY; iY++)
                 {
+                    var tilekey = new TileKey(iX, iY, roundedDownsample);
+                    if(TileTasks.ContainsKey(tilekey))
+                        continue; //We are already getting this tile, so continue
+                    
                     string UniqueID = TileViewModel.CreateUniqueKey(Section.Number, Name, Name, roundedDownsample, this.TileTextureFileName(iX, iY));
                     string TextureFileName = TileFullPath(iX, iY, roundedDownsample);
                     
-                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel))
+                    if (Global.TileCache.TryGetValue(UniqueID, out TileViewModel tileViewModel) && tileViewModel != null)
                     {
-                        if(tileViewModel != null)
-                            TilesToDraw.Add(tileViewModel);
+                        TilesToDraw.Add(tileViewModel);
                     }
                     else
-                    {
+                    {  
+                        
                         //Func<string, int, int, int, string, string,Tile> a = CreateTile;
                         int ixc = iX;
                         int iyc = iY;
                         int rd = roundedDownsample;
-                        var T = Task.Run(() => CreateTile(UniqueID, ixc,  iyc, rd, TextureFileName, Name));
-                        tileTasks.Add(T);
+                        var tileTask = Task.Run<CreateTileTaskResult>(() => CreateTile(UniqueID, tilekey, TextureFileName, Name));
+                        tileTask.ContinueWith(previousTask => OnTileCreated(previousTask.Result));
+                        TileTasks.TryAdd(tilekey, tileTask);
+                        
+                        //tileTasks.Add(T);
                         //TilesToDraw.Add(CreateTile(UniqueID, ixc, iyc, rd, TextureFileName, Name));
                     } 
                 }
             }
 
+            /*
             Task[] tileTaskArray = tileTasks.Cast<Task>().ToArray();
             Task.WaitAll(tileTaskArray);
             TilesToDraw.AddRange(tileTasks.Select(t => t.Result));
+            */
             return TilesToDraw;
         }
 
-        private TileViewModel CreateTile(string uniqueID, int iX,  int iY, int roundedDownsample, string textureFilename, string name)
+        private async Task<CreateTileTaskResult> CreateTile(string uniqueID, TileKey tileKey, string textureFilename, string name, int? MipMapLevels = null)
         {
             //TODO: Make this a task
+            int iX = tileKey.X;
+            int iY = tileKey.Y;
+            int roundedDownsample = tileKey.Downsample;
 
             //First create a new tile
             //PORT: string TextureCacheFileName = TileCacheName(iX, iY, roundedDownsample);
             PositionNormalTextureVertex[] verticies = CalculateVerticies(iX, iY, roundedDownsample);
-            int MipMapLevels = roundedDownsample == this.AvailableLevels[AvailableLevels.Length - 1] ? 0 : 1; //0 = Generate mipmaps for lowest res texture, 1 == no MipMaps for higher res textures in the pyramid
+            
+            if(MipMapLevels.HasValue == false)
+                MipMapLevels = roundedDownsample == this.AvailableLevels[AvailableLevels.Length - 1] ? 0 : 1; //0 = Generate mipmaps for lowest res texture, 1 == no MipMaps for higher res textures in the pyramid
 
             var tile = Global.TileCache.ConstructTile(uniqueID,
                 verticies,
@@ -403,16 +475,19 @@ namespace Viking.VolumeModel
                 //PORT TextureCacheFileName,
                 name,
                 roundedDownsample,
-                MipMapLevels);
+                MipMapLevels.Value);
 
             //Check for tiles at higher resolution
             //                        int iTempX = iX / 2;
             //                        int iTempY = iY / 2;
             //                        int iTempDownsample = roundedDownsample * 2;
-            return tile;
-
+            return new CreateTileTaskResult(tile, tileKey);
         }
-    }
-
-    
+        
+        protected void OnTileCreated(CreateTileTaskResult tileview)
+        {
+            CreateTileTaskResult result = tileview;
+            TileTasks.TryRemove(result.Key, out var value); 
+        }
+    } 
 }
