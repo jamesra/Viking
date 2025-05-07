@@ -397,6 +397,16 @@ namespace MorphologyMesh
                             Next.Next.Point(poly),
                             new double[] { 0.5 });
 
+                        if (midPoint[0] == Current.Previous.Point(poly) || 
+                            midPoint[0] == Current.Point(poly) ||
+                            midPoint[0] == Next.Point(poly))
+                        { 
+                            //TODO: Explore this fairly rare case and understand why we get identical points in the corresponding points
+                            Current = Next;
+                            continue;
+                            //throw new ArgumentException("Midpoint is a duplicate");
+                        }
+
                         //Adding the point will change index of all PointIndex values so we wait until the end
                         PointsToInsert.Add(Current.Next, midPoint[0]);
                     }
