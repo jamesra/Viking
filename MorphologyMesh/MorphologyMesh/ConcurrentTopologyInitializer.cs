@@ -74,7 +74,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="slice_id"></param>
         /// <returns></returns>
-        private Task TryStartSlice(ulong slice_id)
+        private Task TryStartSlice(in ulong slice_id)
         {
             Slice slice = Graph[slice_id];
 

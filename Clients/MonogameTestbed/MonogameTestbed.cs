@@ -83,7 +83,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Test to run at startup
         /// </summary>
-        private TestMode Mode = TestMode.BAJAJTEST;
+        private TestMode Mode = TestMode.BAJAJMULTITEST;
 
         LabelView testLabel = null;
 
