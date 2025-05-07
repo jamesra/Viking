@@ -37,7 +37,7 @@ namespace LocalBookmarks
         /// </summary>
         static string BookmarkUndoFilePath = BookmarkPath + System.IO.Path.DirectorySeparatorChar + BookmarkUndoFileName;
 
-        static internal readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd";
+        internal static readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd";
 
         /// <summary>
         /// The number of undo files to maintain
@@ -63,9 +63,9 @@ namespace LocalBookmarks
             get { return BookmarkXMLDoc.Folder; }
         }
 
-        static public double DefaultBookmarkRadius = 128;
-        static public Microsoft.Xna.Framework.Color DefaultColor = Microsoft.Xna.Framework.Color.Gold;
-        static public double BookmarkArea = DefaultBookmarkRadius * DefaultBookmarkRadius * Math.PI;
+        public static double DefaultBookmarkRadius = 128;
+        public static Microsoft.Xna.Framework.Color DefaultColor = Microsoft.Xna.Framework.Color.Gold;
+        public static double BookmarkArea = DefaultBookmarkRadius * DefaultBookmarkRadius * Math.PI;
 
         private static FolderUIObj _SelectedFolder;
         internal static FolderUIObj SelectedFolder
