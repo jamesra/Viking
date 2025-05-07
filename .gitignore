@@ -28,3 +28,5 @@ TestResults
 **/.vs/
 **/MigrationBackup
 /src/
+*.pyc
+*.egg-info

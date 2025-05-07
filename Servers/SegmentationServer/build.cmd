@@ -1,0 +1,1 @@
+docker build -t sam2-local-2 --pull .  

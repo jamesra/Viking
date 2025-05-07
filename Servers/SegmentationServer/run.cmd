@@ -1,0 +1,1 @@
+docker run -it -v C:/Temp/.X11-unix:/tmp/.X11-unix -v C:/src/git/SAM2-docker:/home/user/SAM2-Docker -e DISPLAY -p 8080:80 --name sam2-dev2 --gpus all sam2-local-2
