@@ -5,6 +5,7 @@ using GeometryTests;
 using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MorphologyMesh;
+using System.Collections.Immutable;
 using System.Collections.Generic;
 using System.Linq;
 

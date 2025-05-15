@@ -181,7 +181,7 @@
       <Version>14.0.1016.290</Version>
     </PackageReference>
     <PackageReference Include="protobuf-net">
-      <Version>2.0.0.668</Version>
+      <Version>3.2.52</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

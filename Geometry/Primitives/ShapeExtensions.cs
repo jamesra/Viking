@@ -1417,7 +1417,7 @@ namespace Geometry
                     var newAIntersections = polyA.AddPointsAtIntersections(polyB);
 
                     //var newBIntersections = polyB.AddPointsAtIntersections(polyA);
-                    added_intersections.AddRange(newAIntersections.Union(newAIntersections).Distinct()); 
+                    added_intersections.AddRange(newAIntersections.Union(newAIntersections)); 
                 }
                 else if(A is GridPolyline lineA && B is GridPolyline lineB)
                 {
@@ -1430,8 +1430,12 @@ namespace Geometry
                     throw new NotImplementedException("Corresponding points for polygons and polylines not implemented yet.");
                 }
             }
-
-            return added_intersections;
+            
+            //added_intersections.RemoveAdjacentDuplicates();
+            if(added_intersections.Count() > 1)
+                return added_intersections.RemoveAdjacentDuplicates();
+            else
+                return added_intersections;
         }
 
         /// <summary>

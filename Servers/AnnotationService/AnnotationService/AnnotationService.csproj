@@ -199,7 +199,7 @@
       <Version>13.0.1</Version>
     </PackageReference>
     <PackageReference Include="protobuf-net">
-      <Version>3.0.101</Version>
+      <Version>3.2.52</Version>
     </PackageReference>
     <PackageReference Include="protobuf-net.ServiceModel">
       <Version>3.0.101</Version>
