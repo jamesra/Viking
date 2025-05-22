@@ -287,7 +287,7 @@ namespace MonogameTestbed
             if (keyboardState.IsKeyDown(Keys.NumPad8) || keyboardState.IsKeyDown(Keys.D8))
                 this.Mode = TestMode.CONSTRAINEDDELAUNAY2D;
             if (keyboardState.IsKeyDown(Keys.NumPad9) || keyboardState.IsKeyDown(Keys.D9))
-                this.Mode = TestMode.POLYGONINTERSECTION;9
+                this.Mode = TestMode.POLYGONINTERSECTION;
             if (keyboardState.IsKeyDown(Keys.NumPad0) || keyboardState.IsKeyDown(Keys.D0))
                 this.Mode = TestMode.LABELED_RECTANGLES;
             
