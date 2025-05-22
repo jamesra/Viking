@@ -1,0 +1,3 @@
+[submodule "gRPC_Protos"]
+	path = gRPC_Protos
+	url = https://github.com/jamesra/viking_gRPC_protos.git
