@@ -10,14 +10,13 @@ namespace WebAnnotation.UI.Controls
     [Viking.Common.SupportedUITypes(typeof(Location_PropertyPageViewModel))]
     public partial class ListLocations : Viking.UI.BaseClasses.DockingListControl
     {
-        Location_PropertyPageViewModel[] _locations;
-
-        EventHandler LocationCreateEventHandler;
+        private Location_PropertyPageViewModel[] _locations;
+        private readonly EventHandler LocationCreateEventHandler;
 
 
         public ListLocations()
         {
-            this.ListItems.ShowPropertiesOnDoubleClick = false;
+            ListItems.ShowPropertiesOnDoubleClick = false;
             InitializeComponent();
 
             LocationCreateEventHandler = new EventHandler(OnLocationCreate);
@@ -26,9 +25,9 @@ namespace WebAnnotation.UI.Controls
 
         public void SetLocations(Location_PropertyPageViewModel[] locations)
         {
-            this._locations = locations;
+            _locations = locations;
 
-            this.ListItems.DisplayObjects(_locations);
+            ListItems.DisplayObjects(_locations);
         }
 
         protected override void OnObjectDoubleClick(IUIObject obj)
@@ -47,11 +46,11 @@ namespace WebAnnotation.UI.Controls
             {
                 if (InvokeRequired)
                 {
-                    this.ListItems.Invoke(new Action(() => this.ListItems.AddObject(loc)));
+                    ListItems.Invoke(new Action(() => ListItems.AddObject(loc)));
                 }
                 else
                 {
-                    this.ListItems.AddObject(loc);
+                    ListItems.AddObject(loc);
                 }
             }
         }

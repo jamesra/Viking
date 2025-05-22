@@ -1,9 +1,9 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
-using Geometry;
+﻿using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
@@ -80,7 +80,7 @@ namespace WebAnnotation
     /// <summary>
     /// Manage actions available to locations
     /// </summary>
-    static class LocationActions
+    internal static class LocationActions
     {
         public static Cursor GetCursor(this LocationAction action)
         {
@@ -157,7 +157,7 @@ namespace WebAnnotation
                                                                          GridVector2 volumePosition)
         {
             //I had to calculate this on the fly because if the databases VolumeShape was out of date it could cause large movements of the annotation during the command.
-            IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+            IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number);
             GridVector2 VolumeCircleCenter;
 
             switch (action)
@@ -180,7 +180,7 @@ namespace WebAnnotation
                             (radius) =>
                             {
                                 WebAnnotation.LocationActions.UpdateCircleLocationCallback(loc, loc.VolumePosition, loc.Position, radius);
-                            }); 
+                            });
                 case LocationAction.ADJUST:
                     return null;
                 case LocationAction.CREATESTRUCTURE:
@@ -198,8 +198,7 @@ namespace WebAnnotation
                                                                        IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
                                                                        GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                                                                       SqlGeometry VolumeShape;
-                                                                       SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+                                                                       SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out SqlGeometry VolumeShape);
 
                                                                        LocationObj newLoc = new LocationObj(loc.Parent,
                                                                             MosaicShape,
@@ -207,7 +206,7 @@ namespace WebAnnotation
                                                                             Parent.Section.Number,
                                                                             loc.TypeCode);
 
-                                                                       section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+                                                                       section_mapper = Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number);
                                                                        NewMosaicPosition = section_mapper.VolumeToSection(NewVolumePosition);
                                                                        UpdateCircleLocationNoSaveCallback(newLoc, NewVolumePosition, NewMosaicPosition, NewRadius);
 
@@ -288,7 +287,7 @@ namespace WebAnnotation
                                                                        Parent.Section.Number,
                                                                        loc.TypeCode);
 
-                                                                    IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+                                                                    IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number);
                                                                     NewMosaicControlPoints = section_mapper.VolumeToSection(NewVolumeControlPoints);
 
                                                                     UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
@@ -369,7 +368,7 @@ namespace WebAnnotation
                                                                     Parent.Section.Number,
                                                                     loc.TypeCode);
 
-                                                                 IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform((int)Parent.Section.Number);
+                                                                 IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number);
                                                                  NewMosaicControlPoints = section_mapper.VolumeToSection(NewVolumeControlPoints);
 
                                                                  UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
@@ -540,8 +539,7 @@ namespace WebAnnotation
                         IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
                         GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                        SqlGeometry VolumeShape;
-                        SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+                        SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out SqlGeometry VolumeShape);
 
                         return new TranslatePolygonCommand(Parent,
                                                                  MosaicShape.ToPolygon(),
@@ -568,18 +566,16 @@ namespace WebAnnotation
                     {
                         IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
                         GridVector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
-
-                        SqlGeometry VolumeShape;
                         //SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
 
-                        var retracecmd = new RetraceAndReplacePathCommand(Parent,
+                        RetraceAndReplacePathCommand retracecmd = new RetraceAndReplacePathCommand(Parent,
                                                                  loc.MosaicShape.ToPolygon(),
                                                                  loc.Parent.Type.Color.ToXNAColor(0.5f),
                                                                  loc.Width.HasValue ? loc.Width.Value : Global.DefaultClosedLineWidth,
                                                                  (sender, MosaicPolygon) =>
                                                                  {
                                                                      //Drawing from inside to outside:
-                                                                     var cmd = (RetraceAndReplacePathCommand)sender;
+                                                                     RetraceAndReplacePathCommand cmd = (RetraceAndReplacePathCommand)sender;
 
                                                                      try
                                                                      {
@@ -627,14 +623,13 @@ namespace WebAnnotation
             return loc.TypeCode == LocationType.CLOSEDCURVE;
         }
 
-
-        static void UpdateLineLocationCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
+        private static void UpdateLineLocationCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
             AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
-        static void UpdateLineLocationNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
+        private static void UpdateLineLocationNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints)
         {
             SqlGeometry updatedMosaicShape = loc.TypeCode.GetShape(MosaicControlPoints);
             SqlGeometry updatedVolumeShape = loc.TypeCode.GetSmoothedShape(VolumeControlPoints);
@@ -643,13 +638,13 @@ namespace WebAnnotation
             loc.MosaicShape = updatedMosaicShape;
         }
 
-        static void UpdateLineLocationCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
+        private static void UpdateLineLocationCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints, NewWidth);
             AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
-        static void UpdateLineLocationNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
+        private static void UpdateLineLocationNoSaveCallback(LocationObj loc, GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints, double NewWidth)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
             loc.Width = NewWidth;
@@ -678,7 +673,9 @@ namespace WebAnnotation
         public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, GridVector2 WorldPosition, GridVector2 MosaicPosition, double NewRadius)
         {
             if (NewRadius < WebAnnotation.Global.MinRadius)
+            {
                 NewRadius = WebAnnotation.Global.MinRadius;
+            }
 
             loc.MosaicShape = SqlGeometryUtils.Extensions.ToCircle(MosaicPosition.X,
                                            MosaicPosition.Y,

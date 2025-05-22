@@ -14,15 +14,15 @@ namespace WebAnnotation.UI.Commands
     /// command which requires the user to select the parent structure.  Once that is done the structure is created
     /// </summary>
     [Viking.Common.CommandAttribute(typeof(WebAnnotation.ViewModel.StructureType))]
-    class PlaceStructureCommand : AnnotationCommandBase
+    internal class PlaceStructureCommand : AnnotationCommandBase
     {
-        StructureType Type = Viking.UI.State.SelectedObject as StructureType;
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly StructureType Type = Viking.UI.State.SelectedObject as StructureType;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         public PlaceStructureCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {
-            this.Type = Viking.UI.State.SelectedObject as StructureType;
+            Type = Viking.UI.State.SelectedObject as StructureType;
             parent.Cursor = Cursors.Cross;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
@@ -30,7 +30,7 @@ namespace WebAnnotation.UI.Commands
         public PlaceStructureCommand(Viking.UI.Controls.SectionViewerControl parent, StructureType type)
             : base(parent)
         {
-            this.Type = type;
+            Type = type;
             parent.Cursor = Cursors.Cross;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
@@ -60,18 +60,19 @@ namespace WebAnnotation.UI.Commands
             {
                 //  Debug.Assert(obj == null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
                 if (Type == null)
+                {
                     return;
+                }
 
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
                 //Transform from volume space to section space if we need to
-                GridVector2 SectionPos;
 
-                bool Transformed = mapping.TryVolumeToSection(WorldPos, out SectionPos);
+                bool Transformed = mapping.TryVolumeToSection(WorldPos, out GridVector2 SectionPos);
 
                 if (!Transformed)
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     base.OnMouseClick(sender, e);
                 }
 
@@ -102,7 +103,7 @@ namespace WebAnnotation.UI.Commands
             }
             else if (e.Button.Right())
             {
-                this.Deactivated = true;
+                Deactivated = true;
             }
 
             base.OnMouseClick(sender, e);
@@ -113,13 +114,15 @@ namespace WebAnnotation.UI.Commands
             StructureType obj = Type;
             //    Debug.Assert(obj == null, "This command should be inactive if Selected Object isn't a StructureTypeObj"); 
             if (obj == null)
+            {
                 return;
+            }
 
             Parent.spriteBatch.Begin();
 
             string title = obj.Code;
 
-            if (this.Parent.spriteBatch != null && this.oldMouse != null)
+            if (Parent.spriteBatch != null && oldMouse != null)
             {
 
                 Vector2 offset = Parent.fontArial.MeasureString(title);
@@ -127,7 +130,7 @@ namespace WebAnnotation.UI.Commands
                 offset.Y /= 2;
                 Parent.spriteBatch.DrawString(Parent.fontArial,
                     title,
-                    new Vector2((float)this.oldMouse.X - offset.X, (float)this.oldMouse.Y - offset.Y),
+                    new Vector2(oldMouse.X - offset.X, oldMouse.Y - offset.Y),
                     new Microsoft.Xna.Framework.Color(obj.Color.R, obj.Color.G, obj.Color.B, 196));
 
             }

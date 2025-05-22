@@ -1,5 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
-using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
+﻿using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
 using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -13,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
 using Viking.ViewModels;
 using Viking.VolumeModel;
@@ -28,43 +28,40 @@ using WebAnnotationModel;
 namespace WebAnnotation
 {
     [Viking.Common.SectionOverlay("Annotation")]
-    class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, IPenActionSupport, ICanvasViewHitTesting
+    internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, IPenActionSupport, ICanvasViewHitTesting
     {
         public static float LocationTextScaleFactor = 5;
         public static float ReferenceLocationTextScaleFactor = 2.5f;
-
-        Viking.UI.Controls.SectionViewerControl _Parent;
-        public Viking.UI.Controls.SectionViewerControl Parent { get { return _Parent; } }
+        private Viking.UI.Controls.SectionViewerControl _Parent;
+        public Viking.UI.Controls.SectionViewerControl Parent => _Parent;
 
         protected TransformChangedEventHandler SectionChangedEventHandler;
-        private EventHandler AnnotationChangedEventHandler;
+        private readonly EventHandler AnnotationChangedEventHandler;
 
         //private static SectionLocationViewModelCache cacheSectionAnnotations = new SectionLocationViewModelCache(); 
-        private static SectionAnnotationsViewModelCache cacheSectionAnnotations = new SectionAnnotationsViewModelCache();
+        private static readonly SectionAnnotationsViewModelCache cacheSectionAnnotations = new SectionAnnotationsViewModelCache();
         //private static LocationLinksViewModel linksView;
 
         private static AnnotationOverlay _CurrentOverlay = null;
-        public static AnnotationOverlay CurrentOverlay { get { return _CurrentOverlay; } }
+        public static AnnotationOverlay CurrentOverlay => _CurrentOverlay;
 
         protected static WebAnnotation.UI.Forms.GoToActionForm GoToLocationForm;
         protected static WebAnnotation.UI.Forms.GoToActionForm GoToStructureForm;
-
-        GridVector2 LastMouseDownCoords;
-        GridVector2 LastMouseMoveVolumeCoords;
+        private GridVector2 LastMouseDownCoords;
+        private GridVector2 LastMouseMoveVolumeCoords;
 
         /// <summary>
         /// The last object the mouse was over, if any
         /// </summary>
         internal static ICanvasView LastMouseOverObject = null;
-
-        Viking.UI.PenInputHelper PenPath = null;
+        private Viking.UI.PenInputHelper PenPath = null;
 
         /// <summary>
         /// The last object the mouse was over, if any
         /// </summary>
         internal static ICanvasGeometryView LastIntersectedObject = null;
 
-        private MouseOverLocationCanvasViewEffect mouseOverEffect = new MouseOverLocationCanvasViewEffect();
+        private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new MouseOverLocationCanvasViewEffect();
 
         /// <summary>
         /// Used to cancel loading section annotations when the desired annotations have changed
@@ -73,12 +70,12 @@ namespace WebAnnotation
 
         static AnnotationOverlay()
         {
-            cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory; 
+            cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory;
         }
 
         public AnnotationOverlay()
         {
-            SectionChangedEventHandler = new TransformChangedEventHandler(this.OnSectionTransformChanged);
+            SectionChangedEventHandler = new TransformChangedEventHandler(OnSectionTransformChanged);
 
             AnnotationChangedEventHandler = new EventHandler(OnAnnotationChanged);
 
@@ -117,7 +114,9 @@ namespace WebAnnotation
         {
             //Invalidate can always be called from any thread
             if (Parent.IsHandleCreated)
+            {
                 Parent.BeginInvoke(new System.Action(() => Parent.Invalidate()));
+            }
         }
 
         string Viking.Common.ISectionOverlayExtension.Name()
@@ -134,7 +133,9 @@ namespace WebAnnotation
         {
             StructureObj s = Store.Structures.GetObjectByID(locID);
             if (s is null)
+            {
                 return;
+            }
 
             GoToStructure(s);
         }
@@ -142,11 +143,15 @@ namespace WebAnnotation
         public static void GoToStructure(StructureObj s)
         {
             if (s is null)
+            {
                 return;
+            }
 
             ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(s.ID);
             if (!locations.Any())
+            {
                 return;
+            }
 
             {
                 //ICanvasView lastObj = 
@@ -160,14 +165,16 @@ namespace WebAnnotation
                 List<double> Depth = nearest.Select(l => l.Z).ToList();
 
                 GoToLocation(nearest.First());
-            } 
+            }
         }
 
         public static void GoToLocation(long locID)
         {
             LocationObj loc = Store.Locations.GetObjectByID(locID);
             if (loc is null)
+            {
                 return;
+            }
 
             GoToLocation(loc);
         }
@@ -175,7 +182,9 @@ namespace WebAnnotation
         public static void GoToLocation(LocationObj loc)
         {
             if (loc is null)
+            {
                 return;
+            }
 
             //Adjust downsample so the location fits nicely in the view
             double downsample = (loc.MosaicShape.BoundingBox().Width / Viking.UI.State.ViewerForm.Width) * Global.DefaultLocationJumpDownsample;
@@ -189,13 +198,7 @@ namespace WebAnnotation
             Global.LastEditedAnnotationID = null;
         }
 
-        public int CurrentSectionNumber
-        {
-            get
-            {
-                return _Parent.Section.Number;
-            }
-        }
+        public int CurrentSectionNumber => _Parent.Section.Number;
 
         /// <summary>
         /// Returns annotations for section if they exist or null if they do not
@@ -204,18 +207,9 @@ namespace WebAnnotation
         public static SectionAnnotationsView GetAnnotationsForSection(int SectionNumber)
         {
             return cacheSectionAnnotations.Fetch(SectionNumber);
-
-            /*
-            if (dictSectionAnnotations.ContainsKey(SectionNumber))
-            {
-                return dictSectionAnnotations[SectionNumber];
-            }
-
-            return null; 
-            */
         }
 
-        private readonly static SemaphoreSlim GetOrCreateAnnotationsForSectionSemaphore = new SemaphoreSlim(1);
+        private static readonly SemaphoreSlim GetOrCreateAnnotationsForSectionSemaphore = new SemaphoreSlim(1);
         /// <summary>
         /// Returns annotations for section if they exist or creates new SectionLocationsViewModel if they do not
         /// </summary>
@@ -224,14 +218,16 @@ namespace WebAnnotation
         {
             SectionAnnotationsView SectionAnnotations = cacheSectionAnnotations.Fetch(SectionNumber);
             if (SectionAnnotations != null)
+            {
                 return SectionAnnotations;
+            }
 
             if (Viking.UI.State.volume.SectionViewModels.ContainsKey(SectionNumber))
             {
                 try
                 {
                     GetOrCreateAnnotationsForSectionSemaphore.Wait();
-                     
+
                     SectionAnnotationsView retVal = cacheSectionAnnotations.GetOrAdd(SectionNumber, (k) => new SectionAnnotationsView(Viking.UI.State.volume.SectionViewModels[SectionNumber]));
 
                     //If we did add a new view model to the cache, then subscribe to events and reduce cache footprint if needed
@@ -254,7 +250,7 @@ namespace WebAnnotation
             }
 
             return null;
-        } 
+        }
 
         public string[] HelpStrings
         {
@@ -271,14 +267,14 @@ namespace WebAnnotation
                 return helpstrings.ToArray();
             }
         }
-         
+
         protected string[] LastMouseOverHelpStrings = new string[] { };
 
         public static void GotoLastModifiedLocation()
         {
             Debug.Print("Open Last Modified Location");
 
-            var task = new System.Threading.Tasks.Task(() =>
+            Task task = new System.Threading.Tasks.Task(() =>
             {
                 WebAnnotationModel.LocationObj lastLocation = WebAnnotationModel.Store.Locations.GetLastModifiedLocation();
                 if (lastLocation != null)
@@ -298,7 +294,9 @@ namespace WebAnnotation
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(sectionNumber);
             if (locView == null)
+            {
                 return null;
+            }
 
             //Get the overlapping locations, filter out non-location annotations
             return locView.GetAnnotations(position).Where(hr => hr.obj is LocationCanvasView).ToList();
@@ -313,7 +311,9 @@ namespace WebAnnotation
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
+            {
                 return null;
+            }
 
             //Get the overlapping locations, filter out non-location annotations
             return locView.GetAnnotations(position).Where(hr => hr.obj is LocationCanvasView).ToList();
@@ -329,13 +329,15 @@ namespace WebAnnotation
             distance = double.MaxValue;
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
+            {
                 return null;
+            }
 
             ICanvasGeometryView bestObj = null;
 
             List<HitTestResult> listObjects = locView.GetAnnotations(position);
 
-            HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(this.CurrentSectionNumber);
+            HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber);
 
             //Use objects on our section, then other sections 
             if (bestHit != null)
@@ -368,7 +370,9 @@ namespace WebAnnotation
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
+            {
                 return null;
+            }
 
             List<HitTestResult> listObjects = locView.GetAnnotations(rect);
             return listObjects;
@@ -381,12 +385,14 @@ namespace WebAnnotation
         /// <returns></returns>
         public static ICanvasView FirstIntersectedObjectOnSection(int CurrentSectionNumber, GridLineSegment line)
         {
-            var listObjects = GetAnnotations(line, CurrentSectionNumber);
+            List<HitTestResult> listObjects = GetAnnotations(line, CurrentSectionNumber);
 
             HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber);
 
             if (bestHit == null)
+            {
                 return null;
+            }
             //Use objects on our section, then other sections
 
             //This function does not detect contained objects
@@ -398,7 +404,9 @@ namespace WebAnnotation
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
+            {
                 return null;
+            }
 
             List<HitTestResult> listObjects = locView.GetLocations(line).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, o.DistanceFromCenterNormalized(line.A))).ToList();
             return listObjects;
@@ -406,7 +414,7 @@ namespace WebAnnotation
 
         public List<HitTestResult> GetAnnotations(GridLineSegment line)
         {
-            return GetAnnotations(line, this.CurrentSectionNumber);
+            return GetAnnotations(line, CurrentSectionNumber);
         }
 
         #region ISectionOverlayExtension Members
@@ -415,27 +423,27 @@ namespace WebAnnotation
         {
             //I'm only expecting this to be set once
             Debug.Assert(_Parent == null, "Not expecting parent to be set twice, OK to ignore, but annotation display may be incorrect");
-            this._Parent = parent;
+            _Parent = parent;
 
             //Load the locations for the current sections
-            this._Parent.OnSectionChanged += new SectionChangedEventHandler(this.OnSectionChanged);
-            Viking.UI.State.volume.TransformChanged += new TransformChangedEventHandler(this.OnVolumeTransformChanged);
-            this._Parent.OnReferenceSectionChanged += new ReferenceSectionChangedEventHandler(this.OnReferenceSectionChanged);
+            _Parent.OnSectionChanged += new SectionChangedEventHandler(OnSectionChanged);
+            Viking.UI.State.volume.TransformChanged += new TransformChangedEventHandler(OnVolumeTransformChanged);
+            _Parent.OnReferenceSectionChanged += new ReferenceSectionChangedEventHandler(OnReferenceSectionChanged);
 
-            this._Parent.MouseDown += new MouseEventHandler(this.OnMouseDown);
-            this._Parent.MouseMove += new MouseEventHandler(this.OnMouseMove);
-            this._Parent.MouseUp += new MouseEventHandler(this.OnMouseUp);
-            this._Parent.KeyDown += new KeyEventHandler(this.OnKeyDown);
-            this._Parent.KeyUp += new KeyEventHandler(this.OnKeyUp);
+            _Parent.MouseDown += new MouseEventHandler(OnMouseDown);
+            _Parent.MouseMove += new MouseEventHandler(OnMouseMove);
+            _Parent.MouseUp += new MouseEventHandler(OnMouseUp);
+            _Parent.KeyDown += new KeyEventHandler(OnKeyDown);
+            _Parent.KeyUp += new KeyEventHandler(OnKeyUp);
 
-            this._Parent.OnPenMove += new Viking.UI.PenEventHandler(this.OnPenMove);
-            this._Parent.OnPenEnterRange += new Viking.UI.PenEventHandler(this.OnPenEnterRange);
-            this._Parent.OnPenContact += new Viking.UI.PenEventHandler(this.OnPenContact);
-            this._Parent.OnPenLeaveContact += new Viking.UI.PenEventHandler(this.OnPenLeaveContact);
-            this._Parent.OnPenLeaveRange += new Viking.UI.PenEventHandler(this.OnPenLeaveRange);
+            _Parent.OnPenMove += new Viking.UI.PenEventHandler(OnPenMove);
+            _Parent.OnPenEnterRange += new Viking.UI.PenEventHandler(OnPenEnterRange);
+            _Parent.OnPenContact += new Viking.UI.PenEventHandler(OnPenContact);
+            _Parent.OnPenLeaveContact += new Viking.UI.PenEventHandler(OnPenLeaveContact);
+            _Parent.OnPenLeaveRange += new Viking.UI.PenEventHandler(OnPenLeaveRange);
 
 
-            this._Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(this.OnCameraPropertyChanged);
+            _Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(OnCameraPropertyChanged);
             //linksView = new LocationLinksViewModel(parent); 
 
             LoadSectionAnnotations(CancellationToken.None);
@@ -445,7 +453,7 @@ namespace WebAnnotation
         {
             loadSectionAnnotationsCancellationTokenSource?.Cancel();
             loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
-            System.Threading.Tasks.Task.Run(() => LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token),loadSectionAnnotationsCancellationTokenSource.Token);
+            System.Threading.Tasks.Task.Run(() => LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token), loadSectionAnnotationsCancellationTokenSource.Token);
         }
 
         protected void UpdateMouseCursor()
@@ -453,9 +461,8 @@ namespace WebAnnotation
             IMouseActionSupport loc = LastMouseOverObject as IMouseActionSupport; // GetNearestLocation(WorldPosition, out distance);
             if (loc != null)
             {
-                long locID;
-                GridVector2 WorldPosition = this.LastMouseMoveVolumeCoords;
-                LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber, Control.ModifierKeys, out locID);
+                GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
+                LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
                 _Parent.Cursor = action.GetCursor();
             }
             else
@@ -470,9 +477,8 @@ namespace WebAnnotation
             IPenActionSupport loc = LastMouseOverObject as IPenActionSupport; // GetNearestLocation(WorldPosition, out distance);
             if (loc != null)
             {
-                long locID;
-                GridVector2 WorldPosition = this.LastMouseMoveVolumeCoords;
-                LocationAction action = loc.GetPenContactActionForPositionOnAnnotation(WorldPosition, this.CurrentSectionNumber, Control.ModifierKeys, out locID);
+                GridVector2 WorldPosition = LastMouseMoveVolumeCoords;
+                LocationAction action = loc.GetPenContactActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Control.ModifierKeys, out long locID);
                 _Parent.Cursor = action.GetCursor();
             }
             else
@@ -484,11 +490,13 @@ namespace WebAnnotation
         protected bool IsCommandDefault()
         {
             if (_Parent.CurrentCommand == null)
+            {
                 return true;
+            }
 
             //Check if there is a non-default command. we don't want to mess with another active command
             return _Parent.CurrentCommand.GetType() == typeof(Viking.UI.Commands.DefaultCommand) &&
-             this.Parent.CommandQueue.QueueDepth == 0;
+             Parent.CommandQueue.QueueDepth == 0;
         }
 
         private bool RetraceAndReplaceDisabled = false;
@@ -497,18 +505,26 @@ namespace WebAnnotation
             //Trace.WriteLine("On pen move");
 
             if (_Parent.CurrentCommand == null)
+            {
                 return;
+            }
 
             //Check if there is a non-default command. we don't want to mess with another active command
             if (!IsCommandDefault())
+            {
                 return;
+            }
 
             if (RetraceAndReplaceDisabled)
+            {
                 RetraceAndReplaceDisabled = e.Button.Left();
+            }
 
             //Buttons being pushed means we are in the middle of a default command, probably scrolling, which won't affect the selection
             if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None)
+            {
                 return;
+            }
 
             //If locations aren't visible they can't be selected
             if (!_Parent.ShowOverlays)
@@ -517,11 +533,10 @@ namespace WebAnnotation
                 return;
             }
 
-            double distance;
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
-            this.LastMouseMoveVolumeCoords = WorldPosition;
+            LastMouseMoveVolumeCoords = WorldPosition;
 
-            ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasView;
+            ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out double distance) as ICanvasView;
             if (NextMouseOverObject != LastMouseOverObject)
             {
                 mouseOverEffect.viewObj = NextMouseOverObject;
@@ -537,15 +552,21 @@ namespace WebAnnotation
         protected void OnMouseDown(object sender, MouseEventArgs e)
         {
             if (_Parent.CurrentCommand == null)
+            {
                 return;
+            }
 
             //Check if there is a non-default command. we don't want to mess with another active command
             if (!IsCommandDefault())
+            {
                 return;
+            }
 
             //If locations aren't visible they can't be selected
             if (!_Parent.ShowOverlays)
+            {
                 return;
+            }
 
             StopPenPath(); //If we are tracking the pen we should stop
 
@@ -564,13 +585,11 @@ namespace WebAnnotation
 
                 if (Viking.UI.State.SelectedObject is StructureType st)
                 {
-                    var action = LocationAction.CREATESTRUCTURE;
                     OnCreateStructure(st.ID, Array.Empty<string>(), LocationType.OPENCURVE);
                 }
                 else
-                { 
-                    double distance;
-                    object obj = ObjectAtPosition(WorldPosition, out distance);
+                {
+                    object obj = ObjectAtPosition(WorldPosition, out double distance);
                     //Figure out if it is resizing a location circle
                     //If the loc is on this section we check if we are close to the edge and we are resizing.  Everyone else gets standard location command
                     Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
@@ -580,10 +599,9 @@ namespace WebAnnotation
 
                     if (actionSupportedObj != null)
                     {
-                        long LocationID;
                         LocationAction action =
                             actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition,
-                                this.CurrentSectionNumber, Control.ModifierKeys, out LocationID);
+                                CurrentSectionNumber, Control.ModifierKeys, out long LocationID);
 
                         Viking.UI.Commands.Command command = action.CreateCommand(Parent,
                             Store.Locations.GetObjectByID(LocationID), WorldPosition);
@@ -612,15 +630,21 @@ namespace WebAnnotation
         protected void OnPenContact(object sender, Viking.UI.PenEventArgs e)
         {
             if (_Parent.CurrentCommand == null)
+            {
                 return;
+            }
 
             //Check if there is a non-default command. we don't want to mess with another active command
             if (!IsCommandDefault())
+            {
                 return;
+            }
 
             //If locations aren't visible they can't be selected
             if (!_Parent.ShowOverlays)
+            {
                 return;
+            }
 
             if (e.Erase)
             {
@@ -629,10 +653,9 @@ namespace WebAnnotation
 
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
 
-            if (this.PenPath == null)
+            if (PenPath == null)
             {
-                double distance;
-                object obj = ObjectAtPosition(WorldPosition, out distance);
+                object obj = ObjectAtPosition(WorldPosition, out double distance);
                 //Figure out if it is resizing a location circle
                 //If the loc is on this section we check if we are close to the edge and we are resizing.  Everyone else gets standard location command
                 Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
@@ -643,13 +666,12 @@ namespace WebAnnotation
 
                 if (actionSupportedObj != null)
                 {
-                    long LocationID;
                     LocationAction action = actionSupportedObj.GetPenContactActionForPositionOnAnnotation(WorldPosition,
-                        this.CurrentSectionNumber, Control.ModifierKeys, out LocationID);
+                        CurrentSectionNumber, Control.ModifierKeys, out long LocationID);
 
                     if (actionSupportedObj is LocationCanvasView viewObj)
                     {
-                        var command =
+                        Viking.UI.Commands.Command command =
                             action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
                         if (command != null)
                         {
@@ -692,15 +714,18 @@ namespace WebAnnotation
             //Trace.WriteLine("On pen move");
 
             if (_Parent.CurrentCommand == null)
+            {
                 return;
+            }
 
             //Check if there is a non-default command. we don't want to mess with another active command
             if (!IsCommandDefault())
+            {
                 return;
-
+            }
 
             GridVector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
-            this.LastMouseMoveVolumeCoords = WorldPosition;
+            LastMouseMoveVolumeCoords = WorldPosition;
 
             if (e.Erase || e.Inverted)
             {
@@ -712,8 +737,7 @@ namespace WebAnnotation
             }
             else
             {
-                double distance;
-                ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out distance) as ICanvasView;
+                ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out double distance) as ICanvasView;
                 if (NextMouseOverObject != LastMouseOverObject)
                 {
                     mouseOverEffect.viewObj = NextMouseOverObject;
@@ -732,7 +756,7 @@ namespace WebAnnotation
         /// </summary>
         protected void StartPenPath(GridVector2 origin)
         {
-            AnnotationOverlayPenFreeDrawCommandV2 cmd = new AnnotationOverlayPenFreeDrawCommandV2(this.Parent,
+            AnnotationOverlayPenFreeDrawCommandV2 cmd = new AnnotationOverlayPenFreeDrawCommandV2(Parent,
                 Color.Yellow,
                 Global.DefaultClosedLineWidth,
                 (object sender, GridVector2[] points) =>
@@ -757,10 +781,10 @@ namespace WebAnnotation
         {
             if (PenPath != null)
             {
-                this.PenPath.UnsubscribeEvents();
-                this.PenPath.OnPathChanged -= this.OnPenPathChanged;
-                this.PenPath.OnPathCompleted -= this.OnPenPathCompleted;
-                this.PenPath = null;
+                PenPath.UnsubscribeEvents();
+                PenPath.OnPathChanged -= OnPenPathChanged;
+                PenPath.OnPathCompleted -= OnPenPathCompleted;
+                PenPath = null;
             }
         }
 
@@ -779,23 +803,23 @@ namespace WebAnnotation
             }
 
             //Check if we should add actions to create new structures
-            foreach (var favoriteStructureID in Global.UserFavoriteStructureTypes)
+            foreach (ulong favoriteStructureID in Global.UserFavoriteStructureTypes)
             {
                 IAction new_action = null;
                 if (sender_cmd.Path.HasSelfIntersection)
                 {
-                    new_action = new WebAnnotation.UI.Actions.Create2DStructureAction(System.Convert.ToInt64(favoriteStructureID), new GridPolygon(sender_cmd.Path.SimplifiedFirstLoop.EnsureClosedRing()), this.CurrentSectionNumber);
+                    new_action = new WebAnnotation.UI.Actions.Create2DStructureAction(System.Convert.ToInt64(favoriteStructureID), new GridPolygon(sender_cmd.Path.SimplifiedFirstLoop.EnsureClosedRing()), CurrentSectionNumber);
                 }
                 else
                 {
-                    new_action = new WebAnnotation.UI.Actions.Create1DStructureAction(System.Convert.ToInt64(favoriteStructureID), sender_cmd.Path.SimplifiedPath.ToPolyline(), this.CurrentSectionNumber);
+                    new_action = new WebAnnotation.UI.Actions.Create1DStructureAction(System.Convert.ToInt64(favoriteStructureID), sender_cmd.Path.SimplifiedPath.ToPolyline(), CurrentSectionNumber);
                 }
 
                 actions.Add(new_action);
             }
 
             //ActionConfirmationCommand confirm_command = new ActionConfirmationCommand(this.Parent, actions, path.BoundingBox(), () => { return; });
-            var confirm_command = ActionSelectionCanvasControl.CreateViews(this.Parent, actions.ToArray());
+            ActionSelectionCanvasControl confirm_command = ActionSelectionCanvasControl.CreateViews(Parent, actions.ToArray());
             _Parent.CurrentCommand = confirm_command;
 
 
@@ -900,10 +924,12 @@ namespace WebAnnotation
         {
             if (GoToStructureForm == null)
             {
-                GoToStructureForm = new UI.Forms.GoToActionForm();
-                GoToStructureForm.Title = "Enter Structure ID";
-                GoToStructureForm.IsValidInput = (ID) => Store.Structures.GetObjectByID(ID, true) != null;
-                GoToStructureForm.OnGo = GoToStructure;
+                GoToStructureForm = new UI.Forms.GoToActionForm
+                {
+                    Title = "Enter Structure ID",
+                    IsValidInput = (ID) => Store.Structures.GetObjectByID(ID, true) != null,
+                    OnGo = GoToStructure
+                };
                 GoToStructureForm.Closed += GoToStructureForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToStructureForm);
                 GoToStructureForm.Show();
@@ -918,10 +944,12 @@ namespace WebAnnotation
         {
             if (GoToLocationForm == null)
             {
-                GoToLocationForm = new UI.Forms.GoToActionForm();
-                GoToLocationForm.Title = "Enter Location ID";
-                GoToLocationForm.IsValidInput = (ID) => Store.Locations.GetObjectByID(ID, true) != null;
-                GoToLocationForm.OnGo = GoToLocation;
+                GoToLocationForm = new UI.Forms.GoToActionForm
+                {
+                    Title = "Enter Location ID",
+                    IsValidInput = (ID) => Store.Locations.GetObjectByID(ID, true) != null,
+                    OnGo = GoToLocation
+                };
                 GoToLocationForm.Closed += GoToLocationForm_Closed;
                 System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(GoToLocationForm);
                 GoToLocationForm.Show();
@@ -944,15 +972,17 @@ namespace WebAnnotation
                     OnContinueLastTrace();
                     return;
                 case Keys.F6:
-                    var StructureIDChoiceForm = new WebAnnotation.UI.Forms.SelectStructureTypeForm();
+                    UI.Forms.SelectStructureTypeForm StructureIDChoiceForm = new WebAnnotation.UI.Forms.SelectStructureTypeForm();
                     Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new Annotation.ViewModels.FavoriteStructureIDsViewModel(Global.UserFavoriteStructureTypes);
                     StructureIDChoiceForm.DataContext = favorite_view_model;
                     System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureIDChoiceForm);
                     StructureIDChoiceForm.Show();
                     return;
                 case Keys.F7:
-                    var StructureTypeManagementForm = new WebAnnotation.WPF.Forms.StructureTypeManagementForm();
-                    StructureTypeManagementForm.DataContext = Store.StructureTypes;
+                    WPF.Forms.StructureTypeManagementForm StructureTypeManagementForm = new WebAnnotation.WPF.Forms.StructureTypeManagementForm
+                    {
+                        DataContext = Store.StructureTypes
+                    };
                     System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureTypeManagementForm);
                     StructureTypeManagementForm.Show();
                     return;
@@ -965,12 +995,13 @@ namespace WebAnnotation
                         LocationObj loc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value);
 
                         if (loc != null)
+                        {
                             Parent.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X,
                                                                                 (float)loc.Position.Y),
                                                                                 (int)loc.Z,
                                                                                 true,
                                                                                 (double)((loc.VolumeShape.BoundingBox().Width) / Parent.Width) * 2);
-
+                        }
                     }
                     else
                     {
@@ -1004,18 +1035,18 @@ namespace WebAnnotation
                         //OK, we have a match, invoke the command
                         //Check if there is a non-default command. we don't want to mess with another active command
                         if (!IsCommandDefault())
+                        {
                             return;
+                        }
 
                         connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
                         if (a != null)
                         {
-                            System.Type commandType;
-                            object[] parameters;
 
-                            a.ExecuteAction(out commandType, out parameters);
+                            a.ExecuteAction(out Type commandType, out object[] parameters);
                             if (commandType != null)
                             {
-                                this.Parent.CommandQueue.EnqueueCommand(commandType, parameters);
+                                Parent.CommandQueue.EnqueueCommand(commandType, parameters);
                             }
 
                             return;
@@ -1056,7 +1087,7 @@ namespace WebAnnotation
                         ChangeLocationAnnotationTypeAction tagChangeLocationAnnotationTypeAction = Global.UserSettings.Actions.ChangeLocationAnnotationTypeAction.SingleOrDefault(action => action.Name == h.Action);
                         if (tagChangeLocationAnnotationTypeAction != null)
                         {
-                            OnChangeLocationAnnotationType(tagChangeLocationAnnotationTypeAction.GetLocationType()); 
+                            OnChangeLocationAnnotationType(tagChangeLocationAnnotationTypeAction.GetLocationType());
                             return;
                         }
 
@@ -1093,12 +1124,12 @@ namespace WebAnnotation
         }
 
         private void GoToStructureForm_Closed(object sender, EventArgs e)
-        {  
+        {
             WebAnnotation.AnnotationOverlay.GoToStructureForm = null;
         }
 
         private void GoToLocationForm_Closed(object sender, EventArgs e)
-        { 
+        {
             WebAnnotation.AnnotationOverlay.GoToLocationForm = null;
         }
 
@@ -1133,12 +1164,12 @@ namespace WebAnnotation
                 bool StructureNeedsParent = type.ParentID.HasValue;
                 System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
                 GridVector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
-                GridVector2 SectionPos;
-                bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(WorldPos, out SectionPos);
+                bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(WorldPos, out GridVector2 SectionPos);
                 Debug.Assert(success);
                 if (!success)
+                {
                     return;
-
+                }
 
                 StructureObj newStruct = new StructureObj(type.modelObj);
                 LocationObj newLocation = new LocationObj(newStruct,
@@ -1157,18 +1188,18 @@ namespace WebAnnotation
                 switch (AnnotationType)
                 {
                     case LocationType.CIRCLE:
-                        QueuePlacementCommandForCircleStructure(this.Parent, newLocation, WorldPos, SectionPos, type.Color.SetAlpha(0.5f), false);
+                        QueuePlacementCommandForCircleStructure(Parent, newLocation, WorldPos, SectionPos, type.Color.SetAlpha(0.5f), false);
                         break;
                     case LocationType.OPENCURVE:
                         newLocation.Width = 8.0;
-                        QueuePlacementCommandForOpenCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), LocationType.OPENCURVE, false);
+                        QueuePlacementCommandForOpenCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), LocationType.OPENCURVE, false);
                         break;
                     case LocationType.CLOSEDCURVE:
                         newLocation.Width = 8.0;
-                        QueuePlacementCommandForClosedCurveStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
+                        QueuePlacementCommandForClosedCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
                         break;
                     case LocationType.CURVEPOLYGON:
-                        QueuePlacementCommandForPolygonStructure(this.Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
+                        QueuePlacementCommandForPolygonStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
                         break;
                     default:
                         Trace.WriteLine("Could not find commands for annotation type: " + AnnotationType.ToString());
@@ -1178,13 +1209,15 @@ namespace WebAnnotation
                 if (StructureNeedsParent)
                 {
                     //Enqueue extra command to select a parent
-                    this.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
+                    Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
                 }
 
-                this.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
+                Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
             }
             else
+            {
                 Trace.WriteLine("Could not find hotkey ID for type: " + TypeID.ToString());
+            }
         }
 
         public static void QueuePlacementCommandForCircleStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 worldPos, GridVector2 sectionPos, System.Drawing.Color typecolor, bool SaveToStore)
@@ -1196,12 +1229,10 @@ namespace WebAnnotation
 
                                     newLocation.TypeCode = LocationType.CIRCLE;
                                     LocationActions.UpdateCircleLocationCallback(newLocation, worldPos, sectionPos,
-                                        radius); 
+                                        radius);
                                     newLocation.Width = null;
 
-                                    if(SaveToStore)
-                                        SaveLocationsWithMessageBoxOnError();
-                    })});
+                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } })});
         }
 
         public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, GridVector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
@@ -1215,9 +1246,7 @@ namespace WebAnnotation
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, cmd.PenInput.SimplifiedPath, null);
-                                                                    if(SaveToStore)
-                                                                        SaveLocationsWithMessageBoxOnError();
-                                                            }) });
+                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
             }
             else
             {
@@ -1226,9 +1255,7 @@ namespace WebAnnotation
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore)
-                                                                        SaveLocationsWithMessageBoxOnError();
-                                                            }) });
+                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
             }
         }
 
@@ -1242,9 +1269,7 @@ namespace WebAnnotation
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore)
-                                                                        SaveLocationsWithMessageBoxOnError();
-                                                            }) });
+                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
             }
             else
             {
@@ -1253,9 +1278,7 @@ namespace WebAnnotation
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.Width = LineWidth;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore)
-                                                                        SaveLocationsWithMessageBoxOnError();
-                                                            }) });
+                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
             }
 
         }
@@ -1270,9 +1293,7 @@ namespace WebAnnotation
                                                                     PlaceClosedCurveWithPenCommand cmd = sender as PlaceClosedCurveWithPenCommand;
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore)
-                                                                        SaveLocationsWithMessageBoxOnError();
-                                                            }) });
+                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
             }
             else
             {
@@ -1282,9 +1303,7 @@ namespace WebAnnotation
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, GridVector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
                                                                     newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore)
-                                                                        SaveLocationsWithMessageBoxOnError();
-                                                            }) });
+                                                                    if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } }) });
             }
         }
 
@@ -1306,7 +1325,7 @@ namespace WebAnnotation
 
             //Convert special tag values
 
-            Parent.CommandQueue.EnqueueCommand(typeof(ToggleStructureTag), new object[] { this.Parent, Store.Structures[loc.ParentID.Value], tag, TryConvertTagValue(value, out var _) });
+            Parent.CommandQueue.EnqueueCommand(typeof(ToggleStructureTag), new object[] { Parent, Store.Structures[loc.ParentID.Value], tag, TryConvertTagValue(value, out bool _) });
             return;
         }
 
@@ -1325,7 +1344,7 @@ namespace WebAnnotation
                 return;
             }
 
-            Parent.CommandQueue.EnqueueCommand(typeof(ToggleLocationTag), new object[] { this.Parent, Store.Locations[loc.ID], tag, TryConvertTagValue(value, out var _) });
+            Parent.CommandQueue.EnqueueCommand(typeof(ToggleLocationTag), new object[] { Parent, Store.Locations[loc.ID], tag, TryConvertTagValue(value, out bool _) });
             return;
         }
 
@@ -1333,7 +1352,9 @@ namespace WebAnnotation
         {
             conversionFound = false;
             if (string.IsNullOrWhiteSpace(input))
+            {
                 return input;
+            }
 
             if (input[0] == '@')
             {
@@ -1352,7 +1373,7 @@ namespace WebAnnotation
 
             return input;
         }
-         
+
         protected void OnToggleLocationTerminalTag()
         {
             if (LastMouseOverObject == null)
@@ -1370,7 +1391,7 @@ namespace WebAnnotation
 
             //ToggleLocationIsTerminalCommand command = new ToggleLocationIsTerminalCommand(this.Parent, loc.modelObj);
 
-            Parent.CommandQueue.EnqueueCommand(typeof(ToggleLocationIsTerminalCommand), new object[] { this.Parent, Store.Locations[loc.ID] });
+            Parent.CommandQueue.EnqueueCommand(typeof(ToggleLocationIsTerminalCommand), new object[] { Parent, Store.Locations[loc.ID] });
 
             return;
         }
@@ -1390,17 +1411,18 @@ namespace WebAnnotation
                 return;
             }
 
-            if (loc.Z != this.CurrentSectionNumber)
+            if (loc.Z != CurrentSectionNumber)
             {
                 Trace.WriteLine("Mouse over object on incorrect section to convert type");
                 return;
             }
 
-            GridVector2 SectionPos;
-            bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(LastMouseMoveVolumeCoords, out SectionPos);
+            bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(LastMouseMoveVolumeCoords, out GridVector2 SectionPos);
             Debug.Assert(success);
             if (!success)
+            {
                 return;
+            }
 
             switch (newLocType)
             {
@@ -1422,13 +1444,7 @@ namespace WebAnnotation
 
 
 
-        protected bool CanContinueLastTrace
-        {
-            get
-            {
-                return Global.CanContinueLastTrace(this.CurrentSectionNumber);
-            }
-        }
+        protected bool CanContinueLastTrace => Global.CanContinueLastTrace(CurrentSectionNumber);
 
         protected void OnContinueLastTrace()
         {
@@ -1440,17 +1456,21 @@ namespace WebAnnotation
         protected void OnContinueLastTrace(GridVector2 WorldPos)
         {
             if (!Global.LastEditedAnnotationID.HasValue)
+            {
                 return;
+            }
 
             LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, true);
             {
                 //This can occur if we deleted the last location we editted.
                 if (lastLoc == null)
-                    return;
-
-                if (lastLoc.Z != this.CurrentSectionNumber && IsCommandDefault())
                 {
-                    Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(this.Parent, lastLoc, WorldPos);
+                    return;
+                }
+
+                if (lastLoc.Z != CurrentSectionNumber && IsCommandDefault())
+                {
+                    Viking.UI.Commands.Command command = LocationAction.CREATELINKEDLOCATION.CreateCommand(Parent, lastLoc, WorldPos);
                     if (command != null)
                     {
                         _Parent.CurrentCommand = command;
@@ -1470,22 +1490,26 @@ namespace WebAnnotation
         /// <param name="e"></param>
         protected async Task OnSectionChanged(object sender, SectionChangedEventArgs e, CancellationToken token)
         {
-            if(token.IsCancellationRequested)
+            if (token.IsCancellationRequested)
+            {
                 return;
+            }
 
-            e.OldSection.TransformChanged -= this.OnSectionTransformChanged;
-            e.NewSection.TransformChanged += this.OnSectionTransformChanged;
+            e.OldSection.TransformChanged -= OnSectionTransformChanged;
+            e.NewSection.TransformChanged += OnSectionTransformChanged;
 
             //Don't load annotations when flipping sections if the user is holding down space bar to hide them
             if (_Parent.ShowOverlays)
             {
                 loadSectionAnnotationsCancellationTokenSource?.Cancel();
-                 
+
                 loadSectionAnnotationsCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
                 LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
 
-                if(loadSectionAnnotationsCancellationTokenSource.IsCancellationRequested)
+                if (loadSectionAnnotationsCancellationTokenSource.IsCancellationRequested)
+                {
                     return;
+                }
 
                 Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading));
             }
@@ -1509,9 +1533,13 @@ namespace WebAnnotation
             if (e.OldItems != null)
             {
                 if (changedSections == null)
+                {
                     changedSections = GetDistinctLocationSections(e.OldItems);
+                }
                 else
+                {
                     changedSections = new SortedSet<int>(changedSections.Union(GetDistinctLocationSections(e.OldItems)));
+                }
             }
 
             return changedSections;
@@ -1531,7 +1559,9 @@ namespace WebAnnotation
                 {
                     LocationObj locNewObj = listLocations[iObj] as LocationObj;
                     if (!changedSections.Contains(locNewObj.Section))
+                    {
                         changedSections.Add(locNewObj.Section);
+                    }
                 }
             }
 
@@ -1550,9 +1580,13 @@ namespace WebAnnotation
             if (e.OldItems != null)
             {
                 if (changedSections == null)
+                {
                     changedSections = GetDistinctLocationLinkSections(e.OldItems);
+                }
                 else
+                {
                     changedSections = new SortedSet<int>(changedSections.Union(GetDistinctLocationLinkSections(e.OldItems)));
+                }
             }
 
             return changedSections;
@@ -1575,10 +1609,14 @@ namespace WebAnnotation
                     LocationObj locB = Store.Locations.GetObjectByID(locLink.B, false);
 
                     if (locA != null && !changedSections.Contains(locA.Section))
+                    {
                         changedSections.Add(locA.Section);
+                    }
 
                     if (locB != null && !changedSections.Contains(locB.Section))
+                    {
                         changedSections.Add(locB.Section);
+                    }
                 }
             }
 
@@ -1601,13 +1639,17 @@ namespace WebAnnotation
                 if (svm.ReferenceSectionAbove != null)
                 {
                     if (changedSections.Contains(svm.ReferenceSectionAbove.Number))
+                    {
                         AdjacentSections.Add(svm.Number);
+                    }
                 }
 
                 if (svm.ReferenceSectionBelow != null)
                 {
                     if (changedSections.Contains(svm.ReferenceSectionBelow.Number))
+                    {
                         AdjacentSections.Add(svm.Number);
+                    }
                 }
             }
 
@@ -1655,8 +1697,8 @@ namespace WebAnnotation
         {
             ///This could be optimized, but it should be a rare event
             cacheSectionAnnotations.RemoveEntry(e.ChangedSection.Number);
-            
-            if (e.ChangedSection.Number == this.CurrentSectionNumber)
+
+            if (e.ChangedSection.Number == CurrentSectionNumber)
             {
                 loadSectionAnnotationsCancellationTokenSource?.Cancel();
                 loadSectionAnnotationsCancellationTokenSource = new CancellationTokenSource();
@@ -1721,15 +1763,19 @@ namespace WebAnnotation
         protected async Task LoadSectionAnnotations(CancellationToken token)
         {
             if (Parent.Scene is null)
+            {
                 return;
+            }
 
             try
             {
                 await LoadSectionAnnotationsSemaphore.WaitAsync(token);
                 if (token.IsCancellationRequested)
+                {
                     return;
+                }
 
-                var sectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number);
+                SectionAnnotationsView sectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number);
                 sectionAnnotations?.LoadAnnotationsInRegion(Parent.Scene, token);
             }
             catch (TaskCanceledException)
@@ -1795,10 +1841,12 @@ namespace WebAnnotation
 
         private static BasicEffect CreateBasicEffect(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
-            basicEffect = new BasicEffect(graphicsDevice);
-            basicEffect.Projection = scene.Projection;
-            basicEffect.View = scene.Camera.View;
-            basicEffect.World = scene.World;
+            basicEffect = new BasicEffect(graphicsDevice)
+            {
+                Projection = scene.Projection,
+                View = scene.Camera.View,
+                World = scene.World
+            };
             return basicEffect;
         }
 
@@ -1825,11 +1873,14 @@ namespace WebAnnotation
             /// <param name="nextStencilValue"></param>
 
             if (_Parent.Section == null)
+            {
                 return;
+            }
 
             if (_Parent.spriteBatch.GraphicsDevice.IsDisposed)
+            {
                 return;
-
+            }
 
             BlendState originalBlendState = graphicsDevice.BlendState;
 
@@ -1889,13 +1940,15 @@ namespace WebAnnotation
 
             if (defaultBlendState == null || defaultBlendState.IsDisposed)
             {
-                defaultBlendState = new BlendState();
-                defaultBlendState.AlphaBlendFunction = BlendFunction.Add;
-                defaultBlendState.AlphaSourceBlend = Blend.SourceAlpha;
-                defaultBlendState.AlphaDestinationBlend = Blend.DestinationAlpha;
-                defaultBlendState.ColorSourceBlend = Blend.SourceColor;
-                defaultBlendState.ColorDestinationBlend = Blend.DestinationColor;
-                defaultBlendState.ColorBlendFunction = BlendFunction.Add;
+                defaultBlendState = new BlendState
+                {
+                    AlphaBlendFunction = BlendFunction.Add,
+                    AlphaSourceBlend = Blend.SourceAlpha,
+                    AlphaDestinationBlend = Blend.DestinationAlpha,
+                    ColorSourceBlend = Blend.SourceColor,
+                    ColorDestinationBlend = Blend.DestinationColor,
+                    ColorBlendFunction = BlendFunction.Add
+                };
             }
 
             graphicsDevice.BlendState = defaultBlendState;
@@ -1918,10 +1971,14 @@ namespace WebAnnotation
             DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections, scene);
 
             if (OriginalRasterState != null && !OriginalRasterState.IsDisposed)
+            {
                 graphicsDevice.RasterizerState = OriginalRasterState;
+            }
 
             if (originalBlendState != null)
+            {
                 graphicsDevice.BlendState = originalBlendState;
+            }
             //Make sure we update the nextStencilValue for the calling function ref parameter
             nextStencilValue++;// DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
         }

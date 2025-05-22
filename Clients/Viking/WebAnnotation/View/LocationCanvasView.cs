@@ -16,7 +16,7 @@ namespace WebAnnotation.View
 {
     public delegate ContextMenu ContextMenuGeneratorDelegate(IViewLocation locationID);
 
-    abstract public class LocationCanvasView : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
+    public abstract class LocationCanvasView : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
                                                IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings
     {
         protected readonly LocationObj modelObj;
@@ -25,14 +25,14 @@ namespace WebAnnotation.View
 
         public LocationCanvasView(LocationObj obj)
         {
-            this.modelObj = obj;
+            modelObj = obj;
 
             ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
         }
 
         public readonly ContextMenuGeneratorDelegate ContextMenuGenerator = null;
 
-        public int VisualHeight => this.ParentDepth;
+        public int VisualHeight => ParentDepth;
 
         /// <summary>
         /// The number of parent structures until we hit a root structure
@@ -54,7 +54,9 @@ namespace WebAnnotation.View
         private int CalculateParentDepth(StructureObj obj)
         {
             if (obj == null)
+            {
                 return 0;
+            }
 
             return CalculateParentDepth(obj.Parent) + 1;
         }
@@ -85,11 +87,15 @@ namespace WebAnnotation.View
         {
             get
             {
-                if (this.modelObj.Parent == null)
+                if (modelObj.Parent == null)
+                {
                     return null;
+                }
 
-                if (this._Parent == null)
-                    _Parent = new Structure(this.modelObj.Parent);
+                if (_Parent == null)
+                {
+                    _Parent = new Structure(modelObj.Parent);
+                }
 
                 return _Parent;
             }
@@ -110,7 +116,7 @@ namespace WebAnnotation.View
 
         protected string StructureIDLabelWithTypeCode()
         {
-            return this.Parent.Type.Code + " " + this.ParentID.ToString();
+            return Parent.Type.Code + " " + ParentID.ToString();
         }
 
         /// <summary>
@@ -119,12 +125,16 @@ namespace WebAnnotation.View
         /// <returns></returns>
         protected string FullLabelText()
         {
-            string fullLabel = this.StructureLabel();
+            string fullLabel = StructureLabel();
 
             if (fullLabel.Length == 0)
-                fullLabel = this.TagLabel();
+            {
+                fullLabel = TagLabel();
+            }
             else
-                fullLabel += '\n' + this.TagLabel();
+            {
+                fullLabel += '\n' + TagLabel();
+            }
 
             return fullLabel;
         }
@@ -133,7 +143,9 @@ namespace WebAnnotation.View
         {
             string InfoLabel = "";
             if (Parent?.InfoLabel != null)
+            {
                 InfoLabel = Parent.InfoLabel.Trim();
+            }
 
             return InfoLabel;
         }
@@ -141,7 +153,9 @@ namespace WebAnnotation.View
         protected string TagLabel()
         {
             if (Parent == null)
+            {
                 return "";
+            }
 
             string InfoLabel = "";
             foreach (ObjAttribute tag in Parent.Attributes)
@@ -195,7 +209,9 @@ namespace WebAnnotation.View
             }
 
             if ((object)A != null)
+            {
                 return A.Equals(B);
+            }
 
             return false;
         }
@@ -208,7 +224,9 @@ namespace WebAnnotation.View
             }
 
             if ((object)A != null)
+            {
                 return !A.Equals(B);
+            }
 
             return true;
         }
@@ -219,7 +237,7 @@ namespace WebAnnotation.View
         {
             get
             {
-                if (this.ContextMenuGenerator != null)
+                if (ContextMenuGenerator != null)
                 {
                     return ContextMenuGenerator(this);
                 }
@@ -228,15 +246,19 @@ namespace WebAnnotation.View
             }
         }
 
-        public string ToolTip => this.modelObj.Label;
+        public string ToolTip => modelObj.Label;
 
         public bool Equals(LocationCanvasView x, LocationCanvasView y)
         {
             if (x == null && y == null)
+            {
                 return true;
+            }
 
             if (x == null || y == null)
+            {
                 return false;
+            }
 
             return x.ID == y.ID;
         }
@@ -244,7 +266,9 @@ namespace WebAnnotation.View
         public int GetHashCode(LocationCanvasView obj)
         {
             if (obj == null)
+            {
                 throw new ArgumentNullException("obj", "GetHashCode");
+            }
 
             return obj.modelObj.GetHashCode();
         }
@@ -252,10 +276,14 @@ namespace WebAnnotation.View
         public bool Equals(LocationObj x, LocationObj y)
         {
             if (x == null && y == null)
+            {
                 return true;
+            }
 
             if (x == null || y == null)
+            {
                 return false;
+            }
 
             return x.ID == y.ID;
         }
@@ -268,9 +296,11 @@ namespace WebAnnotation.View
         int IComparable<LocationCanvasView>.CompareTo(LocationCanvasView other)
         {
             if (other == null)
+            {
                 return 1;
+            }
 
-            return (int)(this.ID - other.ID);
+            return (int)(ID - other.ID);
         }
 
         /// <summary>
@@ -280,8 +310,8 @@ namespace WebAnnotation.View
         {
             get
             {
-                ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(this.Links, false);
-                return listLinkedLocations.Count == this.Links.Count;
+                ICollection<LocationObj> listLinkedLocations = Store.Locations.GetObjectsByIDs(Links, false);
+                return listLinkedLocations.Count == Links.Count;
             }
         }
 
@@ -290,7 +320,7 @@ namespace WebAnnotation.View
 
         internal virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            this.ResetParentCache();
+            ResetParentCache();
             return;
         }
 
@@ -316,7 +346,7 @@ namespace WebAnnotation.View
 
         public void ShowProperties()
         {
-            Location_CanvasContextMenuView contextView = new Location_CanvasContextMenuView(this.ID);
+            Location_CanvasContextMenuView contextView = new Location_CanvasContextMenuView(ID);
             contextView.ShowProperties();
         }
 
@@ -327,27 +357,27 @@ namespace WebAnnotation.View
 
         public virtual bool Contains(GridVector2 Position)
         {
-            return this.VolumeShapeAsRendered.Intersects(Position);
+            return VolumeShapeAsRendered.Intersects(Position);
         }
 
         public virtual bool Intersects(GridLineSegment line)
         {
-            return this.VolumeShapeAsRendered.Intersects(line);
+            return VolumeShapeAsRendered.Intersects(line);
         }
 
         public virtual bool Intersects(SqlGeometry shape)
         {
-            return this.VolumeShapeAsRendered.STIntersects(shape).IsTrue;
+            return VolumeShapeAsRendered.STIntersects(shape).IsTrue;
         }
 
         public virtual double Distance(GridVector2 Position)
         {
-            return this.VolumeShapeAsRendered.Distance(Position);
+            return VolumeShapeAsRendered.Distance(Position);
         }
 
         public virtual double Distance(SqlGeometry Shape)
         {
-            return this.VolumeShapeAsRendered.STDistance(Shape).Value;
+            return VolumeShapeAsRendered.STDistance(Shape).Value;
         }
 
         public abstract bool IsVisible(Scene scene);
@@ -356,9 +386,11 @@ namespace WebAnnotation.View
         public bool Equals(LocationCanvasView other)
         {
             if ((object)other == null)
+            {
                 return false;
+            }
 
-            return other.ID == this.ID;
+            return other.ID == ID;
         }
 
 

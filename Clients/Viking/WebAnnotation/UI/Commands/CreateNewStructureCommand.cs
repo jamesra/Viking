@@ -7,32 +7,34 @@ namespace WebAnnotation.UI.Commands
     /// <summary>
     /// This command takes a structureObj and LocationObj defined by other commands and commits them to the database
     /// </summary>
-    class CreateNewStructureCommand : AnnotationCommandBase
+    internal class CreateNewStructureCommand : AnnotationCommandBase
     {
-        StructureObj newStruct;
-        LocationObj newLoc;
+        private readonly StructureObj newStruct;
+        private readonly LocationObj newLoc;
 
         public CreateNewStructureCommand(Viking.UI.Controls.SectionViewerControl parent,
                                                StructureObj structure,
                                                LocationObj location)
             : base(parent)
         {
-            this.newStruct = structure;
-            this.newLoc = location;
+            newStruct = structure;
+            newLoc = location;
         }
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
+            Parent.BeginInvoke((Action)delegate () { Execute(); });
         }
 
         protected override void Execute()
         {
             //Create the new structure
-            LocationObj unused;
-            Store.Structures.Create(newStruct, newLoc, out unused);
+            Store.Structures.Create(newStruct, newLoc, out LocationObj unused);
             if (unused != null)
+            {
                 Global.LastEditedAnnotationID = unused.ID;
+            }
+
             base.Execute();
         }
     }

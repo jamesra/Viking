@@ -4,7 +4,7 @@ using WebAnnotation.UI.Actions;
 
 namespace WebAnnotation.UI.ActionViews
 {
-    class CutHoleActionView : IActionView, IIconTexture
+    internal class CutHoleActionView : IActionView, IIconTexture
     {
         public IRenderable Passive { get; set; } = null;
 

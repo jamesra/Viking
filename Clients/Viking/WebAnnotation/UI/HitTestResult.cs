@@ -16,10 +16,10 @@ namespace WebAnnotation
 
         public HitTestResult(VikingXNAGraphics.IHitTesting o, int z, int visual_height, double dist)
         {
-            this.obj = o;
-            this.Z = z;
-            this.VisualHeight = visual_height;
-            this.Distance = dist;
+            obj = o;
+            Z = z;
+            VisualHeight = visual_height;
+            Distance = dist;
         }
     }
 
@@ -29,7 +29,9 @@ namespace WebAnnotation
         {
             int compareVal = x.Z.CompareTo(y.Z);
             if (compareVal != 0)
+            {
                 return compareVal;
+            }
 
             return x.Distance.CompareTo(y.Distance);
         }
@@ -41,12 +43,16 @@ namespace WebAnnotation
         {
             int compareVal = x.Z.CompareTo(y.Z);
             if (compareVal != 0)
+            {
                 return compareVal;
+            }
 
             //Higher visualHeight numbers sort earlier.  They are closer to the user because they are taller I guess.
             compareVal = -x.VisualHeight.CompareTo(y.VisualHeight);
             if (compareVal != 0)
+            {
                 return compareVal;
+            }
 
             return x.Distance.CompareTo(y.Distance);
         }
@@ -58,7 +64,9 @@ namespace WebAnnotation
         {
             int compareVal = x.Distance.CompareTo(y.Distance);
             if (compareVal != 0)
+            {
                 return compareVal;
+            }
 
             //Higher visualHeight numbers sort earlier.  They are closer to the user because they are taller I guess.
             compareVal = -x.VisualHeight.CompareTo(y.VisualHeight);

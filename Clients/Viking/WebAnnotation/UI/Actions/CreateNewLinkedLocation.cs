@@ -7,13 +7,13 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Actions
 {
-    class CreateNewLinkedLocationAction : IAction, IEquatable<CreateNewLinkedLocationAction>
+    internal class CreateNewLinkedLocationAction : IAction, IEquatable<CreateNewLinkedLocationAction>
     {
         /// <summary>
         /// ID of location on adjacent section we expect to link to
         /// </summary>
         public long ExistingLocID;
-        readonly IVolumeToSectionTransform Transform;
+        private readonly IVolumeToSectionTransform Transform;
 
         /// <summary>
         /// The mosaic space polygon we want to commit to the database
@@ -37,13 +37,13 @@ namespace WebAnnotation.UI.Actions
         public CreateNewLinkedLocationAction(long existingLocID, IShape2D newMosaicPolygon, IShape2D newVolumePolygon, int SectionNumber, IVolumeToSectionTransform transform = null)
         {
             this.SectionNumber = SectionNumber;
-            this.ExistingLocID = existingLocID;
-            this.Transform = transform == null ?
+            ExistingLocID = existingLocID;
+            Transform = transform == null ?
                 WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
                 : transform;
 
-            this.NewMosaicShape = newMosaicPolygon;
-            this.NewVolumeShape = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon.ToSqlGeometry()).ToIShape2D();
+            NewMosaicShape = newMosaicPolygon;
+            NewVolumeShape = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon.ToSqlGeometry()).ToIShape2D();
         }
 
         public void OnExecute()
@@ -55,7 +55,7 @@ namespace WebAnnotation.UI.Actions
                                                      NewMosaicShape.ToSqlGeometry(),
                                                      NewVolumeShape.ToSqlGeometry(),
                                                      SectionNumber,
-                                                     this.NewMosaicShape.ShapeType.IsClosed() ? Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON : Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE);
+                                                     NewMosaicShape.ShapeType.IsClosed() ? Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON : Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE);
 
                 LocationObj NewLocation = Store.Locations.Create(newLoc, new long[] { ExistingLocID });
                 Global.LastEditedAnnotationID = NewLocation.ID;
@@ -70,17 +70,21 @@ namespace WebAnnotation.UI.Actions
         {
             CreateNewLinkedLocationAction other_obj = other as CreateNewLinkedLocationAction;
             if (object.ReferenceEquals(other_obj, null))
+            {
                 return false;
+            }
 
-            return this.Equals(other_obj);
+            return Equals(other_obj);
         }
 
         public bool Equals(CreateNewLinkedLocationAction other)
         {
             if (object.ReferenceEquals(other, null))
+            {
                 return false;
+            }
 
-            return this.ExistingLocID == other.ExistingLocID && this.Type == other.Type && this.NewMosaicShape == other.NewMosaicShape;
+            return ExistingLocID == other.ExistingLocID && Type == other.Type && NewMosaicShape == other.NewMosaicShape;
         }
     }
 }

@@ -17,14 +17,14 @@ namespace WebAnnotation.UI
             int StructureNumber;
             try
             {
-                StructureNumber = this.numStructure.IntValue;
+                StructureNumber = numStructure.IntValue;
             }
             catch (FormatException)
             {
                 return;
             }
 
-            StructureObj structure = Store.Structures.GetObjectByID((long)StructureNumber);
+            StructureObj structure = Store.Structures.GetObjectByID(StructureNumber);
             if (structure == null)
             {
                 MessageBox.Show(this, "No structure found with that ID", "Error", MessageBoxButtons.OK);
@@ -35,12 +35,12 @@ namespace WebAnnotation.UI
 
             structView.ShowProperties();
 
-            this.Close();
+            Close();
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
     }
 }

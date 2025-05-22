@@ -4,25 +4,25 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    class ToggleLocationIsTerminalCommand : Viking.UI.Commands.Command
+    internal class ToggleLocationIsTerminalCommand : Viking.UI.Commands.Command
     {
-        LocationObj target;
+        private readonly LocationObj target;
         public ToggleLocationIsTerminalCommand(Viking.UI.Controls.SectionViewerControl parent,
                                          LocationObj loc)
             : base(parent)
         {
-            this.target = loc;
+            target = loc;
         }
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)delegate () { this.Execute(); });
+            Parent.BeginInvoke((Action)delegate () { Execute(); });
         }
 
         protected override void Execute()
         {
             target.Terminal = !target.Terminal;
-            var t = new System.Threading.Tasks.Task(() => WebAnnotation.AnnotationOverlay.SaveLocationsWithMessageBoxOnError());
+            System.Threading.Tasks.Task t = new System.Threading.Tasks.Task(() => WebAnnotation.AnnotationOverlay.SaveLocationsWithMessageBoxOnError());
             base.Execute();
         }
     }

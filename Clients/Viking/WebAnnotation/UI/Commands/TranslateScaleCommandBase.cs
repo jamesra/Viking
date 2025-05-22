@@ -9,9 +9,9 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    abstract class TranslateScaleCommandBase : AnnotationCommandBase
+    internal abstract class TranslateScaleCommandBase : AnnotationCommandBase
     {
-        public new static string[] DefaultMouseHelpStrings = new String[] {
+        public static new string[] DefaultMouseHelpStrings = new string[] {
            "Hold Left+Click Drag to move",
            "Release Left button to place",
            "Scroll wheel: Change size",
@@ -98,7 +98,7 @@ namespace WebAnnotation.UI.Commands
         /// <param name="OriginalVolumePosition">The point the command started, where the mouse cursor was, in mosaic space</param>
         public TranslateScaleCommandBase(Viking.UI.Controls.SectionViewerControl parent, GridVector2 OriginalVolumePosition) : base(parent)
         {
-            parent.OnSectionChanged += this.OnSectionChanged;
+            parent.OnSectionChanged += OnSectionChanged;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             ResetCommandVolumeOrigin(OriginalVolumePosition);
             ScaleOrigin = OriginalVolumePosition;
@@ -106,8 +106,10 @@ namespace WebAnnotation.UI.Commands
 
         protected Task OnSectionChanged(object sender, Viking.Common.SectionChangedEventArgs e, CancellationToken token)
         {
-            if(token.IsCancellationRequested)
+            if (token.IsCancellationRequested)
+            {
                 return Task.CompletedTask;
+            }
 
             mapping = Parent.Section.ActiveSectionToVolumeTransform;
             return Task.CompletedTask;
@@ -115,7 +117,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnDeactivate()
         {
-            Parent.OnSectionChanged -= this.OnSectionChanged;
+            Parent.OnSectionChanged -= OnSectionChanged;
 
             base.OnDeactivate();
         }
@@ -123,19 +125,23 @@ namespace WebAnnotation.UI.Commands
         protected double GetScalarForScrollWheelDelta(int scroll_delta_sum)
         {
             if (Math.Abs(scroll_delta_sum) < 120)
+            {
                 return 1.0;
+            }
 
             int adjusted_scroll_distance = Math.Abs(scroll_delta_sum) - 120;
 
             //OK, so lets figure out how far we need to scrool 
             const double Scroll_distance_to_double_size = 900.0;
 
-            double num_doublings = (double)adjusted_scroll_distance / (double)Scroll_distance_to_double_size;
+            double num_doublings = adjusted_scroll_distance / (double)Scroll_distance_to_double_size;
 
             double scalar = Math.Pow(1.25, num_doublings);
 
             if (scroll_delta_sum < 0)
+            {
                 scalar = 1 / scalar;
+            }
 
             Trace.WriteLine(string.Format("{0} {1} {2}", adjusted_scroll_distance, num_doublings, scalar));
 
@@ -148,9 +154,13 @@ namespace WebAnnotation.UI.Commands
             Trace.WriteLine(e.Delta.ToString());
 
             if (Control.ModifierKeys.ShiftPressed())
+            {
                 scroll_delta_sum += (int)(e.Delta / 5.0);
+            }
             else
+            {
                 scroll_delta_sum += e.Delta;
+            }
 
             double scalar = GetScalarForScrollWheelDelta(scroll_delta_sum);
 
@@ -163,7 +173,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             //Redraw if we are dragging a location
-            if (this.oldMouse != null)
+            if (oldMouse != null)
             {
                 if (e.Button.LeftOnly())
                 {
@@ -176,7 +186,7 @@ namespace WebAnnotation.UI.Commands
 
                     GridVector2 NewMosaicPosition = mapping.VolumeToSection(OriginalVolumePosition + VolumePositionDeltaSum);
 
-                    MosaicPositionDeltaSum = NewMosaicPosition - this.OriginalMosaicPosition;
+                    MosaicPositionDeltaSum = NewMosaicPosition - OriginalMosaicPosition;
 
                     TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
                     TranslatedMosaicPosition = NewMosaicPosition;
@@ -198,7 +208,7 @@ namespace WebAnnotation.UI.Commands
             base.OnPenContact(sender, e);
             if (e.Erase == false)
             {
-                ScaleOrigin = Parent.ScreenToWorld(e.X, e.Y); 
+                ScaleOrigin = Parent.ScreenToWorld(e.X, e.Y);
             }
         }
 
@@ -206,16 +216,18 @@ namespace WebAnnotation.UI.Commands
         {
             base.OnPenLeaveContact(sender, e);
             if (e.Erase)
+            {
                 return;
-            
+            }
+
             //Write down that scalar value so if we scale again we are not using the original scale
-            LastSavedScalarValue = this.SizeScale;
+            LastSavedScalarValue = SizeScale;
         }
 
         protected override void OnPenMove(object sender, PenEventArgs e)
         {
             //Redraw if we are dragging a location
-            if(this.oldPen != null & e.Erase == false)
+            if (oldPen != null & e.Erase == false)
             {
                 if (e.InContact == false)
                 {
@@ -229,24 +241,24 @@ namespace WebAnnotation.UI.Commands
                     GridVector2 NewMosaicPosition =
                         mapping.VolumeToSection(OriginalVolumePosition + VolumePositionDeltaSum);
 
-                    MosaicPositionDeltaSum = NewMosaicPosition - this.OriginalMosaicPosition;
+                    MosaicPositionDeltaSum = NewMosaicPosition - OriginalMosaicPosition;
 
                     TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
-                    TranslatedMosaicPosition = NewMosaicPosition; 
+                    TranslatedMosaicPosition = NewMosaicPosition;
                 }
                 else
-                { 
+                {
                     //Need to use last saved mouse position, because if a rotation or other non-translate command
                     //we don't want the mouse to jump
                     GridVector2 LastVolumePosition = ScaleOrigin;
                     GridVector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
-                     
 
-                    var delta = NewVolumePosition - LastVolumePosition;
 
-                    double BlockDistance = delta.X + delta.Y;  
+                    GridVector2 delta = NewVolumePosition - LastVolumePosition;
+
+                    double BlockDistance = delta.X + delta.Y;
                     double scale = BlockDistance / AnnotationRadius;
-                    this.SizeScale = scale + LastSavedScalarValue;
+                    SizeScale = scale + LastSavedScalarValue;
                 }
 
                 OnTranslationChanged();
@@ -259,7 +271,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnPenLeaveRange(object sender, PenEventArgs e)
         {
             base.OnPenLeaveRange(sender, e);
-            this.Execute();
+            Execute();
         }
 
 
@@ -267,7 +279,9 @@ namespace WebAnnotation.UI.Commands
         {
             base.OnMouseUp(sender, e);
             if (e.Button.Left())
-                this.Execute();
+            {
+                Execute();
+            }
         }
 
     }

@@ -1,6 +1,6 @@
 ﻿namespace WebAnnotation.View
 {
-    class LocationCircleLabelView
+    internal class LocationCircleLabelView
     {
     }
 }

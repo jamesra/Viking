@@ -17,12 +17,12 @@ namespace WebAnnotation.UI.Commands
     /// The command may exit with no action, draw an open curve, or draw a closed curved polygon.  Once the geometry is placed the 
     /// user can complete the annotation
     /// </summary>
-    class AnnotationOverlayPenFreeDrawCommandV2 : PlaceGeometryWithPenCommandBase
+    internal class AnnotationOverlayPenFreeDrawCommandV2 : PlaceGeometryWithPenCommandBase
     {
         /// <summary>
         /// Renders any loops the user has created so they have feedback if that was the goal
         /// </summary>
-        List<SolidPolygonView> LoopViews = new List<SolidPolygonView>();
+        private readonly List<SolidPolygonView> LoopViews = new List<SolidPolygonView>();
 
         /*
         /// <summary>
@@ -37,7 +37,7 @@ namespace WebAnnotation.UI.Commands
             get
             {
                 List<IAction> listActions = new List<IAction>();
-                foreach (var list in ActionsForCanvasItem.Values)
+                foreach (List<IAction> list in ActionsForCanvasItem.Values)
                 {
                     listActions.AddRange(list);
                 }
@@ -47,46 +47,28 @@ namespace WebAnnotation.UI.Commands
         }
 
 
-        public PathAnnotationInteractionLog InteractionsLog
-        {
-            get
-            {
-                return InteractionsLogger.Log;
-            }
-        }
+        public PathAnnotationInteractionLog InteractionsLog => InteractionsLogger.Log;
 
-        PathInteractionLogger InteractionsLogger;
+        private readonly PathInteractionLogger InteractionsLogger;
 
         /// <summary>
         /// Prevent the user from making absurdly small annotations by accident
         /// </summary>
-        private double MinAreaForClosedShape
-        {
-            get
-            {
-                return Parent.Downsample * 10 * 10;
-            }
-        }
+        private double MinAreaForClosedShape => Parent.Downsample * 10 * 10;
 
-        private double MinLengthForOpenShape
-        {
-            get
-            {
-                return Parent.Downsample * 10;
-            }
-        }
+        private double MinLengthForOpenShape => Parent.Downsample * 10;
 
 
         public AnnotationOverlayPenFreeDrawCommandV2(SectionViewerControl parent, Color color, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, LineWidth, success_callback)
         {
             InteractionsLogger = new PathInteractionLogger(base.PenInput.path, AnnotationOverlay.CurrentOverlay);
-            InteractionsLogger.Log.OnLogChanged += this.OnInteractionLogChanged;
+            InteractionsLogger.Log.OnLogChanged += OnInteractionLogChanged;
         }
 
         public AnnotationOverlayPenFreeDrawCommandV2(SectionViewerControl parent, Color color, GridVector2 origin, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, origin, LineWidth, success_callback)
         {
             InteractionsLogger = new PathInteractionLogger(base.PenInput.path, AnnotationOverlay.CurrentOverlay);
-            InteractionsLogger.Log.OnLogChanged += this.OnInteractionLogChanged;
+            InteractionsLogger.Log.OnLogChanged += OnInteractionLogChanged;
         }
 
         public override uint NumCurveInterpolations => throw new NotImplementedException();
@@ -104,7 +86,7 @@ namespace WebAnnotation.UI.Commands
 
             //TODO: For certain actions we need to update the path once it is done, for example changing the line of a synapse
             //Other commands we don't need to update... For now I update everything
-            OnInteractionAdded(this.InteractionsLog.Entries);
+            OnInteractionAdded(InteractionsLog.Entries);
 
             /*
             foreach (InteractionLogEvent e in this.InteractionsLog.Entries)
@@ -126,7 +108,7 @@ namespace WebAnnotation.UI.Commands
             }
             */
 
-            this.Execute();
+            Execute();
         }
 
         protected void OnInteractionLogChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -161,14 +143,16 @@ namespace WebAnnotation.UI.Commands
 
             // PossibleActions.Clear();
 
-            var Annotations = this.InteractionsLogger.Log.Entries.Select(e => e.Annotation).Distinct();
-            foreach (var annotation in Annotations)
+            IEnumerable<ICanvasView> Annotations = InteractionsLogger.Log.Entries.Select(e => e.Annotation).Distinct();
+            foreach (ICanvasView annotation in Annotations)
             {
                 IPenActionSupport pen_view = annotation as IPenActionSupport;
                 if (pen_view == null)
+                {
                     continue;
+                }
 
-                var actions = pen_view.GetPenActionsForShapeAnnotation(this.PenInput.path, this.InteractionsLogger.Log.Entries, Parent.Section.Number);
+                List<IAction> actions = pen_view.GetPenActionsForShapeAnnotation(PenInput.path, InteractionsLogger.Log.Entries, Parent.Section.Number);
                 ActionsForCanvasItem[annotation] = actions;
             }
         }
@@ -187,14 +171,16 @@ namespace WebAnnotation.UI.Commands
 
             ActionsForCanvasItem.Clear();
 
-            var Annotations = this.InteractionsLogger.Log.Entries.Select(e => e.Annotation).Distinct();
-            foreach (var annotation in Annotations)
+            IEnumerable<ICanvasView> Annotations = InteractionsLogger.Log.Entries.Select(e => e.Annotation).Distinct();
+            foreach (ICanvasView annotation in Annotations)
             {
                 IPenActionSupport pen_view = annotation as IPenActionSupport;
                 if (pen_view == null)
+                {
                     continue;
+                }
 
-                var actions = pen_view.GetPenActionsForShapeAnnotation(this.PenInput.path, this.InteractionsLogger.Log.Entries, Parent.Section.Number);
+                List<IAction> actions = pen_view.GetPenActionsForShapeAnnotation(PenInput.path, InteractionsLogger.Log.Entries, Parent.Section.Number);
                 ActionsForCanvasItem[annotation] = actions;
             }
 
@@ -206,7 +192,9 @@ namespace WebAnnotation.UI.Commands
             base.OnDraw(graphicsDevice, scene, basicEffect);
 
             if (LoopViews.Count > 0)
-                SolidPolygonView.Draw(graphicsDevice, scene, OverlayStyle.Luma, this.LoopViews);
+            {
+                SolidPolygonView.Draw(graphicsDevice, scene, OverlayStyle.Luma, LoopViews);
+            }
         }
 
         protected override void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment)
@@ -216,7 +204,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnPathLoop(object sender, bool HasLoop)
         {
-            this.PathView.Color = HasLoop ? Color.DarkOrange : Color.DarkGreen;
+            PathView.Color = HasLoop ? Color.DarkOrange : Color.DarkGreen;
             return;
         }
 

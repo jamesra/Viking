@@ -15,26 +15,17 @@ namespace WebAnnotation.View
         public LabelView StructureLabelView;
         public LabelView StructureAttributeView;
         public LabelView ParentStructureLabelView;
-
-        LocationObj locationObj = null;
-
-        GridCircle VolumeCircle;
-
-        readonly bool ShowAttributeLabels = true;
+        private readonly LocationObj locationObj = null;
+        private GridCircle VolumeCircle;
+        private readonly bool ShowAttributeLabels = true;
 
         public double DesiredRowsOfText { get; set; } = 4.0;
 
-        public double DefaultFontSize
-        {
-            get
-            {
-                return (this.Radius * 2.0) / DesiredRowsOfText;
-            }
-        }
+        public double DefaultFontSize => (Radius * 2.0) / DesiredRowsOfText;
 
         public double Radius
         {
-            get { return VolumeCircle.Radius; }
+            get => VolumeCircle.Radius;
             set
             {
                 VolumeCircle = new GridCircle(VolumeCircle.Center, value);
@@ -53,7 +44,9 @@ namespace WebAnnotation.View
         protected string StructureIDLabelWithTypeCode(StructureObj obj)
         {
             if (obj == null)
+            {
                 return "";
+            }
 
             return obj.Type.Code + " " + obj.ID.ToString();
         }
@@ -64,12 +57,16 @@ namespace WebAnnotation.View
         /// <returns></returns>
         protected string FullLabelText()
         {
-            string fullLabel = this.StructureLabel();
+            string fullLabel = StructureLabel();
 
             if (fullLabel.Length == 0)
-                fullLabel = this.TagLabel();
+            {
+                fullLabel = TagLabel();
+            }
             else
-                fullLabel += '\n' + this.TagLabel();
+            {
+                fullLabel += '\n' + TagLabel();
+            }
 
             return fullLabel;
         }
@@ -77,7 +74,9 @@ namespace WebAnnotation.View
         protected string TagLabel()
         {
             if (locationObj.Parent == null)
+            {
                 return "";
+            }
 
             string InfoLabel = "";
             foreach (ObjAttribute tag in locationObj.Parent.Attributes)
@@ -97,10 +96,14 @@ namespace WebAnnotation.View
         {
             string InfoLabel = "";
             if (locationObj.Parent == null)
+            {
                 return InfoLabel;
+            }
 
             if (locationObj.Parent.Label != null)
+            {
                 InfoLabel = locationObj.Parent.Label.Trim();
+            }
 
             return InfoLabel;
         }
@@ -108,45 +111,53 @@ namespace WebAnnotation.View
         private void CreateLabelObjects()
         {
             {
-                double Height = this.VolumeCircle.Radius / 3.0f;
-                StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(this.locationObj.Parent), this.VolumeCircle.Center - new GridVector2(0, Height), fontSize: DefaultFontSize);
-                StructureIDLabelView.MaxLineWidth = GridCircle.WidthAtHeight(Height / this.Radius) * (this.Radius * 2.0);
-                StructureIDLabelView._Color = this.locationObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black;
+                double Height = VolumeCircle.Radius / 3.0f;
+                StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(locationObj.Parent), VolumeCircle.Center - new GridVector2(0, Height), fontSize: DefaultFontSize)
+                {
+                    MaxLineWidth = GridCircle.WidthAtHeight(Height / Radius) * (Radius * 2.0),
+                    _Color = locationObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black
+                };
             }
 
             if (ShowAttributeLabels)
             {
-                string Label = this.StructureLabel();
+                string Label = StructureLabel();
                 if (Label == null || Label?.Length == 0)
                 {
                     StructureLabelView = null;
                 }
                 else
                 {
-                    double height = this.Radius / 2.0f;
-                    StructureLabelView = new LabelView(Label, this.VolumeCircle.Center + new GridVector2(0, height));
-                    StructureLabelView.MaxLineWidth = GridCircle.WidthAtHeight(height / this.Radius) * (this.Radius * 2.0);
+                    double height = Radius / 2.0f;
+                    StructureLabelView = new LabelView(Label, VolumeCircle.Center + new GridVector2(0, height))
+                    {
+                        MaxLineWidth = GridCircle.WidthAtHeight(height / Radius) * (Radius * 2.0)
+                    };
                 }
 
-                string Tags = this.TagLabel();
+                string Tags = TagLabel();
                 if (Tags == null || Tags?.Length == 0)
                 {
                     StructureAttributeView = null;
                 }
                 else
                 {
-                    double height = this.Radius / 4.0f;
-                    StructureAttributeView = new LabelView(Tags, this.VolumeCircle.Center + new GridVector2(0, height));
-                    StructureAttributeView.MaxLineWidth = GridCircle.WidthAtHeight(height / this.Radius) * (this.Radius * 2.0);
+                    double height = Radius / 4.0f;
+                    StructureAttributeView = new LabelView(Tags, VolumeCircle.Center + new GridVector2(0, height))
+                    {
+                        MaxLineWidth = GridCircle.WidthAtHeight(height / Radius) * (Radius * 2.0)
+                    };
                 }
             }
 
             if (locationObj.Parent != null && locationObj.Parent.ParentID.HasValue)
             {
-                double height = this.Radius / 2.0f;
-                ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), this.VolumeCircle.Center + new GridVector2(0, height));
-                ParentStructureLabelView._Color = Color.Red; //locationObj.Parent.Parent.Type.Color.ToXNAColor(0.75f);
-                ParentStructureLabelView.MaxLineWidth = GridCircle.WidthAtHeight(height / this.Radius) * (this.Radius * 2.0);
+                double height = Radius / 2.0f;
+                ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), VolumeCircle.Center + new GridVector2(0, height))
+                {
+                    _Color = Color.Red, //locationObj.Parent.Parent.Type.Color.ToXNAColor(0.75f);
+                    MaxLineWidth = GridCircle.WidthAtHeight(height / Radius) * (Radius * 2.0)
+                };
             }
             else
             {
@@ -172,13 +183,17 @@ namespace WebAnnotation.View
                               VikingXNA.Scene scene)
         {
             if (font == null)
+            {
                 throw new ArgumentNullException("font");
+            }
 
             if (spriteBatch == null)
+            {
                 throw new ArgumentNullException("spriteBatch");
+            }
 
             //Scale the label alpha based on the zoom factor 
-            bool OscillateSize = this.locationObj.IsLastEditedAnnotation();
+            bool OscillateSize = locationObj.IsLastEditedAnnotation();
 
             StructureIDLabelView.FontSize = DefaultFontSize; //We only desire one line of text
 
@@ -190,7 +205,7 @@ namespace WebAnnotation.View
             }
             else
             {
-                StructureIDLabelView.MaxLineWidth = this.Radius * 2.0;
+                StructureIDLabelView.MaxLineWidth = Radius * 2.0;
             }
 
             StructureIDLabelView.Draw(spriteBatch, font, scene);

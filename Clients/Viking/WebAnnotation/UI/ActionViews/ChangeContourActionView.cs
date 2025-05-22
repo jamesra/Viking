@@ -12,7 +12,7 @@ namespace WebAnnotation.UI.ActionViews
         public IRenderable Active { get; set; }
         public BuiltinTexture Icon { get; private set; } = BuiltinTexture.None;
 
-        Change2DContourAction model;
+        private readonly Change2DContourAction model;
 
         public Change2DContourActionView(Change2DContourAction action)
         {
@@ -61,7 +61,7 @@ namespace WebAnnotation.UI.ActionViews
             {
                 DefaultStructureColor = model.Location.Parent.Type.Color.ToXNAColor();
             }
-            catch (NullReferenceException e)
+            catch (NullReferenceException)
             {
             }
 
@@ -96,7 +96,7 @@ namespace WebAnnotation.UI.ActionViews
         public IRenderable Active { get; set; }
         public BuiltinTexture Icon => BuiltinTexture.None;
 
-        Change1DContourAction model;
+        private readonly Change1DContourAction model;
 
         public Change1DContourActionView(Change1DContourAction action)
         {

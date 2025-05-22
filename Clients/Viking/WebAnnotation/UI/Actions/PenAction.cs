@@ -40,9 +40,8 @@ namespace WebAnnotation
     /// </summary>
     public class ViewActionBinding
     {
-        VikingXNAGraphics.Controls.IClickable ClickableAction;
-
-        IActionView View;
+        private readonly VikingXNAGraphics.Controls.IClickable ClickableAction;
+        private readonly IActionView View;
     }
 
 
@@ -60,7 +59,10 @@ namespace WebAnnotation
 
         public Action Execute => OnExecute;
 
-        public static implicit operator Action(AnnotationAction a) => a.Execute;
+        public static implicit operator Action(AnnotationAction a)
+        {
+            return a.Execute;
+        }
 
         /// <summary>
         /// An always active visualization

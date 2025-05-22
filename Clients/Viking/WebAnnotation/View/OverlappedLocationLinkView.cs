@@ -16,78 +16,59 @@ namespace WebAnnotation.View
     /// <summary>
     /// Renders arrows for location links that are overlapped by an annotation on the section
     /// </summary>
-    class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView, Viking.Common.IContextMenu,
+    internal class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView, Viking.Common.IContextMenu,
                                        IMouseActionSupport, IPenActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelpStrings
     {
         public TextureCircleView circleView;
         public LabelView label;
-
-        readonly LocationLinkKey linkKey;
+        private readonly LocationLinkKey linkKey;
 
         public GridCircle Circle
         {
-            get { return circleView.Circle; }
-            set { circleView.Circle = value; }
+            get => circleView.Circle;
+            set => circleView.Circle = value;
         }
 
         public double Radius
         {
-            get { return Circle.Radius; }
-            set { circleView.Circle = new GridCircle(Circle.Center, value); }
+            get => Circle.Radius;
+            set => circleView.Circle = new GridCircle(Circle.Center, value);
         }
 
         public GridVector2 Position
         {
-            get { return Circle.Center; }
-            set { circleView.Circle = new GridCircle(value, Circle.Radius); }
+            get => Circle.Center;
+            set => circleView.Circle = new GridCircle(value, Circle.Radius);
         }
 
         public Microsoft.Xna.Framework.Color Color
         {
-            get
-            {
-                return circleView.Color;
-            }
+            get => circleView.Color;
 
-            set
-            {
-                circleView.Color = value;
-            }
+            set => circleView.Color = value;
         }
 
         public float Alpha
         {
-            get
-            {
-                return circleView.Alpha;
-            }
+            get => circleView.Alpha;
 
-            set
-            {
-                circleView.Alpha = value;
-            }
+            set => circleView.Alpha = value;
         }
 
-        public GridRectangle BoundingBox
-        {
-            get
-            {
-                return Circle.BoundingBox;
-            }
-        }
+        public GridRectangle BoundingBox => Circle.BoundingBox;
 
         public ContextMenu ContextMenu
         {
             get
             {
-                LocationLink_CanvasContextMenuView contextMenuView = new LocationLink_CanvasContextMenuView(this.linkKey);
+                LocationLink_CanvasContextMenuView contextMenuView = new LocationLink_CanvasContextMenuView(linkKey);
                 return contextMenuView.ContextMenu;
             }
         }
 
         public bool IsVisible(Scene scene)
         {
-            return this.circleView.IsVisible(scene);
+            return circleView.IsVisible(scene);
         }
 
         public bool Contains(GridVector2 Position)
@@ -102,7 +83,7 @@ namespace WebAnnotation.View
 
         public double Distance(GridVector2 Position)
         {
-            double Distance = GridVector2.Distance(Position, this.Circle.Center) - Radius;
+            double Distance = GridVector2.Distance(Position, Circle.Center) - Radius;
             Distance = Distance < 0 ? 0 : Distance;
             return Distance;
         }
@@ -114,7 +95,7 @@ namespace WebAnnotation.View
 
         public double DistanceFromCenterNormalized(GridVector2 Position)
         {
-            return GridVector2.Distance(Position, this.Circle.Center) / this.Radius;
+            return GridVector2.Distance(Position, Circle.Center) / Radius;
         }
 
         public long LocationID
@@ -123,36 +104,23 @@ namespace WebAnnotation.View
             set;
         }
 
-        public long OffSectionLocationID
-        {
-            get { return linkKey.A == this.LocationID ? linkKey.B : linkKey.A; }
-        }
+        public long OffSectionLocationID => linkKey.A == LocationID ? linkKey.B : linkKey.A;
 
-        LocationLinkKey IViewLocationLink.Key
-        {
-            get
-            {
-                return this.linkKey;
-            }
-        }
+        LocationLinkKey IViewLocationLink.Key => linkKey;
 
         /// <summary>
         /// Return the ID of the location we are representing with the view.
         /// </summary>
-        long IViewLocation.ID
-        {
-            get
-            {
-                return this.OffSectionLocationID;
-            }
-        }
+        long IViewLocation.ID => OffSectionLocationID;
 
         public OverlappedLocationLinkView(long locationID, LocationObj linkedObj, GridCircle gridCircle, bool Up)
         {
-            this.LocationID = locationID;
-            this.linkKey = new LocationLinkKey(locationID, linkedObj.ID);
-            label = new LabelView(((int)linkedObj.Z).ToString(), gridCircle.Center);
-            label._Color = Microsoft.Xna.Framework.Color.Red;
+            LocationID = locationID;
+            linkKey = new LocationLinkKey(locationID, linkedObj.ID);
+            label = new LabelView(((int)linkedObj.Z).ToString(), gridCircle.Center)
+            {
+                _Color = Microsoft.Xna.Framework.Color.Red
+            };
             Microsoft.Xna.Framework.Color color = linkedObj.Parent.Type.Color.ToXNAColor(0.75f);
             circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color);
         }
@@ -170,9 +138,9 @@ namespace WebAnnotation.View
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene)
         {
             double DesiredRowsOfText = 4.0;
-            double DefaultFontSize = (this.Radius * 2) / DesiredRowsOfText;
+            double DefaultFontSize = (Radius * 2) / DesiredRowsOfText;
             label.FontSize = DefaultFontSize;
-            label.MaxLineWidth = this.Radius * 2;
+            label.MaxLineWidth = Radius * 2;
 
             label.Draw(spriteBatch, font, scene);
         }
@@ -184,15 +152,17 @@ namespace WebAnnotation.View
 
         public LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            LocationID = this.OffSectionLocationID;
+            LocationID = OffSectionLocationID;
             return LocationAction.NONE;
         }
 
         public LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            LocationID = this.OffSectionLocationID;
+            LocationID = OffSectionLocationID;
             if (ModifierKeys.ShiftOrCtrlPressed())
+            {
                 return LocationAction.NONE;
+            }
 
             return LocationAction.CREATELINKEDLOCATION;
         }
@@ -202,22 +172,10 @@ namespace WebAnnotation.View
             return new List<IAction>();
         }
 
-        public string[] HelpStrings
-        {
-            get
-            {
-                return new string[] {
+        public string[] HelpStrings => new string[] {
                     "Hold left click + drag: Create additional annotation for this structure linked to the annotation on the adjacent section."
                 };
-            }
-        }
 
-        int ICanvasView.VisualHeight
-        {
-            get
-            {
-                return 0;
-            }
-        }
+        int ICanvasView.VisualHeight => 0;
     }
 }

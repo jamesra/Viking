@@ -19,18 +19,15 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-    class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IColorView
+    internal class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IColorView
     {
         private StructureCircleLabels curveLabels;
         private OverlappedLinkCircleView OverlappedLinkView;
         private LocationInteriorHoleView[] InteriorHoleViews;
-
-        SolidPolygonView polygonMesh;
-
-        GridPolygon VolumePolygon;
-        GridPolygon SmoothedVolumePolygon;
-
-        CircleView[] ControlPointViews = new CircleView[0];
+        private SolidPolygonView polygonMesh;
+        private readonly GridPolygon VolumePolygon;
+        private GridPolygon SmoothedVolumePolygon;
+        private CircleView[] ControlPointViews = new CircleView[0];
 
         public override string[] HelpStrings
         {
@@ -84,7 +81,7 @@ namespace WebAnnotation.View
             }
         }
 
-        private double _ControlPointRadius;
+        private readonly double _ControlPointRadius;
 
         public double ControlPointRadius => _ControlPointRadius;
 
@@ -98,18 +95,24 @@ namespace WebAnnotation.View
             VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape).ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
-            if(obj.Parent == null)
-                this.Color = Color.Gray.SetAlpha(0.5f);
-            else if(obj.Parent.TypeID == 1) //Cells get a random color for polygons to help Becca see Glia
-                this.Color = obj.Parent.Color.ToXNAColor(0.33f);
+            if (obj.Parent == null)
+            {
+                Color = Color.Gray.SetAlpha(0.5f);
+            }
+            else if (obj.Parent.TypeID == 1) //Cells get a random color for polygons to help Becca see Glia
+            {
+                Color = obj.Parent.Color.ToXNAColor(0.33f);
+            }
             else
-                this.Color = obj.Parent.Type.Color.ToXNAColor(0.33f);
+            {
+                Color = obj.Parent.Type.Color.ToXNAColor(0.33f);
+            }
 
             //polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);
             //polygonMesh = SmoothedVolumePolygon.CreateMeshForPolygon2D(this.HSLColor);
             //polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, this.HSLColor);
-            
-             
+
+
             /*InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];
             for (int iInner = 0; iInner < VolumePolygon.InteriorPolygons.Count; iInner++)
             {
@@ -127,13 +130,17 @@ namespace WebAnnotation.View
         {
             //If initialized move on
             if (Interlocked.CompareExchange(ref _Initialized, _Initialized, 1) > 0)
+            {
                 return;
+            }
 
             //If another thread is initializing, move on
             if (Interlocked.CompareExchange(ref _Initializing, 1, 0) > 0)
+            {
                 return;
+            }
 
-            this.ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
+            ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
 
             try
             {
@@ -141,11 +148,11 @@ namespace WebAnnotation.View
             }
             catch (ArgumentException)
             {
-                Trace.WriteLine($"Unable to smooth volume polygon: {this.ID}");
+                Trace.WriteLine($"Unable to smooth volume polygon: {ID}");
                 SmoothedVolumePolygon = VolumePolygon;
             }
 
-            polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, this.HSLColor);
+            polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, HSLColor);
             CreateLabelObjects();
 
             InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];
@@ -184,13 +191,13 @@ namespace WebAnnotation.View
 
         public void CreateLabelObjects()
         {
-            curveLabels = new StructureCircleLabels(this.modelObj, this.InscribedCircle);
+            curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
         }
 
         public List<CircleView> CreateControlPointViews(GridPolygon polygon)
         {
             List<CircleView> views = new List<CircleView>(polygon.ExteriorRing.Length);
-            views.AddRange(polygon.ExteriorRing.Select(p => new CircleView(new GridCircle(p, ControlPointRadius), this.HSLColor.AdjustHSLHue(180))));
+            views.AddRange(polygon.ExteriorRing.Select(p => new CircleView(new GridCircle(p, ControlPointRadius), HSLColor.AdjustHSLHue(180))));
 
             foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
             {
@@ -206,7 +213,7 @@ namespace WebAnnotation.View
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves
         /// </summary> 
-        public override GridRectangle BoundingBox => GridRectangle.Pad(SmoothedVolumePolygon.BoundingBox, this._ControlPointRadius);
+        public override GridRectangle BoundingBox => GridRectangle.Pad(SmoothedVolumePolygon.BoundingBox, _ControlPointRadius);
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -234,36 +241,48 @@ namespace WebAnnotation.View
         }
 
         public override bool Contains(GridVector2 Position)
-        { 
-            if (!this.BoundingBox.Contains(Position))
+        {
+            if (!BoundingBox.Contains(Position))
+            {
                 return false;
+            }
 
             //Test if we are over a control point
             if (Global.PenMode == false)
             {
-                if (this.SmoothedVolumePolygon.ExteriorRing.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
+                if (SmoothedVolumePolygon.ExteriorRing.Any(p => new GridCircle(p, lineWidth / 2.0).Contains(Position)))
+                {
                     return true;
+                }
             }
 
-            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Contains(Position))
+            if (OverlappedLinkView != null && OverlappedLinkView.Contains(Position))
+            {
                 return true;
+            }
 
-            if (this.SmoothedVolumePolygon.Contains(Position))
+            if (SmoothedVolumePolygon.Contains(Position))
+            {
                 return true;
+            }
 
             //If the UI doesn't detect a hole as part of the annotation then it becomes impossible to close holes in the UI.  
             //On the other hand, a location link inside the hole is unselectable. 
             //The workaround was to assign a distance > 1 when the point falls outside the polygon.
-            if (this.SmoothedVolumePolygon.InteriorPolygonContains(Position))
+            if (SmoothedVolumePolygon.InteriorPolygonContains(Position))
+            {
                 return true;
+            }
 
             return false;
         }
 
         public override bool Intersects(GridLineSegment line)
         {
-            if (!this.BoundingBox.Intersects(line.BoundingBox))
+            if (!BoundingBox.Intersects(line.BoundingBox))
+            {
                 return false;
+            }
 
             /*
             //Test if we are over a control point
@@ -273,11 +292,15 @@ namespace WebAnnotation.View
                     return true;
             }*/
 
-            if (this.OverlappedLinkView != null && this.OverlappedLinkView.Intersects(line))
+            if (OverlappedLinkView != null && OverlappedLinkView.Intersects(line))
+            {
                 return true;
+            }
 
-            if (this.SmoothedVolumePolygon.Intersects(line))
+            if (SmoothedVolumePolygon.Intersects(line))
+            {
                 return true;
+            }
 
             return false;
         }
@@ -294,18 +317,22 @@ namespace WebAnnotation.View
         public ICanvasView GetAnnotationAtPosition(GridVector2 position)
         {
             if (Initialized == false)
+            {
                 return null;
+            }
 
             if (OverlappedLinkView != null)
             {
                 ICanvasView containedAnnotation = OverlappedLinkView.GetAnnotationAtPosition(position);
                 if (containedAnnotation != null)
+                {
                     return containedAnnotation;
+                }
             }
 
             if (InteriorHoleViews != null)
             {
-                foreach (var interiorHole in InteriorHoleViews)
+                foreach (LocationInteriorHoleView interiorHole in InteriorHoleViews)
                 {
                     if (interiorHole.Contains(position))
                     {
@@ -314,8 +341,10 @@ namespace WebAnnotation.View
                 }
             }
 
-            if (this.Contains(position))
+            if (Contains(position))
+            {
                 return this;
+            }
 
             return null;
         }
@@ -324,42 +353,45 @@ namespace WebAnnotation.View
         {
             protected get
             {
-                if (this.OverlappedLinkView == null)
+                if (OverlappedLinkView == null)
+                {
                     return new long[0];
+                }
 
-                return this.OverlappedLinkView.OverlappedLinks;
+                return OverlappedLinkView.OverlappedLinks;
             }
 
             set
             {
                 if (value == null || value.Count == 0)
                 {
-                    this.OverlappedLinkView = null;
+                    OverlappedLinkView = null;
                 }
 
-                this.OverlappedLinkView = new OverlappedLinkCircleView(this.InscribedCircle, this.ID, (int)this.Z, value);
-                this.OverlappedLinkView.Color = this.Color;
+                OverlappedLinkView = new OverlappedLinkCircleView(InscribedCircle, ID, (int)Z, value)
+                {
+                    Color = Color
+                };
 
-                this.CreateLabelObjects();
+                CreateLabelObjects();
             }
         }
 
 
         public LocationAction GetMouseClickActionForPositionOnAnnotationWithPen(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
-            GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
+            LocationID = ID;
 
             if (ModifierKeys.ShiftPressed())
             {
-                if (VisibleSectionNumber == (int)this.modelObj.Z)
+                if (VisibleSectionNumber == (int)modelObj.Z)
                 {
-                    if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                    if (SmoothedVolumePolygon.Contains(WorldPosition))
                     {
-                        GridCircle TranslateTargetCircle = new GridCircle(this.InscribedCircle.Center, this.InscribedCircle.Radius / 2.0);
+                        GridCircle TranslateTargetCircle = new GridCircle(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
                         if (TranslateTargetCircle.Contains(WorldPosition))
                         {
-                            LocationID = this.ID;
+                            LocationID = ID;
                             return LocationAction.TRANSLATE;
                         }
 
@@ -370,14 +402,14 @@ namespace WebAnnotation.View
             else if (ModifierKeys.CtrlPressed())
             {
                 //Check to see if we are on a line segment to add/remove control points.  Otherwise cut a hole
-                if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                if (SmoothedVolumePolygon.Contains(WorldPosition))
                 {
-                    LocationID = this.ID;
+                    LocationID = ID;
                     return LocationAction.CUTHOLE;
                 }
-                else if (this.SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
+                else if (SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
                 {
-                    LocationID = this.ID;
+                    LocationID = ID;
                     return LocationAction.REMOVEHOLE;
                 }
             }
@@ -392,12 +424,12 @@ namespace WebAnnotation.View
         public LocationAction GetMouseClickActionForPositionOnAnnotationWithoutPen(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
 
-            LocationID = this.ID;
+            LocationID = ID;
             GridPolygon intersectingPoly; //Could be our polygon or an interior polygon
 
             if (ModifierKeys.ShiftPressed())
             {
-                if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                if (SmoothedVolumePolygon.Contains(WorldPosition))
                 {
                     return LocationAction.TRANSLATE;
                 }
@@ -405,50 +437,56 @@ namespace WebAnnotation.View
             else if (ModifierKeys.CtrlPressed())
             {
                 //Check to see if we are on a line segment to add/remove control points.  Otherwise cut a hole
-                if (this.SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
+                if (SmoothedVolumePolygon.PointIntersectsAnyPolygonSegment(WorldPosition, ControlPointRadius, out intersectingPoly))
                 {
-                    if (this.VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
+                    if (VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
                     {
                         //Cannot have a polygon with fewer than 4 verticies, We check for 4 because first and last vertex are the same.
                         if (intersectingPoly.ExteriorRing.Length > 4)
+                        {
                             return LocationAction.REMOVECONTROLPOINT;
+                        }
                         else
+                        {
                             return LocationAction.NONE;
+                        }
                     }
                     else
+                    {
                         return LocationAction.ADDCONTROLPOINT;
+                    }
                 }
-                else if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                else if (SmoothedVolumePolygon.Contains(WorldPosition))
                 {
-                    LocationID = this.ID;
+                    LocationID = ID;
                     return LocationAction.CUTHOLE;
                 }
-                else if (this.SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
+                else if (SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
                 {
-                    LocationID = this.ID;
+                    LocationID = ID;
                     return LocationAction.REMOVEHOLE;
                 }
             }
             else if (!ModifierKeys.ShiftOrCtrlPressed())
             {
-                if (VisibleSectionNumber == (int)this.modelObj.Z)
+                if (VisibleSectionNumber == (int)modelObj.Z)
                 {
-                    if (!Global.PenMode && this.VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
+                    if (!Global.PenMode && VolumePolygon.PointIntersectsAnyPolygonVertex(WorldPosition, ControlPointRadius, out intersectingPoly))
                     {
                         return LocationAction.ADJUST;
                     }
-                    else if (this.SmoothedVolumePolygon.Contains(WorldPosition))
+                    else if (SmoothedVolumePolygon.Contains(WorldPosition))
                     {
-                        GridCircle TranslateTargetCircle = new GridCircle(this.InscribedCircle.Center, this.InscribedCircle.Radius / 2.0);
+                        GridCircle TranslateTargetCircle = new GridCircle(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
                         if (TranslateTargetCircle.Contains(WorldPosition))
                         {
-                            LocationID = this.ID;
+                            LocationID = ID;
                             return LocationAction.TRANSLATE;
                         }
 
                         return LocationAction.CREATELINK;
                     }
-                    else if (Global.PenMode && this.SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
+                    else if (Global.PenMode && SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
                     {
                         return LocationAction.CHANGEBOUNDARY;
                     }
@@ -496,13 +534,17 @@ namespace WebAnnotation.View
 
             //CreateViewObjects();
             if (IsLocationPropertyAffectingLabels(args.PropertyName))
+            {
                 CreateLabelObjects();
+            }
         }
 
         public bool IsLabelVisible(Scene scene)
         {
             if (Initialized == false)
+            {
                 return false;
+            }
 
             return curveLabels.IsLabelVisible(scene);
         }
@@ -510,53 +552,63 @@ namespace WebAnnotation.View
         public override bool IsVisible(Scene scene)
         {
             if (Initialized == false)
+            {
                 return false;
+            }
 
-            if (Math.Min(this.BoundingBox.Width, this.BoundingBox.Height) / scene.DevicePixelWidth < 2.0)
+            if (Math.Min(BoundingBox.Width, BoundingBox.Height) / scene.DevicePixelWidth < 2.0)
+            {
                 return false;
+            }
 
-            return scene.VisibleWorldBounds.Intersects(this.BoundingBox);
+            return scene.VisibleWorldBounds.Intersects(BoundingBox);
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
-            if (this.SmoothedVolumePolygon.Contains(Position))
+            if (SmoothedVolumePolygon.Contains(Position))
+            {
                 return 0.5;
+            }
             else
+            {
                 return 1.01; //This is done so we can fill interior polygons without overlapping annotations inside the polygon hole.
+            }
         }
 
         public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
         {
             if (Initialized == false)
+            {
                 return new List<IAction>();
+            }
 
             List<IAction> listActions = new List<IAction>();
             if (path.HasSelfIntersection)
             {
                 //This could be a reshape or linking to an adjacent annotation
-                if (this.Z == VisibleSectionNumber)
+                if (Z == VisibleSectionNumber)
                 {
-                    listActions.AddRange(Shared2DShapeActionsForPath.IdentifyPossibleInteriorActions(this.ID, this.VolumePolygon, this.SmoothedVolumePolygon, path));
-                    listActions.AddRange(Shared2DShapeActionsForPath.GetPenActionsForShapeAnnotation(this, this.SmoothedVolumePolygon, path, interaction_log, VisibleSectionNumber));
+                    listActions.AddRange(Shared2DShapeActionsForPath.IdentifyPossibleInteriorActions(ID, VolumePolygon, SmoothedVolumePolygon, path));
+                    listActions.AddRange(Shared2DShapeActionsForPath.GetPenActionsForShapeAnnotation(this, SmoothedVolumePolygon, path, interaction_log, VisibleSectionNumber));
                 }
             }
             else
             {
-                if (this.Z == VisibleSectionNumber)
+                if (Z == VisibleSectionNumber)
                 {
                     //Ask if they want to convert to a polyline
                     GridPolyline line = new GridPolyline(path.SimplifiedPath);
-                    ChangeToPolylineAction action = new ChangeToPolylineAction(this.modelObj, line);
+                    ChangeToPolylineAction action = new ChangeToPolylineAction(modelObj, line);
                     listActions.Add(action);
 
                     //Check if they cross the shape at two points and want to adjust the shape
-                    listActions.AddRange(Shared2DShapeActionsForPath.GetPenActionsForShapeAnnotation(this, this.SmoothedVolumePolygon, path, interaction_log, VisibleSectionNumber));
+                    listActions.AddRange(Shared2DShapeActionsForPath.GetPenActionsForShapeAnnotation(this, SmoothedVolumePolygon, path, interaction_log, VisibleSectionNumber));
                 }
             }
 
             //Check for links to create
-            listActions.AddRange(interaction_log.IdentifyPossibleLinkActions(this.modelObj.ID));
+            listActions.AddRange(interaction_log.IdentifyPossibleLinkActions(modelObj.ID));
             return listActions;
         }
     }

@@ -1,13 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
-using Viking.AnnotationServiceTypes;
 using VikingXNAGraphics;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Actions
 {
-    class LinkStructureAction : IAction, IActionView, IEquatable<LinkStructureAction>
+    internal class LinkStructureAction : IAction, IActionView, IEquatable<LinkStructureAction>
     {
         public readonly LocationObj Source;
         public readonly LocationObj Target;
@@ -19,7 +17,10 @@ namespace WebAnnotation.UI.Actions
 
         public Action Execute => OnExecute;
 
-        public static implicit operator Action(LinkStructureAction a) => a.Execute;
+        public static implicit operator Action(LinkStructureAction a)
+        {
+            return a.Execute;
+        }
 
         public IRenderable Passive { get; set; } = null;
 
@@ -29,8 +30,8 @@ namespace WebAnnotation.UI.Actions
 
         public LinkStructureAction(LocationObj source, LocationObj target, bool Bidirectional)
         {
-            this.Source = source;
-            this.Target = target;
+            Source = source;
+            Target = target;
             this.Bidirectional = Bidirectional;
 
             Link = new StructureLinkKey(source.ParentID.Value, target.ParentID.Value, Bidirectional);
@@ -55,21 +56,27 @@ namespace WebAnnotation.UI.Actions
         public bool Equals(IAction other)
         {
             if (ReferenceEquals(this, other))
+            {
                 return true;
+            }
 
-            if (this.Type != other.Type)
+            if (Type != other.Type)
+            {
                 return false;
+            }
 
             LinkStructureAction other_action = other as LinkStructureAction;
             if (other_action == null)
+            {
                 return false;
+            }
 
-            return this.Equals(other_action);
+            return Equals(other_action);
         }
 
         public bool Equals(LinkStructureAction other)
         {
-            return other.Link == this.Link;
+            return other.Link == Link;
         }
     }
 }

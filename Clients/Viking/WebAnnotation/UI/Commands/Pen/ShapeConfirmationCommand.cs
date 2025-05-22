@@ -20,30 +20,29 @@ namespace WebAnnotation.UI.Commands
     /// </summary> bb bb                                                                                                                                                                                                                                           
     public class ShapeConfirmationCommand : Viking.UI.Commands.Command
     {
-        private IShape2D VolumeShape = null;
+        private readonly IShape2D VolumeShape = null;
 
         //Shapes the user can click to confirm
-        PositionColorMeshModel DrawnShape2D = null;  //Shape to draw for filled 2D shapes, Polygons, circles, etc...
-        PolyLineView DrawnShape1D = null;            //Shape to draw for 1D shapes or open 2D shapes, lines, closed curves, etc...
-        CircleView circleView = null;
-
-        double Width;  //Line width for line types
+        private PositionColorMeshModel DrawnShape2D = null;  //Shape to draw for filled 2D shapes, Polygons, circles, etc...
+        private PolyLineView DrawnShape1D = null;            //Shape to draw for 1D shapes or open 2D shapes, lines, closed curves, etc...
+        private CircleView circleView = null;
+        private readonly double Width;  //Line width for line types
 
         /// <summary>
         /// Button user can click to cancel
         /// </summary>
-        CircularButton CancelButton = null;
-        Color ShapeColor = Color.Green;
-
-        List<CircularButton> Buttons = new List<CircularButton>();
+        private CircularButton CancelButton = null;
+        private Color ShapeColor = Color.Green;
+        private readonly List<CircularButton> Buttons = new List<CircularButton>();
 
         public delegate void OnCommandSuccess();
-        OnCommandSuccess SuccessCallback = null;
+
+        private readonly OnCommandSuccess SuccessCallback = null;
 
         /// <summary>
         /// Fraction of the total shape area a button should occupy by default
         /// </summary>
-        double CircleAreaScalar = 10;
+        private readonly double CircleAreaScalar = 10;
 
         public ShapeConfirmationCommand(SectionViewerControl parent, IShape2D volume_shape, double width = 16.0, OnCommandSuccess success_callback = null) : base(parent)
         {
@@ -159,7 +158,7 @@ namespace WebAnnotation.UI.Commands
 
             if (DrawnShape1D != null)
             {
-                PolyLineView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, new PolyLineView[] { this.DrawnShape1D });
+                PolyLineView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, new PolyLineView[] { DrawnShape1D });
             }
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
@@ -183,7 +182,9 @@ namespace WebAnnotation.UI.Commands
         protected override void Execute()
         {
             if (SuccessCallback != null)
+            {
                 SuccessCallback();
+            }
 
             base.Execute();
         }
@@ -230,11 +231,11 @@ namespace WebAnnotation.UI.Commands
 
             GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
-            foreach (var button in Buttons)
+            foreach (CircularButton button in Buttons)
             {
                 if (button.Contains(WorldPosition) && button.OnClick(button, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     return;
                 }
             }
@@ -274,11 +275,11 @@ namespace WebAnnotation.UI.Commands
         {
             GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
 
-            foreach (var button in Buttons)
+            foreach (CircularButton button in Buttons)
             {
                 if (button.Contains(WorldPosition) && button.OnClick(button, WorldPosition, InputDevice.Pen, e))
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     return;
                 }
             }

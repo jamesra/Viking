@@ -3,17 +3,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
-using Viking.AnnotationServiceTypes;
 using Viking.Common;
 using WebAnnotation.View;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.ViewModel
 {
-
-    class SectionStructureLinkAnnotationsViewModel
+    internal class SectionStructureLinkAnnotationsViewModel
     {
         /// <summary>
         /// The section that is visible
@@ -30,7 +26,7 @@ namespace WebAnnotation.ViewModel
 
         public SectionStructureLinkAnnotationsViewModel(SectionAnnotationsView primarySection)
         {
-            this.PrimarySection = primarySection;
+            PrimarySection = primarySection;
         }
 
         /// <summary>
@@ -40,7 +36,7 @@ namespace WebAnnotation.ViewModel
         /// <returns></returns>
         public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene)
         {
-            return StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(this.PrimarySection.SectionNumber)).Select((sl_key) => this.StructureLinks[sl_key]).Where(sl => sl != null && sl.IsVisible(scene)).ToList();
+            return StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(PrimarySection.SectionNumber)).Select((sl_key) => StructureLinks[sl_key]).Where(sl => sl != null && sl.IsVisible(scene)).ToList();
         }
 
         internal void AddStructureLinks(IEnumerable<LocationObj> locations)
@@ -48,11 +44,15 @@ namespace WebAnnotation.ViewModel
             foreach (LocationObj locObj in locations)
             {
                 if (!locObj.ParentID.HasValue)
+                {
                     continue;
+                }
 
                 StructureObj parent = Store.Structures.GetObjectByID(locObj.ParentID.Value, true);//locObj.Parent;
                 if (parent == null)
+                {
                     continue;
+                }
 
                 if (parent.NumLinks > 0)
                 {
@@ -66,7 +66,9 @@ namespace WebAnnotation.ViewModel
             foreach (StructureObj structObj in structures)
             {
                 if (structObj.NumLinks > 0)
+                {
                     AddStructureLinks(structObj.LinksCopy);
+                }
             }
         }
 
@@ -78,7 +80,9 @@ namespace WebAnnotation.ViewModel
             foreach (StructureLinkObj structLinkObj in structureLinks)
             {
                 if (structLinkObj == null)
+                {
                     continue;
+                }
 
                 StructureLinkViewModelBase StructLink = CreateStructureLinkWithLocations(structLinkObj);
                 if (StructLink == null)
@@ -92,7 +96,7 @@ namespace WebAnnotation.ViewModel
                 {
                     //An error can occur if two structures are linked to each other twicea, once as a source and once as a destination.
                     StructureLinks.TryAdd(structLinkObj.ID, StructLink);
-                    StructureLinksSearch.TryAdd(StructLink.BoundingBox.ToRTreeRect(this.PrimarySection.SectionNumber), structLinkObj.ID);
+                    StructureLinksSearch.TryAdd(StructLink.BoundingBox.ToRTreeRect(PrimarySection.SectionNumber), structLinkObj.ID);
                 });
             }
         }
@@ -103,10 +107,14 @@ namespace WebAnnotation.ViewModel
             {
                 StructureObj parent = locObj.Parent;
                 if (parent == null)
+                {
                     continue;
+                }
 
                 if (parent.NumLinks > 0)
+                {
                     RemoveStructureLinks(parent.LinksCopy);
+                }
             }
         }
 
@@ -115,7 +123,9 @@ namespace WebAnnotation.ViewModel
             foreach (StructureObj structObj in structures)
             {
                 if (structObj.NumLinks > 0)
+                {
                     RemoveStructureLinks(structObj.LinksCopy);
+                }
             }
         }
 
@@ -125,20 +135,22 @@ namespace WebAnnotation.ViewModel
         internal void RemoveStructureLinks(IEnumerable<StructureLinkObj> structureLinks)
         {
             if (structureLinks == null)
+            {
                 return;
+            }
 
             foreach (StructureLinkObj structLinkObj in structureLinks)
             {
                 if (structLinkObj == null)
+                {
                     continue;
+                }
 
                 KnownStructureLinks.TryRemove(structLinkObj.ID, () =>
                 {
-                    StructureLinkViewModelBase removedLinkView;
-                    StructureLinks.TryRemove(structLinkObj.ID, out removedLinkView);
+                    StructureLinks.TryRemove(structLinkObj.ID, out StructureLinkViewModelBase removedLinkView);
                     //An error can occur if two structures are linked to each other twicea, once as a source and once as a destination.
-                    StructureLinkKey removedID;
-                    StructureLinksSearch.Delete(structLinkObj.ID, out removedID);
+                    StructureLinksSearch.Delete(structLinkObj.ID, out StructureLinkKey removedID);
                 });
             }
         }
@@ -161,20 +173,26 @@ namespace WebAnnotation.ViewModel
             }
 
             //The link may have been created to a structure on an adjacent section 
-            bool Success = PrimarySection.GetLocationsForStructure(structLinkObj.SourceID, out var SourceLocationIDs);
+            bool Success = PrimarySection.GetLocationsForStructure(structLinkObj.SourceID, out KeyTracker<long> SourceLocationIDs);
             if (Success == false)
+            {
                 return null;
-             
-            Success = PrimarySection.GetLocationsForStructure(structLinkObj.TargetID, out var TargetLocationIDs);
+            }
+
+            Success = PrimarySection.GetLocationsForStructure(structLinkObj.TargetID, out KeyTracker<long> TargetLocationIDs);
             if (Success == false)
+            {
                 return null;
+            }
 
             ICollection<LocationCanvasView> SourceLocations = SourceLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null).ToArray();
             ICollection<LocationCanvasView> TargetLocations = TargetLocationIDs.ValuesCopy().Select((l_id) => PrimarySection.GetLocation(l_id)).Where(l => l != null).ToArray();
 
             SectionStructureLinkViewKey linkViewKey = SectionStructureLinkViewKey.CreateForNearestLocations(structLinkObj.ID, SourceLocations, TargetLocations);
             if (linkViewKey == null)
+            {
                 return null;
+            }
 
             //OK, create a StructureLink between the locations
             return AnnotationViewFactory.Create(linkViewKey, PrimarySection.mapper);
@@ -187,19 +205,19 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridRectangle bounds)
         {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(bounds.ToRTreeRect((float)this.PrimarySection.SectionNumber));
+            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(bounds.ToRTreeRect((float)PrimarySection.SectionNumber));
             return intersectingIDs.Select(id => StructureLinks[id]).ToList();
         }
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridVector2 point)
         {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(point.ToRTreeRect((float)this.PrimarySection.SectionNumber));
+            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(point.ToRTreeRect((float)PrimarySection.SectionNumber));
             return intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Contains(point)).ToList();
         }
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks(GridLineSegment line)
         {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)this.PrimarySection.SectionNumber));
+            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)PrimarySection.SectionNumber));
             return intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Intersects(line)).ToList();
         }
     }

@@ -7,11 +7,11 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(Structure), 2)]
     public partial class StructureNotesPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        Structure Obj;
+        private Structure Obj;
 
         public StructureNotesPage()
         {
-            this.Title = "Notes";
+            Title = "Notes";
             InitializeComponent();
         }
 
@@ -22,16 +22,18 @@ namespace WebAnnotation.UI
 
         protected override void OnShowObject(object Object)
         {
-            this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null);
+            Obj = Object as Structure;
+            Debug.Assert(Obj != null);
 
-            if (null != this.Obj.Notes)
-                this.textNotes.Text = this.Obj.Notes;
+            if (null != Obj.Notes)
+            {
+                textNotes.Text = Obj.Notes;
+            }
         }
 
         protected override void OnSaveChanges()
         {
-            this.Obj.Notes = this.textNotes.Text;
+            Obj.Notes = textNotes.Text;
         }
     }
 }

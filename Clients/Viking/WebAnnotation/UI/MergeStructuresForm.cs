@@ -99,12 +99,12 @@ namespace WebAnnotation.UI
                 MessageBox.Show("Merge error", except.Message.ToString());
                 return;
             }
-            this.Close();
+            Close();
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         private bool IsIDValid(string Input, out string Reason)
@@ -165,8 +165,7 @@ namespace WebAnnotation.UI
 
         private void textIDLabel_TextChanged(object sender, EventArgs e)
         {
-            string Reason = null;
-            if (!IsAllInputValid(out Reason))
+            if (!IsAllInputValid(out string Reason))
             {
                 textValidation.Text = Reason;
                 btnMerge.Enabled = false;
@@ -180,8 +179,7 @@ namespace WebAnnotation.UI
 
         private void textKeepIDLabel_TextChanged(object sender, EventArgs e)
         {
-            string Reason;
-            bool IDValid = IsIDValid(textKeepID.Text, out Reason);
+            bool IDValid = IsIDValid(textKeepID.Text, out string Reason);
             textKeepLabel.Text = Reason;
 
             UpdateUIForIDLabelTextChanged();
@@ -189,8 +187,7 @@ namespace WebAnnotation.UI
 
         private void textMergeIDLabel_TextChanged(object sender, EventArgs e)
         {
-            string Reason;
-            bool IDValid = IsIDValid(textMergeID.Text, out Reason);
+            bool IDValid = IsIDValid(textMergeID.Text, out string Reason);
             textMergeLabel.Text = Reason;
 
             UpdateUIForIDLabelTextChanged();
@@ -198,8 +195,7 @@ namespace WebAnnotation.UI
 
         private void UpdateUIForIDLabelTextChanged()
         {
-            string Reason = null;
-            if (!IsAllInputValid(out Reason))
+            if (!IsAllInputValid(out string Reason))
             {
                 textValidation.Text = Reason;
                 btnMerge.Enabled = false;

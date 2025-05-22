@@ -12,40 +12,15 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-
-    class PlaceClosedCurveWithPenCommand : PlaceGeometryWithPenCommandBase
+    internal class PlaceClosedCurveWithPenCommand : PlaceGeometryWithPenCommandBase
     {
-        public override LineStyle Style
-        {
-            get
-            {
-                return LineStyle.HalfTube;
-            }
-        }
+        public override LineStyle Style => LineStyle.HalfTube;
 
-        public override uint NumCurveInterpolations
-        {
-            get
-            {
-                return Geometry.Global.NumClosedCurveInterpolationPoints;
-            }
-        }
+        public override uint NumCurveInterpolations => Geometry.Global.NumClosedCurveInterpolationPoints;
 
-        public float PointIntervalOnDrag
-        {
-            get
-            {
-                return 90;
-            }
-        }
+        public float PointIntervalOnDrag => 90;
 
-        public float PenAngleThreshold
-        {
-            get
-            {
-                return .3f;
-            }
-        }
+        public float PenAngleThreshold => .3f;
 
         public PlaceClosedCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
@@ -72,7 +47,7 @@ namespace WebAnnotation.UI.Commands
             {
                 if (IsProposedClosedLoopValid(PenInput.SimplifiedFirstLoop))
                 {
-                    this.Execute(PenInput.SimplifiedFirstLoop);
+                    Execute(PenInput.SimplifiedFirstLoop);
                 }
             }
         }
@@ -103,42 +78,32 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         protected override bool CanCommandComplete()
         {
-            return this.PenInput.HasSelfIntersection;
+            return PenInput.HasSelfIntersection;
         }
 
         protected override bool ShapeIsValid()
         {
-            if (this.PenInput.Points.Count < 3 || this.PenInput.HasSelfIntersection == false)
+            if (PenInput.Points.Count < 3 || PenInput.HasSelfIntersection == false)
+            {
                 return false;
+            }
 
             try
             {
-                return this.PenInput.Loop.ToPolygon().STIsValid().IsTrue;
+                return PenInput.Loop.ToPolygon().STIsValid().IsTrue;
             }
-            catch (ArgumentException e)
+            catch (ArgumentException)
             {
                 return false;
             }
         }
     }
 
-    class PlaceOpenCurveWithPenCommand : PlaceGeometryWithPenCommandBase
+    internal class PlaceOpenCurveWithPenCommand : PlaceGeometryWithPenCommandBase
     {
-        public override LineStyle Style
-        {
-            get
-            {
-                return LineStyle.Tubular;
-            }
-        }
+        public override LineStyle Style => LineStyle.Tubular;
 
-        public override uint NumCurveInterpolations
-        {
-            get
-            {
-                return Geometry.Global.NumOpenCurveInterpolationPoints;
-            }
-        }
+        public override uint NumCurveInterpolations => Geometry.Global.NumOpenCurveInterpolationPoints;
 
         public PlaceOpenCurveWithPenCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
@@ -161,7 +126,7 @@ namespace WebAnnotation.UI.Commands
         protected override void OnPathLoop(object sender, bool HasLoop)
         {
             //If the path loops it is not an open curve and we are in an invalid state
-            this.PathView.Color = HasLoop ? Microsoft.Xna.Framework.Color.Magenta : this.OriginalColor;
+            PathView.Color = HasLoop ? Microsoft.Xna.Framework.Color.Magenta : OriginalColor;
             return;
         }
 
@@ -207,13 +172,17 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool ShapeIsValid()
         {
-            if (this.PenInput.Points.Count < 2)
+            if (PenInput.Points.Count < 2)
+            {
                 return false;
+            }
 
             if (PenInput.HasSelfIntersection)
+            {
                 return false;
+            }
 
-            return this.PenInput.Points.ToSqlGeometry().STIsValid().IsTrue;
+            return PenInput.Points.ToSqlGeometry().STIsValid().IsTrue;
         }
     }
 
@@ -225,40 +194,23 @@ namespace WebAnnotation.UI.Commands
     /// Double left-click to complete polyline creation
     /// Right-click to remove the last polyline vertex
     /// </summary> 
-    abstract class PlaceGeometryWithPenCommandBase : LineGeometryCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal abstract class PlaceGeometryWithPenCommandBase : LineGeometryCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         public abstract uint NumCurveInterpolations
         {
             get;
         }
 
-        public override double LineWidth
-        {
-            get
-            {
+        public override double LineWidth =>
                 // return this.PathView == null ? Global.DefaultClosedLineWidth : this.PenInput.Points.MinDistanceBetweenSequentialPoints(out int FirstIndex);
-                return this.PathView.LineWidth;
-            }
-        }
+                PathView.LineWidth;
 
         /// <summary>
         /// Used for debugging when we want to show control points
         /// </summary>
-        public virtual double ControlPointRadius
-        {
-            get
-            {
-                return this.LineWidth / 2.0;
-            }
-        }
+        public virtual double ControlPointRadius => LineWidth / 2.0;
 
-        public ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
 
 
         public string[] HelpStrings
@@ -275,7 +227,7 @@ namespace WebAnnotation.UI.Commands
 
         }
 
-        public new static string[] DefaultMouseHelpStrings = new String[] {
+        public static new string[] DefaultMouseHelpStrings = new string[] {
             "Double Left Click: Place final control point, save and exit command",
             "Double Right Click: Pop last control point",
             "Left Click and Drag Control Point: Move existing control point",
@@ -283,7 +235,7 @@ namespace WebAnnotation.UI.Commands
             "No cursor: Command cannot be completed at this location due to invalid geometry. Typically crossed lines."
             };
 
-        public new static string[] DefaultKeyHelpStrings = new String[] {
+        public static new string[] DefaultKeyHelpStrings = new string[] {
             "Escape Key: Cancel command",
             "Page up/down key: Change Magnification",
             "Arrow key: Move view",
@@ -313,11 +265,11 @@ namespace WebAnnotation.UI.Commands
             parent.Cursor = Cursors.Cross;
             PenInput = new Viking.UI.PenInputHelper(parent);
             //Ensure any pen subscriptions are released in the OnDeactivate call
-            System.Diagnostics.Trace.WriteLine(string.Format("PlaceCurveWithPenCommand {0} Subscribed to events", this.ID));
-            PenInput.OnPathChanged += this.OnPenPathChanged;
-            PenInput.OnPathCompleted += this.OnPenPathComplete;
-            PenInput.OnProposedNextSegmentChanged += this.OnPenProposedNextSegmentChanged;
-            PenInput.OnPathLoop += this.OnPathLoop;
+            System.Diagnostics.Trace.WriteLine(string.Format("PlaceCurveWithPenCommand {0} Subscribed to events", ID));
+            PenInput.OnPathChanged += OnPenPathChanged;
+            PenInput.OnPathCompleted += OnPenPathComplete;
+            PenInput.OnProposedNextSegmentChanged += OnPenProposedNextSegmentChanged;
+            PenInput.OnPathLoop += OnPathLoop;
             this.success_callback = success_callback;
 
             SetPathViewForDownsample(Parent.Camera.Downsample);
@@ -367,58 +319,58 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            this.Execute(this.PenInput.SimplifiedPath);
+            Execute(PenInput.SimplifiedPath);
         }
 
         protected override void OnDeactivate()
         {
-            System.Diagnostics.Trace.WriteLine(string.Format("PlaceCurveWithPenCommand {0} Unubscribed to events", this.ID));
-            PenInput.OnPathChanged -= this.OnPenPathChanged;
-            PenInput.OnPathCompleted -= this.OnPenPathComplete;
-            PenInput.OnProposedNextSegmentChanged -= this.OnPenProposedNextSegmentChanged;
-            PenInput.OnPathLoop -= this.OnPathLoop;
-            this.PenInput.UnsubscribeEvents();
-            this.PenInput = null;
+            System.Diagnostics.Trace.WriteLine(string.Format("PlaceCurveWithPenCommand {0} Unubscribed to events", ID));
+            PenInput.OnPathChanged -= OnPenPathChanged;
+            PenInput.OnPathCompleted -= OnPenPathComplete;
+            PenInput.OnProposedNextSegmentChanged -= OnPenProposedNextSegmentChanged;
+            PenInput.OnPathLoop -= OnPathLoop;
+            PenInput.UnsubscribeEvents();
+            PenInput = null;
             base.OnDeactivate();
         }
 
-        virtual protected void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        protected virtual void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             //Update the view of the path
             switch (e.Action)
             {
                 case NotifyCollectionChangedAction.Add:
-                    this.PathView.Add(this.PenInput.Peek());
+                    PathView.Add(PenInput.Peek());
                     break;
                 case NotifyCollectionChangedAction.Remove:
                     //Pop off as many items that were removed
                     foreach (object p in e.OldItems)
                     {
-                        this.PathView.Remove();
+                        PathView.Remove();
                         //System.Diagnostics.Debug.Assert(this.PathView.ControlPoints.Last() == PenInput.Points.First());
                     }
 
                     break;
                 case NotifyCollectionChangedAction.Move:
-                    this.PathView.Remove();
-                    this.PathView.Add(this.PenInput.Peek());
+                    PathView.Remove();
+                    PathView.Add(PenInput.Peek());
                     break;
                 case NotifyCollectionChangedAction.Reset:
-                    this.PathView.ControlPoints = new GridVector2[0];
+                    PathView.ControlPoints = new GridVector2[0];
                     break;
                 default:
-                    this.PathView.ControlPoints = this.PenInput.Points;
+                    PathView.ControlPoints = PenInput.Points;
                     break;
             }
 
-            this.Parent.Invalidate();
+            Parent.Invalidate();
         }
 
         private void SetPathViewForDownsample(double Downsample)
         {
-            this.PathView.LineWidth = Downsample * PenInput.SimplifiedPathToleranceInPixels;
-            this.PathView.ControlPointRadius = this.PathView.LineWidth / 2.0f;
-            this.PathView.DashLength = (float)(Downsample * PenInput.SimplifiedPathToleranceInPixels * 2.0f);
+            PathView.LineWidth = Downsample * PenInput.SimplifiedPathToleranceInPixels;
+            PathView.ControlPointRadius = PathView.LineWidth / 2.0f;
+            PathView.DashLength = (float)(Downsample * PenInput.SimplifiedPathToleranceInPixels * 2.0f);
         }
 
         protected override void OnCameraChanged(object sender, PropertyChangedEventArgs e)
@@ -431,11 +383,11 @@ namespace WebAnnotation.UI.Commands
             base.OnCameraChanged(sender, e);
         }
 
-        abstract protected void OnPenPathComplete(object sender, GridVector2[] Path);
+        protected abstract void OnPenPathComplete(object sender, GridVector2[] Path);
 
-        abstract protected void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment);
+        protected abstract void OnPenProposedNextSegmentChanged(object sender, GridLineSegment? segment);
 
-        abstract protected void OnPathLoop(object sender, bool HasLoop);
+        protected abstract void OnPathLoop(object sender, bool HasLoop);
 
         protected abstract bool ShapeIsValid();
 
@@ -448,27 +400,27 @@ namespace WebAnnotation.UI.Commands
             {
                 base.OnPenMove(sender, e);
             }
-            else if(PenInput != null && e.Barrel)
+            else if (PenInput != null && e.Barrel)
             {
-                this.CancelCommand();
+                CancelCommand();
                 return;
             }
             else
             {
                 GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
-                this.Parent.StatusPosition = NewPosition;
+                Parent.StatusPosition = NewPosition;
                 SaveAsOldPenPosition(e);
             }
         }
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            PolyLineView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new PolyLineView[] { this.PathView });
+            PolyLineView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new PolyLineView[] { PathView });
 
 #if DEBUG
             if (PenInput.ProposedNextSegment.HasValue)
             {
-                LineView unofficialPath = new LineView(PenInput.ProposedNextSegment.Value, width: this.LineWidth, color: this.LineColor, lineStyle: LineStyle.Standard);
+                LineView unofficialPath = new LineView(PenInput.ProposedNextSegment.Value, width: LineWidth, color: LineColor, lineStyle: LineStyle.Standard);
                 LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, new LineView[] { unofficialPath });
             }
 #endif

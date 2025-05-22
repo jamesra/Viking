@@ -15,8 +15,7 @@ namespace WebAnnotation.UI.Actions
     internal class Change2DContourAction : IAction, IEquatable<Change2DContourAction>
     {
         public readonly LocationObj Location;
-
-        IVolumeToSectionTransform Transform;
+        private readonly IVolumeToSectionTransform Transform;
 
         /// <summary>
         /// The mosaic space polygon we want to commit to the database
@@ -44,7 +43,10 @@ namespace WebAnnotation.UI.Actions
 
         public Action Execute => OnExecute;
 
-        public static implicit operator Action(Change2DContourAction a) => a.Execute;
+        public static implicit operator Action(Change2DContourAction a)
+        {
+            return a.Execute;
+        }
 
         /// <summary>
         /// Indicates if this action represents the ClockWiseContour when we are cutting a shape in half
@@ -58,13 +60,13 @@ namespace WebAnnotation.UI.Actions
 
             this.ClockwiseContour = ClockwiseContour;
             RetraceType = retraceType;
-            this.Location = Store.Locations[locationID];
+            Location = Store.Locations[locationID];
 
-            this.Transform = transform ?? WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            Transform = transform ?? WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
-            this.NewMosaicPolygon = newMosaicPolygon;
-            this.NewVolumePolygon = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon);
-            this.NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints); 
+            NewMosaicPolygon = newMosaicPolygon;
+            NewVolumePolygon = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon);
+            NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints); 
         }
 
         public Change2DContourAction(LocationObj location, RetraceCommandAction retraceType, GridPolygon newMosaicPolygon, GridPolygon newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform transform = null)
@@ -73,20 +75,20 @@ namespace WebAnnotation.UI.Actions
 
             this.ClockwiseContour = ClockwiseContour;
             RetraceType = retraceType;
-            this.Location = location;
-            this.Transform = transform == null ?
+            Location = location;
+            Transform = transform == null ?
                 WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
                 : transform;
 
-            this.NewMosaicPolygon = newMosaicPolygon;
+            NewMosaicPolygon = newMosaicPolygon;
 
-            this.NewVolumePolygon = newVolumePolygon is null ? Transform.TryMapShapeSectionToVolume(newMosaicPolygon) : newVolumePolygon;
-            this.NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            NewVolumePolygon = newVolumePolygon is null ? Transform.TryMapShapeSectionToVolume(newMosaicPolygon) : newVolumePolygon;
+            NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
         }
 
         public void OnExecute()
         {
-            var original_mosaic_polygon = Location.MosaicShape;
+            Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape;
             //var mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
             Location.SetShapeFromGeometryInSection(Transform, NewMosaicPolygon.ToSqlGeometry());
 
@@ -104,40 +106,47 @@ namespace WebAnnotation.UI.Actions
         public bool Equals(IAction other)
         {
             if (ReferenceEquals(this, other))
+            {
                 return true;
+            }
 
-            if (this.Type != other.Type)
+            if (Type != other.Type)
+            {
                 return false;
+            }
 
             Change2DContourAction other_action = other as Change2DContourAction;
             if (other_action == null)
+            {
                 return false;
+            }
 
-            return this.Equals(other_action);
+            return Equals(other_action);
         }
 
         public bool Equals(Change2DContourAction other)
         {
-            if (other.Location.ID != this.Location.ID)
+            if (other.Location.ID != Location.ID)
+            {
                 return false;
+            }
 
-            return this.NewVolumePolygon.Equals(other.NewVolumePolygon);
+            return NewVolumePolygon.Equals(other.NewVolumePolygon);
         }
 
         public override string ToString()
         {
-            return string.Format("{0} {1} {2}", base.ToString(), this.Type, this.RetraceType);
+            return string.Format("{0} {1} {2}", base.ToString(), Type, RetraceType);
         }
     }
 
     /// <summary>
     /// Replace the exterior contour of an annotation with the passed contour
     /// </summary>
-    class Change1DContourAction : IAction, IEquatable<Change1DContourAction>
+    internal class Change1DContourAction : IAction, IEquatable<Change1DContourAction>
     {
         public readonly LocationObj Location;
-
-        IVolumeToSectionTransform Transform;
+        private readonly IVolumeToSectionTransform Transform;
 
         /// <summary>
         /// The volume space polygon we want to add to the location
@@ -153,23 +162,25 @@ namespace WebAnnotation.UI.Actions
 
         public Action Execute => OnExecute;
 
-        public static implicit operator Action(Change1DContourAction a) => a.Execute;
-
+        public static implicit operator Action(Change1DContourAction a)
+        {
+            return a.Execute;
+        }
 
         public Change1DContourAction(LocationObj location, GridPolyline newVolumePolyline, IVolumeToSectionTransform transform = null)
         {
             //TODO: This can be merged back into ChangeContour by passing an IShape2D parameter
-            this.Location = location;
-            this.Transform = transform == null ?
+            Location = location;
+            Transform = transform == null ?
                 WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
                 : transform;
-            this.NewVolumePolyline = newVolumePolyline;
+            NewVolumePolyline = newVolumePolyline;
             NewSmoothVolumePolyline = newVolumePolyline.Smooth(Global.NumOpenCurveInterpolationPoints);
         }
 
         public void OnExecute()
         {
-            var mosaic_shape = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
+            GridPolyline mosaic_shape = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
             Location.SetShapeFromGeometryInSection(Transform, mosaic_shape.ToSqlGeometry());
 
             Store.Locations.Save();
@@ -178,29 +189,37 @@ namespace WebAnnotation.UI.Actions
         public bool Equals(IAction other)
         {
             if (ReferenceEquals(this, other))
+            {
                 return true;
+            }
 
-            if (this.Type != other.Type)
+            if (Type != other.Type)
+            {
                 return false;
+            }
 
             Change1DContourAction other_action = other as Change1DContourAction;
             if (other_action == null)
+            {
                 return false;
+            }
 
-            return this.Equals(other_action);
+            return Equals(other_action);
         }
 
         public bool Equals(Change1DContourAction other)
         {
-            if (other.Location.ID != this.Location.ID)
+            if (other.Location.ID != Location.ID)
+            {
                 return false;
+            }
 
-            return this.NewVolumePolyline.Equals(other.NewVolumePolyline);
+            return NewVolumePolyline.Equals(other.NewVolumePolyline);
         }
 
         public override string ToString()
         {
-            return string.Format("{0} {1}", base.ToString(), this.Type);
+            return string.Format("{0} {1}", base.ToString(), Type);
         }
 
     }

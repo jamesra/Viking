@@ -6,13 +6,13 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-    class LocationLink_CanvasContextMenuView : IContextMenu
+    internal class LocationLink_CanvasContextMenuView : IContextMenu
     {
         public LocationLinkKey linkKey;
 
         public LocationLink_CanvasContextMenuView(LocationLinkKey link)
         {
-            this.linkKey = link;
+            linkKey = link;
         }
 
         public static ContextMenu ContextMenuGenerator(IViewLocationLink link)
@@ -42,20 +42,22 @@ namespace WebAnnotation.View
             }
         }
 
-        static WebAnnotation.UI.SplitStructuresForm SplitForm = null;
+        private static WebAnnotation.UI.SplitStructuresForm SplitForm = null;
         protected void ContextMenu_OnSplit(object sender, EventArgs e)
         {
             if (SplitForm == null)
             {
-                SplitForm = new WebAnnotation.UI.SplitStructuresForm();
-                SplitForm.SplitID = this.linkKey.A;
-                SplitForm.KeepID = this.linkKey.B;
+                SplitForm = new WebAnnotation.UI.SplitStructuresForm
+                {
+                    SplitID = linkKey.A,
+                    KeepID = linkKey.B
+                };
                 SplitForm.FormClosed += OnSplitFormClosed;
                 SplitForm.Show();
             }
         }
 
-        static private void OnSplitFormClosed(object sender, FormClosedEventArgs e)
+        private static void OnSplitFormClosed(object sender, FormClosedEventArgs e)
         {
             SplitForm = null;
         }

@@ -13,21 +13,19 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    class AdjustPolygonVertexCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal class AdjustPolygonVertexCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        GridPolygon OriginalMosaicPolygon;
-        GridPolygon OriginalVolumePolygon;
+        private readonly GridPolygon OriginalMosaicPolygon;
+        private readonly GridPolygon OriginalVolumePolygon;
 
         private GridPolygon OutputVolumePolygon;
-
-        PositionColorMeshModel polygonView;
-
-        GridPolygon AdjustedPolygon = null; //The polygon we are adjusting.  This can be an interior polygon.
+        private PositionColorMeshModel polygonView;
+        private GridPolygon AdjustedPolygon = null; //The polygon we are adjusting.  This can be an interior polygon.
         private bool ControlPointSelected = false;
-        private PolygonIndex iOriginalVolumePolyControlPoint; 
+        private PolygonIndex iOriginalVolumePolyControlPoint;
         private PolygonIndex iAdjustedControlPoint; //The index of the vertex in the exterior ring to adjust. 
 
-        Color _color;
+        private Color _color;
 
         /// <summary>
         /// Returns unsmoothed mosaic and volume polygons with the new point
@@ -35,25 +33,13 @@ namespace WebAnnotation.UI.Commands
         /// <param name="MosaicPolygon"></param>
         /// <param name="VolumePolygon"></param>
         public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
-        OnCommandSuccess success_callback;
 
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly OnCommandSuccess success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
-        public string[] HelpStrings
-        {
-            get
-            {
-                return new string[] { "Release Left Mouse Button to place control point" };
-            }
-        }
+        public string[] HelpStrings => new string[] { "Release Left Mouse Button to place control point" };
 
-        public ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
 
         public AdjustPolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridPolygon mosaic_polygon,
@@ -61,8 +47,8 @@ namespace WebAnnotation.UI.Commands
                                         OnCommandSuccess success_callback) : base(parent)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalMosaicPolygon = mosaic_polygon;
+            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
             _color = color;
 
             //this.SmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
@@ -83,7 +69,7 @@ namespace WebAnnotation.UI.Commands
                 OriginalVolumePolygon.NearestVertex(WorldPosition, out iOriginalVolumePolyControlPoint);
                 AdjustedPolygon = (GridPolygon)iOriginalVolumePolyControlPoint.Polygon(OriginalVolumePolygon).Clone();
 
-                this.iAdjustedControlPoint = iOriginalVolumePolyControlPoint.IsInner
+                iAdjustedControlPoint = iOriginalVolumePolyControlPoint.IsInner
                     ? iOriginalVolumePolyControlPoint.ReindexToOuter()
                     : iOriginalVolumePolyControlPoint;
             }
@@ -97,28 +83,32 @@ namespace WebAnnotation.UI.Commands
 
             //If we haven't moved a significant distance, don't update the view
             if (PositionDelta.Round(0) == GridVector2.Zero)
+            {
                 return;
+            }
 
-            var newTokenSource = new CancellationTokenSource();
-            var existingToken = Interlocked.Exchange(ref UpdatePositionCancellationTokenSource, newTokenSource);
-            if(existingToken != null)
+            CancellationTokenSource newTokenSource = new CancellationTokenSource();
+            CancellationTokenSource existingToken = Interlocked.Exchange(ref UpdatePositionCancellationTokenSource, newTokenSource);
+            if (existingToken != null)
+            {
                 existingToken.Cancel();
+            }
 
-            var result = await CreateView(AdjustedPolygon, _color, newTokenSource.Token);
+            PositionColorMeshModel result = await CreateView(AdjustedPolygon, _color, newTokenSource.Token);
             if (newTokenSource.IsCancellationRequested == false)
             {
-                Interlocked.Exchange(ref polygonView, result); 
+                Interlocked.Exchange(ref polygonView, result);
                 ThreadSafeParentInvalidate();
             }
         }
-         
+
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
             PopulateControlPointIndexIfNeeded(NewPosition);
 
             //Redraw if we are dragging a location
-            if (this.oldMouse != null)
+            if (oldMouse != null)
             {
                 if (oldMouse.Button.Left())
                 {
@@ -137,15 +127,15 @@ namespace WebAnnotation.UI.Commands
                 GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
                 PopulateControlPointIndexIfNeeded(NewPosition);
 
-                if (this.AdjustedPolygon != null)
+                if (AdjustedPolygon != null)
                 {
                     OutputVolumePolygon = (GridPolygon)OriginalVolumePolygon.Clone();
                     OutputVolumePolygon[iOriginalVolumePolyControlPoint] = AdjustedPolygon[iAdjustedControlPoint];
-                    this.Execute();
+                    Execute();
                 }
                 else
                 {
-                    this.CommandActive = false;
+                    CommandActive = false;
                 }
             }
 
@@ -156,7 +146,9 @@ namespace WebAnnotation.UI.Commands
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
             if (polygonView != null)
+            {
                 MeshView<VertexPositionColor>.Draw(graphicsDevice, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(graphicsDevice), meshmodels: new PositionColorMeshModel[] { polygonView });
+            }
         }
 
         protected override void Execute()
@@ -172,9 +164,9 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            this.success_callback(mosaic_polygon, OutputVolumePolygon);
+            success_callback(mosaic_polygon, OutputVolumePolygon);
 
             base.Execute();
-        } 
+        }
     }
 }

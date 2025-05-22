@@ -10,12 +10,12 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(Structure), 2)]
     public partial class StructureChildStructuresPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        Structure Obj;
-        bool listLoaded = false;
+        private Structure Obj;
+        private bool listLoaded = false;
 
         public StructureChildStructuresPage()
         {
-            this.Title = "Child Structures";
+            Title = "Child Structures";
 
             InitializeComponent();
         }
@@ -27,8 +27,8 @@ namespace WebAnnotation.UI
 
         protected override void OnShowObject(object Object)
         {
-            this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null);
+            Obj = Object as Structure;
+            Debug.Assert(Obj != null);
         }
 
         private void StructureChildStructuresPage_VisibleChanged(object sender, EventArgs e)
@@ -36,7 +36,7 @@ namespace WebAnnotation.UI
             if (!listLoaded)
             {
 
-                this.UseWaitCursor = true;
+                UseWaitCursor = true;
                 ICollection<StructureObj> childStructureObjs = Store.Structures.GetChildStructuresForStructure(Obj.ID);
                 List<Structure> childStructures = new List<Structure>(childStructureObjs.Count);
 
@@ -45,13 +45,13 @@ namespace WebAnnotation.UI
                     childStructures.Add(new Structure(s));
                 }
 
-                if (!this.IsDisposed)
+                if (!IsDisposed)
                 {
                     listStructures.SetStructures(childStructures.ToArray());
 
                     listLoaded = true;
 
-                    this.UseWaitCursor = false;
+                    UseWaitCursor = false;
                 }
             }
         }

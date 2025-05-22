@@ -138,7 +138,7 @@ namespace MonogameTestbed
             this.Window.Title = "Monogame testbed";
             this.Window.AllowUserResizing = true;
 #if DEBUG
-            this.Window.Position = new Point(-desired_screen_width, 0);
+            this.Window.Position = new Point(0, 0);
 #else
             //this.Window.Position = new Point(0, 0);
 #endif
@@ -246,17 +246,17 @@ namespace MonogameTestbed
                 return;
 
             var StartMode = this.Mode;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F1))
+            if (keyboardState.IsKeyDown(Keys.F1))
                 this.Mode = TestMode.CURVE;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F2))
+            if (keyboardState.IsKeyDown(Keys.F2))
                 this.Mode = TestMode.CURVE_LABEL;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F3))
+            if (keyboardState.IsKeyDown(Keys.F3))
                 this.Mode = TestMode.TEXT;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F4))
+            if (keyboardState.IsKeyDown(Keys.F4))
                 this.Mode = TestMode.LINESTYLES;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F5))
+            if (keyboardState.IsKeyDown(Keys.F5))
                 this.Mode = TestMode.CURVESTYLES;
-            if (Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.F6))
+            if (keyboardState.IsKeyDown(Keys.F6))
                 this.Mode = TestMode.CLOSEDCURVE;
             if (keyboardState.IsKeyDown(Keys.F7))
                 this.Mode = TestMode.POLYGON2D;
@@ -287,9 +287,16 @@ namespace MonogameTestbed
             if (keyboardState.IsKeyDown(Keys.NumPad8) || keyboardState.IsKeyDown(Keys.D8))
                 this.Mode = TestMode.CONSTRAINEDDELAUNAY2D;
             if (keyboardState.IsKeyDown(Keys.NumPad9) || keyboardState.IsKeyDown(Keys.D9))
-                this.Mode = TestMode.POLYGONINTERSECTION;
+                this.Mode = TestMode.POLYGONINTERSECTION;9
             if (keyboardState.IsKeyDown(Keys.NumPad0) || keyboardState.IsKeyDown(Keys.D0))
                 this.Mode = TestMode.LABELED_RECTANGLES;
+            
+            if (!listTests.ContainsKey(Mode))
+            {
+                Console.WriteLine("Test not found: " + Mode);
+                this.Mode = StartMode;
+                return;
+            }
             
             if (!listTests[Mode].Initialized)
             {

@@ -2,8 +2,6 @@
 using System.Linq;
 using Viking.AnnotationServiceTypes;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
-using Viking.AnnotationServiceTypes;
 
 namespace WebAnnotation.UI.Actions
 {
@@ -22,7 +20,9 @@ namespace WebAnnotation.UI.Actions
         {
             //Check if the origin is even in the list of entries before going into detail
             if (false == log_entries.Any(e => e.location?.ID == origin_ID))
+            {
                 return new List<IAction>();
+            }
 
             List<IAction> listAction = new List<IAction>();
             listAction.AddRange(IdentifyPossibleLocationLinkActions(log_entries, origin_ID));
@@ -39,7 +39,7 @@ namespace WebAnnotation.UI.Actions
             long origin_struct_id = origin_loc.ParentID.Value;
 
             //Filter any entries with the same Structure ID
-            var other_structure_entries = log_entries.Where(e => e.location != null).ToArray();
+            LocationInteractionLogEvent[] other_structure_entries = log_entries.Where(e => e.location != null).ToArray();
 
             //Find the first entry with the origin ID. 
             int iStart = other_structure_entries.Length;
@@ -94,7 +94,9 @@ namespace WebAnnotation.UI.Actions
             {
                 int touch_count = candidate_touch_count[key];
                 if (touch_count < 3)
+                {
                     continue; //Not enough touches to create a link
+                }
 
                 LocationObj other_location = Store.Locations[key];
                 long other_struct_id = other_location.ParentID.Value;
@@ -113,7 +115,7 @@ namespace WebAnnotation.UI.Actions
                 //Add the link if it does not exist
                 if (false == Store.StructureLinks.Contains(link_candidate))
                 {
-                    var action = new LinkStructureAction(origin_loc, other_location, link_candidate.Bidirectional);
+                    LinkStructureAction action = new LinkStructureAction(origin_loc, other_location, link_candidate.Bidirectional);
                     listActions.Add(action);
                 }
             }
@@ -125,12 +127,12 @@ namespace WebAnnotation.UI.Actions
         {
             LocationObj origin_loc = Store.Locations.GetObjectByID(origin_ID);
 
-            var candidates = log_entries.Where(e => e.location != null &&
+            IEnumerable<LocationInteractionLogEvent> candidates = log_entries.Where(e => e.location != null &&
                                        e.location.ParentID == origin_loc.ParentID &&
                                        e.location.Z != origin_loc.Z);
 
             //Identify all location links that do not exist in the local store already
-            var non_existing_links = candidates.Select(c => new LocationLinkKey(c.location.ID, origin_ID))
+            LocationLinkKey[] non_existing_links = candidates.Select(c => new LocationLinkKey(c.location.ID, origin_ID))
                                                .Distinct()
                                                .Where(ll => Store.LocationLinks.Contains(ll) == false).ToArray();
 

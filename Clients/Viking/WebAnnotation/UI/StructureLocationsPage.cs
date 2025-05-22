@@ -10,17 +10,16 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(Structure), 3)]
     public partial class StructureLocationsPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        Structure Obj;
-
-        bool listLoaded = false;
+        private Structure Obj;
+        private bool listLoaded = false;
 
         public StructureLocationsPage()
         {
 
             InitializeComponent();
-            this.Title = "Locations";
-            this.listLocations.Title = "Locations";
-            this.listLocations.TitleVisible = false;
+            Title = "Locations";
+            listLocations.Title = "Locations";
+            listLocations.TitleVisible = false;
         }
 
         protected override void OnInitPage()
@@ -30,8 +29,8 @@ namespace WebAnnotation.UI
 
         protected override void OnShowObject(object Object)
         {
-            this.Obj = Object as Structure;
-            Debug.Assert(this.Obj != null);
+            Obj = Object as Structure;
+            Debug.Assert(Obj != null);
         }
 
         private void StructureLocationsPage_VisibleChanged(object sender, EventArgs e)
@@ -39,7 +38,7 @@ namespace WebAnnotation.UI
             if (!listLoaded)
             {
 
-                this.UseWaitCursor = true;
+                UseWaitCursor = true;
                 ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(Obj.ID);
                 List<Location_PropertyPageViewModel> listLocationViews = new List<Location_PropertyPageViewModel>(locations.Count);
 
@@ -53,7 +52,7 @@ namespace WebAnnotation.UI
                 listLoaded = true;
 
 
-                this.UseWaitCursor = false;
+                UseWaitCursor = false;
             }
         }
     }

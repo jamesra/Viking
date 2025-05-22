@@ -1,5 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
-using Geometry;
+﻿using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using RoundLineCode;
@@ -9,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes.Interfaces;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.ViewModel;
@@ -16,16 +16,15 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    class LinkAnnotationsCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal class LinkAnnotationsCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        readonly LocationObj OriginObj;
-        
+        private readonly LocationObj OriginObj;
+
         /// <summary>
         /// Where the origin of the line used for rendering UI feedback is
         /// </summary>
-        readonly GridVector2 OriginPosition;
-
-        LocationObj NearestTarget = null;
+        private readonly GridVector2 OriginPosition;
+        private LocationObj NearestTarget = null;
 
         /// <summary>
         /// For UI feedback this records the bounding box of the nearest target as it appears on the screen.
@@ -75,21 +74,27 @@ namespace WebAnnotation.UI.Commands
         public static IViewLocation FindBestLinkCandidate(SectionAnnotationsView sectionView, GridVector2 WorldPos, LocationObj OriginObj, out GridRectangle rectBestMatchBBox)
         {
             if (sectionView is null)
+            {
                 throw new ArgumentNullException(nameof(sectionView));
+            }
 
             if (OriginObj is null)
+            {
                 throw new ArgumentNullException(nameof(OriginObj));
+            }
 
             rectBestMatchBBox = default;
             List<HitTestResult> listInitialHitTestResults = sectionView.GetAnnotations(WorldPos).Where(ht => ht.obj != null).ToList();
-            var listHitTestResults = listInitialHitTestResults.ExpandICanvasViewContainers(WorldPos);
+            List<HitTestResult> listHitTestResults = listInitialHitTestResults.ExpandICanvasViewContainers(WorldPos);
 
             //Find locations that are not equal to our origin location
             listHitTestResults = listHitTestResults.Where(hr =>
             {
                 IViewLocation loc = hr.obj as IViewLocation;
                 if (loc == null)
+                {
                     return false;
+                }
 
                 return loc.ID != OriginObj.ID && !OriginObj.Links.Contains(loc.ID);
             }).ToList();
@@ -114,7 +119,7 @@ namespace WebAnnotation.UI.Commands
         protected IViewLocation FindBestLinkCandidate(GridVector2 WorldPos, out GridRectangle candidateBoundingBox)
         {
             candidateBoundingBox = default;
-            SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(this.Parent.Section.Number);
+            SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
             return sectionView == null ? null : FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out candidateBoundingBox);
         }
 
@@ -122,10 +127,7 @@ namespace WebAnnotation.UI.Commands
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
-            //Find if we are close enough to a location to "snap" the line to the target
-            double distance;
-
-            IViewLocation nearestVisible = FindBestLinkCandidate(WorldPos, out var boundingBox );
+            IViewLocation nearestVisible = FindBestLinkCandidate(WorldPos, out GridRectangle boundingBox);
             NearestTarget = TrySetTarget(nearestVisible, boundingBox);
 
             base.OnMouseMove(sender, e);
@@ -141,8 +143,8 @@ namespace WebAnnotation.UI.Commands
         {
             if (nearest != null)
             {
-                var nearest_target = Store.Locations[nearest.ID];
-                var result = TrySetTarget(nearest_target); 
+                LocationObj nearest_target = Store.Locations[nearest.ID];
+                LocationObj result = TrySetTarget(nearest_target);
                 NearestTargetBoundingBox = targetBoundingRect;
                 return nearest_target;
             }
@@ -159,13 +161,19 @@ namespace WebAnnotation.UI.Commands
         private LocationObj TrySetTarget(LocationObj nearest_target)
         {
             if (nearest_target == null)
+            {
                 return null;
+            }
 
             if (LocationLinkView.IsValidLocationLinkTarget(nearest_target, OriginObj))
+            {
                 return nearest_target;
+            }
 
             if (StructureLinkViewModelBase.IsValidStructureLinkTarget(nearest_target, OriginObj))
+            {
                 return nearest_target;
+            }
 
             return null;
         }
@@ -178,12 +186,12 @@ namespace WebAnnotation.UI.Commands
                 GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
                 //Find if we are close enough to a location to "snap" the line to the target
-                IViewLocation nearest = FindBestLinkCandidate(WorldPos, out var boundingBox);
+                IViewLocation nearest = FindBestLinkCandidate(WorldPos, out GridRectangle boundingBox);
                 NearestTarget = TrySetTarget(nearest, boundingBox);
 
                 if (NearestTarget == null)
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     return;
                 }
 
@@ -199,7 +207,7 @@ namespace WebAnnotation.UI.Commands
                     }
                     finally
                     {
-                        this.Deactivated = true;
+                        Deactivated = true;
                     }
                 }
                 else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
@@ -216,7 +224,7 @@ namespace WebAnnotation.UI.Commands
                     }
                     finally
                     {
-                        this.Deactivated = true;
+                        Deactivated = true;
                     }
 
                     //HACK: This updates the UI to show the new structure link.  It should be automatic, but force it for now...
@@ -224,7 +232,7 @@ namespace WebAnnotation.UI.Commands
                     //sectionAnnotations.AddStructureLinks(NearestTarget.Parent);
                 }
 
-                this.Execute();
+                Execute();
             }
 
             base.OnMouseUp(sender, e);
@@ -233,8 +241,8 @@ namespace WebAnnotation.UI.Commands
         public static bool TryCreateLink(SectionAnnotationsView sectionView, GridVector2 WorldPos, LocationObj OriginObj)
         {
             //Find if we are close enough to a location to "snap" the line to the target
-            IViewLocation nearest = FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out var _);
-            var NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
+            IViewLocation nearest = FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out GridRectangle _);
+            LocationObj NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
             if (NearestTarget is null)
             {
                 return false;
@@ -287,40 +295,40 @@ namespace WebAnnotation.UI.Commands
             base.Execute();
         }
 
-        static readonly Color invalidTarget = new Color((byte)255,
-                                            (byte)0,
-                                            (byte)64,
+        private static readonly Color invalidTarget = new Color(255,
+                                            0,
+                                            64,
                                             0.5f);
-
-        static readonly Color validTarget = new Microsoft.Xna.Framework.Color((byte)0,
-                                (byte)255,
-                                (byte)0,
-                                (byte)128);
-
-        static readonly Color noTarget = new Color(Color.White.R,
+        private static readonly Color validTarget = new Microsoft.Xna.Framework.Color(0,
+                                255,
+                                0,
+                                128);
+        private static readonly Color noTarget = new Color(Color.White.R,
                                     Color.White.G,
                                     Color.White.B,
                                     0.5f);
-
-        static readonly string InvalidTargetStyle = null;
-        static readonly string LocationLinkStyle = null;
-        static readonly string StructureLinkStyle = "AnimatedLinear";
+        private static readonly string InvalidTargetStyle = null;
+        private static readonly string LocationLinkStyle = null;
+        private static readonly string StructureLinkStyle = "AnimatedLinear";
 
         private double LineRadiusForLocationLink() { return OriginObj.Radius / 6.0; }
         private double LineRadiusForStructureLink()
         {
             if (NearestTarget == null)
+            {
                 return OriginObj.Radius;
+            }
 
             return Math.Min(OriginObj.Radius, NearestTarget.Radius);
         }
 
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
-            if (this.oldMouse == null)
+            if (oldMouse == null)
+            {
                 return;
+            }
 
-            
             Vector3 target;
             if (NearestTarget != null)
             {
@@ -332,11 +340,11 @@ namespace WebAnnotation.UI.Commands
             else
             {
                 //Otherwise use the old mouse position
-                target = new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f);
+                target = new Vector3((float)oldWorldPosition.X, (float)oldWorldPosition.Y, 0f);
             }
 
             Color lineColor = noTarget;
-            String lineStyle = null;
+            string lineStyle = null;
             double lineRadius = LineRadiusForLocationLink();
             bool UseLumaLineManager = false;
 
@@ -367,8 +375,8 @@ namespace WebAnnotation.UI.Commands
 
             RoundLine lineToParent = new RoundLine((float)OriginPosition.X,
                                                    (float)OriginPosition.Y,
-                                                   (float)target.X,
-                                                   (float)target.Y);
+                                                   target.X,
+                                                   target.Y);
 
             float Time = (float)TimeSpan.FromTicks(DateTime.Now.Ticks - DateTime.Today.Ticks).TotalSeconds;
             RoundLineManager lineManager = UseLumaLineManager ? Parent.LumaOverlayLineManager : Parent.LineManager;

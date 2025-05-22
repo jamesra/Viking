@@ -16,7 +16,7 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-    abstract class LocationCircleViewBase : LocationCanvasView, ILabelView
+    internal abstract class LocationCircleViewBase : LocationCanvasView, ILabelView
     {
         public LocationCircleViewBase(LocationObj obj) : base(obj)
         {
@@ -31,7 +31,7 @@ namespace WebAnnotation.View
             {
                 if (_VolumeShape == null)
                 {
-                    _VolumeShape = VolumeCircle.ToSqlGeometry(this.Z);
+                    _VolumeShape = VolumeCircle.ToSqlGeometry(Z);
                 }
                 return _VolumeShape;
             }
@@ -75,7 +75,7 @@ namespace WebAnnotation.View
                     GridVector2 point = new GridVector2(shape.STX.Value, shape.STY.Value);
                     return VolumeCircle.Contains(point);
                 default:
-                    return this.VolumeShapeAsRendered.STIntersects(shape).IsTrue;
+                    return VolumeShapeAsRendered.STIntersects(shape).IsTrue;
             }
         }
 
@@ -86,17 +86,17 @@ namespace WebAnnotation.View
         /// <returns></returns>
         public override double Distance(GridVector2 Position)
         {
-            return this.VolumeCircle.Distance(Position);
+            return VolumeCircle.Distance(Position);
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
-            return GridVector2.Distance(Position, this.VolumeCircle.Center) / this.Radius;
+            return GridVector2.Distance(Position, VolumeCircle.Center) / Radius;
         }
 
         public double DistanceToCenter(GridVector2 Position)
         {
-            return GridVector2.Distance(Position, this.VolumeCircle.Center);
+            return GridVector2.Distance(Position, VolumeCircle.Center);
         }
 
 
@@ -107,7 +107,7 @@ namespace WebAnnotation.View
         public abstract bool IsLabelVisible(Scene scene);
     }
 
-    class AdjacentLocationCircleView : LocationCircleViewBase, IColorView
+    internal class AdjacentLocationCircleView : LocationCircleViewBase, IColorView
     {
         public TextureCircleView upCircleView;
         public TextureCircleView downCircleView;
@@ -120,18 +120,12 @@ namespace WebAnnotation.View
 
         public override GridCircle VolumeCircle => _VolumeCircle;
 
-        private ICollection<long> _OverlappedLinks;
+        private readonly ICollection<long> _OverlappedLinks;
         public override ICollection<long> OverlappedLinks
         {
-            protected get
-            {
-                return _OverlappedLinks;
-            }
+            protected get => _OverlappedLinks;
 
-            set
-            {
-                throw new NotImplementedException();
-            }
+            set => throw new NotImplementedException();
         }
 
         public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper, double Radius) : base(obj)
@@ -139,7 +133,7 @@ namespace WebAnnotation.View
             _MosaicCircle = new GridCircle(obj.Position, Radius);
             _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
-            CreateViewObjects(this.MosaicCircle, mapper);
+            CreateViewObjects(MosaicCircle, mapper);
             CreateLabelObjects();
         }
 
@@ -148,7 +142,7 @@ namespace WebAnnotation.View
             _MosaicCircle = new GridCircle(obj.Position, obj.Radius * Global.AdjacentLocationRadiusScalar);
             _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
-            CreateViewObjects(this.MosaicCircle, mapper);
+            CreateViewObjects(MosaicCircle, mapper);
             CreateLabelObjects();
         }
 
@@ -157,34 +151,34 @@ namespace WebAnnotation.View
             _MosaicCircle = mosaicCircle;
             _VolumeCircle = new GridCircle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
 
-            CreateViewObjects(this.MosaicCircle, mapper);
+            CreateViewObjects(MosaicCircle, mapper);
             CreateLabelObjects();
         }
 
         /// <summary>
         /// We scale down the radius when the location is on an adjacent section
         /// </summary>
-        public override double Radius => this.VolumeCircle.Radius;
+        public override double Radius => VolumeCircle.Radius;
 
         public Color Color
         {
-            get => this.upCircleView.Color;
+            get => upCircleView.Color;
 
             set
             {
-                this.upCircleView.Color = value;
-                this.downCircleView.Color = value;
+                upCircleView.Color = value;
+                downCircleView.Color = value;
             }
         }
 
         public float Alpha
         {
-            get => this.upCircleView.Alpha;
+            get => upCircleView.Alpha;
 
             set
             {
-                this.upCircleView.Alpha = value;
-                this.downCircleView.Alpha = value;
+                upCircleView.Alpha = value;
+                downCircleView.Alpha = value;
             }
         }
 
@@ -196,14 +190,14 @@ namespace WebAnnotation.View
 
         private void CreateLabelObjects()
         {
-            this.structureLabels = new StructureCircleLabels(this.modelObj, this.VolumeCircle, false);
+            structureLabels = new StructureCircleLabels(modelObj, VolumeCircle, false);
         }
 
         #region overrides
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            return !this.modelObj.IsVerifiedTerminal && upCircleView.IsVisible(scene);
+            return !modelObj.IsVerifiedTerminal && upCircleView.IsVisible(scene);
         }
 
         public override bool IsLabelVisible(VikingXNA.Scene scene)
@@ -213,23 +207,25 @@ namespace WebAnnotation.View
 
         public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
+            LocationID = ID;
             return LocationAction.CREATELINKEDLOCATION;
         }
 
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
+            LocationID = ID;
 
             if (ModifierKeys.ShiftOrCtrlPressed())
             {
                 return LocationAction.NONE;
             }
 
-            double distance = this.DistanceToCenter(WorldPosition);
-            if (distance > this.Radius)
+            double distance = DistanceToCenter(WorldPosition);
+            if (distance > Radius)
+            {
                 return LocationAction.NONE;
+            }
 
             return LocationAction.CREATELINKEDLOCATION;
         }
@@ -238,11 +234,11 @@ namespace WebAnnotation.View
         {
             List<IAction> list = new List<IAction>();
 
-            if ((path.HasSelfIntersection && this.TypeCode.AllowsClosed2DShape()) ||
-               (path.HasSelfIntersection == false && this.TypeCode.AllowsOpen2DShape()))
+            if ((path.HasSelfIntersection && TypeCode.AllowsClosed2DShape()) ||
+               (path.HasSelfIntersection == false && TypeCode.AllowsOpen2DShape()))
             {
                 //Both are closed shapes, so allow continuing a linked annotation
-                var Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+                IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
                 //TODO: Check our location links to make sure the shape does not intersect an existing annotation of the same structure on this section
                 IShape2D mosaic_shape;
@@ -250,33 +246,27 @@ namespace WebAnnotation.View
 
                 if (path.HasSelfIntersection)
                 {
-                    var poly = new GridPolygon(path.SimplifiedFirstLoop);
+                    GridPolygon poly = new GridPolygon(path.SimplifiedFirstLoop);
                     volume_shape = poly;
                     mosaic_shape = Transform.TryMapShapeVolumeToSection(poly);
                 }
                 else
                 {
-                    var line = new GridPolyline(path.SimplifiedPath, false);
+                    GridPolyline line = new GridPolyline(path.SimplifiedPath, false);
                     volume_shape = line;
                     mosaic_shape = Transform.TryMapShapeVolumeToSection(line);
                 }
 
-                CreateNewLinkedLocationAction NewLinkedLocationAction = new CreateNewLinkedLocationAction(this.ID, mosaic_shape, volume_shape, VisibleSectionNumber, Transform);
+                CreateNewLinkedLocationAction NewLinkedLocationAction = new CreateNewLinkedLocationAction(ID, mosaic_shape, volume_shape, VisibleSectionNumber, Transform);
                 list.Add(NewLinkedLocationAction);
             }
 
             return list;
         }
 
-        public override string[] HelpStrings
-        {
-            get
-            {
-                return new string[] {
+        public override string[] HelpStrings => new string[] {
                     "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
                 };
-            }
-        }
 
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -316,8 +306,7 @@ namespace WebAnnotation.View
         #endregion 
     }
 
-
-    class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView, ILabelView
+    internal class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView, ILabelView
     {
         protected readonly GridCircle _VolumeCircle;
         protected readonly GridCircle _MosaicCircle;
@@ -334,7 +323,9 @@ namespace WebAnnotation.View
             {
                 circleView.Color = value;
                 if (OverlappedLinkView != null)
+                {
                     OverlappedLinkView.Color = value;
+                }
             }
         }
 
@@ -348,7 +339,9 @@ namespace WebAnnotation.View
                 {
                     circleView.Alpha = value;
                     if (OverlappedLinkView != null)
+                    {
                         OverlappedLinkView.Alpha = value;
+                    }
                 }
             }
         }
@@ -357,12 +350,11 @@ namespace WebAnnotation.View
 
         public OverlappedLinkCircleView OverlappedLinkView;
         public StructureCircleLabels structureLabels;
-
-        static float RadiusToResizeCircle = 7.0f / 8.0f;
-        static float RadiusToPenResizeCircle = 1.0f / 8.0f;
-        static float RadiusToLinkCircle = 1.75f / 4.0f;
-        static double BeginFadeCutoff = 0.1;
-        static double InvisibleCutoff = 1f;
+        private static readonly float RadiusToResizeCircle = 7.0f / 8.0f;
+        private static readonly float RadiusToPenResizeCircle = 1.0f / 8.0f;
+        private static readonly float RadiusToLinkCircle = 1.75f / 4.0f;
+        private static readonly double BeginFadeCutoff = 0.1;
+        private static readonly double InvisibleCutoff = 1f;
 
         public LocationCircleView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
@@ -384,7 +376,7 @@ namespace WebAnnotation.View
 
         private void CreateLabelObjects()
         {
-            this.structureLabels = new StructureCircleLabels(this.modelObj, this.VolumeCircle);
+            structureLabels = new StructureCircleLabels(modelObj, VolumeCircle);
         }
 
 
@@ -392,23 +384,27 @@ namespace WebAnnotation.View
         {
             protected get
             {
-                if (this.OverlappedLinkView == null)
+                if (OverlappedLinkView == null)
+                {
                     return new long[0];
+                }
 
-                return this.OverlappedLinkView.OverlappedLinks;
+                return OverlappedLinkView.OverlappedLinks;
             }
 
             set
             {
                 if (value == null || value.Count == 0)
                 {
-                    this.OverlappedLinkView = null;
+                    OverlappedLinkView = null;
                 }
 
-                this.OverlappedLinkView = new OverlappedLinkCircleView(this.circleView.Circle, this.ID, (int)this.Z, value);
-                this.OverlappedLinkView.Color = this.Color;
+                OverlappedLinkView = new OverlappedLinkCircleView(circleView.Circle, ID, (int)Z, value)
+                {
+                    Color = Color
+                };
 
-                this.CreateLabelObjects();
+                CreateLabelObjects();
             }
         }
 
@@ -427,16 +423,20 @@ namespace WebAnnotation.View
 
         public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
+            LocationID = ID;
 
             if (ModifierKeys.ShiftOrCtrlPressed())
-                return LocationAction.NONE;
-
-            if (VisibleSectionNumber == (int)this.modelObj.Z)
             {
-                double distance = this.DistanceToCenter(WorldPosition);
-                if (distance <= (this.Radius * RadiusToPenResizeCircle))
+                return LocationAction.NONE;
+            }
+
+            if (VisibleSectionNumber == (int)modelObj.Z)
+            {
+                double distance = DistanceToCenter(WorldPosition);
+                if (distance <= (Radius * RadiusToPenResizeCircle))
+                {
                     return LocationAction.SCALETRANSLATE;
+                }
             }
 
             return LocationAction.NONE;
@@ -448,25 +448,25 @@ namespace WebAnnotation.View
             List<IAction> listActions = new List<IAction>();
             if (path.HasSelfIntersection)
             {
-                if (this.Z == VisibleSectionNumber)
+                if (Z == VisibleSectionNumber)
                 {
                     GridPolygon closedpath = new GridPolygon(path.SimplifiedFirstLoop);
-                    ChangeToPolygonAction action = new ChangeToPolygonAction(this.modelObj, closedpath);
+                    ChangeToPolygonAction action = new ChangeToPolygonAction(modelObj, closedpath);
                     listActions.Add(action);
 
-                    if (this.VolumeCircle.Contains(closedpath))
+                    if (VolumeCircle.Contains(closedpath))
                     {
-                        CutHoleAction cutHoleAction = new CutHoleAction(this.modelObj, closedpath);
+                        CutHoleAction cutHoleAction = new CutHoleAction(modelObj, closedpath);
                         listActions.Add(cutHoleAction);
                     }
                 }
             }
             else
             {
-                if (this.Z == VisibleSectionNumber)
+                if (Z == VisibleSectionNumber)
                 {
                     GridPolyline line = new GridPolyline(path.SimplifiedPath);
-                    ChangeToPolylineAction action = new ChangeToPolylineAction(this.modelObj, line);
+                    ChangeToPolylineAction action = new ChangeToPolylineAction(modelObj, line);
                     listActions.Add(action);
 
                     /*SortedDictionary<double, PointIndex> intersectedSegments = this.VolumeShapeAsRendered.IntersectingSegments(path.ToLineSegments());
@@ -481,19 +481,21 @@ namespace WebAnnotation.View
             }
 
             //Check for links to create
-            listActions.AddRange(interaction_log.IdentifyPossibleLinkActions(this.modelObj.ID));
+            listActions.AddRange(interaction_log.IdentifyPossibleLinkActions(modelObj.ID));
             return listActions;
         }
 
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
+            LocationID = ID;
 
             if (ModifierKeys.ShiftOrCtrlPressed())
+            {
                 return LocationAction.NONE;
+            }
 
-            double distance = this.DistanceToCenter(WorldPosition);
+            double distance = DistanceToCenter(WorldPosition);
 
             if (OverlappedLinkView != null)
             {
@@ -503,32 +505,34 @@ namespace WebAnnotation.View
                 }
             }
 
-            if (VisibleSectionNumber == (int)this.modelObj.Z)
+            if (VisibleSectionNumber == (int)modelObj.Z)
             {
-                if (distance > this.Radius)
+                if (distance > Radius)
+                {
                     return LocationAction.NONE;
-                else if (distance >= (this.Radius * RadiusToResizeCircle))
+                }
+                else if (distance >= (Radius * RadiusToResizeCircle))
+                {
                     return LocationAction.SCALE;
-                else if (distance >= (this.Radius * RadiusToLinkCircle))
+                }
+                else if (distance >= (Radius * RadiusToLinkCircle))
+                {
                     return LocationAction.CREATELINK;
+                }
                 else
+                {
                     return LocationAction.TRANSLATE;
+                }
             }
 
             throw new ArgumentException("Wrong section for location");
         }
 
-        public override string[] HelpStrings
-        {
-            get
-            {
-                return new string[] {
+        public override string[] HelpStrings => new string[] {
                     "Hold left click on circle edge: Resize",
                     "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section.",
                     "Hold left click on circle center: Move annotation"
                 };
-            }
-        }
 
 
         #endregion
@@ -544,11 +548,11 @@ namespace WebAnnotation.View
             {
                 if (value)
                 {
-                    this.circleView.Alpha = 0.25f;
+                    circleView.Alpha = 0.25f;
                 }
                 else
                 {
-                    this.circleView.Alpha = 0.5f;
+                    circleView.Alpha = 0.5f;
                 }
 
                 _Selected = value;
@@ -562,11 +566,11 @@ namespace WebAnnotation.View
         {
             ICanvasView annotation = null;
 
-            if (this.Contains(position))
+            if (Contains(position))
             {
-                if (this.OverlappedLinkView != null)
+                if (OverlappedLinkView != null)
                 {
-                    annotation = this.OverlappedLinkView.GetAnnotationAtPosition(position);
+                    annotation = OverlappedLinkView.GetAnnotationAtPosition(position);
                     if (annotation != null)
                     {
                         return annotation;
@@ -627,8 +631,10 @@ namespace WebAnnotation.View
         {
             structureLabels.DrawLabel(spriteBatch, font, scene);
 
-            if (this.OverlappedLinkView != null)
-                this.OverlappedLinkView.DrawLabel(spriteBatch, font, scene);
+            if (OverlappedLinkView != null)
+            {
+                OverlappedLinkView.DrawLabel(spriteBatch, font, scene);
+            }
 
             return;
         }
@@ -641,7 +647,7 @@ namespace WebAnnotation.View
         /// <returns></returns>
         private float GetAlphaFadeScalarForScene(VikingXNA.Scene scene)
         {
-            double ScreenFraction = (this.Radius * 2.0) / scene.MinVisibleWorldBorderLength;
+            double ScreenFraction = (Radius * 2.0) / scene.MinVisibleWorldBorderLength;
             double MinScreenFraction = 0.25;
             double MaxScreenFraction = 1.5;
             if (ScreenFraction < MinScreenFraction)
@@ -681,7 +687,9 @@ namespace WebAnnotation.View
             else
             {
                 if (scale == OptimalViewingScale)
+                {
                     scaledAlpha = OptimalViewingAlpha;
+                }
                 else if (scale < OptimalViewingScale)
                 {
                     float AvailableRange = 1 - OptimalViewingScale;
@@ -748,7 +756,9 @@ namespace WebAnnotation.View
 
             //CreateViewObjects();
             if (IsLocationPropertyAffectingLabels(args.PropertyName))
+            {
                 CreateLabelObjects();
+            }
         }
 
 

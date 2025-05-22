@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Clients\Common\Common.csproj" />
+    <ProjectReference Include="..\GraphLib\GraphLib.csproj" />
     <ProjectReference Include="..\RTree\RTree.csproj" />
     <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj">
       <Private>false</Private>

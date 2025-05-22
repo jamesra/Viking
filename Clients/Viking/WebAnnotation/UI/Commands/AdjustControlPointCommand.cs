@@ -10,32 +10,21 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    class AdjustCurveControlPointCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal class AdjustCurveControlPointCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         //LocationObj Loc;
-        CurveView curveView;
-        readonly GridVector2[] OriginalControlPoints;
+        private CurveView curveView;
+        private readonly GridVector2[] OriginalControlPoints;
         private int iAdjustedControlPoint = -1;
 
         public delegate void OnCommandSuccess(GridVector2[] VolumeControlPoints, GridVector2[] MosaicControlPoints);
-        OnCommandSuccess success_callback;
-        readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
-        public string[] HelpStrings
-        {
-            get
-            {
-                return new string[] { "Release Left Mouse Button to place control point" };
-            }
-        }
+        private readonly OnCommandSuccess success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
-        public ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public string[] HelpStrings => new string[] { "Release Left Mouse Button to place control point" };
+
+        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
 
         public AdjustCurveControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridVector2[] OriginalMosaicControlPoints,
@@ -44,7 +33,7 @@ namespace WebAnnotation.UI.Commands
                                         bool IsClosedCurve,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            this.OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
+            OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
             CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
@@ -59,14 +48,14 @@ namespace WebAnnotation.UI.Commands
 
         protected virtual void UpdatePosition(GridVector2 PositionDelta)
         {
-            curveView.SetPoint(this.iAdjustedControlPoint, curveView.ControlPoints[iAdjustedControlPoint] + PositionDelta);
+            curveView.SetPoint(iAdjustedControlPoint, curveView.ControlPoints[iAdjustedControlPoint] + PositionDelta);
         }
 
         protected void PopulateControlPointIndexIfNeeded(GridVector2 WorldPosition)
         {
             if (iAdjustedControlPoint < 0)
             {
-                double[] DistanceArray = this.curveView.ControlPoints.Select(p => GridVector2.Distance(p, WorldPosition)).ToArray();
+                double[] DistanceArray = curveView.ControlPoints.Select(p => GridVector2.Distance(p, WorldPosition)).ToArray();
                 iAdjustedControlPoint = Array.IndexOf(DistanceArray, DistanceArray.Min());
             }
         }
@@ -77,7 +66,7 @@ namespace WebAnnotation.UI.Commands
             PopulateControlPointIndexIfNeeded(NewPosition);
 
             //Redraw if we are dragging a location
-            if (this.oldMouse != null)
+            if (oldMouse != null)
             {
                 if (oldMouse.Button.Left())
                 {
@@ -98,7 +87,7 @@ namespace WebAnnotation.UI.Commands
                 GridVector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
                 PopulateControlPointIndexIfNeeded(NewPosition);
 
-                this.Execute();
+                Execute();
             }
 
             base.OnMouseUp(sender, e);
@@ -107,12 +96,12 @@ namespace WebAnnotation.UI.Commands
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { this.curveView });
+            CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
         }
 
         protected override void Execute()
         {
-            if (this.success_callback != null)
+            if (success_callback != null)
             {
                 GridVector2[] TranslatedOriginalControlPoints;
                 GridVector2[] MosaicControlPoints = null;
@@ -121,7 +110,10 @@ namespace WebAnnotation.UI.Commands
                 {
                     List<GridVector2> LoopedPointsList = new List<GridVector2>(curveView.ControlPoints);
                     if (curveView.ControlPoints.First() != curveView.ControlPoints.Last())
+                    {
                         LoopedPointsList.Add(LoopedPointsList.First());
+                    }
+
                     TranslatedOriginalControlPoints = LoopedPointsList.ToArray();
                 }
                 else
@@ -139,7 +131,7 @@ namespace WebAnnotation.UI.Commands
                     return;
                 }
 
-                this.success_callback(TranslatedOriginalControlPoints, MosaicControlPoints);
+                success_callback(TranslatedOriginalControlPoints, MosaicControlPoints);
             }
 
             base.Execute();

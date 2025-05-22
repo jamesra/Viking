@@ -5,13 +5,13 @@ using WebAnnotation.UI.Actions;
 
 namespace WebAnnotation.UI.ActionViews
 {
-    class ChangeToPolygonActionView : IActionView, IIconTexture
+    internal class ChangeToPolygonActionView : IActionView, IIconTexture
     {
         public IRenderable Passive { get; set; }
         public IRenderable Active { get; set; }
         public BuiltinTexture Icon => BuiltinTexture.Circle;
 
-        ChangeToPolygonAction model;
+        private readonly ChangeToPolygonAction model;
 
         public ChangeToPolygonActionView(ChangeToPolygonAction action)
         {
@@ -26,13 +26,13 @@ namespace WebAnnotation.UI.ActionViews
         }
     }
 
-    class ChangeToPolylineActionView : IActionView, IIconTexture
+    internal class ChangeToPolylineActionView : IActionView, IIconTexture
     {
         public IRenderable Passive { get; set; }
         public IRenderable Active { get; set; }
         public BuiltinTexture Icon => BuiltinTexture.Circle;
 
-        ChangeToPolylineAction model;
+        private readonly ChangeToPolylineAction model;
 
         public ChangeToPolylineActionView(ChangeToPolylineAction action)
         {

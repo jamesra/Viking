@@ -10,15 +10,14 @@ namespace WebAnnotation.UI.Controls
     [Viking.Common.SupportedUITypes(typeof(StructureObj))]
     public partial class ListStructures : Viking.UI.BaseClasses.DockingListControl
     {
-        Structure[] _structures;
-
-        EventHandler StructureCreateEventHandler;
+        private Structure[] _structures;
+        private readonly EventHandler StructureCreateEventHandler;
 
         public ListStructures()
         {
             InitializeComponent();
 
-            this.ListItems.ShowPropertiesOnDoubleClick = false;
+            ListItems.ShowPropertiesOnDoubleClick = false;
             InitializeComponent();
 
             StructureCreateEventHandler = new EventHandler(OnLocationCreate);
@@ -27,9 +26,9 @@ namespace WebAnnotation.UI.Controls
 
         public void SetStructures(Structure[] structures)
         {
-            this._structures = structures;
+            _structures = structures;
 
-            this.ListItems.DisplayObjects(_structures);
+            ListItems.DisplayObjects(_structures);
         }
 
         protected override void OnObjectDoubleClick(IUIObject obj)
@@ -39,7 +38,9 @@ namespace WebAnnotation.UI.Controls
 
             LocationObj centerLoc = s.Center;
             if (centerLoc != null)
+            {
                 AnnotationOverlay.GoToLocation(centerLoc);
+            }
         }
 
         public void OnLocationCreate(object sender, EventArgs e)
@@ -47,14 +48,16 @@ namespace WebAnnotation.UI.Controls
             Structure structure = sender as Structure;
             Debug.Assert(structure != null);
             if (structure != null)
+            {
                 if (InvokeRequired)
                 {
-                    this.ListItems.Invoke(new Action(() => this.ListItems.AddObject(structure)));
+                    ListItems.Invoke(new Action(() => ListItems.AddObject(structure)));
                 }
                 else
                 {
-                    this.ListItems.AddObject(structure);
+                    ListItems.AddObject(structure);
                 }
+            }
         }
 
         protected override void parentForm_Closing(object sender, CancelEventArgs e)

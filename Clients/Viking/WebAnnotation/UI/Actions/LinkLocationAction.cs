@@ -6,7 +6,7 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Actions
 {
-    class LinkLocationAction : IAction, IActionView, IEquatable<LinkLocationAction>
+    internal class LinkLocationAction : IAction, IActionView, IEquatable<LinkLocationAction>
     {
         public readonly LocationObj A;
         public readonly LocationObj B;
@@ -17,7 +17,10 @@ namespace WebAnnotation.UI.Actions
 
         public Action Execute => OnExecute;
 
-        public static implicit operator Action(LinkLocationAction a) => a.Execute;
+        public static implicit operator Action(LinkLocationAction a)
+        {
+            return a.Execute;
+        }
 
         public IRenderable Passive { get; set; } = null;
 
@@ -37,8 +40,8 @@ namespace WebAnnotation.UI.Actions
 
         public LinkLocationAction(LocationLinkKey link)
         {
-            this.A = Store.Locations[link.A];
-            this.B = Store.Locations[link.B];
+            A = Store.Locations[link.A];
+            B = Store.Locations[link.B];
 
             Link = link;
 
@@ -69,21 +72,27 @@ namespace WebAnnotation.UI.Actions
         public bool Equals(IAction other)
         {
             if (ReferenceEquals(this, other))
+            {
                 return true;
+            }
 
-            if (this.Type != other.Type)
+            if (Type != other.Type)
+            {
                 return false;
+            }
 
             LinkLocationAction other_action = other as LinkLocationAction;
             if (other_action == null)
+            {
                 return false;
+            }
 
-            return this.Equals(other_action);
+            return Equals(other_action);
         }
 
         public bool Equals(LinkLocationAction other)
         {
-            return other.Link == this.Link;
+            return other.Link == Link;
         }
     }
 }

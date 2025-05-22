@@ -5,7 +5,7 @@ using WebAnnotation.UI.Actions;
 
 namespace WebAnnotation.UI.ActionViews
 {
-    class LinkStructureActionView : IActionView, IIconTexture
+    internal class LinkStructureActionView : IActionView, IIconTexture
     {
         public IRenderable Passive { get; set; } = null;
 

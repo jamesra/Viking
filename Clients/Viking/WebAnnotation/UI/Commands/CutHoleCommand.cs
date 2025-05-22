@@ -5,9 +5,9 @@ using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
-    class CutHoleCommand : Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal class CutHoleCommand : Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        MeshView<VertexPositionColor> meshView = null;
+        private readonly MeshView<VertexPositionColor> meshView = null;
 
         public static string[] DefaultCutHoleHelpStrings = new string[]
         {
@@ -30,12 +30,6 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
     }
 }

@@ -7,19 +7,18 @@ using WebAnnotation.UI;
 namespace WebAnnotation
 {
     [MenuAttribute("Annotation")]
-    class AnnotationMenu : Viking.Common.IMenuFactory
+    internal class AnnotationMenu : Viking.Common.IMenuFactory
     {
-        static FindStructureNumberForm _FindStructureNumberForm = null;
-        static MergeStructuresForm _MergeStructuresForm = null;
-
-        static ToolStripMenuItem menuPenMode;
+        private static FindStructureNumberForm _FindStructureNumberForm = null;
+        private static MergeStructuresForm _MergeStructuresForm = null;
+        private static ToolStripMenuItem menuPenMode;
 
         System.Windows.Forms.ToolStripItem Viking.Common.IMenuFactory.CreateMenuItem()
         {
             //Create a menu containing each of our bookmarks
             ToolStripMenuItem menuRoot = new ToolStripMenuItem("Annotation");
 
-            var menuFavoriteTypes = new ToolStripMenuItem("Choose Favorited Structure Types");
+            ToolStripMenuItem menuFavoriteTypes = new ToolStripMenuItem("Choose Favorited Structure Types");
             menuFavoriteTypes.Click += OnChooseFavoriteStructureTypes;
             menuRoot.DropDownItems.Add(menuFavoriteTypes);
 
@@ -41,8 +40,10 @@ namespace WebAnnotation
                 menuRoot.DropDownItems.Add(menuExport);
             }
 
-            menuPenMode = new ToolStripMenuItem("Pen Mode");
-            menuPenMode.Checked = WebAnnotation.Global.PenMode;
+            menuPenMode = new ToolStripMenuItem("Pen Mode")
+            {
+                Checked = WebAnnotation.Global.PenMode
+            };
             menuPenMode.Click += OnPenMode;
 
 
@@ -50,27 +51,27 @@ namespace WebAnnotation
             menuRoot.DropDownItems.Add(menuPenMode);
 
 
-            return menuRoot as ToolStripItem;
+            return menuRoot;
         }
 
-        static public void OnExportMotifsTLP(object sender, EventArgs e)
+        public static void OnExportMotifsTLP(object sender, EventArgs e)
         {
             Debug.Print("OnExportMotifsTLP");
 
             Global.Export.OpenMotif();
         }
 
-        static public void OnChooseFavoriteStructureTypes(object sender, EventArgs e)
+        public static void OnChooseFavoriteStructureTypes(object sender, EventArgs e)
         {
             Debug.Print("OnChooseFavoriteStructureTypes");
-            var StructureIDChoiceForm = new WebAnnotation.UI.Forms.SelectStructureTypeForm();
+            UI.Forms.SelectStructureTypeForm StructureIDChoiceForm = new WebAnnotation.UI.Forms.SelectStructureTypeForm();
             Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new Annotation.ViewModels.FavoriteStructureIDsViewModel(Global.UserFavoriteStructureTypes);
             StructureIDChoiceForm.DataContext = favorite_view_model;
             StructureIDChoiceForm.Show();
         }
 
         [MenuItem("Show Pen Input Window")]
-        static public void OnShowPenInputWindow(object sender, EventArgs e)
+        public static void OnShowPenInputWindow(object sender, EventArgs e)
         {
             Debug.Print("OnShowPenInputWindow");
 
@@ -86,19 +87,19 @@ namespace WebAnnotation
         }
 
         [MenuItem("Open Last Modified Location")]
-        static public void GoToLastModifiedLocation(object sender, EventArgs e)
+        public static void GoToLastModifiedLocation(object sender, EventArgs e)
         {
             AnnotationOverlay.GotoLastModifiedLocation();
         }
 
-        static public void OnPenMode(object sender, EventArgs e)
+        public static void OnPenMode(object sender, EventArgs e)
         {
             Global.PenMode = !Global.PenMode;
             menuPenMode.Checked = Global.PenMode;
         }
 
         [MenuItem("Open Structure")]
-        static public void ShowStructure(object sender, EventArgs e)
+        public static void ShowStructure(object sender, EventArgs e)
         {
             Debug.Print("Show Structure");
 
@@ -116,7 +117,7 @@ namespace WebAnnotation
         }
 
         [MenuItem("Goto Structure")]
-        static public void GotoStructure(object sender, EventArgs e)
+        public static void GotoStructure(object sender, EventArgs e)
         {
             Debug.Print("Goto Structure");
 
@@ -124,7 +125,7 @@ namespace WebAnnotation
         }
 
         [MenuItem("Goto Location")]
-        static public void GotoLocation(object sender, EventArgs e)
+        public static void GotoLocation(object sender, EventArgs e)
         {
             Debug.Print("Goto Location");
 
@@ -132,7 +133,7 @@ namespace WebAnnotation
         }
 
         [MenuItem("Merge Structures")]
-        static public void MergeStructures(object sender, EventArgs e)
+        public static void MergeStructures(object sender, EventArgs e)
         {
             Debug.Print("Merge Structures");
 
@@ -150,7 +151,7 @@ namespace WebAnnotation
         }
 
         [MenuItem("Export")]
-        static public void Export(object sender, EventArgs e)
+        public static void Export(object sender, EventArgs e)
         {
             Debug.Print("Export");
 

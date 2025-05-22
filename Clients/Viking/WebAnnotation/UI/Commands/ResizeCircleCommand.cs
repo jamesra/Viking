@@ -4,15 +4,16 @@ using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
-    class ResizeCircleCommand : Viking.UI.Commands.Command
+    internal class ResizeCircleCommand : Viking.UI.Commands.Command
     {
         public double Radius;
 
         public GridVector2 Origin;
-        System.Drawing.Color CircleColor;
+        private readonly System.Drawing.Color CircleColor;
 
         public delegate void OnCommandSuccess(double radius);
-        OnCommandSuccess success_callback;
+
+        private readonly OnCommandSuccess success_callback;
 
         public ResizeCircleCommand(Viking.UI.Controls.SectionViewerControl parent,
                                      System.Drawing.Color color,
@@ -30,7 +31,7 @@ namespace WebAnnotation.UI.Commands
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(e.X, e.Y);
 
-            this.Radius = GridVector2.Distance(Origin, WorldPos);
+            Radius = GridVector2.Distance(Origin, WorldPos);
         }
 
         protected override void OnMouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -53,8 +54,10 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            if (this.success_callback != null)
-                this.success_callback(this.Radius);
+            if (success_callback != null)
+            {
+                success_callback(Radius);
+            }
 
             base.Execute();
         }
@@ -66,7 +69,7 @@ namespace WebAnnotation.UI.Commands
                 //    TimeSpan Elapsed = new TimeSpan(DateTime.Now.Ticks - CreationTime.Ticks);
                 UpdateRadius(e);
 
-                this.Execute();
+                Execute();
             }
 
             base.OnMouseDown(sender, e);
@@ -82,7 +85,7 @@ namespace WebAnnotation.UI.Commands
                 CircleColor.B,
                 128);
 
-            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, this.Radius, color);
+            GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, Radius, color);
 
             base.OnDraw(graphicsDevice, scene, basicEffect);
         }

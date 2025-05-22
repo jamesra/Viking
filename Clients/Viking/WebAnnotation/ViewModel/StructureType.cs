@@ -44,7 +44,9 @@ namespace WebAnnotation.ViewModel
             get
             {
                 if (modelObj.ParentID.HasValue == false)
+                {
                     return null;
+                }
 
                 return new StructureType(modelObj.Parent);
             }
@@ -72,61 +74,43 @@ namespace WebAnnotation.ViewModel
         }
 
         [Column("ID")]
-        public long ID
-        {
-            get { return modelObj.ID; }
-        }
+        public long ID => modelObj.ID;
 
 
         [Column("ParentID")]
-        public long? ParentID
-        {
-            get { return modelObj.ParentID; }
-        }
+        public long? ParentID => modelObj.ParentID;
 
         [Column("Name")]
         public string Name
         {
-            get { return modelObj.Name; }
-            set
-            {
-                modelObj.Name = value;
-            }
+            get => modelObj.Name;
+            set => modelObj.Name = value;
         }
 
         [Column("Notes")]
         public string Notes
         {
-            get { return modelObj.Notes; }
-            set
-            {
-                modelObj.Notes = value;
-            }
+            get => modelObj.Notes;
+            set => modelObj.Notes = value;
         }
 
         [Column("Color")]
         public System.Drawing.Color Color
         {
-            get { return System.Drawing.Color.FromArgb((int)modelObj.Color); }
-            set
-            {
-                modelObj.Color = (uint)value.ToArgb();
-            }
+            get => System.Drawing.Color.FromArgb((int)modelObj.Color);
+            set => modelObj.Color = (uint)value.ToArgb();
         }
 
         [Column("Code")]
         public string Code
         {
-            get { return modelObj.Code; }
-            set
-            {
-                modelObj.Code = value;
-            }
+            get => modelObj.Code;
+            set => modelObj.Code = value;
         }
 
         public StructureType(StructureTypeObj data)
         {
-            this.modelObj = data;
+            modelObj = data;
         }
 
         #region IUIObject Members
@@ -143,7 +127,9 @@ namespace WebAnnotation.ViewModel
                 newMenuItem.MenuItems.Add("Structure Type", ContextMenu_OnNewStructureType);
 
                 if (modelObj.Children.Length == 0)
+                {
                     menu.MenuItems.Add("Delete", ContextMenu_OnDelete);
+                }
 
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
 
@@ -151,15 +137,9 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public override System.Drawing.Image SmallThumbnail
-        {
-            get { return null; }
-        }
+        public override System.Drawing.Image SmallThumbnail => null;
 
-        public override string ToolTip
-        {
-            get { return this.Name; }
-        }
+        public override string ToolTip => Name;
 
         public override void Save()
         {
@@ -178,28 +158,19 @@ namespace WebAnnotation.ViewModel
             return new Viking.UI.Controls.GenericTreeNode(this);
         }
 
-        public override int TreeImageIndex
-        {
-            get { return 0; }
-        }
+        public override int TreeImageIndex => 0;
 
-        public override int TreeSelectedImageIndex
-        {
-            get { return 0; }
-        }
+        public override int TreeSelectedImageIndex => 0;
 
-        public override Type[] AssignableParentTypes
-        {
-            get { return new Type[] { typeof(StructureType) }; }
-        }
+        public override Type[] AssignableParentTypes => new Type[] { typeof(StructureType) };
 
         public override void SetParent(IUIObject parent)
         {
             StructureType newParent = (StructureType)parent;
-            if (parent != this.Parent)
+            if (parent != Parent)
             {
                 //      this.Parent.CallOnChildChanged(new ChildChangeEventArgs(this, CHANGEACTION.BEFOREADD)); 
-                this.modelObj.Parent = newParent.modelObj;
+                modelObj.Parent = newParent.modelObj;
                 //      this.Parent.CallOnChildChanged(new ChildChangeEventArgs(this, CHANGEACTION.ADD));
 
                 //  Store.StructureTypes.Save(); 
@@ -210,7 +181,7 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_OnNewStructureType(object sender, EventArgs e)
         {
-            StructureTypeObj newType = new StructureTypeObj(this.modelObj);
+            StructureTypeObj newType = new StructureTypeObj(modelObj);
             StructureType newTypeView = new StructureType(newType);
             DialogResult result = Viking.UI.Forms.PropertySheetForm.ShowDialog(newTypeView, null);
 
@@ -261,12 +232,12 @@ namespace WebAnnotation.ViewModel
 
             //This is a hack because not every control may be subscribing to the same object, but the 
             //alternative is a huge rewrite which I am doing with Jotunn
-            this.CallBeforeDelete();
+            CallBeforeDelete();
 
-            Store.StructureTypes.Remove(this.modelObj);
+            Store.StructureTypes.Remove(modelObj);
             Store.StructureTypes.Save();
 
-            this.CallAfterDelete();
+            CallAfterDelete();
 
             Viking.UI.State.SelectedObject = null;
 

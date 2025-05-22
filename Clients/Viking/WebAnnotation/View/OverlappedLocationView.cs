@@ -20,50 +20,40 @@ namespace WebAnnotation.View
         public TextureCircleView circleView;
         public LabelView label;
 
-        public override SqlGeometry VolumeShapeAsRendered
-        {
-            get
-            {
-                return Circle.ToSqlGeometry(this.Z);
-            }
-        }
+        public override SqlGeometry VolumeShapeAsRendered => Circle.ToSqlGeometry(Z);
 
         public GridCircle Circle
         {
-            get { return circleView.Circle; }
-            set { circleView.Circle = value; }
+            get => circleView.Circle;
+            set => circleView.Circle = value;
         }
 
         public double Radius
         {
-            get { return Circle.Radius; }
-            set { circleView.Circle = new GridCircle(Circle.Center, value); }
+            get => Circle.Radius;
+            set => circleView.Circle = new GridCircle(Circle.Center, value);
         }
 
         public GridVector2 Position
         {
-            get { return Circle.Center; }
-            set { circleView.Circle = new GridCircle(value, Circle.Radius); }
+            get => Circle.Center;
+            set => circleView.Circle = new GridCircle(value, Circle.Radius);
         }
 
-        private ICollection<long> _OverlappedLinks;
+        private readonly ICollection<long> _OverlappedLinks;
         public override ICollection<long> OverlappedLinks
         {
-            protected get
-            {
-                return _OverlappedLinks;
-            }
+            protected get => _OverlappedLinks;
 
-            set
-            {
-                throw new NotImplementedException();
-            }
+            set => throw new NotImplementedException();
         }
 
         public OverlappedLocationView(LocationObj obj, GridCircle gridCircle, bool Up) : base(obj)
         {
-            label = new LabelView(LocationLabel(obj), gridCircle.Center);
-            label._Color = Microsoft.Xna.Framework.Color.Red;
+            label = new LabelView(LocationLabel(obj), gridCircle.Center)
+            {
+                _Color = Microsoft.Xna.Framework.Color.Red
+            };
             Microsoft.Xna.Framework.Color color = obj.Parent.Type.Color.ToXNAColor(0.75f);
             circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color);
         }
@@ -75,7 +65,7 @@ namespace WebAnnotation.View
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            return this.circleView.IsVisible(scene);
+            return circleView.IsVisible(scene);
         }
 
         public bool IsLabelVisible(VikingXNA.Scene scene)
@@ -100,14 +90,14 @@ namespace WebAnnotation.View
 
         public override double Distance(GridVector2 Position)
         {
-            double Distance = GridVector2.Distance(Position, this.Circle.Center) - Radius;
+            double Distance = GridVector2.Distance(Position, Circle.Center) - Radius;
             Distance = Distance < 0 ? 0 : Distance;
             return Distance;
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
         {
-            return GridVector2.Distance(Position, this.Circle.Center) / this.Radius;
+            return GridVector2.Distance(Position, Circle.Center) / Radius;
         }
 
         public static void Draw(GraphicsDevice device,
@@ -123,26 +113,28 @@ namespace WebAnnotation.View
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene)
         {
             double DesiredRowsOfText = 4.0;
-            double DefaultFontSize = (this.Radius * 2) / DesiredRowsOfText;
+            double DefaultFontSize = (Radius * 2) / DesiredRowsOfText;
             label.FontSize = DefaultFontSize;
-            label.MaxLineWidth = this.Radius * 2;
+            label.MaxLineWidth = Radius * 2;
 
             label.Draw(spriteBatch, font, scene);
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
+            LocationID = ID;
 
             if (ModifierKeys.ShiftOrCtrlPressed())
+            {
                 return LocationAction.NONE;
+            }
 
             return LocationAction.CREATELINKEDLOCATION;
         }
 
         public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID)
         {
-            LocationID = this.ID;
+            LocationID = ID;
 
             return LocationAction.NONE;
         }
@@ -153,56 +145,26 @@ namespace WebAnnotation.View
             //return LocationAction.CREATELINKEDLOCATION;
         }
 
-        public override string[] HelpStrings
-        {
-            get
-            {
-                return new string[] {
+        public override string[] HelpStrings => new string[] {
                     "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
                 };
-            }
-        }
 
-        public ContextMenu ContextMenu
-        {
-            get
-            {
-                return new Location_CanvasContextMenuView(this.ID).ContextMenu;
-            }
-        }
+        public ContextMenu ContextMenu => new Location_CanvasContextMenuView(ID).ContextMenu;
 
-        public override GridRectangle BoundingBox
-        {
-            get
-            {
-                return Circle.BoundingBox;
-            }
-        }
+        public override GridRectangle BoundingBox => Circle.BoundingBox;
 
         public Microsoft.Xna.Framework.Color Color
         {
-            get
-            {
-                return circleView.Color;
-            }
+            get => circleView.Color;
 
-            set
-            {
-                circleView.Color = value;
-            }
+            set => circleView.Color = value;
         }
 
         public float Alpha
         {
-            get
-            {
-                return circleView.Alpha;
-            }
+            get => circleView.Alpha;
 
-            set
-            {
-                circleView.Alpha = value;
-            }
+            set => circleView.Alpha = value;
         }
     }
 }

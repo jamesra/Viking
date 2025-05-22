@@ -9,21 +9,14 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    class CutHoleWithPenCommand : PlaceClosedCurveWithPenCommand
+    internal class CutHoleWithPenCommand : PlaceClosedCurveWithPenCommand
     {
-        GridPolygon OriginalMosaicPolygon;
-        GridPolygon OriginalVolumePolygon;
+        private readonly GridPolygon OriginalMosaicPolygon;
+        private readonly GridPolygon OriginalVolumePolygon;
+        private readonly List<GridLineSegment> ExteriorSegments;
+        public override uint NumCurveInterpolations => Global.NumClosedCurveInterpolationPoints;
 
-        List<GridLineSegment> ExteriorSegments;
-        public override uint NumCurveInterpolations
-        {
-            get
-            {
-                return Global.NumClosedCurveInterpolationPoints;
-            }
-        }
-           
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         /// <summary>
         /// Returns unsmoothed mosaic and volume polygons with the new point
@@ -40,8 +33,8 @@ namespace WebAnnotation.UI.Commands
             : base(parent, color, origin, LineWidth, success_callback)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalMosaicPolygon = mosaic_polygon;
+            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
             //SmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
 
             ExteriorSegments = OriginalVolumePolygon.ExteriorSegments.ToList();
@@ -58,14 +51,14 @@ namespace WebAnnotation.UI.Commands
             : base(parent, color.ToXNAColor(), origin, LineWidth, success_callback)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalMosaicPolygon = mosaic_polygon;
+            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
         }
 
         protected override bool IsProposedClosedLoopValid(IReadOnlyCollection<GridVector2> proposed_curve)
         {
             GridPolygon proposed_hole = new GridPolygon(proposed_curve.ToArray().EnsureClosedRing());
-            return false == GridPolygon.SegmentsIntersect(this.OriginalVolumePolygon, proposed_hole);
+            return false == GridPolygon.SegmentsIntersect(OriginalVolumePolygon, proposed_hole);
         }
 
 
@@ -91,18 +84,22 @@ namespace WebAnnotation.UI.Commands
 
         protected override bool ShapeIsValid()
         {
-            if (this.PenInput.Points.Count < 3 || this.PenInput.HasSelfIntersection == false)
+            if (PenInput.Points.Count < 3 || PenInput.HasSelfIntersection == false)
+            {
                 return false;
+            }
 
             //We cannot intersect any existing feature of the polygon
-            if (this.PenInput.Segments.Any(s => OriginalVolumePolygon.Intersects(s)))
+            if (PenInput.Segments.Any(s => OriginalVolumePolygon.Intersects(s)))
+            {
                 return false;
+            }
 
             try
             {
-                return this.PenInput.Loop.ToPolygon().STIsValid().IsTrue;
+                return PenInput.Loop.ToPolygon().STIsValid().IsTrue;
             }
-            catch (ArgumentException e)
+            catch (ArgumentException)
             {
                 return false;
             }

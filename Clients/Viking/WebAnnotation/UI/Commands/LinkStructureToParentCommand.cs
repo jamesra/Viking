@@ -17,40 +17,23 @@ namespace WebAnnotation.UI.Commands
     /// Created after a location for a new structure has been determined, but we
     /// have to choose a parent for the new structure. 
     /// </summary>
-    class LinkStructureToParentCommand : AnnotationCommandBase, Viking.Common.IObservableHelpStrings, Viking.Common.IHelpStrings
+    internal class LinkStructureToParentCommand : AnnotationCommandBase, Viking.Common.IObservableHelpStrings, Viking.Common.IHelpStrings
     {
         /// <summary>
         /// New Locations position in world space
         /// </summary>
-        GridVector2 transformedPos;
+        private GridVector2 transformedPos;
+        private readonly StructureObj putativeStruct;
+        private readonly LocationObj putativeLoc;
+        private LocationObj nearestParent;
+        private readonly LocationCanvasView locView;
+        private Microsoft.Xna.Framework.Color linecolor;
+        private CurveLabel labelView = null;
 
-        StructureObj putativeStruct;
-        LocationObj putativeLoc;
-
-        LocationObj nearestParent;
-
-        LocationCanvasView locView;
-
-        Microsoft.Xna.Framework.Color linecolor;
-
-        CurveLabel labelView = null;
-
-        public string[] HelpStrings
-        {
-            get
-            {
-                return new string[] { "Left Mouse Button Release over parent structure annotation: Set annotation's parent structure",
+        public string[] HelpStrings => new string[] { "Left Mouse Button Release over parent structure annotation: Set annotation's parent structure",
                                       "Escape: Cancel command"};
-            }
-        }
 
-        public ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
 
         public LinkStructureToParentCommand(Viking.UI.Controls.SectionViewerControl parent,
                                                StructureObj structure,
@@ -58,10 +41,10 @@ namespace WebAnnotation.UI.Commands
             : base(parent)
         {
 
-            this.putativeStruct = structure;
-            this.putativeLoc = location;
+            putativeStruct = structure;
+            putativeLoc = location;
 
-            StructureTypeObj LocType = this.putativeStruct.Type;
+            StructureTypeObj LocType = putativeStruct.Type;
             if (LocType != null)
             {
                 linecolor = LocType.Color.ToXNAColor(0.5f);
@@ -91,7 +74,9 @@ namespace WebAnnotation.UI.Commands
             {
                 LocationCanvasView loc = hr.obj as LocationCanvasView;
                 if (loc == null)
+                {
                     return false;
+                }
 
                 return loc.ID != putativeLoc.ID && loc.ParentID != putativeStruct.ID;
             }).ToList();
@@ -121,7 +106,9 @@ namespace WebAnnotation.UI.Commands
             if (e.Button.Left())
             {
                 if (HandleInputSelection(e.X, e.Y) == false)
+                {
                     return;
+                }
             }
 
             base.OnMouseDown(sender, e);
@@ -142,7 +129,9 @@ namespace WebAnnotation.UI.Commands
             if (e.Erase == false)
             {
                 if (HandleInputSelection(e.X, e.Y) == false)
+                {
                     return;
+                }
             }
 
             base.OnPenContact(sender, e);
@@ -151,9 +140,6 @@ namespace WebAnnotation.UI.Commands
         protected void HandleInputMovement(int X, int Y)
         {
             GridVector2 WorldPos = Parent.ScreenToWorld(X, Y);
-
-            //Find if we are close enough to a location to "snap" the line to the target
-            double distance;
             LocationCanvasView nearest = NearestLocationToMouse(WorldPos);
             if (nearest != null)
             {
@@ -172,23 +158,31 @@ namespace WebAnnotation.UI.Commands
             /*Check to see if we clicked a location*/
             LocationCanvasView loc = NearestLocationToMouse(WorldPos);
             if (loc == null)
+            {
                 return false;
+            }
 
-            this.putativeStruct.Parent = loc.Parent.modelObj;
+            putativeStruct.Parent = loc.Parent.modelObj;
 
-            this.Deactivated = true;
+            Deactivated = true;
             return true;
         }
 
         public override void OnDraw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, BasicEffect basicEffect)
         {
-            if (this.oldMouse == null)
+            if (oldMouse == null)
+            {
                 return;
+            }
 
             if (locView != null)
+            {
                 LocationObjRenderer.DrawCanvasView(new LocationCanvasView[] { locView }, graphicsDevice, basicEffect, Parent.AnnotationOverlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, (int)locView.Z);
+            }
             else
+            {
                 GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, transformedPos, putativeLoc.Radius, linecolor);
+            }
 
             GridVector2 target;
             if (nearestParent != null)
@@ -199,14 +193,16 @@ namespace WebAnnotation.UI.Commands
             else
             {
                 //Otherwise use the old mouse position
-                target = this.oldWorldPosition;
+                target = oldWorldPosition;
             }
 
             LineView line = new LineView(transformedPos, target, 16.0, Microsoft.Xna.Framework.Color.White, LineStyle.Tubular);
 
             RoundLineManager lineManager = VikingXNAGraphics.DeviceEffectsStore<LumaOverlayRoundLineManager>.TryGet(graphicsDevice);
             if (lineManager == null)
+            {
                 return;
+            }
 
             if (labelView == null)
             {

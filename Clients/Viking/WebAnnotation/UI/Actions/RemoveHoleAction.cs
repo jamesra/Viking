@@ -11,11 +11,10 @@ namespace WebAnnotation.UI.Actions
     /// <summary>
     /// Removes an interior polygon from the annotation
     /// </summary>
-    class RemoveHoleAction : IAction, IActionView, IEquatable<RemoveHoleAction>
+    internal class RemoveHoleAction : IAction, IActionView, IEquatable<RemoveHoleAction>
     {
         public readonly LocationObj Location;
-
-        IVolumeToSectionTransform Transform;
+        private readonly IVolumeToSectionTransform Transform;
 
         /// <summary>
         /// The volume space polygon we want to add to the location
@@ -31,7 +30,10 @@ namespace WebAnnotation.UI.Actions
 
         public Action Execute => OnExecute;
 
-        public static implicit operator Action(RemoveHoleAction a) => a.Execute;
+        public static implicit operator Action(RemoveHoleAction a)
+        {
+            return a.Execute;
+        }
 
         public IRenderable Passive { get; set; } = null;
 
@@ -47,8 +49,8 @@ namespace WebAnnotation.UI.Actions
         /// <param name="innerPoint">A point inside the interior hole in volume space</param>
         public RemoveHoleAction(LocationObj location, int innerPoly, IVolumeToSectionTransform transform = null)
         {
-            this.Location = location;
-            this.Transform = transform == null ?
+            Location = location;
+            Transform = transform == null ?
                 WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform
                 : transform;
 
@@ -61,9 +63,9 @@ namespace WebAnnotation.UI.Actions
             CreateDefaultVisuals();
         }
 
-        void OnExecute()
+        private void OnExecute()
         {
-            var original_mosaic_shape = Location.MosaicShape;
+            Microsoft.SqlServer.Types.SqlGeometry original_mosaic_shape = Location.MosaicShape;
 
             Location.SetShapeFromGeometryInSection(Transform, UpdatedMosaicPolygon.ToSqlGeometry());
 
@@ -88,24 +90,32 @@ namespace WebAnnotation.UI.Actions
         public bool Equals(IAction other)
         {
             if (ReferenceEquals(this, other))
+            {
                 return true;
+            }
 
-            if (this.Type != other.Type)
+            if (Type != other.Type)
+            {
                 return false;
+            }
 
             RemoveHoleAction other_action = other as RemoveHoleAction;
             if (other_action == null)
+            {
                 return false;
+            }
 
-            return this.Equals(other_action);
+            return Equals(other_action);
         }
 
         public bool Equals(RemoveHoleAction other)
         {
-            if (other.Location.ID != this.Location.ID)
+            if (other.Location.ID != Location.ID)
+            {
                 return false;
+            }
 
-            return this.VolumePolygonToRemove.Equals(other.VolumePolygonToRemove);
+            return VolumePolygonToRemove.Equals(other.VolumePolygonToRemove);
         }
     }
 }

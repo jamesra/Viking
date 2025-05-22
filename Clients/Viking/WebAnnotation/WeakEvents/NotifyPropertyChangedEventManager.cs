@@ -1,15 +1,14 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Windows;
 
 
 namespace WebAnnotation.ViewModel
 {
-    class NotifyPropertyChangedEventManager : WeakEventManager
+    internal class NotifyPropertyChangedEventManager : WeakEventManager
     {
-        static int CleanupCountdown = 5000;
-        static public NotifyPropertyChangedEventManager Current = new NotifyPropertyChangedEventManager();
-        private PropertyChangedEventHandler eventHandler;
+        private static int CleanupCountdown = 5000;
+        public static NotifyPropertyChangedEventManager Current = new NotifyPropertyChangedEventManager();
+        private readonly PropertyChangedEventHandler eventHandler;
 
         static NotifyPropertyChangedEventManager()
         {
@@ -29,13 +28,15 @@ namespace WebAnnotation.ViewModel
             INotifyPropertyChanged INotify = source as INotifyPropertyChanged;
             System.Diagnostics.Debug.Assert(INotify != null, "Attempt to create weak subscription to object that does not support it");
             if (INotify == null)
+            {
                 return;
+            }
 
             INotify.PropertyChanged += eventHandler;
 
             if (CleanupCountdown == 0)
             {
-                this.ScheduleCleanup();
+                ScheduleCleanup();
                 CleanupCountdown = 5000;
             }
 
@@ -47,7 +48,9 @@ namespace WebAnnotation.ViewModel
             //Check if we can subscribe to the source
             INotifyPropertyChanged INotify = source as INotifyPropertyChanged;
             if (INotify == null)
+            {
                 return;
+            }
 
             //PropertyChangedEventHandler eventHandler = null;
             //bool Removed = ObjectToHandler.TryRemove(source, out eventHandler);
@@ -64,7 +67,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="source"></param>
         /// <param name="listener"></param>
-        public static void AddListener(Object source, IWeakEventListener listener)
+        public static void AddListener(object source, IWeakEventListener listener)
         {
             Current.ProtectedAddListener(source, listener);
 
@@ -75,18 +78,18 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="source"></param>
         /// <param name="listener"></param>
-        public static void RemoveListener(Object source, IWeakEventListener listener)
+        public static void RemoveListener(object source, IWeakEventListener listener)
         {
             Current.ProtectedRemoveListener(source, listener);
         }
 
-        delegate void DeliverEventsDelegate(object o, PropertyChangedEventArgs e);
+        private delegate void DeliverEventsDelegate(object o, PropertyChangedEventArgs e);
 
         protected void OnPropertyChanged(object source, PropertyChangedEventArgs e)
         {
             //DeliverEventsDelegate del = new DeliverEventsDelegate(this.DeliverEvent);
             // this.Dispatcher.BeginInvoke(del, new object[] { source, e });
-            this.DeliverEvent(source, e);
+            DeliverEvent(source, e);
         }
     }
 }

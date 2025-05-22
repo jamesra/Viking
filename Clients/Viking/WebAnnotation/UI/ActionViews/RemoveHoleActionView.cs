@@ -5,7 +5,7 @@ using WebAnnotation.UI.Actions;
 
 namespace WebAnnotation.UI.ActionViews
 {
-    class RemoveHoleActionView : IActionView, IIconTexture
+    internal class RemoveHoleActionView : IActionView, IIconTexture
     {
         public IRenderable Passive { get; set; } = null;
 

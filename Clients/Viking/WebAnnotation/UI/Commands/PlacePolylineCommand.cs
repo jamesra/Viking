@@ -11,7 +11,7 @@ namespace WebAnnotation.UI.Commands
     /// <summary>
     /// Base class for commands that have the user draw a line to annotate
     /// </summary>
-    abstract class LineGeometryCommandBase : Viking.UI.Commands.Command
+    internal abstract class LineGeometryCommandBase : Viking.UI.Commands.Command
     {
         public virtual double LineWidth
         {
@@ -39,8 +39,8 @@ namespace WebAnnotation.UI.Commands
                                      OnCommandSuccess success_callback)
             : base(parent)
         {
-            this.OriginalColor = color;
-            this.LineColor = color;
+            OriginalColor = color;
+            LineColor = color;
             this.LineWidth = LineWidth;
             this.success_callback = success_callback;
         }
@@ -59,8 +59,10 @@ namespace WebAnnotation.UI.Commands
 
         protected virtual void Execute(GridVector2[] updated_verticies)
         {
-            if (this.success_callback != null)
-                this.success_callback(this, updated_verticies);
+            if (success_callback != null)
+            {
+                success_callback(this, updated_verticies);
+            }
 
             base.Execute();
         }
@@ -70,15 +72,9 @@ namespace WebAnnotation.UI.Commands
     /// Handles callback, drawing, and vertex/color/width properties.
     /// This is the base class for building geometry using manually placed control points
     /// </summary>
-    abstract class ControlPointCommandBase : LineGeometryCommandBase
+    internal abstract class ControlPointCommandBase : LineGeometryCommandBase
     {
-        public virtual double ControlPointRadius
-        {
-            get
-            {
-                return LineWidth / 2.0;
-            }
-        }
+        public virtual double ControlPointRadius => LineWidth / 2.0;
 
         public abstract GridVector2[] Verticies
         {
@@ -145,11 +141,13 @@ namespace WebAnnotation.UI.Commands
 
         protected int? IndexOfOverlappedVertex(GridVector2 position)
         {
-            for (int i = 0; i < this.Verticies.Count(); i++)
+            for (int i = 0; i < Verticies.Count(); i++)
             {
-                bool overlaps = GridVector2.Distance(this.Verticies[i], position) <= ControlPointRadius;
+                bool overlaps = GridVector2.Distance(Verticies[i], position) <= ControlPointRadius;
                 if (overlaps)
+                {
                     return new int?(i);
+                }
             }
 
             return new int?();
@@ -157,7 +155,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            this.Execute(this.Verticies);
+            Execute(Verticies);
         }
 
         /// <summary>
@@ -168,7 +166,7 @@ namespace WebAnnotation.UI.Commands
         protected abstract GridVector2? IntersectsSelf(GridLineSegment lineSeg);
     }
 
-    abstract class PolyLineCommandBase : ControlPointCommandBase
+    internal abstract class PolyLineCommandBase : ControlPointCommandBase
     {
         public PolyLineCommandBase(Viking.UI.Controls.SectionViewerControl parent,
                                      Microsoft.Xna.Framework.Color color,
@@ -193,7 +191,7 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         protected override GridVector2? IntersectsSelf(GridLineSegment lineSeg)
         {
-            return this.Verticies.IntersectionPoint(lineSeg);
+            return Verticies.IntersectionPoint(lineSeg);
         }
     }
 
@@ -203,16 +201,16 @@ namespace WebAnnotation.UI.Commands
     /// Double left-click to complete polyline creation
     /// Right-click to remove the last polyline vertex
     /// </summary>
-    class PlacePolylineCommand : PolyLineCommandBase
+    internal class PlacePolylineCommand : PolyLineCommandBase
     {
-        private Stack<GridVector2> vert_stack = new Stack<GridVector2>();
+        private readonly Stack<GridVector2> vert_stack = new Stack<GridVector2>();
 
         /// <summary>
         /// Returns the stack with the bottomost entry first in the array
         /// </summary>
         public override GridVector2[] Verticies
         {
-            get { return vert_stack.ToArray().Reverse().ToArray(); }
+            get => vert_stack.ToArray().Reverse().ToArray();
             protected set
             {
                 vert_stack.Clear();
@@ -240,9 +238,9 @@ namespace WebAnnotation.UI.Commands
                                      double LineWidth,
                                      OnCommandSuccess success_callback)
             : this(parent,
-                   new Microsoft.Xna.Framework.Color((int)color.R,
-                                                    (int)color.G,
-                                                    (int)color.B,
+                   new Microsoft.Xna.Framework.Color(color.R,
+                                                    color.G,
+                                                    color.B,
                                                     0.5f),
                    origin,
                    LineWidth,
@@ -280,17 +278,17 @@ namespace WebAnnotation.UI.Commands
                     //Drag the vertex under the cursor
                     int? iOverlapped = IndexOfOverlappedVertex(WorldPos);
 
-                    Parent.CommandQueue.InjectCommand(new AdjustPolylineCommand(this.Parent,
-                                                                                        this.LineColor,
-                                                                                        this.Verticies,
-                                                                                        this.LineWidth,
+                    Parent.CommandQueue.InjectCommand(new AdjustPolylineCommand(Parent,
+                                                                                        LineColor,
+                                                                                        Verticies,
+                                                                                        LineWidth,
                                                                                         iOverlapped.Value,
                                                                                         false,
                                                                                         new OnCommandSuccess((ControlPointCommandBase, line_verticies) =>
                                                                                             {
-                                                                                                this.Verticies = line_verticies;
+                                                                                                Verticies = line_verticies;
                                                                                                 //Update oldWorldPosition to keep the line we draw to our cursor from jumping on the first draw when we are reactivated and user hasn't used the mouse yet
-                                                                                                this.oldWorldPosition = line_verticies[iOverlapped.Value];
+                                                                                                oldWorldPosition = line_verticies[iOverlapped.Value];
                                                                                             })));
                     return;
                 }
@@ -309,7 +307,7 @@ namespace WebAnnotation.UI.Commands
                 if (CanCommandComplete(WorldPos))
                 {
                     //If we click a point twice the command is completed.
-                    this.Execute();
+                    Execute();
                     return;
                 }
                 else if (CanControlPointBePlaced(WorldPos))
@@ -339,7 +337,7 @@ namespace WebAnnotation.UI.Commands
                 if (CanControlPointBePlaced(WorldPos))
                 {
                     vert_stack.Push(WorldPos);
-                    this.Execute();
+                    Execute();
                     return;
                 }
             }
@@ -349,24 +347,24 @@ namespace WebAnnotation.UI.Commands
 
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            if (this.oldWorldPosition != Verticies.Last())
+            if (oldWorldPosition != Verticies.Last())
             {
-                GridVector2? SelfIntersection = IntersectsSelf(new GridLineSegment(this.oldWorldPosition, Verticies.Last()));
+                GridVector2? SelfIntersection = IntersectsSelf(new GridLineSegment(oldWorldPosition, Verticies.Last()));
 
-                vert_stack.Push(this.oldWorldPosition);
+                vert_stack.Push(oldWorldPosition);
 
-                CurveView curveView = new CurveView(vert_stack.ToArray(), this.LineColor, false, Global.NumOpenCurveInterpolationPoints, lineWidth: this.LineWidth, controlPointRadius: this.LineWidth / 2.0);
+                CurveView curveView = new CurveView(vert_stack.ToArray(), LineColor, false, Global.NumOpenCurveInterpolationPoints, lineWidth: LineWidth, controlPointRadius: LineWidth / 2.0);
 
                 CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, new CurveView[] { curveView });
                 //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
 
-                this.vert_stack.Pop();
+                vert_stack.Pop();
 
                 base.OnDraw(graphicsDevice, scene, basicEffect);
             }
             else
             {
-                GlobalPrimitives.DrawPolyline(Parent.LumaOverlayLineManager, basicEffect, this.Verticies.ToList(), this.LineWidth, this.LineColor);
+                GlobalPrimitives.DrawPolyline(Parent.LumaOverlayLineManager, basicEffect, Verticies.ToList(), LineWidth, LineColor);
             }
         }
     }
@@ -375,18 +373,17 @@ namespace WebAnnotation.UI.Commands
     /// Hold Left button down and drag a vertex to move a vertex
     /// Release left button to place the vertex and exit the command
     /// </summary>
-    class AdjustPolylineCommand : PolyLineCommandBase
+    internal class AdjustPolylineCommand : PolyLineCommandBase
     {
-        int DraggedVertexIndex;
-
-        GridVector2[] vert_list;
+        private readonly int DraggedVertexIndex;
+        private GridVector2[] vert_list;
 
         public bool IsClosed;
 
         public override GridVector2[] Verticies
         {
-            get { return vert_list; }
-            protected set { vert_list = value; }
+            get => vert_list;
+            protected set => vert_list = value;
 
         }
 
@@ -410,7 +407,7 @@ namespace WebAnnotation.UI.Commands
         {
             this.IsClosed = IsClosed;
             vert_list = verticies;
-            this.DraggedVertexIndex = DraggedVertex;
+            DraggedVertexIndex = DraggedVertex;
 
             parent.Cursor = Cursors.Hand;
         }
@@ -423,9 +420,9 @@ namespace WebAnnotation.UI.Commands
                                      bool IsClosed,
                                      OnCommandSuccess success_callback)
             : this(parent,
-                   new Microsoft.Xna.Framework.Color((int)color.R,
-                                                    (int)color.G,
-                                                    (int)color.B,
+                   new Microsoft.Xna.Framework.Color(color.R,
+                                                    color.G,
+                                                    color.B,
                                                     0.5f),
                    verticies,
                    LineWidth,
@@ -440,11 +437,15 @@ namespace WebAnnotation.UI.Commands
         {
             for (int i = 0; i < Verticies.Length; i++)
             {
-                if (i == this.DraggedVertexIndex)
+                if (i == DraggedVertexIndex)
+                {
                     continue;
+                }
 
-                if (GridVector2.Distance(WorldPosition, Verticies[i]) <= this.ControlPointRadius)
+                if (GridVector2.Distance(WorldPosition, Verticies[i]) <= ControlPointRadius)
+                {
                     return true;
+                }
             }
 
             return false;
@@ -472,7 +473,7 @@ namespace WebAnnotation.UI.Commands
             if (e.Button.Left())
             {
 
-                this.vert_list[this.DraggedVertexIndex] = WorldPos;
+                vert_list[DraggedVertexIndex] = WorldPos;
                 Parent.Invalidate();
             }
 
@@ -487,8 +488,8 @@ namespace WebAnnotation.UI.Commands
                 if (CanCommandComplete(WorldPos))
                 {
                     //If we release the left mouse button the command is completed                   
-                    Verticies[this.DraggedVertexIndex] = WorldPos;
-                    this.Execute();
+                    Verticies[DraggedVertexIndex] = WorldPos;
+                    Execute();
                 }
                 return;
             }
@@ -502,19 +503,19 @@ namespace WebAnnotation.UI.Commands
             if (Verticies.Length > 1)
             {
 
-                CurveView curveView = new CurveView(Verticies, this.LineColor,
-                    this.IsClosed, this.IsClosed ? Global.NumClosedCurveInterpolationPoints : Global.NumOpenCurveInterpolationPoints, null,
+                CurveView curveView = new CurveView(Verticies, LineColor,
+                    IsClosed, IsClosed ? Global.NumClosedCurveInterpolationPoints : Global.NumOpenCurveInterpolationPoints, null,
                     LineWidth, ControlPointRadius,
-                    this.Style);
+                    Style);
 
                 CurveView.Draw(graphicsDevice, scene,
                                Parent.LumaOverlayCurveManager, basicEffect,
-                               Parent.AnnotationOverlayEffect, (float)DateTime.UtcNow.Millisecond / 1000.0f,
+                               Parent.AnnotationOverlayEffect, DateTime.UtcNow.Millisecond / 1000.0f,
                                new CurveView[] { curveView });
             }
             else
             {
-                CircleView circleView = new CircleView(new GridCircle(Verticies[0], this.LineWidth / 2.0), this.LineColor);
+                CircleView circleView = new CircleView(new GridCircle(Verticies[0], LineWidth / 2.0), LineColor);
                 CircleView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new CircleView[] { circleView });
             }
 

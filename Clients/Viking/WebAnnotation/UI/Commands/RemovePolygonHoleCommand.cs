@@ -5,12 +5,11 @@ using Viking.VolumeModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    class RemovePolygonHoleCommand : AnnotationCommandBase
+    internal class RemovePolygonHoleCommand : AnnotationCommandBase
     {
-        GridPolygon OriginalMosaicPolygon;
-        GridPolygon OriginalVolumePolygon;
-
-        GridPolygon UpdatedMosaicPolygon;
+        private readonly GridPolygon OriginalMosaicPolygon;
+        private readonly GridPolygon OriginalVolumePolygon;
+        private readonly GridPolygon UpdatedMosaicPolygon;
 
         /// <summary>
         /// Returns unsmoothed mosaic and volume polygons with the new point
@@ -18,9 +17,9 @@ namespace WebAnnotation.UI.Commands
         /// <param name="MosaicPolygon"></param>
         /// <param name="VolumePolygon"></param>
         public delegate void OnCommandSuccess(GridPolygon MosaicPolygon, GridPolygon VolumePolygon);
-        OnCommandSuccess success_callback;
 
-        Viking.VolumeModel.IVolumeToSectionTransform mapping;
+        private readonly OnCommandSuccess success_callback;
+        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         /// <summary>
         /// 
@@ -35,8 +34,8 @@ namespace WebAnnotation.UI.Commands
                                         OnCommandSuccess success_callback) : base(parent)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            this.OriginalMosaicPolygon = mosaic_polygon;
-            this.UpdatedMosaicPolygon = mosaic_polygon.Clone() as GridPolygon;
+            OriginalMosaicPolygon = mosaic_polygon;
+            UpdatedMosaicPolygon = mosaic_polygon.Clone() as GridPolygon;
             this.success_callback = success_callback;
 
             //Launch the remove action
@@ -53,12 +52,12 @@ namespace WebAnnotation.UI.Commands
         {
             if (polygon.TryRemoveInteriorRing(holePosition))
             {
-                this.Execute();
+                Execute();
             }
             else
             {
                 //Could not remove the interior polygon, so do nothing
-                this.Deactivated = true;
+                Deactivated = true;
             }
         }
 
@@ -75,7 +74,7 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
-            this.success_callback(UpdatedMosaicPolygon, UpdatedVolumePolygon);
+            success_callback(UpdatedMosaicPolygon, UpdatedVolumePolygon);
 
             base.Execute();
         }

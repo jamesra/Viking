@@ -9,7 +9,7 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(StructureType), 1)]
     public partial class StructureTypeGeneralPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        StructureType Obj = null;
+        private StructureType Obj = null;
 
         public StructureTypeGeneralPage()
         {
@@ -23,29 +23,29 @@ namespace WebAnnotation.UI
 
         protected override void OnShowObject(object Object)
         {
-            this.Obj = Object as StructureType;
-            Debug.Assert(this.Obj != null);
+            Obj = Object as StructureType;
+            Debug.Assert(Obj != null);
 
-            this.textName.Text = this.Obj.Name;
+            textName.Text = Obj.Name;
 
-            this.textCode.Text = this.Obj.Code;
+            textCode.Text = Obj.Code;
 
-            this.textNotes.Text = this.Obj.Notes;
+            textNotes.Text = Obj.Notes;
 
-            this.textID.Text = this.Obj.ID.ToString();
+            textID.Text = Obj.ID.ToString();
 
-            this.btnColor.BackColor = this.Obj.Color;
+            btnColor.BackColor = Obj.Color;
         }
 
         protected override void OnSaveChanges()
         {
-            this.Obj.Name = this.textName.Text;
+            Obj.Name = textName.Text;
 
-            this.Obj.Code = this.textCode.Text;
+            Obj.Code = textCode.Text;
 
-            this.Obj.Notes = this.textNotes.Text;
+            Obj.Notes = textNotes.Text;
 
-            this.Obj.Color = this.btnColor.BackColor;
+            Obj.Color = btnColor.BackColor;
         }
 
         private void btnColor_Click(object sender, EventArgs e)

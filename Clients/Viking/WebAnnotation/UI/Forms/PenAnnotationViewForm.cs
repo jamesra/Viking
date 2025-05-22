@@ -14,8 +14,8 @@ namespace WebAnnotation.UI.Forms
         [Browsable(false)]
         public Viking.ViewModels.SectionViewModel Section
         {
-            get { return SectionView.Section; }
-            set { SectionView.Section = value; }
+            get => SectionView.Section;
+            set => SectionView.Section = value;
         }
 
         public PenAnnotationViewForm()
@@ -27,7 +27,7 @@ namespace WebAnnotation.UI.Forms
         {
             InitializeComponent();
 
-            this.SectionView.Section = section;
+            SectionView.Section = section;
         }
 
         /// <summary>

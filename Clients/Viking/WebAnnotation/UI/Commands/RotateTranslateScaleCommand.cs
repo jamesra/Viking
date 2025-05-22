@@ -6,9 +6,9 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    abstract class RotateTranslateScaleCommand : TranslateScaleCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal abstract class RotateTranslateScaleCommand : TranslateScaleCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        public new static string[] DefaultMouseHelpStrings = new string[]
+        public static new string[] DefaultMouseHelpStrings = new string[]
         {
             "Hold Right click and drag: Rotate"
         };
@@ -32,7 +32,7 @@ namespace WebAnnotation.UI.Commands
 
         protected double Angle
         {
-            get { return _Angle; }
+            get => _Angle;
             set
             {
                 _Angle = value;
@@ -60,14 +60,14 @@ namespace WebAnnotation.UI.Commands
             //Reset size scale if the middle mouse button is pushed
             if (e.Button.Middle())
             {
-                this.SizeScale = 1.0;
+                SizeScale = 1.0;
                 return;
             }
             else if (e.Button.Right())
             {
                 GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 // GridVector2 Center = this.TranslatedVolumePosition;
-                this._AngleOffset = GridVector2.Angle(VolumeRotationOrigin, WorldPosition) - Angle;
+                _AngleOffset = GridVector2.Angle(VolumeRotationOrigin, WorldPosition) - Angle;
             }
             else
             {
@@ -84,9 +84,11 @@ namespace WebAnnotation.UI.Commands
                 //GridVector2 centroid = this.OriginalVolumePosition;
 
                 if (VolumeRotationOrigin == worldPosition)
+                {
                     return;
+                }
 
-                this.Angle = GridVector2.Angle(VolumeRotationOrigin, worldPosition) - _AngleOffset;
+                Angle = GridVector2.Angle(VolumeRotationOrigin, worldPosition) - _AngleOffset;
 
                 //Save as old mouse position so location doesn't jump when we release the right mouse button
                 SaveAsOldMousePosition(e);
@@ -97,12 +99,6 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
     }
 }

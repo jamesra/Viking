@@ -1,6 +1,6 @@
 ﻿namespace WebAnnotation.UI.Commands
 {
-    abstract class AnnotationCommandBase : Viking.UI.Commands.Command
+    internal abstract class AnnotationCommandBase : Viking.UI.Commands.Command
     {
         protected AnnotationOverlay Overlay;
 
@@ -8,7 +8,7 @@
             : base(parent)
         {
             //I hate this, but I have to live with it until Jotunn
-            this.Overlay = AnnotationOverlay.CurrentOverlay;
+            Overlay = AnnotationOverlay.CurrentOverlay;
         }
 
         protected override void OnDeactivate()

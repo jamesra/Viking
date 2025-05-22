@@ -8,7 +8,7 @@ namespace WebAnnotation.UI.ActionViews
 {
     internal class CreateNewLinkedLocationActionView : IActionView, IIconTexture, IColorView
     {
-        CreateNewLinkedLocationAction model;
+        private readonly CreateNewLinkedLocationAction model;
 
         public IShape2D Shape { get; private set; }
 
@@ -16,7 +16,7 @@ namespace WebAnnotation.UI.ActionViews
         public IRenderable Active { get; set; }
         public BuiltinTexture Icon { get; private set; } = BuiltinTexture.Chain;
         public Color Color { get; set; }
-        public float Alpha { get { return this.Color.GetAlpha(); } set { this.Color = this.Color.SetAlpha(value); } }
+        public float Alpha { get => Color.GetAlpha(); set => Color = Color.SetAlpha(value); }
 
         public CreateNewLinkedLocationActionView(CreateNewLinkedLocationAction action)
         {

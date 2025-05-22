@@ -32,7 +32,7 @@ namespace WebAnnotation.ViewModel
         List<HitTestResult> GetAnnotationsAtPosition(GridVector2 WorldPosition);
     }
 
-    abstract class SectionAnnotationsViewBase : System.Windows.IWeakEventListener, ICanvasViewHitTesting
+    internal abstract class SectionAnnotationsViewBase : System.Windows.IWeakEventListener, ICanvasViewHitTesting
     {
         public abstract int SectionNumber { get; }
 
@@ -49,12 +49,14 @@ namespace WebAnnotation.ViewModel
             //We should fallback by mapping as many points as possible, and then using those to make an equivalent sized rectangle.
             //If we cannot map any points we shouldn't bother with the request.
 
-            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
+            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
 
             if (!VisibleMosaicBounds.HasValue)
+            {
                 return;
+            }
 
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, AddLocationsInLocalCache, token); // this.AddLocations, null);
+            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, null, AddLocationsInLocalCache, token); // this.AddLocations, null);
         }
 
         protected abstract void AddLocationsInLocalCache(IEnumerable<LocationObj> locations);
@@ -104,7 +106,7 @@ namespace WebAnnotation.ViewModel
     /// <summary>
     /// This class manages Annotations on an adjacent section used on a canvas
     /// </summary>
-    class AdjacentSectionAnnotationsView : SectionAnnotationsViewBase, System.Windows.IWeakEventListener
+    internal class AdjacentSectionAnnotationsView : SectionAnnotationsViewBase, System.Windows.IWeakEventListener
     {
         /// <summary>
         /// The section that is visible
@@ -116,14 +118,11 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         public readonly SectionViewModel AdjacentSection;
 
-        public override int SectionNumber
-        {
-            get { return AdjacentSection.Number; }
-        }
+        public override int SectionNumber => AdjacentSection.Number;
 
         public override string ToString()
         {
-            return string.Format("Annotations on {0} seen from {1}", this.AdjacentSection.Number, this.SectionNumber);
+            return string.Format("Annotations on {0} seen from {1}", AdjacentSection.Number, SectionNumber);
         }
 
         protected readonly KeyTracker<long> KnownLocations = new KeyTracker<long>();
@@ -133,24 +132,18 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Mapping interface for moving geometry between volume and section space
         /// </summary>
-        public override Viking.VolumeModel.IVolumeToSectionTransform mapper
-        {
-            get
-            {
-                return this.AdjacentSection.ActiveSectionToVolumeTransform;
-            }
-        }
+        public override Viking.VolumeModel.IVolumeToSectionTransform mapper => AdjacentSection.ActiveSectionToVolumeTransform;
 
         public AdjacentSectionAnnotationsView(int primary_section_number, SectionViewModel AdjacentSection)
         {
-            this.PrimarySectionNumber = primary_section_number;
+            PrimarySectionNumber = primary_section_number;
             this.AdjacentSection = AdjacentSection;
             Init();
         }
 
         public override void Init()
         {
-            ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(this.SectionNumber);
+            ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(SectionNumber);
             if (local.Count > 0)
             {
                 Task.Run(() => AddLocations(local.Values));
@@ -159,12 +152,12 @@ namespace WebAnnotation.ViewModel
 
         private IEnumerable<LocationObj> LinkedLocationsOnPrimary(ICollection<long> LinkedIDs)
         {
-            return Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == this.PrimarySectionNumber);
+            return Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == PrimarySectionNumber);
         }
 
         private IEnumerable<LocationObj> LinkedLocationsOnAdjacent(ICollection<long> LinkedIDs)
         {
-            return Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == this.AdjacentSection.Number);
+            return Store.Locations.GetObjectsByIDs(LinkedIDs, false).Where(l => (int)l.Z == AdjacentSection.Number);
         }
 
         /// <summary>
@@ -173,7 +166,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="locationObjs"></param>
         protected override void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
         {
-            LocationObj[] unknownObjs = locationObjs.Where(l => !this.KnownLocations.Contains(l.ID)).ToArray();
+            LocationObj[] unknownObjs = locationObjs.Where(l => !KnownLocations.Contains(l.ID)).ToArray();
             if (unknownObjs.Length > 0)
             {
                 AddLocations(unknownObjs);
@@ -190,11 +183,11 @@ namespace WebAnnotation.ViewModel
 
         protected void AddLocation(LocationObj loc, bool subscribe)
         {
-            if (loc.Z == this.AdjacentSection.Number)
+            if (loc.Z == AdjacentSection.Number)
             {
                 AddLocationOnAdjacent(loc, subscribe);
             }
-            else if (loc.Z == this.PrimarySectionNumber)
+            else if (loc.Z == PrimarySectionNumber)
             {
                 //AddLocationOnPrimary(loc, subscribe);
                 return;
@@ -206,10 +199,10 @@ namespace WebAnnotation.ViewModel
         }
 
         protected void AddLocationOnAdjacent(LocationObj loc, bool subscribe)
-        { 
+        {
             KnownLocations.TryAdd(loc.ID, () =>
             {
-                bool AnyOverlap = false; 
+                bool AnyOverlap = false;
                 if (!AnyOverlap)
                 {
                     AddNonOverlappedOrUnlinkedLocation(loc);
@@ -233,11 +226,11 @@ namespace WebAnnotation.ViewModel
 
         protected bool RemoveLocation(LocationObj loc, bool unsubscribe)
         {
-            if (loc.Z == this.AdjacentSection.Number)
+            if (loc.Z == AdjacentSection.Number)
             {
                 return RemoveLocationOnAdjacent(loc, unsubscribe);
             }
-            else if (loc.Z == this.PrimarySectionNumber)
+            else if (loc.Z == PrimarySectionNumber)
             {
                 //return RemoveLocationOnPrimary(loc, unsubscribe);
                 return false;
@@ -250,7 +243,7 @@ namespace WebAnnotation.ViewModel
 
         protected bool RemoveLocationOnAdjacent(LocationObj loc, bool unsubscribe)
         {
-            if (loc.Z != this.SectionNumber)
+            if (loc.Z != SectionNumber)
             {
                 throw new ArgumentException("Location does not belong to adjacent section");
             }
@@ -284,7 +277,7 @@ namespace WebAnnotation.ViewModel
             {
                 locView = AnnotationViewFactory.CreateAdjacent(loc, mapper);
             }
-            catch (ArgumentOutOfRangeException except)
+            catch (ArgumentOutOfRangeException)
             {
                 //Thrown when the point cannot be mapped.
                 Trace.WriteLine(string.Format("Could not map location {0} on section {1}", loc.ID, loc.Section));
@@ -301,15 +294,13 @@ namespace WebAnnotation.ViewModel
 
         private bool RemoveNonOverlappedOrUnlinkedLocation(LocationObj loc)
         {
-            long RemovedID;
-            LocationCanvasView locView;
-            LocationViews.TryRemove(loc.ID, out locView);
-            return LocationsSearch.Delete(loc.ID, out RemovedID);
+            LocationViews.TryRemove(loc.ID, out LocationCanvasView locView);
+            return LocationsSearch.Delete(loc.ID, out long RemovedID);
         }
 
         public override List<HitTestResult> GetAnnotations(GridVector2 WorldPosition)
         {
-            IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(WorldPosition.ToRTreeRect(this.SectionNumber));
+            IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(WorldPosition.ToRTreeRect(SectionNumber));
             IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]).Where(l => l.Contains(WorldPosition));
 
             List<HitTestResult> listHitResults = intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.VisualHeight, l.DistanceFromCenterNormalized(WorldPosition))).ToList();
@@ -318,7 +309,7 @@ namespace WebAnnotation.ViewModel
 
         public override List<HitTestResult> GetAnnotations(GridLineSegment world_line)
         {
-            IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_line.BoundingBox.ToRTreeRect(this.SectionNumber));
+            IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_line.BoundingBox.ToRTreeRect(SectionNumber));
             IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]).Where(l => l.Intersects(world_line));
 
             List<HitTestResult> listHitResults = intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.VisualHeight, l.DistanceFromCenterNormalized(world_line.A))).ToList();
@@ -327,7 +318,7 @@ namespace WebAnnotation.ViewModel
 
         public override List<HitTestResult> GetAnnotations(GridRectangle world_rect)
         {
-            IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_rect.ToRTreeRect(this.SectionNumber));
+            IEnumerable<long> intersecting_IDs = LocationsSearch.Intersects(world_rect.ToRTreeRect(SectionNumber));
             IEnumerable<LocationCanvasView> intersecting_locations = intersecting_IDs.Select(id => LocationViews[id]);
 
             List<HitTestResult> listHitResults = intersecting_locations.Select(l => new HitTestResult(l, (int)l.Z, l.VisualHeight, 0)).ToList();
@@ -336,20 +327,20 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<LocationCanvasView> AnnotationsInRegion(GridRectangle worldRect)
         {
-            List<long> loc_IDs = this.LocationsSearch.Intersects(worldRect.ToRTreeRect(this.SectionNumber));
+            List<long> loc_IDs = LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
 
-            ICollection<LocationCanvasView> locations = loc_IDs.Select(id => this.LocationViews[id]).ToList();
+            ICollection<LocationCanvasView> locations = loc_IDs.Select(id => LocationViews[id]).ToList();
             return locations;
         }
 
         public ICollection<long> LocationIdsInRegion(GridRectangle worldRect)
         {
-            return this.LocationsSearch.Intersects(worldRect.ToRTreeRect(this.SectionNumber));
+            return LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
         }
 
         public ICollection<LocationCanvasView> LocationViewsForIds(ICollection<long> loc_IDs)
         {
-            ICollection<LocationCanvasView> locations = loc_IDs.Select(id => this.LocationViews[id]).ToList();
+            ICollection<LocationCanvasView> locations = loc_IDs.Select(id => LocationViews[id]).ToList();
             return locations;
         }
 
@@ -357,7 +348,9 @@ namespace WebAnnotation.ViewModel
         {
             LocationObj loc = sender as LocationObj;
             if (loc == null)
+            {
                 return;
+            }
 
             //Update if a position or everything has changed
             if (LocationObj.IsGeometryProperty(e.PropertyName))
@@ -366,7 +359,9 @@ namespace WebAnnotation.ViewModel
 
                 SectionAnnotationsView PrimarySectionAnnotationView = AnnotationOverlay.GetAnnotationsForSection(PrimarySectionNumber);
                 if (PrimarySectionAnnotationView != null)
+                {
                     PrimarySectionAnnotationView.SectionLocationLinks.RemoveLocationLinks(new LocationObj[] { loc });
+                }
             }
         }
 
@@ -374,7 +369,9 @@ namespace WebAnnotation.ViewModel
         {
             LocationObj loc = sender as LocationObj;
             if (loc == null)
+            {
                 return;
+            }
 
             //            Trace.WriteLine("Location property changed: " + loc.ToString() + " property: " + e.PropertyName); 
 
@@ -386,7 +383,9 @@ namespace WebAnnotation.ViewModel
 
                 SectionAnnotationsView PrimarySectionAnnotationView = AnnotationOverlay.GetAnnotationsForSection(PrimarySectionNumber);
                 if (PrimarySectionAnnotationView != null)
+                {
                     PrimarySectionAnnotationView.SectionLocationLinks.AddLocationLinks(new LocationObj[] { loc });
+                }
             }
         }
 
@@ -421,7 +420,7 @@ namespace WebAnnotation.ViewModel
     /// This class manages LocationViewModels used on a canvas.  
     /// It handles hit detection, search, and positioning using canvas transforms
     /// </summary>
-    class SectionAnnotationsView : SectionAnnotationsViewBase, System.Windows.IWeakEventListener
+    internal class SectionAnnotationsView : SectionAnnotationsViewBase, System.Windows.IWeakEventListener
     {
         /// <summary>
         /// The section we store annotations for
@@ -449,13 +448,7 @@ namespace WebAnnotation.ViewModel
         private readonly ConcurrentDictionary<long, KeyTracker<long>> LocationsForStructure = new ConcurrentDictionary<long, KeyTracker<long>>();
 
 
-        public ICollection<LocationLinkView> NonOverlappedLocationLinks
-        {
-            get
-            {
-                return SectionLocationLinks.NonOverlappedLinks;
-            }
-        }
+        public ICollection<LocationLinkView> NonOverlappedLocationLinks => SectionLocationLinks.NonOverlappedLinks;
 
         public ICollection<LocationLinkView> NonOverlappedLocationLinksInRegion(GridRectangle bounds)
         {
@@ -465,19 +458,13 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Mapping interface for moving geometry between volume and section space
         /// </summary>
-        public override Viking.VolumeModel.IVolumeToSectionTransform mapper
-        {
-            get
-            {
-                return this.Section.ActiveSectionToVolumeTransform;
-            }
-        }
+        public override Viking.VolumeModel.IVolumeToSectionTransform mapper => Section.ActiveSectionToVolumeTransform;
 
-        public override int SectionNumber { get { return this.Section.Number; } }
+        public override int SectionNumber => Section.Number;
 
         public override string ToString()
         {
-            return string.Format("Section {0} annotations", this.SectionNumber);
+            return string.Format("Section {0} annotations", SectionNumber);
         }
 
         /// <summary>
@@ -485,22 +472,27 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// <param name="section"></param>
         /// <param name="Parent"></param>
-        private bool SubmitUpdatedVolumePositions = false;
+        private readonly bool SubmitUpdatedVolumePositions = false;
 
         public SectionAnnotationsView(SectionViewModel section)
         {
             Trace.WriteLine("Create SectionLocationsViewModel for " + section.Number.ToString());
-            this.Section = section;
+            Section = section;
 
             SectionLocationLinks = new SectionLocationLinkAnnotationsViewModel(section);
             SectionStructureLinks = new SectionStructureLinkAnnotationsViewModel(this);
 
-            this.SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
+            SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
 
-            if (this.Section.ReferenceSectionAbove != null)
-                this.SectionAbove = new AdjacentSectionAnnotationsView(section.Number, Viking.UI.State.volume.SectionViewModels[this.Section.ReferenceSectionAbove.Number]);
-            if (this.Section.ReferenceSectionBelow != null)
-                this.SectionBelow = new AdjacentSectionAnnotationsView(section.Number, Viking.UI.State.volume.SectionViewModels[this.Section.ReferenceSectionBelow.Number]);
+            if (Section.ReferenceSectionAbove != null)
+            {
+                SectionAbove = new AdjacentSectionAnnotationsView(section.Number, Viking.UI.State.volume.SectionViewModels[Section.ReferenceSectionAbove.Number]);
+            }
+
+            if (Section.ReferenceSectionBelow != null)
+            {
+                SectionBelow = new AdjacentSectionAnnotationsView(section.Number, Viking.UI.State.volume.SectionViewModels[Section.ReferenceSectionBelow.Number]);
+            }
 
             CollectionChangedEventManager.AddListener(Store.Structures, this);
             CollectionChangedEventManager.AddListener(Store.StructureLinks, this);
@@ -510,7 +502,7 @@ namespace WebAnnotation.ViewModel
 
         public override void Init()
         {
-            ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(this.SectionNumber);
+            ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(SectionNumber);
             if (local.Count > 0)
             {
                 Task.Run(() => AddLocationBatch(local.Values));
@@ -524,23 +516,26 @@ namespace WebAnnotation.ViewModel
         {
             StructureObj s = sender as StructureObj;
             if (s == null)
+            {
                 return;
+            }
         }
 
         protected void OnStructurePropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             StructureObj s = sender as StructureObj;
             if (s == null)
+            {
                 return;
+            }
 
             if (LocationsForStructure.ContainsKey(s.ID))
             {
-                KeyTracker<long> locIDs = this.LocationsForStructure[s.ID];
+                KeyTracker<long> locIDs = LocationsForStructure[s.ID];
 
                 foreach (long locID in locIDs.ValuesCopy())
                 {
-                    LocationCanvasView locView;
-                    if (this.LocationViews.TryGetValue(locID, out locView))
+                    if (LocationViews.TryGetValue(locID, out LocationCanvasView locView))
                     {
                         locView.OnParentPropertyChanged(sender, e);
                     }
@@ -557,7 +552,9 @@ namespace WebAnnotation.ViewModel
         {
             LocationObj loc = sender as LocationObj;
             if (loc == null)
+            {
                 return;
+            }
 
             //Update if a position or everything has changed
             if (LocationObj.IsGeometryProperty(e.PropertyName))
@@ -573,8 +570,7 @@ namespace WebAnnotation.ViewModel
             }
             else
             {
-                LocationCanvasView locView;
-                if (this.LocationViews.TryGetValue(loc.ID, out locView))
+                if (LocationViews.TryGetValue(loc.ID, out LocationCanvasView locView))
                 {
                     locView.OnObjPropertyChanging(sender, e);
                 }
@@ -585,7 +581,9 @@ namespace WebAnnotation.ViewModel
         {
             LocationObj loc = sender as LocationObj;
             if (loc == null)
+            {
                 return;
+            }
 
 
             //            Trace.WriteLine("Location property changed: " + loc.ToString() + " property: " + e.PropertyName); 
@@ -602,8 +600,7 @@ namespace WebAnnotation.ViewModel
             }
             else
             {
-                LocationCanvasView locView;
-                if (this.LocationViews.TryGetValue(loc.ID, out locView))
+                if (LocationViews.TryGetValue(loc.ID, out LocationCanvasView locView))
                 {
                     locView.OnObjPropertyChanged(sender, e);
                 }
@@ -617,14 +614,14 @@ namespace WebAnnotation.ViewModel
 
         private List<LocationObj> LocationsOnOurSectionLinkedFromSet(IEnumerable<LocationObj> locations)
         {
-            List<long> LocationIDs = locations.SelectMany(l => l.LinksCopy).Where(id => this.KnownLocations.Contains(id)).Distinct().ToList();
+            List<long> LocationIDs = locations.SelectMany(l => l.LinksCopy).Where(id => KnownLocations.Contains(id)).Distinct().ToList();
             return Store.Locations.GetObjectsByIDs(LocationIDs, false);
         }
 
         private void AddLocationBatch(IEnumerable<LocationObj> locations)
         {
             AddLocations(locations);
-            IEnumerable<LocationObj> locsOnOurSection = locations.Where(l => l.Z == this.SectionNumber);
+            IEnumerable<LocationObj> locsOnOurSection = locations.Where(l => l.Z == SectionNumber);
             SectionStructureLinks.AddStructureLinks(locsOnOurSection);
 
             IEnumerable<LocationObj> locsOnOurSectionOrLinkedByInputLocations = locsOnOurSection.Union(LocationsOnOurSectionLinkedFromSet(locations));
@@ -634,7 +631,7 @@ namespace WebAnnotation.ViewModel
 
         private void RemoveLocationBatch(IEnumerable<LocationObj> locations)
         {
-            IEnumerable<LocationObj> locsOnOurSection = locations.Where(l => l.Z == this.SectionNumber);
+            IEnumerable<LocationObj> locsOnOurSection = locations.Where(l => l.Z == SectionNumber);
             IEnumerable<LocationObj> locsLinkedByInputLocations = LocationsOnOurSectionLinkedFromSet(locations);
             IEnumerable<LocationObj> locsOnOurSectionOrLinkedByInputLocations = locsOnOurSection.Union(locsLinkedByInputLocations);
 
@@ -759,13 +756,17 @@ namespace WebAnnotation.ViewModel
 
         public override void AddLocations(IEnumerable<LocationObj> listLocations)
         {
-            AddLocations(listLocations.Where(l => l.Section == this.SectionNumber), true);
+            AddLocations(listLocations.Where(l => l.Section == SectionNumber), true);
 
             if (SectionAbove != null)
+            {
                 SectionAbove.AddLocations(listLocations.Where(l => l.Section == SectionAbove.SectionNumber));
+            }
 
             if (SectionBelow != null)
+            {
                 SectionBelow.AddLocations(listLocations.Where(l => l.Section == SectionBelow.SectionNumber));
+            }
         }
 
         /// <summary>   
@@ -815,7 +816,9 @@ namespace WebAnnotation.ViewModel
         private bool AddLocation(LocationObj loc, bool Subscribe, bool UpdateVolumeLocations)
         {
             if (loc.Section != Section.Number)
+            {
                 return false;
+            }
 
             return KnownLocations.TryAdd(loc.ID, () =>
             {
@@ -823,9 +826,9 @@ namespace WebAnnotation.ViewModel
                 LocationCanvasView locView = null;
                 try
                 {
-                    locView = AnnotationViewFactory.Create(loc, this.mapper);
+                    locView = AnnotationViewFactory.Create(loc, mapper);
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     //Could not add location, probably because of a transform mapping issue
                     Trace.WriteLine("ArgumentException adding location# " + loc.ToString());
@@ -851,16 +854,15 @@ namespace WebAnnotation.ViewModel
         }
 
         private void AddLocationsForStructure(long structureID, LocationCanvasView locView)
-        { 
-            var knownLocationsForStructure = LocationsForStructure.GetOrAdd(structureID, (key) => new KeyTracker<long>());
+        {
+            KeyTracker<long> knownLocationsForStructure = LocationsForStructure.GetOrAdd(structureID, (key) => new KeyTracker<long>());
             knownLocationsForStructure.TryAdd(locView.ID);
             return;
         }
 
         private void RemoveLocationsForStructure(long structureID, long LocationID)
         {
-            KeyTracker<long> KnownLocationsForStructure;
-            if (LocationsForStructure.TryGetValue(structureID, out KnownLocationsForStructure))
+            if (LocationsForStructure.TryGetValue(structureID, out KeyTracker<long> KnownLocationsForStructure))
             {
                 KnownLocationsForStructure.TryRemove(LocationID);
                 //TODO: Remove key tracker if the last location is removed?
@@ -871,13 +873,17 @@ namespace WebAnnotation.ViewModel
 
         public override void RemoveLocations(IEnumerable<LocationObj> listLocations)
         {
-            RemoveLocations(listLocations.Where(l => l.Section == this.SectionNumber), true);
+            RemoveLocations(listLocations.Where(l => l.Section == SectionNumber), true);
 
             if (SectionAbove != null)
+            {
                 SectionAbove.RemoveLocations(listLocations.Where(l => l.Section == SectionAbove.SectionNumber));
+            }
 
             if (SectionBelow != null)
+            {
                 SectionBelow.RemoveLocations(listLocations.Where(l => l.Section == SectionBelow.SectionNumber));
+            }
         }
 
 
@@ -898,12 +904,10 @@ namespace WebAnnotation.ViewModel
         {
             KnownLocations.TryRemove(loc.ID, () =>
             {
-                LocationCanvasView locView;
-                bool Removed = LocationViews.TryRemove(loc.ID, out locView);
+                bool Removed = LocationViews.TryRemove(loc.ID, out LocationCanvasView locView);
                 Debug.Assert(Removed, "Missing location that was removed " + loc.ID.ToString());
 
-                long RemovedID;
-                bool RTreeRemoved = LocationViewSearch.Delete(loc.ID, out RemovedID);
+                bool RTreeRemoved = LocationViewSearch.Delete(loc.ID, out long RemovedID);
                 Debug.Assert(RTreeRemoved, "Could not remove location from RTree " + loc.ID.ToString());
                 Debug.Assert(RemovedID == loc.ID);
                 if (Unsubscribe)
@@ -923,16 +927,22 @@ namespace WebAnnotation.ViewModel
         /// <param name="SectionNumber"></param>
         /// <returns></returns>
         private static LocationObj GetLocationFromLinkOnThisSection(LocationLinkKey link, int SectionNumber)
-        { 
-            if(!Store.Locations.TryGetValue(link.A, out LocationObj AObj))
+        {
+            if (!Store.Locations.TryGetValue(link.A, out LocationObj AObj))
+            {
                 return null;
+            }
 
-            if(!Store.Locations.TryGetValue(link.B, out LocationObj BObj))
+            if (!Store.Locations.TryGetValue(link.B, out LocationObj BObj))
+            {
                 return null;
+            }
 
             //If neither location is on this section the link doesn't involve us.  Move on.
-            if(AObj.Z != SectionNumber && BObj.Z != SectionNumber)
+            if (AObj.Z != SectionNumber && BObj.Z != SectionNumber)
+            {
                 return null;
+            }
 
             //Debug.Assert(AOBj.Z != BOBj.Z);
             if (AObj.Z == BObj.Z)
@@ -942,23 +952,27 @@ namespace WebAnnotation.ViewModel
             }
 
             if (AObj.Z == SectionNumber)
+            {
                 return AObj;
+            }
 
             if (BObj.Z == SectionNumber)
+            {
                 return BObj;
+            }
 
             return null;
         }
 
         private void AddOverlappedLocations(IEnumerable<LocationLinkKey> keys)
         {
-            IEnumerable<LocationObj> locs = keys.Select(k => GetLocationFromLinkOnThisSection(k, this.SectionNumber)).Where(k => k != null);
+            IEnumerable<LocationObj> locs = keys.Select(k => GetLocationFromLinkOnThisSection(k, SectionNumber)).Where(k => k != null);
             AddOverlappedLocations(locs);
         }
 
         private void RemoveOverlappedLocations(IEnumerable<LocationLinkKey> keys)
         {
-            IEnumerable<LocationObj> locs = keys.Select(k => GetLocationFromLinkOnThisSection(k, this.SectionNumber)).Where(k => k != null);
+            IEnumerable<LocationObj> locs = keys.Select(k => GetLocationFromLinkOnThisSection(k, SectionNumber)).Where(k => k != null);
             RemoveOverlappedLocations(locs);
         }
 
@@ -1007,20 +1021,22 @@ namespace WebAnnotation.ViewModel
 
         public bool TryGetLocation(long ID, out LocationCanvasView outVal)
         {
-            return this.LocationViews.TryGetValue(ID, out outVal);
+            return LocationViews.TryGetValue(ID, out outVal);
         }
 
         public LocationCanvasView GetLocation(long ID)
         {
-            LocationCanvasView outVal = null;
-            if (this.LocationViews.TryGetValue(ID, out outVal))
+            if (LocationViews.TryGetValue(ID, out LocationCanvasView outVal))
+            {
                 return outVal;
+            }
+
             return null;
         }
 
         public bool ContainsLocation(long ID)
         {
-            return this.LocationViews.ContainsKey(ID);
+            return LocationViews.ContainsKey(ID);
         }
 
         public bool GetLocationsForStructure(long ID, out KeyTracker<long> child_locations)
@@ -1031,19 +1047,19 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<LocationCanvasView> GetLocations(GridRectangle bounds)
         {
-            List<long> intersectingIDs = LocationViewSearch.Intersects(bounds.ToRTreeRect((float)this.Section.Number));
+            List<long> intersectingIDs = LocationViewSearch.Intersects(bounds.ToRTreeRect((float)Section.Number));
             return intersectingIDs.Select(id => LocationViews[id]).ToList();
         }
 
         public ICollection<LocationCanvasView> GetLocations(GridVector2 point)
         {
-            List<long> intersectingIDs = LocationViewSearch.Intersects(point.ToRTreeRect((float)this.Section.Number));
+            List<long> intersectingIDs = LocationViewSearch.Intersects(point.ToRTreeRect((float)Section.Number));
             return intersectingIDs.Select(id => LocationViews[id]).Where(l => l.Contains(point)).ToList();
         }
 
         public ICollection<LocationCanvasView> GetLocations(GridLineSegment line)
         {
-            List<long> intersectingIDs = LocationViewSearch.Intersects(line.BoundingBox.ToRTreeRect((float)this.Section.Number));
+            List<long> intersectingIDs = LocationViewSearch.Intersects(line.BoundingBox.ToRTreeRect((float)Section.Number));
             return intersectingIDs.Select(id => LocationViews[id]).Where(l => l.Intersects(line)).ToList();
         }
 
@@ -1085,13 +1101,13 @@ namespace WebAnnotation.ViewModel
         public override List<HitTestResult> GetAnnotations(GridVector2 WorldPosition)
         {
             List<HitTestResult> listIntersectingObjects = new List<HitTestResult>();
-            listIntersectingObjects.AddRange(GetStructureLinks(WorldPosition).Select(o => new HitTestResult(o, this.SectionNumber, ((ICanvasView)o).VisualHeight, o.DistanceFromCenterNormalized(WorldPosition))));
+            listIntersectingObjects.AddRange(GetStructureLinks(WorldPosition).Select(o => new HitTestResult(o, SectionNumber, ((ICanvasView)o).VisualHeight, o.DistanceFromCenterNormalized(WorldPosition))));
             listIntersectingObjects.AddRange(GetLocations(WorldPosition).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, o.DistanceFromCenterNormalized(WorldPosition))));
             listIntersectingObjects.AddRange(GetAdjacentIntersectedAnnotations(WorldPosition));
 
-            ICollection<LocationLinkView> listLocLinks = this.SectionLocationLinks.GetLocationLinks(WorldPosition);
+            ICollection<LocationLinkView> listLocLinks = SectionLocationLinks.GetLocationLinks(WorldPosition);
 
-            listIntersectingObjects.AddRange(listLocLinks.Select(ll => new HitTestResult(ll, this.SectionNumber, ((ICanvasView)ll).VisualHeight, ll.DistanceFromCenterNormalized(WorldPosition))));
+            listIntersectingObjects.AddRange(listLocLinks.Select(ll => new HitTestResult(ll, SectionNumber, ((ICanvasView)ll).VisualHeight, ll.DistanceFromCenterNormalized(WorldPosition))));
 
             //Replace any container objects with the nested objects if the mouse is over a nested object
 
@@ -1123,7 +1139,9 @@ namespace WebAnnotation.ViewModel
             {
                 LocationCanvasView loc = o.obj as LocationCanvasView;
                 if (loc is null)
+                {
                     return true;
+                }
 
                 return !SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(loc.ID);
             }).ToList();
@@ -1137,13 +1155,13 @@ namespace WebAnnotation.ViewModel
         public override List<HitTestResult> GetAnnotations(GridLineSegment world_line)
         {
             List<HitTestResult> listIntersectingObjects = new List<HitTestResult>();
-            listIntersectingObjects.AddRange(GetStructureLinks(world_line).Select(o => new HitTestResult(o, this.SectionNumber, ((ICanvasView)o).VisualHeight, o.Distance(world_line.A))));
+            listIntersectingObjects.AddRange(GetStructureLinks(world_line).Select(o => new HitTestResult(o, SectionNumber, ((ICanvasView)o).VisualHeight, o.Distance(world_line.A))));
             listIntersectingObjects.AddRange(GetLocations(world_line).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, o.DistanceFromCenterNormalized(world_line.A))));
             listIntersectingObjects.AddRange(GetAdjacentIntersectedAnnotations(world_line));
 
-            ICollection<LocationLinkView> listLocLinks = this.SectionLocationLinks.GetLocationLinks(world_line);
+            ICollection<LocationLinkView> listLocLinks = SectionLocationLinks.GetLocationLinks(world_line);
 
-            listIntersectingObjects.AddRange(listLocLinks.Select(ll => new HitTestResult(ll, this.SectionNumber, ((ICanvasView)ll).VisualHeight, ll.DistanceFromCenterNormalized(world_line.A))));
+            listIntersectingObjects.AddRange(listLocLinks.Select(ll => new HitTestResult(ll, SectionNumber, ((ICanvasView)ll).VisualHeight, ll.DistanceFromCenterNormalized(world_line.A))));
 
             //Replace any container objects with the nested objects if the mouse is over a nested object
 
@@ -1158,13 +1176,13 @@ namespace WebAnnotation.ViewModel
         public override List<HitTestResult> GetAnnotations(GridRectangle world_rect)
         {
             List<HitTestResult> listIntersectingObjects = new List<HitTestResult>();
-            listIntersectingObjects.AddRange(GetStructureLinks(world_rect).Select(o => new HitTestResult(o, this.SectionNumber, ((ICanvasView)o).VisualHeight, 0)));
+            listIntersectingObjects.AddRange(GetStructureLinks(world_rect).Select(o => new HitTestResult(o, SectionNumber, ((ICanvasView)o).VisualHeight, 0)));
             listIntersectingObjects.AddRange(GetLocations(world_rect).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, 0)));
             listIntersectingObjects.AddRange(GetAdjacentIntersectedAnnotations(world_rect));
 
-            ICollection<LocationLinkView> listLocLinks = this.SectionLocationLinks.GetLocationLinks(world_rect);
+            ICollection<LocationLinkView> listLocLinks = SectionLocationLinks.GetLocationLinks(world_rect);
 
-            listIntersectingObjects.AddRange(listLocLinks.Select(ll => new HitTestResult(ll, this.SectionNumber, ((ICanvasView)ll).VisualHeight, 0)));
+            listIntersectingObjects.AddRange(listLocLinks.Select(ll => new HitTestResult(ll, SectionNumber, ((ICanvasView)ll).VisualHeight, 0)));
 
             //Replace any container objects with the nested objects if the mouse is over a nested object
 
@@ -1196,7 +1214,9 @@ namespace WebAnnotation.ViewModel
             {
                 LocationCanvasView loc = o.obj as LocationCanvasView;
                 if (loc is null)
+                {
                     return true;
+                }
 
                 return !SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(loc.ID);
             }).ToList();
@@ -1227,7 +1247,9 @@ namespace WebAnnotation.ViewModel
             {
                 LocationCanvasView loc = o.obj as LocationCanvasView;
                 if (loc is null)
+                {
                     return true;
+                }
 
                 return !SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(loc.ID);
             }).ToList();
@@ -1264,19 +1286,19 @@ namespace WebAnnotation.ViewModel
         public override void LoadAnnotationsInRegion(VikingXNA.Scene scene, CancellationToken token)
         {
             //Store.LocationsByRegion.LoadSectionAnnotationsInRegion(scene.VisibleWorldBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, this.AddLocationsInRegionCallback);
-            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(this.mapper);
+            GridRectangle? VisibleMosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(mapper);
 
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, this.SectionNumber, null, AddLocationsInLocalCache, token);// this.AddLocationsInRegionCallback);
+            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, null, AddLocationsInLocalCache, token);// this.AddLocationsInRegionCallback);
 
 
-            if (this.SectionAbove != null)
+            if (SectionAbove != null)
             {
-                this.SectionAbove.LoadAnnotationsInRegion(scene, token);
+                SectionAbove.LoadAnnotationsInRegion(scene, token);
             }
 
-            if (this.SectionBelow != null)
+            if (SectionBelow != null)
             {
-                this.SectionBelow.LoadAnnotationsInRegion(scene, token);
+                SectionBelow.LoadAnnotationsInRegion(scene, token);
             }
         }
 
@@ -1286,9 +1308,11 @@ namespace WebAnnotation.ViewModel
         /// <param name="locationObjs"></param>
         protected override void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
         {
-            LocationObj[] unknownObjs = locationObjs.Where(l => !this.KnownLocations.Contains(l.ID)).ToArray();
+            LocationObj[] unknownObjs = locationObjs.Where(l => !KnownLocations.Contains(l.ID)).ToArray();
             if (unknownObjs.Length > 0)
+            {
                 AddLocationBatch(unknownObjs);
+            }
         }
 
         private void AddLocationsInRegionCallback(IEnumerable<LocationObj> locationObjs)
@@ -1304,12 +1328,12 @@ namespace WebAnnotation.ViewModel
                 Type senderType = sender.GetType();
                 if (senderType == typeof(StructureStore))
                 {
-                    this.OnStructuresStoreChanged(sender, CollectionChangeArgs);
+                    OnStructuresStoreChanged(sender, CollectionChangeArgs);
                     return true;
                 }
                 else if (senderType == typeof(StructureLinkStore))
                 {
-                    this.OnStructureLinksStoreChanged(sender, CollectionChangeArgs);
+                    OnStructureLinksStoreChanged(sender, CollectionChangeArgs);
                     return true;
                 }
             }

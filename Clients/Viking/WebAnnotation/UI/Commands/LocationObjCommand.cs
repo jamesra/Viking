@@ -12,12 +12,12 @@ using WebAnnotationModel;
 namespace WebAnnotation.UI.Commands
 {
     [Viking.Common.CommandAttribute(typeof(LocationCanvasView))]
-    class LocationObjCommand : AnnotationCommandBase
+    internal class LocationObjCommand : AnnotationCommandBase
     {
-        LocationObj selected;
-        StructureTypeObj _LocType = null;
+        private readonly LocationObj selected;
+        private StructureTypeObj _LocType = null;
 
-        StructureTypeObj LocType
+        private StructureTypeObj LocType
         {
             get
             {
@@ -39,7 +39,7 @@ namespace WebAnnotation.UI.Commands
             Debug.Assert(selected != null);
 
             //Figure out if we've selected a location on the same section or different
-            if (selected.Section != this.Parent.Section.Number)
+            if (selected.Section != Parent.Section.Number)
             {
                 parent.Cursor = Cursors.Cross;
             }
@@ -52,10 +52,12 @@ namespace WebAnnotation.UI.Commands
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
             //Redraw if we are dragging a location
-            if (this.oldMouse != null)
+            if (oldMouse != null)
             {
-                if (this.oldMouse.Button.Left())
+                if (oldMouse.Button.Left())
+                {
                     Parent.Invalidate();
+                }
             }
 
             base.OnMouseMove(sender, e);
@@ -73,7 +75,7 @@ namespace WebAnnotation.UI.Commands
             if (e.Button != MouseButtons.Right)
             {
                 //Any other button other than the right button cancels the command
-                this.Deactivated = true;
+                Deactivated = true;
             }
 
 
@@ -85,17 +87,23 @@ namespace WebAnnotation.UI.Commands
                                     VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
-            if (this.oldMouse == null)
+            if (oldMouse == null)
+            {
                 return;
+            }
 
             if (basicEffect == null)
+            {
                 throw new ArgumentNullException("basicEffect");
+            }
 
             if (scene == null)
+            {
                 throw new ArgumentNullException("scene");
+            }
 
             //Draw a line from the selected location to the new location if we are holding left button down
-            if (this.oldMouse.Button == MouseButtons.Left)
+            if (oldMouse.Button == MouseButtons.Left)
             {
                 GridVector2 selectedPos = selected.VolumePosition;
                 /*bool found = sectionAnnotations.TryGetPositionForLocation(selected, out selectedPos);
@@ -112,14 +120,14 @@ namespace WebAnnotation.UI.Commands
                 {
                     Microsoft.Xna.Framework.Color color = LocType.Color.ToXNAColor(0.5f);
 
-                    GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, this.oldWorldPosition, selected.Radius, color);
+                    GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, oldWorldPosition, selected.Radius, color);
                 }
                 else
                 {
 
                     VertexPositionColor[] verts = new VertexPositionColor[] {
                                                         new VertexPositionColor(new Vector3((float)selectedPos.X, (float)selectedPos.Y, 0f), Color.Gold),
-                                                        new VertexPositionColor(new Vector3((float)this.oldWorldPosition.X, (float)oldWorldPosition.Y, 0f), Color.Gold)};
+                                                        new VertexPositionColor(new Vector3((float)oldWorldPosition.X, (float)oldWorldPosition.Y, 0f), Color.Gold)};
 
                     int[] indicies = new int[] { 0, 1 };
 
@@ -128,8 +136,9 @@ namespace WebAnnotation.UI.Commands
                         pass.Apply();
 
                         if (verts != null && verts.Length > 0)
+                        {
                             graphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.LineList, verts, 0, verts.Length, indicies, 0, indicies.Length / 2);
-
+                        }
                     }
                 }
             }

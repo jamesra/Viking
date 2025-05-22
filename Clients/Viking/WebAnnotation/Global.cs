@@ -7,8 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Xml.Linq;
-using Viking.Common;
 using Utils;
+using Viking.Common;
 //using WebAnnotation.AuthenticationService;
 
 namespace WebAnnotation
@@ -37,18 +37,18 @@ namespace WebAnnotation
         }
 
         //TODO: Choose number of points based on distance between control points
-        static public uint NumOpenCurveInterpolationPoints => Geometry.Global.NumOpenCurveInterpolationPoints;
-        static public uint NumClosedCurveInterpolationPoints => Geometry.Global.NumClosedCurveInterpolationPoints;
+        public static uint NumOpenCurveInterpolationPoints => Geometry.Global.NumOpenCurveInterpolationPoints;
+        public static uint NumClosedCurveInterpolationPoints => Geometry.Global.NumClosedCurveInterpolationPoints;
 
-        static public uint NumClosedCurveInterpolationPointsForDisplay = 4;
+        public static uint NumClosedCurveInterpolationPointsForDisplay = 4;
 
-        static public int PenSimplifyThreshold = 12;
+        public static int PenSimplifyThreshold = 12;
 
-        static public double DefaultClosedLineWidth = 24.0;
+        public static double DefaultClosedLineWidth = 24.0;
 
-        static public double MinRadius = 0.5;
+        public static double MinRadius = 0.5;
 
-        static public WebAnnotation.UI.Forms.PenAnnotationViewForm PenAnnotationForm = null;
+        public static WebAnnotation.UI.Forms.PenAnnotationViewForm PenAnnotationForm = null;
 
         /// <summary>
         /// Number of interpolations to place between curve control points, determines distance between control points
@@ -64,27 +64,22 @@ namespace WebAnnotation
         /// This is hardcoded for now, but should be read from the VikingXML file
         /// </summary>
         internal static Geometry.GridVector3 Scale;
-
-        static string WebAnnotationPath = Viking.UI.State.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "WebAnnotation";
+        private static readonly string WebAnnotationPath = Viking.UI.State.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "WebAnnotation";
 
         /// <summary>
         /// Bookmark filename only
         /// </summary>
-        static string UserSettingsFileName = "UserSettings.xml";
+        private static readonly string UserSettingsFileName = "UserSettings.xml";
 
         /// <summary>
         /// The full name of the settings file including filename and path
         /// </summary>
-        static string UserSettingsFilePath = WebAnnotationPath + System.IO.Path.DirectorySeparatorChar + UserSettingsFileName;
-
-        static XElement UserSettingsElement = null;
+        private static readonly string UserSettingsFilePath = WebAnnotationPath + System.IO.Path.DirectorySeparatorChar + UserSettingsFileName;
+        private static XElement UserSettingsElement = null;
 
         public static bool PenMode
         {
-            get
-            {
-                return WebAnnotation.Properties.Settings.Default.PenMode;
-            }
+            get => WebAnnotation.Properties.Settings.Default.PenMode;
             set
             {
                 WebAnnotation.Properties.Settings.Default.PenMode = value;
@@ -97,7 +92,7 @@ namespace WebAnnotation
         public static System.Collections.ObjectModel.ObservableCollection<ulong> UserFavoriteStructureTypes
         {
             get
-            { 
+            {
                 if (_UserFavoriteStructureTypes == null)
                 {
                     _UserFavoriteStructureTypes = new System.Collections.ObjectModel.ObservableCollection<ulong>();
@@ -106,8 +101,10 @@ namespace WebAnnotation
                         try
                         {
                             ulong ID = System.Convert.ToUInt64(ID_str);
-                            if(_UserFavoriteStructureTypes.Contains(ID) == false) //Do not add accidental duplicates
+                            if (_UserFavoriteStructureTypes.Contains(ID) == false) //Do not add accidental duplicates
+                            {
                                 _UserFavoriteStructureTypes.Add(ID);
+                            }
                         }
                         catch (ArgumentException)
                         {
@@ -116,18 +113,18 @@ namespace WebAnnotation
                     }
 
                     _UserFavoriteStructureTypes.CollectionChanged += OnFavoriteStructureTypesChanged;
-                } 
+                }
 
-                return _UserFavoriteStructureTypes; 
+                return _UserFavoriteStructureTypes;
             }
         }
 
         private static void OnFavoriteStructureTypesChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            switch(e.Action)
+            switch (e.Action)
             {
                 case NotifyCollectionChangedAction.Add:
-                    foreach(object item in e.NewItems)
+                    foreach (object item in e.NewItems)
                     {
                         Properties.Settings.Default.FavoriteStructureIDs.Add(string.Format("{0}", item));
                     }
@@ -168,7 +165,7 @@ namespace WebAnnotation
             Properties.Settings.Default.Save(); //Persist the updated list
         }
 
-        static Uri UserSettingsUri
+        private static Uri UserSettingsUri
         {
             get
             {
@@ -199,20 +196,21 @@ namespace WebAnnotation
         public static string EndpointName
         {
             get;
-            internal set; 
+            internal set;
         }
 
-        static internal UserSettings UserSettings
+        internal static UserSettings UserSettings
         {
-         get{
-             if (UserSettingsDoc == null)
-             {
-                 LoadUserPreferences();
-             }
-             
-             return UserSettingsDoc.UserSettings;
-         }   
-        
+            get
+            {
+                if (UserSettingsDoc == null)
+                {
+                    LoadUserPreferences();
+                }
+
+                return UserSettingsDoc.UserSettings;
+            }
+
         }
 
         /// <summary>
@@ -288,7 +286,9 @@ namespace WebAnnotation
             Scale = new Geometry.GridVector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
 
             if (volume == null)
+            {
                 return false;
+            }
 
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
 
@@ -316,9 +316,9 @@ namespace WebAnnotation
             //See if we can load the WebAnnotationMapping file
             HttpWebRequest request = WebRequest.CreateHttp(AboutURI);
             if (AboutURI.Scheme.ToLower() == "https")
+            {
                 request.Credentials = Viking.UI.State.UserCredentials;
-
-            XDocument XMLMapping = null;
+            }
             try
             {
                 using (WebResponse response = request.GetResponse())
@@ -335,12 +335,12 @@ namespace WebAnnotation
             catch (WebException)
             {
                 Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "WebAnnotation");
-                return null; 
-            } 
+                return null;
+            }
         }
 
-        static bool GetEndpointFromXML(XElement elem)
-        { 
+        private static bool GetEndpointFromXML(XElement elem)
+        {
             //Fetch the name if we know it
             switch (elem.Name.LocalName)
             {
@@ -358,7 +358,9 @@ namespace WebAnnotation
                     IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
 
                     if (MappingElements.Count() == 0)
+                    {
                         break;
+                    }
 
                     Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
 
@@ -369,7 +371,9 @@ namespace WebAnnotation
 
             //If we have an endpoint address then give the OK to load
             if (WebAnnotationModel.State.Endpoint != null)
-                return true; 
+            {
+                return true;
+            }
 
             //We don't have an endpoint to read/write annotations.  Do not load.
             return false;
@@ -379,25 +383,27 @@ namespace WebAnnotation
         {
             XAttribute NameAttribute = MappingElement.Attribute("Name");
             if (NameAttribute != null)
+            {
                 Global.EndpointName = NameAttribute.Value;
+            }
 
             XAttribute EndpointAttribute = MappingElement.Attribute("Endpoint");
             if (EndpointAttribute != null)
             {
-                #if DEBUG
-                          WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value); 
-//                        WebAnnotationModel.State.EndpointAddress = new EndpointAddress("https://connectomes.utah.edu/Services/TestBinary/Annotate.svc");
-                #else
+#if DEBUG
                 WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value);
-                #endif
+                //                        WebAnnotationModel.State.EndpointAddress = new EndpointAddress("https://connectomes.utah.edu/Services/TestBinary/Annotate.svc");
+#else
+                WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value);
+#endif
             }
 
             XAttribute ExportURLAttribute = MappingElement.Attribute("ExportURL");
-            if(ExportURLAttribute != null)
+            if (ExportURLAttribute != null)
             {
                 Global.Export = new WebAnnotation.Export(new Uri(ExportURLAttribute.Value));
             }
-                
+
             /*
             XAttribute AuthenticationAttribute = MappingElement.Attribute("Authentication");
             if (AuthenticationAttribute != null)
@@ -426,41 +432,47 @@ namespace WebAnnotation
                     LoadFromServer = true;
                 }
 
-                if(LoadFromServer)
-                {  
-                    var success = LoadServerUserSettings();
-                    if(!success)
+                if (LoadFromServer)
+                {
+                    bool success = LoadServerUserSettings();
+                    if (!success)
                     {
                         return;
                     }
                 }
-                     
-                if(System.IO.File.Exists(UserSettingsFilePath))
+
+                if (System.IO.File.Exists(UserSettingsFilePath))
+                {
                     UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
+                }
             }
-            catch (Xml.Schema.Linq.LinqToXsdException e)
+            catch (Xml.Schema.Linq.LinqToXsdException)
             {
                 //We found it locally, but could not parse it
-                var success = LoadServerUserSettings();
+                bool success = LoadServerUserSettings();
                 if (!success)
                 {
                     throw;
                 }
 
                 if (System.IO.File.Exists(UserSettingsFilePath))
+                {
                     UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
+                }
             }
-            catch (System.Xml.XmlException e)
+            catch (System.Xml.XmlException)
             {
                 //We found it locally, but could not parse it
-                var success = LoadServerUserSettings();
+                bool success = LoadServerUserSettings();
                 if (!success)
                 {
                     throw;
                 }
 
                 if (System.IO.File.Exists(UserSettingsFilePath))
+                {
                     UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
+                }
             }
             /*
             catch (Exception )
@@ -480,14 +492,18 @@ namespace WebAnnotation
         private static bool CachedResourceIsValid(string CacheFilename, Uri uri)
         {
             if (uri == null)
+            {
                 return true;
+            }
 
             if (!System.IO.File.Exists(CacheFilename))
+            {
                 return false;
+            }
 
             HttpWebRequest headerRequest = HttpWebRequest.CreateHttp(uri);
             headerRequest.Method = "HEAD";
-            headerRequest.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate); 
+            headerRequest.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
             using (HttpWebResponse headerResponse = headerRequest.GetResponse() as HttpWebResponse)
             {
                 bool valid = headerResponse.LastModified.ToUniversalTime() <= System.IO.File.GetLastWriteTimeUtc(CacheFilename);
@@ -499,7 +515,7 @@ namespace WebAnnotation
         {
             //Try to download the default user settings file
             Uri uri = UserSettingsUri;
-            if(uri != null)
+            if (uri != null)
             {
                 System.Net.WebRequest request = null;
                 //WebResponse response = null;
@@ -510,36 +526,36 @@ namespace WebAnnotation
                 {
                     request = HttpWebRequest.CreateHttp(uri);
 
-                    using(WebResponse response = request.GetResponse())
-                    { 
-                        using(Stream stream = response.GetResponseStream())
-                        { 
-                            byte[] data = new Byte[response.ContentLength];
-                            DateTime loopStart = DateTime.UtcNow; 
+                    using (WebResponse response = request.GetResponse())
+                    {
+                        using (Stream stream = response.GetResponseStream())
+                        {
+                            byte[] data = new byte[response.ContentLength];
+                            DateTime loopStart = DateTime.UtcNow;
                             TimeSpan elapsed;
                             long BytesRead = 0;
 
                             do
                             {
-                                BytesRead += stream.Read(data, (int)BytesRead, (int)data.Length - (int)BytesRead);
+                                BytesRead += stream.Read(data, (int)BytesRead, data.Length - (int)BytesRead);
                                 elapsed = new TimeSpan(DateTime.UtcNow.Ticks - loopStart.Ticks);
                             }
                             while (BytesRead < response.ContentLength && elapsed.TotalSeconds < 60);
 
                             try
                             {
-                                if(System.IO.File.Exists(UserSettingsFilePath))
+                                if (System.IO.File.Exists(UserSettingsFilePath))
                                 {
                                     System.IO.File.Delete(UserSettingsFilePath);
                                 }
                             }
-                            catch(System.IO.IOException)
+                            catch (System.IO.IOException)
                             {
 
-                            } 
+                            }
 
-                            using(FileStream file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                            { 
+                            using (FileStream file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
+                            {
                                 file.Write(data, 0, data.Length);
                             }
                         }
@@ -548,21 +564,21 @@ namespace WebAnnotation
                 catch (Exception)
                 {
                     Trace.WriteLine("Could not load server user settings: " + uri.ToString());
-                    return false; 
-                } 
+                    return false;
+                }
 
-                return true; 
+                return true;
 
             }
-            
 
-            return false; 
+
+            return false;
         }
 
         private static void CreateNewUserSettingsFile()
         {
             Global.UserSettingsDoc = new XRoot(new UserSettings());
-            SaveUserSettings(); 
+            SaveUserSettings();
         }
 
         public static void SaveUserSettings()

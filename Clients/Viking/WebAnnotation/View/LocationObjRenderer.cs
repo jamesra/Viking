@@ -10,7 +10,7 @@ namespace WebAnnotation
     /// <summary>
     /// This class draws LocationObj's
     /// </summary>
-    static class LocationObjRenderer
+    internal static class LocationObjRenderer
     {
         /// <summary>
         /// Draw the list of locations as they should appear for the given section number.
@@ -29,7 +29,9 @@ namespace WebAnnotation
                                            VikingXNA.Scene Scene, int VisibleSectionNumber)
         {
             if (listToDraw.Count == 0)
+            {
                 return;
+            }
 
             int MaxCanvasViewDepth = listToDraw.Max(l => l.ParentDepth);
 
@@ -38,13 +40,13 @@ namespace WebAnnotation
             int EndingDepthStencilValue = StartingDepthStencilValue + (DepthStencilStepSize * MaxCanvasViewDepth);
             int DepthStencilValue = EndingDepthStencilValue;
 
-            var depthGroups = listToDraw.GroupBy(l => l.ParentDepth).OrderBy(l => l.Key).Reverse();
+            IEnumerable<IGrouping<int, LocationCanvasView>> depthGroups = listToDraw.GroupBy(l => l.ParentDepth).OrderBy(l => l.Key).Reverse();
 
             DeviceStateManager.SaveDeviceState(graphicsDevice);
 
             DeviceStateManager.SetRasterizerStateForShapes(graphicsDevice);
 
-            foreach (var depthGroup in depthGroups)
+            foreach (IGrouping<int, LocationCanvasView> depthGroup in depthGroups)
             {
                 //We render twice.  The first time we only update the Z-buffer. 
                 //The second time we write colors, but only when the Z-buffer is equal to the objects Z-value.
@@ -83,7 +85,7 @@ namespace WebAnnotation
         {
             IEnumerable<IGrouping<Type, LocationCanvasView>> typeGroups = depthGroup.GroupBy(l => l.GetType());
 
-            foreach (var typeGroup in typeGroups)
+            foreach (IGrouping<Type, LocationCanvasView> typeGroup in typeGroups)
             {
                 if (typeGroup.Key == typeof(LocationOpenCurveView))
                 {
@@ -127,7 +129,7 @@ namespace WebAnnotation
         {
             IEnumerable<IGrouping<Type, LocationCanvasView>> typeGroups = views.GroupBy(l => l.GetType());
 
-            foreach (var typeGroup in typeGroups)
+            foreach (IGrouping<Type, LocationCanvasView> typeGroup in typeGroups)
             {
                 if (typeGroup.Key == typeof(LocationOpenCurveView))
                 {
@@ -177,30 +179,40 @@ namespace WebAnnotation
             string[] labelParts = label.Split();
 
             if (labelParts.Length <= 2)
+            {
                 return labelParts;
+            }
 
             foreach (string word in labelParts)
             {
                 if (topRow.Length + word.Length + 1 <= (label.Length / 2))
                 {
                     if (topRow.Length == 0)
+                    {
                         topRow += word;
+                    }
                     else
+                    {
                         topRow += " " + word;
+                    }
                 }
                 else
                 {
                     if (bottomRow.Length == 0)
+                    {
                         bottomRow += word;
+                    }
                     else
+                    {
                         bottomRow += " " + word;
+                    }
                 }
             }
 
             topRow = topRow.TrimEnd();
             bottomRow = bottomRow.TrimEnd();
 
-            return new String[] { topRow, bottomRow };
+            return new string[] { topRow, bottomRow };
         }
     }
 }

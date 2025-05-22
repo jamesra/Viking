@@ -5,7 +5,7 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-    abstract class LocationCurveView : LocationLineViewBase, VikingXNAGraphics.IColorView
+    internal abstract class LocationCurveView : LocationLineViewBase, VikingXNAGraphics.IColorView
     {
         public abstract GridVector2[] MosaicCurveControlPoints { get; }
         public abstract GridVector2[] VolumeCurveControlPoints { get; }
@@ -25,20 +25,19 @@ namespace WebAnnotation.View
             else
             {
                 //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
-                GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(this.VolumeCurveControlPoints);
+                GridLineSegment[] segs = GridLineSegment.SegmentsFromPoints(VolumeCurveControlPoints);
                 double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
-                return MinDistance / (this.LineWidth / 2.0);
+                return MinDistance / (LineWidth / 2.0);
             }
         }
 
         protected override bool PointIntersectsAnyLineSegment(GridVector2 WorldPosition)
         {
             //TODO: This could be optimized considerably
-            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(this.VolumeCurveControlPoints);
+            GridLineSegment[] lineSegs = GridLineSegment.SegmentsFromPoints(VolumeCurveControlPoints);
             //Find the line segment the NewControlPoint intersects
-            double MinDistance;
-            int iNearest = lineSegs.NearestSegment(WorldPosition, out MinDistance);
-            return MinDistance < this.LineWidth / 2.0f;
+            int iNearest = lineSegs.NearestSegment(WorldPosition, out double MinDistance);
+            return MinDistance < LineWidth / 2.0f;
         }
     }
 }

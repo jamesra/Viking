@@ -16,9 +16,9 @@ namespace WebAnnotation.UI
         {
             InitializeComponent();
 
-            this.Title = "Structure Types";
+            Title = "Structure Types";
 
-            Store.StructureTypes.OnCollectionChanged += this.OnStructureTypeCollectionChanged;
+            Store.StructureTypes.OnCollectionChanged += OnStructureTypeCollectionChanged;
         }
 
         protected override void InitializeTree()
@@ -35,7 +35,7 @@ namespace WebAnnotation.UI
         }
 
         protected void UpdateNodeChildren(StructureType obj)
-        { 
+        {
             GenericTreeNode[] Nodes = Tree.GetNodesForObject(obj);
             foreach (GenericTreeNode node in Nodes)
             {
@@ -55,14 +55,20 @@ namespace WebAnnotation.UI
                 if (!newTypeObj.ParentID.HasValue)
                 {
                     if (!Tree.Contains(newType))
+                    {
                         listRoots.Add(newType);
+                    }
                     else if (!listParents.ContainsKey(newType.ID))
+                    {
                         listParents.Add(newType.ID, newType);
+                    }
                 }
                 else
                 {
                     if (!listParents.ContainsKey(newTypeObj.ParentID.Value))
+                    {
                         listParents.Add(newTypeObj.ParentID.Value, newType.Parent);
+                    }
                 }
             }
 
@@ -79,7 +85,7 @@ namespace WebAnnotation.UI
             if (InvokeRequired)
             {
                 //Ensure UI controls are updated in main thread
-                this.Invoke(new Action(() => this.OnStructureTypeCollectionChanged(sender, args)));
+                Invoke(new Action(() => OnStructureTypeCollectionChanged(sender, args)));
                 return;
             }
             else
@@ -169,7 +175,7 @@ namespace WebAnnotation.UI
 
             if (e.Button == MouseButtons.Right)
             {
-                TreeNode node = this.Tree.GetNodeAt(e.Location);
+                TreeNode node = Tree.GetNodeAt(e.Location);
 
                 if (node == null)
                 {
@@ -180,9 +186,9 @@ namespace WebAnnotation.UI
 
                     menu.MenuItems.Add(menuItem);
 
-                    this.ContextMenu = menu;
+                    ContextMenu = menu;
 
-                    this.ContextMenu.Show(this, e.Location);
+                    ContextMenu.Show(this, e.Location);
                 }
             }
         }
@@ -192,7 +198,7 @@ namespace WebAnnotation.UI
             StructureTypeObj newTypeObj = new StructureTypeObj();
             StructureType newType = new StructureType(newTypeObj);
 
-            if (newType.ShowPropertiesDialog(this.ParentForm) == DialogResult.OK)
+            if (newType.ShowPropertiesDialog(ParentForm) == DialogResult.OK)
             {
                 try
                 {

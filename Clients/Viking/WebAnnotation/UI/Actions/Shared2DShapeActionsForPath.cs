@@ -24,7 +24,9 @@ namespace WebAnnotation.UI.Actions
             List<Change2DContourAction> output = new List<Change2DContourAction>();
 
             if (StartEntry.Index == 0)
+            {
                 return output;
+            }
 
             GridVector2[] subpath = path.PathBetween(StartEntry.Index - 2 < 0 ? 0 : StartEntry.Index - 2, NextEntry.Index + 1 < path.Count ? NextEntry.Index + 1 : NextEntry.Index); //path.PathBetween(StartEntry.Index - 1 < 0 ? 0 : StartEntry.Index - 1, path.Count-1); //path.PathBetween(StartEntry.Index - 1 < 0 ? 0 : StartEntry.Index - 1, NextEntry.Index);
 
@@ -63,27 +65,27 @@ namespace WebAnnotation.UI.Actions
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             LocationObj locObj = Store.Locations[locID];
-            var Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            IVolumeToSectionTransform Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
             GridPolygon PolyToCut = OriginalVolumePolygon.Clone() as GridPolygon;
             if (FirstIntersection.IsInner)
             {
                 PolyToCut = OriginalVolumePolygon.InteriorPolygons[FirstIntersection.iInnerPoly.Value];
             }
-            else if(PolyToCut.HasInteriorRings)
+            else if (PolyToCut.HasInteriorRings)
             {
                 //If we have a polygon with multiple rings, then all rings have been smoothed by Viking and only the exterior ring of the new polygon will be smoothed by the code below.
                 //We don't want to change the interior rings, so replace the smooth versions with the originals from the LocationObj
-                var unsmooth_mosaic_poly = locObj.MosaicShape.ToPolygon();
+                GridPolygon unsmooth_mosaic_poly = locObj.MosaicShape.ToPolygon();
 
-                for(int i = 0; i < PolyToCut.InteriorRings.Count; i++)
+                for (int i = 0; i < PolyToCut.InteriorRings.Count; i++)
                 {
-                    var unsmooth_volume_inner_poly = Transform.TryMapShapeSectionToVolume(unsmooth_mosaic_poly.InteriorPolygons[i]);
+                    GridPolygon unsmooth_volume_inner_poly = Transform.TryMapShapeSectionToVolume(unsmooth_mosaic_poly.InteriorPolygons[i]);
                     PolyToCut.ReplaceInteriorRing(i, unsmooth_volume_inner_poly);
                 }
             }
 
-             
+
             //Condition Check to make sure pen path exists and is valid
             if (subpath is null || subpath.Length < 2 || OriginalVolumePolygon.TotalVerticies <= 3)
             {
@@ -101,21 +103,21 @@ namespace WebAnnotation.UI.Actions
                 counter_clockwise_poly = GridPolygon.WalkPolygonCut(PolyToCut, RotationDirection.COUNTERCLOCKWISE, subpath);
                 counter_clockwise_poly.ExteriorRing = CatmullRomControlPointSimplification.IdentifyControlPoints(counter_clockwise_poly.ExteriorRing, AnnotationOverlay.CurrentOverlay.Parent.Downsample < 2 ? 4 : AnnotationOverlay.CurrentOverlay.Parent.Downsample * 4, true).ToArray();
             }
-            catch (ArgumentException e)
+            catch (ArgumentException)
             {
                 //Thrown when the polygon cannot be cut using the path
                 return output;
             }
 
-           
+
 
 
             RetraceCommandAction cutType = GetRetraceCommandAction(FirstIntersection.IsInner, StartEntry.Interaction == AnnotationRegionInteraction.ENTER);
 
-            
 
-            var mosaic_clockwise_poly = Transform.TryMapShapeVolumeToSection(clockwise_poly);
-            var mosaic_counter_clockwise_poly = Transform.TryMapShapeVolumeToSection(counter_clockwise_poly);
+
+            GridPolygon mosaic_clockwise_poly = Transform.TryMapShapeVolumeToSection(clockwise_poly);
+            GridPolygon mosaic_counter_clockwise_poly = Transform.TryMapShapeVolumeToSection(counter_clockwise_poly);
 
 
 
@@ -148,7 +150,7 @@ namespace WebAnnotation.UI.Actions
                         break;
                     case RetraceCommandAction.GROW_INTERNAL_RING:
                         UseCCW = counter_clockwise_poly.Area > clockwise_poly.Area;
-                        var mosaic_shape_clone = locObj.MosaicShape.ToPolygon();
+                        GridPolygon mosaic_shape_clone = locObj.MosaicShape.ToPolygon();
                         inner_ring_replacement = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
                         mosaic_shape_clone.ReplaceInteriorRing(PolyBeingCut.Value.iInnerPoly.Value, inner_ring_replacement);
                         grow_action = new Change2DContourAction(locObj, cutType, mosaic_shape_clone);
@@ -190,7 +192,7 @@ namespace WebAnnotation.UI.Actions
     /// <summary>
     /// A helper class that determines which actions can be performed on a generic 2D shape with a given path
     /// </summary>
-    static public class Shared2DShapeActionsForPath
+    public static class Shared2DShapeActionsForPath
     {
         /// <summary>
         /// Returns a list of actions that should be offered for the path drawn over the provided smooth volume shape.
@@ -238,7 +240,9 @@ namespace WebAnnotation.UI.Actions
             List<IAction> actions = new List<IAction>();
 
             if (path.HasSelfIntersection == false)
+            {
                 return actions;
+            }
 
             if (smooth_volume_shape is GridPolygon)
             {
@@ -247,10 +251,6 @@ namespace WebAnnotation.UI.Actions
                 GridPolygon closedpath = new GridPolygon(path.SimplifiedFirstLoop);
                 if (smooth_exterior_polygon.Contains(closedpath))
                 {
-                    //Check if we draw a closed circle around existing holes (that should enlarge & merge if needed) or
-                    //if we are cutting a new hole
-                    bool PathContainsInteriorPoly = false;
-                    bool InteriorPolyContainsPath = false;
                     List<int> IntersectedInteriorPolygons = new List<int>();
                     for (int iPoly = 0; iPoly < smooth_volume_polygon.InteriorPolygons.Count; iPoly++)
                     {
@@ -259,14 +259,12 @@ namespace WebAnnotation.UI.Actions
                         if (interiorRelationship == ShapeRelation.INTERSECTING || interiorRelationship == ShapeRelation.CONTAINED)
                         {
                             IntersectedInteriorPolygons.Add(iPoly);
-                            PathContainsInteriorPoly = true;
                         }
 
                         if (interiorPoly.Contains(closedpath))
                         {
                             IntersectedInteriorPolygons.Clear();
                             IntersectedInteriorPolygons.Add(iPoly);
-                            InteriorPolyContainsPath = true;
                             break;
                         }
                     }
@@ -286,7 +284,7 @@ namespace WebAnnotation.UI.Actions
 
                         volume_shape_copy.AddInteriorRing(closedpath);
 
-                        var transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+                        IVolumeToSectionTransform transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
                         Change2DContourAction action = new Change2DContourAction(origin_ID, RetraceCommandAction.REPLACE_INTERIOR_RING, volume_shape_copy, transform: transform);
                         actions.Add(action);
@@ -341,8 +339,8 @@ namespace WebAnnotation.UI.Actions
                     }
                 }
 
-                var Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
-                var mosaic_shape = Transform.TryMapShapeVolumeToSection(newShape);
+                IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+                GridPolygon mosaic_shape = Transform.TryMapShapeVolumeToSection(newShape);
 
                 Change2DContourAction action = new Change2DContourAction(origin_loc, RetraceCommandAction.REPLACE_EXTERIOR_RING, mosaic_shape, newShape);
                 actions.Add(action);
@@ -365,22 +363,22 @@ namespace WebAnnotation.UI.Actions
         /// <returns></returns>
         public static bool IsBorderScribble(long locID, ICanvasView shapeView, IReadOnlyList<InteractionLogEvent> interaction_log, int nCrossings)
         {
-            var shapeEntries = interaction_log.Where(entry => entry.Annotation == shapeView).ToArray();
-            var shapeEntryExitEntries = shapeEntries.Where(entry => entry.Interaction == AnnotationRegionInteraction.ENTER || entry.Interaction == AnnotationRegionInteraction.EXIT).ToArray();
+            InteractionLogEvent[] shapeEntries = interaction_log.Where(entry => entry.Annotation == shapeView).ToArray();
+            InteractionLogEvent[] shapeEntryExitEntries = shapeEntries.Where(entry => entry.Interaction == AnnotationRegionInteraction.ENTER || entry.Interaction == AnnotationRegionInteraction.EXIT).ToArray();
 
             throw new NotImplementedException();
         }
 
         public static List<IAction> GetPenActionsForLocationShape2DAnnotation(long locID, ICanvasView shapeView, GridPolygon smooth_volume_polygon, Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
         {
-            var output = new List<IAction>();
+            List<IAction> output = new List<IAction>();
 
             //if (interaction_log.Last().Annotation != shapeView)
             //    return new List<IAction>();
 
             //Determine which entries apply to our shape
-            var shapeEntries = interaction_log.Where(entry => entry.Annotation == shapeView).ToArray();
-            var shapeEntryExitEntries = shapeEntries.Where(entry => entry.Interaction == AnnotationRegionInteraction.ENTER || entry.Interaction == AnnotationRegionInteraction.EXIT).ToArray();
+            InteractionLogEvent[] shapeEntries = interaction_log.Where(entry => entry.Annotation == shapeView).ToArray();
+            InteractionLogEvent[] shapeEntryExitEntries = shapeEntries.Where(entry => entry.Interaction == AnnotationRegionInteraction.ENTER || entry.Interaction == AnnotationRegionInteraction.EXIT).ToArray();
 
             //Check for retrace and replace contour actions
             //We retrace if we enter/exit the shape and there is not a loop
@@ -390,7 +388,7 @@ namespace WebAnnotation.UI.Actions
                 {
                     InteractionLogEvent StartEntry = shapeEntries[0];
 
-                    var locModel = Store.Locations[locID];
+                    LocationObj locModel = Store.Locations[locID];
                     //Viking.VolumeModel.IVolumeToSectionTransform transform = Viking.UI.State.volume.GetSectionToVolumeTransform((int)locModel.Z);
 
                     //GridPolygon VolumePolygon = transform.TryMapShapeSectionToVolume(locModel.MosaicShape).ToPolygon();

@@ -5,44 +5,28 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-
-    class StructureLink_CanvasContextMenuView : IContextMenu
+    internal class StructureLink_CanvasContextMenuView : IContextMenu
     {
         public StructureLinkKey linkKey;
         public StructureLinkObj modelObj;
 
 
-        public long SourceID
-        {
-            get
-            {
-                return modelObj.SourceID;
-            }
-        }
+        public long SourceID => modelObj.SourceID;
 
-        public long TargetID
-        {
-            get
-            {
-                return modelObj.TargetID;
-            }
-        }
+        public long TargetID => modelObj.TargetID;
 
-        public bool Bidirectional
-        {
-            get { return modelObj.Bidirectional; }
-        }
+        public bool Bidirectional => modelObj.Bidirectional;
 
         public StructureLink_CanvasContextMenuView(StructureLinkObj obj)
         {
-            this.modelObj = obj;
-            this.linkKey = obj.ID;
+            modelObj = obj;
+            linkKey = obj.ID;
         }
 
         public StructureLink_CanvasContextMenuView(StructureLinkKey link)
         {
-            this.linkKey = link;
-            this.modelObj = Store.StructureLinks[link];
+            linkKey = link;
+            modelObj = Store.StructureLinks[link];
         }
 
         public static ContextMenu ContextMenuGenerator(IViewStructureLink link)
@@ -58,14 +42,18 @@ namespace WebAnnotation.View
                 ContextMenu menu = new ContextMenu();
                 MenuItem menuFlip = new MenuItem("Flip Direction", ContextMenu_OnFlip);
 
-                MenuItem menuBidirectional = new MenuItem("Bidirectional", ContextMenu_OnBidirectional);
-                menuBidirectional.Checked = this.modelObj.Bidirectional;
+                MenuItem menuBidirectional = new MenuItem("Bidirectional", ContextMenu_OnBidirectional)
+                {
+                    Checked = modelObj.Bidirectional
+                };
 
                 MenuItem menuSeperator = new MenuItem();
                 MenuItem menuDelete = new MenuItem("Delete", ContextMenu_OnDelete);
 
                 if (!modelObj.Bidirectional)
+                {
                     menu.MenuItems.Add(menuFlip);
+                }
 
                 menu.MenuItems.Add(menuBidirectional);
                 menu.MenuItems.Add(menuSeperator);
@@ -77,12 +65,12 @@ namespace WebAnnotation.View
 
         protected void ContextMenu_OnFlip(object sender, EventArgs e)
         {
-            Store.StructureLinks.Remove(this.modelObj);
+            Store.StructureLinks.Remove(modelObj);
             try
             {
                 Store.StructureLinks.Save();
 
-                StructureLinkObj newLink = new StructureLinkObj(this.TargetID, this.SourceID, this.Bidirectional);
+                StructureLinkObj newLink = new StructureLinkObj(TargetID, SourceID, Bidirectional);
                 Store.StructureLinks.Create(newLink);
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
@@ -95,12 +83,12 @@ namespace WebAnnotation.View
 
         protected void ContextMenu_OnBidirectional(object sender, EventArgs e)
         {
-            Store.StructureLinks.Remove(this.modelObj);
+            Store.StructureLinks.Remove(modelObj);
             try
             {
                 Store.StructureLinks.Save();
 
-                StructureLinkObj newLink = new StructureLinkObj(this.SourceID, this.TargetID, !this.Bidirectional);
+                StructureLinkObj newLink = new StructureLinkObj(SourceID, TargetID, !Bidirectional);
                 Store.StructureLinks.Create(newLink);
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
@@ -118,7 +106,7 @@ namespace WebAnnotation.View
 
         public void Delete()
         {
-            Store.StructureLinks.Remove(this.modelObj);
+            Store.StructureLinks.Remove(modelObj);
             Store.StructureLinks.Save();
         }
     }

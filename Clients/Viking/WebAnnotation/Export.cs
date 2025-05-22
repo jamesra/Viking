@@ -2,7 +2,7 @@
 
 namespace WebAnnotation
 {
-    class Export
+    internal class Export
     {
         public Uri ExportURL;
 

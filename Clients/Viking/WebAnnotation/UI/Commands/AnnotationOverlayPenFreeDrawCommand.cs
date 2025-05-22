@@ -19,26 +19,14 @@ namespace WebAnnotation.UI.Commands
     /// The command may exit with no action, draw an open curve, or draw a closed curved polygon.  Once the geometry is placed the 
     /// user can complete the annotation
     /// </summary>
-    class AnnotationOverlayPenFreeDrawCommand : PlaceGeometryWithPenCommandBase
+    internal class AnnotationOverlayPenFreeDrawCommand : PlaceGeometryWithPenCommandBase
     {
         /// <summary>
         /// Prevent the user from making absurdly small annotations by accident
         /// </summary>
-        private double MinAreaForClosedShape
-        {
-            get
-            {
-                return Parent.Downsample * 10 * 10;
-            }
-        }
+        private double MinAreaForClosedShape => Parent.Downsample * 10 * 10;
 
-        private double MinLengthForOpenShape
-        {
-            get
-            {
-                return Parent.Downsample * 10;
-            }
-        }
+        private double MinLengthForOpenShape => Parent.Downsample * 10;
 
 
         public AnnotationOverlayPenFreeDrawCommand(SectionViewerControl parent, Color color, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, LineWidth, success_callback)
@@ -61,10 +49,10 @@ namespace WebAnnotation.UI.Commands
             //TODO: Prompt the user to create a closed curve type
             if (HasLoop)
             {
-                GridPolygon newVolumePoly = new GridPolygon(this.PenInput.SimplifiedFirstLoop);
-                if (newVolumePoly.Area < this.MinAreaForClosedShape)
+                GridPolygon newVolumePoly = new GridPolygon(PenInput.SimplifiedFirstLoop);
+                if (newVolumePoly.Area < MinAreaForClosedShape)
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     return;
                 }
 
@@ -75,7 +63,7 @@ namespace WebAnnotation.UI.Commands
 
                 if (TryConvertEnclosedCircle(newVolumePoly))
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     return;
                 }
                 else if (Global.CanContinueLastTrace(Parent.Section.Number))
@@ -96,31 +84,31 @@ namespace WebAnnotation.UI.Commands
                             System.Windows.Forms.MessageBox.Show(Parent, e.Message, "Could not save Polygon", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                         }
 
-                        this.Deactivated = true;
+                        Deactivated = true;
                         return;
                     }
                     else
                     {
                         //TODO: New annotation?
                         CreateNewClosedAnnotation();
-                        this.Execute();
+                        Execute();
                         return;
                     }
                 }
                 else
                 {
                     CreateNewClosedAnnotation();
-                    this.Execute();
+                    Execute();
                     return;
                 }
 
-                this.Execute();
+                Execute();
             }
         }
 
         private bool TryConvertEnclosedCircle(GridPolygon newVolumePoly)
         {
-            if (!this.PenInput.HasSelfIntersection)
+            if (!PenInput.HasSelfIntersection)
             {
                 throw new ArgumentException("Cannot possibly convert a circle if our path is not a loop.");
             }
@@ -137,7 +125,7 @@ namespace WebAnnotation.UI.Commands
 
             SqlGeometry original_mosaic_shape = obj.MosaicShape;
             SqlGeometry original_volume_shape = obj.MosaicShape;
-            var original_typecode = obj.TypeCode;
+            Viking.AnnotationServiceTypes.Interfaces.LocationType original_typecode = obj.TypeCode;
 
             try
             {
@@ -158,7 +146,7 @@ namespace WebAnnotation.UI.Commands
 
         private void CreateNewClosedAnnotation()
         {
-            GridPolygon newVolumePoly = new GridPolygon(this.PenInput.SimplifiedFirstLoop);
+            GridPolygon newVolumePoly = new GridPolygon(PenInput.SimplifiedFirstLoop);
 
             StructureTypeObj type = Store.StructureTypes.GetObjectByID(1);//new StructureType(typeObj);
             bool StructureNeedsParent = type.ParentID.HasValue;
@@ -170,15 +158,15 @@ namespace WebAnnotation.UI.Commands
 
             newLocation.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, newVolumePoly.ToSqlGeometry());
 
-            this.Parent.CommandQueue.EnqueueCommand(typeof(ShapeConfirmationCommand), new object[] { Parent, newVolumePoly, this.LineWidth,
+            Parent.CommandQueue.EnqueueCommand(typeof(ShapeConfirmationCommand), new object[] { Parent, newVolumePoly, LineWidth,
                 new ShapeConfirmationCommand.OnCommandSuccess(() =>  {
                             if (StructureNeedsParent)
                             {
                                 //Enqueue extra command to select a parent
-                                this.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
+                                Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), new object[] { Parent, newStruct, newLocation });
                             }
 
-                            this.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
+                            Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), new object[] { Parent, newStruct, newLocation });
                         })
                 }
              );
@@ -189,7 +177,7 @@ namespace WebAnnotation.UI.Commands
             //TODO: Prompt the user to create an open curve type if there is no curve
             //If we draw from one annotation to another we either create a location link (different sections) or a structure link (same sections).
             //If not we create a new open curve annotation.
-            this.Execute();
+            Execute();
         }
 
         protected override void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -198,10 +186,12 @@ namespace WebAnnotation.UI.Commands
 
             //This path currently only executes when the user is inside an annotation, but leaves the annotation to fire a retrace and replace command.
             //In the future we should probably fire OnLeavingAnnotation events to simplify detecting this case
-            if (this.PenInput.Points.Count <= 1)
+            if (PenInput.Points.Count <= 1)
+            {
                 return;
+            }
 
-            GridLineSegment move_line = this.PenInput.NewestSegent;
+            GridLineSegment move_line = PenInput.NewestSegent;
             ICanvasView IntersectedObject = AnnotationOverlay.FirstIntersectedObjectOnSection(Parent.Section.Number, move_line);
             //            ICanvasGeometryView MouseOverAnnotation = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
             System.Diagnostics.Trace.WriteLine(string.Format("{0}", IntersectedObject == null ? "NULL" : IntersectedObject.ToString()));
@@ -214,9 +204,8 @@ namespace WebAnnotation.UI.Commands
 
                     //intersectedPolyView.
                     LocationObj Loc = Store.Locations.GetObjectByID(intersectedPolyView.ID, true);
-                    GridVector2 intersection_point;
 #if DEBUG
-                    bool Intersection_found = move_line.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out intersection_point);
+                    bool Intersection_found = move_line.Intersects(intersectedPolyView.VolumeShapeAsRendered.ToPolygon(), out GridVector2 intersection_point);
                     System.Diagnostics.Debug.Assert(Intersection_found, "Expected to find an intersection with the object boundary.");
 
                     Loc.VolumeShape.ToPolygon().AddVertex(intersection_point);
@@ -225,7 +214,7 @@ namespace WebAnnotation.UI.Commands
                     {
                         //Drawing from outside to inside:
 
-                        var cmd = (RetraceAndReplacePathCommand)senderCmd;
+                        RetraceAndReplacePathCommand cmd = (RetraceAndReplacePathCommand)senderCmd;
 
                         try
                         {
@@ -240,9 +229,9 @@ namespace WebAnnotation.UI.Commands
                     }
                     );
 
-                    retraceCmd.InitPath(this.PenInput.Points);
+                    retraceCmd.InitPath(PenInput.Points);
 
-                    this.Deactivated = true;
+                    Deactivated = true;
 
                     Parent.CurrentCommand = retraceCmd;
                 }
@@ -270,13 +259,13 @@ namespace WebAnnotation.UI.Commands
         {
             SectionAnnotationsView locView = AnnotationOverlay.GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
+            {
                 return null;
+            }
 
-            ICanvasGeometryView bestObj = null;
+            IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE);
 
-            var listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE);
-
-            var listCircles = listObjects.Select(o => o as LocationCircleView).Where(o => o != null);
+            IEnumerable<LocationCircleView> listCircles = listObjects.Select(o => o as LocationCircleView).Where(o => o != null);
 
             return listCircles.Where(o => o.VolumeCircle.Intersects(bounds) || bounds.Contains(o.VolumeCircle)).ToList();
         }

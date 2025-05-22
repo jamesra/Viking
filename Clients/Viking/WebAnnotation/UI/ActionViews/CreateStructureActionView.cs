@@ -8,7 +8,7 @@ namespace WebAnnotation.UI.ActionViews
 {
     internal class CreateStructureActionView : IActionView, IIconTexture, IColorView
     {
-        CreateStructureActionBase model;
+        private readonly CreateStructureActionBase model;
 
         public IShape2D Shape { get; private set; }
 
@@ -16,7 +16,7 @@ namespace WebAnnotation.UI.ActionViews
         public IRenderable Active { get; set; }
         public BuiltinTexture Icon { get; private set; } = BuiltinTexture.Plus;
         public Color Color { get; set; }
-        public float Alpha { get { return this.Color.GetAlpha(); } set { this.Color = this.Color.SetAlpha(value); } }
+        public float Alpha { get => Color.GetAlpha(); set => Color = Color.SetAlpha(value); }
 
         public CreateStructureActionView(CreateStructureActionBase action)
         {
@@ -33,7 +33,9 @@ namespace WebAnnotation.UI.ActionViews
             {
                 StructureTypeObj structure_type = Store.StructureTypes.GetObjectByID(model.TypeID, false);
                 if (structure_type != null)
+                {
                     Color = structure_type.Color.ToXNAColor();
+                }
             }
 
             if (model is Create2DStructureAction)

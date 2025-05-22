@@ -4,30 +4,30 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    class ToggleStructureTag : Viking.UI.Commands.Command
+    internal class ToggleStructureTag : Viking.UI.Commands.Command
     {
         private readonly StructureObj target;
         private readonly string tag;
         private readonly string value;
-        
+
         public ToggleStructureTag(Viking.UI.Controls.SectionViewerControl parent,
             StructureObj structure,
             string tag, string value)
             : base(parent)
         {
-            this.target = structure;
+            target = structure;
             this.tag = tag;
             this.value = value;
         }
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)this.Execute);
+            Parent.BeginInvoke((Action)Execute);
         }
 
         protected override void Execute()
         {
-            target.ToggleAttribute(this.tag, this.value);
+            target.ToggleAttribute(tag, value);
 
             try
             {
@@ -36,37 +36,37 @@ namespace WebAnnotation.UI.Commands
             catch (FaultException ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                target.ToggleAttribute(this.tag, this.value);
+                target.ToggleAttribute(tag, value);
             }
 
             base.Execute();
         }
     }
 
-    class ToggleLocationTag : Viking.UI.Commands.Command
+    internal class ToggleLocationTag : Viking.UI.Commands.Command
     {
         private readonly LocationObj target;
         private readonly string tag;
         private readonly string value;
-        
+
         public ToggleLocationTag(Viking.UI.Controls.SectionViewerControl parent,
             LocationObj loc,
             string tag, string value)
             : base(parent)
         {
-            this.target = loc;
+            target = loc;
             this.tag = tag;
             this.value = value;
         }
 
         public override void OnActivate()
         {
-            this.Parent.BeginInvoke((Action)this.Execute);
+            Parent.BeginInvoke((Action)Execute);
         }
 
         protected override void Execute()
         {
-            target.ToggleAttribute(this.tag, this.value);
+            target.ToggleAttribute(tag, value);
             try
             {
                 Store.Locations.Save();
@@ -74,7 +74,7 @@ namespace WebAnnotation.UI.Commands
             catch (System.ServiceModel.FaultException ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                target.ToggleAttribute(this.tag, value);
+                target.ToggleAttribute(tag, value);
             }
 
             base.Execute();

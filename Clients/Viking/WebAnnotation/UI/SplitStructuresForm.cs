@@ -23,9 +23,13 @@ namespace WebAnnotation.UI
             set
             {
                 if (value > 0)
+                {
                     textKeepID.Text = value.ToString();
+                }
                 else
+                {
                     textKeepID.Text = "";
+                }
             }
         }
 
@@ -45,9 +49,13 @@ namespace WebAnnotation.UI
             set
             {
                 if (value > 0)
+                {
                     textSplitID.Text = value.ToString();
+                }
                 else
+                {
                     textKeepID.Text = "";
+                }
             }
         }
 
@@ -155,7 +163,7 @@ namespace WebAnnotation.UI
 
             if (keepLoc.ParentID != splitLoc.ParentID)
             {
-                Reason = String.Format("Location IDs must be from the same structure. Structure {0} not equal to {1}", keepLoc.ParentID, splitLoc.ParentID);
+                Reason = string.Format("Location IDs must be from the same structure. Structure {0} not equal to {1}", keepLoc.ParentID, splitLoc.ParentID);
                 return false;
             }
 
@@ -164,8 +172,7 @@ namespace WebAnnotation.UI
 
         private void textKeepID_TextChanged(object sender, EventArgs e)
         {
-            string Reason;
-            bool IDValid = IsIDValid(textKeepID.Text, out Reason);
+            bool IDValid = IsIDValid(textKeepID.Text, out string Reason);
             textKeepLabel.Text = Reason;
 
             UpdateUIForIDLabelTextChanged();
@@ -173,8 +180,7 @@ namespace WebAnnotation.UI
 
         private void textSplitID_TextChanged(object sender, EventArgs e)
         {
-            string Reason;
-            bool IDValid = IsIDValid(textSplitID.Text, out Reason);
+            bool IDValid = IsIDValid(textSplitID.Text, out string Reason);
             textSplitLabel.Text = Reason;
 
             UpdateUIForIDLabelTextChanged();
@@ -182,8 +188,7 @@ namespace WebAnnotation.UI
 
         private void UpdateUIForIDLabelTextChanged()
         {
-            string Reason = null;
-            if (!IsAllInputValid(out Reason))
+            if (!IsAllInputValid(out string Reason))
             {
                 textInfo.Text = Reason;
                 btnSplit.Enabled = false;
@@ -231,25 +236,26 @@ namespace WebAnnotation.UI
             catch (Exception except)
             {
                 if (except.Message != null)
+                {
                     MessageBox.Show("Split error", except.Message.ToString());
+                }
 
                 return;
             }
 
-            this.Close();
+            Close();
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         private void textKeepID_Validating(object sender, CancelEventArgs e)
         {
             e.Cancel = true;
 
-            string Reason = null;
-            if (!IsIDValid(textKeepID.Text, out Reason))
+            if (!IsIDValid(textKeepID.Text, out string Reason))
             {
                 textKeepLabel.Text = Reason;
                 return;
@@ -265,8 +271,7 @@ namespace WebAnnotation.UI
         {
             e.Cancel = true;
 
-            string Reason = null;
-            if (!IsIDValid(textSplitID.Text, out Reason))
+            if (!IsIDValid(textSplitID.Text, out string Reason))
             {
                 textSplitLabel.Text = Reason;
                 return;
@@ -280,8 +285,7 @@ namespace WebAnnotation.UI
 
         private void ValidateSplitButton()
         {
-            string reason;
-            if (!IsAllInputValid(out reason))
+            if (!IsAllInputValid(out string reason))
             {
                 textInfo.Text = reason;
                 btnSplit.Enabled = false;

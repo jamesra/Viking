@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Geometry;
+using SqlGeometryUtils;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -7,8 +9,6 @@ using System.Drawing;
 using System.Windows.Forms;
 using Viking.Common.UI;
 using WebAnnotationModel;
-using SqlGeometryUtils;
-using Geometry;
 
 namespace WebAnnotation.ViewModel
 {
@@ -18,7 +18,7 @@ namespace WebAnnotation.ViewModel
 
         public Location_ViewModelBase(long LocationID)
         {
-            this.modelObj = Store.Locations.GetObjectByID(LocationID);
+            modelObj = Store.Locations.GetObjectByID(LocationID);
             if (modelObj == null)
             {
                 throw new ArgumentException(string.Format("Could not load location {0} from store", LocationID));
@@ -26,10 +26,7 @@ namespace WebAnnotation.ViewModel
         }
 
         [Column("ID")]
-        public long ID
-        {
-            get { return modelObj.ID; }
-        }
+        public long ID => modelObj.ID;
 
         public override string ToString()
         {
@@ -66,7 +63,9 @@ namespace WebAnnotation.ViewModel
             }
 
             if ((object)A != null)
+            {
                 return A.Equals(B);
+            }
 
             return false;
         }
@@ -79,7 +78,9 @@ namespace WebAnnotation.ViewModel
             }
 
             if ((object)A != null)
+            {
                 return !A.Equals(B);
+            }
 
             return true;
         }
@@ -89,19 +90,20 @@ namespace WebAnnotation.ViewModel
             get
             {
                 if (Parent == null)
+                {
                     return "";
+                }
 
                 if (Parent.Type == null)
+                {
                     return "";
+                }
 
                 return Parent.Type.Code + " " + Parent.ID.ToString();
             }
         }
 
-        public long? ParentID
-        {
-            get { return modelObj.ParentID; }
-        }
+        public long? ParentID => modelObj.ParentID;
 
         private Structure _Parent = null;
 
@@ -111,11 +113,15 @@ namespace WebAnnotation.ViewModel
         {
             get
             {
-                if (this.modelObj.Parent == null)
+                if (modelObj.Parent == null)
+                {
                     return null;
+                }
 
-                if (this._Parent == null)
-                    _Parent = new Structure(this.modelObj.Parent);
+                if (_Parent == null)
+                {
+                    _Parent = new Structure(modelObj.Parent);
+                }
 
                 return _Parent;
             }
@@ -177,11 +183,13 @@ namespace WebAnnotation.ViewModel
 
         public override void Delete()
         {
-            Store.Locations.Remove(this.modelObj);
+            Store.Locations.Remove(modelObj);
             AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
 
-            if (this.ParentID.HasValue)
-                Store.Structures.CheckForOrphan(this.ParentID.Value);
+            if (ParentID.HasValue)
+            {
+                Store.Structures.CheckForOrphan(ParentID.Value);
+            }
         }
 
         public new event PropertyChangedEventHandler ValueChanged
@@ -216,17 +224,27 @@ namespace WebAnnotation.ViewModel
 
         private void _AddExportToTulipNetwork(MenuItem menu)
         {
-            MenuItem menuNetwork = new MenuItem("Network", ContextMenu_ExportNetwork);
-            menuNetwork.Tag = new long?(); //Tag contains the number of hops
+            MenuItem menuNetwork = new MenuItem("Network", ContextMenu_ExportNetwork)
+            {
+                Tag = new long?() //Tag contains the number of hops
+            };
 
-            MenuItem menuOneHop = new MenuItem("1 degree  of seperation", ContextMenu_ExportNetwork);
-            menuOneHop.Tag = new long?(1);
-            MenuItem menuTwoHop = new MenuItem("2 degrees of seperation", ContextMenu_ExportNetwork);
-            menuTwoHop.Tag = new long?(2);
-            MenuItem menuThreeHop = new MenuItem("3 degrees of seperation", ContextMenu_ExportNetwork);
-            menuThreeHop.Tag = new long?(3);
-            MenuItem menuAllHop = new MenuItem("All connected", ContextMenu_ExportNetwork);
-            menuAllHop.Tag = new long?();
+            MenuItem menuOneHop = new MenuItem("1 degree  of seperation", ContextMenu_ExportNetwork)
+            {
+                Tag = new long?(1)
+            };
+            MenuItem menuTwoHop = new MenuItem("2 degrees of seperation", ContextMenu_ExportNetwork)
+            {
+                Tag = new long?(2)
+            };
+            MenuItem menuThreeHop = new MenuItem("3 degrees of seperation", ContextMenu_ExportNetwork)
+            {
+                Tag = new long?(3)
+            };
+            MenuItem menuAllHop = new MenuItem("All connected", ContextMenu_ExportNetwork)
+            {
+                Tag = new long?()
+            };
 
             menu.MenuItems.Add(menuNetwork);
 
@@ -241,8 +259,8 @@ namespace WebAnnotation.ViewModel
             MenuItem menuExtensible = new MenuItem("Terminal", ContextMenu_OnTerminal);
             MenuItem menuOffEdge = new MenuItem("Off Edge", ContextMenu_OnOffEdge);
 
-            menuExtensible.Checked = this.modelObj.Terminal;
-            menuOffEdge.Checked = this.modelObj.OffEdge;
+            menuExtensible.Checked = modelObj.Terminal;
+            menuOffEdge.Checked = modelObj.OffEdge;
 
             menu.MenuItems.Add(menuExtensible);
             menu.MenuItems.Add(menuOffEdge);
@@ -263,7 +281,7 @@ namespace WebAnnotation.ViewModel
 
         protected ContextMenu _AddCopyLocationIDMenu(ContextMenu menu)
         {
-            MenuItem menuCopyLocationID = new MenuItem(string.Format("Copy Location ID: {0}", this.ID), ContextMenu_CopyLocationID);
+            MenuItem menuCopyLocationID = new MenuItem(string.Format("Copy Location ID: {0}", ID), ContextMenu_CopyLocationID);
             menu.MenuItems.Add(menuCopyLocationID);
 
             return menu;
@@ -273,17 +291,21 @@ namespace WebAnnotation.ViewModel
         {
             MenuItem menuShape = new MenuItem("Change Shape");
 
-            if(this.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE)
-            { 
-                MenuItem menuOpenCurve = new MenuItem("Curve", ContextMenu_ConvertShape);
-                menuOpenCurve.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE;
+            if (TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE)
+            {
+                MenuItem menuOpenCurve = new MenuItem("Curve", ContextMenu_ConvertShape)
+                {
+                    Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE
+                };
                 menuShape.MenuItems.Add(menuOpenCurve);
             }
 
-            if(this.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
-            { 
-                MenuItem menuCircle = new MenuItem("Circle", ContextMenu_ConvertShape);
-                menuCircle.Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+            if (TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
+            {
+                MenuItem menuCircle = new MenuItem("Circle", ContextMenu_ConvertShape)
+                {
+                    Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE
+                };
                 menuShape.MenuItems.Add(menuCircle);
             }
 
@@ -292,11 +314,13 @@ namespace WebAnnotation.ViewModel
 
         protected void _AddSimplifyPolygonMenus(ContextMenu menu)
         {
-            if (this.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON ||
-                this.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON)
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON ||
+                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON)
             {
-                MenuItem menuSimplify = new MenuItem("Simplify Shape", ContextMenu_SimplifyPolygon);
-                menuSimplify.Tag = new int?();
+                MenuItem menuSimplify = new MenuItem("Simplify Shape", ContextMenu_SimplifyPolygon)
+                {
+                    Tag = new int?()
+                };
                 menu.MenuItems.Add(menuSimplify);
             }
         }
@@ -308,25 +332,19 @@ namespace WebAnnotation.ViewModel
                 ContextMenu menu = new ContextMenu();
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
 
-                this._AddCopyLocationIDMenu(menu);
-                this._AddTerminalOffEdgeMenus(menu);
-                this._AddConvertShapeMenus(menu);
-                this._AddSimplifyPolygonMenus(menu);
-                this._AddDeleteMenu(menu);
+                _AddCopyLocationIDMenu(menu);
+                _AddTerminalOffEdgeMenus(menu);
+                _AddConvertShapeMenus(menu);
+                _AddSimplifyPolygonMenus(menu);
+                _AddDeleteMenu(menu);
 
                 return menu;
             }
         }
 
-        public override Image SmallThumbnail
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override Image SmallThumbnail => throw new NotImplementedException();
 
-        public override string ToolTip
-        {
-            get { return this.modelObj.Label; }
-        }
+        public override string ToolTip => modelObj.Label;
 
         public override void Save()
         {
@@ -338,12 +356,12 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_OnProperties(object sender, EventArgs e)
         {
-            Viking.UI.Forms.PropertySheetForm.Show(this.Parent);
+            Viking.UI.Forms.PropertySheetForm.Show(Parent);
         }
 
         protected void ContextMenu_OnTerminal(object sender, EventArgs e)
         {
-            this.modelObj.Terminal = !this.modelObj.Terminal;
+            modelObj.Terminal = !modelObj.Terminal;
             try
             {
                 Store.Locations.Save();
@@ -351,18 +369,18 @@ namespace WebAnnotation.ViewModel
             catch (System.ServiceModel.FaultException ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                this.modelObj.Terminal = !this.modelObj.Terminal;
+                modelObj.Terminal = !modelObj.Terminal;
             }
         }
 
         protected void ContextMenu_CopyLocationID(object sender, EventArgs e)
         {
-            System.Windows.Forms.Clipboard.SetText(this.ID.ToString());
+            System.Windows.Forms.Clipboard.SetText(ID.ToString());
         }
 
         protected void ContextMenu_ExportMorphology(object sender, EventArgs e)
         {
-            Global.Export.OpenMorphology(this.ParentID.Value);
+            Global.Export.OpenMorphology(ParentID.Value);
         }
 
         protected void ContextMenu_ExportNetwork(object sender, EventArgs e)
@@ -370,7 +388,7 @@ namespace WebAnnotation.ViewModel
             MenuItem item = sender as MenuItem;
             long? hops = item.Tag as long?;
 
-            Global.Export.OpenNetwork(this.ParentID.Value, hops);
+            Global.Export.OpenNetwork(ParentID.Value, hops);
         }
 
         protected void ContextMenu_ConvertShape(object sender, EventArgs e)
@@ -398,33 +416,34 @@ namespace WebAnnotation.ViewModel
             MenuItem item = sender as MenuItem;
             int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
 
-            var poly = this.modelObj.MosaicShape.ToPolygon();
+            GridPolygon poly = modelObj.MosaicShape.ToPolygon();
 
-            try { 
-                if(!innerPoly.HasValue)
-                {    
-                    var outer_poly = new GridPolygon(poly.ExteriorRing);
-                    var simple_poly = outer_poly.Simplify(Global.PenSimplifyThreshold);
+            try
+            {
+                if (!innerPoly.HasValue)
+                {
+                    GridPolygon outer_poly = new GridPolygon(poly.ExteriorRing);
+                    GridPolygon simple_poly = outer_poly.Simplify(Global.PenSimplifyThreshold);
                     poly.ExteriorRing = simple_poly.ExteriorRing;
-                    this.modelObj.MosaicShape = poly.ToSqlGeometry();
+                    modelObj.MosaicShape = poly.ToSqlGeometry();
                 }
                 else
                 {
-                    if(innerPoly.Value >= poly.InteriorRings.Count)
+                    if (innerPoly.Value >= poly.InteriorRings.Count)
                     {
                         Trace.WriteLine($"Inner polygon {innerPoly.Value} does not exist");
                         return;
                     }
 
-                    var inner_poly = poly.InteriorPolygons[innerPoly.Value];
-                    var simple_inner_poly = inner_poly.Simplify(Global.PenSimplifyThreshold / 2.0);
+                    GridPolygon inner_poly = poly.InteriorPolygons[innerPoly.Value];
+                    GridPolygon simple_inner_poly = inner_poly.Simplify(Global.PenSimplifyThreshold / 2.0);
                     poly.ReplaceInteriorRing(innerPoly.Value, simple_inner_poly);
-                    this.modelObj.MosaicShape = poly.ToSqlGeometry();
+                    modelObj.MosaicShape = poly.ToSqlGeometry();
                 }
 
                 Store.Locations.Save();
             }
-            catch(Exception ex)
+            catch (Exception)
             {
                 Trace.WriteLine("Could not simplify polygon");
             }
@@ -441,7 +460,7 @@ namespace WebAnnotation.ViewModel
             MenuItem item = sender as MenuItem;
             int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
 
-            var poly = this.modelObj.MosaicShape.ToPolygon();
+            GridPolygon poly = modelObj.MosaicShape.ToPolygon();
 
             try
             {
@@ -457,13 +476,13 @@ namespace WebAnnotation.ViewModel
                         return;
                     }
 
-                    poly.RemoveInteriorRing(innerPoly.Value); 
-                    this.modelObj.MosaicShape = poly.ToSqlGeometry();
+                    poly.RemoveInteriorRing(innerPoly.Value);
+                    modelObj.MosaicShape = poly.ToSqlGeometry();
                 }
 
                 Store.Locations.Save();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Trace.WriteLine("Could not simplify polygon");
             }
@@ -471,7 +490,7 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_OnOffEdge(object sender, EventArgs e)
         {
-            this.modelObj.OffEdge = !this.modelObj.OffEdge;
+            modelObj.OffEdge = !modelObj.OffEdge;
             try
             {
                 Store.Locations.Save();
@@ -479,7 +498,7 @@ namespace WebAnnotation.ViewModel
             catch (System.ServiceModel.FaultException ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                this.modelObj.OffEdge = !this.modelObj.OffEdge;
+                modelObj.OffEdge = !modelObj.OffEdge;
             }
         }
 
@@ -492,10 +511,14 @@ namespace WebAnnotation.ViewModel
         public bool Equals(Location_ViewModelBase x, Location_ViewModelBase y)
         {
             if (x == null && y == null)
+            {
                 return true;
+            }
 
             if (x == null || y == null)
+            {
                 return false;
+            }
 
             return x.ID == y.ID;
         }
@@ -503,7 +526,9 @@ namespace WebAnnotation.ViewModel
         public int GetHashCode(Location_ViewModelBase obj)
         {
             if (obj == null)
+            {
                 throw new ArgumentNullException("obj", "GetHashCode");
+            }
 
             return obj.modelObj.GetHashCode();
         }
@@ -511,10 +536,14 @@ namespace WebAnnotation.ViewModel
         public bool Equals(LocationObj x, LocationObj y)
         {
             if (x == null && y == null)
+            {
                 return true;
+            }
 
             if (x == null || y == null)
+            {
                 return false;
+            }
 
             return x.ID == y.ID;
         }
@@ -527,9 +556,11 @@ namespace WebAnnotation.ViewModel
         int IComparable<Location_ViewModelBase>.CompareTo(Location_ViewModelBase other)
         {
             if (other == null)
+            {
                 return 1;
+            }
 
-            return (int)(this.ID - other.ID);
+            return (int)(ID - other.ID);
         }
 
         #region WeakEvents
@@ -540,11 +571,13 @@ namespace WebAnnotation.ViewModel
             if (PropertyChangedArgs != null)
             {
                 StructureObj structObj = sender as StructureObj;
-                if (structObj != null && structObj.ID == this.modelObj.ParentID)
-                    this.OnParentPropertyChanged(sender, PropertyChangedArgs);
+                if (structObj != null && structObj.ID == modelObj.ParentID)
+                {
+                    OnParentPropertyChanged(sender, PropertyChangedArgs);
+                }
                 else
                 {
-                    this.OnObjPropertyChanged(sender, PropertyChangedArgs);
+                    OnObjPropertyChanged(sender, PropertyChangedArgs);
                 }
 
                 return true;
@@ -553,7 +586,7 @@ namespace WebAnnotation.ViewModel
             System.Collections.Specialized.NotifyCollectionChangedEventArgs CollectionChangeArgs = e as System.Collections.Specialized.NotifyCollectionChangedEventArgs;
             if (CollectionChangeArgs != null)
             {
-                this.OnLinksChanged(sender, CollectionChangeArgs);
+                OnLinksChanged(sender, CollectionChangeArgs);
                 return true;
             }
 
@@ -563,7 +596,7 @@ namespace WebAnnotation.ViewModel
 
         protected virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            this.ResetParentCache();
+            ResetParentCache();
             return;
         }
 
@@ -584,38 +617,23 @@ namespace WebAnnotation.ViewModel
 
 
         [Column("X")]
-        public double X
-        {
-            get { return modelObj.Position.X; }
-        }
+        public double X => modelObj.Position.X;
 
         [Column("Y")]
-        public double Y
-        {
-            get { return modelObj.Position.Y; }
-        }
+        public double Y => modelObj.Position.Y;
 
         /// <summary>
         /// This is readonly because changing it would break a datastructure in location store
         /// and also would require update of X,Y to the section space of the different section
         /// </summary>
         [Column("Z")]
-        public double Z
-        {
-            get { return modelObj.Z; }
-        }
+        public double Z => modelObj.Z;
 
         [Column("Last Editor")]
-        public string Username
-        {
-            get { return modelObj.Username; }
-        }
+        public string Username => modelObj.Username;
 
         [Column("Modified")]
-        public DateTime LastModified
-        {
-            get { return modelObj.LastModified; }
-        }
+        public DateTime LastModified => modelObj.LastModified;
 
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
@@ -624,13 +642,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// 
         [Column("VolumeX")]
-        public double VolumeX
-        {
-            get
-            {
-                return modelObj.VolumePosition.X;
-            }
-        }
+        public double VolumeX => modelObj.VolumePosition.X;
 
         /// <summary>
         /// VolumeY is the y position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
@@ -639,42 +651,21 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// 
         [Column("VolumeY")]
-        public double VolumeY
-        {
-            get
-            {
-                return modelObj.VolumePosition.Y;
-            }
-        }
+        public double VolumeY => modelObj.VolumePosition.Y;
 
 
 
         [Column("Width")]
-        public double Width
-        {
-            get { return modelObj.Width.HasValue ? modelObj.Width.Value : 0; }
-        }
+        public double Width => modelObj.Width.HasValue ? modelObj.Width.Value : 0;
 
         [Column("Radius")]
-        public double Radius
-        {
-            get { return modelObj.Radius; }
-        }
+        public double Radius => modelObj.Radius;
 
 
         [Column("TypeCode")]
-        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode
-        {
-            get { return (Viking.AnnotationServiceTypes.Interfaces.LocationType)modelObj.TypeCode; }
-        }
+        public Viking.AnnotationServiceTypes.Interfaces.LocationType TypeCode => modelObj.TypeCode;
 
-        public bool IsTerminal
-        {
-            get
-            {
-                return modelObj.Terminal;
-            }
-        }
+        public bool IsTerminal => modelObj.Terminal;
 
         /// <summary>
         /// This column is set to true when the location has one link and is not marked as terminal.  It means the
@@ -683,13 +674,7 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         /// 
         [Column("IsUnverifiedTerminal")]
-        public bool IsUnverifiedTerminal
-        {
-            get
-            {
-                return modelObj.IsUnverifiedTerminal;
-            }
-        }
+        public bool IsUnverifiedTerminal => modelObj.IsUnverifiedTerminal;
 
         /// <summary>
         /// This is readonly because changing it would break a datastructure in location store
@@ -698,18 +683,12 @@ namespace WebAnnotation.ViewModel
         /// 
 
         [Column("Section")]
-        public int Section
-        {
-            get { return (int)modelObj.Section; }
-        }
+        public int Section => modelObj.Section;
 
         /// <summary>
         /// Return true if the locations volume position has been calculated
         /// </summary>
-        public bool VolumePositionHasBeenCalculated
-        {
-            get { return this.modelObj.VolumePositionHasBeenCalculated; }
-        }
+        public bool VolumePositionHasBeenCalculated => modelObj.VolumePositionHasBeenCalculated;
 
         #endregion
 

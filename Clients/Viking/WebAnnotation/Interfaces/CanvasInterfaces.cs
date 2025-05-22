@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using VikingXNA;
 using WebAnnotation.UI;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 using LocationLinkKey = Viking.AnnotationServiceTypes.LocationLinkKey;
 
 namespace WebAnnotation

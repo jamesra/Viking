@@ -18,28 +18,16 @@ namespace WebAnnotation.UI.Commands
     /// The command may exit with no action, draw an open curve, or draw a closed curved polygon.  Once the geometry is placed the 
     /// user can complete the annotation
     /// </summary>
-    class AnnotationPenFreeDrawCommand : PlaceGeometryWithPenCommandBase
+    internal class AnnotationPenFreeDrawCommand : PlaceGeometryWithPenCommandBase
     {
         /// <summary>
         /// Prevent the user from making absurdly small annotations by accident
         /// </summary>
-        private double MinAreaForClosedShape
-        {
-            get
-            {
-                return Parent.Downsample * 10 * 10;
-            }
-        }
+        private double MinAreaForClosedShape => Parent.Downsample * 10 * 10;
 
-        private double MinLengthForOpenShape
-        {
-            get
-            {
-                return Parent.Downsample * 10;
-            }
-        }
+        private double MinLengthForOpenShape => Parent.Downsample * 10;
 
-        readonly LocationCanvasView Annotation;
+        private readonly LocationCanvasView Annotation;
 
         public AnnotationPenFreeDrawCommand(SectionViewerControl parent, LocationCanvasView annotation, Color color, double LineWidth, OnCommandSuccess success_callback) : base(parent, color, LineWidth, success_callback)
         {
@@ -63,10 +51,10 @@ namespace WebAnnotation.UI.Commands
             //TODO: Prompt the user to create a closed curve type
             if (HasLoop)
             {
-                GridPolygon newVolumePoly = new GridPolygon(this.PenInput.SimplifiedFirstLoop);
-                if (newVolumePoly.Area < this.MinAreaForClosedShape)
+                GridPolygon newVolumePoly = new GridPolygon(PenInput.SimplifiedFirstLoop);
+                if (newVolumePoly.Area < MinAreaForClosedShape)
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     return;
                 }
 
@@ -75,19 +63,19 @@ namespace WebAnnotation.UI.Commands
 
                 if (TryCutHole(newVolumePoly))
                 {
-                    this.Deactivated = true;
+                    Deactivated = true;
                     return;
                 }
 
                 //OK, we drew a loop... yay?  I can't think of a command that is applicable, so exit.
-                this.Execute();
+                Execute();
             }
         }
 
 
         private bool TryCutHole(GridPolygon newVolumePoly)
         {
-            if (!this.PenInput.HasSelfIntersection)
+            if (!PenInput.HasSelfIntersection)
             {
                 throw new ArgumentException("Cannot possibly cut a hole if our path is not a loop.");
             }
@@ -113,7 +101,7 @@ namespace WebAnnotation.UI.Commands
             mosaic_shape.AddInteriorRing(new_mosiac_hole);
 
             GridPolygon volume_shape = obj.VolumeShape.ToPolygon();
-            GridPolygon new_volume_hole = newVolumePoly.Smooth(this.NumCurveInterpolations);
+            GridPolygon new_volume_hole = newVolumePoly.Smooth(NumCurveInterpolations);
             volume_shape.AddInteriorRing(new_volume_hole);
 
             obj.MosaicShape = mosaic_shape.ToSqlGeometry();
@@ -145,16 +133,16 @@ namespace WebAnnotation.UI.Commands
             List<HitTestResult> listFinishHitTestResults = AnnotationOverlay.GetAnnotations(Parent.Section.Number, Finish);
 
             LocationObj loc = Store.Locations.GetObjectByID(Annotation.ID, false);
-            IViewLocation locationLinkCandidate = LinkAnnotationsCommand.FindBestLinkCandidate(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc, out var _);
+            IViewLocation locationLinkCandidate = LinkAnnotationsCommand.FindBestLinkCandidate(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc, out GridRectangle _);
             if (locationLinkCandidate != null)
             {
                 LinkAnnotationsCommand.TryCreateLink(AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number), Finish, loc);
-                this.Execute();
+                Execute();
                 return;
             }
             else
             {
-                this.Deactivated = true;
+                Deactivated = true;
             }
         }
 
@@ -239,13 +227,13 @@ namespace WebAnnotation.UI.Commands
         {
             SectionAnnotationsView locView = AnnotationOverlay.GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
+            {
                 return null;
+            }
 
-            ICanvasGeometryView bestObj = null;
+            IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode.AllowsInteriorHoles());
 
-            var listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode.AllowsInteriorHoles());
-
-            var listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
+            IEnumerable<LocationPolygonView> listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
 
             return listPolygons.Where(o =>
             {

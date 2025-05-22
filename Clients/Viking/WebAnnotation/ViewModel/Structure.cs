@@ -41,7 +41,7 @@ namespace WebAnnotation.ViewModel
 
         public Structure(StructureObj data)
         {
-            this.modelObj = data;
+            modelObj = data;
         }
 
         public Structure Parent
@@ -49,7 +49,9 @@ namespace WebAnnotation.ViewModel
             get
             {
                 if (modelObj.Parent == null)
+                {
                     return null;
+                }
 
                 return new Structure(modelObj.Parent);
             }
@@ -58,87 +60,53 @@ namespace WebAnnotation.ViewModel
         [Column("Label")]
         public string InfoLabel
         {
-            get { return modelObj.Label; }
-            set
-            {
-                modelObj.Label = value;
-            }
+            get => modelObj.Label;
+            set => modelObj.Label = value;
         }
 
         //        [Column("ID")] This is covered by the ToString method in UI's
-        public long ID
-        {
-            get { return modelObj.ID; }
-        }
+        public long ID => modelObj.ID;
 
         [Column("ParentID")]
-        public long? ParentID
-        {
-
-            get { return modelObj.ParentID; }
-        }
+        public long? ParentID => modelObj.ParentID;
 
         [Column("Last Editor")]
-        public string Username
-        {
-            get { return modelObj.Username; }
-        }
+        public string Username => modelObj.Username;
 
         [Column("Num Links")]
-        public int NumLinks
-        {
-            get { return modelObj.NumLinks; }
-        }
+        public int NumLinks => modelObj.NumLinks;
 
 
         [Column("Verified")]
         public bool Verified
         {
-            get { return modelObj.Verified; }
-            set
-            {
-                modelObj.Verified = value;
-            }
+            get => modelObj.Verified;
+            set => modelObj.Verified = value;
         }
 
         [Column("Confidence")]
         public double Confidence
         {
-            get { return modelObj.Confidence; }
-            set
-            {
-                modelObj.Confidence = value;
-            }
+            get => modelObj.Confidence;
+            set => modelObj.Confidence = value;
         }
 
         [Column("Attributes")]
         public IEnumerable<ObjAttribute> Attributes
         {
-            get { return modelObj.Attributes; }
-            set
-            {
-                modelObj.Attributes = new List<ObjAttribute>(value);
-            }
+            get => modelObj.Attributes;
+            set => modelObj.Attributes = new List<ObjAttribute>(value);
         }
 
         [Column("Notes")]
         public string Notes
         {
-            get { return modelObj.Notes; }
-            set
-            {
-                modelObj.Notes = value;
-            }
+            get => modelObj.Notes;
+            set => modelObj.Notes = value;
         }
 
         [Column("Type")]
-        public StructureType Type
-        {
-            get
-            {
-                return new StructureType(modelObj.Type);
-            }
-        }
+        public StructureType Type => new StructureType(modelObj.Type);
 
 
 
@@ -257,21 +225,18 @@ namespace WebAnnotation.ViewModel
             return new Viking.UI.Controls.GenericTreeNode(this);
         }
 
-        public override Type[] AssignableParentTypes
-        {
-            get { return new System.Type[] { typeof(StructureObj) }; }
-        }
+        public override Type[] AssignableParentTypes => new System.Type[] { typeof(StructureObj) };
 
         public long[] UnfinishedBranches()
         {
-            return Store.Structures.GetUnfinishedBranches(this.ID);
+            return Store.Structures.GetUnfinishedBranches(ID);
         }
 
         #endregion
 
         protected void ContextMenu_OnMorphology(object sender, EventArgs e)
         {
-            Global.Export.OpenMorphology(this.ID);
+            Global.Export.OpenMorphology(ID);
         }
 
 
@@ -289,7 +254,7 @@ namespace WebAnnotation.ViewModel
         {
             MenuItem menuUnverifiedBranchTerminals = new MenuItem("Unmarked process terminals");
             menuUnverifiedBranchTerminals.MenuItems.Add(new MenuItem());
-            menuUnverifiedBranchTerminals.Select += this.OnSelectUnverifiedBranchTerminals;
+            menuUnverifiedBranchTerminals.Select += OnSelectUnverifiedBranchTerminals;
             menu.MenuItems.Add(menuUnverifiedBranchTerminals);
 
 
@@ -300,7 +265,7 @@ namespace WebAnnotation.ViewModel
         {
             MenuItem menuUnverifiedBranchTerminals = sender as MenuItem;
             menuUnverifiedBranchTerminals.MenuItems.Clear();
-            menuUnverifiedBranchTerminals.Select -= this.OnSelectUnverifiedBranchTerminals;
+            menuUnverifiedBranchTerminals.Select -= OnSelectUnverifiedBranchTerminals;
             bool HasMenuItems = _PopulateUnverifiedBranchTerminalsContextMenu(menuUnverifiedBranchTerminals);
 
             menuUnverifiedBranchTerminals.Enabled = HasMenuItems;
@@ -316,9 +281,9 @@ namespace WebAnnotation.ViewModel
             //            long[] Loc_Ids = Store.Structures.GetUnfinishedBranches(this.ID);
             //            List<LocationObj> listLocations = Store.Locations.GetObjectsByIDs(Loc_Ids, true);
 
-            AnnotationService.Types.LocationPositionOnly[] LocationArray = Store.Structures.GetUnfinishedBranchesWithPosition(this.ID);
+            AnnotationService.Types.LocationPositionOnly[] LocationArray = Store.Structures.GetUnfinishedBranchesWithPosition(ID);
 
-            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = this.MapLocationsToSections(LocationArray);
+            Dictionary<double, List<AnnotationService.Types.LocationPositionOnly>> dictSectionToLocations = MapLocationsToSections(LocationArray);
 
             List<double> levels = new List<double>(dictSectionToLocations.Keys);
             levels.Sort();
@@ -344,8 +309,10 @@ namespace WebAnnotation.ViewModel
                 AnnotationService.Types.LocationPositionOnly locObj = listObjs[0];
                 //For a single item do not create a submenu
                 string locString = _LocationToString(locObj);
-                rootMenuItem = new MenuItem(level.ToString("D4") + " - " + locString, ContextMenu_SelectUnbranchedLocation);
-                rootMenuItem.Tag = locObj.ID;
+                rootMenuItem = new MenuItem(level.ToString("D4") + " - " + locString, ContextMenu_SelectUnbranchedLocation)
+                {
+                    Tag = locObj.ID
+                };
             }
             else
             {
@@ -353,8 +320,10 @@ namespace WebAnnotation.ViewModel
                 foreach (AnnotationService.Types.LocationPositionOnly locObj in listObjs)
                 {
                     string locString = _LocationToString(locObj);
-                    MenuItem subItem = new MenuItem(locString, ContextMenu_SelectUnbranchedLocation);
-                    subItem.Tag = locObj.ID;
+                    MenuItem subItem = new MenuItem(locString, ContextMenu_SelectUnbranchedLocation)
+                    {
+                        Tag = locObj.ID
+                    };
                     rootMenuItem.MenuItems.Add(subItem);
                 }
             }
@@ -412,7 +381,7 @@ namespace WebAnnotation.ViewModel
 
         bool IEquatable<Structure>.Equals(Structure other)
         {
-            return this.modelObj.ID == other.modelObj.ID;
+            return modelObj.ID == other.modelObj.ID;
         }
 
         public bool Equals(Structure x, Structure y)

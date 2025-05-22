@@ -47,7 +47,6 @@
     <Compile Include="Generators\BajajMeshGenerator.cs" />
     <Compile Include="ConnectionVerticies.cs" />
     <Compile Include="EdgeType.cs" />
-    <Compile Include="MedialAxis.cs" />
     <Compile Include="MeshGraph.cs" />
     <Compile Include="MorphologyMesh\BajajGeneratorMesh.cs" />
     <Compile Include="MorphologyMesh\ConcurrentTopologyInitializer.cs" />

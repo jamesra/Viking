@@ -61,7 +61,9 @@ namespace WebAnnotation
         public static HitTestResult NearestObjectOnCurrentSectionThenAdjacent(this ICollection<HitTestResult> listHitTestObjects, int SectionNumber)
         {
             if (listHitTestObjects.Count == 0)
+            {
                 return null;
+            }
 
             List<HitTestResult> listLocations = listHitTestObjects.Where(l => l.obj as IViewLocation != null).ToList();
             List<HitTestResult> listLocationsOnSection = listLocations.Where(l => l.Z == SectionNumber).ToList();
@@ -116,7 +118,9 @@ namespace WebAnnotation
                  {
                      ICanvasViewContainer container = lc.obj as ICanvasViewContainer;
                      if (container == null)
+                     {
                          return lc;
+                     }
 
                      ICanvasView nestedObj = container.GetAnnotationAtPosition(WorldPos);
                      if (nestedObj == null)
@@ -223,11 +227,14 @@ namespace WebAnnotation
         {
             Viking.VolumeModel.IVolumeToSectionTransform mapper = Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z);
             if (mapper == null)
+            {
                 return double.MaxValue;
+            }
 
-            GridVector2 vPos;
-            if (!mapper.TrySectionToVolume(l.Position, out vPos))
+            if (!mapper.TrySectionToVolume(l.Position, out GridVector2 vPos))
+            {
                 return double.MaxValue;
+            }
 
             GridVector3 p = new GridVector3(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
             return GridVector3.Distance(p, origin);
@@ -272,8 +279,15 @@ namespace WebAnnotation
     {
         public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (action == null) throw new ArgumentNullException("action");
+            if (source == null)
+            {
+                throw new ArgumentNullException("source");
+            }
+
+            if (action == null)
+            {
+                throw new ArgumentNullException("action");
+            }
 
             foreach (T item in source)
             {
@@ -283,8 +297,15 @@ namespace WebAnnotation
 
         public static void ForEach<T>(this IEnumerable<T> source, Action<T, int> action)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (action == null) throw new ArgumentNullException("action");
+            if (source == null)
+            {
+                throw new ArgumentNullException("source");
+            }
+
+            if (action == null)
+            {
+                throw new ArgumentNullException("action");
+            }
 
             int i = 0;
             foreach (T item in source)
@@ -296,8 +317,15 @@ namespace WebAnnotation
 
         public static void ForEach<T>(this T[] source, Action<T, int> action)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (action == null) throw new ArgumentNullException("action");
+            if (source == null)
+            {
+                throw new ArgumentNullException("source");
+            }
+
+            if (action == null)
+            {
+                throw new ArgumentNullException("action");
+            }
 
             for (int i = 0; i < source.Length; i++)
             {

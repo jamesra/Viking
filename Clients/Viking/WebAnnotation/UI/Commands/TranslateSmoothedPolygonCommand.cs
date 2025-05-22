@@ -1,13 +1,13 @@
-﻿using System;
-using Geometry;
+﻿using Geometry;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
-    class TranslatePolygonCommand : RotateTranslateScaleCommand, Viking.Common.IHelpStrings
+    internal class TranslatePolygonCommand : RotateTranslateScaleCommand, Viking.Common.IHelpStrings
     {
         public delegate void OnCommandSuccess(GridPolygon MosaicPolygon);
         protected OnCommandSuccess success_callback;
@@ -27,7 +27,7 @@ namespace WebAnnotation.UI.Commands
 
         protected GridVector2 DeltaSum = new GridVector2(0, 0);
 
-        private GridPolygon OriginalMosaicPolygon;
+        private readonly GridPolygon OriginalMosaicPolygon;
         public GridPolygon TransformedMosaicPolygon;
         protected MeshModel<VertexPositionColor> _mesh;
         protected CircleView OriginalVolumePositionView;
@@ -40,13 +40,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         public bool SmoothPolygon = false;
 
-        protected override GridVector2 VolumeRotationOrigin
-        {
-            get
-            {
-                return mapping.SectionToVolume(TransformedMosaicPolygon.Centroid);
-            }
-        }
+        protected override GridVector2 VolumeRotationOrigin => mapping.SectionToVolume(TransformedMosaicPolygon.Centroid);
 
         public TranslatePolygonCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         GridPolygon MosaicPolygon,
@@ -94,17 +88,17 @@ namespace WebAnnotation.UI.Commands
             GridPolygon poly = OriginalMosaicPolygon.Clone() as GridPolygon;
             if (Angle != 0)
             {
-                poly = OriginalMosaicPolygon.Rotate(this.Angle);
+                poly = OriginalMosaicPolygon.Rotate(Angle);
             }
 
             if (SizeScale != 1.0)
             {
-                poly = poly.Scale(this.SizeScale);
+                poly = poly.Scale(SizeScale);
             }
 
             if (MosaicPositionDeltaSum != GridVector2.Zero)
             {
-                poly = poly.Translate(this.MosaicPositionDeltaSum);
+                poly = poly.Translate(MosaicPositionDeltaSum);
             }
 
             return poly;
@@ -112,17 +106,17 @@ namespace WebAnnotation.UI.Commands
 
         protected void CreateUpdateView()
         {
-            GridPolygon TransformedVolumePolygon = mapping.TryMapShapeSectionToVolume(this.TransformedMosaicPolygon);
+            GridPolygon TransformedVolumePolygon = mapping.TryMapShapeSectionToVolume(TransformedMosaicPolygon);
             TransformedVolumePolygon = TransformedVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             _mesh = TransformedVolumePolygon.CreateMeshForPolygon2D(Color.ConvertToHSL());
 
-            OriginalVolumePositionView = new CircleView(new GridCircle(this.OriginalVolumePosition, 16), Microsoft.Xna.Framework.Color.Red);
-            TranslatedVolumePositionView = new CircleView(new GridCircle(this.TranslatedVolumePosition, 16), Microsoft.Xna.Framework.Color.Green);
+            OriginalVolumePositionView = new CircleView(new GridCircle(OriginalVolumePosition, 16), Microsoft.Xna.Framework.Color.Red);
+            TranslatedVolumePositionView = new CircleView(new GridCircle(TranslatedVolumePosition, 16), Microsoft.Xna.Framework.Color.Green);
         }
 
         protected override void Execute()
         {
-            if (this.success_callback != null)
+            if (success_callback != null)
             {
                 /*
                 GridPolygon VolumeShape = null;

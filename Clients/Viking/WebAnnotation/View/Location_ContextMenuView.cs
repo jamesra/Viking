@@ -4,7 +4,7 @@ using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.View
 {
-    class Location_CanvasContextMenuView : Location_ViewModelBase
+    internal class Location_CanvasContextMenuView : Location_ViewModelBase
     {
         public Location_CanvasContextMenuView(long LocationID) : base(LocationID) { }
 
@@ -15,7 +15,7 @@ namespace WebAnnotation.View
             {
                 contextMenuView = new Location_CanvasContextMenuView(loc.ID);
             }
-            catch (ArgumentException e)
+            catch (ArgumentException)
             {
                 ContextMenu menu = new ContextMenu();
                 menu.MenuItems.Add(string.Format("Unable to load location {0}", loc.ID));
@@ -32,13 +32,13 @@ namespace WebAnnotation.View
                 ContextMenu menu = new ContextMenu();
                 menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
 
-                this._AddExportMenus(menu);
-                this._AddCopyLocationIDMenu(menu);
-                this._AddTerminalOffEdgeMenus(menu);
-                this.Parent.ContextMenu_AddUnverifiedBranchTerminals(menu);
-                this._AddConvertShapeMenus(menu);
-                this._AddSimplifyPolygonMenus(menu);
-                this._AddDeleteMenu(menu);
+                _AddExportMenus(menu);
+                _AddCopyLocationIDMenu(menu);
+                _AddTerminalOffEdgeMenus(menu);
+                Parent.ContextMenu_AddUnverifiedBranchTerminals(menu);
+                _AddConvertShapeMenus(menu);
+                _AddSimplifyPolygonMenus(menu);
+                _AddDeleteMenu(menu);
 
                 return menu;
             }

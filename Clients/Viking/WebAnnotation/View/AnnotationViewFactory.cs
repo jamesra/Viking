@@ -1,13 +1,13 @@
-﻿using Viking.AnnotationServiceTypes.Interfaces;
-using SqlGeometryUtils;
+﻿using SqlGeometryUtils;
 using System;
 using System.Threading.Tasks;
+using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-    static class AnnotationViewFactory
+    internal static class AnnotationViewFactory
     {
         /*
         /// <summary>
@@ -44,11 +44,11 @@ namespace WebAnnotation.View
                     return new LocationOpenCurveView(obj, mapping);
                 case LocationType.CURVEPOLYGON:
                 case LocationType.POLYGON:
-                {
-                    var polyview = new LocationPolygonView(obj, mapping);
-                    Task.Run(() => polyview.Initialize());
-                    return polyview;
-                } 
+                    {
+                        LocationPolygonView polyview = new LocationPolygonView(obj, mapping);
+                        Task.Run(() => polyview.Initialize());
+                        return polyview;
+                    }
                 case LocationType.CLOSEDCURVE:
                     return new LocationClosedCurveView(obj, mapping);
                 case LocationType.POLYLINE:
@@ -95,8 +95,10 @@ namespace WebAnnotation.View
                     }
                 case LocationType.POLYLINE:
                     {
-                        AdjacentLocationLineView view = new AdjacentLocationLineView(obj, mapping);
-                        view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
+                        AdjacentLocationLineView view = new AdjacentLocationLineView(obj, mapping)
+                        {
+                            Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f)
+                        };
                         return view;
                     }
                 default:
@@ -117,7 +119,9 @@ namespace WebAnnotation.View
 
             //If the location types don't match then use the default circle view, which all annotations are compatible with
             if (sourceLocation.TypeCode != targetLocation.TypeCode)
+            {
                 return new StructureLinkCirclesView(key, mapper);
+            }
 
             switch (sourceLocation.TypeCode)
             {

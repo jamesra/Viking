@@ -3,7 +3,7 @@ using Geometry.Meshing;
 using System;
 using System.Linq;
 
-namespace MorphologyMesh
+namespace Geometry
 {
     public class MedialAxisEdge : GraphLib.Edge<GridVector2>
     {
