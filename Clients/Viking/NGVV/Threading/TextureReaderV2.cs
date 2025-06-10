@@ -354,8 +354,9 @@ namespace Viking
                                 await Task.Delay(Geometry.Global.GetRandomRequestDelay());
                                 continue;
                             }
-                            else
+                            else if(response.StatusCode == System.Net.HttpStatusCode.NotFound)
                             {
+                                this.TextureNotFound = true;
                                 break;
                             }
                         }

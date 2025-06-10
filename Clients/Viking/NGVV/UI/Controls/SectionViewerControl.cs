@@ -29,7 +29,7 @@ namespace Viking.UI.Controls
         Viking.UI.Commands.Command _CurrentCommand;
         public Viking.UI.Commands.Command CurrentCommand
         {
-            get { return _CurrentCommand; }
+            get => _CurrentCommand;
             set
             {
                 if (_CurrentCommand != value && _CurrentCommand != null)
@@ -85,12 +85,17 @@ namespace Viking.UI.Controls
         /// When set to true Commands and ISectionOverlayExtension draw methods are called
         /// </summary>
         public bool ShowOverlays = true;
+        
+        /// <summary>
+        /// When true, only the overlays are rendered and section images are hidden
+        /// </summary>
         public bool ShowOnlyOverlays = false;
+        
 
         public bool ColorizeTiles
         {
-            get { return menuColorizeTiles.Checked; }
-            set { menuColorizeTiles.Checked = value; }
+            get => menuColorizeTiles.Checked;
+            set => menuColorizeTiles.Checked = value;
         }
 
 
@@ -129,10 +134,7 @@ namespace Viking.UI.Controls
 
         public GridVector2 StatusPosition
         {
-            get
-            {
-                return _StatusPosition;
-            }
+            get => _StatusPosition;
             set
             {
                 if(value.Round(0) != _StatusPosition.Round(0))
@@ -144,18 +146,14 @@ namespace Viking.UI.Controls
 
         public int StatusSection
         {
-            set
-            {
-                tsSection.Text = "Section: " + value.ToString();
-            }
+            set => tsSection.Text = "Section: " + value.ToString();
         }
 
         private double _Magnification = 0;
 
         public double StatusMagnification
         {
-            get
-            { return _Magnification; }
+            get => _Magnification;
 
             set
             {
@@ -219,10 +217,7 @@ namespace Viking.UI.Controls
 
         #endregion
 
-        public VolumeViewModel Volume
-        {
-            get { return _Section.VolumeViewModel; }
-        }
+        public VolumeViewModel Volume => _Section.VolumeViewModel;
 
         private SectionViewModel _Section;
 
@@ -231,7 +226,7 @@ namespace Viking.UI.Controls
         /// </summary>
         public SectionViewModel Section
         {
-            get { return _Section; }
+            get => _Section;
             set
             {
                 if (_Section == value)
@@ -315,15 +310,15 @@ namespace Viking.UI.Controls
         [System.ComponentModel.Browsable(false)]
         public string CurrentChannel
         {
-            get { return Section?.ActiveChannel; }
-            set { Section.ActiveChannel = value; }
+            get => Section?.ActiveChannel;
+            set => Section.ActiveChannel = value;
         }
 
         [System.ComponentModel.Browsable(false)]
         public string CurrentTransform
         {
-            get { return Section?.ActiveTileTransform; }
-            set { Section.ActiveTileTransform = value; }
+            get => Section?.ActiveTileTransform;
+            set => Section.ActiveTileTransform = value;
         }
 
         public ChannelInfo[] CurrentChannelset
@@ -331,7 +326,7 @@ namespace Viking.UI.Controls
             get
             {
                 if (Section is null)
-                    return new ChannelInfo[0];
+                    return Array.Empty<ChannelInfo>();
 
                 ChannelInfo[] Channelset = Section.ChannelInfoArray;
                 if (Channelset.Length == 0)
@@ -483,11 +478,11 @@ namespace Viking.UI.Controls
                 //bool isPen = Touch.IsPenEvent(out uint pointerID);
                 if (WinMsgInput.IsPenEvent(out uint PointerID))
                 {
-                    Trace.WriteLine(string.Format("Pen button down {0}", PointerID));
+                    Trace.WriteLine($"Pen button down {PointerID}");
                 }
                 else
                 {
-                    Trace.WriteLine(string.Format("Mouse button down {0}", PointerID));
+                    Trace.WriteLine($"Mouse button down {PointerID}");
                 }
             }
 
@@ -560,43 +555,49 @@ namespace Viking.UI.Controls
         public event ReferenceSectionChangedEventHandler OnReferenceSectionChanged;
 
         #region IPenEvents 
-        public event PenEventHandler OnPenEnterRange { add { penEventManager.OnPenEnterRange += value; } remove { penEventManager.OnPenEnterRange -= value; } }
-        public event PenEventHandler OnPenLeaveRange { add { penEventManager.OnPenLeaveRange += value; } remove { penEventManager.OnPenLeaveRange -= value; } }
-        public event PenEventHandler OnPenContact { add { penEventManager.OnPenContact += value; } remove { penEventManager.OnPenContact -= value; } }
-        public event PenEventHandler OnPenLeaveContact { add { penEventManager.OnPenLeaveContact += value; } remove { penEventManager.OnPenLeaveContact -= value; } }
-        public event PenEventHandler OnPenMove { add { penEventManager.OnPenMove += value; } remove { penEventManager.OnPenMove -= value; } }
+        public event PenEventHandler OnPenEnterRange { add => penEventManager.OnPenEnterRange += value;
+            remove => penEventManager.OnPenEnterRange -= value;
+        }
+        public event PenEventHandler OnPenLeaveRange { add => penEventManager.OnPenLeaveRange += value;
+            remove => penEventManager.OnPenLeaveRange -= value;
+        }
+        public event PenEventHandler OnPenContact { add => penEventManager.OnPenContact += value;
+            remove => penEventManager.OnPenContact -= value;
+        }
+        public event PenEventHandler OnPenLeaveContact { add => penEventManager.OnPenLeaveContact += value;
+            remove => penEventManager.OnPenLeaveContact -= value;
+        }
+        public event PenEventHandler OnPenMove { add => penEventManager.OnPenMove += value;
+            remove => penEventManager.OnPenMove -= value;
+        }
         #endregion
 
         #region IGestureEvents
-        public event PanGestureEventHandler OnGesturePan { add { gestureEventManager.OnGesturePan += value; } remove { gestureEventManager.OnGesturePan -= value; } }
-        public event ZoomGestureEventHandler OnGestureZoom { add { gestureEventManager.OnGestureZoom += value; } remove { gestureEventManager.OnGestureZoom -= value; } }
-        public event BeginGestureEventHandler OnGestureBegin { add { gestureEventManager.OnGestureBegin += value; } remove { gestureEventManager.OnGestureBegin -= value; } }
-        public event EndGestureEventHandler OnGestureEnd { add { gestureEventManager.OnGestureEnd += value; } remove { gestureEventManager.OnGestureEnd -= value; } }
+        public event PanGestureEventHandler OnGesturePan { add => gestureEventManager.OnGesturePan += value;
+            remove => gestureEventManager.OnGesturePan -= value;
+        }
+        public event ZoomGestureEventHandler OnGestureZoom { add => gestureEventManager.OnGestureZoom += value;
+            remove => gestureEventManager.OnGestureZoom -= value;
+        }
+        public event BeginGestureEventHandler OnGestureBegin { add => gestureEventManager.OnGestureBegin += value;
+            remove => gestureEventManager.OnGestureBegin -= value;
+        }
+        public event EndGestureEventHandler OnGestureEnd { add => gestureEventManager.OnGestureEnd += value;
+            remove => gestureEventManager.OnGestureEnd -= value;
+        }
 
         public event PenEventHandler OnPenButtonDown
         {
-            add
-            {
-                ((IPenEvents)penEventManager).OnPenButtonDown += value;
-            }
+            add => ((IPenEvents)penEventManager).OnPenButtonDown += value;
 
-            remove
-            {
-                ((IPenEvents)penEventManager).OnPenButtonDown -= value;
-            }
+            remove => ((IPenEvents)penEventManager).OnPenButtonDown -= value;
         }
 
         public event PenEventHandler OnPenButtonUp
         {
-            add
-            {
-                ((IPenEvents)penEventManager).OnPenButtonUp += value;
-            }
+            add => ((IPenEvents)penEventManager).OnPenButtonUp += value;
 
-            remove
-            {
-                ((IPenEvents)penEventManager).OnPenButtonUp -= value;
-            }
+            remove => ((IPenEvents)penEventManager).OnPenButtonUp -= value;
         }
         #endregion
 
@@ -764,14 +765,11 @@ namespace Viking.UI.Controls
             }
         }
 
-        public void ExportImage(string Filename, GridRectangle MyRect, int Z, double Downsample, bool IncludeOverlays)
+        public async Task ExportImage(string Filename, GridRectangle MyRect, int Z, double Downsample, bool IncludeOverlays)
         {
             Debug.Assert(MyRect.Left < MyRect.Right);
             Debug.Assert(MyRect.Bottom < MyRect.Top);
-
-            this.ShowOverlays = IncludeOverlays;
-            this.AsynchTextureLoad = false;
-
+              
             //Image Dimensions
             int RequestedWorldX = (int)Math.Floor(MyRect.Center.X);
             int RequestedWorldY = (int)Math.Floor(MyRect.Center.Y);
@@ -838,7 +836,7 @@ namespace Viking.UI.Controls
             }
 
 
-            Queue<Task> listTasks = new Queue<Task>();
+            List<Task> listTasks = new List<Task>();
             int MaxActiveExports = 2; 
             {
                 GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
@@ -855,30 +853,33 @@ namespace Viking.UI.Controls
 
                         VikingXNA.Scene TileScene = new Scene(new Viewport(0, 0, CapturedTileSizeX, CapturedTileSizeY), camera);
                         TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
-                        string tile_filename = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Filename), string.Format("{0}_Z{1}_X{2}_Y{3}_W{4}_H{5}_DS{6}.png", System.IO.Path.GetFileNameWithoutExtension(Filename), Z, X, Y, Width, Height, Downsample));
+                        string tile_filename = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Filename),
+                            $"{System.IO.Path.GetFileNameWithoutExtension(Filename)}_Z{Z}_X{X}_Y{Y}_W{Width}_H{Height}_DS{Downsample}.png");
 
                         if (!System.IO.File.Exists(tile_filename))
                         {
-                            listTasks.Enqueue(ExportScene(TileScene, (float)X, (float)Y, Z, tile_filename, CancellationToken.None));
+                            listTasks.Add(RenderSceneToTexture(TileScene, (float)X, (float)Y, Z, IncludeOverlays, false, CancellationToken.None).ContinueWith(
+                                task => task.Result.SaveAsync(tile_filename, System.Drawing.Imaging.ImageFormat.Png)));
                         }
 
-                        while (listTasks.Count > 0 && (listTasks.Count > MaxActiveExports || listTasks.Peek().IsCompleted))
+                        while (listTasks.Count > 0 && (listTasks.Count > MaxActiveExports))
                         {
-                            System.Threading.Tasks.Task topTask = listTasks.Dequeue();
-                            if (topTask.IsCompleted)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                topTask.Wait();
-                            }
+                            var completedTask = await Task.WhenAny(listTasks);
+                            listTasks.Remove(completedTask);
                         }
 
-                        System.GC.Collect();
+                        
                     }
+
+                    System.GC.Collect();
                 }
-            }
+
+                while (listTasks.Count > 0)
+                {
+                    var completedTask = await Task.WhenAny(listTasks);
+                    listTasks.Remove(completedTask);
+                }
+            } 
         }
 
 
@@ -894,12 +895,7 @@ namespace Viking.UI.Controls
 
             //Capture each of the requested frames
             GenericProgressForm progressForm = new GenericProgressForm();
-            progressForm.Show();
-
-            this.AsynchTextureLoad = false;
-
-            bool OriginalOverlay = this.ShowOverlays;
-            this.ShowOverlays = false;
+            progressForm.Show(); 
 
             //long OldCacheSize = Global.TextureCache.MaxCacheSize; 
             //Global.TextureCache.MaxCacheSize = (1 << 30);
@@ -909,19 +905,17 @@ namespace Viking.UI.Controls
             //            this.CurrentVolumeTransform = null; 
 
             Scene originalScene = this.Scene;
+             
 
-            foreach (SectionViewModel S in State.volume.SectionViewModels.Values)
+            foreach (SectionViewModel S in State.volume.SectionViewModels.Values.Where(S => S.Number >= FirstSection && S.Number <= LastSection))
             {
-                if (S.Number < FirstSection || S.Number > LastSection)
-                    continue;
-
-                string Path = ExportPath + S.VolumeViewModel.Name + "/" + S.Number.ToString("D3") + "/Tiles/" + Downsample.ToString("D3") + "/";
+                string path = ExportPath + S.VolumeViewModel.Name + "/" + S.Number.ToString("D3") + "/Tiles/" + Downsample.ToString("D3") + "/";
 
                 System.IO.DirectoryInfo dirInfo;
-                if (System.IO.Directory.Exists(Path) == false)
-                    dirInfo = System.IO.Directory.CreateDirectory(Path);
+                if (System.IO.Directory.Exists(path) == false)
+                    dirInfo = System.IO.Directory.CreateDirectory(path);
                 else
-                    dirInfo = new System.IO.DirectoryInfo(Path);
+                    dirInfo = new System.IO.DirectoryInfo(path);
 
                 dirInfo.Attributes &= ~System.IO.FileAttributes.ReadOnly;
 
@@ -934,15 +928,14 @@ namespace Viking.UI.Controls
                 Size TileImageSize = new Size(512, 512);
 
                 Size TileWorldSize = new Size(TileImageSize.Width * Downsample,
-                                              TileImageSize.Height * Downsample);
+                                                TileImageSize.Height * Downsample);
 
                 //Figure out how many tiles to expect
                 Size TileDim = new Size((int)Math.Ceiling(mapping.ControlBounds.Width / (TileImageSize.Width * Downsample)),
                                         (int)Math.Ceiling(mapping.ControlBounds.Height / (TileImageSize.Height * Downsample)));
 
                 Scene TileScene = new VikingXNA.Scene(new Viewport(0, 0, TileImageSize.Width, TileImageSize.Height), new Camera());
-                TileScene.Camera.Downsample = Downsample;
-                this.Scene = TileScene;
+                TileScene.Camera.Downsample = Downsample; 
 
                 int numTiles = TileDim.Width * TileDim.Height;
                 int iTile = 0;
@@ -952,7 +945,7 @@ namespace Viking.UI.Controls
                 int LoopCounter = 0;
                 int MaxTilesQueued = 256;
 
-                Queue<System.Threading.Tasks.Task> listTasks = new Queue<System.Threading.Tasks.Task>(MaxTilesQueued);
+                List<Task> listTasks = new List<Task>(MaxTilesQueued);
 
                 for (int iX = 0; iX < TileDim.Width; iX++)
                 {
@@ -963,7 +956,7 @@ namespace Viking.UI.Controls
                         LoopCounter++;
                         double Y = (iY * TileWorldSize.Height) + (TileWorldSize.Height / 2);
 
-                        string Filename = Path + string.Format("X{0}_Y{1}.png", iX.ToString("D3"), iY.ToString("D3"));
+                        string Filename = path + $"X{iX.ToString("D3")}_Y{iY.ToString("D3")}.png";
 
                         //Assume images already on disk are good
                         if (System.IO.File.Exists(Filename))
@@ -979,25 +972,22 @@ namespace Viking.UI.Controls
                         }
 
                         TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
+
                         if (false == await SceneHasTextures(TileScene, S.Number, token))
                             continue;
 
-                        Task T = ExportScene(TileScene, (float)X, (float)Y, S.Number, Filename, token);
-                        listTasks.Enqueue(T);
+                        Task T = RenderSceneToTexture(TileScene, (float)X, (float)Y, S.Number, false, false, token).ContinueWith(t => t.Result.SaveAsync(Filename, System.Drawing.Imaging.ImageFormat.Png), token);
+                        listTasks.Add(T);
 
                         //Throttle tile creation so we don't exceed our memory limits
-                        while (listTasks.Count > 0 && (listTasks.Count > MaxTilesQueued || listTasks.Peek().IsCompleted))
+                        
+                        while (listTasks.Count > 0 && (listTasks.Count > MaxTilesQueued))
                         {
-                            System.Threading.Tasks.Task topTask = listTasks.Dequeue();
-                            if (topTask.IsCompleted)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                topTask.Wait();
-                            }
+                            var completedTask = await Task.WhenAny(listTasks.ToArray());
+                            listTasks.Remove(completedTask);
                         }
+                        
+                        Application.DoEvents();
 
                         if (progressForm.DialogResult == DialogResult.Cancel)
                             break;
@@ -1005,9 +995,14 @@ namespace Viking.UI.Controls
                         //Do events once in a while
                         if (LoopCounter % EventInterval == 0)
                         {
-                            progressForm.ShowProgress("Section " + S.Name + "\nFrame ID: " + Filename, (double)iTile / (double)numTiles);
-                            Parent.Invalidate();
+                            Parent.BeginInvoke( new Action(() =>
+                            {
+                                progressForm.ShowProgress("Section " + S.Name + "\nFrame ID: " + Filename, (double)iTile / (double)numTiles);
+                                Parent.Invalidate();
+                            }));
+                             
                             Application.DoEvents();
+                                
 
                             //System.Windows.Forms.Application.DoEvents();
                             if (progressForm.DialogResult == DialogResult.Cancel)
@@ -1038,38 +1033,26 @@ namespace Viking.UI.Controls
                 }
 
                 System.IO.StreamWriter stream = null;
-                try
-                {
-                    string XMLString = string.Format("<?xml version=\"1.0\"?>\n<Level FilePostfix=\".png\" FilePrefix=\"\" Downsample=\"{0}\" TileYDim=\"{1}\" TileXDim=\"{2}\" GridDimY=\"{3}\" GridDimX=\"{4}\"/>", Downsample.ToString(), TileImageSize.Width, TileImageSize.Height, TileDim.Height.ToString(), TileDim.Width.ToString());
-                    string XMLPath = Path + string.Format("{0}.xml", S.Number.ToString("D4"));
-                    stream = System.IO.File.CreateText(XMLPath);
-                    stream.Write(XMLString);
-                }
-                finally
-                {
-                    if (stream != null)
-                    {
-                        stream.Close();
-                        stream = null;
-                    }
-
-                    this.Scene = originalScene;
-                }
-
+                
+                string XMLString =
+                    $"<?xml version=\"1.0\"?>\n<Level FilePostfix=\".png\" FilePrefix=\"\" Downsample=\"{Downsample.ToString()}\" TileYDim=\"{TileImageSize.Width}\" TileXDim=\"{TileImageSize.Height}\" GridDimY=\"{TileDim.Height.ToString()}\" GridDimX=\"{TileDim.Width.ToString()}\"/>";
+                string XMLPath = path + $"{S.Number:D4}.xml";
+                using(stream = System.IO.File.CreateText(XMLPath))
+                    await stream.WriteAsync(XMLString);
+                
                 if (progressForm.DialogResult == DialogResult.Cancel)
-                    break;
-
+                    break; 
             }
 
-            progressForm.Close();
-
-            this.AsynchTextureLoad = true;
-            this.ShowOverlays = OriginalOverlay;
+            progressForm.BeginInvoke(new Action(() => progressForm.Close())); 
         }
 
-        private async Task ExportScene(VikingXNA.Scene TileScene, float CenterX, float CenterY, int Z, string Filename, CancellationToken token)
+        private async Task<RenderTarget2D> RenderSceneToTexture(VikingXNA.Scene TileScene, float CenterX, float CenterY, int Z, bool showOverlays, bool asyncTextureLoad, CancellationToken token)
         {
-            await PreloadSceneTexturesAsync(TileScene, Z, false, token);
+            if(!asyncTextureLoad)
+                await PreloadSceneTexturesAsync(TileScene, Z, asyncTextureLoad, token);
+            else
+                PreloadSceneTexturesAsync(TileScene, Z, asyncTextureLoad, token);
             /*
             Task preloadTask = await PreloadSceneTexturesAsync(TileScene, Z, false);
             do
@@ -1077,40 +1060,47 @@ namespace Viking.UI.Controls
                 Application.DoEvents();
             }
             while (preloadTask.IsCompleted == false && preloadTask.IsFaulted == false && preloadTask.IsCanceled == false);
-             */
-            Task T = null;
-            Scene originalScene = this.Scene;
-            bool OriginalOverlays = this.ShowOverlays;
-            bool AsynchTextureLoad = this.AsynchTextureLoad;
+            */   
             SectionViewModel originalSection = this.Section;
 
             this.Section = State.volume.SectionViewModels[Z];
 
             GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
             TileScene.Camera.LookAt = new Vector2(CenterX, CenterY);
-             
-            this.Scene = TileScene;
+              
             RenderTarget2D renderTargetTile = new RenderTarget2D(graphicsDevice, TileScene.Viewport.Width, TileScene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
 
-            Draw(TileScene, renderTargetTile);
+            // Use TaskCompletionSource to handle the asynchronous operation
+            var taskCompletionSource = new TaskCompletionSource<bool>();
+            var result = this.BeginInvoke(new Action(() => {
+                var originalScene = this.Scene;
+                try
+                {
+                    var originalShowOverlays = this.ShowOverlays; 
+                    this.ShowOverlays = showOverlays;
+                    Draw(TileScene, renderTargetTile);
+                    //Obtain texture from renderTarget
+                    graphicsDevice.SetRenderTarget(null);
+                    taskCompletionSource.SetResult(true);
+                      
+                    this.ShowOverlays = originalShowOverlays;
+                }
+                catch (Exception ex)
+                {
+                    // Mark the task as faulted if an exception occurs
+                    taskCompletionSource.SetException(ex);
+                }
+                finally
+                {
+                    this.Scene = originalScene;
+                }
+            }));
 
-            //Obtain texture from renderTarget
-            graphicsDevice.SetRenderTarget(null);
-
-            T = Task.Run(() =>
-            {
-                BmpWriter.TextureToBmpAsync(renderTargetTile, Filename);
-                renderTargetTile.Dispose();
-                renderTargetTile = null;
-            });
-
-            this.ShowOverlays = OriginalOverlays;
-            this.AsynchTextureLoad = AsynchTextureLoad;
-            this.Scene = originalScene;
-            this.Section = originalSection;
-
-            return;
-        }
+            await taskCompletionSource.Task; 
+            
+            return renderTargetTile;
+            
+        } 
 
         protected void InitGraphicsDeviceForDraw(GraphicsDevice graphicsDevice)
         {
@@ -1330,7 +1320,6 @@ namespace Viking.UI.Controls
 
             BlendState OriginalBlendState = graphicsDevice.BlendState;
 
-
             double HalfWidth = Bounds.Width / 2;
             double HalfHeight = Bounds.Height / 2;
             GridVector2 BotLeft = new GridVector2(Bounds.Center.X - HalfWidth, Bounds.Center.Y + HalfHeight);
@@ -1350,25 +1339,28 @@ namespace Viking.UI.Controls
             StatusChannels = Channelset;
             State.CurrentMode = this.CurrentChannel;
 
-            Texture backgroundSection = null;
+            Texture backgroundSectionTexture = null;
             Texture ChannelOverlay = null;
             if (Channelset.Length == 0)
             {
                 tileLayoutEffect.TileColor = new Microsoft.Xna.Framework.Color(1f, 1f, 1f, 1);
                 tileLayoutEffect.RenderToGreyscale();
 
-                backgroundSection = DrawSection(graphicsDevice, this.Section.section, this.CurrentChannel, scene);
+                backgroundSectionTexture = DrawSection(graphicsDevice, this.Section.section, this.CurrentChannel, scene);
             }
             else
             {
                 //Walk through each channel and draw the section
-                backgroundSection = DrawSectionsWithChannels(graphicsDevice, Channelset, scene, out ChannelOverlay);
+                backgroundSectionTexture = DrawSectionsWithChannels(graphicsDevice, Channelset, scene, out ChannelOverlay);
             }
+            
+            //Save the rendering of the background texture only in case an overlay like auto-segmentation needs it.
+            
 
-            //OK, enable stencil buffer.  
+            //Enable stencil buffer.  
             graphicsDevice.SetRenderTargets(originalRenderTargets);
 
-            this.channelOverlayEffect.SetEffectTextures(backgroundSection, ChannelOverlay);
+            this.channelOverlayEffect.SetEffectTextures(backgroundSectionTexture, ChannelOverlay);
 
             //this.channelOverlayEffect.BackgroundTexture = backgroundSection;
             //this.channelOverlayEffect.OverlayTexture = ChannelOverlay;
@@ -1380,7 +1372,6 @@ namespace Viking.UI.Controls
             //Set a standard starting state for all overlay modules
             graphicsDevice.DepthStencilState = OverlayBackgroundDepthState;
             graphicsDevice.ReferenceStencil = 1;
-
 
             if (!ShowOnlyOverlays)
             {
@@ -1398,7 +1389,7 @@ namespace Viking.UI.Controls
             //            List<RenderTarget2D> OverlayList = new List<RenderTarget2D>(listOverlays.Length);
             if (ShowOverlays)
             {
-                UpdateLumaTextureForOverlayEffects(backgroundSection);
+                UpdateLumaTextureForOverlayEffects(backgroundSectionTexture);
                 //                List<Vector4> listChannelColors = new List<Vector4>();
                 //Vector4 white = new Microsoft.Xna.Framework.Color(1, 1, 1, 0).ToVector4(); //Use alpha=0 so we blend color with background by default
                 //                Vector4 white = Microsoft.Xna.Framework.Color.White.ToVector4();
@@ -1416,9 +1407,10 @@ namespace Viking.UI.Controls
                     BlendState startingBlendState = graphicsDevice.BlendState;
                     DepthStencilState startingDepthState = graphicsDevice.DepthStencilState;
 #endif
-                    overlayObj.Draw(graphicsDevice, scene, backgroundSection, ChannelOverlay, ref NextStencilValue);
+                    overlayObj.Draw(graphicsDevice, scene, backgroundSectionTexture, ChannelOverlay, ref NextStencilValue);
 #if DEBUG
-                    System.Diagnostics.Debug.Assert(startingBlendState == graphicsDevice.BlendState, string.Format("Blend state changed by overlay extension draw method {0}", overlayObj.ToString()));
+                    System.Diagnostics.Debug.Assert(startingBlendState == graphicsDevice.BlendState,
+                        $"Blend state changed by overlay extension draw method {overlayObj.ToString()}");
                     //Stencil reference can change on depthstate, so ignore check for now
                     //System.Diagnostics.Debug.Assert(startingDepthState == graphicsDevice.DepthStencilState, string.Format("Depth state changed by overlay extension draw method {0}", overlayObj.ToString()));
 #endif
@@ -1461,10 +1453,10 @@ namespace Viking.UI.Controls
             graphicsDevice.Textures[6] = null;
             graphicsDevice.Textures[7] = null;
 
-            if (backgroundSection != null)
+            if (backgroundSectionTexture != null)
             {
-                backgroundSection.Dispose();
-                backgroundSection = null;
+                backgroundSectionTexture.Dispose();
+                backgroundSectionTexture = null;
             }
 
             if (ChannelOverlay != null)
@@ -1551,10 +1543,10 @@ namespace Viking.UI.Controls
         /// </summary>
         /// <param name="scene"></param>
         /// <param name="Z"></param>
-        /// <param name="AsyncTextureLoad">If this is false we only load the high resolution textures because the scene won't be drawn until all textures are loaded</param>
+        /// <param name="HighestResolutionOnly">If this is true we only load the high resolution textures.  This is used when the scene should not be drawn until all textures are loaded and there is no reason to load intermediate textures.
         /// <param name="token"></param>
         /// <returns></returns>
-        protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool AsyncTextureLoad, CancellationToken token)
+        protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool HighestResolutionOnly, CancellationToken token)
         {
             List<Task<Texture2D>> listGetTextureTasks = new List<Task<Texture2D>>();
             List<TileView> listTileViewModels = new List<ViewModels.TileView>();
@@ -1581,7 +1573,7 @@ namespace Viking.UI.Controls
                 int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
 
                 //If we aren't loading asynchronously only load the hi-res textures since we are waiting for completion
-                if (!AsyncTextureLoad)
+                if (HighestResolutionOnly)
                     DownsamplesToRender = new int[] { DownsamplesToRender.Last() };
 
                 //Get all of the visible tiles
@@ -1633,17 +1625,12 @@ namespace Viking.UI.Controls
                     }
                 }
             }
-
-
-            if (!AsyncTextureLoad)
-            {                 
-                foreach(var t in listGetTextureTasks)
-                {
-                    await t;
-                }
-                //while (!AllTileViewsHaveTexture(listTileViewModels))
-                //    Application.DoEvents();
-            }
+             
+            while(listGetTextureTasks.Count > 0)
+            {
+                var completedTask = await Task.WhenAny(listGetTextureTasks); 
+                listGetTextureTasks.Remove(completedTask); 
+            }   
         }
 
         private bool AllTileViewsHaveTexture(IList<TileView> listTiles)
@@ -1690,6 +1677,8 @@ namespace Viking.UI.Controls
 
             //Get all of the visible tiles
             var visibleTiles = mapping.VisibleTiles(scene.VisibleWorldBounds, scene.Camera.Downsample);
+            
+            PreloadSceneTexturesAsync
 
             RenderTarget2D renderTarget = new RenderTarget2D(graphicsDevice,
                                               scene.Viewport.Width,
@@ -1740,6 +1729,9 @@ namespace Viking.UI.Controls
                                                                                                     SectionViewerControl.TileCacheFullPath(section, t.TextureCacheFilePath),
                                                                                                     mapping.Name,
                                                                                                     0);
+                    
+                    if(tileView is null)
+                        continue; 
 
                     //Don't request and draw a bunch of levels that cover the entire screen.  Saves time if we are at high magnification
                     if (tileView.HasTexture == false && tileView.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
@@ -1802,7 +1794,7 @@ namespace Viking.UI.Controls
                     using (TriangulationViewModel stosMeshViewModel = new TriangulationViewModel(transform as Geometry.IControlPointTriangulation))
                     {
                         stosMeshViewModel.DrawMesh(graphicsDevice, basicEffect);
-                        stosMeshViewModel.DrawLabels(this);
+                        stosMeshViewModel.DrawLabels(this, scene);
                     }
                 }
             }

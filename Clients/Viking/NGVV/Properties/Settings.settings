@@ -42,7 +42,7 @@
       <Value Profile="(Default)">16</Value>
     </Setting>
     <Setting Name="LastScreenshotPath" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">%UserProfile%\Pictures</Value>
     </Setting>
     <Setting Name="LastScreenshotIncludeOverlays" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
@@ -83,6 +83,12 @@
     </Setting>
     <Setting Name="FrameExportPath" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ScreenShotFilePrefix" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ScreenShot</Value>
+    </Setting>
+    <Setting Name="ScreenShotNumber" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">1</Value>
     </Setting>
   </Settings>
 </SettingsFile>

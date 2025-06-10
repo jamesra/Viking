@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using VikingXNA;
 using VikingXNAGraphics;
 
 namespace Viking.ViewModels
@@ -169,10 +170,10 @@ namespace Viking.ViewModels
             return labels;
         }
 
-        public void DrawLabels(Viking.UI.Controls.SectionViewerControl _Parent)
+        public void DrawLabels(Viking.UI.Controls.SectionViewerControl _Parent, Scene scene)
         {
 
-            LabelView.Draw(_Parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, _Parent.Scene, this.Labels);
+            LabelView.Draw(_Parent.spriteBatch, VikingXNAGraphics.Global.DefaultFont, scene, this.Labels);
         }
 
 

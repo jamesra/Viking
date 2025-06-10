@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace Viking.UI.Forms
@@ -14,9 +15,11 @@ namespace Viking.UI.Forms
 
         public void ShowProgress(string Message, double NewProgress)
         {
-            LabelInfo.Text = Message;
-            this.Progress = NewProgress;
-            PanelProgress.Invalidate();
+            this.BeginInvoke( new Action( () => {
+                LabelInfo.Text = Message;
+                this.Progress = NewProgress;
+                PanelProgress.Invalidate();
+            }));
         }
 
         private void PanelProgress_Paint(object sender, PaintEventArgs e)

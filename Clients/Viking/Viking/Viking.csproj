@@ -18,7 +18,7 @@
     <ManifestCertificateThumbprint>51290C7919FEE3D3A1BD4BC827690436EC4831B7</ManifestCertificateThumbprint>
     <ManifestKeyFile>Viking_1_TemporaryKey.pfx</ManifestKeyFile>
     <GenerateManifests>true</GenerateManifests>
-    <SignManifests>true</SignManifests>
+    <SignManifests>false</SignManifests>
     <TargetZone>LocalIntranet</TargetZone>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
     <FileUpgradeFlags>
@@ -28,7 +28,7 @@
     <TargetFrameworkProfile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <PublishUrl>C:\Src\git\VikingLegacy\PublishTest\</PublishUrl>
+    <PublishUrl>C:\src\git\VikingLegacy\Publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Web</InstallFrom>
     <UpdateEnabled>true</UpdateEnabled>
@@ -38,7 +38,7 @@
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <InstallUrl>https://connectomes.utah.edu/Software/VikingCertTest/</InstallUrl>
+    <InstallUrl>https://connectomes.utah.edu/Software/Viking/</InstallUrl>
     <SupportUrl>http://connectomes.utah.edu/</SupportUrl>
     <ErrorReportUrl>http://connectomes.utah.edu/client/installationerror.html</ErrorReportUrl>
     <TargetCulture>en</TargetCulture>
@@ -48,7 +48,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>332</ApplicationRevision>
+    <ApplicationRevision>338</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -259,11 +259,6 @@
     <BootstrapperPackage Include="Microsoft.SqlServer.SQLSysClrTypes.12.0.x86">
       <Visible>False</Visible>
       <ProductName>Microsoft® System CLR Types for SQL Server® 2014 %28x86%29</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Windows.Installer.4.5">
-      <Visible>False</Visible>
-      <ProductName>Windows Installer 4.5</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
     <BootstrapperPackage Include="Microsoft.Xna.Framework.4.0">

@@ -181,7 +181,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("%UserProfile%\\Pictures")]
         public string LastScreenshotPath {
             get {
                 return ((string)(this["LastScreenshotPath"]));
@@ -300,6 +300,30 @@ namespace Viking.Properties {
             }
             set {
                 this["FrameExportPath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ScreenShot")]
+        public string ScreenShotFilePrefix {
+            get {
+                return ((string)(this["ScreenShotFilePrefix"]));
+            }
+            set {
+                this["ScreenShotFilePrefix"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int ScreenShotNumber {
+            get {
+                return ((int)(this["ScreenShotNumber"]));
+            }
+            set {
+                this["ScreenShotNumber"] = value;
             }
         }
     }

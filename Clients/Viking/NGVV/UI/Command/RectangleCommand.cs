@@ -59,6 +59,9 @@ namespace Viking.UI.Commands
         {
             try
             {
+                if(NewPosition == Origin)
+                    return false;
+
                 MyRect = new GridRectangle(NewPosition, Origin);
                 return true;
             }

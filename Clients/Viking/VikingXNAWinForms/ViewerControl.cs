@@ -13,54 +13,17 @@ namespace VikingXNAWinForms
 {
     public class ViewerControl : GraphicsDeviceControl
     {
-        public RoundLineCode.RoundLineManager LineManager
-        {
-            get
-            {
-                return DeviceEffectsStore<RoundLineCode.RoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
-            }
+        public RoundLineCode.RoundLineManager LineManager => DeviceEffectsStore<RoundLineCode.RoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
 
-        }
+        public RoundLineCode.LumaOverlayRoundLineManager LumaOverlayLineManager => DeviceEffectsStore<RoundLineCode.LumaOverlayRoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
 
-        public RoundLineCode.LumaOverlayRoundLineManager LumaOverlayLineManager
-        {
-            get
-            {
-                return DeviceEffectsStore<RoundLineCode.LumaOverlayRoundLineManager>.GetOrCreateForDevice(this.Device, this.Content);
-            }
-        }
+        public RoundCurve.CurveManager CurveManager => DeviceEffectsStore<CurveManager>.GetOrCreateForDevice(this.Device, this.Content);
 
-        public RoundCurve.CurveManager CurveManager
-        {
-            get
-            {
-                return DeviceEffectsStore<CurveManager>.GetOrCreateForDevice(this.Device, this.Content);
-            }
-        }
+        public RoundCurve.CurveManagerHSV LumaOverlayCurveManager => DeviceEffectsStore<CurveManagerHSV>.GetOrCreateForDevice(this.Device, this.Content);
 
-        public RoundCurve.CurveManagerHSV LumaOverlayCurveManager
-        {
-            get
-            {
-                return DeviceEffectsStore<CurveManagerHSV>.GetOrCreateForDevice(this.Device, this.Content);
-            }
-        }
+        public PolygonOverlayEffect PolygonOverlayEffect => DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.Device, this.Content);
 
-        public PolygonOverlayEffect PolygonOverlayEffect
-        {
-            get
-            {
-                return DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.Device, this.Content);
-            }
-        }
-
-        public OverlayShaderEffect AnnotationOverlayEffect
-        {
-            get
-            {
-                return DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(this.Device, this.Content);
-            }
-        }
+        public OverlayShaderEffect AnnotationOverlayEffect => DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(this.Device, this.Content);
 
         public BasicEffect basicEffect;
 
@@ -105,7 +68,7 @@ namespace VikingXNAWinForms
         /// </summary>
         public Scene Scene
         {
-            get { return _scene; }
+            get => _scene;
             set
             {
                 if (_scene == value)
@@ -125,13 +88,7 @@ namespace VikingXNAWinForms
             
         }
 
-        private Matrix worldMatrix
-        {
-            get
-            {
-                return Matrix.Identity;
-            }
-        }
+        private Matrix worldMatrix => Matrix.Identity;
 
         /// <summary>
         /// The current world view projection matrix for the camera
@@ -143,13 +100,7 @@ namespace VikingXNAWinForms
         /// </summary>
         public bool AsynchTextureLoad = true;
 
-        public static float MaxImageDimension
-        {
-            get
-            {
-                return 1000000;
-            }
-        }
+        public static float MaxImageDimension => 1000000;
 
         /// <summary>
         /// Initializes the transforms used for the 3D model.
@@ -254,14 +205,8 @@ namespace VikingXNAWinForms
 
         public virtual double Downsample
         {
-            set
-            {
-                Camera.Downsample = value;
-            }
-            get
-            {
-                return Camera.Downsample;
-            }
+            set => Camera.Downsample = value;
+            get => Camera.Downsample;
         }
 
         /// <summary>
@@ -352,6 +297,11 @@ namespace VikingXNAWinForms
             this.PolygonOverlayEffect.WorldViewProjMatrix = worldViewProj;
         }
 
+        /// <summary>
+        /// Render the scene to the specific target.  Calls the normal Draw(scene) method after setting the render target to the passed variable.
+        /// </summary>
+        /// <param name="drawnScene"></param>
+        /// <param name="renderTarget"></param>
         protected void Draw(Scene drawnScene, RenderTarget2D renderTarget)
         {
             Device.SetRenderTarget(renderTarget);
@@ -363,7 +313,6 @@ namespace VikingXNAWinForms
             {
                 UpdateSceneViewport(drawnScene);
                 Device.Viewport = drawnScene.Viewport;
-
             }
 
             AnnotationOverlayEffect.RenderTargetSize = drawnScene.Viewport;
@@ -374,7 +323,6 @@ namespace VikingXNAWinForms
             {
                 Debug.Assert(renderTarget.Bounds.Width >= drawnScene.Viewport.Width &&
                              renderTarget.Bounds.Height >= drawnScene.Viewport.Height);
-
             }
 #endif
 

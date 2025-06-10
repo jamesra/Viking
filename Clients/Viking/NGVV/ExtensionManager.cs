@@ -221,6 +221,13 @@ namespace Viking.Common
                 //Check the module attributes and see if it is an extension module.
                 try
                 {
+                    // Check if the file is a valid .NET assembly
+                    if (!IsDotNetAssembly(FileName))
+                    {
+                        Trace.WriteLine($"Skipping non-.NET assembly file: {FileName}", "ExtMan");
+                        continue;
+                    }
+                    
                     Assembly A = Assembly.LoadFrom(FileName);
 
                     VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
@@ -238,6 +245,26 @@ namespace Viking.Common
                     continue;
                 }
                 
+            }
+        }
+
+        private static bool IsDotNetAssembly(string filePath)
+        {
+            try
+            {
+                // Attempt to load the assembly name to check if it's a valid .NET assembly
+                AssemblyName.GetAssemblyName(filePath);
+                return true;
+            }
+            catch (BadImageFormatException)
+            {
+                // Not a valid .NET assembly
+                return false;
+            }
+            catch (FileNotFoundException)
+            {
+                // File not found, treat as invalid
+                return false;
             }
         }
 

@@ -49,7 +49,7 @@ namespace Viking.UI.Forms
                 this.textPath.Text = System.Environment.CurrentDirectory;
             }
             else
-                this.textPath.Text = Path;
+                this.textPath.Text = Environment.ExpandEnvironmentVariables(Path);
         }
 
         private void FrameCapturesForm_KeyDown(object sender, KeyEventArgs e)
@@ -174,7 +174,7 @@ namespace Viking.UI.Forms
                 DialogResult result = browserDlg.ShowDialog(this);
                 if (result == DialogResult.OK)
                 {
-                    this.textPath.Text = browserDlg.SelectedPath;
+                    this.textPath.Text = Environment.ExpandEnvironmentVariables(browserDlg.SelectedPath);
                 }
             }
 

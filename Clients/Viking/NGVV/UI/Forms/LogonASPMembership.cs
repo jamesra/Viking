@@ -217,7 +217,14 @@ namespace Viking.UI.Forms
 
         private void SetUpdateText(string text)
         {
-            this.BeginInvoke(new System.Action(() => update_label.Text = text));
+            try
+            { 
+                this.BeginInvoke(new System.Action(() => update_label.Text = text));
+            }
+            catch(System.InvalidOperationException)
+            {
+                //This can occur if this call occurs before the form is completely initialized
+            }
         }
 
         private void Logon_Load(object sender, EventArgs e)
