@@ -361,7 +361,7 @@ namespace VikingXNAWinForms
                 {
                     sampleState = new SamplerState
                     {
-                        AddressU = TextureAddressMode.Clamp,    //Compatability with Reach
+                        AddressU = TextureAddressMode.Clamp,    //Compatibility with Reach
                         AddressV = TextureAddressMode.Clamp
                     };
                     Device.SamplerStates[0] = sampleState;

@@ -49,17 +49,28 @@ namespace Viking.VolumeModel
         /// </summary>
         public ChannelInfo[] ChannelInfoArray
         {
-            get { return _ChannelInfo; }
+            get => _ChannelInfo;
             set
             {
                 if (null == value)
                 {
-                    _ChannelInfo = new ChannelInfo[0];
+                    _ChannelInfo = Array.Empty< ChannelInfo >();
                     return;
                 }
 
                 _ChannelInfo = value;
             }
+        }
+
+        /// <summary>
+        /// Getter for channels
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public bool TryGetChannelInfo(string channel, out ChannelInfo result)
+        {
+            result = this._ChannelInfo.FirstOrDefault(c => c.ChannelName == channel);
+            return !(result is null);
         }
 
         /// <summary>
@@ -116,13 +127,7 @@ namespace Viking.VolumeModel
         /// </summary>
         public List<string> VolumeTransformList = new List<string>();
 
-        public UnitsAndScale.IAxisUnits XYScale
-        {
-            get
-            {
-                return this.volume.DefaultXYScale;
-            }
-        }
+        public UnitsAndScale.IAxisUnits XYScale => this.volume.DefaultXYScale;
 
         /// <summary>
         /// Current the section number padded with four digits.  Could be a different name, 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -25,31 +26,48 @@ namespace Viking.ViewModels
 
 
         [Column("Name")]
-        public string Name { get { return section.Name; } }
+        public string Name => section.Name;
 
         [Column("Number")]
-        public int Number { get { return section.Number; } }
+        public int Number => section.Number;
 
         [Column("Notes")]
-        public string Notes { get { return section.Notes; } }
+        public string Notes => section.Notes;
 
-        public string Path { get { return section.Path; } }
+        public string Path => section.Path;
 
-        public string SubPath { get { return section.SectionSubPath; } }
+        public string SubPath => section.SectionSubPath;
 
         public override string ToString()
         {
             return section.ToString();
         }
 
-        public string DefaultChannel { get { return section.DefaultChannel; } }
-        public IList<string> Channels { get { return section.Channels; } }
+        public string DefaultChannel => section.DefaultChannel;
+        public IList<string> Channels => section.Channels;
 
-        public string DefaultPyramidTransform { get { return section.DefaultPyramidTransform; } }
-        public string DefaultPyramid { get { return section.DefaultPyramid; } }
-        public List<string> TilesetNames { get { return section.TilesetNames; } }
-        public List<string> PyramidTransformNames { get { return section.PyramidTransformNames; } }
-        public SortedList<string, Pyramid> ImagePyramids { get { return section.ImagePyramids; } }
+        public string DefaultPyramidTransform => section.DefaultPyramidTransform;
+        public string DefaultPyramid => section.DefaultPyramid;
+        public List<string> TilesetNames => section.TilesetNames;
+        public List<string> PyramidTransformNames => section.PyramidTransformNames;
+        public SortedList<string, Pyramid> ImagePyramids => section.ImagePyramids;
+
+
+        /// <summary>
+        /// Fetch channels. The channel may not exist if it is a default channel.  Failing to fetch a mapping will determine that case.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public bool TryGetChannelInfo(string channel, out ChannelInfo result)
+        {
+            if(section.ChannelInfoArray.Length == 0)
+            { 
+                result = VolumeViewModel.DefaultChannels.FirstOrDefault(c => c.ChannelName == channel);
+                return !(result is null);
+            }
+            
+            return this.section.TryGetChannelInfo(channel, out result);
+        }
 
         /// <summary>
         /// The currently displayed channels
@@ -70,13 +88,13 @@ namespace Viking.ViewModels
                 }
                 return section.ChannelInfoArray;
             }
-            set { section.ChannelInfoArray = value; }
+            set => section.ChannelInfoArray = value;
         }
 
         /// <summary>
         /// The names of all channels supported by this section
         /// </summary>
-        public List<string> ChannelNames { get { return section.ChannelNames; } }
+        public List<string> ChannelNames => section.ChannelNames;
 
         #region Reference Sections
 
@@ -190,7 +208,7 @@ namespace Viking.ViewModels
         #endregion
 
         private readonly VolumeViewModel _VolumeViewModel;
-        public VolumeViewModel VolumeViewModel { get { return _VolumeViewModel; } }
+        public VolumeViewModel VolumeViewModel => _VolumeViewModel;
 
         public SectionViewModel(VolumeViewModel Volume, Section section)
         {
@@ -217,10 +235,7 @@ namespace Viking.ViewModels
             }
         }
 
-        string IUIObjectBasic.ToolTip
-        {
-            get { return this.ToString(); }
-        }
+        string IUIObjectBasic.ToolTip => this.ToString();
 
         void IUIObjectBasic.Save()
         {
@@ -238,62 +253,50 @@ namespace Viking.ViewModels
 
         event System.ComponentModel.PropertyChangedEventHandler IUIObject.ValueChanged
         {
-            add { OnValueChanged += value; }
-            remove { OnValueChanged -= value; }
+            add => OnValueChanged += value;
+            remove => OnValueChanged -= value;
         }
 
         event EventHandler IUIObject.BeforeDelete
         {
-            add { OnBeforeDelete += value; }
-            remove { OnBeforeDelete -= value; }
+            add => OnBeforeDelete += value;
+            remove => OnBeforeDelete -= value;
         }
 
         event EventHandler IUIObject.AfterDelete
         {
-            add { OnAfterDelete += value; }
-            remove { OnAfterDelete -= value; }
+            add => OnAfterDelete += value;
+            remove => OnAfterDelete -= value;
         }
 
         event EventHandler IUIObject.BeforeSave
         {
-            add { OnBeforeSave += value; }
-            remove { OnBeforeSave -= value; }
+            add => OnBeforeSave += value;
+            remove => OnBeforeSave -= value;
         }
 
         event EventHandler IUIObject.AfterSave
         {
-            add { OnAfterSave += value; }
-            remove { OnAfterSave -= value; }
+            add => OnAfterSave += value;
+            remove => OnAfterSave -= value;
         }
 
         event System.Collections.Specialized.NotifyCollectionChangedEventHandler IUIObject.ChildChanged
         {
-            add { OnChildChanged += value; }
-            remove { OnChildChanged -= value; }
+            add => OnChildChanged += value;
+            remove => OnChildChanged -= value;
         }
 
         event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
         {
-            add
-            {
-                throw new NotImplementedException();
-            }
+            add => throw new NotImplementedException();
 
-            remove
-            {
-                throw new NotImplementedException();
-            }
+            remove => throw new NotImplementedException();
         }
 
-        System.Drawing.Image IUIObject.SmallThumbnail
-        {
-            get { throw new NotImplementedException(); }
-        }
+        System.Drawing.Image IUIObject.SmallThumbnail => throw new NotImplementedException();
 
-        Type[] IUIObject.AssignableParentTypes
-        {
-            get { return new Type[0]; }
-        }
+        Type[] IUIObject.AssignableParentTypes => new Type[0];
 
         void IUIObject.SetParent(IUIObject parent)
         {
@@ -305,17 +308,9 @@ namespace Viking.ViewModels
             throw new NotImplementedException();
         }
 
-        int IUIObject.TreeImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
+        int IUIObject.TreeImageIndex => throw new NotImplementedException();
 
-        int IUIObject.TreeSelectedImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-
+        int IUIObject.TreeSelectedImageIndex => throw new NotImplementedException();
 
         #endregion
 
@@ -330,13 +325,7 @@ namespace Viking.ViewModels
             await this.section.PrepareTransform(transform);
         }
 
-        public IVolumeToSectionTransform ActiveSectionToVolumeTransform
-        {
-            get
-            {
-                return this._VolumeViewModel.GetSectionToVolumeTransform(this.section.Number);
-            }
-        }
+        public IVolumeToSectionTransform ActiveSectionToVolumeTransform => this._VolumeViewModel.GetSectionToVolumeTransform(this.section.Number);
 
 
         /// <summary>
@@ -345,7 +334,7 @@ namespace Viking.ViewModels
         protected string _ActiveTileTransform;
         public string ActiveTileTransform
         {
-            get { return _ActiveTileTransform; }
+            get => _ActiveTileTransform;
             set
             {
                 bool NewValue = _ActiveTileTransform != value;
@@ -367,7 +356,7 @@ namespace Viking.ViewModels
         protected string _ActiveChannel;
         public string ActiveChannel
         {
-            get { return _ActiveChannel; }
+            get => _ActiveChannel;
             set
             {
                 bool NewValue = value != _ActiveChannel;

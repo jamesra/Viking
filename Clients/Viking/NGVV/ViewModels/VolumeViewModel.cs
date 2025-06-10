@@ -14,14 +14,11 @@ namespace Viking.ViewModels
 
         public readonly SortedList<int, SectionViewModel> SectionViewModels;
 
-        public string Name { get { return _Volume.Name; } }
+        public string Name => _Volume.Name;
 
-        public bool IsLocal { get { return _Volume.IsLocal; } }
+        public bool IsLocal => _Volume.IsLocal;
 
-        public UnitsAndScale.IAxisUnits DefaultXYScale
-        {
-            get { return _Volume.DefaultXYScale; }
-        }
+        public UnitsAndScale.IAxisUnits DefaultXYScale => _Volume.DefaultXYScale;
 
         public int DefaultSectionNumber
         {
@@ -39,17 +36,19 @@ namespace Viking.ViewModels
             }
         }
 
-        public string DefaultVolumeTransform { get { return _Volume.DefaultVolumeTransform; } }
+        public string DefaultVolumeTransform => _Volume.DefaultVolumeTransform;
 
-        public ChannelInfo[] DefaultChannels { get { return _Volume.DefaultChannels; } set { _Volume.DefaultChannels = value; } }
+        public ChannelInfo[] DefaultChannels { get => _Volume.DefaultChannels;
+            set => _Volume.DefaultChannels = value;
+        }
 
-        public string[] ChannelNames { get { return _Volume.ChannelNames; } }
+        public string[] ChannelNames => _Volume.ChannelNames;
 
-        public string[] TransformNames { get { return _Volume.Transforms.Keys.ToArray(); } }
+        public string[] TransformNames => _Volume.Transforms.Keys.ToArray();
 
-        public XElement VolumeElement { get { return _Volume.VolumeElement; } }
+        public XElement VolumeElement => _Volume.VolumeElement;
 
-        public bool UpdateServerVolumePositions { get { return _Volume.UpdateServerVolumePositions; } }
+        public bool UpdateServerVolumePositions => _Volume.UpdateServerVolumePositions;
 
         public VolumeViewModel(Volume volume)
         {
@@ -68,7 +67,7 @@ namespace Viking.ViewModels
             _ActiveVolumeTransform = this.DefaultVolumeTransform;
         }
 
-        public string Host { get { return _Volume.Host; } }
+        public string Host => _Volume.Host;
 
         public MappingBase GetTileMapping(string VolumeTransformName, int SectionNumber, string ChannelName, string SectionTransformName)
         {
@@ -124,7 +123,7 @@ namespace Viking.ViewModels
         protected string _ActiveVolumeTransform;
         public string ActiveVolumeTransform
         {
-            get { return _ActiveVolumeTransform; }
+            get => _ActiveVolumeTransform;
             set
             {
                 bool NewValue = value != _ActiveVolumeTransform;
@@ -139,12 +138,6 @@ namespace Viking.ViewModels
             }
         }
          
-        public bool UsingVolumeTransform
-        {
-            get
-            {
-                return ActiveVolumeTransform != null; 
-            }
-        } 
+        public bool UsingVolumeTransform => ActiveVolumeTransform != null;
     }
 }
