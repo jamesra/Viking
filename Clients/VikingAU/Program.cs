@@ -22,29 +22,26 @@ namespace Viking.AU
         [Option('v', "VolumeURL", Required = true, HelpText = "URL of VolumeXML file")]
         public string VolumeURL { get; set; }
 
-        [Option('u', "username", DefaultValue = "Anonymous", Required = false, HelpText = "URL of VolumeXML file")]
-        public string Username { get; set; }
+        [Option('u', "username", Required = false, HelpText = "URL of VolumeXML file")]
+        public string Username { get; set; } = "Anonymous";
 
-        [Option('p', "password", DefaultValue = "connectome", Required = false, HelpText = "URL of VolumeXML file")]
-        public string Password { get; set; }
+        [Option('p', "password",Required = false, HelpText = "URL of VolumeXML file")]
+        public string Password { get; set; } = "connectome";
 
-        [Option('c', "closed_interpolation_points", DefaultValue = 10, Required = false, HelpText = "Number of closed curve interpolation points")]
-        public int NumClosedInterpolationPoints { get; set; }
+        [Option('c', "closed_interpolation_points", Required = false, HelpText = "Number of closed curve interpolation points")]
+        public int NumClosedInterpolationPoints { get; set; } = 10;
 
-        [Option('o', "open_interpolation_points", DefaultValue = 3, Required = false, HelpText = "Number of open curve interpolation points")]
-        public int NumOpenInterpolationPoints { get; set; }
+        [Option('o', "open_interpolation_points", Required = false, HelpText = "Number of open curve interpolation points")]
+        public int NumOpenInterpolationPoints { get; set; } = 3;
 
-        [Option('s', "sections", DefaultValue = null, Required = false,  HelpText = "Section Numbers to update")]
-        public string SectionNumbersString { get; set; }
+        [Option('s', "sections", Required = false,  HelpText = "Section Numbers to update")]
+        public string SectionNumbersString { get; set; } = null;
 
-        [Option('t', "threads", DefaultValue = null, Required = false, HelpText = "Number of threads to process and submit updates on.  If VikingAU is reporting timeout errors lower this number.  If VikingAU isn't using 100% of the CPU you can try raising it.  Default value is the number of cores on the machine + 1")]
-        public int? NumThreads { get; set; }
-
-        [Option('h', "help", DefaultValue = false, Required = false, HelpText = "Show help")]
-        public bool ShowHelp { get; set; }
-
-        [Option('m', "translate", DefaultValue = null, Required = false, HelpText = "Translation file, json each array entry is <section #> <X> <Y> <datetime>")]
-        public string TranslateFile { get; set; }
+        [Option('t', "threads", Required = false, HelpText = "Number of threads to process and submit updates on.  If VikingAU is reporting timeout errors lower this number.  If VikingAU isn't using 100% of the CPU you can try raising it.  Default value is the number of cores on the machine + 1")]
+        public int? NumThreads { get; set; } = null;
+          
+        [Option('m', "translate", Required = false, HelpText = "Translation file, json each array entry is <section #> <X> <Y> <datetime>")]
+        public string TranslateFile { get; set; } = null;
 
         public IList<long> Sections
         {
@@ -57,12 +54,6 @@ namespace Viking.AU
             }
         }
 
-        [HelpOption]
-        public string GetUsage()
-        {
-            return CommandLine.Text.HelpText.AutoBuild(this,
-                (HelpText current) => HelpText.DefaultParsingErrorsHandler(this, current));
-        }
 
         private static bool IsNumberRange(string input)
         {
@@ -165,31 +156,35 @@ namespace Viking.AU
     }
 
     class Program
-    {
-        static readonly CommandLineOptions options = new CommandLineOptions();
+    { 
         private static readonly SemaphoreSlim ConsoleLock = new SemaphoreSlim(1);
 
         static SectionTranslations SectionTranslations = new SectionTranslations();
+         
 
         static async Task Main(string[] args)
-        {
-            var help = HelpText.AutoBuild(Program.options);
-
-            if (!CommandLine.Parser.Default.ParseArguments(args, Program.options))
-            {    
-                System.Console.WriteLine(help);
-                System.Console.ForegroundColor = ConsoleColor.Red;
-                System.Console.WriteLine("Unable to parse command line arguments, aborting");
-                System.Console.ResetColor();
-                return;
-            }
-
-            if (options.ShowHelp)
-            {
-                System.Console.WriteLine(help);
-                return;
-            }
-
+        {  
+            var parse_result = await CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args) 
+                .WithParsedAsync(RunAsync);
+             
+        }
+        //static void ShowErrors(IEnumerable<Error> errors)
+        //{ 
+        //    System.Console.WriteLine(help);
+        //    System.Console.ForegroundColor = ConsoleColor.Red;
+        //    System.Console.WriteLine("Unable to parse command line arguments, aborting");
+        //    foreach(Error e in errors)
+        //    {
+        //        Console.WriteLine(e.ToString());
+        //    }
+        //    System.Console.ResetColor();
+        //    return; 
+        //}
+        
+        
+        static async Task RunAsync(CommandLineOptions options)
+        { 
+            
             if (options.TranslateFile != null)
             {
                 SectionTranslations = SectionTranslations.CreateFromConfigFile(options.TranslateFile);
@@ -202,7 +197,7 @@ namespace Viking.AU
 
             ConsoleProgressReporter progressReporter = new AU.ConsoleProgressReporter();
 
-            State.Volume = new Volume(Program.options.VolumeURL, State.CachePath, progressReporter);
+            State.Volume = new Volume(options.VolumeURL, State.CachePath, progressReporter);
 
             var cancellationTokenSource = new CancellationTokenSource();
             await State.Volume.Initialize(cancellationTokenSource.Token, progressReporter);

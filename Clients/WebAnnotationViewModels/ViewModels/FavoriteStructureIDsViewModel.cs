@@ -11,10 +11,7 @@ namespace Annotation.ViewModels
         ObservableCollection<ulong> _FavoriteStructureTypeIDs = null;
         public ObservableCollection<ulong> FavoriteStructureTypeIDs
         {
-            get
-            {
-                return _FavoriteStructureTypeIDs;
-            }
+            get => _FavoriteStructureTypeIDs;
             set
             {
                 if (_FavoriteStructureTypeIDs == value)
@@ -28,10 +25,7 @@ namespace Annotation.ViewModels
         ObservableCollection<IStructureType> _RootStructureTypes = null; 
         public ObservableCollection<IStructureType> RootStructureTypes
         {
-            get
-            {
-                return _RootStructureTypes;
-            }
+            get => _RootStructureTypes;
             set
             {
                 if (_RootStructureTypes == value)

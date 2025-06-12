@@ -120,9 +120,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Libs\LinqToXSD\2.0.2\Xml.Schema.Linq.dll</HintPath>
     </Reference>
-    <Reference Include="XOTask">
-      <HintPath>..\..\Libs\LinqToXSD\2.0.2\XOTask.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BookmarkGeneralPage.cs">
@@ -254,7 +251,6 @@
     <None Include="BookmarkSchemaV2.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="BookmarkGeneralPage.resx">

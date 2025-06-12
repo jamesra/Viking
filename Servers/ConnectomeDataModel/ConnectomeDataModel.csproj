@@ -209,7 +209,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework">
-      <Version>6.4.4</Version>
+      <Version>6.5.1</Version>
     </PackageReference>
     <PackageReference Include="EntityFrameworkExtras.EF6">
       <Version>3.0.5</Version>

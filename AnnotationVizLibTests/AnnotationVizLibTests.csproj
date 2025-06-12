@@ -191,7 +191,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework">
-      <Version>6.4.4</Version>
+      <Version>6.5.1</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNet.WebApi">
       <Version>5.2.7</Version>
@@ -209,7 +209,7 @@
       <Version>14.0.1016.290</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
-      <Version>13.0.1</Version>
+      <Version>13.0.3</Version>
     </PackageReference>
     <PackageReference Include="protobuf-net">
       <Version>3.2.52</Version>

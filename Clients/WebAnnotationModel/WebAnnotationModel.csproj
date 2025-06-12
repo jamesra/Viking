@@ -111,7 +111,6 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="packages.config" />
     <None Include="Properties\DataSources\AnnotationService.Types.AnnotationSet.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.CreateStructureRetval.datasource" />
     <None Include="Properties\DataSources\AnnotationService.Types.Location.datasource" />
@@ -172,7 +171,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework">
-      <Version>6.4.4</Version>
+      <Version>6.5.1</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.OData.Client">
       <Version>6.17.0</Version>

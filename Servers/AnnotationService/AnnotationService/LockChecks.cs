@@ -1,5 +1,4 @@
 ﻿using ConnectomeDataModel;
-using System;
 using System.Linq;
 
 namespace Annotation
