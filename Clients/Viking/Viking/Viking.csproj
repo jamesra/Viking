@@ -48,7 +48,7 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>Viking.html</WebPage>
     <TrustUrlParameters>true</TrustUrlParameters>
-    <ApplicationRevision>338</ApplicationRevision>
+    <ApplicationRevision>340</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -155,7 +155,7 @@
     <Content Include="Content\RoundCurveHSV.fx" />
     <Content Include="Content\RoundLine.fx" />
     <Content Include="Content\RoundLineHSV.fx" />
-    <Content Include="Content\TileLayout.fx" /> 
+    <Content Include="Content\TileLayout.fx" />
     <Content Include="Modules\WebAnnotation\Annotation.ViewModels.dll" />
     <Content Include="Modules\WebAnnotation\AnnotationInterfaces.dll" />
     <Content Include="Modules\WebAnnotation\AnnotationServiceTypes.dll" />
@@ -230,6 +230,11 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
     <BootstrapperPackage Include="Microsoft.Net.Framework.4.8">
       <Visible>False</Visible>
       <ProductName>.NET Framework 4.8</ProductName>
@@ -262,16 +267,6 @@
     <Content Include="Viking.ico" />
   </ItemGroup>
   <ItemGroup>
-    <PublishFile Include="Modules\WebAnnotation\EntityFramework.dll">
-      <Visible>False</Visible>
-      <Group>
-      </Group>
-      <TargetPath>
-      </TargetPath>
-      <PublishState>Exclude</PublishState>
-      <IncludeHash>True</IncludeHash>
-      <FileType>File</FileType>
-    </PublishFile>
     <PublishFile Include="Modules\WebAnnotation\EntityFramework.SqlServer.dll">
       <Visible>False</Visible>
       <Group>
@@ -312,6 +307,16 @@
       <IncludeHash>True</IncludeHash>
       <FileType>File</FileType>
     </PublishFile>
+    <PublishFile Include="Modules\WebAnnotation\protobuf-net.dll">
+      <Visible>False</Visible>
+      <Group>
+      </Group>
+      <TargetPath>
+      </TargetPath>
+      <PublishState>Exclude</PublishState>
+      <IncludeHash>True</IncludeHash>
+      <FileType>File</FileType>
+    </PublishFile>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommandLineParser">
@@ -339,7 +344,10 @@
       <Version>13.0.3</Version>
     </PackageReference>
     <PackageReference Include="protobuf-net">
-      <Version>2.0.0.668</Version>
+      <Version>3.2.52</Version>
+    </PackageReference>
+    <PackageReference Include="protobuf-net.ServiceModel">
+      <Version>3.2.52</Version>
     </PackageReference>
     <PackageReference Include="System.Net.Http">
       <Version>4.3.4</Version>
