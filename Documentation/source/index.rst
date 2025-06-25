@@ -20,7 +20,7 @@ Viking Client Installation
 
 Viking requires the following:
    * Windows 7+ 
-   * `.NET Framework 4.6`_
+   * `.NET Framework 4.8`_
    * `XNA 4.0 Framework Redistributable`_
    * A dedicated GPU.  Intel chips with embedded graphics also work.
    * An internet connection
