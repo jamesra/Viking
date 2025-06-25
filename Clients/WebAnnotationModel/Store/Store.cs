@@ -41,7 +41,7 @@ namespace WebAnnotationModel
                 RegionStructuresLoader = new RegionLoader<long, StructureObj>(Store.Structures);
             }
 
-            static public void Init()
+            public static void Init()
             {
                 if (Initialized)
                     return;
