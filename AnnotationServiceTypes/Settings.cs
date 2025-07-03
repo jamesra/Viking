@@ -1,5 +1,4 @@
 ﻿using System;
-using AnnotationService.Types;
 using ProtoBuf;
 
 namespace AnnotationService.Types
@@ -29,9 +28,6 @@ namespace AnnotationService.Types
             Serializer.PrepareSerializer<Structure>();
             Serializer.PrepareSerializer<StructureType>();
             Serializer.PrepareSerializer<StructureLink>();
-            
-            
         }
-
     }
 }

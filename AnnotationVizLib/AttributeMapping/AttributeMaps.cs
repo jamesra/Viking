@@ -6,10 +6,10 @@ namespace AnnotationVizLib
     /// <summary>
     /// We build pre-defined dictionaries that map an attribute, such as a node label, to a set of other properties we wish to add to a view of a graph node, such as color, size,and shape.
     /// </summary>
-    public class AttributeMap
+    public readonly struct AttributeMap
     {
-        public string Key;
-        public SortedList<string, string> Attributes;
+        public readonly string Key;
+        public readonly SortedList<string, string> Attributes;
 
         public AttributeMap(string key, SortedList<string, string> attributes)
         {

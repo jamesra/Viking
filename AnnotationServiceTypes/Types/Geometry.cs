@@ -1,115 +1,72 @@
-﻿using ProtoBuf;
+﻿
 using System;
 using System.Runtime.Serialization;
+using ProtoBuf;
+using System.Data.Entity;
+using System.Data.SqlTypes;
+
 
 namespace AnnotationService.Types
 {
 
-    [ProtoContract]
-    [DataContract]
-    [Serializable]
-    public struct AnnotationPoint
-    {
-        private double _X;
-        private double _Y;
-        private double _Z;
+    [ProtoContract()] 
+    public class AnnotationPoint
+    { 
+        [ProtoMember(1)] 
+        public double X { get; set; } 
 
-        [ProtoMember(1)]
-        [DataMember]
-        public double X
-        {
-            get { return _X; }
-            set { _X = value; }
-        }
+        [ProtoMember(2)] 
+        public double Y { get; set; } 
 
-        [ProtoMember(2)]
-        [DataMember]
-        public double Y
-        {
-            get { return _Y; }
-            set { _Y = value; }
-        }
-
-        [ProtoMember(3)]
-        [DataMember]
-        public double Z
-        {
-            get { return _Z; }
-            set { _Z = value; }
-        }
+        [ProtoMember(3)] 
+        public double Z { get; set; } 
 
         public AnnotationPoint(double x, double y, double z)
         {
-            _X = x;
-            _Y = y;
-            _Z = z;
+            X = x;
+            Y = y;
+            Z = z;
         }
+        
+        public AnnotationPoint()
+        {}
+
     }
 
-    [ProtoContract]
-    [DataContract]
-    [Serializable]
-    public struct BoundingRectangle
+    [ProtoContract] 
+    public class BoundingRectangle
     {
-        private double _XMin;
-        private double _YMin;
-        private double _XMax;
-        private double _YMax;
+        [ProtoMember(1)] 
+        public double XMin { get; set; } 
 
-        [ProtoMember(1)]
-        [DataMember]
-        public double XMin
-        {
-            get { return _XMin; }
-            set { _XMin = value; }
-        }
+        [ProtoMember(2)] 
+        public double YMin { get; set; } 
 
-        [ProtoMember(2)]
-        [DataMember]
-        public double YMin
-        {
-            get { return _YMin; }
-            set { _YMin = value; }
-        }
+        [ProtoMember(3)] 
+        public double XMax { get; set; } 
 
-        [ProtoMember(3)]
-        [DataMember]
-        public double XMax
-        {
-            get { return _XMax; }
-            set { _XMax = value; }
-        }
+        [ProtoMember(4)] 
+        public double YMax { get; set; } 
 
-        [ProtoMember(4)]
-        [DataMember]
-        public double YMax
-        {
-            get { return _YMax; }
-            set { _YMax = value; }
-        }
+        public double Width => XMax - XMin;
 
-        public double Width
-        {
-            get { return _XMax - _XMin; }
-        }
+        public double Height => YMax - YMin;
 
-        public double Height
-        {
-            get { return _YMax - _YMin; }
-        }
-
-        public double Area
-        {
-            get { return Width * Height; }
-        }
+        public double Area => Width * Height;
 
         public BoundingRectangle(double xmin, double ymin, double xmax, double ymax)
         {
-            _XMin = xmin;
-            _YMin = ymin;
-            _XMax = xmax;
-            _YMax = ymax;
+            XMin = xmin;
+            YMin = ymin;
+            XMax = xmax;
+            YMax = ymax;
         }
+
+        public BoundingRectangle()
+        { 
+        }
+
+
         public System.Data.Entity.Spatial.DbGeometry ToGeometry()
         {
             return System.Data.Entity.Spatial.DbGeometry.FromText(string.Format("POLYGON (( {0} {2}, {0} {3}, {1} {3}, {1} {2}, {0} {2}))", XMin, XMax, YMin, YMax));
@@ -120,79 +77,45 @@ namespace AnnotationService.Types
     [DataContract]
     [Serializable]
     public struct BoundingBox
-    {
-        private double _XMin;
-        private double _YMin;
-        private double _ZMin;
-        private double _XMax;
-        private double _YMax;
-        private double _ZMax;
-
+    { 
         [ProtoMember(1)]
         [DataMember]
-        public double XMin
-        {
-            get { return _XMin; }
-            set { _XMin = value; }
-        }
+        public double XMin { get; set; } 
 
         [ProtoMember(2)]
         [DataMember]
-        public double YMin
-        {
-            get { return _YMin; }
-            set { _YMin = value; }
-        }
+        public double YMin { get; set; } 
 
         [ProtoMember(3)]
         [DataMember]
-        public double ZMin
-        {
-            get { return _ZMin; }
-            set { _ZMin = value; }
-        }
+        public double ZMin { get; set; } 
 
         [ProtoMember(4)]
         [DataMember]
-        public double XMax
-        {
-            get { return _XMax; }
-            set { _XMax = value; }
-        }
+        public double XMax { get; set; } 
 
         [ProtoMember(5)]
         [DataMember]
-        public double YMax
-        {
-            get { return _YMax; }
-            set { _YMax = value; }
-        }
+        public double YMax { get; set; } 
 
         [ProtoMember(6)]
         [DataMember]
-        public double ZMax
-        {
-            get { return _ZMax; }
-            set { _ZMax = value; }
-        }
+        public double ZMax { get; set; } 
 
-        public double Width => _XMax - _XMin;
+        public double Width => XMax - XMin;
 
-        public double Height => _YMax - _YMin;
+        public double Height => YMax - YMin;
 
-        public double Depth
-        {
-            get { return _ZMax - _ZMin; }
-        }
+        public double Depth => ZMax - ZMin;
 
         public BoundingBox(double xmin, double ymin, double zmin, double xmax, double ymax, double zmax)
         {
-            _XMin = xmin;
-            _YMin = ymin;
-            _ZMin = zmin;
-            _XMax = xmax;
-            _YMax = ymax;
-            _ZMax = zmax;
+            XMin = xmin;
+            YMin = ymin;
+            ZMin = zmin;
+            XMax = xmax;
+            YMax = ymax;
+            ZMax = zmax;
         }
         public System.Data.Entity.Spatial.DbGeometry ToGeometry()
         {

@@ -1,4 +1,4 @@
-﻿using IdentityModel.Client;
+﻿using Duende.IdentityModel.Client;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -70,35 +70,7 @@ namespace Viking.UI.Forms
 
                 if (_VolumeURL != null)
                 {
-                    _LoadVolumeTask = Task.Run(() =>
-                    {
-                        XDocument document = null;
-                        try
-                        {
-                            document = VolumeModel.Volume.LoadXDocument(_VolumeURL);
-                            if (this.IsHandleCreated)
-                            {
-                                this.BeginInvoke(new System.Action(() => comboVolumeURL.Text = _VolumeURL));
-                            }
-                        }
-                        catch (WebException except)
-                        {
-                            document = null;
-                            SetUpdateText("No volume found at URL");
-
-                            if (Settings.Default.VolumeURLs.Contains(_VolumeURL))
-                            {
-                                DialogResult result = MessageBox.Show(this, "Error loading volume URL, remove from history?\n\n Details:\n " + except.Message, "Invalid Volume URL", MessageBoxButtons.YesNo);
-                                if (result == DialogResult.Yes)
-                                    Settings.Default.VolumeURLs.Remove(_VolumeURL);
-                            }
-                        }
-
-                        if (this.IsHandleCreated)
-                        {
-                            this.Invoke(new System.Action(() => VolumeDocument = document));
-                        }
-                    }, source.Token);
+                    _LoadVolumeTask = TryUpdateVolumeMetaData(source.Token);
                 }
                 else
                 {
@@ -244,7 +216,42 @@ namespace Viking.UI.Forms
             System.Diagnostics.Process.Start("https://connectomes.utah.edu/Viz/Account/Register");
         }
 
+        async Task TryUpdateVolumeMetaData(CancellationToken token)
+        {
+            XDocument document = null;
+            try
+            {
+                document = VolumeModel.Volume.LoadXDocument(_VolumeURL);
 
+                if(token.IsCancellationRequested)
+                    return; 
+
+                if (this.IsHandleCreated)
+                {
+                    this.BeginInvoke(new System.Action(() => comboVolumeURL.Text = _VolumeURL));
+                }
+            }
+            catch (WebException except)
+            {
+                if(token.IsCancellationRequested)
+                    return;
+
+                document = null;
+                SetUpdateText("No volume found at URL");
+
+                if (Settings.Default.VolumeURLs.Contains(_VolumeURL))
+                {
+                    DialogResult result = MessageBox.Show(this, "Error loading volume URL, remove from history?\n\n Details:\n " + except.Message, "Invalid Volume URL", MessageBoxButtons.YesNo);
+                    if (result == DialogResult.Yes)
+                        Settings.Default.VolumeURLs.Remove(_VolumeURL);
+                }
+            }
+
+            if (this.IsHandleCreated)
+            {
+                this.Invoke(new System.Action(() => VolumeDocument = document));
+            }
+        }
 
         readonly Task LoginTask = null;
 

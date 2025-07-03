@@ -83,10 +83,9 @@ namespace Viking
         {
             if (path.Exists == false)
                 return;
-
-            var subdirs = path.EnumerateDirectories().ToArray();
-            System.Collections.Generic.List<Task> listTasks = new System.Collections.Generic.List<Task>(subdirs.Length);
-            foreach (var subdir in subdirs)
+             
+            System.Collections.Generic.List<Task> listTasks = new System.Collections.Generic.List<Task>(128);
+            foreach (var subdir in path.EnumerateDirectories())
             {
                 if (token.IsCancellationRequested)
                     return;
@@ -97,9 +96,8 @@ namespace Viking
             foreach (var file in path.EnumerateFiles())
             {
                 LocalTextureCacheEntry entry = new LocalTextureCacheEntry(file);
-
-                bool Added = AddEntry(entry);
-                if (!Added)
+                 
+                if (!AddEntry(entry))
                 {
                     entry.Dispose();
                     entry = null;
@@ -108,9 +106,8 @@ namespace Viking
                 if (token.IsCancellationRequested)
                     return;
             }
-
-            if(listTasks.Count > 0)
-                Task.WaitAll(listTasks.ToArray());
+             
+            await Task.WhenAll(listTasks);
 
             return;
         }

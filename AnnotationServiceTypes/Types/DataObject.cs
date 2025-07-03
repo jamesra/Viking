@@ -21,10 +21,10 @@ namespace AnnotationService.Types
 
         [DataMember]
         [ProtoMember(10)]
-        public DBACTION DBAction
+        public DBACTION DBAction 
         {
-            get { return _DBAction; }
-            set { _DBAction = value; }
+            get => _DBAction;
+            set => _DBAction = value;
         }
     }
 
@@ -44,8 +44,8 @@ namespace AnnotationService.Types
         [DataMember]
         public Int64 ID
         {
-            get { return _ID; }
-            set { _ID = value; }
+            get => _ID;
+            set => _ID = value;
         }
     }
 
@@ -71,10 +71,10 @@ namespace AnnotationService.Types
                     return _ParentID;
                 else
                 {
-                    return new Int64?();
+                    return null;
                 }
             }
-            set { _ParentID = value; }
+            set => _ParentID = value;
         }
     }
 }

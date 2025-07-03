@@ -15,11 +15,15 @@ namespace AnnotationService.Types
 
         [ProtoMember(1)]
         [DataMember]
-        public Structure structure { get { return _structure; } set { _structure = value; } }
+        public Structure structure { get => _structure;
+            set => _structure = value;
+        }
 
         [ProtoMember(2)]
         [DataMember]
-        public Location location { get { return _location; } set { _location = value; } }
+        public Location location { get => _location;
+            set => _location = value;
+        }
 
         public CreateStructureRetval(Structure s, Location l)
         {
@@ -50,24 +54,24 @@ namespace AnnotationService.Types
         [ProtoMember(1)]
         public Int64 TypeID
         {
-            get { return _Type; }
-            set { _Type = value; }
+            get => _Type;
+            set => _Type = value;
         }
 
         [DataMember]
         [ProtoMember(2)]
         public string Notes
         {
-            get { return _Notes; }
-            set { _Notes = value; }
+            get => _Notes;
+            set => _Notes = value;
         }
 
         [DataMember]
         [ProtoMember(3)]
         public bool Verified
         {
-            get { return _Verified; }
-            set { _Verified = value; }
+            get => _Verified;
+            set => _Verified = value;
         }
 
         /*
@@ -83,40 +87,40 @@ namespace AnnotationService.Types
         [ProtoMember(4)]
         public string AttributesXml
         {
-            get { return _Xml; }
-            set { _Xml = value; }
+            get => _Xml;
+            set => _Xml = value;
         }
 
         [DataMember]
         [ProtoMember(5)]
         public double Confidence
         {
-            get { return _Confidence; }
-            set { _Confidence = value; }
+            get => _Confidence;
+            set => _Confidence = value;
         }
 
         [DataMember]
         [ProtoMember(6)]
         public StructureLink[] Links
         {
-            get { return _Links; }
-            set { _Links = value; }
+            get => _Links;
+            set => _Links = value;
         }
 
         [DataMember]
         [ProtoMember(7)]
         public Int64[] ChildIDs
         {
-            get { return _ChildIDs; }
-            set { _ChildIDs = value; }
+            get => _ChildIDs;
+            set => _ChildIDs = value;
         }
 
         [DataMember]
         [ProtoMember(8)]
         public string Label
         {
-            get { return _Label; }
-            set { _Label = value; }
+            get => _Label;
+            set => _Label = value;
         }
 
         [DataMember]
@@ -124,8 +128,8 @@ namespace AnnotationService.Types
         [Column("Username")]
         public string Username
         {
-            get { return _Username; }
-            set { _Username = value; }
+            get => _Username;
+            set => _Username = value;
         }
 
 

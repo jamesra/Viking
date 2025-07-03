@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Web.Script.Serialization;
+using System.Text.Json;
 
 namespace AnnotationVizLib
 {
@@ -17,6 +17,13 @@ namespace AnnotationVizLib
     public class MorphologyJSONView
     {
         readonly List<JSONStructureMorphology> StructureMorphologies = new List<JSONStructureMorphology>();
+        
+        static JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
+        {
+            WriteIndented = true,
+            MaxDepth=64
+        };
+        
 
         static MorphologyJSONView()
         {
@@ -71,19 +78,8 @@ namespace AnnotationVizLib
 
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
-
-            using (StringWriter fs = new StringWriter(sb))
-            {
-                System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new JavaScriptSerializer
-                {
-                    MaxJsonLength = 268435456
-                };
-                fs.Write(oSerializer.Serialize(new { Morphology = this.StructureMorphologies }));
-                fs.Close();
-            }
-
-            return sb.ToString();
+            // Serialize the object to JSON
+            return JsonSerializer.Serialize(new { Morphology = this.StructureMorphologies }, jsonOptions);
         }
 
         public void SaveJSON(string JSONFileFullPath)

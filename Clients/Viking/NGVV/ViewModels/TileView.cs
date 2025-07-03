@@ -82,7 +82,7 @@ namespace Viking.ViewModels
             { 
                 var originalTexture = Interlocked.CompareExchange(ref _texture, value, null);
 
-                originalTexture?.DisposeAsync();
+                originalTexture?.Dispose();
                 //DisposeTextureThreadingObj disposeObj = new DisposeTextureThreadingObj(_texture);
                 //ThreadPool.QueueUserWorkItem(disposeObj.ThreadPoolCallback);
                 //Global.RemoveTexture(_texture);  //Texture removed from global records within the thread

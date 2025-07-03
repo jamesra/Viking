@@ -52,7 +52,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XNATestbedContent", "Client
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingWPFUserControls", "Clients\VikingWPFUserControls\VikingWPFUserControls.csproj", "{4F62FCE1-3FCF-431B-9526-80B859131513}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLib", "AnnotationVizLib\AnnotationVizLib.csproj", "{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnnotationVizLib", "AnnotationVizLib\AnnotationVizLib.csproj", "{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLibTests", "AnnotationVizLibTests\AnnotationVizLibTests.csproj", "{B80BF900-A7CF-4A14-8A96-8C590A2435D4}"
 EndProject
@@ -80,7 +80,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingXNAGraphics", "Client
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingXNAGraphicsContent", "Clients\MonogameXNAGraphicsShared\XNAContent\VikingXNAGraphicsContent.contentproj", "{3B195345-13D5-4E0A-95EC-FC95501FD066}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationServiceTypes.WCF", "AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj", "{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnnotationServiceTypes.WCF", "AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj", "{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlGeometryAnnotationExtensions", "SqlGeometryAnnotationExtensions\SqlGeometryAnnotationExtensions.csproj", "{6B29CF4C-107E-444C-9FB0-76F1981ED6C0}"
 EndProject
@@ -94,11 +94,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAnnotationTests", "Clien
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAnnotationWPFControls", "Clients\WebAnnotationWPFControls\WebAnnotationWPFControls.csproj", "{C29F3CC8-1914-4682-8250-EAFED6BE1E30}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAnnotationViewModels", "Clients\WebAnnotationViewModels\WebAnnotationViewModels.csproj", "{C4401C6E-E354-420E-8373-36A71B9B6290}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebAnnotationViewModels", "Clients\WebAnnotationViewModels\WebAnnotationViewModels.csproj", "{C4401C6E-E354-420E-8373-36A71B9B6290}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Servers", "Servers", "{3377B811-CB5D-41CA-9CD9-2417483C943D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationService", "Servers\AnnotationService\AnnotationService\AnnotationService.csproj", "{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnnotationService", "Servers\AnnotationService\AnnotationService\AnnotationService.csproj", "{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataExport", "Servers\DataExport\DataExport.csproj", "{73CB157C-8882-480E-A70A-23D2A4CBA7E9}"
 EndProject
@@ -210,7 +210,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VolumeModel", "Clients\Volu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Triangle", "Triangle.NET\Triangle\Triangle.csproj", "{F7907A0A-B75F-400B-9E78-BFAD00DB4D6B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TriangleNetGeometryExtensions", "TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj", "{2B2E3C2E-BE56-466C-98F3-6F9BFA82B213}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TriangleNetGeometryExtensions", "TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj", "{2B2E3C2E-BE56-466C-98F3-6F9BFA82B213}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

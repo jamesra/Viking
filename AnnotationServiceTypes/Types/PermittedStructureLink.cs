@@ -24,24 +24,24 @@ namespace AnnotationService.Types
         [ProtoMember(1)]
         public Int64 SourceTypeID
         {
-            get { return _SourceTypeID; }
-            set { _SourceTypeID = value; }
+            get => _SourceTypeID;
+            set => _SourceTypeID = value;
         }
 
         [DataMember]
         [ProtoMember(2)]
         public Int64 TargetTypeID
         {
-            get { return _TargetTypeID; }
-            set { _TargetTypeID = value; }
+            get => _TargetTypeID;
+            set => _TargetTypeID = value;
         }
 
         [DataMember]
         [ProtoMember(3)]
         public bool Bidirectional
         {
-            get { return _Bidirectional; }
-            set { _Bidirectional = value; }
+            get => _Bidirectional;
+            set => _Bidirectional = value;
         }
 
         public PermittedStructureLink()

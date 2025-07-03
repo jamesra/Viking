@@ -4,11 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Data.Entity;
 
 namespace AnnotationService.Types
 {
     [ProtoContract]
-    [DataContract]
+    [DataContract] 
     public class LocationPositionOnly : DataObjectWithKeyOfLong
     {
         AnnotationPoint _Position;
@@ -18,8 +19,8 @@ namespace AnnotationService.Types
         [DataMember]
         public AnnotationPoint Position
         {
-            get { return _Position; }
-            set { _Position = value; }
+            get => _Position;
+            set => _Position = value;
         }
 
         [ProtoMember(2)]
@@ -27,8 +28,8 @@ namespace AnnotationService.Types
         [Column("Radius")]
         public double Radius
         {
-            get { return _Radius; }
-            set { _Radius = value; }
+            get => _Radius;
+            set => _Radius = value;
         }
 
 
@@ -63,15 +64,15 @@ namespace AnnotationService.Types
         [DataMember]
         public Int64 ParentID
         {
-            get { return _ParentID; }
-            set { _ParentID = value; }
+            get => _ParentID;
+            set => _ParentID = value;
         }
 
         [ProtoMember(2)]
         [DataMember]
         public Int64 Section
         {
-            get { return _Section; }
+            get => _Section;
             set
             {
                 _Section = value;
@@ -83,16 +84,16 @@ namespace AnnotationService.Types
         [DataMember]
         public AnnotationPoint Position
         {
-            get { return _Position; }
-            set { _Position = value; }
+            get => _Position;
+            set => _Position = value;
         }
 
         [ProtoMember(4)]
         [DataMember]
         public AnnotationPoint VolumePosition
         {
-            get { return _VolumePosition; }
-            set { _VolumePosition = value; }
+            get => _VolumePosition;
+            set => _VolumePosition = value;
         }
 
         //[ProtoMember(5)]
@@ -130,7 +131,7 @@ namespace AnnotationService.Types
         [DataMember]
         public byte[] MosaicShapeWKB
         {
-            get { return _MosaicShapeWKB; }
+            get => _MosaicShapeWKB;
             set
             {
                 _MosaicShapeWKB = value;
@@ -142,7 +143,7 @@ namespace AnnotationService.Types
         [DataMember]
         public byte[] VolumeShapeWKB
         {
-            get { return _VolumeShapeWKB; }
+            get => _VolumeShapeWKB;
             set
             {
                 _VolumeShapeWKB = value;
@@ -155,16 +156,16 @@ namespace AnnotationService.Types
         [Column("Closed")]
         public bool Closed
         {
-            get { return _Closed; }
-            set { _Closed = value; }
+            get => _Closed;
+            set => _Closed = value;
         }
 
         [ProtoMember(10)]
         [DataMember]
         public string AttributesXml
         {
-            get { return _Xml; }
-            set { _Xml = value; }
+            get => _Xml;
+            set => _Xml = value;
         }
 
         [ProtoMember(11)]
@@ -181,7 +182,7 @@ namespace AnnotationService.Types
                 else
                     return _Links.ToArray();
             }
-            set { _Links = value is null ? null : new SortedSet<Int64>(value); }
+            set => _Links = value is null ? null : new SortedSet<Int64>(value);
         }
 
         [ProtoMember(12)]
@@ -189,8 +190,8 @@ namespace AnnotationService.Types
         [Column("Extensible")]
         public bool Terminal
         {
-            get { return _Terminal; }
-            set { _Terminal = value; }
+            get => _Terminal;
+            set => _Terminal = value;
         }
 
         [ProtoMember(13)]
@@ -198,8 +199,8 @@ namespace AnnotationService.Types
         [Column("OffEdge")]
         public bool OffEdge
         {
-            get { return _OffEdge; }
-            set { _OffEdge = value; }
+            get => _OffEdge;
+            set => _OffEdge = value;
         }
 
         [ProtoMember(14)]
@@ -207,8 +208,8 @@ namespace AnnotationService.Types
         [Column("Radius")]
         public double Radius
         {
-            get { return _Radius; }
-            set { _Radius = value; }
+            get => _Radius;
+            set => _Radius = value;
         }
 
         [ProtoMember(15)]
@@ -216,8 +217,8 @@ namespace AnnotationService.Types
         [Column("Width")]
         public double? Width
         {
-            get { return _Width; }
-            set { _Width = value; }
+            get => _Width;
+            set => _Width = value;
         }
 
         [ProtoMember(16)]
@@ -225,8 +226,8 @@ namespace AnnotationService.Types
         [Column("TypeCode")]
         public short TypeCode
         {
-            get { return _TypeCode; }
-            set { _TypeCode = value; }
+            get => _TypeCode;
+            set => _TypeCode = value;
         }
 
         [ProtoMember(17)]
@@ -234,8 +235,8 @@ namespace AnnotationService.Types
         [Column("LastModified")]
         public Int64 LastModified
         {
-            get { return _LastModified; }
-            set { _LastModified = value; }
+            get => _LastModified;
+            set => _LastModified = value;
         }
 
         [ProtoMember(18)]
@@ -243,8 +244,8 @@ namespace AnnotationService.Types
         [Column("Username")]
         public string Username
         {
-            get { return _Username; }
-            set { _Username = value; }
+            get => _Username;
+            set => _Username = value;
         }
 
         public void AddLink(Int64 linkedID)
@@ -345,14 +346,8 @@ namespace AnnotationService.Types
         [Column("ChangedColumnMask")]
         public Int64 ChangedColumnMask
         {
-            get
-            {
-                return _ChangedColumnMask;
-            }
-            set
-            {
-                _ChangedColumnMask = value;
-            }
+            get => _ChangedColumnMask;
+            set => _ChangedColumnMask = value;
         }
     }
 }

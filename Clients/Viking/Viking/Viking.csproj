@@ -322,20 +322,20 @@
     <PackageReference Include="CommandLineParser">
       <Version>2.9.1</Version>
     </PackageReference>
+    <PackageReference Include="Duende.IdentityModel">
+      <Version>7.1.0</Version>
+    </PackageReference>
     <PackageReference Include="EntityFramework">
       <Version>6.5.1</Version>
-    </PackageReference>
-    <PackageReference Include="IdentityModel">
-      <Version>5.2.0</Version>
     </PackageReference>
     <PackageReference Include="LargeAddressAware">
       <Version>1.0.6</Version>
     </PackageReference>
     <PackageReference Include="MathNet.Numerics">
-      <Version>4.15.0</Version>
+      <Version>5.0.0</Version>
     </PackageReference>
     <PackageReference Include="MathNet.Numerics.MKL.Win">
-      <Version>2.5.0</Version>
+      <Version>3.0.0</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.SqlServer.Types">
       <Version>14.0.1016.290</Version>
@@ -348,6 +348,9 @@
     </PackageReference>
     <PackageReference Include="protobuf-net.ServiceModel">
       <Version>3.2.52</Version>
+    </PackageReference>
+    <PackageReference Include="System.Memory">
+      <Version>4.6.3</Version>
     </PackageReference>
     <PackageReference Include="System.Net.Http">
       <Version>4.3.4</Version>
@@ -363,6 +366,9 @@
     </PackageReference>
     <PackageReference Include="System.Text.Encodings.Web">
       <Version>9.0.6</Version>
+    </PackageReference>
+    <PackageReference Include="System.Text.Json">
+      <Version>8.0.5</Version>
     </PackageReference>
     <PackageReference Include="System.ValueTuple">
       <Version>4.6.1</Version>

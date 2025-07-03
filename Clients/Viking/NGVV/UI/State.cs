@@ -49,7 +49,7 @@ namespace Viking.UI
         static public string[] UserAccessLevel;
 
         //User credentials used during authentication
-        static public IdentityModel.Client.TokenResponse UserBearerToken = null;
+        static public Duende.IdentityModel.Client.TokenResponse UserBearerToken = null;
 
         static public System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
