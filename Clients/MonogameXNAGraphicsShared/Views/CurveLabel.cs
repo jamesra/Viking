@@ -5,7 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;  
+using System.Threading.Tasks;
+using VikingXNA;
 
 namespace VikingXNAGraphics
 {
@@ -15,7 +16,7 @@ namespace VikingXNAGraphics
         private string _Text;
         public string Text
         {
-            get { return _Text; }
+            get => _Text;
             set
             {
                 _Text = value;
@@ -25,16 +26,16 @@ namespace VikingXNAGraphics
 
         public double FontSize
         {
-            get { return (float)LineWidth; }
-            set { LineWidth = value; }
+            get => (float)LineWidth;
+            set => LineWidth = value;
         }
 
 
         public Color Color { get; set; }
         public float Alpha
         {
-            get { return Color.GetAlpha(); }
-            set { Color = Color.SetAlpha(value); }
+            get => Color.GetAlpha();
+            set => Color = Color.SetAlpha(value);
         }
 
         public double LineWidth;
@@ -71,13 +72,13 @@ namespace VikingXNAGraphics
 
         public GridVector2[] ControlPoints
         {
-            get { return _CurveControlPoints.ControlPoints; }
+            get => _CurveControlPoints.ControlPoints;
             set { _CurveControlPoints.ControlPoints = value; UpdateView(); }
         }
 
         public uint NumInterpolations
         {
-            get { return _CurveControlPoints.NumInterpolations; }
+            get => _CurveControlPoints.NumInterpolations;
             set
             {
                 if (_CurveControlPoints.NumInterpolations != value)
@@ -93,7 +94,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public bool TryCloseCurve
         {
-            get { return _CurveControlPoints.TryCloseCurve; }
+            get => _CurveControlPoints.TryCloseCurve;
             set
             {
                 if (_CurveControlPoints.TryCloseCurve != value)
@@ -123,7 +124,7 @@ namespace VikingXNAGraphics
                     this._LabelTexture = CreateTextureForLabel(this.Text, device, spritebatch, font, Color);
                     this.TextureGenerating = false;
                 });
-                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(a, System.Windows.Threading.DispatcherPriority.Background, null);
+                GpuSynchronizationManager.RunTask(a);
             }
         }
 

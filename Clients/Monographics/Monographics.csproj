@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<RootNamespace>Monographics</RootNamespace>
+		<AssemblyName>Monographics</AssemblyName>
+		<MonoGamePlatform>Windows</MonoGamePlatform>
+		<SignManifests>true</SignManifests>
+		<SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+		<GenerateDocumentationFile>False</GenerateDocumentationFile>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DefineConstants>DEBUG;TRACE</DefineConstants>
+		<Optimize>false</Optimize>
+		<OutputPath>bin\MonoGame\Debug\</OutputPath>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>full</DebugType>
+		<UseVSHostingProcess>true</UseVSHostingProcess>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DefineConstants>TRACE</DefineConstants>
+		<Optimize>true</Optimize>
+		<OutputPath>bin\MonoGame\Release\</OutputPath>
+		<DebugType>pdbonly</DebugType>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*"/>
+		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.4" />
+		<PackageReference Include="System.Collections.Immutable" Version="9.0.7" />
+	</ItemGroup>  
+
+	<ItemGroup>
+		<MonoGameContentReference Include="MonogameContent\Content.mgcb" />
+		<None Include="app.config" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="MonogameContent\**\*.fx" />
+		<Content Include="MonogameContent\LineCurvePixelShaderShared.fx" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+		<ProjectReference Include="..\..\Triangle.NET\Triangle\Triangle.csproj" />
+		<ProjectReference Include="..\..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="app.config" />
+	</ItemGroup>
+	
+	<!-- Custom target to build MonoGame content using the local MGCB tool -->
+	<Target Name="BuildMonoGameContent" BeforeTargets="Build" Condition="'$(Configuration)' != ''">
+		<Exec Command="dotnet tool run mgcb /quiet /@:Content.mgcb /platform:Windows /outputDir:bin\Windows\Content /intermediateDir:obj\Windows\net9.0\Content" WorkingDirectory="$(ProjectDir)MonogameContent" ContinueOnError="false" />
+	</Target>
+</Project>

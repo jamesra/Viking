@@ -37,7 +37,6 @@ namespace MonogameTestbed
         public Task Init(MonoTestbed window)
         {
             _initialized = true;
-
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));

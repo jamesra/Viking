@@ -1,47 +1,30 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<!-- Target .NET Framework 4.8 -->
-		<TargetFrameworks>net48</TargetFrameworks>
-		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+		<TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
 		<RootNamespace>AnnotationServiceTypes</RootNamespace>
 		<AssemblyName>AnnotationServiceTypes</AssemblyName>
 		<Version>1.0.0.0</Version>
 		<Copyright>Copyright © 2017</Copyright>
 		<OutputType>Library</OutputType>
 	</PropertyGroup>
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-		<DebugSymbols>true</DebugSymbols>
-		<DebugType>full</DebugType>
-		<Optimize>false</Optimize>
-		<OutputPath>bin\Debug\</OutputPath>
-		<DefineConstants>DEBUG;TRACE</DefineConstants>
-		<ErrorReport>prompt</ErrorReport>
-		<WarningLevel>4</WarningLevel>
-	</PropertyGroup>
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-		<DebugType>pdbonly</DebugType>
-		<Optimize>true</Optimize>
-		<OutputPath>bin\Release\</OutputPath>
-		<DefineConstants>TRACE</DefineConstants>
-		<ErrorReport>prompt</ErrorReport>
-		<WarningLevel>4</WarningLevel>
-	</PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="Properties\**" />
 	  <EmbeddedResource Remove="Properties\**" />
 	  <None Remove="Properties\**" />
 	</ItemGroup>
-	<!-- NuGet package references -->
 	<ItemGroup>
-		<PackageReference Include="EntityFramework" Version="6.5.1" />
 		<PackageReference Include="protobuf-net" Version="3.2.52" />
 		<PackageReference Include="System.Memory" Version="4.6.3" />
+		<PackageReference Include="System.Runtime.Serialization.Primitives" Version="4.3.0" />
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
-	</ItemGroup> 
-	<!-- WCF Metadata -->
+	</ItemGroup>
+	
+	<!-- Entity Framework 6 is only available for .NET Framework -->
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="EntityFramework" Version="6.5.1" />
+	</ItemGroup>
 	<ItemGroup>
 		<WCFMetadata Include="Connected Services\" />
 	</ItemGroup>

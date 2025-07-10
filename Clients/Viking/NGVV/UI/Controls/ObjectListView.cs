@@ -17,7 +17,7 @@ namespace Viking.UI.BaseClasses
         [Category("Data")]
         public System.Type DisplayType
         {
-            get { return _DisplayType; }
+            get => _DisplayType;
             set
             {
                 if (_DisplayType != value)
@@ -55,10 +55,7 @@ namespace Viking.UI.BaseClasses
 
         private System.Type _DisplayType = null;
 
-        /// <summary>
-        /// holds the menu items from when the context menu is assigned to
-        /// </summary>
-        private MenuItem[] menuItemsFromHost = new MenuItem[0];
+
         /// <summary>
         /// saves the args from the last mouse up event
         /// </summary>
@@ -182,10 +179,7 @@ namespace Viking.UI.BaseClasses
 
                 return Objs;
             }
-            set
-            {
-                DisplayObjects(value);
-            }
+            set => DisplayObjects(value);
         }
 
         public void SelectObject(object Object)
@@ -352,136 +346,236 @@ namespace Viking.UI.BaseClasses
             // save these args for the column click and context menu
             lastMouseUpEventArgs = e;
 
+            // Show context menu on right-click
             if (e.Button == MouseButtons.Right)
             {
-                this.ContextMenu.Show(this, new Point(e.X, e.Y));
+                var contextMenu = BuildContextMenuStrip();
+                if (contextMenu != null && contextMenu.Items.Count > 0)
+                {
+                    contextMenu.Show(this, new Point(e.X, e.Y));
+                }
             }
 
             base.OnMouseUp(e);
         }
 
 
-        private System.Windows.Forms.ContextMenu _ContextMenu = null;
-        public override System.Windows.Forms.ContextMenu ContextMenu
+        // Modern ContextMenuStrip implementation for .NET 9.0 compatibility
+        private System.Windows.Forms.ContextMenuStrip _ContextMenuStrip = null;
+        private System.Windows.Forms.ToolStripItem[] menuItemsFromHost = new System.Windows.Forms.ToolStripItem[0];
+
+        /// <summary>
+        /// Property to set context menu items from host controls
+        /// </summary>
+        public System.Windows.Forms.ContextMenuStrip HostContextMenuStrip
         {
-            get
-            {
-                if (_ContextMenu is null)
-                    _ContextMenu = new ContextMenu();
-
-                // clear our menu items so they don't get added twice
-                _ContextMenu.MenuItems.Clear();
-
-                // find the item we clicked on
-                ListViewItem listItem = null;
-                if (lastMouseUpEventArgs != null)
-                    listItem = GetItemAt(lastMouseUpEventArgs.X, lastMouseUpEventArgs.Y);
-
-                // if there was an item for that location
-                if (listItem != null)
-                {
-                    IUIObject ContextObj = ObjectForItem(listItem);
-                    if (ContextObj != null)
-                    {
-                        using (ContextMenu ObjectContextMenu = ContextObj.ContextMenu)
-                        {
-                            if (ObjectContextMenu != null)
-                                _ContextMenu.MergeMenu(ObjectContextMenu);
-                        }
-                    }
-                }
-
-                // if someone is going to handle the click for New add that
-                if (OnContextMenuNewClick != null)
-                    _ContextMenu.MenuItems.Add("New", this.OnContextMenuNewClick);
-
-                // if someone is handling remove add the menu item
-                if (OnContextMenuRemoveClick != null)
-                    _ContextMenu.MenuItems.Add("Remove", this.OnContextMenuRemoveClick);
-
-                // add the original menu items back to the menu
-                foreach (MenuItem item in menuItemsFromHost)
-                    _ContextMenu.MenuItems.Add(item);
-
-                // add our menu to show/hide columns
-                using (ContextMenu ColumnMenu = this.ColumnMenu)
-                {
-                    if (null != ColumnMenu)
-                    {
-                        if (ColumnMenu.MenuItems.Count > 1)
-                        {
-                            MenuItem ColumnMenuItem = new MenuItem("Columns");
-                            ColumnMenuItem.MergeMenu(ColumnMenu);
-                            _ContextMenu.MenuItems.Add(ColumnMenuItem);
-                        }
-                    }
-                }
-
-                return _ContextMenu;
-            }
+            get => _ContextMenuStrip;
             set
             {
                 if (value is null)
                 {
-                    _ContextMenu = new ContextMenu();
+                    menuItemsFromHost = new System.Windows.Forms.ToolStripItem[0];
                 }
                 else
                 {
-                    menuItemsFromHost = new MenuItem[value.MenuItems.Count];
-                    value.MenuItems.CopyTo(menuItemsFromHost, 0);
-                    _ContextMenu = value;
+                    // Copy menu items from host
+                    menuItemsFromHost = new System.Windows.Forms.ToolStripItem[value.Items.Count];
+                    for (int i = 0; i < value.Items.Count; i++)
+                    {
+                        menuItemsFromHost[i] = value.Items[i];
+                    }
                 }
             }
         }
 
-        private ContextMenu ColumnMenu
+        /// <summary>
+        /// Builds the context menu strip dynamically based on current state
+        /// </summary>
+        private System.Windows.Forms.ContextMenuStrip BuildContextMenuStrip()
         {
-            get
+            var contextMenu = new System.Windows.Forms.ContextMenuStrip();
+
+            // find the item we clicked on
+            ListViewItem listItem = null;
+            if (lastMouseUpEventArgs != null)
+                listItem = GetItemAt(lastMouseUpEventArgs.X, lastMouseUpEventArgs.Y);
+
+            // if there was an item for that location, add object-specific menu items
+            if (listItem != null)
             {
-                if (_ColumnSettingsHashtable is null)
-                    return null;
-
-                // a list to sort our columns
-                List<string> list = new List<string>(this.Columns.Count);
-
-                // update the visibility settings and add the columns to the list
-                foreach (ColumnHeader column in this.Columns)
+                IUIObject contextObj = ObjectForItem(listItem);
+                if (contextObj != null)
                 {
-                    list.Add(column.Text);
-
-                    // setting for this column
-                    ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[column.Text];
-
-                    // updating the settings if they changed the visibility of a column by means other
-                    // then the context menu
-                    setting.isVisibile = (column.Width > 0);
-                    if (column.Width > 0)
-                        setting.width = column.Width;
-
-                    _ColumnSettingsHashtable[column.Text] = setting;
+                    // Convert old ContextMenu to ContextMenuStrip items
+                    using (ContextMenu objectContextMenu = contextObj.ContextMenu)
+                    {
+                        if (objectContextMenu != null)
+                        {
+                            AddMenuItemsToContextMenuStrip(contextMenu, objectContextMenu);
+                        }
+                    }
                 }
-
-                list.Sort();
-
-                ContextMenu menu = new ContextMenu();
-
-                // create the menu items
-                foreach (object obj in list)
-                {
-                    string str = obj as string;
-                    MenuItem newMenuItem = new MenuItem(str, OnContextColumnMenuHandler);
-
-                    // get the setting so we know if the column is visibile
-                    ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[str];
-
-                    // checked?
-                    newMenuItem.Checked = setting.isVisibile;
-
-                    menu.MenuItems.Add(newMenuItem);
-                }
-
-                return menu;
             }
+
+            // if someone is going to handle the click for New add that
+            if (OnContextMenuNewClick != null)
+            {
+                var newItem = new System.Windows.Forms.ToolStripMenuItem("New");
+                newItem.Click += OnContextMenuNewClick;
+                contextMenu.Items.Add(newItem);
+            }
+
+            // if someone is handling remove add the menu item
+            if (OnContextMenuRemoveClick != null)
+            {
+                var removeItem = new System.Windows.Forms.ToolStripMenuItem("Remove");
+                removeItem.Click += OnContextMenuRemoveClick;
+                contextMenu.Items.Add(removeItem);
+            }
+
+            // add the original menu items back to the menu
+            foreach (System.Windows.Forms.ToolStripItem item in menuItemsFromHost)
+            {
+                contextMenu.Items.Add(item);
+            }
+
+            // add our menu to show/hide columns
+            var columnMenuStrip = BuildColumnMenuStrip();
+            if (columnMenuStrip != null && columnMenuStrip.Items.Count > 1)
+            {
+                var columnMenuItem = new System.Windows.Forms.ToolStripMenuItem("Columns");
+                // Copy column menu items to the submenu
+                foreach (System.Windows.Forms.ToolStripItem item in columnMenuStrip.Items)
+                {
+                    if (item is System.Windows.Forms.ToolStripMenuItem menuItem)
+                    {
+                        columnMenuItem.DropDownItems.Add(CloneToolStripMenuItem(menuItem));
+                    }
+                }
+                contextMenu.Items.Add(columnMenuItem);
+            }
+
+            return contextMenu;
+        }
+
+        /// <summary>
+        /// Helper method to convert old ContextMenu items to ContextMenuStrip items
+        /// </summary>
+        private void AddMenuItemsToContextMenuStrip(System.Windows.Forms.ContextMenuStrip contextMenuStrip, System.Windows.Forms.ContextMenu contextMenu)
+        {
+            foreach (System.Windows.Forms.MenuItem menuItem in contextMenu.MenuItems)
+            {
+                var toolStripItem = ConvertMenuItemToToolStripMenuItem(menuItem);
+                contextMenuStrip.Items.Add(toolStripItem);
+            }
+        }
+
+        /// <summary>
+        /// Converts a MenuItem to a ToolStripMenuItem
+        /// </summary>
+        private System.Windows.Forms.ToolStripMenuItem ConvertMenuItemToToolStripMenuItem(System.Windows.Forms.MenuItem menuItem)
+        {
+            var toolStripItem = new System.Windows.Forms.ToolStripMenuItem(menuItem.Text);
+            toolStripItem.Enabled = menuItem.Enabled;
+            toolStripItem.Checked = menuItem.Checked;
+            
+            // Copy event handlers by invoking the original handler when the new one is clicked
+            toolStripItem.Click += (sender, e) => {
+                // Create a MenuItem event args and invoke the original handler
+                menuItem.PerformClick();
+            };
+
+            // Convert sub-menu items recursively
+            foreach (System.Windows.Forms.MenuItem subMenuItem in menuItem.MenuItems)
+            {
+                toolStripItem.DropDownItems.Add(ConvertMenuItemToToolStripMenuItem(subMenuItem));
+            }
+
+            return toolStripItem;
+        }
+
+        /// <summary>
+        /// Extension method to clone a ToolStripMenuItem
+        /// </summary>
+        private System.Windows.Forms.ToolStripMenuItem CloneToolStripMenuItem(System.Windows.Forms.ToolStripMenuItem original)
+        {
+            var clone = new System.Windows.Forms.ToolStripMenuItem(original.Text);
+            clone.Enabled = original.Enabled;
+            clone.Checked = original.Checked;
+            clone.Image = original.Image;
+            clone.Tag = original.Tag;
+            
+            // Clone event handlers by creating a lambda that calls the original's PerformClick
+            clone.Click += (sender, e) => {
+                original.PerformClick();
+            };
+
+            // Clone sub-menu items recursively
+            foreach (System.Windows.Forms.ToolStripItem subItem in original.DropDownItems)
+            {
+                if (subItem is System.Windows.Forms.ToolStripMenuItem subMenuItem)
+                {
+                    clone.DropDownItems.Add(CloneToolStripMenuItem(subMenuItem));
+                }
+                else
+                {
+                    // For non-menu items like separators, create new instances
+                    clone.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
+                }
+            }
+
+            return clone;
+        }
+
+        /// <summary>
+        /// Builds the column visibility context menu strip
+        /// </summary>
+        private System.Windows.Forms.ContextMenuStrip BuildColumnMenuStrip()
+        {
+            if (_ColumnSettingsHashtable is null)
+                return null;
+
+            // a list to sort our columns
+            List<string> list = new List<string>(this.Columns.Count);
+
+            // update the visibility settings and add the columns to the list
+            foreach (ColumnHeader column in this.Columns)
+            {
+                list.Add(column.Text);
+
+                // setting for this column
+                ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[column.Text];
+
+                // updating the settings if they changed the visibility of a column by means other
+                // then the context menu
+                setting.isVisibile = (column.Width > 0);
+                if (column.Width > 0)
+                    setting.width = column.Width;
+
+                _ColumnSettingsHashtable[column.Text] = setting;
+            }
+
+            list.Sort();
+
+            var menuStrip = new System.Windows.Forms.ContextMenuStrip();
+
+            // create the menu items
+            foreach (object obj in list)
+            {
+                string str = obj as string;
+                var newMenuItem = new System.Windows.Forms.ToolStripMenuItem(str);
+                newMenuItem.Click += OnContextColumnMenuHandler;
+
+                // get the setting so we know if the column is visibile
+                ColumnVisibilitySetting setting = (ColumnVisibilitySetting)_ColumnSettingsHashtable[str];
+
+                // checked?
+                newMenuItem.Checked = setting.isVisibile;
+
+                menuStrip.Items.Add(newMenuItem);
+            }
+
+            return menuStrip;
         }
 
         protected override void OnDoubleClick(System.EventArgs e)
@@ -585,7 +679,7 @@ namespace Viking.UI.BaseClasses
 
         protected void OnContextMenuColumnVisibility(object sender, EventArgs e)
         {
-            MenuItem item = sender as MenuItem;
+            System.Windows.Forms.MenuItem item = sender as System.Windows.Forms.MenuItem;
 
             Debug.Assert(item != null);
             Debug.Assert(_ColumnSettingsHashtable.ContainsKey(item.Text));

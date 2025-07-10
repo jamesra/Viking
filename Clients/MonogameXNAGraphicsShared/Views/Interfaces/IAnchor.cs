@@ -66,7 +66,7 @@ namespace VikingXNAGraphics
         HorizontalAlignment _Horizontal = HorizontalAlignment.CENTER;
         public HorizontalAlignment Horizontal
         {
-            get { return _Horizontal; }
+            get => _Horizontal;
             set
             {
                 if (_Horizontal != value)
@@ -80,7 +80,7 @@ namespace VikingXNAGraphics
         VerticalAlignment _Vertical = VerticalAlignment.CENTER;
         public VerticalAlignment Vertical
         {
-            get { return _Vertical; }
+            get => _Vertical;
             set
             {
                 if (_Vertical != value)

@@ -1,6 +1,6 @@
 ﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationService.Types;
-using IdentityModel.Client;
+using Duende.IdentityModel.Client;
 using Microsoft.SqlServer.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;

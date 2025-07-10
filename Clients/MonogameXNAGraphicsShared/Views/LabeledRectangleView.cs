@@ -39,10 +39,7 @@ namespace VikingXNAGraphics
 
         public GridRectangle BoundingBox
         {
-            get
-            {
-                return ((IHitTesting)BackgroundBox).BoundingBox;
-            }
+            get => ((IHitTesting)BackgroundBox).BoundingBox;
             set
             {
                 if (BackgroundBox.BoundingRect == value)
@@ -59,9 +56,7 @@ namespace VikingXNAGraphics
 
         public GridVector2 Position
         {
-            get {
-                return BackgroundBox.Position;
-            } 
+            get => BackgroundBox.Position;
             set
             {
                 BackgroundBox.Position = value;

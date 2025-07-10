@@ -29,7 +29,7 @@ namespace VikingXNAGraphics
 
                 return _DefaultFont;
             }
-            set { _DefaultFont = value; }
+            set => _DefaultFont = value;
         }
     }
 

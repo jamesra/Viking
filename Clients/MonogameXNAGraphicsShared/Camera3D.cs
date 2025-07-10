@@ -31,7 +31,7 @@ namespace VikingXNA
         /// View Matrix is only worth updating when the LookAt parameter changes.
         /// </summary>
         private Matrix _View;
-        public Matrix View { get { return _View; } }
+        public Matrix View => _View;
 
         private void UpdateViewMatrix()
         {
@@ -87,7 +87,7 @@ namespace VikingXNA
 
         public float Pan
         {
-            get { return MathHelper.ToDegrees(_Pan); }
+            get => MathHelper.ToDegrees(_Pan);
             set
             {
                 _Pan = MathHelper.ToRadians(value);
@@ -97,7 +97,7 @@ namespace VikingXNA
 
         public float Tilt
         {
-            get { return MathHelper.ToDegrees(_Tilt); }
+            get => MathHelper.ToDegrees(_Tilt);
             set
             {
                 if (value >= 90)
@@ -114,10 +114,7 @@ namespace VikingXNA
 
         public Vector3 LookAt
         {
-            get
-            {
-                return _LookAt;
-            }
+            get => _LookAt;
             set
             {
                 if (value == _Position)
@@ -136,10 +133,7 @@ namespace VikingXNA
 
         public Vector3 Position
         {
-            get
-            {
-                return _Position;
-            }
+            get => _Position;
             set
             {
                 _Position = value;
@@ -150,10 +144,7 @@ namespace VikingXNA
 
         public Vector3 Rotation
         {
-            get
-            {
-                return _Rotation;
-            }
+            get => _Rotation;
             set
             {
                 _Rotation = value;
@@ -164,7 +155,7 @@ namespace VikingXNA
          
         public double Yaw
         {
-            get { return Rotation.X; }
+            get => Rotation.X;
             set
             {
                 if (double.IsNaN(value) || double.IsInfinity(value))
@@ -182,7 +173,7 @@ namespace VikingXNA
 
         public double Pitch
         {
-            get { return Rotation.Y; }
+            get => Rotation.Y;
             set
             {
                 if (double.IsNaN(value) || double.IsInfinity(value))
@@ -198,10 +189,7 @@ namespace VikingXNA
         }
 
 
-        public Vector3 Up
-        {
-            get { return _Up; }
-        } 
+        public Vector3 Up => _Up;
 
         public Camera3D()
         {

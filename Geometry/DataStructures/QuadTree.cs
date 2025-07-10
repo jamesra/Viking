@@ -673,7 +673,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
-        public virtual void Add(GridVector2 point, T value)
+        public override void Add(GridVector2 point, T value)
         {
             /*
             try
@@ -712,7 +712,7 @@ namespace Geometry
         /// </summary>
         /// <param name="point"></param>
         /// <param name="value"></param>
-        public virtual bool TryAdd(GridVector2 point, in T value)
+        public override bool TryAdd(GridVector2 point, in T value)
         { 
             try
             {

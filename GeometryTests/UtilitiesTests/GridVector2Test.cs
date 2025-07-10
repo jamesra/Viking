@@ -12,9 +12,9 @@ namespace UtilitiesTests
     /// Summary description for GridVector2Test
     /// </summary>
     [TestClass]
-    public class GridVector2Test
+    public class GridVector2Test2
     {
-        public GridVector2Test()
+        public GridVector2Test2()
         {
             //
             // TODO: Add constructor logic here

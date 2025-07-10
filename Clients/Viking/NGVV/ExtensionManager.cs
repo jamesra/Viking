@@ -666,13 +666,7 @@ namespace Viking.Common
         /// <summary>
         /// Returns null if CreateSectionOverlays or an empty array if there are no listeners
         /// </summary>
-        static public ISectionOverlayExtension[] SectionOverlays
-        {
-            get
-            {
-                return _SectionOverlays?.ToArray();
-            }
-        }
+        static public ISectionOverlayExtension[] SectionOverlays => _SectionOverlays?.ToArray();
 
         static public ISectionOverlayExtension[] CreateSectionOverlays(Viking.UI.Controls.SectionViewerControl parent)
         {

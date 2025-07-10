@@ -12,7 +12,7 @@ namespace VikingXNAGraphics
         private Texture2D _ControlPointTexture;
         public Texture2D ControlPointTexture
         {
-            get { return _ControlPointTexture; }
+            get => _ControlPointTexture;
             set
             {
                 _ControlPointTexture = value;
@@ -26,7 +26,7 @@ namespace VikingXNAGraphics
 
         public IList<GridVector2> ControlPoints
         {
-            get { return _ControlPoints; }
+            get => _ControlPoints;
             set
             {
                 if (value is null)
@@ -52,7 +52,7 @@ namespace VikingXNAGraphics
         private LineStyle _Style; 
         public LineStyle Style
         {
-            get { return _Style; }
+            get => _Style;
             set
             {
                 if(value != _Style)
@@ -70,7 +70,7 @@ namespace VikingXNAGraphics
         private double _LineWidth;
         public double LineWidth
         {
-            get { return _LineWidth; }
+            get => _LineWidth;
             set
             {
                 if(value != _LineWidth)
@@ -126,7 +126,7 @@ namespace VikingXNAGraphics
         private Color _HSLColor;
         public Color Color
         {
-            get { return _Color; }
+            get => _Color;
             set
             {
                 _Color = value;
@@ -149,15 +149,12 @@ namespace VikingXNAGraphics
             }
         }
 
-        internal Color HSLColor
-        {
-            get { return _HSLColor; }
-        }
+        internal Color HSLColor => _HSLColor;
 
         public float Alpha
         {
-            get { return _Color.GetAlpha(); }
-            set { Color = _Color.SetAlpha(value); }
+            get => _Color.GetAlpha();
+            set => Color = _Color.SetAlpha(value);
         }
 
         public PolyLineView(Microsoft.Xna.Framework.Color color, 

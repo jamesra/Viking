@@ -25,10 +25,7 @@ namespace Viking.UI.Controls
         private bool _ShowDelete; //Controls don't update the Visible property immediately so I cache the values
         public bool ShowDelete
         {
-            get
-            {
-                return _ShowDelete;
-            }
+            get => _ShowDelete;
             set
             {
                 _ShowDelete = value;
@@ -40,10 +37,7 @@ namespace Viking.UI.Controls
         private bool _ShowLabels; //Controls don't update the Visible property immediately so I cache the values
         public bool ShowLabels
         {
-            get
-            {
-                return _ShowLabels;
-            }
+            get => _ShowLabels;
             set
             {
                 _ShowLabels = value;
@@ -112,7 +106,7 @@ namespace Viking.UI.Controls
         /// </summary>
         internal ChannelInfo Info
         {
-            get { return _Info; }
+            get => _Info;
             set
             {
                 if (value is null)

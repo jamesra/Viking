@@ -24,10 +24,7 @@ namespace Viking.UI.Forms
         /// <summary>
         /// The string to append to the next filename captured
         /// </summary>
-        static string NextCaptureNumberString
-        {
-            get => "_" + ScreenshotForm.NextCaptureNumber.ToString("d03");
-        }
+        static string NextCaptureNumberString => "_" + ScreenshotForm.NextCaptureNumber.ToString("d03");
 
         /// <summary>
         /// Rectangle to be captured by the screenshot

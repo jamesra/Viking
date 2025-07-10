@@ -33,21 +33,9 @@ namespace VikingXNAGraphics
             }
         }
 
-        public int Count
-        {
-            get
-            {
-                return Points.Count;
-            }
-        }
+        public int Count => Points.Count;
 
-        public bool IsReadOnly
-        {
-            get
-            {
-                return Points.IsReadOnly;
-            }
-        }
+        public bool IsReadOnly => Points.IsReadOnly;
 
         /// <summary>
         /// Add or remove a point from the list

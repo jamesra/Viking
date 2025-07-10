@@ -50,8 +50,9 @@ namespace Viking.UI
     {
         public System.Drawing.Point Location { get; internal set; }
 
-        public int X { get { return Location.X; } }
-        public int Y { get { return Location.Y; } }
+        public int X => Location.X;
+        public int Y => Location.Y;
+
         /// <summary>
         /// Raw data for our pen state
         /// </summary>
@@ -70,12 +71,12 @@ namespace Viking.UI
             }
         }
 
-        public bool Erase { get { return (Pen.flags & PenFlags.Eraser) > 0; } }
-        public bool Inverted { get { return (Pen.flags & PenFlags.Inverted) > 0; } }
-        public bool Barrel { get { return (Pen.flags & PenFlags.Barrel) > 0; } }
+        public bool Erase => (Pen.flags & PenFlags.Eraser) > 0;
+        public bool Inverted => (Pen.flags & PenFlags.Inverted) > 0;
+        public bool Barrel => (Pen.flags & PenFlags.Barrel) > 0;
 
-        public bool InContact { get { return (Pen.pointerInfo.pointerFlags & PointerFlags.InContact) > 0; } }
-        public bool InRange { get { return (Pen.pointerInfo.pointerFlags & PointerFlags.InRange) > 0; } }
+        public bool InContact => (Pen.pointerInfo.pointerFlags & PointerFlags.InContact) > 0;
+        public bool InRange => (Pen.pointerInfo.pointerFlags & PointerFlags.InRange) > 0;
     }
 
     public delegate void PenEventHandler(object sender, PenEventArgs e);

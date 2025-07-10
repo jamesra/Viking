@@ -19,13 +19,7 @@ namespace Viking.UI.Commands
             _ObservableHelpStrings = new ObservableCollection<string>(this.HelpStrings);
         }
 
-        public virtual string[] HelpStrings
-        {
-            get
-            {
-                return BuildHelpStrings();
-            }
-        }
+        public virtual string[] HelpStrings => BuildHelpStrings();
 
         private readonly ObservableCollection<string> _ObservableHelpStrings;
 

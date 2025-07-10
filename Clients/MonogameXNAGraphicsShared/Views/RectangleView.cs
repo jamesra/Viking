@@ -15,7 +15,7 @@ namespace VikingXNAGraphics
 
         public override GridRectangle BoundingRect
         {
-            get { return _BoundingRect; }
+            get => _BoundingRect;
             set {
                 if(_BoundingRect != value)
                 {
@@ -27,10 +27,7 @@ namespace VikingXNAGraphics
 
         public override GridVector2 Position
         {
-            get
-            {
-                return BoundingRect.Center;
-            }
+            get => BoundingRect.Center;
 
             set
             {

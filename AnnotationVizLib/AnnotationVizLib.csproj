@@ -1,44 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<!-- Multi-targeting for .NET Standard 2.0 and .NET Framework 4.8 -->
-		<TargetFrameworks>net48</TargetFrameworks>
-		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+		<TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
 		<RootNamespace>TriangeNetGeometryExtensions</RootNamespace>
 		<AssemblyName>TriangeNetGeometryExtensions</AssemblyName>
 		<OutputType>Library</OutputType>
 	</PropertyGroup>
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-		<DebugSymbols>true</DebugSymbols>
-		<DebugType>full</DebugType>
-		<Optimize>false</Optimize>
-		<OutputPath>bin\Debug\</OutputPath>
-		<DefineConstants>DEBUG;TRACE</DefineConstants>
-		<ErrorReport>prompt</ErrorReport>
-		<WarningLevel>4</WarningLevel>
-	</PropertyGroup>
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-		<DebugType>pdbonly</DebugType>
-		<Optimize>true</Optimize>
-		<OutputPath>bin\Release\</OutputPath>
-		<DefineConstants>TRACE</DefineConstants>
-		<ErrorReport>prompt</ErrorReport>
-		<WarningLevel>4</WarningLevel>
-	</PropertyGroup>
-	<!-- Project references -->
 	<ItemGroup>
 		<ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
 		<ProjectReference Include="..\Geometry\Geometry.csproj" />
 		<ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
 		<ProjectReference Include="..\Triangle.NET\Triangle\Triangle.csproj" />
 	</ItemGroup>
-	<!-- Dependencies -->
 	<ItemGroup>
-		<!-- Add any NuGet package references here -->
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="System.Drawing.Common" Version="9.0.6" />
-		<PackageReference Include="System.Text.Json" Version="8.0.5" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.7" />
+		<PackageReference Include="System.Text.Json" Version="9.0.7" />
 	</ItemGroup>
 </Project>

@@ -69,15 +69,15 @@ namespace WebAnnotationModel
                 }
             }
 
-            internal readonly static StructureTypeStore StructureTypes = new StructureTypeStore();
-            internal readonly static StructureStore Structures = new StructureStore();
-            internal readonly static LocationStore Locations = new LocationStore();
-            internal readonly static StructureLinkStore StructureLinks = new StructureLinkStore();
-            internal readonly static LocationLinkStore LocationLinks = new LocationLinkStore();
-            internal readonly static PermittedStructureLinkStore PermittedStructureLinks = new PermittedStructureLinkStore();
+            internal static readonly StructureTypeStore StructureTypes = new StructureTypeStore();
+            internal static readonly StructureStore Structures = new StructureStore();
+            internal static readonly LocationStore Locations = new LocationStore();
+            internal static readonly StructureLinkStore StructureLinks = new StructureLinkStore();
+            internal static readonly LocationLinkStore LocationLinks = new LocationLinkStore();
+            internal static readonly PermittedStructureLinkStore PermittedStructureLinks = new PermittedStructureLinkStore();
 
-            internal readonly static RegionLoader<long, LocationObj> RegionLocationsLoader;
-            internal readonly static RegionLoader<long, StructureObj> RegionStructuresLoader;
+            internal static readonly RegionLoader<long, LocationObj> RegionLocationsLoader;
+            internal static readonly RegionLoader<long, StructureObj> RegionStructuresLoader;
         }
     }
 }

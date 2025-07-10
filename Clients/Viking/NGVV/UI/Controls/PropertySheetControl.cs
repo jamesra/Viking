@@ -12,7 +12,7 @@ namespace Viking.UI.Controls
     {
         public System.Type DisplayType
         {
-            get { return _DisplayType; }
+            get => _DisplayType;
             set
             {
                 if (_DisplayType != value)
@@ -31,13 +31,7 @@ namespace Viking.UI.Controls
         public System.Drawing.Size MaxTabSize = Size.Empty;
 
         [Browsable(false)]
-        public IPropertyPage[] IPropertyPages
-        {
-            get
-            {
-                return IPageArray.ToArray();
-            }
-        }
+        public IPropertyPage[] IPropertyPages => IPageArray.ToArray();
 
         protected List<IPropertyPage> IPageArray = new List<IPropertyPage>();
 

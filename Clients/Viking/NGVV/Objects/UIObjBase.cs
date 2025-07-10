@@ -78,38 +78,38 @@ namespace Viking.Objects
 
         public event PropertyChangedEventHandler ValueChanged
         {
-            add { OnValueChanged += value; }
-            remove { OnValueChanged -= value; }
+            add => OnValueChanged += value;
+            remove => OnValueChanged -= value;
         }
 
         public event EventHandler BeforeDelete
         {
-            add { OnBeforeDelete += value; }
-            remove { OnBeforeDelete -= value; }
+            add => OnBeforeDelete += value;
+            remove => OnBeforeDelete -= value;
         }
 
         public event EventHandler AfterDelete
         {
-            add { OnAfterDelete += value; }
-            remove { OnAfterDelete -= value; }
+            add => OnAfterDelete += value;
+            remove => OnAfterDelete -= value;
         }
 
         public event EventHandler BeforeSave
         {
-            add { OnBeforeSave += value; }
-            remove { OnBeforeSave -= value; }
+            add => OnBeforeSave += value;
+            remove => OnBeforeSave -= value;
         }
 
         event EventHandler IUIObject.AfterSave
         {
-            add { OnAfterSave += value; }
-            remove { OnAfterSave -= value; }
+            add => OnAfterSave += value;
+            remove => OnAfterSave -= value;
         }
 
         public virtual event System.Collections.Specialized.NotifyCollectionChangedEventHandler ChildChanged
         {
-            add { OnChildChanged += value; }
-            remove { OnChildChanged -= value; }
+            add => OnChildChanged += value;
+            remove => OnChildChanged -= value;
         }
 
         public virtual void ShowProperties()
@@ -122,30 +122,18 @@ namespace Viking.Objects
             return Viking.UI.Forms.PropertySheetForm.ShowDialog(this, ParentForm);
         }
 
-        public virtual System.Windows.Forms.ContextMenu ContextMenu
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public virtual System.Windows.Forms.ContextMenu ContextMenu => throw new NotImplementedException();
 
-        public virtual System.Drawing.Image SmallThumbnail
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public virtual System.Drawing.Image SmallThumbnail => throw new NotImplementedException();
 
-        public virtual string ToolTip
-        {
-            get { return this.ToString(); }
-        }
+        public virtual string ToolTip => this.ToString();
 
         public virtual void Save()
         {
             throw new NotImplementedException();
         }
 
-        public virtual Type[] AssignableParentTypes
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public virtual Type[] AssignableParentTypes => throw new NotImplementedException();
 
         public virtual void SetParent(IUIObject parent)
         {
@@ -157,15 +145,9 @@ namespace Viking.Objects
             throw new NotImplementedException();
         }
 
-        public virtual int TreeImageIndex
-        {
-            get { return 0; }
-        }
+        public virtual int TreeImageIndex => 0;
 
-        public virtual int TreeSelectedImageIndex
-        {
-            get { return 1; }
-        }
+        public virtual int TreeSelectedImageIndex => 1;
 
         #endregion
     }

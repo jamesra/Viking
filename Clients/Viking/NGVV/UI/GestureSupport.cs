@@ -145,7 +145,7 @@ namespace Viking.UI
         /// </summary>
         public UInt32 ID;
 
-        public Gesture Gesture { get { return (Gesture)ID; } }
+        public Gesture Gesture => (Gesture)ID;
 
         /// <summary>
         /// A handle to the window that is targeted by this gesture.

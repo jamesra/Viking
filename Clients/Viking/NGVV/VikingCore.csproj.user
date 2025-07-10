@@ -34,4 +34,126 @@
     <StartArguments>http://155.100.105.9/RABBIT/Volume.xml</StartArguments>
     <StartAction>Program</StartAction>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="PropertyPages\SectionChannelsPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="PropertyPages\SectionGeneralPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\BaseClasses\DockableUserControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\BaseClasses\DockingTreeControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\BaseClasses\DocklingListControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\BaseClasses\ModuleTabControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\BaseClasses\PropertyPageBase.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\BaseClasses\TagMenuItem.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="UI\BaseClasses\VikingControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\BaseClasses\VikingObjectEventControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\ChannelPickerControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\ChannelSetupControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\EnableToolBar.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\NumericTextBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\ObjectLinkLabel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\ObjectListView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\ObjectTreeView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\PropertySheetControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\SectionViewerControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\UserCredentialsControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\VolumeListControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\AboutBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\FindVolumeForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\FrameCapturesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\GenericProgressForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\GoToLocationForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\InputBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\LoadingVolumeForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\Logon.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\LogonASPMembership.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\PropertySheetForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\ScreenshotForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\SectionChooserForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\SectionViewerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\SetupChannelsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\SplashForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\TileExportForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\VikingForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\VikingMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\VolumeControls\SectionList.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+  </ItemGroup>
 </Project>

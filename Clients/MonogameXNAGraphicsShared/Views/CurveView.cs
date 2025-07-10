@@ -21,8 +21,8 @@ namespace VikingXNAGraphics
         private Texture2D _ControlPointTexture;
         public Texture2D ControlPointTexture
         {
-            get { return _ControlPointTexture; }
-            set { _ControlPointTexture = value; }
+            get => _ControlPointTexture;
+            set => _ControlPointTexture = value;
         }
         
         /// <summary>
@@ -30,7 +30,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public GridVector2[] ControlPoints
         {
-            get { return _CurveControlPoints.ControlPoints; }
+            get => _CurveControlPoints.ControlPoints;
             set {
                 _CurveControlPoints.ControlPoints = value;
                 UpdateViews();
@@ -43,10 +43,7 @@ namespace VikingXNAGraphics
             UpdateViews();
         }
                 
-        private GridVector2[] CurvePoints
-        {
-            get { return _CurveControlPoints.CurvePoints; }
-        }
+        private GridVector2[] CurvePoints => _CurveControlPoints.CurvePoints;
 
         private RoundCurve.RoundCurve Curve;
 
@@ -58,7 +55,7 @@ namespace VikingXNAGraphics
 
         public double LineWidth
         {
-            get { return _LineWidth; }
+            get => _LineWidth;
             set {
                 if (_LineWidth != value)
                 {
@@ -72,7 +69,7 @@ namespace VikingXNAGraphics
 
         public double? ControlPointRadius
         {
-            get { return _ControlPointRadius; }
+            get => _ControlPointRadius;
             set
             {
                 if (_ControlPointRadius != value)
@@ -88,7 +85,7 @@ namespace VikingXNAGraphics
 
         public Color Color
         {
-            get { return _Color; }
+            get => _Color;
             set
             {
                 _Color = value;
@@ -102,13 +99,13 @@ namespace VikingXNAGraphics
 
         public float Alpha
         {
-            get { return _Color.GetAlpha(); }
-            set { Color = _Color.SetAlpha(value); }
+            get => _Color.GetAlpha();
+            set => Color = _Color.SetAlpha(value);
         }
 
         public uint NumInterpolations
         {
-            get { return _CurveControlPoints.NumInterpolations; }
+            get => _CurveControlPoints.NumInterpolations;
             set {
                 if (_CurveControlPoints.NumInterpolations != value)
                 {
@@ -123,7 +120,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public bool TryCloseCurve
         {
-            get { return _CurveControlPoints.TryCloseCurve; }
+            get => _CurveControlPoints.TryCloseCurve;
             set
             {
                 if (_CurveControlPoints.TryCloseCurve != value)

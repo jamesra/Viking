@@ -29,7 +29,7 @@ namespace VikingXNAGraphics
         private PointLabelType _LabelType = PointLabelType.NONE;
         public PointLabelType LabelType
         {
-            get { return _LabelType; }
+            get => _LabelType;
             set {
                 _LabelType = value;
                 UpdateViews();
@@ -38,10 +38,7 @@ namespace VikingXNAGraphics
          
         public bool LabelIndex
         {
-            get
-            {
-                return (_LabelType & PointLabelType.INDEX) > 0;
-            }
+            get => (_LabelType & PointLabelType.INDEX) > 0;
             set
             {
                 if (value)
@@ -58,10 +55,7 @@ namespace VikingXNAGraphics
           
         public bool LabelPosition
         {
-            get
-            {
-                return (_LabelType & PointLabelType.POSITION) > 0;
-            }
+            get => (_LabelType & PointLabelType.POSITION) > 0;
             set
             {
                 if (value)
@@ -80,10 +74,7 @@ namespace VikingXNAGraphics
 
         public Color LabelColor
         {
-            get
-            {
-                return _LabelColor;
-            }
+            get => _LabelColor;
 
             set
             {
@@ -95,7 +86,7 @@ namespace VikingXNAGraphics
 
         public double PointRadius
         {
-            get { return _PointRadius; }
+            get => _PointRadius;
             set
             {
                 _PointRadius = value;

@@ -10,9 +10,11 @@
 #region Using Statements
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.ComponentModel.Design;
 using System.Drawing;
 using System.Windows.Forms;
+using VikingXNAGraphics;
+using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
+
 #endregion
 
 namespace VikingXNAWinForms
@@ -103,7 +105,7 @@ namespace VikingXNAWinForms
         /// </summary>
         protected override void OnCreateControl()
         {
-            // Don't initialize the graphics device if we are running in the designer.
+            // Don't initialize the graphics device if we are running in the designer.  
             if (!DesignMode)
             {
                 graphicsDeviceService = GraphicsDeviceService.AddRef(Handle,
@@ -256,7 +258,7 @@ namespace VikingXNAWinForms
                                                             ClientSize.Height);
 
             if (Device.GraphicsDeviceStatus == GraphicsDeviceStatus.Normal)
-                Device.Present(sourceRectangle, null, this.Handle);
+                Device.Present(); //(sourceRectangle, null, this.Handle);
 #if !DEBUG
             }
             catch

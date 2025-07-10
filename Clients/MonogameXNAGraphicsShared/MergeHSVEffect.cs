@@ -26,8 +26,8 @@ namespace VikingXNA
                 
         public Matrix WorldViewProjMatrix
         {
-            get { return _WorldViewProjMatrix.GetValueMatrix(); }
-            set { _WorldViewProjMatrix.SetValue(value); }
+            get => _WorldViewProjMatrix.GetValueMatrix();
+            set => _WorldViewProjMatrix.SetValue(value);
         }
 
         public void MergeHSVImages(Texture2D[] Textures, float[] Alphas, float[] Betas)
@@ -109,18 +109,12 @@ namespace VikingXNA
 
         private float[] HueAlpha
         {
-            set
-            {
-                _ChannelHueAlpha.SetValue(value); 
-            }
+            set => _ChannelHueAlpha.SetValue(value);
         }
 
         private float[] HueBeta
         {
-            set
-            {
-                _ChannelHueBeta.SetValue(value); 
-            }
+            set => _ChannelHueBeta.SetValue(value);
         }
 
         public MergeHSVImagesEffect(Effect effect)

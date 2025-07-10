@@ -2,13 +2,11 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SIMeasurement;
-using System.Collections.Generic;
-using System.Web.UI.WebControls;
+using System.Collections.Generic; 
 using System.Windows.Forms;
 using VikingXNA;
 using VikingXNAGraphics;
-using HorizontalAlignment = VikingXNAGraphics.HorizontalAlignment;
-using Label = System.Web.UI.WebControls.Label;
+using HorizontalAlignment = VikingXNAGraphics.HorizontalAlignment; 
 
 namespace MeasurementExtension
 {

@@ -62,7 +62,7 @@ namespace VikingXNAGraphics
         private bool _TryCloseCurve;
         public bool TryCloseCurve
         {
-            get { return _TryCloseCurve; }
+            get => _TryCloseCurve;
             set
             {
                 if (_TryCloseCurve != value)
@@ -81,7 +81,7 @@ namespace VikingXNAGraphics
         /// </summary>
         public GridVector2[] ControlPoints
         {
-            get { return _ControlPoints; }
+            get => _ControlPoints;
             set
             {
                 _ControlPoints = value;
@@ -95,10 +95,7 @@ namespace VikingXNAGraphics
         }
 
         private GridVector2[] _CurvePoints;
-        public GridVector2[] CurvePoints
-        {
-            get { return _CurvePoints; }
-        }
+        public GridVector2[] CurvePoints => _CurvePoints;
 
         /// <summary>
         /// Return the interpolated points between the two control point indicies
@@ -205,7 +202,7 @@ namespace VikingXNAGraphics
         private uint _NumInterpolations = 1;
         public uint NumInterpolations
         {
-            get { return _NumInterpolations; }
+            get => _NumInterpolations;
             set
             {
                 if (value != _NumInterpolations)

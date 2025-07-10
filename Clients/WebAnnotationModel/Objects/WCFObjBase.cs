@@ -9,7 +9,7 @@ namespace WebAnnotationModel.Objects
     /// Base of objects used to expose WCF objects, T is the WCF object
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    abstract public class WCFObjBase<T> : INotifyPropertyChanged, INotifyPropertyChanging, ICloneable
+    public abstract class WCFObjBase<T> : INotifyPropertyChanged, INotifyPropertyChanging, ICloneable
         where T : DataObject, new()
     {
         protected T Data;

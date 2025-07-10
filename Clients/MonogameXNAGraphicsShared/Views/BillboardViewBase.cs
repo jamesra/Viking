@@ -31,23 +31,14 @@ namespace VikingXNAGraphics
 
         public virtual float Alpha
         {
-            get
-            {
-                return _Color.GetAlpha();
-            }
-            set
-            {
-                Color = this._Color.SetAlpha(value);
-            }
+            get => _Color.GetAlpha();
+            set => Color = this._Color.SetAlpha(value);
         }
         
         protected Microsoft.Xna.Framework.Color _Color;
         public virtual Microsoft.Xna.Framework.Color Color
         {
-            get
-            {
-                return _Color;
-            }
+            get => _Color;
             set
             {
                 _Color = value;
@@ -57,13 +48,7 @@ namespace VikingXNAGraphics
         }
 
         protected Microsoft.Xna.Framework.Color _HSLColor;
-        public virtual Microsoft.Xna.Framework.Color HSLColor
-        {
-            get
-            {
-                return _HSLColor;
-            }
-        }
+        public virtual Microsoft.Xna.Framework.Color HSLColor => _HSLColor;
 
 
         public abstract GridVector2 Position { get; set; }

@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics; 
 using Utilities;
+using Geometry;
 
 namespace UtilitiesTests
 {

@@ -16,53 +16,29 @@ namespace Viking.UI.BaseClasses
         [Browsable(true)]
         public System.Drawing.Color ListForeColor
         {
-            get
-            {
-                return this.ListItems.ForeColor;
-            }
-            set
-            {
-                this.ListItems.ForeColor = value;
-            }
+            get => this.ListItems.ForeColor;
+            set => this.ListItems.ForeColor = value;
         }
 
         [Browsable(true)]
         public System.Drawing.Color ListBackColor
         {
-            get
-            {
-                return this.ListItems.BackColor;
-            }
-            set
-            {
-                this.ListItems.BackColor = value;
-            }
+            get => this.ListItems.BackColor;
+            set => this.ListItems.BackColor = value;
         }
 
         [Browsable(true)]
         public System.Drawing.Color TitleForeColor
         {
-            get
-            {
-                return this.LabelTitle.ForeColor;
-            }
-            set
-            {
-                this.LabelTitle.ForeColor = value;
-            }
+            get => this.LabelTitle.ForeColor;
+            set => this.LabelTitle.ForeColor = value;
         }
 
         [Browsable(true)]
         public System.Drawing.Color TitleBackColor
         {
-            get
-            {
-                return this.LabelTitle.BackColor;
-            }
-            set
-            {
-                this.LabelTitle.BackColor = value;
-            }
+            get => this.LabelTitle.BackColor;
+            set => this.LabelTitle.BackColor = value;
         }
 
         #endregion

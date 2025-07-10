@@ -132,13 +132,7 @@ namespace Viking.UI
 
         public Path path = new Path();
 
-        private double PointIntervalOnDrag
-        {
-            get
-            {
-                return Parent.Downsample * 4.0;
-            }
-        }
+        private double PointIntervalOnDrag => Parent.Downsample * 4.0;
 
         public bool PenIsComplete;
 
@@ -186,38 +180,20 @@ namespace Viking.UI
 
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnPathChanged
         {
-            add
-            {
-                path.OnPathChanged += value;
-            }
-            remove
-            {
-                path.OnPathChanged -= value;
-            }
+            add => path.OnPathChanged += value;
+            remove => path.OnPathChanged -= value;
         }
 
         event NotifyCollectionChangedEventHandler System.Collections.Specialized.INotifyCollectionChanged.CollectionChanged
         {
-            add
-            {
-                path.OnPathChanged += value;
-            }
-            remove
-            {
-                path.OnPathChanged -= value;
-            }
+            add => path.OnPathChanged += value;
+            remove => path.OnPathChanged -= value;
         }
 
         public event Path.LoopChangedEventHandler OnPathLoop
         {
-            add
-            {
-                path.OnLoopChanged += value;
-            }
-            remove
-            {
-                path.OnLoopChanged -= value;
-            }
+            add => path.OnLoopChanged += value;
+            remove => path.OnLoopChanged -= value;
         }
 
         /// <summary>
@@ -252,21 +228,9 @@ namespace Viking.UI
         /// </summary>
         //public delegate void OnPathClosedHandler(object sender, GridLineSegment? segment);
         //public event OnPathClosedHandler OnPathClosed;
-        public List<GridVector2> Points
-        {
-            get
-            {
-                return path.Points;
-            }
-        }
+        public List<GridVector2> Points => path.Points;
 
-        public GridVector2[] SimplifiedPath
-        {
-            get
-            {
-                return path.SimplifiedPath;
-            }
-        }
+        public GridVector2[] SimplifiedPath => path.SimplifiedPath;
 
         public GridVector2? LastPenPosition;
 
@@ -303,61 +267,31 @@ namespace Viking.UI
         /// <summary>
         /// Segments are ordered so that A is the newer control point and B is the older control point in the path
         /// </summary>
-        public IReadOnlyList<GridLineSegment> Segments
-        {
-            get
-            {
-                return path.Segments;
-            }
-        }
+        public IReadOnlyList<GridLineSegment> Segments => path.Segments;
 
 
         /// <summary>
         /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
         /// </summary>
-        public GridVector2[] Loop
-        {
-            get
-            {
-                return path.Loop;
-            }
-        }
+        public GridVector2[] Loop => path.Loop;
 
 
         /// <summary>
         /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
         /// </summary>
-        public GridLineSegment[] LoopSegments
-        {
-            get
-            {
-                return path.LoopSegments;
-            }
-        }
+        public GridLineSegment[] LoopSegments => path.LoopSegments;
 
 
         /// <summary>
         /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
         /// </summary>
-        public GridVector2[] SimplifiedFirstLoop
-        {
-            get
-            {
-                return path.SimplifiedFirstLoop;
-            }
-        }
+        public GridVector2[] SimplifiedFirstLoop => path.SimplifiedFirstLoop;
 
 
         /// <summary>
         /// Returns the line segments composing the first loop described by the path, or null if no self-intersection exists
         /// </summary>
-        public GridLineSegment[] SimplifiedLoopSegments
-        {
-            get
-            {
-                return path.SimplifiedLoopSegments;
-            }
-        }
+        public GridLineSegment[] SimplifiedLoopSegments => path.SimplifiedLoopSegments;
 
         public static int _NextID = 0;
         public int ID;
@@ -436,13 +370,7 @@ namespace Viking.UI
             return this.path.Peek();
         }
 
-        public bool HasSelfIntersection
-        {
-            get
-            {
-                return path.HasSelfIntersection;
-            }
-        }
+        public bool HasSelfIntersection => path.HasSelfIntersection;
 
         private void FireOnProposedNextSegmentChanged(GridLineSegment? line)
         {

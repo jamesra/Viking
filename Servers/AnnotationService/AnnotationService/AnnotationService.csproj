@@ -1,235 +1,68 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Annotation</RootNamespace>
-    <AssemblyName>AnnotationService</AssemblyName>
-    <ProjectTypeGuids>{3D9AD99F-2412-4246-B90B-4EAA41C64699};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <StartArguments>/client:"WcfTestClient.exe"</StartArguments>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
-    <FileUpgradeFlags>
-    </FileUpgradeFlags>
-    <OldToolsVersion>3.5</OldToolsVersion>
-    <UpgradeBackupLocation />
-    <TargetFrameworkProfile />
-    <XsdCodeGenEnabled>False</XsdCodeGenEnabled>
-    <WcfConfigValidationEnabled>True</WcfConfigValidationEnabled>
-    <XsdCodeGenSerializerMode>XmlSerializer</XsdCodeGenSerializerMode>
-    <XsdCodeGenReuseTypesFlag>True</XsdCodeGenReuseTypesFlag>
-    <XsdCodeGenReuseTypesMode>All</XsdCodeGenReuseTypesMode>
-    <XsdCodeGenReferences />
-    <XsdCodeGenNamespaceMappings>%2a, Annotation.ContractTypes</XsdCodeGenNamespaceMappings>
-    <XsdCodeGenCollectionTypes>System.Array%3bSystem.Collections.Generic.Dictionary`2</XsdCodeGenCollectionTypes>
-    <XsdCodeGenExcludedTypes />
-    <XsdCodeGenImportXmlTypes>True</XsdCodeGenImportXmlTypes>
-    <XsdCodeGenGenerateSerializableTypes>True</XsdCodeGenGenerateSerializableTypes>
-    <XsdCodeGenGenerateInternalTypes>False</XsdCodeGenGenerateInternalTypes>
-    <XsdCodeGenEnableDataBinding>False</XsdCodeGenEnableDataBinding>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>false</Prefer32Bit>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
-    <Reference Include="System.ComponentModel.DataAnnotations" />
-    <Reference Include="System.configuration" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.IdentityModel" />
-    <Reference Include="System.IdentityModel.Selectors" />
-    <Reference Include="System.Net" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.Serialization">
-      <RequiredTargetFramework>3.0</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Transactions" />
-    <Reference Include="System.Web" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="AnnotateService.cs" />
-    <Compile Include="GraphClasses\Edgex.cs" />
-    <Compile Include="GraphClasses\Graphx.cs" />
-    <Compile Include="GraphClasses\LocationInfo.cs" />
-    <Compile Include="GraphClasses\SynapseClasses.cs" />
-    <Compile Include="Identity.cs" />
-    <Compile Include="LockChecks.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <DependentUpon>Settings.settings</DependentUpon>
-    </Compile>
-    <Compile Include="ServiceModelUtil.cs" />
-    <Compile Include="SqlServerTypes\Loader.cs" />
-    <Compile Include="Service\Interfaces\ICircuit.cs" />
-    <Compile Include="Service\Types\LocationExtensions.cs" />
-    <Compile Include="Service\Types\LocationLinkExtensions.cs" />
-    <Compile Include="Service\Types\PermittedStructureLinkExtensions.cs" />
-    <Compile Include="Service\Types\StructureExtensions.cs" />
-    <Compile Include="Service\Types\StructureLinkExtensions.cs" />
-    <Compile Include="Service\Types\StructureTypeExtensions.cs" />
-    <Compile Include="Utils.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Installation.rst" />
-    <None Include="TagSchema.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="webText.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <SubType>Designer</SubType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{3259AA49-8AA1-44D3-9025-A0B520596A8C}" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="app.config" />
-    <None Include="GraphClasses\.svn\entries" />
-    <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-    <Content Include="SqlServerTypes\x64\msvcr120.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x86\msvcr120.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="web.config">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <SubType>Designer</SubType>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="GraphClasses\.svn\prop-base\" />
-    <Folder Include="GraphClasses\.svn\props\" />
-    <Folder Include="GraphClasses\.svn\text-base\" />
-    <Folder Include="GraphClasses\.svn\tmp\prop-base\" />
-    <Folder Include="GraphClasses\.svn\tmp\props\" />
-    <Folder Include="GraphClasses\.svn\tmp\text-base\" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
-      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
-      <Name>AnnotationServiceTypes.WCF</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj">
-      <Project>{6702adda-3f8f-43d0-9c7e-1e7fdbbe983f}</Project>
-      <Name>SqlGeometryUtils</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\ConnectomeDataModel\ConnectomeDataModel.csproj">
-      <Project>{9599f439-7526-4c45-a1eb-fde32648cfcd}</Project>
-      <Name>ConnectomeDataModel</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\WebAppSettings\VikingWebAppSettings.csproj">
-      <Project>{cd19dfb6-2201-431d-9db3-c8ad6ad629bf}</Project>
-      <Name>VikingWebAppSettings</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="EntityFramework">
-      <Version>6.5.1</Version>
-    </PackageReference>
-    <PackageReference Include="IdentityModel">
-      <Version>5.2.0</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.AspNet.WebApi">
-      <Version>5.2.7</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Bcl.Async">
-      <Version>1.0.168</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Bcl.Build">
-      <Version>1.0.21</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Net.Http">
-      <Version>2.2.29</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.SqlServer.Types">
-      <Version>14.0.1016.290</Version>
-    </PackageReference>
-    <PackageReference Include="Newtonsoft.Json">
-      <Version>13.0.3</Version>
-    </PackageReference>
-    <PackageReference Include="protobuf-net">
-      <Version>3.2.52</Version>
-    </PackageReference>
-    <PackageReference Include="protobuf-net.ServiceModel">
-      <Version>3.2.52</Version>
-    </PackageReference>
-    <PackageReference Include="System.Net.Http">
-      <Version>4.3.4</Version>
-    </PackageReference>
-    <PackageReference Include="System.Security.Cryptography.Algorithms">
-      <Version>4.3.1</Version>
-    </PackageReference>
-    <PackageReference Include="System.Security.Cryptography.X509Certificates">
-      <Version>4.3.2</Version>
-    </PackageReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <ProjectExtensions>
-    <VisualStudio>
-      <FlavorProperties GUID="{3D9AD99F-2412-4246-B90B-4EAA41C64699}">
-        <WcfProjectProperties>
-          <AutoStart>False</AutoStart>
-        </WcfProjectProperties>
-      </FlavorProperties>
-    </VisualStudio>
-  </ProjectExtensions>
-  <PropertyGroup>
-    <PostBuildEvent>
-    </PostBuildEvent>
-  </PropertyGroup>
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<!-- Target .NET Framework 4.8 -->
+		<TargetFramework>net48</TargetFramework>
+		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+		<RootNamespace>Annotation</RootNamespace>
+		<AssemblyName>AnnotationService</AssemblyName>
+		<AssemblyTitle>Viking Annotation Service</AssemblyTitle>
+		<OutputType>Library</OutputType>
+		<Version>1.0.0.0</Version>
+		<FileVersion>1.0.0.0</FileVersion>
+		<Copyright>Copyright © James Anderson 2008</Copyright>
+		<WcfConfigValidationEnabled>True</WcfConfigValidationEnabled>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>full</DebugType>
+		<Optimize>false</Optimize>
+		<OutputPath>bin\Debug\</OutputPath>
+		<DefineConstants>DEBUG;TRACE</DefineConstants>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>4</WarningLevel>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<DebugType>pdbonly</DebugType>
+		<Optimize>true</Optimize>
+		<OutputPath>bin\Release\</OutputPath>
+		<DefineConstants>TRACE</DefineConstants>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>4</WarningLevel>
+	</PropertyGroup>
+	<!-- NuGet package references -->
+	<ItemGroup>
+		<PackageReference Include="Duende.IdentityModel" Version="7.1.0" />
+		<PackageReference Include="EntityFramework" Version="6.5.1" />
+		<PackageReference Include="Microsoft.AspNet.WebApi" Version="5.2.7" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="protobuf-net" Version="3.2.52" />
+		<PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
+		<PackageReference Include="System.Net.Http" Version="4.3.4" />
+		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+		<PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
+		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
+	</ItemGroup> 
+	<!-- WCF Metadata -->
+	<ItemGroup>
+		<WCFMetadata Include="Connected Services\" />
+	</ItemGroup>
+	<!-- Project references -->
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
+		<ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
+		<ProjectReference Include="..\..\ConnectomeDataModel\ConnectomeDataModel.csproj" />
+		<ProjectReference Include="..\..\WebAppSettings\VikingWebAppSettings.csproj" />
+	</ItemGroup>
+	<!-- Content files -->
+	<ItemGroup>
+		<Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="SqlServerTypes\x86\msvcr120.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="web.config" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
 </Project>

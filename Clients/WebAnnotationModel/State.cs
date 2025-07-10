@@ -24,6 +24,6 @@ namespace WebAnnotationModel
         /// Record the program start time so we do not send queries that request every update since the start of time,
         /// only every update since our first possible query.
         /// </summary>
-        public readonly static DateTime ProgramStartTime = DateTime.UtcNow;
+        public static readonly DateTime ProgramStartTime = DateTime.UtcNow;
     }
 }

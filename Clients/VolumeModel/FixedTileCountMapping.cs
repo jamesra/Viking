@@ -5,10 +5,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using System.Threading.Tasks;
+using VolumeModel;
 
 namespace Viking.VolumeModel
 {
@@ -133,16 +132,13 @@ namespace Viking.VolumeModel
 
         protected static Task SaveToCache(in string CachedTransformsFileName, in ITransform[] transforms)
         {
-            //The corrupted memory error disappeared when I stopped using the cache.  There are also 
-            //memory leak issues documented on MSDN regarding BinaryFormatters
-            //return;
+            //Replaced BinaryFormatter with modern JSON serialization to avoid security vulnerabilities
             if (transforms is null)
                 return Task.CompletedTask;
 
             using (FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Create, FileAccess.Write))
             {
-                BinaryFormatter binFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                binFormatter.Serialize(fstream, transforms);
+                JsonTransformSerializer.SerializeArray(fstream, transforms);
             }
 
             return Task.CompletedTask;
@@ -150,9 +146,7 @@ namespace Viking.VolumeModel
 
         protected virtual ITransform[] LoadFromCache()
         {
-            //The corrupted memory error disappeared when I stopped using the cache.  There are also 
-            //memory leak issues documented on MSDN regarding BinaryFormatters
-            //return null;
+            //Replaced BinaryFormatter with modern JSON deserialization to avoid security vulnerabilities
 
             ITransform[] transforms = null;
 
@@ -160,9 +154,7 @@ namespace Viking.VolumeModel
             {
                 using (FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Open, FileAccess.Read))
                 {
-                    BinaryFormatter binFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-
-                    transforms = binFormatter.Deserialize(fstream) as ITransform[];
+                    transforms = JsonTransformSerializer.DeserializeArray(fstream);
                 }
             }
             catch (Exception e)

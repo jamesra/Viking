@@ -14,14 +14,14 @@ namespace VikingXNAGraphics
 
         public GridVector2 Source
         {
-            get { return line.P0.ToGridVector2(); }
-            set { line.P0 = value.ToXNAVector2(); }
+            get => line.P0.ToGridVector2();
+            set => line.P0 = value.ToXNAVector2();
         }
 
         public GridVector2 Destination
         {
-            get { return line.P1.ToGridVector2(); }
-            set { line.P1 = value.ToXNAVector2(); }
+            get => line.P1.ToGridVector2();
+            set => line.P1 = value.ToXNAVector2();
         }
 
         public float LineWidth;
@@ -54,14 +54,14 @@ namespace VikingXNAGraphics
         protected Microsoft.Xna.Framework.Color _Color;
         public Microsoft.Xna.Framework.Color Color
         {
-            get { return _Color; }
+            get => _Color;
             set { _Color = value; _HSLColor = value.ConvertToHSL(); }
         }
 
         public float Alpha
         {
-            get { return _Color.GetAlpha(); }
-            set { _Color = _Color.SetAlpha(value); }
+            get => _Color.GetAlpha();
+            set => _Color = _Color.SetAlpha(value);
         }
 
         /// <summary>

@@ -1,194 +1,27 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C29F3CC8-1914-4682-8250-EAFED6BE1E30}</ProjectGuid>
-    <OutputType>library</OutputType>
-    <RootNamespace>WebAnnotation.WPF</RootNamespace>
-    <AssemblyName>WebAnnotationWPFControls</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <WarningLevel>4</WarningLevel>
-    <Deterministic>true</Deterministic>
-    <TargetFrameworkProfile />
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Xaml">
-      <RequiredTargetFramework>4.0</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="WindowsBase" />
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Behaviors\DragSelectorBehavior.cs" />
-    <Compile Include="Controls\DropList.xaml.cs">
-      <DependentUpon>DropList.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Converters\MockStructureTypeIDToStructureConverter.cs" />
-    <Compile Include="Converters\NullToVisibilityConverter.cs" />
-    <Compile Include="Converters\PermittedStructureLinkToStructureTypeConverters.cs" />
-    <Compile Include="Converters\StructureTypeToStructureTypeViewModel.cs" />
-    <Compile Include="Forms\GoToActionForm.xaml.cs">
-      <DependentUpon>GoToActionForm.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Forms\StructureTypeManagementForm.xaml.cs">
-      <DependentUpon>StructureTypeManagementForm.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="MockData\MockData.cs" />
-    <Compile Include="Forms\SelectStructureTypeForm.xaml.cs">
-      <DependentUpon>SelectStructureTypeForm.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Converters\IntToBrushConverter.cs" />
-    <Compile Include="Converters\StructureIDToStructureObjConverter.cs" />
-    <Compile Include="MockData\MockFavoriteStructureTypes.cs" />
-    <Compile Include="SqlServerTypes\Loader.cs" />
-    <Page Include="Controls\DropList.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Forms\GoToActionForm.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Forms\SelectStructureTypeForm.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\StructureTypeTree.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Compile Include="Controls\StructureTypeTree.xaml.cs">
-      <DependentUpon>StructureTypeTree.xaml</DependentUpon>
-    </Compile>
-    <DesignData Include="SampleData\MockStructureTypeSampleData.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </DesignData>
-    <DesignData Include="SampleData\MockStructureTypeCollection.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </DesignData>
-    <Page Include="Forms\StructureTypeManagementForm.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="MockStructureTypeSampleData.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <DesignData Include="SampleData\MockFavoriteStructureTypeIDs.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </DesignData>
-    <Page Include="SampleData\MockPermittedStructureLinks.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="SampleData\MockRibbonStructureType.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="SampleData\MockPSDStructureTypeID.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="SampleData\MockRibbonStructureTypeID.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="SampleData\MockStructureType.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="SampleData\MockStructureTypeIDCollection.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="SharedResources.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Properties\AssemblyInfo.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-    </Compile>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-    <None Include="app.config" />
-    <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-    <None Include="SampleData\StructureTypes.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj">
-      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
-      <Name>AnnotationInterfaces</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
-      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
-      <Name>AnnotationServiceTypes.WCF</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj">
-      <Project>{709a3c16-7218-4ff0-9a2d-6bf015c243bf}</Project>
-      <Name>WebAnnotationModel</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\WebAnnotationViewModels\WebAnnotationViewModels.csproj">
-      <Project>{c4401c6e-e354-420e-8373-36a71b9b6290}</Project>
-      <Name>WebAnnotationViewModels</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ViewModels\" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Extended.Wpf.Toolkit">
-      <Version>4.0.1</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.SqlServer.Types">
-      <Version>14.0.1016.290</Version>
-    </PackageReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<RootNamespace>WebAnnotation.WPF</RootNamespace>
+		<AssemblyName>WebAnnotationWPFControls</AssemblyName>
+		<UseWPF>true</UseWPF>
+		<Deterministic>true</Deterministic>
+		<WarningLevel>4</WarningLevel>
+	</PropertyGroup>
+	<ItemGroup> 
+		<None Include="**\*.json" /> 
+	</ItemGroup>
+	<ItemGroup>
+	  <Page Remove="SampleData\MockFavoriteStructureTypeIDs.xaml" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
+		<ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
+		<ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj" />
+		<ProjectReference Include="..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Extended.Wpf.Toolkit" Version="4.0.1" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+	</ItemGroup>
 </Project>

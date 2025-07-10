@@ -1,10 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Linq; 
-using System.Text;
-using System.Threading.Tasks;
+using System; 
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 
@@ -28,21 +24,18 @@ namespace VikingXNAGraphics
         [DataMember]
         Color vColor;
 
-        public Vector3 Position
-        {
-            get => vPosition;
-        }
+        public Vector3 Position => vPosition;
 
         public Vector3 Normal
         {
             get => vNormal;
-            set { vNormal = value; }
+            set => vNormal = value;
         }
 
         public Color Color
         {
             get => vColor;
-            set { vColor = value; }
+            set => vColor = value;
         }
 
         public VertexPositionNormalColor(Vector3 position, Vector3 normal, Color color)
@@ -88,12 +81,6 @@ namespace VikingXNAGraphics
         }
 
 
-        VertexDeclaration IVertexType.VertexDeclaration
-        {
-            get
-            {
-                return VertexPositionNormalColor.Declaration;
-            }
-        }
+        VertexDeclaration IVertexType.VertexDeclaration => VertexPositionNormalColor.Declaration;
     }
 }

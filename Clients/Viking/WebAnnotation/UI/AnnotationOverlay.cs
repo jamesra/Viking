@@ -1504,14 +1504,14 @@ namespace WebAnnotation
                 loadSectionAnnotationsCancellationTokenSource?.Cancel();
 
                 loadSectionAnnotationsCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
-                LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
+                await LoadSectionAnnotations(loadSectionAnnotationsCancellationTokenSource.Token);
 
                 if (loadSectionAnnotationsCancellationTokenSource.IsCancellationRequested)
                 {
                     return;
                 }
 
-                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading));
+                Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading), loadSectionAnnotationsCancellationTokenSource.Token);
             }
         }
 

@@ -1,126 +1,54 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>
-    </ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{A4B6452D-7C65-487C-B446-4F9F6742C1BC}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>WebAnnotationModelTest</RootNamespace>
-    <AssemblyName>WebAnnotationModelTest</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="System" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
-  </ItemGroup>
-  <ItemGroup>
-    <CodeAnalysisDependentAssemblyPaths Condition=" '$(VS100COMNTOOLS)' != '' " Include="$(VS100COMNTOOLS)..\IDE\PrivateAssemblies">
-      <Visible>False</Visible>
-    </CodeAnalysisDependentAssemblyPaths>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="EventLogger.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="WebAnnotationModelTests.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="app.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj">
-      <Project>{d66a2153-e19a-4bb1-aa55-a5e8aa51e8ee}</Project>
-      <Name>AnnotationInterfaces</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj">
-      <Project>{55ff8936-d9bc-4ac6-aa29-fc0d7a7640ec}</Project>
-      <Name>AnnotationServiceTypes.WCF</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Geometry\Geometry.csproj">
-      <Project>{eacb87e8-a5e3-417e-a9ef-b80c2a68c020}</Project>
-      <Name>Geometry</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\RTree\RTree.csproj">
-      <Project>{4085ba67-60d7-4679-886e-457aaf37ec7b}</Project>
-      <Name>RTree</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\SIMeasurement\SIMeasurement.csproj">
-      <Project>{0b489584-5d3e-4fb4-8a3d-77b7030e2994}</Project>
-      <Name>SIMeasurement</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Viking\WebAnnotation\WebAnnotation.csproj">
-      <Project>{3d353357-948c-4542-8e64-98c1a61d717b}</Project>
-      <Name>WebAnnotation</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\WCFTokenInjector\WCFTokenInjector.csproj">
-      <Project>{61452f17-ca41-4bbe-8d20-3c6339cd4626}</Project>
-      <Name>WCFTokenInjector</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj">
-      <Project>{709a3c16-7218-4ff0-9a2d-6bf015c243bf}</Project>
-      <Name>WebAnnotationModel</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="IdentityModel">
-      <Version>5.2.0</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.SqlServer.Types">
-      <Version>14.0.1016.290</Version>
-    </PackageReference>
-    <PackageReference Include="System.Memory">
-      <Version>4.6.3</Version>
-    </PackageReference>
-    <PackageReference Include="System.Text.Json">
-      <Version>9.0.6</Version>
-    </PackageReference>
-    <PackageReference Include="System.Threading.Tasks.Extensions">
-      <Version>4.6.3</Version>
-    </PackageReference>
-    <PackageReference Include="System.ValueTuple">
-      <Version>4.6.1</Version>
-    </PackageReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<RootNamespace>WebAnnotationModelTest</RootNamespace>
+		<AssemblyName>WebAnnotationModelTest</AssemblyName>
+		<Deterministic>true</Deterministic>
+		<WarningLevel>4</WarningLevel>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DefineConstants>DEBUG;TRACE</DefineConstants>
+		<Optimize>false</Optimize>
+		<OutputPath>bin\Debug\</OutputPath>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>full</DebugType>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DefineConstants>TRACE</DefineConstants>
+		<Optimize>true</Optimize>
+		<OutputPath>bin\Release\</OutputPath>
+		<DebugType>pdbonly</DebugType>
+	</PropertyGroup>
+	<ItemGroup>
+		<Reference Include="System" />
+		<Reference Include="System.Core" />
+		<Reference Include="System.Net.Http" />
+		<Reference Include="System.Numerics" />
+		<Reference Include="System.Runtime.Serialization" />
+		<Reference Include="System.ServiceModel" />
+	</ItemGroup>
+	<ItemGroup> 
+		<None Include="app.config" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
+		<ProjectReference Include="..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
+		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+		<ProjectReference Include="..\..\RTree\RTree.csproj" />
+		<ProjectReference Include="..\..\SIMeasurement\SIMeasurement.csproj" />
+		<ProjectReference Include="..\Viking\WebAnnotation\WebAnnotation.csproj" />
+		<ProjectReference Include="..\WCFTokenInjector\WCFTokenInjector.csproj" />
+		<ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Duende.IdentityModel" Version="7.1.0" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+		<PackageReference Include="System.Memory" Version="4.6.3" />
+		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+		<PackageReference Include="System.Text.Json" Version="9.0.7" />
+		<PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
+		<PackageReference Include="System.ValueTuple" Version="4.6.1" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
+	</ItemGroup>
 </Project>

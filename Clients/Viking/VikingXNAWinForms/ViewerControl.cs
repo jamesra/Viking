@@ -66,6 +66,9 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Combination of the viewport and a camera used to draw this control
         /// </summary>
+        [Browsable(true)]
+        [DefaultValue(null)]
+        [Category("Camera Settings")]
         public Scene Scene
         {
             get => _scene;
@@ -79,7 +82,8 @@ namespace VikingXNAWinForms
 
                 _scene = value;
 
-                _scene.OnSceneChanged += this.OnSceneChanged;
+                if(_scene != null)
+                    _scene.OnSceneChanged += this.OnSceneChanged;
             }
         }
 
@@ -156,6 +160,8 @@ namespace VikingXNAWinForms
 
         public ViewerControl() : base()
         {
+            Scene = null; //Initialize to null so that the Scene property setter can set it properly
+            Downsample = 1.0;
             InitializeComponent();
         }
         /// <summary>
@@ -203,6 +209,9 @@ namespace VikingXNAWinForms
             return rect;
         }
 
+        [Browsable(true)]
+        [Category("Camera Settings")]
+        [DefaultValue(1.0)]
         public virtual double Downsample
         {
             set => Camera.Downsample = value;

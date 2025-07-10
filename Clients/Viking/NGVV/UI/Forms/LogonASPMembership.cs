@@ -19,7 +19,7 @@ namespace Viking.UI.Forms
         private string _AuthenticationServiceURL = null;
         public string AuthenticationServiceURL
         {
-            get { return _AuthenticationServiceURL; }
+            get => _AuthenticationServiceURL;
             set
             {
                 _AuthenticationServiceURL = value;
@@ -27,28 +27,16 @@ namespace Viking.UI.Forms
             }
         }
 
-        protected string RegistrationURL
-        {
-            get
-            {
-                return AuthenticationServiceURL + "/Account/Register";
-            }
-        }
+        protected string RegistrationURL => AuthenticationServiceURL + "/Account/Register";
 
-        protected string AuthenticationURL
-        {
-            get
-            {
-                return AuthenticationServiceURL + "/Account/Authenticate";
-            }
-        }
+        protected string AuthenticationURL => AuthenticationServiceURL + "/Account/Authenticate";
 
 
         private string _VolumeURL;
 
         public string VolumeURL
         {
-            get { return _VolumeURL; }
+            get => _VolumeURL;
             set
             {
                 _VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(value);
@@ -105,10 +93,7 @@ namespace Viking.UI.Forms
 
         protected XDocument VolumeDocument
         {
-            get
-            {
-                return _VolumeDocument;
-            }
+            get => _VolumeDocument;
             set
             {
                 _VolumeDocument = value;
@@ -124,20 +109,11 @@ namespace Viking.UI.Forms
 
         public DialogResult Result = DialogResult.Cancel;
 
-        protected string KeyFileFolderPath
-        {
-            get { return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Viking"); }
-        }
+        protected string KeyFileFolderPath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Viking");
 
-        protected string KeyFileFullPath
-        {
-            get { return System.IO.Path.Combine(this.KeyFileFolderPath, this.keyFile); }
-        }
+        protected string KeyFileFullPath => System.IO.Path.Combine(this.KeyFileFolderPath, this.keyFile);
 
-        protected string passkey
-        {
-            get { return "marclab.connectome.utah"; }
-        }
+        protected string passkey => "marclab.connectome.utah";
 
         public LogonASPMembership(string volumeUrl = null, string username=null, string password=null)
         {

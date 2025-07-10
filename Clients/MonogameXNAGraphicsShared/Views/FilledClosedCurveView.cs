@@ -15,8 +15,8 @@ namespace VikingXNAGraphics
         public Color Color { get; set; }
         public float Alpha
         {
-            get { return Color.GetAlpha(); }
-            set { Color = Color.SetAlpha(value); }
+            get => Color.GetAlpha();
+            set => Color = Color.SetAlpha(value);
         }
 
         private CurveViewControlPoints _ExteriorCurveControlPoints;

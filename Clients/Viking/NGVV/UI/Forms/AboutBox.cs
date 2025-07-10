@@ -40,13 +40,7 @@ namespace Viking.UI.Forms
             }
         }
 
-        public static string AssemblyVersion
-        {
-            get
-            {
-                return Assembly.GetEntryAssembly().GetName().Version.ToString();
-            }
-        }
+        public static string AssemblyVersion => Assembly.GetEntryAssembly().GetName().Version.ToString();
 
         public static string AssemblyDescription
         {

@@ -2,7 +2,9 @@
 using System;
 using System.Runtime.Serialization;
 using ProtoBuf;
+#if NET48
 using System.Data.Entity;
+#endif
 using System.Data.SqlTypes;
 
 
@@ -66,11 +68,12 @@ namespace AnnotationService.Types
         { 
         }
 
-
+#if NET48
         public System.Data.Entity.Spatial.DbGeometry ToGeometry()
         {
             return System.Data.Entity.Spatial.DbGeometry.FromText(string.Format("POLYGON (( {0} {2}, {0} {3}, {1} {3}, {1} {2}, {0} {2}))", XMin, XMax, YMin, YMax));
         }
+#endif
     }
 
     [ProtoContract]
@@ -117,10 +120,12 @@ namespace AnnotationService.Types
             YMax = ymax;
             ZMax = zmax;
         }
+#if NET48
         public System.Data.Entity.Spatial.DbGeometry ToGeometry()
         {
             return System.Data.Entity.Spatial.DbGeometry.FromText(string.Format("POLYGON (( {0} {2}, {0} {3}, {1} {3}, {1} {2}, {0} {2}))", XMin, XMax, YMin, YMax));
         }
+#endif
     }
 
 }

@@ -23,7 +23,7 @@ namespace VikingXNA
         /// View Matrix is only worth updating when the LookAt parameter changes.
         /// </summary>
         private Matrix _View;
-        public Matrix View { get { return _View; } }
+        public Matrix View => _View;
 
         public Camera()
         {
@@ -43,7 +43,7 @@ namespace VikingXNA
         
         public float Pan
         {
-            get { return MathHelper.ToDegrees(_Pan); }
+            get => MathHelper.ToDegrees(_Pan);
             set
             {
                 _Pan = MathHelper.ToRadians(value);
@@ -53,7 +53,7 @@ namespace VikingXNA
 
         public float Tilt
         {
-            get { return MathHelper.ToDegrees(_Tilt); }
+            get => MathHelper.ToDegrees(_Tilt);
             set
             {
                 if (value >= 90)
@@ -70,10 +70,7 @@ namespace VikingXNA
 
         public Vector2 LookAt
         {
-            get
-            {
-                return new Vector2(_LookAt.X, _LookAt.Y);
-            }
+            get => new Vector2(_LookAt.X, _LookAt.Y);
             set
             {
                 _LookAt = new Vector3(value, Vector3.Backward.Z); 
@@ -84,10 +81,7 @@ namespace VikingXNA
 
         public float Rotation
         {
-            get
-            {
-                return MathHelper.ToDegrees(_Rotation);
-            }
+            get => MathHelper.ToDegrees(_Rotation);
             set
             {
                 if (float.IsNaN(value))
@@ -120,10 +114,7 @@ namespace VikingXNA
                     CallOnPropertyChanged(new PropertyChangedEventArgs("Downsample"));
                 }
             }
-            get
-            {
-                return _Downsample;
-            }
+            get => _Downsample;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

@@ -9,13 +9,7 @@ namespace Viking.Common
     {
         //Default directories
         public string HomeDir = "";
-        public string ImageDir
-        {
-            get
-            {
-                return HomeDir + "Data\\Images\\";
-            }
-        }
+        public string ImageDir => HomeDir + "Data\\Images\\";
 
         public Color LinkHighlightColor = Color.FromArgb(128, Color.FromKnownColor(KnownColor.Highlight));
         public Color SelectionColor = Color.FromKnownColor(KnownColor.Highlight);

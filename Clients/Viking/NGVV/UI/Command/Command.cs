@@ -106,10 +106,7 @@ namespace Viking.UI.Commands
             _CommandQueue.Clear();
         }
 
-        public int QueueDepth
-        {
-            get { return _CommandQueue.Count; }
-        }
+        public int QueueDepth => _CommandQueue.Count;
 
 
         /// <summary>
@@ -433,7 +430,7 @@ namespace Viking.UI.Commands
         /// 
         public bool Deactivated
         {
-            get { return _Deactivated; }
+            get => _Deactivated;
             set
             {
                 if (_Deactivated == false)

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
+using System.Drawing; 
 using System.Windows.Forms;
 using Viking.Common;
+using UserControl = System.Windows.Forms.UserControl;
 
 namespace Viking.UI.Controls
 {
@@ -13,10 +14,7 @@ namespace Viking.UI.Controls
         [Category("Data")]
         public new string Text
         {
-            get
-            {
-                return this.txtName.Text;
-            }
+            get => this.txtName.Text;
             set
             {
                 this.txtName.Text = value;
@@ -39,10 +37,7 @@ namespace Viking.UI.Controls
 
         public IUIObject SourceObject
         {
-            get
-            {
-                return _SourceObject;
-            }
+            get => _SourceObject;
             set
             {
                 _SourceObject = value;
@@ -65,10 +60,7 @@ namespace Viking.UI.Controls
 
         public Type SourceType
         {
-            get
-            {
-                return _Type;
-            }
+            get => _Type;
             set
             {
                 _Type = value;
@@ -84,7 +76,7 @@ namespace Viking.UI.Controls
 
         public bool ReadOnly
         {
-            get { return _ReadOnly; }
+            get => _ReadOnly;
             set
             {
                 _ReadOnly = value;
@@ -92,21 +84,66 @@ namespace Viking.UI.Controls
             }
         }
 
-        public override ContextMenu ContextMenu
+        /// <summary>
+        /// Builds context menu strip for .NET 9.0 compatibility
+        /// </summary>
+        private System.Windows.Forms.ContextMenuStrip BuildContextMenuStrip()
         {
-            get
+            if (_SourceObject is null)
+                return null;
+
+            var contextMenu = new System.Windows.Forms.ContextMenuStrip();
+
+            // Get the object's context menu and convert it to ContextMenuStrip
+            using (ContextMenu objectContextMenu = ((IUIObject)_SourceObject).ContextMenu)
             {
-                if (_SourceObject is null)
-                    return base.ContextMenu;
-                ContextMenu CMenu = ((IUIObject)_SourceObject).ContextMenu;
-                CMenu.MenuItems.Add("Clear Link", new EventHandler(ContextMenuOnClear));
-                return CMenu;
+                if (objectContextMenu != null)
+                {
+                    // Convert old ContextMenu items to ContextMenuStrip items
+                    foreach (System.Windows.Forms.MenuItem menuItem in objectContextMenu.MenuItems)
+                    {
+                        var toolStripItem = ConvertMenuItemToToolStripMenuItem(menuItem);
+                        contextMenu.Items.Add(toolStripItem);
+                    }
+                }
             }
-            set
+
+            // Add separator if there are existing items
+            if (contextMenu.Items.Count > 0)
             {
-                System.Diagnostics.Debug.Assert(false, "No implemented");
-                base.ContextMenu = value;
+                contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
             }
+
+            // Add "Clear Link" option
+            var clearLinkItem = new System.Windows.Forms.ToolStripMenuItem("Clear Link");
+            clearLinkItem.Click += ContextMenuOnClear;
+            contextMenu.Items.Add(clearLinkItem);
+
+            return contextMenu;
+        }
+
+        /// <summary>
+        /// Converts a MenuItem to a ToolStripMenuItem
+        /// </summary>
+        private System.Windows.Forms.ToolStripMenuItem ConvertMenuItemToToolStripMenuItem(System.Windows.Forms.MenuItem menuItem)
+        {
+            var toolStripItem = new System.Windows.Forms.ToolStripMenuItem(menuItem.Text);
+            toolStripItem.Enabled = menuItem.Enabled;
+            toolStripItem.Checked = menuItem.Checked;
+            
+            // Copy event handlers by invoking the original handler when the new one is clicked
+            toolStripItem.Click += (sender, e) => {
+                // Create a MenuItem event args and invoke the original handler
+                menuItem.PerformClick();
+            };
+
+            // Convert sub-menu items recursively
+            foreach (System.Windows.Forms.MenuItem subMenuItem in menuItem.MenuItems)
+            {
+                toolStripItem.DropDownItems.Add(ConvertMenuItemToToolStripMenuItem(subMenuItem));
+            }
+
+            return toolStripItem;
         }
 
         private void ContextMenuOnClear(object sender, EventArgs e)
@@ -154,9 +191,17 @@ namespace Viking.UI.Controls
             if (_SourceObject != null)
             {
                 if (e.Button == MouseButtons.Right)
-                    this.ContextMenu.Show(this, new Point(e.X, e.Y));
+                {
+                    var contextMenu = BuildContextMenuStrip();
+                    if (contextMenu != null && contextMenu.Items.Count > 0)
+                    {
+                        contextMenu.Show(this, new Point(e.X, e.Y));
+                    }
+                }
                 else
+                {
                     ((IUIObject)_SourceObject).ShowProperties();
+                }
             }
         }
 

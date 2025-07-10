@@ -57,6 +57,18 @@ namespace Viking
 
             return installedValue != 0;
         }
+        
+        /// <summary>
+        /// Check the known registry entries for an XNA install
+        /// </summary>
+        /// <returns></returns>
+        public static bool XNAFrameworkInstalled()
+        {
+            return XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Game Studio\v4.0") ||
+             XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Game Studio\v4.0") ||
+             XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Framework\v4.0") ||
+             XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Framework\v4.0");
+        }
 
         /// <summary>
         /// The main entry point for the application.
@@ -102,10 +114,7 @@ namespace Viking
 
             string website = null;
 
-            if (!(XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Game Studio\v4.0") ||
-                 XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Game Studio\v4.0") ||
-                 XNAFrameworkInstalled(@"SOFTWARE\Microsoft\XNA\Framework\v4.0") ||
-                 XNAFrameworkInstalled(@"SOFTWARE\Wow6432Node\Microsoft\XNA\Framework\v4.0")))
+            if (!XNAFrameworkInstalled())
             {
                 MessageBox.Show("XNA framework 4.0 does not appear to be installed.  Viking will display a blank gray screen without it.  Please check the documentation or internet for links to the XNA Framework 4.0 Redistributable.", "Missing XNA 4.0 Redistributable", MessageBoxButtons.OK);
             }
@@ -329,7 +338,7 @@ namespace Viking
 
             TextWriterTraceListener Listener = new TextWriterTraceListener(SynchronizedDebugWriter, "Viking Log Listener"); 
             Trace.Listeners.Add(Listener);
-            Debug.Listeners.Add(Listener);
+            Trace.Listeners.Add(Listener);
             
             /*ConsoleTraceListener DebugOutputListener = new ConsoleTraceListener(true);
             Trace.Listeners.Add(DebugOutputListener);

@@ -32,5 +32,5 @@ namespace VikingXNAGraphics
 
             return new Microsoft.Xna.Framework.Vector2((float)v[0], (float)v[1]);
         }
-    } 
+    }
 }

@@ -1371,7 +1371,7 @@ namespace Viking.UI.Controls
 
             //Set a standard starting state for all overlay modules
             graphicsDevice.DepthStencilState = OverlayBackgroundDepthState;
-            graphicsDevice.ReferenceStencil = 1;
+            VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, 1);
 
             if (!ShowOnlyOverlays)
             {
@@ -1398,7 +1398,7 @@ namespace Viking.UI.Controls
                 {
                     ++NextStencilValue;
                     graphicsDevice.DepthStencilState = CreateDepthStateForOverlay(++NextStencilValue);
-                    graphicsDevice.ReferenceStencil = NextStencilValue;
+                    VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, NextStencilValue);
 
                     graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
 
@@ -1426,7 +1426,7 @@ namespace Viking.UI.Controls
 
                             ++NextStencilValue;
                             graphicsDevice.DepthStencilState = CreateDepthStateForOverlay(++NextStencilValue, true);
-                            graphicsDevice.ReferenceStencil = NextStencilValue;
+                            VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, NextStencilValue);
 
                             graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
 
@@ -1699,7 +1699,7 @@ namespace Viking.UI.Controls
                 graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, int.MaxValue);
 
                 //Use a stencil buffer to prevent lower-res textures from overwriting higer-res textures
-                graphicsDevice.ReferenceStencil = iLevel;
+                VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, iLevel);
                 graphicsDevice.DepthStencilState = CreateDepthStateForDownsampleLevel(iLevel);
 
                 SortedDictionary<string, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
@@ -1786,7 +1786,7 @@ namespace Viking.UI.Controls
 
                 if (transform as Geometry.IControlPointTriangulation != null)
                 {
-                    graphicsDevice.ReferenceStencil = int.MaxValue;
+                    VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, int.MaxValue);
                     graphicsDevice.DepthStencilState = CreateDepthStateForDownsampleLevel(int.MaxValue);
 
                     using (TriangulationViewModel stosMeshViewModel = new TriangulationViewModel(transform as Geometry.IControlPointTriangulation))

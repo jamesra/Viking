@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace WebAnnotationModel.Objects
 {
-    abstract public class WCFObjBaseWithParent<KEY, T, THISTYPE> : WCFObjBaseWithKey<KEY, T>, System.Collections.Specialized.INotifyCollectionChanged
+    public abstract class WCFObjBaseWithParent<KEY, T, THISTYPE> : WCFObjBaseWithKey<KEY, T>, System.Collections.Specialized.INotifyCollectionChanged
         where KEY : struct, IEquatable<KEY>
         where T : AnnotationService.Types.DataObjectWithParentOfLong, new()
         where THISTYPE : WCFObjBaseWithParent<KEY, T, THISTYPE>, new()

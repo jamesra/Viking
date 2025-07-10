@@ -26,33 +26,15 @@ namespace VikingXNA
 
         private float _FieldOfView = (float)(Math.PI / 3.0f);
 
-        public Matrix Projection
-        {
-            get
-            {
-                return _Projection;
-            }
-        }
+        public Matrix Projection => _Projection;
 
-        public Matrix View
-        {
-            get
-            {
-                return Camera.View;
-            }
-        }
+        public Matrix View => Camera.View;
 
-        public Matrix ViewProj
-        {
-            get
-            {
-                return this.Camera.View * this.Projection;
-            }
-        }
+        public Matrix ViewProj => this.Camera.View * this.Projection;
 
         public Matrix World
         {
-            get { return _World; }
+            get => _World;
             set
             {
                 _World = value;
@@ -61,13 +43,7 @@ namespace VikingXNA
             }
         }
 
-        public Matrix WorldViewProj
-        {
-            get
-            {
-                return _WorldViewProj;
-            }
-        }
+        public Matrix WorldViewProj => _WorldViewProj;
 
         private Viewport _Viewport;
         /// <summary>
@@ -75,10 +51,7 @@ namespace VikingXNA
         /// </summary>
         public Viewport Viewport
         {
-            get
-            {
-                return _Viewport;
-            }
+            get => _Viewport;
             set
             {
                 if (_Viewport.Equals(value) == false)
@@ -91,7 +64,7 @@ namespace VikingXNA
 
         public float FieldOfView
         {
-            get { return _FieldOfView; }
+            get => _FieldOfView;
             set
             {
                 if (_FieldOfView != value)
@@ -105,7 +78,7 @@ namespace VikingXNA
 
         public float MinDrawDistance
         {
-            get { return _MinDrawDistance; }
+            get => _MinDrawDistance;
             set
             {
                 if (_MinDrawDistance != value)
@@ -119,7 +92,7 @@ namespace VikingXNA
 
         public float MaxDrawDistance
         {
-            get { return _MaxDrawDistance; }
+            get => _MaxDrawDistance;
             set
             {
                 if (_MaxDrawDistance != value)
@@ -135,7 +108,7 @@ namespace VikingXNA
 
         public Camera3D Camera
         {
-            get { return _Camera; }
+            get => _Camera;
             set
             {
                 if (value.Equals(_Camera))

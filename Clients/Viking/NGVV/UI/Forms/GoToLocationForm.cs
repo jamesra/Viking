@@ -8,26 +8,26 @@ namespace Viking.UI.Forms
     {
         public float X
         {
-            get { return (float)textX.DoubleValue; }
-            set { textX.Text = value.ToString(); }
+            get => (float)textX.DoubleValue;
+            set => textX.Text = value.ToString();
         }
 
         public float Y
         {
-            get { return (float)textY.DoubleValue; }
-            set { textY.Text = value.ToString(); }
+            get => (float)textY.DoubleValue;
+            set => textY.Text = value.ToString();
         }
 
         public int Z
         {
-            get { return textZ.IntValue; }
-            set { textZ.Text = value.ToString(); }
+            get => textZ.IntValue;
+            set => textZ.Text = value.ToString();
         }
 
         public double Downsample
         {
-            get { return textDownsample.DoubleValue; }
-            set { textDownsample.Text = value.ToString(); }
+            get => textDownsample.DoubleValue;
+            set => textDownsample.Text = value.ToString();
         }
 
         public GoToLocationForm()

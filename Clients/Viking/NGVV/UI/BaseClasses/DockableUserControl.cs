@@ -9,20 +9,18 @@ namespace Viking.UI.BaseClasses
         [Browsable(true)]
         public string Title
         {
-            get { return LabelTitle.Text; }
-            set
-            {
+            get => LabelTitle.Text;
+            set =>
                 //Convert single '&' to '&&' so they display correctly
                 LabelTitle.Text = value.Replace("&", "&&");
-            }
         }
 
         [Browsable(true)]
         [Category("Appearance")]
         public bool TitleVisible
         {
-            get { return LabelTitle.Visible; }
-            set { LabelTitle.Visible = value; }
+            get => LabelTitle.Visible;
+            set => LabelTitle.Visible = value;
         }
 
         /// <summary>

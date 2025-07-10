@@ -10,9 +10,10 @@
 #region Using Statements
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.ComponentModel.Design;
-using System.Threading;
+using System.Threading; 
 using VikingXNAGraphics;
+using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
+
 #endregion
 
 // The IGraphicsDeviceService interface requires a DeviceCreated event, but we
@@ -71,6 +72,7 @@ namespace VikingXNAWinForms
             parameters.EnableAutoDepthStencil = true;
             parameters.AutoDepthStencilFormat = DepthFormat.Depth24;
             */
+            GpuSynchronizationManager.Initialize();
 
             if (GraphicsAdapter.DefaultAdapter.IsProfileSupported(GraphicsProfile.HiDef))
                 graphicsDevice = new GraphicsDevice(GraphicsAdapter.DefaultAdapter, GraphicsProfile.HiDef, parameters);

@@ -10,4 +10,57 @@
     <FallbackCulture>en-US</FallbackCulture>
     <VerifyUploadedFiles>false</VerifyUploadedFiles>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="UI\Controls\ListLocations.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\Controls\ListStructures.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\FindStructureNumberForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\Forms\PenAnnotationViewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\MergeStructuresForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\SplitStructuresForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="UI\StructureBaseGeneralPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureChildStructuresPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureExtendedPropertiesPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureGeneralPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureLocationsChangeLogPropertiesPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureLocationsPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureNotesPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureTypeGeneralPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureTypesRelationsPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureTypesTree.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\StructureTypeStructuresPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+  </ItemGroup>
 </Project>

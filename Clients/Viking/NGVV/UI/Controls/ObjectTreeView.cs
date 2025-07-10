@@ -103,10 +103,7 @@ namespace Viking.UI.Controls
 
         public IUIObject SelectedObject
         {
-            get
-            {
-                return this.SelectedNode?.Tag as IUIObject;
-            }
+            get => this.SelectedNode?.Tag as IUIObject;
             set
             {
                 GenericTreeNode[] SelectedNodes = GetNodesForObject(value) as GenericTreeNode[];
@@ -156,10 +153,7 @@ namespace Viking.UI.Controls
         private Type[] _ValidDragDropTypes = new Type[0];
         public virtual Type[] ValidDragDropTypes
         {
-            get
-            {
-                return _ValidDragDropTypes;
-            }
+            get => _ValidDragDropTypes;
             set
             {
                 _ValidDragDropTypes = value;
@@ -279,15 +273,10 @@ namespace Viking.UI.Controls
 
             if (e.Button == MouseButtons.Right)
             {
-                if (MouseNode != null)
+                var contextMenu = BuildContextMenuStrip(MouseNode);
+                if (contextMenu != null && contextMenu.Items.Count > 0)
                 {
-                    IUIObject Obj = MouseNode.Tag as IUIObject;
-                    this.ContextMenu = Obj.ContextMenu;
-                }
-                else
-                {
-                    //If we don't have a node, as the parent for a context menu
-                    this.ContextMenu = Parent.ContextMenu;
+                    contextMenu.Show(this, new Point(e.X, e.Y));
                 }
             }
             else if (e.Button == MouseButtons.Left)
@@ -299,6 +288,70 @@ namespace Viking.UI.Controls
             }
 
             base.OnMouseDown(e);
+        }
+
+        /// <summary>
+        /// Builds context menu strip for .NET 9.0 compatibility
+        /// </summary>
+        private System.Windows.Forms.ContextMenuStrip BuildContextMenuStrip(TreeNode mouseNode)
+        {
+            System.Windows.Forms.ContextMenuStrip contextMenuStrip = null;
+
+            if (mouseNode != null)
+            {
+                // Get context menu from the object associated with the node
+                IUIObject obj = mouseNode.Tag as IUIObject;
+                if (obj != null)
+                {
+                    using (ContextMenu objectContextMenu = obj.ContextMenu)
+                    {
+                        if (objectContextMenu != null)
+                        {
+                            contextMenuStrip = new System.Windows.Forms.ContextMenuStrip();
+                            // Convert old ContextMenu items to ContextMenuStrip items
+                            foreach (System.Windows.Forms.MenuItem menuItem in objectContextMenu.MenuItems)
+                            {
+                                var toolStripItem = ConvertMenuItemToToolStripMenuItem(menuItem);
+                                contextMenuStrip.Items.Add(toolStripItem);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // If we don't have a node, try to get the parent's context menu
+                if (Parent != null && Parent.ContextMenuStrip != null)
+                {
+                    contextMenuStrip = Parent.ContextMenuStrip;
+                }
+            }
+
+            return contextMenuStrip;
+        }
+
+        /// <summary>
+        /// Converts a MenuItem to a ToolStripMenuItem
+        /// </summary>
+        private System.Windows.Forms.ToolStripMenuItem ConvertMenuItemToToolStripMenuItem(System.Windows.Forms.MenuItem menuItem)
+        {
+            var toolStripItem = new System.Windows.Forms.ToolStripMenuItem(menuItem.Text);
+            toolStripItem.Enabled = menuItem.Enabled;
+            toolStripItem.Checked = menuItem.Checked;
+            
+            // Copy event handlers by invoking the original handler when the new one is clicked
+            toolStripItem.Click += (sender, e) => {
+                // Create a MenuItem event args and invoke the original handler
+                menuItem.PerformClick();
+            };
+
+            // Convert sub-menu items recursively
+            foreach (System.Windows.Forms.MenuItem subMenuItem in menuItem.MenuItems)
+            {
+                toolStripItem.DropDownItems.Add(ConvertMenuItemToToolStripMenuItem(subMenuItem));
+            }
+
+            return toolStripItem;
         }
 
         public void AddObjects(IEnumerable<IUIObject> Objects)

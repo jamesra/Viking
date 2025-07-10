@@ -16,8 +16,8 @@ namespace VikingXNA
 
         public Matrix WorldViewProjMatrix
         {
-            get { return _WorldViewProjMatrix.GetValueMatrix(); }
-            set { _WorldViewProjMatrix.SetValue(value); }
+            get => _WorldViewProjMatrix.GetValueMatrix();
+            set => _WorldViewProjMatrix.SetValue(value);
         }
 
         public void SetEffectTextures(Texture Background, Texture ColorOverlay)

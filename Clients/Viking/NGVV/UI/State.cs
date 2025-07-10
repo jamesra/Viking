@@ -9,10 +9,7 @@ namespace Viking.UI
     {
         static public VikingMain Appwindow;
 
-        static public System.Windows.Forms.Form MdiParent
-        {
-            get { return State.Appwindow; }
-        }
+        static public System.Windows.Forms.Form MdiParent => State.Appwindow;
 
         /// <summary>
         /// Dispatcher for invoking methods on the main thread. 
@@ -32,13 +29,7 @@ namespace Viking.UI
         /// This is not going in the right direction for supporting multiple viewer controls,
         /// but that is a major rewrite and I needed the extensions to work cleanly.
         /// </summary>
-        static public Viking.UI.Controls.SectionViewerControl ViewerControl
-        {
-            get
-            {
-                return ViewerForm?.SectionControl;
-            }
-        }
+        static public Viking.UI.Controls.SectionViewerControl ViewerControl => ViewerForm?.SectionControl;
 
 
         static public string CurrentMode = "";
@@ -47,6 +38,9 @@ namespace Viking.UI
 
         //Stores userAccessLevel for the profided credentials: Include: Admin, Modify, Read
         static public string[] UserAccessLevel;
+
+        //Current user access level as a single string value
+        static public string userAccessLevel = "Exit";
 
         //User credentials used during authentication
         static public Duende.IdentityModel.Client.TokenResponse UserBearerToken = null;
@@ -77,13 +71,7 @@ namespace Viking.UI
             return System.IO.Path.Combine(CachePath, VolumeName);
         }
 
-        static public string TextureCachePath
-        {
-            get
-            {
-                return System.IO.Path.Combine(State.VolumeCachePath, "Textures");
-            }
-        }
+        static public string TextureCachePath => System.IO.Path.Combine(State.VolumeCachePath, "Textures");
 
         public static void ClearVolumeTextureCache()
         {
@@ -115,8 +103,8 @@ namespace Viking.UI
 
         public static IUIObject DragDropObject
         {
-            get { return _DragDropObject; }
-            set { _DragDropObject = value; }
+            get => _DragDropObject;
+            set => _DragDropObject = value;
         }
 
         /// <summary>
@@ -135,7 +123,7 @@ namespace Viking.UI
         /// </summary>
         public static IUIObjectBasic SelectedObject
         {
-            get { return _SelectedObject; }
+            get => _SelectedObject;
             set
             {
                 bool FireEvent = _SelectedObject != value;
@@ -187,11 +175,8 @@ namespace Viking.UI
         /// </summary>
         static public VolumeViewModel volume
         {
-            get { return _volume; }
-            set
-            {
-                _volume = value;
-            }
+            get => _volume;
+            set => _volume = value;
         }
 
         /// <summary>

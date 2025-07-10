@@ -25,13 +25,7 @@ namespace Viking.UI.Commands
             }
         }
 
-        public override ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public override ObservableCollection<string> ObservableHelpStrings => new(this.HelpStrings);
 
         public RectangleCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)

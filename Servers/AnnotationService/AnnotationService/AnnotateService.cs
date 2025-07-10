@@ -9,8 +9,13 @@ using System.Security;
 using System.Security.Permissions;
 using System.ServiceModel;
 using System.ServiceModel.Activation;
-using System.Threading.Tasks;
+using System.Threading.Tasks; 
 using System.Web;
+using Location = AnnotationService.Types.Location;
+using LocationLink = AnnotationService.Types.LocationLink;
+using Structure = AnnotationService.Types.Structure;
+using StructureLink = AnnotationService.Types.StructureLink;
+using StructureType = AnnotationService.Types.StructureType;
 
 namespace Annotation
 {
@@ -198,7 +203,6 @@ namespace Annotation
 
         #endregion
 
-
         #region IAnnotateStructureTypes Members
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
@@ -319,7 +323,7 @@ namespace Annotation
                 }
                 catch (Exception)
                 {
-                    return new AnnotationService.Types.Structure[0];
+                    return Array.Empty<Structure>();
                 }
             }
         }
@@ -379,7 +383,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.StructureType[0];
+            return Array.Empty<StructureType>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
@@ -562,13 +566,13 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.Structure[0];
+            return Array.Empty<Structure>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationService.Types.Structure[] GetStructuresForSection(long SectionNumber, long ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
-            DeletedIDs = new long[0];
+            DeletedIDs = Array.Empty<long>();
 
             QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
 
@@ -595,7 +599,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.Structure[0];
+            return Array.Empty<Structure>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -604,7 +608,7 @@ namespace Annotation
             DateTime start = DateTime.UtcNow;
             TimeSpan elapsed;
 
-            DeletedIDs = new long[0];
+            DeletedIDs = Array.Empty<long>();
 
             QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
 
@@ -639,7 +643,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.Structure[0];
+            return Array.Empty<Structure>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -648,7 +652,7 @@ namespace Annotation
             DateTime start = DateTime.UtcNow;
             TimeSpan elapsed;
 
-            DeletedIDs = new long[0];
+            DeletedIDs = Array.Empty<long>();
 
             QueryExecutedTime = DateTime.Now.ToUniversalTime().Ticks;
 
@@ -683,7 +687,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.Structure[0];
+            return Array.Empty<Structure>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -1080,7 +1084,7 @@ namespace Annotation
                     Debug.WriteLine("Could not find StructureLinks");
                 }
             }
-            return new AnnotationService.Types.StructureLink[0];
+            return Array.Empty<StructureLink>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -1110,7 +1114,7 @@ namespace Annotation
                     Debug.WriteLine("Could not find StructureLinks for ID: " + ID.ToString());
                 }
 
-                return new AnnotationService.Types.StructureLink[0];
+                return Array.Empty<StructureLink>();
             }
         }
 
@@ -1164,7 +1168,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.Location[0];
+            return Array.Empty<Location>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -1423,7 +1427,7 @@ namespace Annotation
 
             return structures.ToArray();
              */
-            return new AnnotationService.Types.Structure[0];
+            return Array.Empty<Structure>();
         }
 
 
@@ -1701,7 +1705,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.Location[0];
+            return Array.Empty<Location>();
 
         }
 
@@ -1739,7 +1743,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.Location[0];
+            return Array.Empty<Location>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -1776,7 +1780,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.Location[0];
+            return Array.Empty<Location>();
         }
 
         /// <summary>
@@ -1803,9 +1807,9 @@ namespace Annotation
 
                 ModifiedAfterThisTime = ConnectomeDataModel.ConnectomeEntities.ValidateDate(ModifiedAfterThisTime);
 
-                DeletedIDs = new long[0];
+                DeletedIDs = Array.Empty<long>();
 
-                AnnotationService.Types.Location[] retList = new AnnotationService.Types.Location[0];
+                AnnotationService.Types.Location[] retList = Array.Empty<Location>();
 
                 QueryExecutedTime = start.Ticks;
                 //try
@@ -1847,6 +1851,9 @@ namespace Annotation
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationSet GetAnnotationsInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
         {
+            if (bbox is null)
+                throw new ArgumentNullException("bbox");
+            
             if (bbox.Width == 0 || bbox.Height == 0)
             {
                 throw new ArgumentException("Bounding box must have non-zero dimensions");
@@ -1864,7 +1871,7 @@ namespace Annotation
 
                 ModifiedAfterThisTime = ConnectomeDataModel.ConnectomeEntities.ValidateDate(ModifiedAfterThisTime);
 
-                DeletedIDs = new long[0];
+                DeletedIDs = Array.Empty<long>();
 
                 AnnotationSet results = null;
 
@@ -1922,9 +1929,9 @@ namespace Annotation
                     ModifiedAfterThisTime = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Utc));
                 ModifiedAfterThisTime = ConnectomeDataModel.ConnectomeEntities.ValidateDate(ModifiedAfterThisTime);
 
-                DeletedIDs = new long[0];
+                DeletedIDs = Array.Empty<long>();
 
-                AnnotationService.Types.Location[] retList = new AnnotationService.Types.Location[0];
+                AnnotationService.Types.Location[] retList = Array.Empty<Location>();
 
                 QueryExecutedTime = start.Ticks;
                 //try
@@ -1990,9 +1997,9 @@ namespace Annotation
                     ModifiedAfterThisTime = new DateTime?(new DateTime(ModifiedAfterThisUtcTime, DateTimeKind.Utc));
                 ModifiedAfterThisTime = ConnectomeDataModel.ConnectomeEntities.ValidateDate(ModifiedAfterThisTime);
 
-                DeletedIDs = new long[0];
+                DeletedIDs = Array.Empty<long>();
 
-                AnnotationService.Types.Location[] retList = new AnnotationService.Types.Location[0];
+                AnnotationService.Types.Location[] retList = Array.Empty<Location>();
 
                 QueryExecutedTime = start.Ticks;
                 //try
@@ -2057,7 +2064,7 @@ namespace Annotation
 
             if (!DeletedAfterThisTime.HasValue)
             {
-                return new long[0];
+                return Array.Empty<long>();
             }
 
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
@@ -2099,7 +2106,7 @@ namespace Annotation
                 }
             }
 
-            return new long[0];
+            return Array.Empty<long>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
@@ -2395,7 +2402,7 @@ namespace Annotation
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
             {
                 //TODO: This needs a real assignment, but I haven't created the table yet
-                DeletedLinks = new AnnotationService.Types.LocationLink[0];
+                DeletedLinks = Array.Empty<LocationLink>();
                 DateTime start = DateTime.Now;
                 DateTime? ModifiedAfter;
                 if (ModifiedAfterThisUtcTime == 0)
@@ -2435,7 +2442,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.LocationLink[0];
+            return Array.Empty<LocationLink>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -2444,7 +2451,7 @@ namespace Annotation
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
             {
                 //TODO: This needs a real assignment, but I haven't created the table yet
-                DeletedLinks = new AnnotationService.Types.LocationLink[0];
+                DeletedLinks = Array.Empty<LocationLink>();
                 DateTime start = DateTime.Now;
                 DateTime? ModifiedAfter;
                 if (ModifiedAfterThisUtcTime == 0)
@@ -2480,7 +2487,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.LocationLink[0];
+            return Array.Empty<LocationLink>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -2489,7 +2496,7 @@ namespace Annotation
             using (ConnectomeEntities db = GetOrCreateReadOnlyContext())
             {
                 //TODO: This needs a real assignment, but I haven't created the table yet
-                DeletedLinks = new AnnotationService.Types.LocationLink[0];
+                DeletedLinks = Array.Empty<LocationLink>();
                 DateTime start = DateTime.Now;
                 DateTime? ModifiedAfter;
                 if (ModifiedAfterThisUtcTime == 0)
@@ -2525,7 +2532,7 @@ namespace Annotation
                 }
             }
 
-            return new AnnotationService.Types.LocationLink[0];
+            return Array.Empty<LocationLink>();
         }
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
@@ -2613,7 +2620,7 @@ namespace Annotation
         public AnnotationService.Types.Structure[] webService_GetStructures(Graphx graph, long[] ids)
         {
             if (ids.Length == 0)
-                return new AnnotationService.Types.Structure[0];
+                return Array.Empty<Structure>();
 
             // connect to the AnnotationService.Types.Structure webservice 
             AnnotationService.Types.Structure[] FoundStructures = GetStructuresByIDs(ids, true);

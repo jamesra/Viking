@@ -106,6 +106,7 @@ namespace MonogameTestbed
         {
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
             graphics = new GraphicsDeviceManager(this);
+            GpuSynchronizationManager.Initialize();
             VikingXNAGraphics.Global.Content = this.Content;
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             Content.RootDirectory = "Content";

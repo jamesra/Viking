@@ -20,8 +20,10 @@ namespace Client
             Pause();
         }
 
-        //private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/identityserver";
+        // private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/identityserver";
+        // private const string IdentityApiEndpoint = "https://identity.connectomes.utah.edu";
         private const string IdentityServerEndpoint = "https://localhost:5001/";
+        private const string IdentityApiEndpoint = "https://localhost:5001/";
 
         private const string Secret = "CorrectHorseBatteryStaple";
 
@@ -101,7 +103,7 @@ namespace Client
             Console.ForegroundColor = ConsoleColor.White; 
 
             Console.WriteLine("\n\n");
-            await GetUserPermissions(IdentityServerEndpoint, tokenResponse, "RC1");
+            await GetUserPermissions(IdentityApiEndpoint, tokenResponse, "RC1");
             Console.WriteLine("\n\n");
 
             await CheckClaims(disco, tokenResponse, Client, "RC1.Read");
@@ -139,26 +141,42 @@ namespace Client
             {
                 client.SetBearerToken(tokenResponse.AccessToken);
 
-                string userAddress = $"{identityServerEndpoint}api/permissions/CurrentUser";
+                string userAddress = $"{identityServerEndpoint}/api/permissions/CurrentUser";
 
-                var appUserResponse = await client.GetStringAsync(userAddress);
-                string appUser = JsonSerializer.Deserialize<string>(appUserResponse);
+                try { 
+                    var appUserResponse = await client.GetStringAsync(userAddress);
+                    string appUser = JsonSerializer.Deserialize<string>(appUserResponse);
+                    Console.WriteLine($"Server reports username = {appUser}");
+                }
+                catch (System.Net.Http.HttpRequestException)
+                {
+                    Console.WriteLine($"Failed to get response from {userAddress}");
+                    throw;
+                }
                  
-                Console.WriteLine($"Server reports username = {appUser}");
+                
 
-                string userIdAddress = $"{identityServerEndpoint}api/permissions/CurrentUserId";
+                string userIdAddress = $"{identityServerEndpoint}/api/permissions/CurrentUserId";
+                string appUserId;
+                try
+                { 
+                    var appUserIdResponse = await client.GetStringAsync(userIdAddress);
+                    appUserId = JsonSerializer.Deserialize<string>(appUserIdResponse);
 
-                var appUserIdResponse = await client.GetStringAsync(userIdAddress);
-                string appUserId = JsonSerializer.Deserialize<string>(appUserIdResponse);
-
-                Console.WriteLine($"Server reports userId = {appUserId}");
+                    Console.WriteLine($"Server reports userId = {appUserId}");
+                }
+                catch (System.Net.Http.HttpRequestException)
+                {
+                    Console.WriteLine($"Failed to get response from {userIdAddress}");
+                     throw;
+                }
 
                 //client.SetToken("token", tokenResponse.AccessToken);
 
                 //client.SetBasicAuthentication("jamesan", "Wat>com3");
 
                 {
-                    string address = $"{identityServerEndpoint}api/permissions/{appUserId}/resource/{VolumeName}";
+                    string address = $"{identityServerEndpoint}/api/permissions/{appUserId}/resource/{VolumeName}";
 
                     var permissionsResponse = await client.GetStringAsync(address);
                     var permissions = JsonSerializer.Deserialize<string[]>(permissionsResponse);
@@ -166,7 +184,7 @@ namespace Client
                 }
 
                 {
-                    string address = $"{identityServerEndpoint}api/permissions/resource/{VolumeName}";
+                    string address = $"{identityServerEndpoint}/api/permissions/resource/{VolumeName}";
 
                     var permissionsResponse = await client.GetStringAsync(address);
                     var permissions = JsonSerializer.Deserialize<string[]>(permissionsResponse);

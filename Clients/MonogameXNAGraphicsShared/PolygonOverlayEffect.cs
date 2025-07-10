@@ -28,25 +28,18 @@ namespace VikingXNAGraphics
 
         public Matrix WorldViewProjMatrix
         {
-            get { return _WorldViewProjMatrix.GetValueMatrix(); }
-            set { _WorldViewProjMatrix.SetValue(value); }
+            get => _WorldViewProjMatrix.GetValueMatrix();
+            set => _WorldViewProjMatrix.SetValue(value);
         }
 
         public Texture LumaTexture
         {
-            set
-            {
-                _BackgroundTexture.SetValue(value);
-            }
+            set => _BackgroundTexture.SetValue(value);
         }
 
         public Viewport RenderTargetSize
         {
-            set
-            {
-                _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height));
-            }
-
+            set => _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height));
         }
 
         public Techniques Technique
@@ -64,19 +57,12 @@ namespace VikingXNAGraphics
             }
         } 
 
-        public EffectTechnique CurrentTechnique
-        {
-            get
-            {
-                return this.effect.CurrentTechnique;
-            }
-
-        }
+        public EffectTechnique CurrentTechnique => this.effect.CurrentTechnique;
 
         public float InputLumaAlphaValue
         {
-            get { return _InputLumaAlpha.GetValueSingle(); }
-            set { _InputLumaAlpha.SetValue(value); }
+            get => _InputLumaAlpha.GetValueSingle();
+            set => _InputLumaAlpha.SetValue(value);
         }
 
         public PolygonOverlayEffect()

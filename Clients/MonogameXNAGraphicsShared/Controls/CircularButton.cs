@@ -29,14 +29,8 @@ namespace VikingXNAGraphics.Controls
 
         public GridCircle Circle
         {
-            get
-            {
-                return circleView.Circle;
-            }
-            set
-            {
-                circleView.Circle = value;
-            }
+            get => circleView.Circle;
+            set => circleView.Circle = value;
         }
 
         /// <summary>
@@ -82,16 +76,14 @@ namespace VikingXNAGraphics.Controls
                 this.OnClick += OnClick;
         }
 
-        public GridRectangle BoundingBox
-        {
-            get
-            {
-                return circleView.Circle.BoundingBox;
-            }
-        }
+        public GridRectangle BoundingBox => circleView.Circle.BoundingBox;
 
-        public Color Color { get { return circleView.Color; } set { circleView.Color = value; } }
-        public float Alpha { get { return circleView.Alpha; } set { circleView.Alpha = value; } }
+        public Color Color { get => circleView.Color;
+            set => circleView.Color = value;
+        }
+        public float Alpha { get => circleView.Alpha;
+            set => circleView.Alpha = value;
+        }
 
         public bool Contains(GridVector2 Position)
         {

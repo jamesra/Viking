@@ -56,27 +56,18 @@ namespace Viking.AnnotationServiceTypes
 
         public static bool operator ==(LocationLinkKey A, LocationLinkKey B)
         {
-            if (System.Object.ReferenceEquals(A, B))
-            {
-                return true;
-            }
-             
-            return A.Equals(B);
+            return A.A == B.A && A.B == B.B || A.A == B.B && A.B == B.A;
         }
 
         public static bool operator !=(LocationLinkKey A, LocationLinkKey B)
         {
-            if (System.Object.ReferenceEquals(A, B))
-            {
-                return false;
-            }
             
-            return !A.Equals(B); 
+            return !(A == B);
         }
          
         public override bool Equals(object obj)
         {
-            if (System.Object.ReferenceEquals(this, obj))
+            if (System.Object.Equals(this, obj))
                 return true;
             if (obj is null)
                 return false;

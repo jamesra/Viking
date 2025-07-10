@@ -18,13 +18,7 @@ namespace Viking.UI.Controls
             }
         }
 
-        public string ServerUrl
-        {
-            get
-            {
-                return listServers.SelectedItem?.ToString();
-            }
-        }
+        public string ServerUrl => listServers.SelectedItem?.ToString();
 
         public string[] ServerUrls
         {

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<RootNamespace>VikingXNAGraphics</RootNamespace>
+		<AssemblyName>VikingXNAGraphics</AssemblyName>
+		<UseWindowsForms>true</UseWindowsForms>
+		<MonoGamePlatform>Windows</MonoGamePlatform>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.4" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+	</ItemGroup>
+</Project> 

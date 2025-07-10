@@ -1,0 +1,24 @@
+using Geometry;
+using System;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Content;
+using System.Threading.Tasks;
+
+namespace VikingXNAGraphics
+{
+    public interface IHitTesting
+    { 
+        /// <summary>
+        /// The bounding box of the region we are interested in hit testing
+        /// </summary>
+        GridRectangle BoundingBox { get; }
+
+        /// <summary>
+        /// True if the passed point falls inside the view, a hit-testing function
+        /// </summary>
+        /// <param name="Position"></param>
+        /// <returns></returns>
+        bool Contains(GridVector2 Position);
+    }
+}

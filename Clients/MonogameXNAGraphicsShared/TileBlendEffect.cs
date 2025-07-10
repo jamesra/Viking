@@ -19,7 +19,7 @@ namespace VikingXNA
 
         public Color TileColor
         {
-            get { return new Color(_TileColor.GetValueVector4()); }
+            get => new Color(_TileColor.GetValueVector4());
             set { 
                 _TileColor.SetValue(value.ToVector4());
 
@@ -31,14 +31,14 @@ namespace VikingXNA
 
         public Matrix WorldViewProjMatrix
         {
-            get { return _WorldViewProjMatrix.GetValueMatrix(); }
-            set { _WorldViewProjMatrix.SetValue(value); }
+            get => _WorldViewProjMatrix.GetValueMatrix();
+            set => _WorldViewProjMatrix.SetValue(value);
         }
 
         public Texture2D Texture
         {
-            get { return _Texture.GetValueTexture2D();}
-            set { _Texture.SetValue(value); }
+            get => _Texture.GetValueTexture2D();
+            set => _Texture.SetValue(value);
         }
 
         public void RenderToGreyscale()

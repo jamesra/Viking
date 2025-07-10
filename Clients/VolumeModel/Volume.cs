@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using UnitsAndScale;
 using Utils;
+using VolumeModel;
 
 namespace Viking.VolumeModel
 {
@@ -45,14 +46,14 @@ namespace Viking.VolumeModel
         {
             AuthenticationURL = new Uri(Authentication);
             EndpointURL = new Uri(Endpoint);
-            this.ExportURL = new Uri(exportURL);
+            this.ExportURL = exportURL is null ? null :  new Uri(exportURL);
         }
 
         internal static EndpointInformation CreateFromElement(XElement elem)
         {
             return new EndpointInformation(elem.GetAttributeCaseInsensitive("authentication").Value,
                                            elem.GetAttributeCaseInsensitive("endpoint").Value, 
-                                           elem.GetAttributeCaseInsensitive("exporturl").Value);
+                                           elem.GetAttributeCaseInsensitive("exporturl")?.Value);
         }
     }
 
@@ -1053,12 +1054,11 @@ namespace Viking.VolumeModel
             {
                 if (Geometry.Global.IsCacheFileValid(CacheStosPath, new DateTime[] { ControlToVolumeInfo.LastModified, SectionToControlInfo.LastModified, Global.OldestValidCachedTransform }))
                 {
-                    string outString = $"Loading from binary cache: {SectionToControlInfo.MappedSection} to {ControlToVolumeInfo.ControlSection}";
+                    string outString = $"Loading from JSON cache: {SectionToControlInfo.MappedSection} to {ControlToVolumeInfo.ControlSection}";
                     Trace.WriteLine(outString);
                     using (Stream binFile = System.IO.File.OpenRead(CacheStosPath))
                     {
-                        var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                        cachedTransform = binaryFormatter.Deserialize(binFile) as ITransform;
+                        cachedTransform = JsonTransformSerializer.Deserialize(binFile);
                     }
                 }
                 else
@@ -1123,8 +1123,14 @@ namespace Viking.VolumeModel
         {
             using (Stream binFile = System.IO.File.OpenWrite(CacheStosPath))
             {
-                var binaryFormatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                binaryFormatter.Serialize(binFile, itkTransform);
+                if (itkTransform is ITransform transform)
+                {
+                    JsonTransformSerializer.Serialize(binFile, transform);
+                }
+                else
+                {
+                    throw new ArgumentException("Object must implement ITransform interface", nameof(itkTransform));
+                }
             }
         }
 

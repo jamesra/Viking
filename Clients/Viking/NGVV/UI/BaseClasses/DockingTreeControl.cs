@@ -37,14 +37,8 @@ namespace Viking.UI.BaseClasses
         [Browsable(false)]
         public IUIObject SelectedObject
         {
-            get
-            {
-                return Tree.SelectedObject;
-            }
-            set
-            {
-                Tree.SelectedObject = value;
-            }
+            get => Tree.SelectedObject;
+            set => Tree.SelectedObject = value;
         }
 
         #endregion

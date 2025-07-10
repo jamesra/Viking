@@ -19,7 +19,7 @@ namespace Viking.UI
 
     public class GestureEventArgs : EventArgs
     { 
-        public Gesture Type { get { return Gesture.Gesture; } }
+        public Gesture Type => Gesture.Gesture;
 
         /// <summary>
         /// Raw data for our pen state

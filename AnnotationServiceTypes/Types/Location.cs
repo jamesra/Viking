@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+#if NET48
 using System.Data.Entity;
+#endif
 
 namespace AnnotationService.Types
 {
@@ -55,8 +57,10 @@ namespace AnnotationService.Types
         private Int64 _LastModified;
         private string _Username;
         private string _Xml;
+#if NET48
         private System.Data.Entity.Spatial.DbGeometry _MosaicShape;
         private System.Data.Entity.Spatial.DbGeometry _VolumeShape;
+#endif
         private byte[] _MosaicShapeWKB;
         private byte[] _VolumeShapeWKB;
 
@@ -98,6 +102,7 @@ namespace AnnotationService.Types
 
         //[ProtoMember(5)]
         //[DataMember]
+#if NET48
         public System.Data.Entity.Spatial.DbGeometry MosaicShape
         {
             get
@@ -126,6 +131,7 @@ namespace AnnotationService.Types
             //set { _VolumeShape = value; }
 
         }
+#endif
 
         [ProtoMember(7)]
         [DataMember]
@@ -135,7 +141,9 @@ namespace AnnotationService.Types
             set
             {
                 _MosaicShapeWKB = value;
+#if NET48
                 _MosaicShape = null;
+#endif
             }
         }
 
@@ -147,7 +155,9 @@ namespace AnnotationService.Types
             set
             {
                 _VolumeShapeWKB = value;
+#if NET48
                 _VolumeShape = null;
+#endif
             }
         }
 

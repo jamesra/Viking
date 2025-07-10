@@ -51,14 +51,8 @@ namespace Viking
         /// </summary>
         public bool TextureNotFound
         {
-            get
-            {
-                return _TextureNotFound;
-            }
-            protected set
-            {
-                _TextureNotFound = value;
-            }
+            get => _TextureNotFound;
+            protected set => _TextureNotFound = value;
         }
 
         static private bool TextureErrorReported = false;
@@ -812,10 +806,7 @@ namespace Viking
             return Filename.GetHashCode();
         }
 
-        public bool UseMipMaps
-        {
-            get { return this.MipMapLevels > 0; }
-        }
+        public bool UseMipMaps => this.MipMapLevels > 0;
 
         /*
         protected Texture2D TextureFromStream(GraphicsDevice device, Byte[] streamdata, bool UseMipMaps)

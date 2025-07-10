@@ -6,8 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using RuneWpfControlLibrary;
 using System;
-using DXViews;
-using VikingXNA;
+using DXViews; 
 using VikingXNAGraphics;
 using RoundCurve;
 using RoundLineCode;
@@ -64,6 +63,7 @@ namespace Viewer
         public MonoTestbed()
         {
             graphics = new GraphicsDeviceManager(this);
+            GpuSynchronizationManager.Initialize();
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             graphics.DeviceCreated += graphics_DeviceCreated;
             Content.RootDirectory = "Content";

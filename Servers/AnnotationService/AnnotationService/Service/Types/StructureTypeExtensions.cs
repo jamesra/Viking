@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace AnnotationService.Types
 {
@@ -42,12 +43,12 @@ namespace AnnotationService.Types
             st.MarkupType = type.MarkupType;
 
             if (type.Tags is null)
-                st.Tags = new string[0];
+                st.Tags = Array.Empty<string>();
             else
                 st.Tags = type.Tags.Split(';');
 
             if (type.StructureTags is null)
-                st.StructureTags = new string[0];
+                st.StructureTags = Array.Empty<string>();
             else
                 st.StructureTags = type.StructureTags.Split(';');
 

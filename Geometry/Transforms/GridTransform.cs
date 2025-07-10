@@ -182,7 +182,7 @@ namespace Geometry.Transforms
     /// A grid transform is a uniform grid of dimensions X,Y with the points equally spaced throughout the grid
     /// </summary>
     [Serializable()]
-    public class GridTransform : TriangulationTransform, IGridTransformInfo
+    public partial class GridTransform : TriangulationTransform, IGridTransformInfo
     {
         /// <summary>
         /// Size of x dimension of grid 

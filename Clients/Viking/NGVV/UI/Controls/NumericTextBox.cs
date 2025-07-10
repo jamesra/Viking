@@ -86,25 +86,13 @@ namespace Viking.UI.Controls
             }
         }
 
-        public decimal DecimalValue
-        {
-            get
-            {
-                return Decimal.Parse(this.Text);
-            }
-        }
+        public decimal DecimalValue => Decimal.Parse(this.Text);
 
         public bool AllowSpace
         {
-            set
-            {
-                this.allowSpace = value;
-            }
+            set => this.allowSpace = value;
 
-            get
-            {
-                return this.allowSpace;
-            }
+            get => this.allowSpace;
         }
 
     }

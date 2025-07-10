@@ -37,25 +37,18 @@ namespace VikingXNAGraphics
 
         public Viewport RenderTargetSize
         {
-            set
-            { 
-               _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height)); 
-            }
-
+            set => _RenderTargetSize.SetValue(new Vector2(value.Width, value.Height));
         }
 
         public Matrix WorldViewProjMatrix
         {
-            get { return _WorldViewProjMatrix.GetValueMatrix(); }
-            set { _WorldViewProjMatrix.SetValue(value); }
+            get => _WorldViewProjMatrix.GetValueMatrix();
+            set => _WorldViewProjMatrix.SetValue(value);
         }
 
         public Texture LumaTexture
         {
-            set
-            {
-                _BackgroundTexture.SetValue(value);
-            }
+            set => _BackgroundTexture.SetValue(value);
         }
 
         public Techniques Technique
@@ -76,14 +69,7 @@ namespace VikingXNAGraphics
             }
         } 
 
-        public EffectTechnique CurrentTechnique
-        {
-            get
-            {
-                return this.effect.CurrentTechnique;
-            }
-
-        }
+        public EffectTechnique CurrentTechnique => this.effect.CurrentTechnique;
 
         public void AnnotateWithTexture(Texture2D AnnotationTexture)
         {            
@@ -93,8 +79,8 @@ namespace VikingXNAGraphics
 
         public float InputLumaAlphaValue
         {
-            get { return _InputLumaAlpha.GetValueSingle(); }
-            set { _InputLumaAlpha.SetValue(value); }
+            get => _InputLumaAlpha.GetValueSingle();
+            set => _InputLumaAlpha.SetValue(value);
         }
 
         public void AnnotateWithCircle(float BorderRatio, float inputLumaAlphaValue)

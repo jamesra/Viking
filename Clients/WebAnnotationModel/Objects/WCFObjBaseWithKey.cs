@@ -3,7 +3,7 @@ using System;
 
 namespace WebAnnotationModel.Objects
 {
-    abstract public class WCFObjBaseWithKey<KEY, T> : WCFObjBase<T>, IEquatable<WCFObjBaseWithKey<KEY, T>>
+    public abstract class WCFObjBaseWithKey<KEY, T> : WCFObjBase<T>, IEquatable<WCFObjBaseWithKey<KEY, T>>
         where KEY : struct, IEquatable<KEY>
         where T : DataObject, new()
     {

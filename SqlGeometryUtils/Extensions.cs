@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Data.SqlTypes;
 using System.Linq;
 using System.Text;
+#if NET48
+using System.Data.Entity;
+#endif
 
 namespace SqlGeometryUtils
 {
@@ -166,6 +169,7 @@ namespace SqlGeometryUtils
                                                                Math.Round(Y, RoundingDigits), 0);
         }
 
+#if NET48
         public static GridVector2 Centroid(this System.Data.Entity.Spatial.DbGeometry geometry)
         {
             System.Data.Entity.Spatial.DbGeometry centroid = geometry.Centroid;
@@ -175,12 +179,14 @@ namespace SqlGeometryUtils
                 return geometry.ToSqlGeometry().Centroid();
             //throw new ArgumentException("Calling centroid on geometry type without centroid, dimension is " + geometry.Dimension.ToString() + " shape is " + geometry.ToString());
         }
+#endif
 
         public static SqlGeometry ToSqlGeometry(this byte[] WellKnownBinary, int SRID = 0)
         {
             return SqlGeometry.STGeomFromWKB(new SqlBytes(WellKnownBinary), SRID);
         }
 
+#if NET48
         public static Microsoft.SqlServer.Types.SqlGeometry ToSqlGeometry(this System.Data.Entity.Spatial.DbGeometry geometry)
         {
             if (geometry.WellKnownValue.WellKnownBinary != null)
@@ -191,11 +197,14 @@ namespace SqlGeometryUtils
                 return Microsoft.SqlServer.Types.SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(geometry.WellKnownValue.WellKnownText), geometry.CoordinateSystemId);
             }
         }
+#endif
 
+#if NET48
         public static System.Data.Entity.Spatial.DbGeometry ToDbGeometry(this Microsoft.SqlServer.Types.SqlGeometry geometry)
         {
             return System.Data.Entity.Spatial.DbGeometry.FromBinary(geometry.STAsBinary().Buffer, geometry.STSrid.Value);
         }
+#endif
 
 
         public static SqlGeometry ToSqlGeometry(this GridCircle circle, double Z=0)
@@ -566,11 +575,13 @@ namespace SqlGeometryUtils
             return GridRectangle.GetBoundingBox(geometry.STEnvelope().ToPoints());
         }
 
+#if NET48
         public static GridRectangle BoundingBox(this System.Data.Entity.Spatial.DbGeometry geometry)
         {
             System.Data.Entity.Spatial.DbGeometry envelope = geometry.Envelope;
             return GridRectangle.GetBoundingBox(envelope.ToPoints());
         }
+#endif
 
         public static bool Intersects(this SqlGeometry geometry, GridVector2 point)
         {
@@ -593,6 +604,7 @@ namespace SqlGeometryUtils
             return geometry.STDistance(point.ToSqlGeometry()).Value;
         }
 
+#if NET48
         /// <summary>
         /// Return the points for the geometry, if it is a polygon return the rings around the exterior
         /// </summary>
@@ -621,6 +633,7 @@ namespace SqlGeometryUtils
 
 
         }
+#endif
 
         /// <summary>
         /// Return the points for the geometry, if it is a polygon return the rings around the exterior
