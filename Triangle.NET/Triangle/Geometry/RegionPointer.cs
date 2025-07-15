@@ -23,7 +23,7 @@ namespace TriangleNet.Geometry
         /// </summary>
         public double Area
         {
-            get { return area; }
+            get => area;
             set
             {
                 if (value < 0.0)

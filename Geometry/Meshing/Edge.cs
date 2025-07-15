@@ -158,20 +158,11 @@ namespace Geometry.Meshing
         protected readonly SortedSet<IFace> _Faces; //The two faces adjacent to the edge
         public readonly IEdgeKey Key;
 
-        public int A
-        {
-            get { return Key.A; }
-        }
+        public int A => Key.A;
 
-        public int B
-        {
-            get { return Key.B; }
-        }
+        public int B => Key.B;
 
-        IEdgeKey IEdge.Key
-        {
-            get { return this.Key; }
-        }
+        IEdgeKey IEdge.Key => this.Key;
 
         private ImmutableSortedSet<IFace> _ImmutableFaces;
 

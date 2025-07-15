@@ -41,8 +41,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public int ID
         {
-            get { return id; }
-            set { id = value; }
+            get => id;
+            set => id = value;
         }
 
         /// <summary>
@@ -50,8 +50,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public HalfEdge Edge
         {
-            get { return edge; }
-            set { edge = value; }
+            get => edge;
+            set => edge = value;
         }
 
         /// <summary>
@@ -59,8 +59,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public bool Bounded
         {
-            get { return bounded; }
-            set { bounded = value; }
+            get => bounded;
+            set => bounded = value;
         }
 
         /// <summary>

@@ -217,10 +217,7 @@ namespace Geometry.Transforms
 
                 return _Edges;
             }
-            protected set
-            {
-                _Edges = value;
-            }
+            protected set => _Edges = value;
         }
 
         public GridTransform(MappingGridVector2[] points, GridRectangle mappedBounds, int gridSizeX, int gridSizeY, TransformBasicInfo info)

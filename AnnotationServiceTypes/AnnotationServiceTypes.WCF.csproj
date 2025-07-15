@@ -7,6 +7,13 @@
 		<Version>1.0.0.0</Version>
 		<Copyright>Copyright © 2017</Copyright>
 		<OutputType>Library</OutputType>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
+		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+		<LangVersion>9.0</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="Properties\**" />
@@ -14,16 +21,22 @@
 	  <None Remove="Properties\**" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="protobuf-net" Version="3.2.52" />
-		<PackageReference Include="System.Memory" Version="4.6.3" />
+		<PackageReference Include="protobuf-net" Version="3.0.62" />
+		<PackageReference Include="protobuf-net.ServiceModel" Version="3.0.62" />
 		<PackageReference Include="System.Runtime.Serialization.Primitives" Version="4.3.0" />
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
-		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
+		<PackageReference Include="System.Memory" Version="4.5.5" />
 	</ItemGroup>
 	
 	<!-- Entity Framework 6 is only available for .NET Framework -->
 	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
+		<Reference Include="System.ServiceModel" />
+	</ItemGroup>
+
+	<!-- WCF primitives for .NET Standard -->
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<PackageReference Include="System.ServiceModel.Primitives" Version="4.10.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<WCFMetadata Include="Connected Services\" />

@@ -23,7 +23,7 @@ namespace MorphologyMesh
 
         private readonly MorphRenderMesh mesh;
 
-        GridLineSegment ISliceChord.Line { get { return this.Line; } }
+        GridLineSegment ISliceChord.Line => this.Line;
 
         public MeshChord(MorphRenderMesh mesh, int iO, int iT)
         {

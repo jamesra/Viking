@@ -387,8 +387,8 @@ namespace WebAnnotationModel
         public event NotifyCollectionChangedEventHandler OnCollectionChanged;
         event NotifyCollectionChangedEventHandler INotifyCollectionChanged.CollectionChanged
         {
-            add { OnCollectionChanged += value; }
-            remove { OnCollectionChanged -= value; }
+            add => OnCollectionChanged += value;
+            remove => OnCollectionChanged -= value;
         }
 
         #endregion

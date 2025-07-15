@@ -18,25 +18,13 @@ namespace TriangleNet.Logging
         readonly string message;
         readonly string info;
 
-        public DateTime Time
-        {
-            get { return time; }
-        }
+        public DateTime Time => time;
 
-        public LogLevel Level
-        {
-            get { return level; }
-        }
+        public LogLevel Level => level;
 
-        public string Message
-        {
-            get { return message; }
-        }
+        public string Message => message;
 
-        public string Info
-        {
-            get { return info; }
-        }
+        public string Info => info;
 
         public LogItem(LogLevel level, string message)
             : this(level, message, "")

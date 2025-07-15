@@ -11,14 +11,11 @@ namespace WebAnnotationModel
 {
     public class StructureObj : WCFObjBaseWithParent<long, Structure, StructureObj>, IStructure
     {
-        public override long ID
-        {
-            get { return Data.ID; }
-        }
+        public override long ID => Data.ID;
 
         public override long? ParentID
         {
-            get { return Data.ParentID; }
+            get => Data.ParentID;
             set
             {
                 if (Data.ParentID != value)
@@ -33,10 +30,7 @@ namespace WebAnnotationModel
             }
         }
 
-        public long TypeID
-        {
-            get { return Data.TypeID; }
-        }
+        public long TypeID => Data.TypeID;
 
         private uint? _Color;
 
@@ -51,10 +45,7 @@ namespace WebAnnotationModel
 
                 return _Color.Value;
             }
-            set
-            {
-                _Color = value;
-            }
+            set => _Color = value;
         }
 
 
@@ -70,7 +61,7 @@ namespace WebAnnotationModel
 
         public string Notes
         {
-            get { return Data.Notes; }
+            get => Data.Notes;
             set
             {
                 if (Data.Notes != value)
@@ -87,7 +78,7 @@ namespace WebAnnotationModel
 
         public bool Verified
         {
-            get { return Data.Verified; }
+            get => Data.Verified;
             set
             {
                 if (Data.Verified != value)
@@ -102,7 +93,7 @@ namespace WebAnnotationModel
 
         public double Confidence
         {
-            get { return Data.Confidence; }
+            get => Data.Confidence;
             set
             {
                 if (Confidence != value)
@@ -164,7 +155,7 @@ namespace WebAnnotationModel
 
         public string Label
         {
-            get { return Data.Label; }
+            get => Data.Label;
             set
             {
                 if (Label != value)
@@ -178,10 +169,7 @@ namespace WebAnnotationModel
             }
         }
 
-        public string Username
-        {
-            get { return Data.Username; }
-        }
+        public string Username => Data.Username;
 
         private readonly object LinksLock = new object();
         private ObservableCollection<StructureLinkObj> _Links = null;
@@ -452,8 +440,8 @@ namespace WebAnnotationModel
 
         public static event EventHandler Create
         {
-            add { OnCreate += value; }
-            remove { OnCreate -= value; }
+            add => OnCreate += value;
+            remove => OnCreate -= value;
         }
 
 

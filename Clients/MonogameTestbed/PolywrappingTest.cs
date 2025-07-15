@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using TriangleNet;
 using TriangleNet.Meshing;
 using VikingXNA;
-using VikingXNAGraphics;
 
 namespace MonogameTestbed
 { 

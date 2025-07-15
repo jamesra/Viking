@@ -34,20 +34,14 @@ namespace TriangleNet.Meshing.Iterators
             tri.orient = 0;
         }
 
-        public Edge Current
-        {
-            get { return current; }
-        }
+        public Edge Current => current;
 
         public void Dispose()
         {
             this.triangles.Dispose();
         }
 
-        object System.Collections.IEnumerator.Current
-        {
-            get { return current; }
-        }
+        object System.Collections.IEnumerator.Current => current;
 
         public bool MoveNext()
         {

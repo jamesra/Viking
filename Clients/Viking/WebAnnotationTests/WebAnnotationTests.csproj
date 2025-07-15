@@ -1,11 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>9.0</LangVersion>
     <RootNamespace>WebAnnotationTests</RootNamespace>
     <AssemblyName>WebAnnotationTests</AssemblyName>
     <IsCodedUITest>false</IsCodedUITest>
     <TestProjectType>UnitTest</TestProjectType>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\GeometryTests\GeometryTests.csproj" />
@@ -23,7 +25,7 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MSTest.TestAdapter" Version="3.9.2" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.9.2" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
   </ItemGroup>
 </Project>

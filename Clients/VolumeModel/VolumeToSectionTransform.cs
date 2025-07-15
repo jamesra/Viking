@@ -18,13 +18,7 @@ namespace Viking.VolumeModel
             return _Name;
         }
 
-        public long ID
-        {
-            get
-            {
-                return _Name.GetHashCode();
-            }
-        }
+        public long ID => _Name.GetHashCode();
 
         public GridRectangle? SectionBounds
         {

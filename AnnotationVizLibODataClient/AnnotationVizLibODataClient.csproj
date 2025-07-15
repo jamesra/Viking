@@ -1,9 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>net48;net9.0</TargetFrameworks>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj" />
+    <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
+    <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
+    <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj" />
+    <ProjectReference Include="..\ODataClient\ODataClient.csproj" />
+  </ItemGroup>
+  <!-- Conditional Package References for .NET Framework 4.8 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Microsoft.OData.Client" Version="6.17.0" />
+    <PackageReference Include="Microsoft.OData.Core" Version="6.17.0" />
+    <PackageReference Include="Microsoft.OData.Edm" Version="6.17.0" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+  </ItemGroup>
+  
+  <!-- Conditional Package References for .NET 9.0 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
+    <PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
+    <PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
   </ItemGroup>
 </Project>

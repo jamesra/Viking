@@ -10,15 +10,20 @@
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
 		<PackageReference Include="Microsoft.AspNet.WebApi" Version="5.2.7" />
 		<PackageReference Include="Microsoft.Net.Http" Version="2.2.29" />
-		<PackageReference Include="Microsoft.OData.Client" Version="6.17.0" />
-		<PackageReference Include="Microsoft.OData.Core" Version="6.17.0" />
-		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+		<PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
+		<PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
+		<PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="protobuf-net" Version="3.2.52" />
-		<PackageReference Include="Simple.OData.V4.Client" Version="4.27.0" />
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
 		<PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
 		<PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj" />

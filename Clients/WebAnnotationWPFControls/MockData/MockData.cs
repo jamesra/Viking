@@ -87,7 +87,7 @@ namespace WebAnnotation.WPF.MockData
         private ulong _ID;
         public ulong ID
         {
-            get { return _ID; }
+            get => _ID;
             set
             {
                 if (value == this._ID)

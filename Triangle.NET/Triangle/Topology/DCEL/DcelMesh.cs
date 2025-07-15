@@ -40,34 +40,22 @@ namespace TriangleNet.Topology.DCEL
         /// <summary>
         /// Gets the vertices of the Voronoi diagram.
         /// </summary>
-        public List<Vertex> Vertices
-        {
-            get { return vertices; }
-        }
+        public List<Vertex> Vertices => vertices;
 
         /// <summary>
         /// Gets the list of half-edges specify the Voronoi diagram topology.
         /// </summary>
-        public List<HalfEdge> HalfEdges
-        {
-            get { return edges; }
-        }
+        public List<HalfEdge> HalfEdges => edges;
 
         /// <summary>
         /// Gets the faces of the Voronoi diagram.
         /// </summary>
-        public List<Face> Faces
-        {
-            get { return faces; }
-        }
+        public List<Face> Faces => faces;
 
         /// <summary>
         /// Gets the collection of edges of the Voronoi diagram.
         /// </summary>
-        public IEnumerable<IEdge> Edges
-        {
-            get { return EnumerateEdges(); }
-        }
+        public IEnumerable<IEdge> Edges => EnumerateEdges();
 
         /// <summary>
         /// Check if the DCEL is consistend.

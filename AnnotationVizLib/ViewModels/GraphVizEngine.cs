@@ -45,15 +45,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// This string lists the parent structures connected, i.e. cells
         /// </summary>
-        public string KeyString
-        {
-            get
-            {
-                return to + "->" + from;
-            }
-        }
-
-
+        public string KeyString => to + "->" + from;
     }
 
     public class GraphVizEngine<KEY> : GraphViewEngine<KEY>

@@ -21,7 +21,7 @@ namespace Geometry.Meshing
         private GridRectangle? _BoundingBox = new GridRectangle?();
 
 
-        public override IReadOnlyList<VERTEX> Verticies { get { return _Verticies; } }
+        public override IReadOnlyList<VERTEX> Verticies => _Verticies;
 
         public GridRectangle BoundingBox
         {

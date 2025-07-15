@@ -15,10 +15,7 @@ namespace AnnotationVizLib
 
         public SortedDictionary<MorphologyEdge, ulong> MorphologyEdgeToTulipID = new SortedDictionary<MorphologyEdge, ulong>();
 
-        protected override SortedDictionary<string, string> DefaultAttributes
-        {
-            get { return TLPAttributes.DefaultForMorphologyAttribute; }
-        }
+        protected override SortedDictionary<string, string> DefaultAttributes => TLPAttributes.DefaultForMorphologyAttribute;
 
         public MorphologyTLPView(IScale scale, System.Drawing.Color ColorMap, string VolumeURL) : base(VolumeURL)
         {

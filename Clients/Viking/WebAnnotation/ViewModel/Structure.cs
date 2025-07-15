@@ -185,8 +185,8 @@ namespace WebAnnotation.ViewModel
 
         public new event PropertyChangedEventHandler ValueChanged
         {
-            add { modelObj.PropertyChanged += value; }
-            remove { modelObj.PropertyChanged -= value; }
+            add => modelObj.PropertyChanged += value;
+            remove => modelObj.PropertyChanged -= value;
         }
 
         public override ContextMenu ContextMenu

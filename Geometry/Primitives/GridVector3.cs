@@ -161,12 +161,12 @@ namespace Geometry
         public static readonly GridVector3 Zero = new GridVector3(0, 0, 0); 
 
 
-        public double[] coords { get => _coords; } 
+        public double[] coords => _coords;
         private readonly double[] _coords;
 
-        public double X { get => _coords[(int)AXIS.X]; }
-        public double Y { get => _coords[(int)AXIS.Y]; }
-        public double Z { get =>_coords[(int)AXIS.Z]; } 
+        public double X => _coords[(int)AXIS.X];
+        public double Y => _coords[(int)AXIS.Y];
+        public double Z => _coords[(int)AXIS.Z];
 
         public GridVector3(double[] input)
         {
@@ -454,14 +454,8 @@ namespace Geometry
 
         public double this[AXIS axis]
         {
-            get
-            {
-                return coords[(int)axis];
-            }
-            set
-            {
-                coords[(int)axis] = value;
-            }
+            get => coords[(int)axis];
+            set => coords[(int)axis] = value;
         }
 
         public static GridVector3 FromBarycentric(GridVector3 v1, GridVector3 v2, GridVector3 v3, double u, double v)
@@ -497,38 +491,20 @@ namespace Geometry
 
         double IPoint2D.X
         {
-            get
-            {
-                return _coords[(int)AXIS.X];
-            }
-            set
-            {
-                _coords[(int)AXIS.X] = value; 
-            }
+            get => _coords[(int)AXIS.X];
+            set => _coords[(int)AXIS.X] = value;
         }
 
         double IPoint2D.Y
         {
-            get
-            {
-                return _coords[(int)AXIS.Y]; 
-            }
-            set
-            {
-                _coords[(int)AXIS.Y] = value; 
-            }
+            get => _coords[(int)AXIS.Y];
+            set => _coords[(int)AXIS.Y] = value;
         }
 
         double IPoint.Z
         {
-            get
-            {
-                return _coords[(int)AXIS.Z];
-            }
-            set
-            {
-                _coords[(int)AXIS.Z] = value;
-            }
+            get => _coords[(int)AXIS.Z];
+            set => _coords[(int)AXIS.Z] = value;
         }
 
         #endregion

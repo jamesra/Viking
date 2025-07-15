@@ -24,11 +24,8 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Directional
         {
-            get
-            {
-                return !Bidirectional;
-            }
-            set { Bidirectional = !value; }
+            get => !Bidirectional;
+            set => Bidirectional = !value;
         }
 
         private bool Bidirectional { get; set; }

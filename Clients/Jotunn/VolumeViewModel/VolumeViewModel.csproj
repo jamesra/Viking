@@ -7,6 +7,7 @@
     <UseWPF>true</UseWPF>
     <OutputPath Condition="'$(Configuration)' == 'Debug'">..\..\Jotunn\bin\Debug\Modules\VolumeViewModel\</OutputPath>
     <OutputPath Condition="'$(Configuration)' == 'Release'">..\..\Jotunn\bin\Release\Modules\VolumeViewModel\</OutputPath>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

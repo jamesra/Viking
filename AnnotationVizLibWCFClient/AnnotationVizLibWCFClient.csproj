@@ -1,9 +1,34 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>net48</TargetFrameworks>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
+  
+  <!-- Framework references -->
+  <ItemGroup>
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.ServiceModel.Web" />
+  </ItemGroup>
+  
+  <!-- Project references -->
   <ItemGroup>
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj" />
+    <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
+    <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj" />
+    <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
+  </ItemGroup>
+  
+  <!-- Service References -->
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  
+  <!-- Conditional Package References -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
   </ItemGroup>
 </Project>

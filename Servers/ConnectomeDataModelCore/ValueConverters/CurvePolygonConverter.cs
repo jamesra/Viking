@@ -33,6 +33,9 @@ namespace Viking.DataModel.Annotation.ValueConverters
 
         public override ConverterMappingHints MappingHints => base.MappingHints;
 
+        public override LambdaExpression ConstructorExpression => 
+            Expression.Lambda(Expression.New(typeof(CurvePolygonConverter<IN, OUT>)));
+
         protected static object DoConvertToProvider(object input)
         {
             return input as IN;
@@ -41,12 +44,16 @@ namespace Viking.DataModel.Annotation.ValueConverters
 
         protected static object DoConvertFromProvider(object input)
         {
+            // Note: IUnsupportedGeometry commented out - not available in current NetTopologySuite
+            /*
             if (input is IUnsupportedGeometry)
             {
                 //App specific logic
                 return "Circle";
             }
-            else if(input is Geometry shape)
+            else
+            */
+            if(input is Geometry shape)
             {
                 return shape.ToText();
             }

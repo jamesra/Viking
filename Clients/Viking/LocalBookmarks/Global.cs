@@ -47,7 +47,7 @@ namespace LocalBookmarks
         private static XRoot _BookmarkXMLDoc = null;
         internal static XRoot BookmarkXMLDoc
         {
-            get { return _BookmarkXMLDoc; }
+            get => _BookmarkXMLDoc;
             set
             {
                 _BookmarkXMLDoc = value;
@@ -58,10 +58,7 @@ namespace LocalBookmarks
 
         public static event System.ComponentModel.PropertyChangedEventHandler RootBookmarkChanged;
 
-        internal static Folder FolderRoot
-        {
-            get { return BookmarkXMLDoc.Folder; }
-        }
+        internal static Folder FolderRoot => BookmarkXMLDoc.Folder;
 
         public static double DefaultBookmarkRadius = 128;
         public static Microsoft.Xna.Framework.Color DefaultColor = Microsoft.Xna.Framework.Color.Gold;
@@ -70,14 +67,14 @@ namespace LocalBookmarks
         private static FolderUIObj _SelectedFolder;
         internal static FolderUIObj SelectedFolder
         {
-            get { return _SelectedFolder; }
-            set { _SelectedFolder = value; }
+            get => _SelectedFolder;
+            set => _SelectedFolder = value;
         }
 
         private static FolderUIObj _FolderUIObjRoot = null;
         internal static FolderUIObj FolderUIObjRoot
         {
-            get { return _FolderUIObjRoot; }
+            get => _FolderUIObjRoot;
             set
             {
                 _FolderUIObjRoot = value;

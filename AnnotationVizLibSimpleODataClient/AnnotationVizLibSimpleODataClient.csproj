@@ -1,8 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>net48</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
+	  <PackageReference Include="Simple.OData.V4.Client" Version="4.27.0" />
+      <PackageReference Include="EntityFramework" Version="6.5.1" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0' or '$(TargetFramework)' == 'netstandard2.0'">
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+	</ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
+    <ProjectReference Include="..\SqlGeometryAnnotationExtensions\SqlGeometryAnnotationExtensions.csproj" />
+    <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
+    <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj" />
   </ItemGroup>
 </Project>

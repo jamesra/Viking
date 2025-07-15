@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net9.0-windows</TargetFramework>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>9.0</LangVersion>
 		<UseWindowsForms>true</UseWindowsForms>
+		<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<DefineConstants>DEBUG;TRACE</DefineConstants>
@@ -30,7 +32,7 @@
 		<ProjectReference Include="..\..\..\Utils\Utils.csproj" />
 		<ProjectReference Include="..\..\Common\Common.csproj" />
 		<ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
-		<ProjectReference Include="..\..\Monographics\Monographics.csproj" />
+		<ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" />
 		<ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
@@ -41,12 +43,11 @@
 	<ItemGroup>
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
 		<PackageReference Include="log4net" Version="2.0.13" />
-		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+		<PackageReference Include="MathNet.Numerics" Version="5.0.0" /> 
 		<PackageReference Include="NETStandard.Library" Version="2.0.3" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
-		<PackageReference Include="System.Memory" Version="4.6.3" />
+		<PackageReference Include="protobuf-net" Version="3.0.62" />
+		<PackageReference Include="protobuf-net.ServiceModel" Version="3.0.62" />
 		<PackageReference Include="System.Net.Http" Version="4.3.4" />
 		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
 		<PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
@@ -54,6 +55,22 @@
 		<PackageReference Include="System.Text.Encodings.Web" Version="9.0.7" />
 		<PackageReference Include="System.ValueTuple" Version="4.6.1" />
 		<PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" />
+		<PackageReference Include="System.Memory" Version="4.5.5" />
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="WindowsBase" />
+		<Reference Include="System.Xml.Linq" />
+		<Reference Include="System.ComponentModel.DataAnnotations" />
+		<Reference Include="System.Data.Linq" />
+		<Reference Include="System.Xaml" />
+		<Reference Include="PresentationCore" />
+		<Reference Include="PresentationFramework" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	</ItemGroup>
 	<PropertyGroup>
 		<PostBuildEvent>

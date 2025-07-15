@@ -112,7 +112,7 @@ namespace Viking.ViewModels
                 //pass.Begin();
                 pass.Apply();
 
-                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, vbMappedMesh.VertexCount, 0, ibMesh.IndexCount / 2);
+                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, ibMesh.IndexCount / 2);
 
             }
 
@@ -124,7 +124,7 @@ namespace Viking.ViewModels
                 //pass.Begin();
                 pass.Apply();
 
-                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, vbControlMesh.VertexCount, 0, ibMesh.IndexCount / 2);
+                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, ibMesh.IndexCount / 2);
             }
 
             graphicsDevice.DepthStencilState = originalDepthState;

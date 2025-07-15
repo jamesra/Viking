@@ -44,26 +44,17 @@ namespace TriangleNet.Topology
         /// <summary>
         /// Gets the first endpoints vertex id.
         /// </summary>
-        public int P0
-        {
-            get { return this.vertices[0].id; }
-        }
+        public int P0 => this.vertices[0].id;
 
         /// <summary>
         /// Gets the seconds endpoints vertex id.
         /// </summary>
-        public int P1
-        {
-            get { return this.vertices[1].id; }
-        }
+        public int P1 => this.vertices[1].id;
 
         /// <summary>
         /// Gets the segment boundary mark.
         /// </summary>
-        public int Label
-        {
-            get { return this.boundary; }
-        }
+        public int Label => this.boundary;
 
         #endregion
 

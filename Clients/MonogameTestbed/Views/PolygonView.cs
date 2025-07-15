@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Linq;
 using TriangleNet;
-using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

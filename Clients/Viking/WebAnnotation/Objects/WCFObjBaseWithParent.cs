@@ -20,10 +20,7 @@ namespace WebAnnotation.Objects
         protected abstract THISTYPE OnMissingParent();
 
         private THISTYPE _Parent = null;
-        public long? ParentID
-        {
-            get { return Data.ParentID; }
-        }
+        public long? ParentID => Data.ParentID;
 
         public THISTYPE Parent
         {
@@ -91,10 +88,7 @@ namespace WebAnnotation.Objects
 
         List<THISTYPE> _Children = new List<THISTYPE>();
         [Common.UI.ThisToManyRelation]
-        public THISTYPE[] Children
-        {
-            get { return _Children.ToArray(); }
-        }
+        public THISTYPE[] Children => _Children.ToArray();
 
         protected void AddChild(THISTYPE child)
         {

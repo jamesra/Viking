@@ -25,35 +25,23 @@ namespace Geometry
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
-        QuadTreeNodeTemplatePoint<TPoint, TValue> UpperLeft
-        {
-            get { return _quadrants[(int)Quadrant.UPPERLEFT]; }
-        }
+        QuadTreeNodeTemplatePoint<TPoint, TValue> UpperLeft => _quadrants[(int)Quadrant.UPPERLEFT];
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
-        QuadTreeNodeTemplatePoint<TPoint, TValue> UpperRight
-        {
-            get { return _quadrants[(int)Quadrant.UPPERRIGHT]; }
-        }
+        QuadTreeNodeTemplatePoint<TPoint, TValue> UpperRight => _quadrants[(int)Quadrant.UPPERRIGHT];
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
         /// 
-        QuadTreeNodeTemplatePoint<TPoint, TValue> LowerLeft
-        {
-            get { return _quadrants[(int)Quadrant.LOWERLEFT]; }
-        }
+        QuadTreeNodeTemplatePoint<TPoint, TValue> LowerLeft => _quadrants[(int)Quadrant.LOWERLEFT];
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
         /// </summary>
-        QuadTreeNodeTemplatePoint<TPoint, TValue> LowerRight
-        {
-            get { return _quadrants[(int)Quadrant.LOWERRIGHT]; }
-        }
+        QuadTreeNodeTemplatePoint<TPoint, TValue> LowerRight => _quadrants[(int)Quadrant.LOWERRIGHT];
 
         /// <summary>
         /// Returns the number of non-null children
@@ -77,13 +65,7 @@ namespace Geometry
         }
 
         internal GridRectangle Border;
-        protected GridVector2 Center
-        {
-            get
-            {
-                return Border.Center;
-            }
-        }
+        protected GridVector2 Center => Border.Center;
 
         /// <summary>
         /// If this node is a leaf then Point contains the position of the point in this node

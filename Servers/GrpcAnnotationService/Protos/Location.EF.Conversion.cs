@@ -1,11 +1,11 @@
 ﻿using System.Linq;
-using Viking.gRPC.AnnotationTypes.V1.Protos;
+using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 
 namespace gRPCAnnotationService.Protos
 {
     public static class LocationEFExtensions
     {
-        public static Viking.DataModel.Annotation.Location ToLocation(this global::Viking.gRPC.AnnotationTypes.V1.Protos.Location src)
+        public static Viking.DataModel.Annotation.Location ToLocation(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location src)
         {
             var converted = new Viking.DataModel.Annotation.Location
             {
@@ -40,12 +40,12 @@ namespace gRPCAnnotationService.Protos
         }
 
 
-        public static global::Viking.gRPC.AnnotationTypes.V1.Protos.Location ToProtobufMessage(this Viking.DataModel.Annotation.Location src)
+        public static global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location ToProtobufMessage(this Viking.DataModel.Annotation.Location src)
         {
             var compositeLinks = src.LocationLinkANavigations.ToList();
             compositeLinks.AddRange(src.LocationLinkBNavigations);
 
-            var value = new global::Viking.gRPC.AnnotationTypes.V1.Protos.Location
+            var value = new global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location
             {  
                 Id = src.Id,
                 ParentId = src.ParentId,

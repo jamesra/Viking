@@ -64,13 +64,7 @@ namespace LocalBookmarks
 
         }
 
-        public GridRectangle BoundingRect
-        {
-            get
-            {
-                return new GridRectangle(GridPosition, Global.DefaultBookmarkRadius);
-            }
-        }
+        public GridRectangle BoundingRect => new(GridPosition, Global.DefaultBookmarkRadius);
 
         protected static event EventHandler OnCreate;
         protected void CallOnCreate()
@@ -82,15 +76,15 @@ namespace LocalBookmarks
         }
         public static event EventHandler Create
         {
-            add { OnCreate += value; }
-            remove { OnCreate -= value; }
+            add => OnCreate += value;
+            remove => OnCreate -= value;
         }
 
 
 
         public override string Name
         {
-            get { return Data.Name; }
+            get => Data.Name;
             set
             {
                 Data.Name = value;
@@ -111,22 +105,13 @@ namespace LocalBookmarks
                     Data.VolumePosition = new Point2D();
                 return Data.VolumePosition;
             }
-            set
-            {
-                Data.VolumePosition = value;
-            }
+            set => Data.VolumePosition = value;
         }
 
         public Point2D MosaicPosition
         {
-            get
-            {
-                return Data.MosaicPosition;
-            }
-            set
-            {
-                Data.MosaicPosition = value;
-            }
+            get => Data.MosaicPosition;
+            set => Data.MosaicPosition = value;
         }
 
         public View View
@@ -137,20 +122,14 @@ namespace LocalBookmarks
                     Data.View = new View();
                 return Data.View;
             }
-            set
-            {
-                Data.View = value;
-            }
+            set => Data.View = value;
         }
 
-        public GridVector2 GridPosition
-        {
-            get { return new GridVector2(X, Y); }
-        }
+        public GridVector2 GridPosition => new(X, Y);
 
         public double X
         {
-            get { return System.Convert.ToDouble(Data.VolumePosition.X); }
+            get => System.Convert.ToDouble(Data.VolumePosition.X);
             set
             {
                 Position.X = (float)value;
@@ -160,7 +139,7 @@ namespace LocalBookmarks
 
         public double Y
         {
-            get { return System.Convert.ToDouble(Data.VolumePosition.Y); }
+            get => System.Convert.ToDouble(Data.VolumePosition.Y);
             set
             {
                 Position.Y = (float)value;
@@ -170,7 +149,7 @@ namespace LocalBookmarks
 
         public int Z
         {
-            get { return System.Convert.ToInt32(Math.Round(Data.Z)); }
+            get => System.Convert.ToInt32(Math.Round(Data.Z));
             set
             {
                 Data.Z = (float)value;
@@ -180,7 +159,7 @@ namespace LocalBookmarks
 
         public string Comment
         {
-            get { return Data.Comment; }
+            get => Data.Comment;
             set
             {
                 Data.Comment = value;
@@ -190,7 +169,7 @@ namespace LocalBookmarks
 
         public double Downsample
         {
-            get { return View.Downsample; }
+            get => View.Downsample;
             set
             {
                 View.Downsample = value;
@@ -200,13 +179,7 @@ namespace LocalBookmarks
 
         #region Export
 
-        public string URI
-        {
-            get
-            {
-                return Viking.Common.Util.CoordinatesToURI(X, Y, Z, Downsample);
-            }
-        }
+        public string URI => Viking.Common.Util.CoordinatesToURI(X, Y, Z, Downsample);
 
         public string HTMLAnchor
         {
@@ -221,13 +194,7 @@ namespace LocalBookmarks
             }
         }
 
-        public string CutPasteCoords
-        {
-            get
-            {
-                return Viking.Common.Util.CoordinatesToCopyPaste(X, Y, Z, Downsample);
-            }
-        }
+        public string CutPasteCoords => Viking.Common.Util.CoordinatesToCopyPaste(X, Y, Z, Downsample);
 
         #endregion
 
@@ -240,21 +207,9 @@ namespace LocalBookmarks
             return node;
         }
 
-        public override int TreeImageIndex
-        {
-            get
-            {
-                return 2;
-            }
-        }
+        public override int TreeImageIndex => 2;
 
-        public override int TreeSelectedImageIndex
-        {
-            get
-            {
-                return 2;
-            }
-        }
+        public override int TreeSelectedImageIndex => 2;
 
         public override void Delete()
         {
@@ -265,13 +220,7 @@ namespace LocalBookmarks
             Global.Save();
         }
 
-        public override string ToolTip
-        {
-            get
-            {
-                return this.Comment;
-            }
-        }
+        public override string ToolTip => this.Comment;
 
         #endregion
 

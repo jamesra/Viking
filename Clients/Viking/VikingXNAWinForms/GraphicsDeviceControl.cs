@@ -51,26 +51,18 @@ namespace VikingXNAWinForms
         /// This can be used with components such as the ContentManager,
         /// which use this service to look up the GraphicsDevice.
         /// </summary>
-        public ServiceContainer Services
-        {
-            get { return services; }
-        }
+        public ServiceContainer Services => services;
 
         readonly ServiceContainer services = new ServiceContainer();
 
         private Microsoft.Xna.Framework.Content.ContentManager _Content;
-        public Microsoft.Xna.Framework.Content.ContentManager Content
-        {
-            get
-            {
-                /*if (_Content is null)
+        public Microsoft.Xna.Framework.Content.ContentManager Content =>
+            /*if (_Content is null)
                 {
                     _Content = new Microsoft.Xna.Framework.Content.ContentManager(this.Services);
                     _Content.RootDirectory = "Content";
                 }*/
-                return graphicsDeviceService.Content;
-            }
-        }
+            graphicsDeviceService.Content;
 
         #endregion
 

@@ -26,13 +26,7 @@ namespace AnnotationVizLib.WCFClient
             graph = new NeuronGraph();
         }
 
-        public System.Collections.ObjectModel.ReadOnlyCollection<ulong> IncompleteNodes
-        {
-            get
-            {
-                return NextHopNodes.AsReadOnly();
-            }
-        }
+        public System.Collections.ObjectModel.ReadOnlyCollection<ulong> IncompleteNodes => NextHopNodes.AsReadOnly();
 
         public static NeuronGraph BuildGraph(ICollection<long> StructureIDs, uint numHops, string Endpoint, System.Net.NetworkCredential userCredentials)
         {

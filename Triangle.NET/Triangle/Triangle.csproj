@@ -2,8 +2,15 @@
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
 		<TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
 		<RootNamespace>TriangleNet</RootNamespace>
 		<AssemblyName>Triangle</AssemblyName>
 		<DefineConstants>USE_ATTRIBS</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
+		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+		<LangVersion>9.0</LangVersion>
 	</PropertyGroup>
 </Project>

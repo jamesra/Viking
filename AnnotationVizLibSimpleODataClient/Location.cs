@@ -34,10 +34,7 @@ namespace AnnotationVizLib.SimpleOData
                 return _VolumeShape;
             }
 
-            set
-            {
-                _VolumeShape = value;
-            }
+            set => _VolumeShape = value;
         }
 
         public System.Data.Entity.Spatial.DbGeometry MosaicShape { get; internal set; }
@@ -56,10 +53,7 @@ namespace AnnotationVizLib.SimpleOData
                 return _MosaicShape;
             }
 
-            set
-            {
-                _MosaicShape = value;
-            }
+            set => _MosaicShape = value;
         }
 
 
@@ -93,28 +87,16 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
-        public long UnscaledZ
-        {
-            get
-            {
-                return (long)this.Z;
-            }
-        }
+        public long UnscaledZ => (long)this.Z;
 
         public double Z
         {
             get; internal set;
         }
 
-        double ILocation.Z
-        {
-            get { return (double)UnscaledZ * scale.Z.Value; }
-        }
+        double ILocation.Z => (double)UnscaledZ * scale.Z.Value;
 
-        public string TagsXml
-        {
-            get { return this.Tags; }
-        }
+        public string TagsXml => this.Tags;
 
         public string Tags
         {
@@ -124,14 +106,8 @@ namespace AnnotationVizLib.SimpleOData
         LocationType _TypeCode;
         public LocationType TypeCode
         {
-            get
-            {
-                return (LocationType)this._TypeCode;
-            }
-            internal set
-            {
-                _TypeCode = value;
-            }
+            get => (LocationType)this._TypeCode;
+            internal set => _TypeCode = value;
         }
 
         GridBox _BoundingBox = default;

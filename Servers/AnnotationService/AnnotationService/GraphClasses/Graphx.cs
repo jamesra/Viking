@@ -24,8 +24,8 @@ namespace AnnotationService.Types
         [DataMember]
         public List<long> FrontierNodes
         {
-            get { return _FrontierNodes; }
-            set { _FrontierNodes = value; }
+            get => _FrontierNodes;
+            set => _FrontierNodes = value;
         }
         [DataMember]
         public List<long> ReducedEdges { get; set; }

@@ -23,7 +23,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// Number of parent cells for structure links
         /// </summary>
-        public int SourceCellCount { get { return SourceStructIDs.Count; } }
+        public int SourceCellCount => SourceStructIDs.Count;
 
         /// <summary>
         /// Number of structure links
@@ -34,7 +34,7 @@ namespace AnnotationVizLib
         /// <summary>
         /// Number of parent cells for structure links
         /// </summary>
-        public int TargetCellCount { get { return TargetStructIDs.Count; } }
+        public int TargetCellCount => TargetStructIDs.Count;
 
         /// <summary>
         /// Number of structure links
@@ -105,10 +105,7 @@ namespace AnnotationVizLib
         //Structures that belong to this node
         public List<IStructure> Structures;
 
-        public int StructureCount
-        {
-            get { return Structures.Count; }
-        }
+        public int StructureCount => Structures.Count;
 
         public MotifNode(string key, IEnumerable<IStructure> value)
             : base(key)

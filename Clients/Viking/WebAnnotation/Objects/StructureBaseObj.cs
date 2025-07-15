@@ -8,7 +8,8 @@ using WebAnnotation.WCFService.Annotation;
 using System.Drawing;
 using System.Windows.Forms;
 
-using Viking.Common; 
+using Viking.Common;
+using WebAnnotation.Service;
 
 namespace WebAnnotation.Objects
 {
@@ -40,16 +41,13 @@ namespace WebAnnotation.Objects
 
         private StructureBase Data
         {
-            get { return (StructureBase)_Data; }
-            set { _Data = value; }
+            get => (StructureBase)_Data;
+            set => _Data = value;
         }
 
         public DBACTION DBAction
         {
-            get
-            {
-                return ((StructureBase)Data).DBAction;
-            }
+            get => ((StructureBase)Data).DBAction;
             set
             {
                 if (Data.DBAction == DBACTION.INSERT && value == DBACTION.UPDATE)
@@ -70,7 +68,7 @@ namespace WebAnnotation.Objects
         [Column("Notes")]
         public string Notes
         {
-            get { return Data.Notes; }
+            get => Data.Notes;
             set
             {
                 Data.Notes = value;
@@ -82,7 +80,7 @@ namespace WebAnnotation.Objects
         [Column("Verified")]
         public bool Verified
         {
-            get { return Data.Verified; }
+            get => Data.Verified;
             set
             {
                 Data.Verified = value;
@@ -94,7 +92,7 @@ namespace WebAnnotation.Objects
         [Column("Confidence")]
         public double Confidence
         {
-            get { return Data.Confidence; }
+            get => Data.Confidence;
             set
             {
                 Data.Confidence = value;
@@ -106,7 +104,7 @@ namespace WebAnnotation.Objects
         [Column("Tags")]
         public string[] Tags
         {
-            get { return Data.Tags; }
+            get => Data.Tags;
             set
             {
                 Data.Tags = value;
@@ -123,10 +121,7 @@ namespace WebAnnotation.Objects
             }
         }
 
-        public long ID
-        {
-            get { return Data.ID; }
-        }
+        public long ID => Data.ID;
 
         protected StructureBaseObj()
         {
@@ -192,32 +187,32 @@ namespace WebAnnotation.Objects
 
         event ValueChangedEventHandler IUIObject.ValueChanged
         {
-            add { OnValueChanged += value; }
-            remove { OnValueChanged -= value; }
+            add => OnValueChanged += value;
+            remove => OnValueChanged -= value;
         }
 
         event EventHandler IUIObject.BeforeDelete
         {
-            add { OnBeforeDelete += value; }
-            remove { OnBeforeDelete -= value; }
+            add => OnBeforeDelete += value;
+            remove => OnBeforeDelete -= value;
         }
 
         event EventHandler IUIObject.AfterDelete
         {
-            add { OnAfterDelete += value; }
-            remove { OnAfterDelete -= value; }
+            add => OnAfterDelete += value;
+            remove => OnAfterDelete -= value;
         }
 
         event EventHandler IUIObject.BeforeSave
         {
-            add { OnBeforeSave += value; }
-            remove { OnBeforeSave -= value; }
+            add => OnBeforeSave += value;
+            remove => OnBeforeSave -= value;
         }
 
         event EventHandler IUIObject.AfterSave
         {
-            add { OnAfterSave += value; }
-            remove { OnAfterSave -= value; }
+            add => OnAfterSave += value;
+            remove => OnAfterSave -= value;
         }
 
         void IUIObject.ShowProperties()
@@ -238,15 +233,9 @@ namespace WebAnnotation.Objects
             }
         }
 
-        Image IUIObject.SmallThumbnail
-        {
-            get { throw new NotImplementedException(); }
-        }
+        Image IUIObject.SmallThumbnail => throw new NotImplementedException();
 
-        string IUIObject.ToolTip
-        {
-            get { throw new NotImplementedException(); }
-        }
+        string IUIObject.ToolTip => throw new NotImplementedException();
 
         public virtual void Save()
         {
@@ -258,20 +247,14 @@ namespace WebAnnotation.Objects
             return new Viking.UI.Controls.GenericTreeNode(this); 
         }
 
-        int IUIObject.TreeImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
+        int IUIObject.TreeImageIndex => throw new NotImplementedException();
 
-        int IUIObject.TreeSelectedImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
+        int IUIObject.TreeSelectedImageIndex => throw new NotImplementedException();
 
         event ChildChangedEventHandler IUIObject.ChildChanged
         {
-            add { OnChildChanged += value; }
-            remove { OnChildChanged -= value; }
+            add => OnChildChanged += value;
+            remove => OnChildChanged -= value;
         }
 
         Type[] IUIObject.AssignableParentTypes

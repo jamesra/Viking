@@ -91,13 +91,7 @@ namespace AnnotationUtils
         /// <summary>
         /// This string lists the parent structures connected, i.e. cells
         /// </summary>
-        public string KeyString
-        {
-            get
-            {
-                return to + "->" + from;
-            }
-        }
+        public string KeyString => to + "->" + from;
 
         #endregion
     }
@@ -223,7 +217,7 @@ namespace AnnotationUtils
                 //StreamWriter sw = new StreamWriter(fs);
                 sw.Write(graphDefinition);
                  
-                bool first = true;
+                //bool first = true;
                 sw.Write("graph");
                 WriteAttributesToDOT(sw, this.Attributes); 
                 sw.Write("\n"); 

@@ -40,40 +40,27 @@ namespace Geometry
 
         public GridVector2 Center => new GridLineSegment(T0.p2, T0.p3).Bisect();
          
-        public GridVector2 BottomLeft
-        {
-            get => T0.p1;
-            /*set {
+        public GridVector2 BottomLeft => T0.p1;
+
+        /*set {
                 T0 = new GridTriangle(value, T0.p2, T0.p3); 
             }*/
-        }
+        public GridVector2 BottomRight => T0.p2;
 
-        public GridVector2 BottomRight
-        {
-            get => T0.p2;
-            /*set {
+        /*set {
                 T0 = new GridTriangle(T0.p1, value, T0.p3);
                 T1 = new GridTriangle(value, T1.p2, T1.p3); 
             }*/
-        }
+        public GridVector2 TopLeft => T0.p3;
 
-        public GridVector2 TopLeft
-        {
-            get => T0.p3;
-            /*set {
+        /*set {
                 T0 = new GridTriangle(T0.p1, T0.p3, value);
                 T1 = new GridTriangle(T1.p1, T1.p2, value); 
             }*/
-        }
-
-        public GridVector2 TopRight
-        {
-            get => T1.p2;
-            /*set {
+        public GridVector2 TopRight => T1.p2;
+        /*set {
                 T1 = new GridTriangle(T1.p1,  value, T1.p3); 
             }*/
-        }
-
         /*
         public void Scale(double scalar)
         {

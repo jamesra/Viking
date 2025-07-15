@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFrameworks>net48;net9.0-windows</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.4" />
+	  <PackageReference Include="Windows.Base" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />

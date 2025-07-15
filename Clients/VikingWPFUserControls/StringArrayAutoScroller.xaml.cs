@@ -32,20 +32,20 @@ namespace Viking.WPF
 
         public bool IsDropDownOpen
         {
-            get { return comboHelpText.IsDropDownOpen; }
-            set { comboHelpText.IsDropDownOpen = value; }
+            get => comboHelpText.IsDropDownOpen;
+            set => comboHelpText.IsDropDownOpen = value;
         }
 
         public ObservableCollection<string> TextArray
         {
-            get { return (ObservableCollection<string>)GetValue(StringArrayAutoScroller.TextArrayProperty); }
-            set { SetValue(StringArrayAutoScroller.TextArrayProperty, value); }
+            get => (ObservableCollection<string>)GetValue(StringArrayAutoScroller.TextArrayProperty);
+            set => SetValue(StringArrayAutoScroller.TextArrayProperty, value);
         }
 
         public int TextArrayIndex
         {
-            get { return (int)GetValue(StringArrayAutoScroller.TextArrayIndexProperty); }
-            set { SetValue(StringArrayAutoScroller.TextArrayIndexProperty, value); }
+            get => (int)GetValue(StringArrayAutoScroller.TextArrayIndexProperty);
+            set => SetValue(StringArrayAutoScroller.TextArrayIndexProperty, value);
         }
 
         public StringArrayAutoScroller()

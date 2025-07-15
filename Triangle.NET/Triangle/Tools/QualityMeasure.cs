@@ -71,90 +71,57 @@ namespace TriangleNet.Tools
         /// <summary>
         /// Minimum triangle area.
         /// </summary>
-        public double AreaMinimum
-        {
-            get { return areaMeasure.area_min; }
-        }
+        public double AreaMinimum => areaMeasure.area_min;
 
         /// <summary>
         /// Maximum triangle area.
         /// </summary>
-        public double AreaMaximum
-        {
-            get { return areaMeasure.area_max; }
-        }
+        public double AreaMaximum => areaMeasure.area_max;
 
         /// <summary>
         /// Ratio of maximum and minimum triangle area.
         /// </summary>
-        public double AreaRatio
-        {
-            get { return areaMeasure.area_max / areaMeasure.area_min; }
-        }
+        public double AreaRatio => areaMeasure.area_max / areaMeasure.area_min;
 
         /// <summary>
         /// Smallest angle.
         /// </summary>
-        public double AlphaMinimum
-        {
-            get { return alphaMeasure.alpha_min; }
-        }
+        public double AlphaMinimum => alphaMeasure.alpha_min;
 
         /// <summary>
         /// Maximum smallest angle.
         /// </summary>
-        public double AlphaMaximum
-        {
-            get { return alphaMeasure.alpha_max; }
-        }
+        public double AlphaMaximum => alphaMeasure.alpha_max;
 
         /// <summary>
         /// Average angle.
         /// </summary>
-        public double AlphaAverage
-        {
-            get { return alphaMeasure.alpha_ave; }
-        }
+        public double AlphaAverage => alphaMeasure.alpha_ave;
 
         /// <summary>
         /// Average angle weighted by area.
         /// </summary>
-        public double AlphaArea
-        {
-            get { return alphaMeasure.alpha_area; }
-        }
+        public double AlphaArea => alphaMeasure.alpha_area;
 
         /// <summary>
         /// Smallest aspect ratio.
         /// </summary>
-        public double Q_Minimum
-        {
-            get { return qMeasure.q_min; }
-        }
+        public double Q_Minimum => qMeasure.q_min;
 
         /// <summary>
         /// Largest aspect ratio.
         /// </summary>
-        public double Q_Maximum
-        {
-            get { return qMeasure.q_max; }
-        }
+        public double Q_Maximum => qMeasure.q_max;
 
         /// <summary>
         /// Average aspect ratio.
         /// </summary>
-        public double Q_Average
-        {
-            get { return qMeasure.q_ave; }
-        }
+        public double Q_Average => qMeasure.q_ave;
 
         /// <summary>
         /// Average aspect ratio weighted by area.
         /// </summary>
-        public double Q_Area
-        {
-            get { return qMeasure.q_area; }
-        }
+        public double Q_Area => qMeasure.q_area;
 
         #endregion
 

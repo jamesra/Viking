@@ -8,7 +8,15 @@ namespace GeometryTests
         [AssemblyInitializeAttribute]
         public static void InitializeMathNetMKL(TestContext context)
         {
-            MathNet.Numerics.Control.UseNativeMKL();
+            try
+            {
+                MathNet.Numerics.Control.UseNativeMKL();
+            }
+            catch (System.NotSupportedException)
+            {
+                // MKL not available, use managed implementation
+                System.Console.WriteLine("MKL not available, using managed Math.NET implementation");
+            }
         }
     }
 }

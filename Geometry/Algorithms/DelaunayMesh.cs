@@ -16,8 +16,8 @@ namespace Geometry
         public readonly GridLineSegment Segment;
         public readonly IVertex2D OriginVert;
         public readonly IVertex2D TargetVert;
-        public long Origin { get => (long)OriginVert.Index; }
-        public long Target { get => (long)TargetVert.Index; }
+        public long Origin => (long)OriginVert.Index;
+        public long Target => (long)TargetVert.Index;
         public readonly GridLine Line;
 
         public Baseline(IVertex2D Origin, IVertex2D Target)

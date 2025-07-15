@@ -122,16 +122,13 @@ namespace TriangleNet.Smoothing
 
             T[] pool;
 
-            public int Count
-            {
-                get { return count; }
-            }
+            public int Count => count;
 
 
             public int Capacity
             {
-                get { return this.pool.Length; }
-                set { Resize(value); }
+                get => this.pool.Length;
+                set => Resize(value);
             }
 
             public ObjectPool(int capacity = 3)

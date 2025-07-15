@@ -99,14 +99,14 @@ namespace Viking.VolumeModel
 
         public int MaxDownsample
         {
-            get { return _MaxDownsample; }
-            protected set { _MaxDownsample = value; }
+            get => _MaxDownsample;
+            protected set => _MaxDownsample = value;
         }
 
         public int MinDownsample
         {
-            get { return _MinDownsample; }
-            protected set { _MinDownsample = value; }
+            get => _MinDownsample;
+            protected set => _MinDownsample = value;
         }
 
         protected readonly string TileGridPath;
@@ -241,6 +241,7 @@ namespace Viking.VolumeModel
         public static string GridTileFormatStringFromPythonString(string gridFormat)
         {
             string outputFormat = string.Copy(gridFormat);
+
             if (!char.IsLetter(gridFormat[0]))
             {
                 if (char.IsLetter(gridFormat[gridFormat.Length - 1]))

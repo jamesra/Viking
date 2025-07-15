@@ -10,20 +10,11 @@ namespace WebAnnotation
     /// </summary>
     class Store
     {
-        public static LocationStore Locations
-        {
-            get { return Nested.Locations; }
-        }
+        public static LocationStore Locations => Nested.Locations;
 
-        public static StructureStore Structures
-        {
-            get { return Nested.Structures; }
-        }
+        public static StructureStore Structures => Nested.Structures;
 
-        public static StructureTypeStore StructureTypes
-        {
-            get { return Nested.StructureTypes; }
-        }
+        public static StructureTypeStore StructureTypes => Nested.StructureTypes;
 
         class Nested
         {

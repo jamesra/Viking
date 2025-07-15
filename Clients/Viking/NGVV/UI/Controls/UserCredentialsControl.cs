@@ -7,9 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Net;
+using System.Net.Http;
 using System.IO;
 using System.Security.Cryptography;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Security.AccessControl;
 using Viking.UI;
 using System.Net.Security;
@@ -19,6 +21,11 @@ namespace Viking.UI.Controls
 {
     public partial class UserCredentialsControl : UserControl
     {
+        private static readonly HttpClient httpClient = new HttpClient(new HttpClientHandler()
+        {
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true // Do not validate server certificate for now
+        });
+
         public string authenticationURL;
         private string userName = UI.State.AnonymousCredentials.UserName;
         private string password = UI.State.AnonymousCredentials.Password; 
@@ -74,9 +81,9 @@ namespace Viking.UI.Controls
 
                     string[] data = DecryptString(sr.ReadToEnd(), passkey).Split(',');
 
-                    this.textUsername.Text = readUserName = String.Copy(data[0]);
+                    this.textUsername.Text = readUserName = data[0];
 
-                    this.textPassword.Text = String.Copy(data[1]);
+                    this.textPassword.Text = data[1];
 
                     this.btnLogin.Enabled = true;
 
@@ -214,41 +221,49 @@ namespace Viking.UI.Controls
 
         string createConnection()
         {
-            string postdata = string.Format("userName={0}&password={1}", userName, password);
+            try
+            {
+                return createConnectionAsync().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                return "Exit";
+            }
+        }
+
+        async Task<string> createConnectionAsync()
+        {
+            string postdata = $"userName={userName}&password={password}";
 
             Uri AuthenticationURI = new Uri(authenticationURL + "?" + postdata);
 
             if (AuthenticationURI.Scheme.ToLower() != "https")
             {
-                throw new ArgumentException("Logon UI, createConnection(): Expected to authenticate to an https URI scheme"); 
+                throw new ArgumentException("Logon UI, createConnectionAsync(): Expected to authenticate to an https URI scheme"); 
             }
 
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(authenticationURL+"?" + postdata);
-            request.Method = "POST";
-
-            StreamWriter stream = new StreamWriter(request.GetRequestStream());
-
-            stream.Write(postdata);
-
-            stream.Close();
-
-            // Do not validate server certificate, since its user generated for now
-            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-
-            if (response.StatusCode != HttpStatusCode.OK)
-                this.update_label.Text = response.StatusDescription;
-            else
+            try
             {
-                StreamReader streamRead = new StreamReader(response.GetResponseStream());
+                using var content = new StringContent(postdata, Encoding.UTF8, "application/x-www-form-urlencoded");
+                using var response = await httpClient.PostAsync(authenticationURL, content);
 
-                string responseData = streamRead.ReadToEnd();
+                if (response.StatusCode != HttpStatusCode.OK)
+                {
+                    this.update_label.Text = response.ReasonPhrase;
+                    return "Exit";
+                }
 
+                string responseData = await response.Content.ReadAsStringAsync();
                 return responseData;
             }
-
-            return "Exit";
+            catch (HttpRequestException)
+            {
+                return "Exit";
+            }
+            catch (TaskCanceledException)
+            {
+                return "Exit";
+            }
         }
 
         void username_KeyUp(object sender, System.Windows.Forms.KeyEventArgs e)
@@ -314,11 +329,11 @@ namespace Viking.UI.Controls
             // We use the MD5 hash generator as the result is a 128 bit byte array
             // which is a valid length for the TripleDES encoder we use below
 
-            MD5CryptoServiceProvider HashProvider = new MD5CryptoServiceProvider();
+            using var HashProvider = MD5.Create();
             byte[] TDESKey = HashProvider.ComputeHash(UTF8.GetBytes(Passphrase));
 
-            // Step 2. Create a new TripleDESCryptoServiceProvider object
-            TripleDESCryptoServiceProvider TDESAlgorithm = new TripleDESCryptoServiceProvider();
+            // Step 2. Create a new TripleDES object
+            using var TDESAlgorithm = TripleDES.Create();
 
             // Step 3. Setup the encoder
             TDESAlgorithm.Key = TDESKey;
@@ -336,9 +351,7 @@ namespace Viking.UI.Controls
             }
             finally
             {
-                // Clear the TripleDes and Hashprovider services of any sensitive information
-                TDESAlgorithm.Clear();
-                HashProvider.Clear();
+                // Objects are automatically disposed with using statements
             }
 
             // Step 6. Return the encrypted string as a base64 encoded string
@@ -354,11 +367,11 @@ namespace Viking.UI.Controls
             // We use the MD5 hash generator as the result is a 128 bit byte array
             // which is a valid length for the TripleDES encoder we use below
 
-            MD5CryptoServiceProvider HashProvider = new MD5CryptoServiceProvider();
+            using var HashProvider = MD5.Create();
             byte[] TDESKey = HashProvider.ComputeHash(UTF8.GetBytes(Passphrase));
 
-            // Step 2. Create a new TripleDESCryptoServiceProvider object
-            TripleDESCryptoServiceProvider TDESAlgorithm = new TripleDESCryptoServiceProvider();
+            // Step 2. Create a new TripleDES object
+            using var TDESAlgorithm = TripleDES.Create();
 
             // Step 3. Setup the decoder
             TDESAlgorithm.Key = TDESKey;
@@ -376,9 +389,7 @@ namespace Viking.UI.Controls
             }
             finally
             {
-                // Clear the TripleDes and Hashprovider services of any sensitive information
-                TDESAlgorithm.Clear();
-                HashProvider.Clear();
+                // Objects are automatically disposed with using statements
             }
 
             // Step 6. Return the decrypted string in UTF8 format

@@ -17,8 +17,8 @@ namespace Viking.VolumeModel
     {
         public long NumSectionsToKeepInMemory
         {
-            get { return this.MaxCacheSize; }
-            set { this.MaxCacheSize = value; }
+            get => this.MaxCacheSize;
+            set => this.MaxCacheSize = value;
         }
 
 

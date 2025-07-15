@@ -23,24 +23,18 @@ namespace TriangleNet.Geometry
         /// </summary>
         public int Label
         {
-            get { return label; }
-            set { label = value; }
+            get => label;
+            set => label = value;
         }
         /// <summary>
         /// Gets the first endpoints index.
         /// </summary>
-        public int P0
-        {
-            get { return v0.id; }
-        }
+        public int P0 => v0.id;
 
         /// <summary>
         /// Gets the second endpoints index.
         /// </summary>
-        public int P1
-        {
-            get { return v1.id; }
-        }
+        public int P1 => v1.id;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Segment" /> class.

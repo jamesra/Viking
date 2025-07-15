@@ -17,14 +17,14 @@ namespace AnnotationService.Types
         [DataMember]
         public long SourceID
         {
-            get { return Link.SourceID; }
+            get => Link.SourceID;
             set { }
         }
 
         [DataMember]
         public long TargetID
         {
-            get { return Link.TargetID; }
+            get => Link.TargetID;
             set { }
         }
 
@@ -42,14 +42,7 @@ namespace AnnotationService.Types
         /// This string lists the parent structures connected, i.e. cells
         /// </summary>
 
-        public string KeyString
-        {
-            get
-            {
-                return SourceParentID + "-" + TargetParentID + "," + SourceTypeName;
-            }
-
-        }
+        public string KeyString => SourceParentID + "-" + TargetParentID + "," + SourceTypeName;
 
         /// <summary>
         /// This string lists the actual structures connection, i.e. synapses and gap junction ID's

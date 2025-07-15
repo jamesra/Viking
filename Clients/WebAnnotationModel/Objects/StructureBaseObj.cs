@@ -1,312 +1,402 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Diagnostics; 
-
-using WebAnnotation.WCFService.Annotation;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
-
-using Viking.Common; 
+using Viking.Common;
+using Viking.UI.Controls;
+using WebAnnotationModel.Service;
 
 namespace WebAnnotation.Objects
 {
-    class StructureBaseObj : IUIObject
+    /// <summary>
+    /// Base class for all structure objects in the web annotation system
+    /// </summary>
+    public abstract class StructureBaseObj : IUIObject
     {
-        public override string ToString()
+        #region Variables
+
+        protected long _ID;
+        protected string _Name;
+        protected string _Description;
+        protected long _VolumeID;
+        protected long _SectionID;
+        protected long _ParentID;
+        protected DateTime _Created;
+        protected DateTime _Modified;
+        protected string _CreatedBy;
+        protected string _ModifiedBy;
+        protected bool _Visible;
+        protected bool _Selected;
+        protected Color _Color;
+        protected double _Opacity;
+        protected string _Tags;
+
+        #endregion
+
+        #region Properties
+
+        public virtual long ID
         {
-            if (Data != null)
-                return Data.ID.ToString();
-
-            return "Uninitialized " + base.ToString();
-        }
-
-        public override bool Equals(object obj)
-        {
-            StructureBaseObj structObj = obj as StructureBaseObj;
-            if (structObj != null)
-            {
-                return this.ID == structObj.ID; 
-            }
-            else
-                return base.Equals(obj);
-        }
-
-        /// <summary>
-        /// Pointer to the data which is sent to the web server
-        /// </summary>
-        protected object _Data; //This is a structureBase object
-
-        private StructureBase Data
-        {
-            get { return (StructureBase)_Data; }
-            set { _Data = value; }
-        }
-
-        public DBACTION DBAction
-        {
-            get
-            {
-                return ((StructureBase)Data).DBAction;
-            }
+            get => _ID;
             set
             {
-                if (Data.DBAction == DBACTION.INSERT && value == DBACTION.UPDATE)
-                    return;
-
-                //Just a precaution. I haven't thought whether I could undelete an object
-                Debug.Assert(false == (Data.DBAction == DBACTION.DELETE && value != DBACTION.DELETE));
-
-                Data.DBAction = value;
-            }
-        }
-
-        protected void SetDBActionForChange()
-        {
-            DBAction = DBACTION.UPDATE;
-        }
-
-        [Column("Notes")]
-        public string Notes
-        {
-            get { return Data.Notes; }
-            set
-            {
-                Data.Notes = value;
-                SetDBActionForChange();
-                ValueChangedEvent("Notes");
-            }
-        }
-
-        [Column("Verified")]
-        public bool Verified
-        {
-            get { return Data.Verified; }
-            set
-            {
-                Data.Verified = value;
-                SetDBActionForChange();
-                ValueChangedEvent("Verified");
-            }
-        }
-
-        [Column("Confidence")]
-        public double Confidence
-        {
-            get { return Data.Confidence; }
-            set
-            {
-                Data.Confidence = value;
-                SetDBActionForChange();
-                ValueChangedEvent("Confidence");
-            }
-        }
-
-        [Column("Tags")]
-        public string[] Tags
-        {
-            get { return Data.Tags; }
-            set
-            {
-                Data.Tags = value;
-                SetDBActionForChange();
-                ValueChangedEvent("Tags");
-            }
-        }
-
-        protected void ValueChangedEvent(string Column)
-        {
-            if (OnValueChanged != null)
-            {
-                OnValueChanged(this, new ValueChangedEventArgs(Column));
-            }
-        }
-
-        public long ID
-        {
-            get { return Data.ID; }
-        }
-
-        protected StructureBaseObj()
-        {
-        }
-
-        protected virtual void InitNewData(StructureTypeObj type)
-        {
-            this.Data.DBAction = DBACTION.INSERT;
-            
-            this.Data.ID = StructureStore.GetTempID();
-            this.Data.TypeID = type.ID;
-            Debug.Assert(type.ID >= 0);
-            this.Data.Notes = "";
-            this.Data.Tags = new String[0]; 
-            this.Data.Confidence = 0.5; 
-        }
-
-        internal virtual StructureBase GetData()
-        {
-            return Data;
-        }
-
-        private StructureTypeObj _Type = null;
-        public StructureTypeObj Type
-        {
-            get
-            {
-                if (_Type == null)
+                if (_ID != value)
                 {
-                    _Type = StructureTypeStore.GetStructureType(Data.TypeID);
-                }
-                return _Type; 
-            }
-            set
-            {
-                Debug.Assert(value != null);
-                if (value != null)
-                {
-                    Data.TypeID = value.ID;
-                    _Type = value;
-
-                    SetDBActionForChange();
-
-                    ValueChangedEvent("Type");
+                    _ID = value;
+                    ValueChangedEvent("ID");
                 }
             }
         }
 
-        protected void FireOnChildChanged(ChildChangeEventArgs args)
+        public virtual string Name
         {
-            if(OnChildChanged != null)
-                OnChildChanged(this, args); 
-        }
-
-        protected event ValueChangedEventHandler OnValueChanged;
-        protected event EventHandler OnBeforeDelete;
-        protected event EventHandler OnAfterDelete;
-        protected event EventHandler OnBeforeSave;
-        protected event EventHandler OnAfterSave;
-        protected event ChildChangedEventHandler OnChildChanged;
-
-        #region IUIObject Members
-
-        event ValueChangedEventHandler IUIObject.ValueChanged
-        {
-            add { OnValueChanged += value; }
-            remove { OnValueChanged -= value; }
-        }
-
-        event EventHandler IUIObject.BeforeDelete
-        {
-            add { OnBeforeDelete += value; }
-            remove { OnBeforeDelete -= value; }
-        }
-
-        event EventHandler IUIObject.AfterDelete
-        {
-            add { OnAfterDelete += value; }
-            remove { OnAfterDelete -= value; }
-        }
-
-        event EventHandler IUIObject.BeforeSave
-        {
-            add { OnBeforeSave += value; }
-            remove { OnBeforeSave -= value; }
-        }
-
-        event EventHandler IUIObject.AfterSave
-        {
-            add { OnAfterSave += value; }
-            remove { OnAfterSave -= value; }
-        }
-
-        void IUIObject.ShowProperties()
-        {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
-        }
-
-        ContextMenu IUIObject.ContextMenu
-        {
-            get
+            get => _Name;
+            set
             {
-                ContextMenu menu = new ContextMenu();
-
-                menu.MenuItems.Add("Delete", ContextMenu_OnDelete);
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
-
-                return menu;
+                if (_Name != value)
+                {
+                    _Name = value;
+                    ValueChangedEvent("Name");
+                }
             }
         }
 
-        Image IUIObject.SmallThumbnail
+        public virtual string Description
         {
-            get { throw new NotImplementedException(); }
+            get => _Description;
+            set
+            {
+                if (_Description != value)
+                {
+                    _Description = value;
+                    ValueChangedEvent("Description");
+                }
+            }
         }
 
-        string IUIObject.ToolTip
+        public virtual long VolumeID
         {
-            get { throw new NotImplementedException(); }
+            get => _VolumeID;
+            set
+            {
+                if (_VolumeID != value)
+                {
+                    _VolumeID = value;
+                    ValueChangedEvent("VolumeID");
+                }
+            }
         }
 
-        public virtual void Save()
+        public virtual long SectionID
         {
-            throw new NotImplementedException();
+            get => _SectionID;
+            set
+            {
+                if (_SectionID != value)
+                {
+                    _SectionID = value;
+                    ValueChangedEvent("SectionID");
+                }
+            }
         }
 
-        Viking.UI.Controls.GenericTreeNode IUIObject.CreateNode()
+        public virtual long ParentID
         {
-            return new Viking.UI.Controls.GenericTreeNode(this); 
+            get => _ParentID;
+            set
+            {
+                if (_ParentID != value)
+                {
+                    _ParentID = value;
+                    ValueChangedEvent("ParentID");
+                }
+            }
         }
 
-        int IUIObject.TreeImageIndex
+        public virtual DateTime Created
         {
-            get { throw new NotImplementedException(); }
+            get => _Created;
+            set
+            {
+                if (_Created != value)
+                {
+                    _Created = value;
+                    ValueChangedEvent("Created");
+                }
+            }
         }
 
-        int IUIObject.TreeSelectedImageIndex
+        public virtual DateTime Modified
         {
-            get { throw new NotImplementedException(); }
+            get => _Modified;
+            set
+            {
+                if (_Modified != value)
+                {
+                    _Modified = value;
+                    ValueChangedEvent("Modified");
+                }
+            }
         }
 
-        event ChildChangedEventHandler IUIObject.ChildChanged
+        public virtual string CreatedBy
         {
-            add { OnChildChanged += value; }
-            remove { OnChildChanged -= value; }
+            get => _CreatedBy;
+            set
+            {
+                if (_CreatedBy != value)
+                {
+                    _CreatedBy = value;
+                    ValueChangedEvent("CreatedBy");
+                }
+            }
         }
 
-        Type[] IUIObject.AssignableParentTypes
+        public virtual string ModifiedBy
         {
-            get { return new System.Type[] { typeof(StructureObj) }; }
+            get => _ModifiedBy;
+            set
+            {
+                if (_ModifiedBy != value)
+                {
+                    _ModifiedBy = value;
+                    ValueChangedEvent("ModifiedBy");
+                }
+            }
         }
 
-        public virtual void SetParent(IUIObject parent)
+        public virtual bool Visible
         {
-            return;
+            get => _Visible;
+            set
+            {
+                if (_Visible != value)
+                {
+                    _Visible = value;
+                    ValueChangedEvent("Visible");
+                }
+            }
+        }
+
+        public virtual bool Selected
+        {
+            get => _Selected;
+            set
+            {
+                if (_Selected != value)
+                {
+                    _Selected = value;
+                    ValueChangedEvent("Selected");
+                }
+            }
+        }
+
+        public virtual Color Color
+        {
+            get => _Color;
+            set
+            {
+                if (_Color != value)
+                {
+                    _Color = value;
+                    ValueChangedEvent("Color");
+                }
+            }
+        }
+
+        public virtual double Opacity
+        {
+            get => _Opacity;
+            set
+            {
+                if (_Opacity != value)
+                {
+                    _Opacity = value;
+                    ValueChangedEvent("Opacity");
+                }
+            }
+        }
+
+        public virtual string Tags
+        {
+            get => _Tags;
+            set
+            {
+                if (_Tags != value)
+                {
+                    _Tags = value;
+                    ValueChangedEvent("Tags");
+                }
+            }
         }
 
         #endregion
 
-        protected void ContextMenu_OnProperties(object sender, EventArgs e)
+        #region Constructor
+
+        protected StructureBaseObj()
         {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
+            _ID = -1;
+            _Name = "";
+            _Description = "";
+            _VolumeID = -1;
+            _SectionID = -1;
+            _ParentID = -1;
+            _Created = DateTime.Now;
+            _Modified = DateTime.Now;
+            _CreatedBy = "";
+            _ModifiedBy = "";
+            _Visible = true;
+            _Selected = false;
+            _Color = Color.Black;
+            _Opacity = 1.0;
+            _Tags = "";
         }
 
-        protected void ContextMenu_OnDelete(object sender, EventArgs e)
+        #endregion
+
+        #region Event Code
+
+        protected event PropertyChangedEventHandler OnValueChanged;
+        private event EventHandler OnBeforeDelete;
+        private event EventHandler OnAfterDelete;
+        private event EventHandler OnBeforeSave;
+        private event EventHandler OnAfterSave;
+        private event NotifyCollectionChangedEventHandler OnChildChanged;
+
+        protected void ValueChangedEvent(string Column)
         {
-            Delete();
+            OnValueChanged?.Invoke(this, new PropertyChangedEventArgs(Column));
         }
 
-        public void Delete()
+        protected void CallBeforeSave()
         {
-            if (OnBeforeDelete != null)
-                OnBeforeDelete(this, null);
-
-            this.DBAction = DBACTION.DELETE;
-
-            StructureStore.Save();
-
-            if (OnAfterDelete != null)
-                OnAfterDelete(this, null);
+            OnBeforeSave?.Invoke(this, EventArgs.Empty);
         }
+
+        protected void CallAfterSave()
+        {
+            OnAfterSave?.Invoke(this, EventArgs.Empty);
+        }
+
+        protected void CallBeforeDelete()
+        {
+            OnBeforeDelete?.Invoke(this, EventArgs.Empty);
+        }
+
+        protected void CallAfterDelete()
+        {
+            OnAfterDelete?.Invoke(this, EventArgs.Empty);
+        }
+
+        protected void CallOnChildChanged(NotifyCollectionChangedEventArgs args)
+        {
+            OnChildChanged?.Invoke(this, args);
+        }
+
+        #endregion
+
+        #region IUIObject Members
+
+        public event PropertyChangedEventHandler ValueChanged
+        {
+            add => OnValueChanged += value;
+            remove => OnValueChanged -= value;
+        }
+
+        public event EventHandler BeforeDelete
+        {
+            add => OnBeforeDelete += value;
+            remove => OnBeforeDelete -= value;
+        }
+
+        public event EventHandler AfterDelete
+        {
+            add => OnAfterDelete += value;
+            remove => OnAfterDelete -= value;
+        }
+
+        public event EventHandler BeforeSave
+        {
+            add => OnBeforeSave += value;
+            remove => OnBeforeSave -= value;
+        }
+
+        public event EventHandler AfterSave
+        {
+            add => OnAfterSave += value;
+            remove => OnAfterSave -= value;
+        }
+
+        public virtual void ShowProperties()
+        {
+            // Default implementation - can be overridden by derived classes
+        }
+
+        public virtual ContextMenu ContextMenu => null;
+
+        public virtual Image SmallThumbnail => null;
+
+        public virtual string ToolTip => Name;
+
+        public virtual void Save()
+        {
+            // Default implementation - can be overridden by derived classes
+        }
+
+        public virtual Type[] AssignableParentTypes => new Type[0];
+
+        public virtual void SetParent(IUIObject parent)
+        {
+            // Default implementation - can be overridden by derived classes
+        }
+
+        public virtual GenericTreeNode CreateNode()
+        {
+            return new GenericTreeNode(this);
+        }
+
+        public virtual int TreeImageIndex => 0;
+
+        public virtual int TreeSelectedImageIndex => 1;
+
+        public event NotifyCollectionChangedEventHandler ChildChanged
+        {
+            add => OnChildChanged += value;
+            remove => OnChildChanged -= value;
+        }
+
+        #endregion
+
+        #region Object Overrides
+
+        public override bool Equals(object obj)
+        {
+            if (obj is StructureBaseObj other)
+            {
+                return this.ID == other.ID && this.VolumeID == other.VolumeID;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + ID.GetHashCode();
+                hash = hash * 23 + VolumeID.GetHashCode();
+                return hash;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.IsNullOrEmpty(_Name) ? GetType().Name : _Name;
+        }
+
+        #endregion
     }
 }

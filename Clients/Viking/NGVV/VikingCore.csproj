@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net48</TargetFramework>
     <RootNamespace>Viking</RootNamespace>
     <AssemblyName>VikingCore</AssemblyName>
     <UseWPF>true</UseWPF>
@@ -16,26 +16,50 @@
     <!-- Disable Windows Forms serialization warnings for legacy application -->
     <NoWarn>$(NoWarn);WFO1000</NoWarn>
   </PropertyGroup>
+  
+  <!-- .NET Framework 4.8 specific properties -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
+    <NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+    <LangVersion>9.0</LangVersion>
+  </PropertyGroup>
+  
+  <!-- .NET 9.0-windows specific properties -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
+    <TargetFrameworkMoniker>.NETCoreApp,Version%3Dv9.0</TargetFrameworkMoniker>
+    <NuGetTargetMoniker>.NETCoreApp,Version=v9.0</NuGetTargetMoniker>
+  </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.4" />
-    <PackageReference Include="Duende.IdentityModel" Version="7.1.0" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
     <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
-    <PackageReference Include="System.Text.Encodings.Web" Version="9.0.7" />
     <PackageReference Include="System.ValueTuple" Version="4.6.1" />
     <PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" />
+  </ItemGroup>
+  
+  <!-- .NET 9 specific packages -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
+    <PackageReference Include="Duende.IdentityModel" Version="7.1.0" />
+    <PackageReference Include="System.Text.Encodings.Web" Version="9.0.7" />
     <PackageReference Include="Unofficial.System.Windows.Forms.Legacy" Version="1.0.0" />
+  </ItemGroup>
+  
+  <!-- .NET Framework 4.8 specific packages -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Resources.Extensions" Version="4.6.0" />
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\..\..\UnitsAndScale\UnitsAndScale.csproj" />
     <ProjectReference Include="..\..\..\Utils\Utils.csproj" />
     <ProjectReference Include="..\..\Common\Common.csproj" />
-    <ProjectReference Include="..\..\Monographics\Monographics.csproj" />
+    <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
+    <ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" Condition="'$(TargetFramework)' == 'net48'" />
     <ProjectReference Include="..\..\VikingWPFUserControls\VikingWPFUserControls.csproj" />
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />

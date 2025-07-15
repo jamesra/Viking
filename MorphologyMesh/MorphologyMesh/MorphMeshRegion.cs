@@ -17,10 +17,7 @@ namespace MorphologyMesh
         private readonly MorphRenderMesh ParentMesh;
 
         private readonly ImmutableSortedSet<MorphMeshFace> _Faces;
-        public ImmutableSortedSet<MorphMeshFace> Faces
-        {
-            get { return _Faces; }
-        }
+        public ImmutableSortedSet<MorphMeshFace> Faces => _Faces;
 
         public RegionType Type { get; private set; }
 

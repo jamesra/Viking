@@ -17,24 +17,12 @@ namespace Viking.VolumeModel
             this.Name = VolumeName;
         }
 
-        private string VolumeCachePath
-        {
-            get
-            {
-                return this.LocalCachePath + System.IO.Path.DirectorySeparatorChar + this.Name;
-            }
-        }
+        private string VolumeCachePath => this.LocalCachePath + System.IO.Path.DirectorySeparatorChar + this.Name;
 
         /// <summary>
         /// Server-side stos files loaded from .zip file listed in .vikingxml file
         /// </summary>
-        public string ServerStosCachePath
-        {
-            get
-            {
-                return this.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "StosZip";
-            }
-        }
+        public string ServerStosCachePath => this.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "StosZip";
 
 
         string _LocalVolumeDir = null;

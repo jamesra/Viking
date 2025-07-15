@@ -631,13 +631,7 @@ namespace RTree
             }
         }
 
-        public RTree.Rectangle this[T key]
-        {
-            get
-            {
-                return ItemsToRects[key];
-            }
-        }
+        public RTree.Rectangle this[T key] => ItemsToRects[key];
 
         /// <summary>
         /// find all rectangles in the tree that are contained by the passed rectangle

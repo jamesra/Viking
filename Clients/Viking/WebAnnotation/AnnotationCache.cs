@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
-using WebAnnotationModel.Objects;
+using WebAnnotationModel; 
 using Viking;
 using Viking.Common;
 using Geometry;
@@ -35,13 +35,7 @@ namespace WebAnnotation
         /// Locations on the section we are providing an overlay for
         /// </summary>
         //private static SortedList<long, LocationObj> Locations = new SortedList<long, LocationObj>(0);
-        private static ConcurrentDictionary<long, LocationObj> Locations
-        {
-            get
-            {
-                return Store.Locations.GetLocationsForSection(Section.Number); 
-            }
-        }
+        private static ConcurrentDictionary<long, LocationObj> Locations => Store.Locations.GetLocationsForSection(Section.Number);
 
         /// <summary>
         /// Locations on the reference sections above and below our current section

@@ -145,21 +145,14 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Unique ID for this volume on the server
         /// </summary>
-        public string UniqueID
-        {
-            get { return _UniqueID; }
-        }
+        public string UniqueID => _UniqueID;
 
         /// <summary>
         /// Set to true if the volume is located on the local drive
         /// False if over a network
         /// </summary>
         private readonly bool _IsLocal;
-        public bool IsLocal
-        {
-            get { return _IsLocal; }
-
-        }
+        public bool IsLocal => _IsLocal;
 
         /// <summary>
         /// Credentials to use during web requests
@@ -171,13 +164,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The XML document used to initialize the volume.  Contains all configuration settings from the server.
         /// </summary>
-        public XElement VolumeElement
-        {
-            get
-            {
-                return _VolumeElement;
-            }
-        }
+        public XElement VolumeElement => _VolumeElement;
 
         /// <summary>
         /// Names of transform groups that can be used to register images into the volume
@@ -212,10 +199,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Set to true if the Initialize() method has previously completed for this instance
         /// </summary>
-        public bool IsInitialized
-        {
-            get => Interlocked.Read(ref _Initialized) > 0;
-        }
+        public bool IsInitialized => Interlocked.Read(ref _Initialized) > 0;
 
         /// <summary>
         /// Sorted list containing the transforms for each volume transform we find
@@ -224,17 +208,11 @@ namespace Viking.VolumeModel
         /// </summary>
         public SortedList<string, SortedList<int, ITransform>> Transforms = new SortedList<string, SortedList<int, ITransform>>();
 
-        public int NumSections
-        {
-            get { return Sections.Count; }
-        }
+        public int NumSections => Sections.Count;
 
         private IAxisUnits _DefaultXYScale;
 
-        public IAxisUnits DefaultXYScale
-        {
-            get { return _DefaultXYScale;}
-        }
+        public IAxisUnits DefaultXYScale => _DefaultXYScale;
 
         /// <summary>
         /// Returns the section that the passed section was registered to
@@ -345,7 +323,7 @@ namespace Viking.VolumeModel
 
         public ChannelInfo[] DefaultChannels
         {
-            get { return _DefaultChannels; }
+            get => _DefaultChannels;
             set
             {
                 if (null == value)
@@ -365,10 +343,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// A list of all channel names found on sections in the volume
         /// </summary>
-        public string[] ChannelNames
-        {
-            get { return _ChannelNames.ToArray(); }
-        }
+        public string[] ChannelNames => _ChannelNames.ToArray();
 
         private void AddChannel(string name)
         {

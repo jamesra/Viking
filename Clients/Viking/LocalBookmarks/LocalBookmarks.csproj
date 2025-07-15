@@ -5,10 +5,14 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.4" />
+    <PackageReference Include="LinqToXsd" Version="2.0.2" />
+    <PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
+    <ProjectReference Include="..\..\VikingWPFUserControls\VikingWPFUserControls.csproj" />
+    <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
   </ItemGroup> 
   <ItemGroup>
     <None Include="app.config" />

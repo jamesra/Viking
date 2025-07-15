@@ -11,13 +11,7 @@ namespace Geometry
         {
         }
 
-        public GridLineSegment Line
-        {
-            get
-            {
-                return new GridLineSegment(this.SourceNodeKey, this.TargetNodeKey);
-            }
-        }
+        public GridLineSegment Line => new GridLineSegment(this.SourceNodeKey, this.TargetNodeKey);
     }
 
     public class MedialAxisVertex : GraphLib.Node<GridVector2, MedialAxisEdge>

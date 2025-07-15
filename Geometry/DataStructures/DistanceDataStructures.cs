@@ -130,13 +130,7 @@ namespace Geometry
             return;
         }
 
-        public List<Geometry.DistanceToPoint<T>> this[double distance]
-        {
-            get
-            {
-                return Data[distance];
-            }
-        }
+        public List<Geometry.DistanceToPoint<T>> this[double distance] => Data[distance];
 
         /*
         public void RemoveAt(int index)

@@ -96,10 +96,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// We are a root node if we have no parent
         /// </summary>
-        bool IsRoot
-        {
-            get { return !Parent.HasValue; }
-        }
+        bool IsRoot => !Parent.HasValue;
 
         public void SetParent(int? parentSection)
         {

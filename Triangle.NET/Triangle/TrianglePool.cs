@@ -219,15 +219,9 @@ namespace TriangleNet
             }
         }
 
-        public int Count
-        {
-            get { return count - stack.Count; }
-        }
+        public int Count => count - stack.Count;
 
-        public bool IsReadOnly
-        {
-            get { return true; }
-        }
+        public bool IsReadOnly => true;
 
         public bool Remove(Triangle item)
         {
@@ -265,19 +259,13 @@ namespace TriangleNet
                 offset = 0;
             }
 
-            public Triangle Current
-            {
-                get { return current; }
-            }
+            public Triangle Current => current;
 
             public void Dispose()
             {
             }
 
-            object System.Collections.IEnumerator.Current
-            {
-                get { return current; }
-            }
+            object System.Collections.IEnumerator.Current => current;
 
             public bool MoveNext()
             {

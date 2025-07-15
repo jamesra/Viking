@@ -30,14 +30,8 @@ namespace Geometry
 
         event NotifyCollectionChangedEventHandler System.Collections.Specialized.INotifyCollectionChanged.CollectionChanged
         {
-            add
-            {
-                this.OnPathChanged += value;
-            }
-            remove
-            {
-                this.OnPathChanged -= value;
-            }
+            add => this.OnPathChanged += value;
+            remove => this.OnPathChanged -= value;
         }
 
         private void FireOnPathChangedEvent(NotifyCollectionChangedEventArgs e)

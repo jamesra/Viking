@@ -8,10 +8,7 @@ namespace AnnotationVizLib
 {
     public class NeuronTLPView : TLPView<long>
     {
-        protected override SortedDictionary<string, string> DefaultAttributes
-        {
-            get { return TLPAttributes.DefaultForAttribute; }
-        }
+        protected override SortedDictionary<string, string> DefaultAttributes => TLPAttributes.DefaultForAttribute;
 
         public NeuronTLPView(string VolumeURL) : base(VolumeURL)
         {

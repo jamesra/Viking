@@ -1,18 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFramework>net9.0-windows</TargetFramework>
+		<TargetFrameworks>net48;net9.0-windows</TargetFrameworks>
 		<RootNamespace>VikingXNAWinForms</RootNamespace>
 		<AssemblyName>VikingXNAWinForms</AssemblyName>
 		<UseWindowsForms>true</UseWindowsForms>
 		<MonoGamePlatform>Windows</MonoGamePlatform> 
 	</PropertyGroup>
-	<ItemGroup>
-		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.*" />
-	</ItemGroup>
+	
+	<!-- .NET Framework 4.8 specific properties -->
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
+		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+		<LangVersion>9.0</LangVersion>
+	</PropertyGroup>
+	
+	<!-- .NET 9.0-windows specific properties -->
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
+		<TargetFrameworkMoniker>.NETCoreApp,Version%3Dv9.0</TargetFrameworkMoniker>
+		<NuGetTargetMoniker>.NETCoreApp,Version=v9.0</NuGetTargetMoniker>
+	</PropertyGroup>
+	
+	<!-- No direct MonoGame reference for net48; use VikingXNAGraphics instead -->
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
-		<ProjectReference Include="..\..\Monographics\Monographics.csproj" />
+		<ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
+		<ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" Condition="'$(TargetFramework)' == 'net48'" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="app.config" />

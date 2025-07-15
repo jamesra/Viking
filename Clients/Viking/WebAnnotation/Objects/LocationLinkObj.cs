@@ -27,13 +27,7 @@ namespace WebAnnotation.Objects
         public RoundLineCode.RoundLine lineGraphic;
         public Geometry.GridLineSegment lineSegment;
 
-        public double Radius
-        {
-            get
-            {
-                return LocationOnSection.Radius / 4.0f; 
-            }
-        }
+        public double Radius => LocationOnSection.Radius / 4.0f;
 
         public LocationLinkObj(LocationObj LocOnSection, long LocOnRef, Geometry.GridLineSegment line)
         {
@@ -69,10 +63,7 @@ namespace WebAnnotation.Objects
             }
         }
 
-        string IUIObjectBasic.ToolTip
-        {
-            get { throw new NotImplementedException(); }
-        }
+        string IUIObjectBasic.ToolTip => throw new NotImplementedException();
 
         void IUIObjectBasic.Save()
         {
@@ -169,49 +160,43 @@ namespace WebAnnotation.Objects
 
         public event ValueChangedEventHandler ValueChanged
         {
-            add { OnValueChanged += value; }
-            remove { OnValueChanged -= value; }
+            add => OnValueChanged += value;
+            remove => OnValueChanged -= value;
         }
 
         public event EventHandler BeforeDelete
         {
-            add { OnBeforeDelete += value; }
-            remove { OnBeforeDelete -= value; }
+            add => OnBeforeDelete += value;
+            remove => OnBeforeDelete -= value;
         }
 
         public event EventHandler AfterDelete
         {
-            add { OnAfterDelete += value; }
-            remove { OnAfterDelete -= value; }
+            add => OnAfterDelete += value;
+            remove => OnAfterDelete -= value;
         }
 
         public event EventHandler BeforeSave
         {
-            add { OnBeforeSave += value; }
-            remove { OnBeforeSave -= value; }
+            add => OnBeforeSave += value;
+            remove => OnBeforeSave -= value;
         }
 
         event EventHandler IUIObject.AfterSave
         {
-            add { OnAfterSave += value; }
-            remove { OnAfterSave -= value; }
+            add => OnAfterSave += value;
+            remove => OnAfterSave -= value;
         }
 
         public event ChildChangedEventHandler ChildChanged
         {
-            add { OnChildChanged += value; }
-            remove { OnChildChanged -= value; }
+            add => OnChildChanged += value;
+            remove => OnChildChanged -= value;
         }
 
-        System.Drawing.Image IUIObject.SmallThumbnail
-        {
-            get { throw new NotImplementedException(); }
-        }
+        System.Drawing.Image IUIObject.SmallThumbnail => throw new NotImplementedException();
 
-        Type[] IUIObject.AssignableParentTypes
-        {
-            get { throw new NotImplementedException(); }
-        }
+        Type[] IUIObject.AssignableParentTypes => throw new NotImplementedException();
 
         void IUIObject.SetParent(IUIObject parent)
         {
@@ -223,15 +208,9 @@ namespace WebAnnotation.Objects
             throw new NotImplementedException();
         }
 
-        int IUIObject.TreeImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
+        int IUIObject.TreeImageIndex => throw new NotImplementedException();
 
-        int IUIObject.TreeSelectedImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
+        int IUIObject.TreeSelectedImageIndex => throw new NotImplementedException();
 
         #endregion
 

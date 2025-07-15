@@ -24,29 +24,11 @@ namespace Geometry.Transforms
             get; set;
         }
 
-        public MappingGridVector2[] MapPoints
-        {
-            get
-            {
-                return ((ITransformControlPoints)DiscreteTransform).MapPoints;
-            }
-        }
+        public MappingGridVector2[] MapPoints => ((ITransformControlPoints)DiscreteTransform).MapPoints;
 
-        public GridRectangle ControlBounds
-        {
-            get
-            {
-                return ((ITransformControlPoints)DiscreteTransform).ControlBounds;
-            }
-        }
+        public GridRectangle ControlBounds => ((ITransformControlPoints)DiscreteTransform).ControlBounds;
 
-        public GridRectangle MappedBounds
-        {
-            get
-            {
-                return ((ITransformControlPoints)DiscreteTransform).MappedBounds;
-            }
-        }
+        public GridRectangle MappedBounds => ((ITransformControlPoints)DiscreteTransform).MappedBounds;
 
         public int[] TriangleIndicies
         {

@@ -5,4 +5,10 @@
   <ItemGroup>
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ColladaIO\ColladaIO.csproj" />
+    <ProjectReference Include="..\MorphologyMesh\MorphologyMesh.csproj" />
+    <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj" />
+    <ProjectReference Include="..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj" />
+  </ItemGroup>
 </Project>

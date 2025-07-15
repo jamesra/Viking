@@ -92,10 +92,7 @@ namespace Viking.AnnotationServiceTypes
 
         readonly ObservableCollection<THISTYPE> _Children = new ObservableCollection<THISTYPE>();
 
-        public THISTYPE[] Children
-        {
-            get { return _Children.ToArray(); }
-        }
+        public THISTYPE[] Children => _Children.ToArray();
 
         protected void AddChild(THISTYPE child)
         {
@@ -121,21 +118,15 @@ namespace Viking.AnnotationServiceTypes
 
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler ChildChanged
         {
-            add { _Children.CollectionChanged += value; }
-            remove { _Children.CollectionChanged -= value; }
+            add => _Children.CollectionChanged += value;
+            remove => _Children.CollectionChanged -= value;
         }
 
         public event NotifyCollectionChangedEventHandler CollectionChanged
         {
-            add
-            {
-                ((INotifyCollectionChanged)_Children).CollectionChanged += value;
-            }
+            add => ((INotifyCollectionChanged)_Children).CollectionChanged += value;
 
-            remove
-            {
-                ((INotifyCollectionChanged)_Children).CollectionChanged -= value;
-            }
+            remove => ((INotifyCollectionChanged)_Children).CollectionChanged -= value;
         }
 
         /// <summary>

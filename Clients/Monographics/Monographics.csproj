@@ -2,13 +2,14 @@
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
 		<TargetFramework>net9.0-windows</TargetFramework>
-		<RootNamespace>Monographics</RootNamespace>
+		<RootNamespace>VikingXNAGraphics</RootNamespace>
 		<AssemblyName>Monographics</AssemblyName>
 		<MonoGamePlatform>Windows</MonoGamePlatform>
 		<SignManifests>true</SignManifests>
 		<SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
 		<GenerateDocumentationFile>False</GenerateDocumentationFile>
 	</PropertyGroup>
+	
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<DefineConstants>DEBUG;TRACE</DefineConstants>
 		<Optimize>false</Optimize>
@@ -24,12 +25,10 @@
 		<DebugType>pdbonly</DebugType>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
-	<ItemGroup>
-		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*"/>
-		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.4" />
+	<ItemGroup> 		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
 		<PackageReference Include="System.Collections.Immutable" Version="9.0.7" />
-	</ItemGroup>  
-
+	</ItemGroup>
+	
 	<ItemGroup>
 		<MonoGameContentReference Include="MonogameContent\Content.mgcb" />
 		<None Include="app.config" />
@@ -49,6 +48,6 @@
 	
 	<!-- Custom target to build MonoGame content using the local MGCB tool -->
 	<Target Name="BuildMonoGameContent" BeforeTargets="Build" Condition="'$(Configuration)' != ''">
-		<Exec Command="dotnet tool run mgcb /quiet /@:Content.mgcb /platform:Windows /outputDir:bin\Windows\Content /intermediateDir:obj\Windows\net9.0\Content" WorkingDirectory="$(ProjectDir)MonogameContent" ContinueOnError="false" />
+		<Exec Command="dotnet tool run mgcb /quiet /@:Content.mgcb /platform:Windows /outputDir:bin\Windows\Content /intermediateDir:obj\Windows\$(TargetFramework)\Content" WorkingDirectory="$(ProjectDir)MonogameContent" ContinueOnError="false" />
 	</Target>
 </Project>

@@ -401,7 +401,7 @@ namespace Viking.ViewModels
                 //pass.Begin();
                 pass.Apply();
 
-                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, VertBuffer.VertexCount, 0, TriangleIndicies.Length / 3);
+                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, TriangleIndicies.Length / 3);
                 /*
                 graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList,
                                         this.Verticies,
@@ -521,7 +521,7 @@ namespace Viking.ViewModels
                 //pass.Begin();
                 pass.Apply();
 
-                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, vbMesh.VertexCount, 0, ibMesh.IndexCount / 2);
+                graphicsDevice.DrawIndexedPrimitives(PrimitiveType.LineList, 0, 0, ibMesh.IndexCount / 2);
 
             }
 

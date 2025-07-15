@@ -56,13 +56,7 @@ namespace TriangleNet.IO
 
         private DebugWriter() { }
 
-        public static DebugWriter Session
-        {
-            get
-            {
-                return instance;
-            }
-        }
+        public static DebugWriter Session => instance;
 
         #endregion
 

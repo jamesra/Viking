@@ -21,20 +21,20 @@ namespace GeometryTests
             Runner.consoleRunner.OnArguments(value1, value2, value3);
         }
 
-        public void OnFinished(string value1, TestResult value2)
+        public void OnFinished(string value1, FsCheck.TestResult value2)
         {
             Runner.consoleRunner.OnFinished(value1, value2);
 
-            if (value2 is TestResult.Exhausted exhausted)
+            if (value2 is FsCheck.TestResult.Exhausted exhausted)
             {
                 Console.Write($"{value1} test options exhausted");
             }
-            else if (value2 is TestResult.False falseResult)
+            else if (value2 is FsCheck.TestResult.False falseResult)
             {
                 Console.Write($"{value1} test failed");
                 throw new AssertFailedException(value1);
             }
-            else if (value2 is TestResult.True trueResult)
+            else if (value2 is FsCheck.TestResult.True trueResult)
             {
                 Console.WriteLine($"{value1} passed");
             }

@@ -23,13 +23,11 @@ namespace AnnotationVizLib
 
         public System.Drawing.Color Color
         {
-            set
-            {
+            set =>
                 this.Attributes["viewColor"] = string.Format("({0},{1},{2},{3})", value.R,
-                                                                                 value.G,
-                                                                                 value.B,
-                                                                                 value.A);
-            }
+                    value.G,
+                    value.B,
+                    value.A);
         }
 
         public string AttributeToString(string attrib_name)
@@ -59,13 +57,11 @@ namespace AnnotationVizLib
 
         public System.Drawing.Color Color
         {
-            set
-            {
+            set =>
                 this.Attributes["viewColor"] = string.Format("({0},{1},{2},{3})", value.R,
-                                                                                 value.G,
-                                                                                 value.B,
-                                                                                 value.A);
-            }
+                    value.G,
+                    value.B,
+                    value.A);
         }
 
         public string DefinitionString()
@@ -85,29 +81,11 @@ namespace AnnotationVizLib
     internal static class TLPFile
     {
 
-        public static string FileHeader
-        {
-            get
-            {
-                return "(tlp \"2.0\"";
-            }
-        }
+        public static string FileHeader => "(tlp \"2.0\"";
 
-        public static string FileFooter
-        {
-            get
-            {
-                return GenericFooter;
-            }
-        }
+        public static string FileFooter => GenericFooter;
 
-        public static string GenericFooter
-        {
-            get
-            {
-                return ")";
-            }
-        }
+        public static string GenericFooter => ")";
 
         public static string ClusterHeader(ulong id, string name)
         {
@@ -128,14 +106,7 @@ namespace AnnotationVizLib
             return string.Format("(property 0 {0} \"{1}\"", attribType, attribName);
         }
 
-        public static string PropertyFooter
-        {
-            get
-            {
-                return GenericFooter;
-            }
-        }
-
+        public static string PropertyFooter => GenericFooter;
     }
 
     public class TLPViewSubgraph
@@ -175,13 +146,11 @@ namespace AnnotationVizLib
 
         public System.Drawing.Color Color
         {
-            set
-            {
+            set =>
                 this.SubgraphAttributes["viewColor"] = string.Format("({0},{1},{2},{3} {0},{1},{2},{3})", value.R,
-                                                                                 value.G,
-                                                                                 value.B,
-                                                                                 value.A);
-            }
+                    value.G,
+                    value.B,
+                    value.A);
         }
 
         private string NodesString(IEnumerable<ulong> node_ids)

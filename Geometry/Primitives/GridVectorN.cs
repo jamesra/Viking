@@ -96,9 +96,9 @@ namespace Geometry
     {
         readonly double[] _coords;
 
-        public int nDims { get => _coords.Length; }
+        public int nDims => _coords.Length;
 
-        public double[] coords { get => _coords; }
+        public double[] coords => _coords;
 
         public GridVectorN(double[] input)
         {
@@ -355,14 +355,8 @@ namespace Geometry
 
         public double this[AXIS axis]
         {
-            get
-            {
-                return coords[(int)axis];
-            }
-            set
-            {
-                coords[(int)axis] = value;
-            }
+            get => coords[(int)axis];
+            set => coords[(int)axis] = value;
         } 
     }
 }

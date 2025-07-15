@@ -18,10 +18,10 @@ namespace Viking.VolumeModel
         protected ITransform[] _TileTransforms = null;
 
         private GridRectangle _VolumeBounds;
-        public override GridRectangle ControlBounds { get => _VolumeBounds; }
+        public override GridRectangle ControlBounds => _VolumeBounds;
 
         private GridRectangle _SectionBounds;
-        public override GridRectangle? SectionBounds { get => _SectionBounds; }
+        public override GridRectangle? SectionBounds => _SectionBounds;
 
         public override GridRectangle? VolumeBounds => _VolumeBounds;
 
@@ -132,10 +132,7 @@ namespace Viking.VolumeModel
         /// </summary>
         public readonly ITransform VolumeTransform;
 
-        public override string CachedTransformsFileName
-        {
-            get { return System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, VolumeTransform.ToString() + "_stos.cache"); }
-        }
+        public override string CachedTransformsFileName => System.IO.Path.Combine(Section.volume.Paths.LocalVolumeDir, VolumeTransform.ToString() + "_stos.cache");
 
         public SectionToVolumeMapping(Section section, string name, FixedTileCountMapping sourceMapping, ITransform volumeTransform)
             : base(section, name, sourceMapping.TilePrefix, sourceMapping.TilePostfix)

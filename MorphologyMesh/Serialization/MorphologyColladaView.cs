@@ -81,31 +81,16 @@ namespace MorphologyMesh
             Reflective = color;
         }
 
-        public string FXName
-        {
-            get { return Key + "-fx"; }
-        }
+        public string FXName => Key + "-fx";
     }
 
     public class StructureModel
     {
         public readonly ulong ID;
 
-        public string Name
-        {
-            get
-            {
-                return $"Struct-{ID}";
-            }
-        }
+        public string Name => $"Struct-{ID}";
 
-        public string NodeName
-        {
-            get
-            {
-                return $"NodeID-{ID}";
-            }
-        }
+        public string NodeName => $"NodeID-{ID}";
 
         public string GeometryURL
         {
@@ -115,10 +100,7 @@ namespace MorphologyMesh
         /// <summary>
         /// url to use in the <node> elements within the <library visual scenes> element
         /// </summary>
-        public string InstanceURL
-        {
-            get { return GeometryURL is null ? "#" + NodeName : string.Format("{0}#{1}", GeometryURL, NodeName); }
-        }
+        public string InstanceURL => GeometryURL is null ? "#" + NodeName : string.Format("{0}#{1}", GeometryURL, NodeName);
 
 
         public readonly IReadOnlyMesh3D<IVertex3D> Mesh;
@@ -127,12 +109,7 @@ namespace MorphologyMesh
 
         private readonly SortedList<ulong, StructureModel> _ChildStructures = new SortedList<ulong, StructureModel>();
 
-        public IReadOnlyDictionary<ulong, StructureModel> ChildStructures
-        {
-            get {
-                return _ChildStructures as IReadOnlyDictionary<ulong, StructureModel>;
-            }
-         }
+        public IReadOnlyDictionary<ulong, StructureModel> ChildStructures => _ChildStructures as IReadOnlyDictionary<ulong, StructureModel>;
 
         public StructureModel(ulong id, IReadOnlyMesh3D<IVertex3D> mesh, MaterialLighting mat)
         {
@@ -154,8 +131,8 @@ namespace MorphologyMesh
         /// </summary>
         public GridVector3 Translation
         {
-            get { return _Translation; }
-            set { _Translation = value; }
+            get => _Translation;
+            set => _Translation = value;
         }
 
         /// <summary>

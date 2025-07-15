@@ -57,10 +57,7 @@ namespace Geometry.Transforms
                 return _TriangleIndicies;
             }
 
-            protected set
-            {
-                _TriangleIndicies = value;
-            }
+            protected set => _TriangleIndicies = value;
         }
 
         #endregion

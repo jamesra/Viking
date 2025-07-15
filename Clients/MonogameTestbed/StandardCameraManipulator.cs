@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Input;
 using System;
 using VikingXNA;
-using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

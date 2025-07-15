@@ -33,10 +33,7 @@ namespace Geometry.Transforms
 
                 return _ControlBounds;
             }
-            protected set
-            {
-                _ControlBounds = value;
-            }
+            protected set => _ControlBounds = value;
         }
 
         private GridRectangle _MappedBounds = new GridRectangle();
@@ -51,10 +48,7 @@ namespace Geometry.Transforms
 
                 return _MappedBounds;
             }
-            protected set
-            {
-                _MappedBounds = value;
-            }
+            protected set => _MappedBounds = value;
         }
 
         /// <summary>

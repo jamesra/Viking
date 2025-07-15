@@ -20,13 +20,7 @@ namespace AnnotationVizLib.OData
             this.scale = scale ?? throw new ArgumentNullException(nameof(scale));
         }
 
-        public IDictionary<string, string> Attributes
-        {
-            get
-            {
-                return null;
-            }
-        }
+        public IDictionary<string, string> Attributes => null;
 
         private SqlGeometry _VolumeShape = null;
         public SqlGeometry Geometry
@@ -46,91 +40,28 @@ namespace AnnotationVizLib.OData
                 return _VolumeShape;
             }
 
-            set
-            {
-                _VolumeShape = value;
-            }
+            set => _VolumeShape = value;
         }
 
-        public ulong ID
-        {
-            get
-            {
-                return (ulong)loc.ID;
-            }
-        }
+        public ulong ID => (ulong)loc.ID;
 
-        public bool IsUntraceable
-        {
-            get
-            {
-                return loc.IsUntraceable();
-            }
-        }
+        public bool IsUntraceable => loc.IsUntraceable();
 
-        public bool IsVericosityCap
-        {
-            get
-            {
-                return loc.IsVericosityCap();
-            }
-        }
+        public bool IsVericosityCap => loc.IsVericosityCap();
 
-        public bool OffEdge
-        {
-            get
-            {
-                return loc.OffEdge;
-            }
-        }
+        public bool OffEdge => loc.OffEdge;
 
-        public ulong ParentID
-        {
-            get
-            {
-                return (ulong)loc.ParentID;
-            }
-        }
+        public ulong ParentID => (ulong)loc.ParentID;
 
-        public bool Terminal
-        {
-            get
-            {
-                return loc.Terminal;
-            }
-        }
+        public bool Terminal => loc.Terminal;
 
-        public long UnscaledZ
-        {
-            get
-            {
-                return loc.Z;
-            }
-        }
+        public long UnscaledZ => loc.Z;
 
-        public double Z
-        {
-            get
-            {
-                return (double)loc.Z * scale.Z.Value;
-            }
-        }
+        public double Z => (double)loc.Z * scale.Z.Value;
 
-        public string TagsXml
-        {
-            get
-            {
-                return loc.Tags;
-            }
-        }
+        public string TagsXml => loc.Tags;
 
-        public LocationType TypeCode
-        {
-            get
-            {
-                return (LocationType)loc.TypeCode;
-            }
-        }
+        public LocationType TypeCode => (LocationType)loc.TypeCode;
 
         GridBox _BoundingBox = default;
         public GridBox BoundingBox

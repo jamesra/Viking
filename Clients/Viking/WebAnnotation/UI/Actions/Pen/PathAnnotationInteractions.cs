@@ -159,14 +159,8 @@ namespace WebAnnotation.UI
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnLogChanged;
         event NotifyCollectionChangedEventHandler System.Collections.Specialized.INotifyCollectionChanged.CollectionChanged
         {
-            add
-            {
-                OnLogChanged += value;
-            }
-            remove
-            {
-                OnLogChanged -= value;
-            }
+            add => OnLogChanged += value;
+            remove => OnLogChanged -= value;
         }
 
         public void FireOnLogChanged(object sender, NotifyCollectionChangedEventArgs e)

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Geometry;
-using VikingXNAGraphics;
 using VikingXNA;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
@@ -32,8 +31,8 @@ namespace MonogameTestbed
         static double PointRadius = 2.0;
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
-        
+        public bool Initialized => _initialized;
+
         public Task Init(MonoTestbed window)
         {
             _initialized = true;

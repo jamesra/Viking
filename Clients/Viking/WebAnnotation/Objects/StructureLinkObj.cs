@@ -13,10 +13,7 @@ namespace WebAnnotation.Objects
         [ColumnAttribute("Source ID")]
         public long SourceID
         {
-            get
-            {
-                return Data.SourceID;
-            }
+            get => Data.SourceID;
             set
             {
                 if (Data.SourceID != value)
@@ -31,10 +28,7 @@ namespace WebAnnotation.Objects
         [ColumnAttribute("Target ID")]
         public long TargetID
         {
-            get
-            {
-                return Data.TargetID;
-            }
+            get => Data.TargetID;
             set
             {
                 if (Data.TargetID != value)
@@ -49,7 +43,7 @@ namespace WebAnnotation.Objects
         [ColumnAttribute("Bidirectional")]
         public bool Bidirectional
         {
-            get { return Data.Bidirectional; }
+            get => Data.Bidirectional;
             set {
                 if (Data.Bidirectional != value)
                 {
@@ -74,13 +68,7 @@ namespace WebAnnotation.Objects
 
         public Geometry.GridLineSegment lineSegment;
 
-        public double Radius
-        {
-            get
-            {
-                return SourceLocation.Radius / 10.0f;
-            }
-        }
+        public double Radius => SourceLocation.Radius / 10.0f;
 
         public StructureLinkObj(long sourceID, long targetID, 
                                 LocationObj sourceLoc, LocationObj targetLoc,

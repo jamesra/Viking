@@ -23,10 +23,7 @@ namespace TriangleNet.Topology
         internal SubSegment seg;
         internal int orient; // Ranges from 0 to 1.
 
-        public SubSegment Segment
-        {
-            get { return seg; }
-        }
+        public SubSegment Segment => seg;
 
         public override string ToString()
         {

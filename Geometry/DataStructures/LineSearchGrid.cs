@@ -31,7 +31,7 @@ namespace Geometry
         /// </summary>
         private int _LastIntersectingLineCount;
 
-        public int Count { get { return tableLineToValue.Count; } }
+        public int Count => tableLineToValue.Count;
 
         System.Threading.ReaderWriterLockSlim rwLock = new System.Threading.ReaderWriterLockSlim();
 
@@ -914,15 +914,9 @@ namespace Geometry
             }
         }
 
-        public T this[GridLineSegment key]
-        {
-            get { return tableLineToValue[key]; }
-        }
+        public T this[GridLineSegment key] => tableLineToValue[key];
 
-        public GridLineSegment this[T key]
-        {
-            get { return tableValueToLine[key]; }
-        }
+        public GridLineSegment this[T key] => tableValueToLine[key];
 
         /// <summary>
         /// Returns a list of GridLineSegments that could possible intersect the passed line

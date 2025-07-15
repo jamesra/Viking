@@ -28,10 +28,7 @@ namespace WebAnnotationModel
 #endif
 
 
-        public bool HasBeenQueried
-        {
-            get { return LastQuery.HasValue; }
-        }
+        public bool HasBeenQueried => LastQuery.HasValue;
 
         /// <summary>
         /// True if a query has been sent to the server but has not returned

@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using CommandLine;
+using CommandLine.Text;
 
 namespace Neo4JGenerator
 {
@@ -38,13 +40,17 @@ namespace Neo4JGenerator
 
         static void Main(string[] args)
         {
-            Simple.OData.Client.V4Adapter.Reference();
-            if (!CommandLine.Parser.Default.ParseArguments(args, Program.options))
-            {
-                System.Console.WriteLine("Unable to parse command line arguments, aborting");
-                return;
-            }
+            // Microsoft.OData.Client doesn't require V4Adapter.Reference();
+            
+            var result = Parser.Default.ParseArguments<CommandLineOptions>(args);
+            result.WithParsed(opts => RunWithOptions(opts))
+                  .WithNotParsed(errs => HandleParseErrors(errs));
+        }
 
+        private static void RunWithOptions(CommandLineOptions opts)
+        {
+            Program.options = opts;
+            
             Newtonsoft.Json.Linq.JObject json = null;
             if (Program.options.JsonFilename != null)
             {
@@ -61,6 +67,7 @@ namespace Neo4JGenerator
             if(json is null)
             {
                 Console.WriteLine("Unable to load JSON data");
+                return;
             }
 
             if (Program.options.ODataEndpoint is null)
@@ -73,6 +80,12 @@ namespace Neo4JGenerator
             }
 
             Console.WriteLine("All done!");
+        }
+
+        private static void HandleParseErrors(IEnumerable<Error> errs)
+        {
+            Console.WriteLine("Unable to parse command line arguments, aborting");
+            // Help text is automatically displayed by CommandLineParser 2.x
         }
 
         public static void ClearAndImportDatabase(JObject json)

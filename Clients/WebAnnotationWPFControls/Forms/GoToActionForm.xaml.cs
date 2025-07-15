@@ -41,10 +41,7 @@ namespace WebAnnotation.UI.Forms
         public long ID
         {
             get => (long)GetValue(IDProperty);
-            set
-            {
-                SetValue(IDProperty, value);
-            }
+            set => SetValue(IDProperty, value);
         }
 
         public static readonly DependencyProperty IsActionEnabledProperty = DependencyProperty.Register(

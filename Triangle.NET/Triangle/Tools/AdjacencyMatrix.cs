@@ -33,18 +33,12 @@ namespace TriangleNet.Tools
         /// <summary>
         /// Gets the column pointers.
         /// </summary>
-        public int[] ColumnPointers
-        {
-            get { return pcol; }
-        }
+        public int[] ColumnPointers => pcol;
 
         /// <summary>
         /// Gets the row indices.
         /// </summary>
-        public int[] RowIndices
-        {
-            get { return irow; }
-        }
+        public int[] RowIndices => irow;
 
         public AdjacencyMatrix(Mesh mesh)
         {

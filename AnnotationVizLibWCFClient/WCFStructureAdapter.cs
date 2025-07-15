@@ -14,21 +14,9 @@ namespace AnnotationVizLib.WCFClient
             this.structure = s;
         }
 
-        public ulong ID
-        {
-            get
-            {
-                return (ulong)structure.ID;
-            }
-        }
+        public ulong ID => (ulong)structure.ID;
 
-        public string Label
-        {
-            get
-            {
-                return structure.Label;
-            }
-        }
+        public string Label => structure.Label;
 
         public ICollection<IStructureLink> Links
         {
@@ -52,29 +40,11 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
-        public string TagsXML
-        {
-            get
-            {
-                return structure.AttributesXml;
-            }
-        }
+        public string TagsXML => structure.AttributesXml;
 
-        public IStructureType Type
-        {
-            get
-            {
-                return new WCFStructureTypeAdapter(Queries.IDToStructureType[this.structure.TypeID]);
-            }
-        }
+        public IStructureType Type => new WCFStructureTypeAdapter(Queries.IDToStructureType[this.structure.TypeID]);
 
-        public ulong TypeID
-        {
-            get
-            {
-                return (ulong)structure.TypeID;
-            }
-        }
+        public ulong TypeID => (ulong)structure.TypeID;
 
         public bool Equals(IStructure other)
         {

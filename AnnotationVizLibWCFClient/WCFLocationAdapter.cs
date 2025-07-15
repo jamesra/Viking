@@ -20,13 +20,7 @@ namespace AnnotationVizLib.WCFClient
             this.scale = scale;
         }
 
-        public IDictionary<string, string> Attributes
-        {
-            get
-            {
-                return null;
-            }
-        }
+        public IDictionary<string, string> Attributes => null;
 
         private SqlGeometry _VolumeShape = null;
         public SqlGeometry Geometry
@@ -48,10 +42,7 @@ namespace AnnotationVizLib.WCFClient
                 return _VolumeShape;
             }
 
-            set
-            {
-                _VolumeShape = value;
-            }
+            set => _VolumeShape = value;
         }
 
         private SqlGeometry _MosaicShape = null;
@@ -74,91 +65,28 @@ namespace AnnotationVizLib.WCFClient
                 return _MosaicShape;
             }
 
-            set
-            {
-                _MosaicShape = value;
-            }
+            set => _MosaicShape = value;
         }
 
-        public ulong ID
-        {
-            get
-            {
-                return (ulong)loc.ID;
-            }
-        }
+        public ulong ID => (ulong)loc.ID;
 
-        public bool IsUntraceable
-        {
-            get
-            {
-                return loc.IsUntraceable();
-            }
-        }
+        public bool IsUntraceable => loc.IsUntraceable();
 
-        public bool IsVericosityCap
-        {
-            get
-            {
-                return loc.IsVericosityCap();
-            }
-        }
+        public bool IsVericosityCap => loc.IsVericosityCap();
 
-        public bool OffEdge
-        {
-            get
-            {
-                return loc.OffEdge;
-            }
-        }
+        public bool OffEdge => loc.OffEdge;
 
-        public ulong ParentID
-        {
-            get
-            {
-                return (ulong)loc.ParentID;
-            }
-        }
+        public ulong ParentID => (ulong)loc.ParentID;
 
-        public bool Terminal
-        {
-            get
-            {
-                return loc.Terminal;
-            }
-        }
+        public bool Terminal => loc.Terminal;
 
-        public double Z
-        {
-            get
-            {
-                return (double)loc.VolumePosition.Z * scale.Z.Value;
-            }
-        }
+        public double Z => (double)loc.VolumePosition.Z * scale.Z.Value;
 
-        public long UnscaledZ
-        {
-            get
-            {
-                return (long)loc.VolumePosition.Z;
-            }
-        }
+        public long UnscaledZ => (long)loc.VolumePosition.Z;
 
-        public string TagsXml
-        {
-            get
-            {
-                return loc.AttributesXml;
-            }
-        }
+        public string TagsXml => loc.AttributesXml;
 
-        public LocationType TypeCode
-        {
-            get
-            {
-                return (LocationType)loc.TypeCode;
-            }
-        }
+        public LocationType TypeCode => (LocationType)loc.TypeCode;
 
         GridBox _BoundingBox = default;
         public GridBox BoundingBox

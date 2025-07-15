@@ -17,8 +17,8 @@ namespace TriangleNet.Topology.DCEL
         /// </summary>
         public HalfEdge Leaving
         {
-            get { return leaving; }
-            set { leaving = value; }
+            get => leaving;
+            set => leaving = value;
         }
 
         /// <summary>

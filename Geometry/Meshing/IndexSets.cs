@@ -64,13 +64,7 @@ namespace Geometry
             GC.SuppressFinalize(this);
         }
 
-        object IEnumerator.Current
-        {
-            get
-            {
-                return Current;
-            }
-        }
+        object IEnumerator.Current => Current;
 
         public long Current
         {
@@ -97,21 +91,9 @@ namespace Geometry
         private readonly long _Count;
         private readonly bool _Reversed;
 
-        public int Count
-        {
-            get
-            {
-                return System.Convert.ToInt32(_Count);
-            }
-        }
+        public int Count => System.Convert.ToInt32(_Count);
 
-        public long this[int index]
-        {
-            get
-            {
-                return this[(long)index];
-            }
-        }
+        public long this[int index] => this[(long)index];
 
 
         public long this[long index]
@@ -222,29 +204,11 @@ namespace Geometry
             Array.Copy(indicies, Indicies, indicies.Length);
         }
 
-        public long this[int index]
-        {
-            get
-            {
-                return this[(long)index];
-            }
-        }
+        public long this[int index] => this[(long)index];
 
-        public long this[long index]
-        {
-            get
-            {
-                return Indicies[index];
-            }
-        }
+        public long this[long index] => Indicies[index];
 
-        public int Count
-        {
-            get
-            {
-                return Indicies.Length;
-            }
-        }
+        public int Count => Indicies.Length;
 
         public IIndexSet Reverse()
         {
@@ -303,21 +267,9 @@ namespace Geometry
             GC.SuppressFinalize(this);
         }
 
-        object IEnumerator.Current
-        {
-            get
-            {
-                return Current;
-            }
-        }
+        object IEnumerator.Current => Current;
 
-        public long Current
-        {
-            get
-            {
-                return set[position];
-            }
-        }
+        public long Current => set[position];
     }
 
     /// <summary>
@@ -368,13 +320,7 @@ namespace Geometry
             GC.SuppressFinalize(this);
         }
 
-        object IEnumerator.Current
-        {
-            get
-            {
-                return Current;
-            }
-        }
+        object IEnumerator.Current => Current;
 
         public long Current
         {
@@ -421,13 +367,7 @@ namespace Geometry
         }
 
 
-        public override long this[int index]
-        {
-            get
-            {
-                return this[(long)index];
-            }
-        }
+        public override long this[int index] => this[(long)index];
 
         public override long this[long index]
         {
@@ -513,21 +453,9 @@ namespace Geometry
             return new InfiniteSequentialIndexSet(MinIndex, MaxIndex, StartIndex, !this._Reverse);
         }
 
-        public int Count
-        {
-            get
-            {
-                return System.Convert.ToInt32(_Count);
-            }
-        }
+        public int Count => System.Convert.ToInt32(_Count);
 
-        public virtual long this[int index]
-        {
-            get
-            {
-                return this[(long)index];
-            }
-        }
+        public virtual long this[int index] => this[(long)index];
 
         public virtual long this[long index]
         {

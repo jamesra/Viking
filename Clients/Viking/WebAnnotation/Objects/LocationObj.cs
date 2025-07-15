@@ -73,10 +73,7 @@ namespace WebAnnotation.Objects
 
         }
 
-        public long? ParentID
-        {
-            get { return Data.ParentID; }
-        }
+        public long? ParentID => Data.ParentID;
 
         private StructureObj _Parent;
         public StructureObj Parent
@@ -96,7 +93,7 @@ namespace WebAnnotation.Objects
 
         public double X
         {
-            get { return Data.Position.X; }
+            get => Data.Position.X;
             set {
                 AnnotationPoint point = new AnnotationPoint();
                 point.X = value;
@@ -109,7 +106,7 @@ namespace WebAnnotation.Objects
 
         public double Y 
         {
-            get { return Data.Position.Y; }
+            get => Data.Position.Y;
             set
             {
                 AnnotationPoint point = new AnnotationPoint();
@@ -126,12 +123,8 @@ namespace WebAnnotation.Objects
         /// and also would require update of X,Y to the section space of the different section
         /// </summary>
         [ColumnAttribute("Z")]
-        public double Z
-        {
-            get {return Data.Position.Z; }
-        }
+        public double Z => Data.Position.Z;
 
-        
 
         /// <summary>
         /// VolumeX is the x position in volume space. It only exists to inform the database of an estimate of the locations position in volume space.
@@ -141,10 +134,7 @@ namespace WebAnnotation.Objects
         [ColumnAttribute("Volume X")]
         public double VolumeX
         {
-            get
-            {
-                return Data.VolumePosition.X; 
-            }
+            get => Data.VolumePosition.X;
             set
             {
                 if (value != Data.VolumePosition.X)
@@ -167,10 +157,7 @@ namespace WebAnnotation.Objects
         [ColumnAttribute("Volume Y")]
         public double VolumeY
         {
-            get
-            {
-                return Data.VolumePosition.Y;
-            }
+            get => Data.VolumePosition.Y;
             set
             {
                 if (value != Data.VolumePosition.Y)
@@ -188,7 +175,7 @@ namespace WebAnnotation.Objects
         [ColumnAttribute("Radius")]
         public double Radius
         {
-            get { return Data.Radius; }
+            get => Data.Radius;
             set { Data.Radius = value;
             SetDBActionForChange();
             }
@@ -197,7 +184,7 @@ namespace WebAnnotation.Objects
         [ColumnAttribute("Type")]
         public LocationType TypeCode
         {
-            get { return (LocationType)Data.TypeCode; }
+            get => (LocationType)Data.TypeCode;
             set { Data.TypeCode = (short)value;
             SetDBActionForChange();
             }
@@ -223,14 +210,11 @@ namespace WebAnnotation.Objects
         /// This is readonly because changing it would break a datastructure in location store
         /// and also would require update of X,Y to the section space of the different section
         /// </summary>
-        public long Section
-        {
-            get { return Data.Section; }
-        }
+        public long Section => Data.Section;
 
         public AnnotationPoint Position
         {
-            get { return Data.Position; }
+            get => Data.Position;
             set { Data.Position = value;
             SetDBActionForChange();
             }
@@ -277,31 +261,22 @@ namespace WebAnnotation.Objects
 
         public bool Terminal
         {
-            get { return Data.Terminal; }
-            set { Data.Terminal = value; }
+            get => Data.Terminal;
+            set => Data.Terminal = value;
         }
 
         public bool OffEdge
         {
-            get { return Data.OffEdge; }
-            set { Data.OffEdge = value; }
+            get => Data.OffEdge;
+            set => Data.OffEdge = value;
         }
 
-        public DateTime LastModified
-        {
-            get { return new DateTime(Data.LastModified, DateTimeKind.Utc); }
-        }
-        
+        public DateTime LastModified => new(Data.LastModified, DateTimeKind.Utc);
+
         /// <summary>
         /// The radius to use when the location is displayed as a reference location on another section
         /// </summary>
-        public float OffSectionRadius
-        {
-            get
-            {
-                return (float)(this.Radius / 4 > 128f ? 128f : this.Radius / 4);
-            }
-        }
+        public float OffSectionRadius => (float)(this.Radius / 4 > 128f ? 128f : this.Radius / 4);
 
         public LocationObj()
         {
@@ -818,15 +793,9 @@ namespace WebAnnotation.Objects
             }
         }
 
-        public override Image SmallThumbnail
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override Image SmallThumbnail => throw new NotImplementedException();
 
-        public override string ToolTip
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override string ToolTip => throw new NotImplementedException();
 
         public override void Save()
         {
@@ -838,15 +807,9 @@ namespace WebAnnotation.Objects
             return new Viking.UI.Controls.GenericTreeNode(this); 
         }
 
-        public override int TreeImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override int TreeImageIndex => throw new NotImplementedException();
 
-        public override int TreeSelectedImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override int TreeSelectedImageIndex => throw new NotImplementedException();
 
         public override Type[] AssignableParentTypes
         {
@@ -925,8 +888,8 @@ namespace WebAnnotation.Objects
         }
         public static event EventHandler Create
         {
-            add { OnCreate += value; }
-            remove { OnCreate -= value; }
+            add => OnCreate += value;
+            remove => OnCreate -= value;
         }
     }
 }

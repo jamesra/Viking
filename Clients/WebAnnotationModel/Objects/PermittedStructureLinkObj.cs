@@ -13,10 +13,10 @@ namespace WebAnnotationModel.Objects
         //public long SourceTypeID { get { return link != null ? link.SourceTypeID : _SourceID;  } }
         //public long TargetTypeID { get { return link != null ? link.TargetTypeID : _TargetID; } }
 
-        public long SourceTypeID { get { return _SourceTypeID; } }
-        public long TargetTypeID { get { return _TargetTypeID; } }
+        public long SourceTypeID => _SourceTypeID;
+        public long TargetTypeID => _TargetTypeID;
 
-        public bool Bidirectional { get { return _Bidirectional; } }
+        public bool Bidirectional => _Bidirectional;
 
         ulong IPermittedStructureLink.SourceTypeID => (ulong)SourceTypeID;
 
@@ -174,36 +174,18 @@ namespace WebAnnotationModel.Objects
         PermittedStructureLink>,
         IPermittedStructureLink
     {
-        public override PermittedStructureLinkKey ID
-        {
-            get { return new PermittedStructureLinkKey(this); }
-        }
+        public override PermittedStructureLinkKey ID => new(this);
 
         protected override int GenerateHashCode()
         {
             return (int)(SourceTypeID % int.MaxValue);
         }
 
-        public long SourceTypeID
-        {
-            get
-            {
-                return Data.SourceTypeID;
-            }
-        }
+        public long SourceTypeID => Data.SourceTypeID;
 
-        public long TargetTypeID
-        {
-            get
-            {
-                return Data.TargetTypeID;
-            }
-        }
+        public long TargetTypeID => Data.TargetTypeID;
 
-        public bool Bidirectional
-        {
-            get { return Data.Bidirectional; }
-        }
+        public bool Bidirectional => Data.Bidirectional;
 
         ulong IPermittedStructureLink.SourceTypeID => (ulong)SourceTypeID;
 

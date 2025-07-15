@@ -131,15 +131,9 @@ namespace Geometry
         }
 
 
-        public int Width
-        {
-            get { return (iMaxX - iMinX); }
-        }
+        public int Width => (iMaxX - iMinX);
 
-        public int Height
-        {
-            get { return (iMaxY - iMinY); }
-        }
+        public int Height => (iMaxY - iMinY);
 
         public static GridIndicies FromGridDimensions(GridDimensions gridDim)
         {
@@ -194,10 +188,7 @@ namespace Geometry
         /// Return the number of grid cells covered by the indicies
         /// </summary>
         /// <returns></returns>
-        public int NumberOfCells
-        {
-            get { return Width * Height; }
-        }
+        public int NumberOfCells => Width * Height;
     }
 
     public sealed class GridIndexEnumerator : IEnumerator<GridIndex>
@@ -223,13 +214,7 @@ namespace Geometry
             }
         }
 
-        GridIndex IEnumerator<GridIndex>.Current
-        {
-            get
-            {
-                return new GridIndex(iX, iY);
-            }
-        }
+        GridIndex IEnumerator<GridIndex>.Current => new GridIndex(iX, iY);
 
         public void Dispose()
         {
@@ -299,20 +284,11 @@ namespace Geometry
 
         private readonly int _Level;
 
-        public int Level
-        {
-            get
-            {
-                return _Level;
-            }
-        }
+        public int Level => _Level;
 
         private readonly double _MinRadius;
 
-        public double MinRadius
-        {
-            get { return _MinRadius; }
-        }
+        public double MinRadius => _MinRadius;
 
         public RegionPyramidLevel(int Level, GridDimensions gridDim, GridCellDimensions cellDim, double minRadius)
         {

@@ -2,13 +2,7 @@
 {
     class BookmarkTreeNode : Viking.UI.Controls.GenericTreeNode
     {
-        public BookmarkUIObj bookmark
-        {
-            get
-            {
-                return this.Tag as BookmarkUIObj;
-            }
-        }
+        public BookmarkUIObj bookmark => this.Tag as BookmarkUIObj;
 
 
         public BookmarkTreeNode(BookmarkUIObj folder)

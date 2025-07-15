@@ -12,8 +12,8 @@ namespace WebAnnotation.WPF.Controls
     {  
         public ICommand DropCommand
         {
-            get { return (ICommand)GetValue(DropCommandProperty); }
-            set { SetValue(DropCommandProperty, value); }
+            get => (ICommand)GetValue(DropCommandProperty);
+            set => SetValue(DropCommandProperty, value);
         }
 
         // Using a DependencyProperty as the backing store for DropCommand.  This enables animation, styling, binding, etc...

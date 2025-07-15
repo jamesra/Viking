@@ -35,7 +35,7 @@ namespace Geometry
         /// </summary>
         public GridVector2[] ExteriorRing
         {
-            get { return _ExteriorRing; }
+            get => _ExteriorRing;
             set
             {
                 _ExteriorRingArea = value.PolygonArea();
@@ -151,13 +151,7 @@ namespace Geometry
         /// <summary>
         /// Read only please
         /// </summary>
-        public IReadOnlyList<GridPolygon> InteriorPolygons
-        {
-            get
-            {
-                return _InteriorPolygons.AsReadOnly();
-            }
-        }
+        public IReadOnlyList<GridPolygon> InteriorPolygons => _InteriorPolygons.AsReadOnly();
 
         /// <summary>
         /// Read only please
@@ -185,13 +179,7 @@ namespace Geometry
             }
         }
 
-        public bool HasInteriorRings
-        {
-            get
-            {
-                return _InteriorPolygons.Count > 0;
-            }
-        }
+        public bool HasInteriorRings => _InteriorPolygons.Count > 0;
 
         /// <summary>
         /// Returns the point at the specified Index.  The iPoly value is not checked.

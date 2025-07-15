@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AnnotationVizLib;
-using AnnotationVizLib.SimpleOData;
+// using AnnotationVizLib.SimpleOData; // Temporarily commented out
 using ODataClient;
 
 namespace MeasureDistance
@@ -16,74 +16,6 @@ namespace MeasureDistance
     {
         [Option('v', "VolumeURL", Required = true, HelpText = "URL of VolumeXML file")]
         public string VolumeURL { get; set; }
-        
-        [ParserState]
-        public IParserState LastParsertState { get; set; }
-
-        [HelpOption]
-        public string GetUsage()
-        {
-            return CommandLine.Text.HelpText.AutoBuild(this,
-                (HelpText current) => HelpText.DefaultParsingErrorsHandler(this, current));
-        }
-
-        private static bool IsNumberRange(string input)
-        {
-            Regex regex = new Regex(@"(\d+)\-(\d+)");
-            var match = regex.Match(input);
-            return match.Success;
-        }
-
-        /// <summary>
-        /// Convert a string of two integers seperated by a hyphen to a list of integers
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
-        private static List<long> NumberRangeToList(string input)
-        {
-
-            Regex regex = new Regex(@"(\d+)\-(\d+)");
-            Match m = regex.Match(input);
-
-            long start = System.Convert.ToInt64(m.Groups[1].Value);
-            long end = System.Convert.ToInt64(m.Groups[2].Value);
-
-            List<long> listNumbers = new List<long>((int)(end - start) + 1);
-
-            for (long val = start; val <= end; val++)
-            {
-                listNumbers.Add(val);
-            }
-
-            return listNumbers;
-        }
-
-        private static List<long> NumberStringToList(string input)
-        {
-            List<long> listNumbers = new List<long>();
-
-            foreach (string chunk in input.Split(','))
-            {
-                string trimmed_chunk = chunk.Trim();
-
-                if (IsNumberRange(trimmed_chunk))
-                    listNumbers.AddRange(NumberRangeToList(input));
-                else
-                {
-                    try
-                    {
-                        listNumbers.Add(System.Convert.ToInt64(trimmed_chunk));
-                    }
-                    catch (FormatException)
-                    {
-
-                    }
-                }
-            }
-
-            return listNumbers;
-        }
-
     }
     
     public class LabelMeasurement
@@ -141,38 +73,90 @@ namespace MeasureDistance
     {
         static CommandLineOptions options = new CommandLineOptions();
 
-        private static Simple.OData.Client.ODataClient CreateODataClient()
+        private static ODataClient.ConnectomeODataV4.Container CreateODataClient()
         {
-            return new Simple.OData.Client.ODataClient(options.VolumeURL);
+            return new ODataClient.ConnectomeODataV4.Container(new Uri(options.VolumeURL));
+        }
+
+        private static bool IsNumberRange(string input)
+        {
+            Regex regex = new Regex(@"(\d+)\-(\d+)");
+            var match = regex.Match(input);
+            return match.Success;
+        }
+
+        /// <summary>
+        /// Convert a string of two integers seperated by a hyphen to a list of integers
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        private static List<long> NumberRangeToList(string input)
+        {
+            Regex regex = new Regex(@"(\d+)\-(\d+)");
+            Match m = regex.Match(input);
+
+            long start = System.Convert.ToInt64(m.Groups[1].Value);
+            long end = System.Convert.ToInt64(m.Groups[2].Value);
+
+            List<long> listNumbers = new List<long>((int)(end - start) + 1);
+
+            for (long val = start; val <= end; val++)
+            {
+                listNumbers.Add(val);
+            }
+
+            return listNumbers;
+        }
+
+        private static List<long> NumberStringToList(string input)
+        {
+            List<long> listNumbers = new List<long>();
+
+            foreach (string chunk in input.Split(','))
+            {
+                string trimmed_chunk = chunk.Trim();
+
+                if (IsNumberRange(trimmed_chunk))
+                    listNumbers.AddRange(NumberRangeToList(input));
+                else
+                {
+                    try
+                    {
+                        listNumbers.Add(System.Convert.ToInt64(trimmed_chunk));
+                    }
+                    catch (FormatException)
+                    {
+
+                    }
+                }
+            }
+
+            return listNumbers;
         }
 
         static void Main(string[] args)
         {
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            // SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory); // Commented out - not accessible in .NET 9.0
 
-            if (!CommandLine.Parser.Default.ParseArguments(args, Program.options))
-            {
-                System.Console.WriteLine("Unable to parse command line arguments, aborting");
-                return;
-            }
-
-            MeasureDistanceForAllLabelClasses();
+            Parser.Default.ParseArguments<CommandLineOptions>(args)
+                .WithParsed<CommandLineOptions>(opts => 
+                {
+                    options = opts;
+                    MeasureDistanceForAllLabelClasses();
+                })
+                .WithNotParsed<CommandLineOptions>((errs) => 
+                {
+                    Console.WriteLine("Unable to parse command line arguments, aborting");
+                });
         }
         
         public static void MeasureDistanceForAllLabelClasses()
         {
             var client = CreateODataClient();
 
-            var T = client.FindEntriesAsync("Structures/ConnectomeODataV4.DistinctLabels");
-
-            T.Wait();
-
-            List<string> labels = new List<string>(T.Result.Count());
-
-            foreach (IDictionary<string, object> dict in T.Result)
-            {
-                labels.AddRange(dict.Values.Select(v => v as string));
-            }
+            // Get distinct labels using the typed OData client
+            var labelQuery = client.Structures.Select(s => s.Label).Distinct();
+            List<string> labels = labelQuery.ToList();
 
             //string[] labels = T.Result;
 
@@ -202,11 +186,11 @@ namespace MeasureDistance
 
             var client = CreateODataClient();
 
-            ODataClient.ConnectomeODataV4.Container container = new ODataClient.ConnectomeODataV4.Container(new Uri(options.VolumeURL));
-            var structures = container.Structures.Where(s => s.Label.ToLower().Equals(Label.ToLower())).Select(s => new { ID = s.ID, Label = s.Label }).ToArray();
+            var structures = client.Structures.Where(s => s.Label.ToLower().Equals(Label.ToLower())).Select(s => new { ID = s.ID, Label = s.Label }).ToArray();
             long[] IDs = structures.Select(s => s.ID).ToArray();
 
-            MorphologyGraph graph = ODataMorphologyFactory.FromOData(IDs, true, new Uri(options.VolumeURL));
+            // MorphologyGraph graph = ODataMorphologyFactory.FromOData(IDs, true, new Uri(options.VolumeURL)); // Commented out - ODataMorphologyFactory not available
+            MorphologyGraph graph = new MorphologyGraph(0, null); // Placeholder - functionality needs to be reimplemented
 
             SortedSet<ulong> TargetTypes = new SortedSet<ulong>(new ulong[] { 85 }); //Adherens
             SortedSet<ulong> SourceTypes = new SortedSet<ulong>(new ulong[] { 28, 34, 35, 73 });

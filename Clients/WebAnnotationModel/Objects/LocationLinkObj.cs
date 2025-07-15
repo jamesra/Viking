@@ -78,15 +78,9 @@ namespace WebAnnotationModel
             throw new NotImplementedException();
         }
 
-        public long A
-        {
-            get { return Data.SourceID < Data.TargetID ? Data.SourceID : Data.TargetID; }
-        }
+        public long A => Data.SourceID < Data.TargetID ? Data.SourceID : Data.TargetID;
 
-        public long B
-        {
-            get { return Data.SourceID > Data.TargetID ? Data.SourceID : Data.TargetID; }
-        }
+        public long B => Data.SourceID > Data.TargetID ? Data.SourceID : Data.TargetID;
 
         ulong ILocationLink.A => (ulong)A;
 

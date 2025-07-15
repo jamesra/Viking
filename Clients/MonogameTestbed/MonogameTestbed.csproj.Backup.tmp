@@ -39,8 +39,13 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
-		<Reference Include="System.Drawing" />
+		<Reference Include="MonoGame.Framework">
+			<HintPath>$(MonoGameInstallDirectory)\MonoGame\v3.0\Assemblies\Windows\MonoGame.Framework.dll</HintPath>
+		</Reference>
+		<Reference Include="System.Net" />
+		<Reference Include="System.Numerics" />
+		<Reference Include="System.Runtime.Serialization" />
+		<Reference Include="System.Xml" />
 	</ItemGroup>
 	<ItemGroup>
 		<MonoGameContentReference Include="Content\Content.mgcb" />
@@ -77,13 +82,12 @@
 		<ProjectReference Include="..\..\Triangle.NET\Triangle\Triangle.csproj" />
 		<ProjectReference Include="..\..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj" />
 		<ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj" />
-		<ProjectReference Include="..\Monographics\Monographics.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="Always" />
 		<Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll" CopyToOutputDirectory="Always" />
 	</ItemGroup>
 	<PropertyGroup>
-		<PostBuildEvent>copy $(ProjectDir)..\Monographics\bin\MonoGame\$(ConfigurationName)\Content\*.xnb $(TargetDir)\Content\*</PostBuildEvent>
+		<PostBuildEvent>copy $(ProjectDir)..\MonogameXNAGraphicsShared\bin\Monogame\$(ConfigurationName)\Content\*.xnb $(TargetDir)\Content\*</PostBuildEvent>
 	</PropertyGroup>
 </Project>

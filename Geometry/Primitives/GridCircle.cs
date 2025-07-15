@@ -237,45 +237,15 @@ namespace Geometry
             return Contains(new GridVector2[] { c1, c2, c3 }, p1);
         }
 
-        public GridRectangle BoundingBox
-        {
-            get
-            {
-                return new GridRectangle(this.Center, this.Radius);
-            }
-        }
+        public GridRectangle BoundingBox => new GridRectangle(this.Center, this.Radius);
 
-        public double Area
-        {
-            get
-            {
-                return this.RadiusSquared * Math.PI;
-            }
-        }
+        public double Area => this.RadiusSquared * Math.PI;
 
-        public ShapeType2D ShapeType
-        {
-            get
-            {
-                return ShapeType2D.CIRCLE;
-            }
-        }
+        public ShapeType2D ShapeType => ShapeType2D.CIRCLE;
 
-        IPoint2D ICircle2D.Center
-        {
-            get
-            {
-                return this.Center;
-            }
-        }
+        IPoint2D ICircle2D.Center => this.Center;
 
-        double ICircle2D.Radius
-        {
-            get
-            {
-                return this.Radius;
-            }
-        }
+        double ICircle2D.Radius => this.Radius;
 
         public bool Contains(in IPoint2D p)
         {

@@ -49,23 +49,14 @@ namespace TriangleNet.Voronoi.Legacy
         /// <summary>
         /// Gets the list of Voronoi vertices.
         /// </summary>
-        public Point[] Points
-        {
-            get { return points; }
-        }
+        public Point[] Points => points;
 
         /// <summary>
         /// Gets the list of Voronoi regions.
         /// </summary>
-        public ICollection<VoronoiRegion> Regions
-        {
-            get { return regions.Values; }
-        }
+        public ICollection<VoronoiRegion> Regions => regions.Values;
 
-        public IEnumerable<IEdge> Edges
-        {
-            get { return EnumerateEdges(); }
-        }
+        public IEnumerable<IEdge> Edges => EnumerateEdges();
 
         /// <summary>
         /// Gets the Voronoi diagram as raw output data.

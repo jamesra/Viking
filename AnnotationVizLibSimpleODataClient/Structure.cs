@@ -83,20 +83,11 @@ namespace AnnotationVizLib.SimpleOData
             get; private set;
         }
 
-        public string TagsXML
-        {
-            get
-            {
-                return this.Tags;
-            }
-        }
+        public string TagsXML => this.Tags;
 
         private string Tags { get; set; }
 
-        IStructureType IStructure.Type
-        {
-            get { return this.Type; }
-        }
+        IStructureType IStructure.Type => this.Type;
 
         public StructureType Type
         {

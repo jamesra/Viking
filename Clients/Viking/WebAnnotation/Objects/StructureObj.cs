@@ -17,7 +17,7 @@ namespace WebAnnotation.Objects
         [Column("Notes")]
         public string Notes
         {
-            get { return Data.Notes; }
+            get => Data.Notes;
             set
             {
                 Data.Notes = value;
@@ -29,7 +29,7 @@ namespace WebAnnotation.Objects
         [Column("Verified")]
         public bool Verified
         {
-            get { return Data.Verified; }
+            get => Data.Verified;
             set
             {
                 Data.Verified = value;
@@ -41,7 +41,7 @@ namespace WebAnnotation.Objects
         [Column("Confidence")]
         public double Confidence
         {
-            get { return Data.Confidence; }
+            get => Data.Confidence;
             set
             {
                 Data.Confidence = value;
@@ -54,7 +54,7 @@ namespace WebAnnotation.Objects
         [Column("Tags")]
         public string[] Tags
         {
-            get { return Data.Tags; }
+            get => Data.Tags;
             set
             {
                 Data.Tags = value;
@@ -68,7 +68,7 @@ namespace WebAnnotation.Objects
         [Column("InfoLabel")]
         public string InfoLabel
         {
-            get { return Data.Label; }
+            get => Data.Label;
             set
             {
                 Data.Label = value;
@@ -78,10 +78,7 @@ namespace WebAnnotation.Objects
             }
         }
 
-        public StructureLink[] Links
-        {
-            get { return Data.Links; }
-        }
+        public StructureLink[] Links => Data.Links;
 
         /// <summary>
         /// Adjust the client after a link is created
@@ -183,15 +180,9 @@ namespace WebAnnotation.Objects
             }
         }
 
-        public override Image SmallThumbnail
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override Image SmallThumbnail => throw new NotImplementedException();
 
-        public override string ToolTip
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override string ToolTip => throw new NotImplementedException();
 
         public override void Save()
         {
@@ -203,15 +194,9 @@ namespace WebAnnotation.Objects
             return new Viking.UI.Controls.GenericTreeNode(this); 
         }
 
-        public override int TreeImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override int TreeImageIndex => throw new NotImplementedException();
 
-        public override int TreeSelectedImageIndex
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override int TreeSelectedImageIndex => throw new NotImplementedException();
 
         public override Type[] AssignableParentTypes
         {
@@ -260,8 +245,8 @@ namespace WebAnnotation.Objects
         }
         public static event EventHandler Create
         {
-            add { OnCreate += value; }
-            remove { OnCreate -= value; }
+            add => OnCreate += value;
+            remove => OnCreate -= value;
         }
     }
 }

@@ -237,30 +237,21 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="vertIndicies"></param>
         /// <returns></returns>
-        public IEnumerable<VERTEX> this[IEnumerable<int> vertIndicies]
-        {
-            get => vertIndicies.Select(i => this._Verticies[(int)i]);
-        }
+        public IEnumerable<VERTEX> this[IEnumerable<int> vertIndicies] => vertIndicies.Select(i => this._Verticies[(int)i]);
 
         /// <summary>
         /// Returns all of the verticies that match the indicies
         /// </summary>
         /// <param name="vertIndicies"></param>
         /// <returns></returns>
-        public IEnumerable<VERTEX> this[IEnumerable<long> vertIndicies]
-        {
-            get => vertIndicies.Select(i => this._Verticies[(int)i]);
-        }
+        public IEnumerable<VERTEX> this[IEnumerable<long> vertIndicies] => vertIndicies.Select(i => this._Verticies[(int)i]);
 
         /// <summary>
         /// Returns all of the verticies in the face
         /// </summary>
         /// <param name="vertIndicies"></param>
         /// <returns></returns>
-        public IEnumerable<VERTEX> this[IFace face]
-        {
-            get => face.iVerts.Select(i => this._Verticies[(int)i]);
-        }
+        public IEnumerable<VERTEX> this[IFace face] => face.iVerts.Select(i => this._Verticies[(int)i]);
 
         public virtual IEdge this[IEdgeKey key] => this._Edges[key];
 
@@ -269,10 +260,7 @@ namespace Geometry.Meshing
         /// </summary>
         /// <param name="vertIndicies"></param>
         /// <returns></returns>
-        public IEnumerable<IEdge> this[IEnumerable<IEdgeKey> keys]
-        {
-            get => keys.Select(e => this._Edges[e]);
-        }
+        public IEnumerable<IEdge> this[IEnumerable<IEdgeKey> keys] => keys.Select(e => this._Edges[e]);
 
         public virtual bool Contains(IEdgeKey key) => Edges.ContainsKey(key);
 

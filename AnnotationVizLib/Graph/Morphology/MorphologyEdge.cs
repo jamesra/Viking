@@ -10,13 +10,7 @@ namespace AnnotationVizLib
         //Structure this edge is part of
         public MorphologyGraph Graph;
 
-        public override bool Directional
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool Directional => false;
 
         public MorphologyEdge(MorphologyGraph graph, ulong A, ulong B)
             : base(A < B ? A : B, A < B ? B : A, false)

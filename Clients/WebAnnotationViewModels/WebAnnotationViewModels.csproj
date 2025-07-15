@@ -1,7 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFramework>net9.0-windows</TargetFramework>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>9.0</LangVersion>
 		<RootNamespace>Annotation.ViewModels</RootNamespace>
 		<AssemblyName>Annotation.ViewModels</AssemblyName>
 		<UseWPF>true</UseWPF>
@@ -18,5 +19,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
 	</ItemGroup>
 </Project>

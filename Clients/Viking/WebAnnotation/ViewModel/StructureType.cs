@@ -69,8 +69,8 @@ namespace WebAnnotation.ViewModel
 
         public override event NotifyCollectionChangedEventHandler ChildChanged
         {
-            add { modelObj.ChildChanged += value; }
-            remove { modelObj.ChildChanged += value; }
+            add => modelObj.ChildChanged += value;
+            remove => modelObj.ChildChanged += value;
         }
 
         [Column("ID")]

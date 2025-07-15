@@ -170,10 +170,7 @@ namespace VikingXNAWinForms
         /// <summary>
         /// Gets the current graphics device.
         /// </summary>
-        public GraphicsDevice GraphicsDevice
-        {
-            get { return graphicsDevice; }
-        }
+        public GraphicsDevice GraphicsDevice => graphicsDevice;
 
         GraphicsDevice graphicsDevice;
 

@@ -6,7 +6,7 @@ using System.Text;
 namespace Viking.Common
 {
     public static class SharedResources
-    {        
-        static public HttpClient HttpClient = new HttpClient();
+    {
+        public static HttpClient HttpClient = new HttpClient();
     }
 }

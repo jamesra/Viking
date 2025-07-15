@@ -24,9 +24,10 @@
     <PackageReference Include="Microsoft.AspNet.WebPages" Version="3.3.0" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.6" />
     <PackageReference Include="Microsoft.Net.Http" Version="2.2.29" />
-    <PackageReference Include="Microsoft.OData.Core" Version="7.20.0" />
-    <PackageReference Include="Microsoft.OData.Edm" Version="7.20.0" />
-    <PackageReference Include="Microsoft.Spatial" Version="7.20.0" />
+    <PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
+    <PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
+    <PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
+    <PackageReference Include="Microsoft.Spatial" Version="8.1.0" />
     <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
     <PackageReference Include="Microsoft.Web.Infrastructure" Version="1.0.0.0" />
   </ItemGroup>
@@ -62,6 +63,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
     <ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj" />
     <ProjectReference Include="..\WebAppSettings\VikingWebAppSettings.csproj" />
   </ItemGroup>

@@ -14,10 +14,10 @@ namespace WebAnnotationModel
         //public long SourceID { get { return link != null ? link.SourceID : _SourceID;  } }
         //public long TargetID { get { return link != null ? link.TargetID : _TargetID; } }
 
-        public long SourceID { get { return _SourceID; } }
-        public long TargetID { get { return _TargetID; } }
+        public long SourceID => _SourceID;
+        public long TargetID => _TargetID;
 
-        public bool Bidirectional { get { return _Bidirectional; } }
+        public bool Bidirectional => _Bidirectional;
 
         ulong IStructureLink.SourceID => (ulong)SourceID;
 
@@ -167,36 +167,18 @@ namespace WebAnnotationModel
 
     public class StructureLinkObj : WCFObjBaseWithKey<StructureLinkKey, StructureLink>
     {
-        public override StructureLinkKey ID
-        {
-            get { return new StructureLinkKey(this); }
-        }
+        public override StructureLinkKey ID => new(this);
 
         protected override int GenerateHashCode()
         {
             return (int)(SourceID % int.MaxValue);
         }
 
-        public long SourceID
-        {
-            get
-            {
-                return Data.SourceID;
-            }
-        }
+        public long SourceID => Data.SourceID;
 
-        public long TargetID
-        {
-            get
-            {
-                return Data.TargetID;
-            }
-        }
+        public long TargetID => Data.TargetID;
 
-        public bool Bidirectional
-        {
-            get { return Data.Bidirectional; }
-        }
+        public bool Bidirectional => Data.Bidirectional;
 
         public override string ToString()
         {

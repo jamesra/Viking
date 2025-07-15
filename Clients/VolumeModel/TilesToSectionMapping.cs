@@ -22,10 +22,10 @@ namespace Viking.VolumeModel
         private readonly SemaphoreSlim _InitializeSemaphore = new SemaphoreSlim(1);
 
         private GridRectangle _VolumeBounds;
-        public override GridRectangle ControlBounds { get => _VolumeBounds; }
+        public override GridRectangle ControlBounds => _VolumeBounds;
 
         private GridRectangle _SectionBounds;
-        public override GridRectangle? SectionBounds { get => _SectionBounds; }
+        public override GridRectangle? SectionBounds => _SectionBounds;
 
         public override GridRectangle? VolumeBounds => _VolumeBounds;
 

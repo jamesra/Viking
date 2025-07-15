@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
-using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
@@ -16,8 +15,8 @@ namespace MonogameTestbed
     class MeshTest : IGraphicsTest
     {
         public string Title => this.GetType().Name;
-        VikingXNAGraphics.MeshView<VertexPositionColor> meshView;
-        VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshViewWithLighting;
+        		Monographics.MeshView<VertexPositionColor> meshView;
+		Monographics.MeshView<VertexPositionNormalColor> meshViewWithLighting;
         readonly Mesh3D tetraMesh = new Mesh3D();
         readonly Mesh3D cubeMesh =  new Mesh3D();
 

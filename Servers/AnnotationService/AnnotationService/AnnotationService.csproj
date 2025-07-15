@@ -32,6 +32,10 @@
 		<ErrorReport>prompt</ErrorReport>
 		<WarningLevel>4</WarningLevel>
 	</PropertyGroup>
+	<!-- Framework references -->
+	<ItemGroup>
+		<Reference Include="System.IdentityModel" />
+	</ItemGroup>
 	<!-- NuGet package references -->
 	<ItemGroup>
 		<PackageReference Include="Duende.IdentityModel" Version="7.1.0" />

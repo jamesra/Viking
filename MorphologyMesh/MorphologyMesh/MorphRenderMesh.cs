@@ -220,10 +220,7 @@ namespace MorphologyMesh
         /// </summary>
         /// <param name="vertIndicies"></param>
         /// <returns></returns>
-        public new IEnumerable<MorphMeshEdge> this[IEnumerable<IEdgeKey> keys]
-        {
-            get => keys.Select(e => (MorphMeshEdge)this.Edges[e]);
-        }
+        public new IEnumerable<MorphMeshEdge> this[IEnumerable<IEdgeKey> keys] => keys.Select(e => (MorphMeshEdge)this.Edges[e]);
 
         public virtual MorphMeshVertex this[IShapeIndex key]
         {

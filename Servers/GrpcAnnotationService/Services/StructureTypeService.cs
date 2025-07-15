@@ -4,11 +4,11 @@ using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading.Tasks;
 using Viking.DataModel.Annotation;
-using Viking.gRPC.AnnotationTypes.V1.Protos;
+using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 
 namespace gRPCAnnotationService
 {
-    public class StructureTypeService : Viking.gRPC.AnnotationTypes.V1.Protos.AnnotateStructureTypes.AnnotateStructureTypesBase
+    public class StructureTypeService : Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotateStructureTypes.AnnotateStructureTypesBase
     {
         private readonly AnnotationContext _context;
         private readonly ILogger<StructureTypeService> _logger;

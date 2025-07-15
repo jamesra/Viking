@@ -17,10 +17,7 @@ namespace LocalBookmarks
         [Viking.Common.UI.ThisToOneRelationAttribute()]
         public FolderUIObj Parent
         {
-            get
-            {
-                return _Parent;
-            }
+            get => _Parent;
             set
             {
                 if (_Parent != null)

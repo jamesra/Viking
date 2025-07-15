@@ -13,37 +13,13 @@ namespace AnnotationVizLib.OData
             type = t ?? throw new ArgumentNullException();
         }
 
-        public ulong ID
-        {
-            get
-            {
-                return (ulong)type.ID;
-            }
-        }
+        public ulong ID => (ulong)type.ID;
 
-        public string Name
-        {
-            get
-            {
-                return type.Name;
-            }
-        }
+        public string Name => type.Name;
 
-        public string Code
-        {
-            get
-            {
-                return type.Code;
-            }
-        }
+        public string Code => type.Code;
 
-        public ulong? ParentID
-        {
-            get
-            {
-                return (ulong?)type.ParentID;
-            }
-        }
+        public ulong? ParentID => (ulong?)type.ParentID;
 
         public string[] Tags
         {

@@ -36,13 +36,7 @@ namespace MeasurementExtension
             }
         }
 
-        public System.Collections.ObjectModel.ObservableCollection<string> ObservableHelpStrings
-        {
-            get
-            {
-                return new System.Collections.ObjectModel.ObservableCollection<string>(this.HelpStrings);
-            }
-        }
+        public System.Collections.ObjectModel.ObservableCollection<string> ObservableHelpStrings => new(this.HelpStrings);
 
         public MeasureCommand(Viking.UI.Controls.SectionViewerControl parent, LengthMeasurement pixelSize)
             : base(parent)

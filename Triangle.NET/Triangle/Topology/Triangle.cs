@@ -52,8 +52,8 @@ namespace TriangleNet.Topology
         /// </summary>
         public int ID
         {
-            get { return this.id; }
-            set { this.id = value; }
+            get => this.id;
+            set => this.id = value;
         }
 
         /// <summary>
@@ -61,8 +61,8 @@ namespace TriangleNet.Topology
         /// </summary>
         public int Label
         {
-            get { return this.label; }
-            set { this.label = value; }
+            get => this.label;
+            set => this.label = value;
         }
 
         /// <summary>
@@ -70,8 +70,8 @@ namespace TriangleNet.Topology
         /// </summary>
         public double Area
         {
-            get { return this.area; }
-            set { this.area = value; }
+            get => this.area;
+            set => this.area = value;
         }
 
         /// <summary>

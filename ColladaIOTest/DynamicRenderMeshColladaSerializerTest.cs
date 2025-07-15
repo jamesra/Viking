@@ -59,11 +59,14 @@ namespace ColladaIOTest
             AnnotationVizLib.MorphologyGraph graph = null;
             if (CellIDs != null)
             {
-                graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(CellIDs, true, EndpointMap[endpoint]);
+                var longIDs = new List<long>();
+                foreach (var id in CellIDs)
+                    longIDs.Add((long)id);
+                graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(longIDs, true, EndpointMap[endpoint]);
             }
             else
             {
-                graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(EndpointMap[endpoint], true).Result;
+                graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new List<long>(), true, EndpointMap[endpoint]);
             }
 
             graph.ConnectIsolatedSubgraphs();

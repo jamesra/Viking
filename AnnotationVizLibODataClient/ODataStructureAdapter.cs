@@ -15,21 +15,9 @@ namespace AnnotationVizLib.OData
             this.structure = s ?? throw new ArgumentNullException();
         }
 
-        public ulong ID
-        {
-            get
-            {
-                return (ulong)structure.ID;
-            }
-        }
+        public ulong ID => (ulong)structure.ID;
 
-        public string Label
-        {
-            get
-            {
-                return structure.Label;
-            }
-        }
+        public string Label => structure.Label;
 
         public ICollection<IStructureLink> Links
         {
@@ -53,29 +41,11 @@ namespace AnnotationVizLib.OData
             }
         }
 
-        public string TagsXML
-        {
-            get
-            {
-                return structure.Tags;
-            }
-        }
+        public string TagsXML => structure.Tags;
 
-        public IStructureType Type
-        {
-            get
-            {
-                return new ODataStructureTypeAdapter(structure.Type);
-            }
-        }
+        public IStructureType Type => new ODataStructureTypeAdapter(structure.Type);
 
-        public ulong TypeID
-        {
-            get
-            {
-                return (ulong)structure.TypeID;
-            }
-        }
+        public ulong TypeID => (ulong)structure.TypeID;
 
         public bool Equals(IStructure other)
         {

@@ -63,68 +63,68 @@ namespace TriangleNet.Tools
         /// <summary>
         /// Gets the shortest edge.
         /// </summary>
-        public double ShortestEdge { get { return minEdge; } }
+        public double ShortestEdge => minEdge;
 
         double maxEdge = 0;
         /// <summary>
         /// Gets the longest edge.
         /// </summary>
-        public double LongestEdge { get { return maxEdge; } }
+        public double LongestEdge => maxEdge;
 
         //
         double minAspect = 0;
         /// <summary>
         /// Gets the shortest altitude.
         /// </summary>
-        public double ShortestAltitude { get { return minAspect; } }
+        public double ShortestAltitude => minAspect;
 
         double maxAspect = 0;
         /// <summary>
         /// Gets the largest aspect ratio.
         /// </summary>
-        public double LargestAspectRatio { get { return maxAspect; } }
+        public double LargestAspectRatio => maxAspect;
 
         double minArea = 0;
         /// <summary>
         /// Gets the smallest area.
         /// </summary>
-        public double SmallestArea { get { return minArea; } }
+        public double SmallestArea => minArea;
 
         double maxArea = 0;
         /// <summary>
         /// Gets the largest area.
         /// </summary>
-        public double LargestArea { get { return maxArea; } }
+        public double LargestArea => maxArea;
 
         double minAngle = 0;
         /// <summary>
         /// Gets the smallest angle.
         /// </summary>
-        public double SmallestAngle { get { return minAngle; } }
+        public double SmallestAngle => minAngle;
 
         double maxAngle = 0;
         /// <summary>
         /// Gets the largest angle.
         /// </summary>
-        public double LargestAngle { get { return maxAngle; } }
+        public double LargestAngle => maxAngle;
 
         int[] angleTable;
         /// <summary>
         /// Gets the angle histogram.
         /// </summary>
-        public int[] AngleHistogram { get { return angleTable; } }
+        public int[] AngleHistogram => angleTable;
 
         int[] minAngles;
         /// <summary>
         /// Gets the min angles histogram.
         /// </summary>
-        public int[] MinAngleHistogram { get { return minAngles; } }
+        public int[] MinAngleHistogram => minAngles;
 
         int[] maxAngles;
         /// <summary>
         /// Gets the max angles histogram.
         /// </summary>
-        public int[] MaxAngleHistogram { get { return maxAngles; } }
+        public int[] MaxAngleHistogram => maxAngles;
 
         #endregion
 

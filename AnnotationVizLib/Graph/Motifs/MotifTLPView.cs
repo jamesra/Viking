@@ -9,10 +9,7 @@ namespace AnnotationVizLib
     {
 
 
-        protected override SortedDictionary<string, string> DefaultAttributes
-        {
-            get { return TLPAttributes.DefaultForAttribute; }
-        }
+        protected override SortedDictionary<string, string> DefaultAttributes => TLPAttributes.DefaultForAttribute;
 
         protected MotifTLPView(MotifGraph graph, string VolumeURL) : base(VolumeURL)
         {

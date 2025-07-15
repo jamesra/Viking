@@ -45,8 +45,8 @@ namespace LocalBookmarks
         }
         public static event EventHandler Create
         {
-            add { OnCreate += value; }
-            remove { OnCreate -= value; }
+            add => OnCreate += value;
+            remove => OnCreate -= value;
         }
 
 
@@ -92,7 +92,7 @@ namespace LocalBookmarks
 
         public override string Name
         {
-            get { return Data.Name; }
+            get => Data.Name;
             set
             {
                 Data.Name = value;
@@ -135,10 +135,7 @@ namespace LocalBookmarks
 
         public ShapeType Shape
         {
-            get
-            {
-                return Data.Shape.ToShape();
-            }
+            get => Data.Shape.ToShape();
 
             set
             {
@@ -294,30 +291,15 @@ namespace LocalBookmarks
             return node;
         }
 
-        public override int TreeImageIndex
-        {
-            get
-            {
-                return 0;
-            }
-        }
+        public override int TreeImageIndex => 0;
 
-        public override int TreeSelectedImageIndex
-        {
-            get
-            {
-                return 1;
-            }
-        }
+        public override int TreeSelectedImageIndex => 1;
 
         #endregion
 
         #region IUIObjectBasic Members
 
-        public override string ToolTip
-        {
-            get { return Data.Name; }
-        }
+        public override string ToolTip => Data.Name;
 
 
         public override void Delete()

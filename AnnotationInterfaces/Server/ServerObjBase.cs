@@ -56,10 +56,7 @@ namespace Viking.AnnotationServiceTypes
 
         public DBACTION DBAction
         {
-            get
-            {
-                return Data.DBAction;
-            }
+            get => Data.DBAction;
             set
             {
                 if (Data.DBAction == DBACTION.INSERT && value == DBACTION.UPDATE)

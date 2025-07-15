@@ -34,18 +34,18 @@ namespace Geometry.Meshing
         /// </summary>
         public bool YSecondAxisAscending = true;
 
-        public long Count { get { return XSortedVerts.LongLength; } }
+        public long Count => XSortedVerts.LongLength;
 
         public bool Contains(long value)
         {
             return _AllVerts.Contains(value);
         }
 
-        public IReadOnlyList<long> Verticies { get { return CutAxis == CutDirection.HORIZONTAL ? XSortedVerts : YSortedVerts; } }
+        public IReadOnlyList<long> Verticies => CutAxis == CutDirection.HORIZONTAL ? XSortedVerts : YSortedVerts;
 
         public long[] SortedAlongCutAxisVertSet
         {
-            get { return CutAxis == CutDirection.VERTICAL ? YSortedVerts : XSortedVerts; }
+            get => CutAxis == CutDirection.VERTICAL ? YSortedVerts : XSortedVerts;
             set
             {
                 if (CutAxis == CutDirection.VERTICAL)
@@ -61,7 +61,7 @@ namespace Geometry.Meshing
 
         public long[] SortedOppositeCutAxisVertSet
         {
-            get { return CutAxis == CutDirection.VERTICAL ? XSortedVerts : YSortedVerts; }
+            get => CutAxis == CutDirection.VERTICAL ? XSortedVerts : YSortedVerts;
             set
             {
                 if (CutAxis == CutDirection.VERTICAL)
@@ -77,26 +77,14 @@ namespace Geometry.Meshing
 
         public long this[long key]
         {
-            get
-            {
-                return SortedOppositeCutAxisVertSet[key];
-            }
-            set
-            {
-                SortedOppositeCutAxisVertSet[key] = value;
-            }
+            get => SortedOppositeCutAxisVertSet[key];
+            set => SortedOppositeCutAxisVertSet[key] = value;
         }
 
         public int this[int key]
         {
-            get
-            {
-                return (int)SortedOppositeCutAxisVertSet[key];
-            }
-            set
-            {
-                SortedOppositeCutAxisVertSet[key] = value;
-            }
+            get => (int)SortedOppositeCutAxisVertSet[key];
+            set => SortedOppositeCutAxisVertSet[key] = value;
         }
 
         public MeshCut(long[] SortedAlongAxis, long[] SortedOppositeAxis, CutDirection cutAxis, GridRectangle boundingRect)

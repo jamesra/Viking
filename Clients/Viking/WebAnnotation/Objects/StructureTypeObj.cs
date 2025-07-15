@@ -6,13 +6,12 @@ using System.Diagnostics;
 using WebAnnotation.Service;
 using System.Drawing;
 using System.Windows.Forms;
-using Viking.Common; 
-
-using Common.UI; 
+using Viking.Common;  
+using Viking.Common.UI;
 
 namespace WebAnnotation.Objects
 {
-    [Common.UI.TreeViewVisible]
+    [TreeViewVisible]
     public class StructureTypeObj : WCFObjBaseWithParent<StructureType, StructureTypeObj>
     {
         public override string ToString()
@@ -23,7 +22,7 @@ namespace WebAnnotation.Objects
         [Column("Name")]
         public string Name
         {
-            get { return Data.Name; }
+            get => Data.Name;
             set { Data.Name = value; 
                   SetDBActionForChange();
                   ValueChangedEvent("Name");
@@ -33,7 +32,7 @@ namespace WebAnnotation.Objects
         [Column("Notes")]
         public string Notes
         {
-            get { return Data.Notes; }
+            get => Data.Notes;
             set
             {
                 Data.Notes = value;
@@ -45,7 +44,7 @@ namespace WebAnnotation.Objects
         [Column("Color")]
         public System.Drawing.Color Color
         {
-            get { return Color.FromArgb(Data.Color); }
+            get => Color.FromArgb(Data.Color);
             set
             {
                 Data.Color = value.ToArgb(); 
@@ -57,7 +56,7 @@ namespace WebAnnotation.Objects
         [Column("Code")]
         public string Code
         {
-            get { return Data.Code; }
+            get => Data.Code;
             set
             {
                 Data.Code = value;
@@ -128,15 +127,9 @@ namespace WebAnnotation.Objects
             }
         }
 
-        public override System.Drawing.Image SmallThumbnail
-        {
-            get { return null; }
-        }
+        public override System.Drawing.Image SmallThumbnail => null;
 
-        public override string ToolTip
-        {
-            get { return this.Name; }
-        }
+        public override string ToolTip => this.Name;
 
         public override void Save()
         {
@@ -148,15 +141,9 @@ namespace WebAnnotation.Objects
             return new Viking.UI.Controls.GenericTreeNode(this); 
         }
 
-        public override int TreeImageIndex
-        {
-            get { return 0; }
-        }
+        public override int TreeImageIndex => 0;
 
-        public override int TreeSelectedImageIndex
-        {
-            get { return 0;  }
-        }
+        public override int TreeSelectedImageIndex => 0;
 
         public override Type[] AssignableParentTypes
         {

@@ -85,25 +85,27 @@ namespace VolumeModel
             if (reader.TokenType != JsonTokenType.StartObject)
                 throw new JsonException("Expected start of object");
 
-            using var jsonDoc = JsonDocument.ParseValue(ref reader);
-            var root = jsonDoc.RootElement;
+            using(var jsonDoc = JsonDocument.ParseValue(ref reader))
+            { 
+                var root = jsonDoc.RootElement;
 
-            // Try to determine the concrete type based on available properties
-            // This is a simplified approach - you may need to add more type discrimination logic
-            if (root.TryGetProperty("triangleIndicies", out _))
-            {
-                // Likely a triangulation transform
-                return JsonSerializer.Deserialize<Geometry.Transforms.TriangulationTransform>(root.GetRawText(), options);
-            }
-            else if (root.TryGetProperty("mapPoints", out _))
-            {
-                // Likely a control point transform
-                return JsonSerializer.Deserialize<Geometry.Transforms.RBFTransform>(root.GetRawText(), options);
-            }
-            else
-            {
-                // Default fallback - you may need to add more specific type handling
-                throw new JsonException("Unable to determine transform type from JSON");
+                // Try to determine the concrete type based on available properties
+                // This is a simplified approach - you may need to add more type discrimination logic
+                if (root.TryGetProperty("triangleIndicies", out _))
+                {
+                    // Likely a triangulation transform
+                    return JsonSerializer.Deserialize<Geometry.Transforms.TriangulationTransform>(root.GetRawText(), options);
+                }
+                else if (root.TryGetProperty("mapPoints", out _))
+                {
+                    // Likely a control point transform
+                    return JsonSerializer.Deserialize<Geometry.Transforms.RBFTransform>(root.GetRawText(), options);
+                }
+                else
+                {
+                    // Default fallback - you may need to add more specific type handling
+                    throw new JsonException("Unable to determine transform type from JSON");
+                }
             }
         }
 

@@ -15,8 +15,8 @@ namespace WebAnnotation.UI.Controls
     {
         public System.Collections.ObjectModel.ObservableCollection<IStructureType> RootStructureTypes
         {
-            get { return (System.Collections.ObjectModel.ObservableCollection<IStructureType>)GetValue( RootStructureTypesProperty); }
-            set { SetValue( RootStructureTypesProperty, value); }
+            get => (System.Collections.ObjectModel.ObservableCollection<IStructureType>)GetValue( RootStructureTypesProperty);
+            set => SetValue( RootStructureTypesProperty, value);
         }
 
         // Using a DependencyProperty as the backing store for  RootStructureTypes.  This enables animation, styling, binding, etc...

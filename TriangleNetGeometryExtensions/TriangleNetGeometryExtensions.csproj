@@ -9,8 +9,14 @@
 		<RootNamespace>TriangeNetGeometryExtensions</RootNamespace>
 		<AssemblyName>TriangeNetGeometryExtensions</AssemblyName>
 		<TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
 		<FileAlignment>512</FileAlignment>
 		<UserSecretsId>9f8bc87c-d0ad-4a76-8844-443667d5e510</UserSecretsId>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
+		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+		<LangVersion>9.0</LangVersion>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<DebugSymbols>true</DebugSymbols>

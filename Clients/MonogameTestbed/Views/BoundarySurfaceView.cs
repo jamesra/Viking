@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using VikingXNAGraphics;
 using Microsoft.Xna.Framework; 
 using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry.Meshing;

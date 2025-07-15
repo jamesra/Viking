@@ -11,13 +11,7 @@ namespace DataExport.Controllers
 
         private static long _next_id = 0;
 
-        public static long NextFilenameID
-        {
-            get
-            {
-                return _next_id++;
-            }
-        }
+        public static long NextFilenameID => _next_id++;
 
         public string GetOutputFilename(string ext)
         {

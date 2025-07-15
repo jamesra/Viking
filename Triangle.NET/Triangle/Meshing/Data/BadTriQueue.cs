@@ -22,7 +22,7 @@ namespace TriangleNet.Meshing.Data
     {
         const double SQRT2 = 1.4142135623730950488016887242096980785696718753769480732;
 
-        public int Count { get { return this.count; } }
+        public int Count => this.count;
 
         // Variables that maintain the bad triangle queues.  The queues are
         // ordered from 4095 (highest priority) to 0 (lowest priority).

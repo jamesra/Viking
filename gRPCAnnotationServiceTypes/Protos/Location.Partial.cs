@@ -9,36 +9,45 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 {
     public partial class Location : ILocation, IChangeAction
     {
-        long? ILocation.ParentID { get => this.HasParentId ? this.ParentId : new long?();
-            set {
-                if (value.HasValue)
-                    this.ParentId = value.Value;
-                else
-                    this.ClearParentId();
-            }
-        }
+        // ILocation interface implementation
+        ulong ILocation.ID => (ulong)this.Id;
 
-        string ILocation.Attributes { get => this.Attributes; set => this.Attributes = value; }
+        ulong ILocation.ParentID => this.HasParentId ? (ulong)this.ParentId : 0;
 
-        long ILocation.SectionNumber { get => this.Section; set => Section = value; }
-        string ILocation.TagsXml { get => this.Attributes; set => this.Attributes = value;}
-        LocationType ILocation.TypeCode { get => (LocationType)(int)this.TypeCode; set => TypeCode = (Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationType)(int)value;}
+        bool ILocation.Terminal => this.Terminal;
 
-        GridVector3 ILocation.VolumePosition { get => this.VolumePosition; }
+        bool ILocation.OffEdge => this.OffEdge;
 
-        GridVector3 ILocation.MosaicPosition { get => this.MosaicPosition; }
+        // These properties don't exist in the protobuf, so return default values
+        bool ILocation.IsVericosityCap => false;
 
-        DateTime ILocation.LastModified { get => LastModified.ToDateTime(); }
+        bool ILocation.IsUntraceable => false;
 
-        IList<long> ILocation.Links { get => this.Links; }
-         
-        long IDataObjectWithKey<long>.ID { get => this.Id; set => Id = value; }
+        IDictionary<string, string> ILocation.Attributes => 
+            string.IsNullOrEmpty(this.Attributes) ? new Dictionary<string, string>() : 
+            ParseAttributesFromString(this.Attributes);
 
+        // This property doesn't exist in the protobuf, so calculate from section
+        long ILocation.UnscaledZ => this.Section;
+
+        // This property doesn't exist in the protobuf, use attributes instead
+        string ILocation.TagsXml => this.Attributes ?? string.Empty;
+
+        LocationType ILocation.TypeCode => (LocationType)(int)this.TypeCode;
+
+        // This property doesn't exist in the protobuf, use section as fallback
+        double ILocation.Z => this.Section;
+
+        Microsoft.SqlServer.Types.SqlGeometry ILocation.Geometry => 
+            this.VolumeShape?.Text != null ? 
+            Microsoft.SqlServer.Types.SqlGeometry.Parse(this.VolumeShape.Text) :
+            Microsoft.SqlServer.Types.SqlGeometry.Null;
+
+        // IChangeAction implementation
         DBACTION _DBAction = DBACTION.NONE;
         DBACTION IChangeAction.DBAction { get => _DBAction; set => _DBAction = value; }
-        string ILocation.MosaicGeometryWKT { get => this.MosaicShape.Text; set => this.MosaicShape.Text = value; }
-        string ILocation.VolumeGeometryWKT { get => this.VolumeShape.Text; set => this.VolumeShape.Text = value; }
 
+        // IEquatable implementation
         bool IEquatable<ILocation>.Equals(ILocation other)
         {
             if (ReferenceEquals(this, other))
@@ -47,7 +56,35 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
             if (ReferenceEquals(other, null))
                 return false;
 
-            return (ulong)this.Id == other.ID;
+            return this.Id == (long)other.ID;
+        }
+
+        // Helper method to parse attributes string to dictionary
+        private static IDictionary<string, string> ParseAttributesFromString(string attributes)
+        {
+            var result = new Dictionary<string, string>();
+            if (string.IsNullOrEmpty(attributes))
+                return result;
+
+            try
+            {
+                // Try to parse as simple key=value pairs separated by semicolons
+                var pairs = attributes.Split(';');
+                foreach (var pair in pairs)
+                {
+                    var keyValue = pair.Split('=');
+                    if (keyValue.Length == 2)
+                    {
+                        result[keyValue[0].Trim()] = keyValue[1].Trim();
+                    }
+                }
+            }
+            catch
+            {
+                // If parsing fails, return empty dictionary
+            }
+
+            return result;
         }
     }
 }

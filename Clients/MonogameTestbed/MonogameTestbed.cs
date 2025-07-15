@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using VikingXNA;
-using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
@@ -107,7 +106,7 @@ namespace MonogameTestbed
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
             graphics = new GraphicsDeviceManager(this);
             GpuSynchronizationManager.Initialize();
-            VikingXNAGraphics.Global.Content = this.Content;
+            		Monographics.Global.Content = this.Content;
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             Content.RootDirectory = "Content";
         }
@@ -409,8 +408,8 @@ namespace MonogameTestbed
             /*
             testLabel.Position = this.Scene.VisibleWorldBounds.UpperRight - new GridVector2(testLabel.BoundingRect.Width/2.0, 0);//testLabel.BoundingRect.Height);
             testLabel.ScaleFontWithScene = false;
-            testLabel.HorzAlign = VikingXNAGraphics.HorizontalAlignment.LEFT;
-            testLabel.VertAlign = VikingXNAGraphics.VerticalAlignment.BOTTOM;
+            		testLabel.HorzAlign = Monographics.HorizontalAlignment.LEFT;
+		testLabel.VertAlign = Monographics.VerticalAlignment.BOTTOM;
             LabelView.Draw(this.spriteBatch, this.fontArial, this.Scene, new LabelView[] { testLabel });
             */
             //  spriteBatch.End();

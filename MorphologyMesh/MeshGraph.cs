@@ -79,10 +79,7 @@ namespace MorphologyMesh
         private ConnectionVerticies _CapPort;
         public ConnectionVerticies CapPort
         {
-            get
-            {
-                return _CapPort;
-            }
+            get => _CapPort;
             set
             {
                 _CapPort = value;

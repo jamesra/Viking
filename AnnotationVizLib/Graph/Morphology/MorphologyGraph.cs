@@ -178,14 +178,14 @@ namespace AnnotationVizLib
 
                         GridBox subgraph_bbox = subgraphBoxes.Aggregate((a, b) => GridBox.Union(a, b));
 
-                        if (_BoundingBox != null)
+                        if (_BoundingBox != default)
                             _BoundingBox = GridBox.Union(_BoundingBox, subgraph_bbox);
                         else
                             _BoundingBox = subgraph_bbox;
                     }
                 }
 
-                Debug.Assert(_BoundingBox != null);
+                Debug.Assert(_BoundingBox != default);
                 return _BoundingBox;
             }
         }

@@ -283,34 +283,17 @@ namespace Geometry.Meshing
 
     public class TriangleFace : Face, ITriangleFace
     {
-        public int A
-        {
-            get { return iVerts[0]; }
-        }
+        public int A => iVerts[0];
 
-        public int B
-        {
-            get { return iVerts[1]; }
-        }
+        public int B => iVerts[1];
 
-        public int C
-        {
-            get { return iVerts[2]; }
-        }
+        public int C => iVerts[2];
 
-        public EdgeKey AB
-        {
-            get { return new EdgeKey(A, B); }
-        }
+        public EdgeKey AB => new EdgeKey(A, B);
 
-        public EdgeKey BC
-        {
-            get { return new EdgeKey(B, C); }
-        }
-        public EdgeKey CA
-        {
-            get { return new EdgeKey(C, A); }
-        }
+        public EdgeKey BC => new EdgeKey(B, C);
+
+        public EdgeKey CA => new EdgeKey(C, A);
 
         public override IFace Clone()
         {

@@ -4,6 +4,7 @@
     <TargetFramework>net9.0-windows</TargetFramework>
     <RootNamespace>VikingTests</RootNamespace>
     <AssemblyName>VikingTests</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Common_4.8.csproj" />

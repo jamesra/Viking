@@ -22,13 +22,7 @@ namespace Viking.VolumeModel
         };
 
         //For compatability with older version of VikingXML, the first channel with a grey color is considered the background for multi-channel blending
-        public bool Greyscale
-        {
-            get
-            {
-                return (Color.B == Color.G) && (Color.B == Color.R);
-            }
-        }
+        public bool Greyscale => (Color.B == Color.G) && (Color.B == Color.R);
 
         public override string ToString()
         {
@@ -67,13 +61,11 @@ namespace Viking.VolumeModel
                 return formColor;
             }
 
-            set
-            {
+            set =>
                 Color = new Geometry.Graphics.Color(value.R,
-                                                                        value.G,
-                                                                        value.B,
-                                                                        value.A);
-            }
+                    value.G,
+                    value.B,
+                    value.A);
         }
 
         #region ICloneable Members

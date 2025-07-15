@@ -1,15 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net48;netstandard2.0;net9.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
-  <ItemGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
+    <NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+    <LangVersion>9.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0' or '$(TargetFramework)' == 'netstandard2.0'">
     <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
   </ItemGroup>
+
+<PropertyGroup>
+	<NoWarn>$(NoWarn);NU1701</NoWarn>
+</PropertyGroup>
 
 </Project>

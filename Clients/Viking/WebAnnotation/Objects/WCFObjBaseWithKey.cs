@@ -11,10 +11,7 @@ namespace WebAnnotation.Objects
     abstract public class WCFObjBaseWithKey<T> : WCFObjBase<T>
         where T : DataObjectWithKeyOflong, new()
     {
-        public long ID
-        {
-            get { return Data.ID; }
-        }
+        public long ID => Data.ID;
 
         public override string ToString()
         {

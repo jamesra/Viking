@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Diagnostics; 
@@ -7,7 +8,10 @@ using WebAnnotation.WCFService.Annotation;
 using System.Drawing;
 using System.Windows.Forms; 
 
-using Viking.Common; 
+using Viking.Common;
+using Viking.Common.UI;
+using WebAnnotation.Service;
+using System.ComponentModel;
 
 namespace WebAnnotation.AnnotationObjects
 {
@@ -28,10 +32,7 @@ namespace WebAnnotation.AnnotationObjects
 
         public DBACTION DBAction
         {
-            get
-            {
-                return Data.DBAction;
-            }
+            get => Data.DBAction;
             set
             {
                 if (Data.DBAction == DBACTION.INSERT && value == DBACTION.UPDATE)
@@ -44,33 +45,24 @@ namespace WebAnnotation.AnnotationObjects
             }
         }
 
-        protected void SetDBActionForChange()
-        {
-            DBAction = DBACTION.UPDATE;
-        }
+        protected void SetDBActionForChange() => DBAction = DBACTION.UPDATE;
 
-        protected void ValueChangedEvent(string Column)
+        protected void ValueChangedEvent(string column)
         {
             if (OnValueChanged != null)
             {
-                OnValueChanged(this, new ValueChangedEventArgs(Column));
+                OnValueChanged(this, new ValueChangedEventArgs(column));
             }
         }
 
-        public long ID
-        {
-            get { return Data.ID; }
-        }
+        public long ID => Data.ID;
 
-        public long? ParentID
-        {
-            get { return Data.ParentID; }
-        }
+        public long? ParentID => Data.ParentID;
 
         [Column("Name")]
         public string Name
         {
-            get { return Data.Name; }
+            get => Data.Name;
             set { Data.Name = value; 
                   SetDBActionForChange();
                   ValueChangedEvent("Name");
@@ -80,7 +72,7 @@ namespace WebAnnotation.AnnotationObjects
         [Column("Notes")]
         public string Notes
         {
-            get { return Data.Notes; }
+            get => Data.Notes;
             set
             {
                 Data.Notes = value;
@@ -92,7 +84,7 @@ namespace WebAnnotation.AnnotationObjects
         [Column("Color")]
         public System.Drawing.Color Color
         {
-            get { return Color.FromArgb(Data.Color); }
+            get => Color.FromArgb(Data.Color);
             set
             {
                 Data.Color = value.ToArgb(); 
@@ -104,7 +96,7 @@ namespace WebAnnotation.AnnotationObjects
         [Column("Code")]
         public string Code
         {
-            get { return Data.Code; }
+            get => Data.Code;
             set
             {
                 Data.Code = value;
@@ -117,10 +109,7 @@ namespace WebAnnotation.AnnotationObjects
         private StructureTypeObj _Parent = null; 
         public StructureTypeObj Parent
         {
-            get
-            {
-                return _Parent;
-            }
+            get => _Parent;
             set
             {
                 //Do nothing if the parent isn't changed
@@ -161,10 +150,7 @@ namespace WebAnnotation.AnnotationObjects
 
         List<StructureTypeObj> _Children = new List<StructureTypeObj>(); 
         [ThisToManyRelation]
-        public StructureTypeObj[] Children
-        {
-            get { return _Children.ToArray(); }
-        }
+        public StructureTypeObj[] Children => _Children.ToArray();
 
         private void AddChild(StructureTypeObj child)
         {
@@ -215,38 +201,38 @@ namespace WebAnnotation.AnnotationObjects
         internal event EventHandler OnAfterDelete;
         internal event EventHandler OnBeforeSave;
         internal event EventHandler OnAfterSave;
-        private event ChildChangedEventHandler OnChildChanged;
+        private event NotifyC OnChildChanged;
 
         #region IUIObject Members
 
         event ValueChangedEventHandler IUIObject.ValueChanged
         {
-            add { OnValueChanged += value; }
-            remove { OnValueChanged -= value; }
+            add => OnValueChanged += value;
+            remove => OnValueChanged -= value;
         }
 
         event EventHandler IUIObject.BeforeDelete
         {
-            add { OnBeforeDelete += value;  }
-            remove { OnBeforeDelete -= value; }
+            add => OnBeforeDelete += value;
+            remove => OnBeforeDelete -= value;
         }
 
         event EventHandler IUIObject.AfterDelete
         {
-            add { OnAfterDelete += value;  }
-            remove { OnAfterDelete -= value; }
+            add => OnAfterDelete += value;
+            remove => OnAfterDelete -= value;
         }
 
         event EventHandler IUIObject.BeforeSave
         {
-            add { OnBeforeSave += value; }
-            remove { OnBeforeSave -= value; }
+            add => OnBeforeSave += value;
+            remove => OnBeforeSave -= value;
         }
 
         event EventHandler IUIObject.AfterSave
         {
-            add { OnAfterSave += value; }
-            remove { OnAfterSave -= value; }
+            add => OnAfterSave += value;
+            remove => OnAfterSave -= value;
         }
 
         void IUIObject.ShowProperties()
@@ -276,15 +262,9 @@ namespace WebAnnotation.AnnotationObjects
             }
         }
 
-        System.Drawing.Image IUIObject.SmallThumbnail
-        {
-            get { return null; }
-        }
+        System.Drawing.Image IUIObject.SmallThumbnail => null;
 
-        string IUIObject.ToolTip
-        {
-            get { return this.Name; }
-        }
+        string IUIObject.ToolTip => this.Name;
 
         void IUIObject.Save()
         {
@@ -302,20 +282,14 @@ namespace WebAnnotation.AnnotationObjects
             return new Viking.UI.Controls.GenericTreeNode(this); 
         }
 
-        int IUIObject.TreeImageIndex
-        {
-            get { return 0; }
-        }
+        int IUIObject.TreeImageIndex => 0;
 
-        int IUIObject.TreeSelectedImageIndex
-        {
-            get { return 0;  }
-        }
+        int IUIObject.TreeSelectedImageIndex => 0;
 
         event ChildChangedEventHandler IUIObject.ChildChanged
         {
-            add { OnChildChanged += value;  }
-            remove { OnChildChanged -= value;  }
+            add => OnChildChanged += value;
+            remove => OnChildChanged -= value;
         }
 
         Type[] IUIObject.AssignableParentTypes

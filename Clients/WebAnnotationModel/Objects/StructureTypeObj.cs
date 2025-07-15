@@ -11,10 +11,7 @@ namespace WebAnnotationModel
 {
     public class StructureTypeObj : WCFObjBaseWithParent<long, StructureType, StructureTypeObj>, IStructureType
     {
-        public override long ID
-        {
-            get { return Data.ID; }
-        }
+        public override long ID => Data.ID;
 
         ulong IStructureType.ID => (ulong)this.ID;
         ulong? IStructureType.ParentID => this.ParentID.HasValue ? new ulong?((ulong)ParentID.Value) : new ulong?();
@@ -33,10 +30,8 @@ namespace WebAnnotationModel
 
         public override long? ParentID
         {
-            get { return Data.ParentID; }
-            set { 
-                Data.ParentID = value; 
-            }
+            get => Data.ParentID;
+            set => Data.ParentID = value;
         }
 
         public override string ToString()
@@ -46,7 +41,7 @@ namespace WebAnnotationModel
 
         public string Name
         {
-            get { return Data.Name; }
+            get => Data.Name;
             set
             {
                 OnPropertyChanging("Name");
@@ -58,7 +53,7 @@ namespace WebAnnotationModel
 
         public string Notes
         {
-            get { return Data.Notes; }
+            get => Data.Notes;
             set
             {
                 OnPropertyChanging("Notes");
@@ -70,7 +65,7 @@ namespace WebAnnotationModel
 
         public uint Color
         {
-            get { return (uint)Data.Color; }
+            get => (uint)Data.Color;
             set
             {
                 if (Data.Color == value)
@@ -84,7 +79,7 @@ namespace WebAnnotationModel
 
         public string Code
         {
-            get { return Data.Code; }
+            get => Data.Code;
             set
             {
                 OnPropertyChanging("Code");

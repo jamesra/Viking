@@ -7,10 +7,7 @@ namespace Geometry
     /// </summary>
     public class PolygonList : List<GridPolygon>
     {
-        public virtual GridVector2 this[PolygonIndex index]
-        {
-            get { return index.Point(this); }
-        }
+        public virtual GridVector2 this[PolygonIndex index] => index.Point(this);
 
         public PolygonList() : base()
         {

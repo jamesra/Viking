@@ -53,10 +53,7 @@ namespace AnnotationVizLib
 
                 return System.Convert.ToDouble(Attributes["TotalSourceArea"]);
             }
-            set
-            {
-                Attributes["TotalSourceArea"] = value;
-            }
+            set => Attributes["TotalSourceArea"] = value;
         }
 
         public double TotalTargetArea
@@ -70,10 +67,7 @@ namespace AnnotationVizLib
 
                 return System.Convert.ToDouble(Attributes["TotalTargetArea"]);
             }
-            set
-            {
-                Attributes["TotalTargetArea"] = value;
-            }
+            set => Attributes["TotalTargetArea"] = value;
         }
 
         public double MinZ
@@ -87,10 +81,7 @@ namespace AnnotationVizLib
 
                 return System.Convert.ToDouble(Attributes["MinZ"]);
             }
-            set
-            {
-                Attributes["MinZ"] = value;
-            }
+            set => Attributes["MinZ"] = value;
         }
 
         public double MaxZ
@@ -104,19 +95,10 @@ namespace AnnotationVizLib
 
                 return System.Convert.ToDouble(Attributes["MaxZ"]);
             }
-            set
-            {
-                Attributes["MaxZ"] = value;
-            }
+            set => Attributes["MaxZ"] = value;
         }
 
-        public override double Weight
-        {
-            get
-            {
-                return (double)Links.Count();
-            }
-        }
+        public override double Weight => (double)Links.Count();
 
         public ulong[] SourceIDs
         {

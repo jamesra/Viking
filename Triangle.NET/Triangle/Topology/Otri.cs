@@ -25,8 +25,8 @@ namespace TriangleNet.Topology
 
         public Triangle Triangle
         {
-            get { return tri; }
-            set { tri = value; }
+            get => tri;
+            set => tri = value;
         }
 
         public override string ToString()

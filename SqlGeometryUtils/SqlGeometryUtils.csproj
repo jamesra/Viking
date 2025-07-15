@@ -1,7 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>net48</TargetFrameworks>
+		<TargetFrameworks>net48;net9.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
+		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+		<LangVersion>9.0</LangVersion>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<DebugSymbols>true</DebugSymbols>
@@ -29,11 +35,14 @@
 	<ItemGroup>
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" /> 
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
-		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" /> 
 	</ItemGroup>
 	
-	<!-- Entity Framework 6 is only available for .NET Framework -->
+	<!-- SQL Server Types - different versions for different frameworks -->
 	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0' or '$(TargetFramework)' == 'netstandard2.0'">
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	</ItemGroup>
 </Project>

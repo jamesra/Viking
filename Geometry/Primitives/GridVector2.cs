@@ -170,7 +170,7 @@ namespace Geometry
         public double X;
         public double Y;
 
-        public double[] coords { get => new double[] { X,Y }; }
+        public double[] coords => new double[] { X,Y };
 
         public GridVector2(in double x, in double y)
         {

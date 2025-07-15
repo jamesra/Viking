@@ -4,11 +4,11 @@ using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading.Tasks;
 using Viking.DataModel.Annotation;
-using Viking.gRPC.AnnotationTypes.V1.Protos;
+using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 
 namespace gRPCAnnotationService
 {
-    public class PermittedStructureLinksService : Viking.gRPC.AnnotationTypes.V1.Protos.PermittedStructureLinks.PermittedStructureLinksBase
+    public class PermittedStructureLinksService : Viking.AnnotationServiceTypes.gRPC.V1.Protos.PermittedStructureLinks.PermittedStructureLinksBase
     {
         private readonly AnnotationContext _context;
         private readonly ILogger<LocationService> _logger;
@@ -27,7 +27,7 @@ namespace gRPCAnnotationService
                 };
 
                 response.PermittedLinks.AddRange(_context.PermittedStructureLinks.Select(p =>
-                    new Viking.gRPC.AnnotationTypes.V1.Protos.PermittedStructureLink() {
+                    new Viking.AnnotationServiceTypes.gRPC.V1.Protos.PermittedStructureLink() {
                         SourceTypeId = p.SourceTypeId,
                         TargetTypeId = p.TargetTypeId,
                         Bidirectional = p.Bidirectional,

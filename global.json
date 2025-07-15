@@ -1,0 +1,13 @@
+{
+  "sdk": {
+    "version": "9.0.100",
+    "rollForward": "latestMajor"
+  },
+  "msbuild-sdks": {
+    "Microsoft.Build.NoTargets": "3.7.0"
+  },
+  "suppressWarnings": [
+    "NU1603",
+    "NU1605"
+  ]
+} 

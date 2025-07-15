@@ -52,19 +52,10 @@ namespace Geometry
             return new GridTriangle(t.points[t.i1], t.points[t.i2], t.points[t.i3]);
         }
 
-        public GridVector2 P1
-        {
-            get { return points[i1]; }
-        }
+        public GridVector2 P1 => points[i1];
 
-        public GridVector2 P2
-        {
-            get { return points[i2]; }
-        }
+        public GridVector2 P2 => points[i2];
 
-        public GridVector2 P3
-        {
-            get { return points[i3]; }
-        }
+        public GridVector2 P3 => points[i3];
     }
 }

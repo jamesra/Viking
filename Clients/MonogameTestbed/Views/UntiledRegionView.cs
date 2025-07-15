@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using TriangleNet;
 using VikingXNA;
-using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

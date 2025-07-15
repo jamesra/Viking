@@ -24,13 +24,11 @@ namespace AnnotationVizLib
 
         public System.Drawing.Color Color
         {
-            set
-            {
+            set =>
                 this.Attributes["Color"] = string.Format("({0},{1},{2},{3})", value.R,
-                                                                                 value.G,
-                                                                                 value.B,
-                                                                                 value.A);
-            }
+                    value.G,
+                    value.B,
+                    value.A);
         }
 
         public string ToGMLElement()
@@ -80,13 +78,11 @@ namespace AnnotationVizLib
 
         public System.Drawing.Color Color
         {
-            set
-            {
+            set =>
                 this.Attributes["viewColor"] = string.Format("({0},{1},{2},{3})", value.R,
-                                                                                 value.G,
-                                                                                 value.B,
-                                                                                 value.A);
-            }
+                    value.G,
+                    value.B,
+                    value.A);
         }
 
         public string ToGMLElement()
@@ -136,21 +132,9 @@ namespace AnnotationVizLib
             }
         }
 
-        public static string FileFooter
-        {
-            get
-            {
-                return GenericFooter;
-            }
-        }
+        public static string FileFooter => GenericFooter;
 
-        public static string GenericFooter
-        {
-            get
-            {
-                return "</graphml>";
-            }
-        }
+        public static string GenericFooter => "</graphml>";
 
         public static string DeclareProperty(string attribName, PropertyType type)
         {
@@ -175,14 +159,7 @@ namespace AnnotationVizLib
             return Element;
         }
 
-        public static string PropertyFooter
-        {
-            get
-            {
-                return GenericFooter;
-            }
-        }
-
+        public static string PropertyFooter => GenericFooter;
     }
 
     public class GMLViewSubgraph
@@ -222,13 +199,11 @@ namespace AnnotationVizLib
 
         public System.Drawing.Color Color
         {
-            set
-            {
+            set =>
                 this.SubgraphAttributes["viewColor"] = string.Format("({0},{1},{2},{3} {0},{1},{2},{3})", value.R,
-                                                                                 value.G,
-                                                                                 value.B,
-                                                                                 value.A);
-            }
+                    value.G,
+                    value.B,
+                    value.A);
         }
 
         private string NodesString(IEnumerable<ulong> node_ids)

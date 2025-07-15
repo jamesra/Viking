@@ -99,10 +99,7 @@ namespace Viking.VolumeModel
         /// <summary>
         /// This records the modified date of the file the transform was loaded from
         /// </summary>
-        public DateTime LastModified
-        {
-            get => _LastModified;
-        }
+        public DateTime LastModified => _LastModified;
 
         protected DateTime _LastModified = DateTime.MinValue;
 
@@ -149,13 +146,7 @@ namespace Viking.VolumeModel
         }
 
         protected UnitsAndScale.IAxisUnits _XYScale;
-        public virtual UnitsAndScale.IAxisUnits XYScale
-        {
-            get
-            {
-                return _XYScale;
-            }
-        }
+        public virtual UnitsAndScale.IAxisUnits XYScale => _XYScale;
 
         /// <summary>
         /// Adjust a viewer downsample level to match the difference between the scale used in the pyramid/mapping and the maximum resolution scale for the volume

@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
+    <LangVersion>9.0</LangVersion>
     <UseWPF>true</UseWPF>
     <AssemblyName>VikingWPFUserControls</AssemblyName>
     <RootNamespace>VikingWPFUserControls</RootNamespace>

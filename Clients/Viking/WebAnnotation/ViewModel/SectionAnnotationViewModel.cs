@@ -28,13 +28,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Locations on the section we are providing an overlay for
         /// </summary>
-        private ConcurrentDictionary<long, LocationObj> Locations
-        {
-            get
-            {
-                return Store.Locations.GetLocationsForSection(Section.Number);
-            }
-        }
+        private ConcurrentDictionary<long, LocationObj> Locations => Store.Locations.GetLocationsForSection(Section.Number);
 
         /// <summary>
         /// Maps a structureID to all the locations for that structure on the visible section

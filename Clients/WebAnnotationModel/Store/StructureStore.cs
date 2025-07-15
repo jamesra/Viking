@@ -321,9 +321,7 @@ namespace WebAnnotationModel
             {
                 ShowStandardExceptionMessage(e);
                 throw;
-            } 
-
-            return 0;
+            }
         }
 
         public long SplitAtLocationLink(long KeepLocID, long SplitLocID)
@@ -396,8 +394,6 @@ namespace WebAnnotationModel
 
         public MixedLocalAndRemoteQueryResults<long, StructureObj> GetObjectsInRegionAsync(long SectionNumber, GridRectangle bounds, double MinRadius, DateTime? LastQueryUtc, Action<ICollection<StructureObj>> OnLoadedCallback)
         {
-            MixedLocalAndRemoteQueryResults<long, StructureObj> results;
-
             MixedLocalAndRemoteQueryResults<long, LocationObj> locResults = Store.Locations.GetObjectsInRegionAsync(SectionNumber,
                                                                                                                     bounds,
                                                                                                                     MinRadius,

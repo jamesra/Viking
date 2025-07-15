@@ -17,13 +17,7 @@ namespace Viking.VolumeModel
     /// </summary>
     public abstract class FixedTileCountMapping : MappingBase
     {
-        public override UnitsAndScale.IAxisUnits XYScale
-        {
-            get
-            {
-                return CurrentPyramid.XYScale;
-            }
-        }
+        public override UnitsAndScale.IAxisUnits XYScale => CurrentPyramid.XYScale;
 
         public abstract Task<ITransform[]> GetOrCreateTransforms(CancellationToken token);
 

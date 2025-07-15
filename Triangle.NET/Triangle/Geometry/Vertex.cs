@@ -78,19 +78,13 @@ namespace TriangleNet.Geometry
         /// <summary>
         /// Gets the vertex attributes (may be null).
         /// </summary>
-        public double[] Attributes
-        {
-            get { return this.attributes; }
-        }
+        public double[] Attributes => this.attributes;
 #endif
 
         /// <summary>
         /// Gets the vertex type.
         /// </summary>
-        public VertexType Type
-        {
-            get { return this.type; }
-        }
+        public VertexType Type => this.type;
 
         /// <summary>
         /// Gets the specified coordinate of the vertex.

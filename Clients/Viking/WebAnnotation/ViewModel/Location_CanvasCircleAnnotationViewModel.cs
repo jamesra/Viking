@@ -97,11 +97,8 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public System.Collections.ObjectModel.ObservableCollection<long> Links
-        {
-            get { return modelObj.Links; }
-        } 
-         
+        public System.Collections.ObjectModel.ObservableCollection<long> Links => modelObj.Links;
+
 
         public Location_CanvasCircleAnnotationViewModel(LocationObj location)
             : base(location)

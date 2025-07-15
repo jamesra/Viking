@@ -36,13 +36,7 @@ namespace TriangleNet
 
         private Log() { }
 
-        public static ILog<LogItem> Instance
-        {
-            get
-            {
-                return instance;
-            }
-        }
+        public static ILog<LogItem> Instance => instance;
 
         #endregion
 
@@ -71,14 +65,8 @@ namespace TriangleNet
             log.Add(new LogItem(LogLevel.Error, message, location));
         }
 
-        public IList<LogItem> Data
-        {
-            get { return log; }
-        }
+        public IList<LogItem> Data => log;
 
-        public LogLevel Level
-        {
-            get { return level; }
-        }
+        public LogLevel Level => level;
     }
 }

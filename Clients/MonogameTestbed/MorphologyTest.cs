@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VikingXNA;
-using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
@@ -30,7 +29,7 @@ namespace MonogameTestbed
 
 
         bool _initialized = false;
-        public bool Initialized { get { return _initialized; } }
+        public bool Initialized => _initialized;
 
 
         //        long[] TroubleIDS = new long[] {
