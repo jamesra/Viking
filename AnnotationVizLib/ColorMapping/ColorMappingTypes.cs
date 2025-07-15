@@ -39,10 +39,10 @@ namespace AnnotationVizLib
         }
     }
 
-    public class ColorMapImageData
+    public class ColorMapImageData : IDisposable
     {
         public readonly int SectionNumber;
-        readonly Bitmap image;
+        readonly CrossPlatformImage image;
         readonly IScale scale;
         readonly ColorScalars color_scalar = new ColorScalars(1, 1, 1, 1);
         readonly ColorImageOffset offset = new ColorImageOffset(0, 0);
@@ -50,7 +50,7 @@ namespace AnnotationVizLib
         public ColorMapImageData(System.IO.Stream ImageStream, int section_number, IScale scale_data)
         {
             this.SectionNumber = section_number;
-            this.image = new Bitmap(ImageStream);
+            this.image = new CrossPlatformImage(ImageStream);
             this.scale = scale_data;
         }
 
@@ -70,10 +70,10 @@ namespace AnnotationVizLib
             int bmp_Y = (int)Math.Round(Y / scale.Y.Value);
             Color color = Color.Empty;
 
-            if (bmp_X < 0 || bmp_X >= image.Size.Width)
+            if (bmp_X < 0 || bmp_X >= image.Width)
                 return Color.Empty;
 
-            if (bmp_Y < 0 || bmp_Y >= image.Size.Height)
+            if (bmp_Y < 0 || bmp_Y >= image.Height)
                 return Color.Empty;
 
             try
@@ -98,6 +98,11 @@ namespace AnnotationVizLib
             scaled_color = scaled_color > 255 ? 255 : scaled_color;
             scaled_color = scaled_color < 0 ? 0 : scaled_color;
             return scaled_color;
+        }
+
+        public void Dispose()
+        {
+            image?.Dispose();
         }
     }
 }

@@ -1,27 +1,59 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFrameworks>net48;net9.0</TargetFrameworks>
     <LangVersion>9.0</LangVersion>
     <AssemblyName>ODataClient</AssemblyName>
     <RootNamespace>ODataClient</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.OData.Client" Version="6.17.0" />
+  <!-- Modern OData Client Package References -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Microsoft.OData.Client" Version="7.15.0" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="ODataClient.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>ODataClient.cs</LastGenOutput>
-    </Content>
-    <None Include="App.config" />
-    <None Include="ODataClient.ttinclude" />
-  </ItemGroup>
+  <!-- Generate OData Client during build -->
+  <Target Name="GenerateODataClient" BeforeTargets="Build" Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <ODataMetadataUri>http://websvc1.connectomes.utah.edu/RC1/OData/$metadata</ODataMetadataUri>
+      <GeneratedODataFile>$(MSBuildProjectDirectory)\Generated\ODataClient.cs</GeneratedODataFile>
+    </PropertyGroup>
+    
+    <!-- Create output directory -->
+    <MakeDir Directories="$(MSBuildProjectDirectory)\Generated" />
+    
+    <!-- Generate OData client using Microsoft.OData.CLI -->
+    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient.cs&quot;" 
+          ContinueOnError="true" 
+          IgnoreExitCode="true" />
+    
+    <Message Text="OData client generation attempted. Check Generated\ODataClient.cs for output." Importance="high" />
+  </Target>
 
+  <!-- Manual generation target -->
+  <Target Name="GenerateODataClientManual">
+    <PropertyGroup>
+      <ODataMetadataUri>http://websvc1.connectomes.utah.edu/RC1/OData/$metadata</ODataMetadataUri>
+      <GeneratedODataFile>$(MSBuildProjectDirectory)\Generated\ODataClient.cs</GeneratedODataFile>
+    </PropertyGroup>
+    
+    <MakeDir Directories="$(MSBuildProjectDirectory)\Generated" />
+    
+    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient.cs&quot;" />
+    
+    <Message Text="OData client manually generated: $(GeneratedODataFile)" Importance="high" />
+  </Target>
+
+  <!-- Include generated files -->
   <ItemGroup>
-    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+    <Compile Include="Generated\ODataClient.cs.cs" Condition="Exists('Generated\ODataClient.cs.cs')" />
+    <Compile Include="Generated\ODataClient.cs" Condition="Exists('Generated\ODataClient.cs') And !Exists('Generated\ODataClient.cs.cs')" />
+    <Compile Include="Extensions.cs" />
   </ItemGroup>
 
 </Project>

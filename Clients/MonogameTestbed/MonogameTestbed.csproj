@@ -65,7 +65,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
-		<ProjectReference Include="..\..\AnnotationVizLibSimpleODataClient\AnnotationVizLibSimpleODataClient.csproj" />
+		<ProjectReference Include="..\..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj" />
 		<ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
 		<ProjectReference Include="..\..\ColladaIO\ColladaIO.csproj" />
 		<ProjectReference Include="..\..\GeometryTests\GeometryTests.csproj" />

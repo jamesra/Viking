@@ -1,204 +1,171 @@
 ﻿using AnnotationVizLib;
-using AnnotationVizLib.WCFClient;
+using AnnotationVizLib.OData; // Use correct namespace
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
+using VikingWebAppSettings;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
-using System.Web;
-using System.Web.Mvc;
-using VikingWebAppSettings;
 
 namespace DataExport.Controllers
 {
+    [ApiController]
+    [Route("[controller]/[action]")]
     public class NetworkController : Controller
     {
-        public string GetOutputFilename(ICollection<long> requestIDs, string ext)
+        private readonly IWebHostEnvironment _env;
+        public NetworkController(IWebHostEnvironment env)
+        {
+            _env = env;
+        }
+
+        private string GetOutputFilename(ICollection<long> requestIDs, string ext)
         {
             string ID_List = OutputNameGenerator.GetFileFriendlyIDList(requestIDs);
-            string date = OutputNameGenerator.GetFileFriendlyDateString(); 
-
-            return string.Format("nw-{0}_hops_{1} {2}.{3}", ID_List, GetNumHops(), date, ext);
+            string date = OutputNameGenerator.GetFileFriendlyDateString();
+            return $"nw-{ID_List}_hops_{GetNumHops()} {date}.{ext}";
         }
 
-        private ActionResult RedirectToFile(string outputFilename)
+        private string GetAndCreateOutputDirectory()
         {
-            Response.StatusCode = (int)System.Net.HttpStatusCode.Created;
-            Uri host = AppSettings.VolumeURI;
-            string url = new Uri(host, Request.ApplicationPath + "/Output/" + outputFilename).ToString();
+            string outputDir = Path.Combine(_env.ContentRootPath, "Output");
+            if (!Directory.Exists(outputDir))
+                Directory.CreateDirectory(outputDir);
+            return outputDir;
+        }
+
+        private IActionResult RedirectToFile(string outputFilename)
+        {
+            string url = $"/Output/{outputFilename}";
+            Response.StatusCode = StatusCodes.Status201Created;
             Response.Headers["Location"] = url;
-            Response.Redirect(url, true);
-            return new EmptyResult(); 
+            return Redirect(url);
         }
 
-        [HttpPost()]
-        [AcceptVerbs(HttpVerbs.Post)]
-        public async Task<ActionResult> PostDot(HttpPostedFileBase req)
+        [HttpPost]
+        public async Task<IActionResult> PostDot([FromForm] IFormFile req)
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
-
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "dot");
-            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
+            string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
-            NeuronGraph neuronGraph = GetGraph(requestIDs);
-            NeuronDOTView DotGraph = NeuronDOTView.ToDOT(neuronGraph, false);
-            DotGraph.SaveDOT(outputFileFullPath); 
-            return RedirectToFile(outputFilename);
-        }
-
-
-        [HttpPost()]
-        [AcceptVerbs(HttpVerbs.Post)]
-        public async Task<ActionResult> PostTLP(HttpPostedFileBase req)
-        {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
-
-            string outputFilename = GetOutputFilename(requestIDs, "tlp");
-            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
-
-            NeuronGraph neuronGraph = GetGraph(requestIDs);
-            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, AppSettings.VolumeURL);
-            TlpGraph.SaveTLP(outputFileFullPath);
-
-            return RedirectToFile(outputFilename);
-        }
-
-        [HttpPost()]
-        [AcceptVerbs(HttpVerbs.Post)]
-        public async Task<ActionResult> PostGML(HttpPostedFileBase req)
-        {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
-
-            string outputFilename = GetOutputFilename(requestIDs, "graphml");
-            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
-
-            NeuronGraph neuronGraph = GetGraph(requestIDs);
-            NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, AppSettings.VolumeURL);
-            GmlGraph.SaveGML(outputFileFullPath);
-
-            return RedirectToFile(outputFilename);
-        }
-
-        [HttpPost()]
-        [AcceptVerbs(HttpVerbs.Post)]
-        public async Task<ActionResult> PostJSON(HttpPostedFileBase req)
-        {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
-
-            string outputFilename = GetOutputFilename(requestIDs, "json");
-            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
-
-            NeuronGraph neuronGraph = GetGraph(requestIDs);
-            NeuronJSONView JsonGraph = NeuronJSONView.ToJSON(neuronGraph);
-            JsonGraph.SaveJSON(outputFileFullPath);
-
-            return RedirectToFile(outputFilename);
-        }
-
-        //
-        // GET: /Network/Dot 
-        [ActionName("GetDot")]
-        [HttpGet]
-        public async Task<ActionResult> GetDot()
-        {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
-            string outputFilename = GetOutputFilename(requestIDs, "dot");
-            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
-
-            NeuronGraph neuronGraph = GetGraph(requestIDs);
+            NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
             NeuronDOTView DotGraph = NeuronDOTView.ToDOT(neuronGraph, false);
             DotGraph.SaveDOT(outputFileFullPath);
-
-            return File(outputFileFullPath, "text/plain", outputFilename);
+            return RedirectToFile(outputFilename);
         }
 
-        [ActionName("GetTLP")]
-        [HttpGet]
-        public async Task<ActionResult> GetTLP()
+        [HttpPost]
+        public async Task<IActionResult> PostTLP([FromForm] IFormFile req)
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "tlp");
-            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
+            string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
-            NeuronGraph neuronGraph = GetGraph(requestIDs);
-            AnnotationVizLib.SimpleODataClient.SimpleODataSpatialDataFactory.AppendSpatialDataFromOData(neuronGraph, VikingWebAppSettings.AppSettings.ODataURL, requestIDs, GetNumHops());
+            NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
             NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, AppSettings.VolumeURL);
             TlpGraph.SaveTLP(outputFileFullPath);
-
-            return File(outputFileFullPath, "text/plain", outputFilename);
+            return RedirectToFile(outputFilename);
         }
 
-        [ActionName("GetGML")]
-        [HttpGet]
-        public async Task<ActionResult> GetGML()
+        [HttpPost]
+        public async Task<IActionResult> PostGML([FromForm] IFormFile req)
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "graphml");
-            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
+            string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
-            NeuronGraph neuronGraph = GetGraph(requestIDs);
+            NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
             NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, AppSettings.VolumeURL);
             GmlGraph.SaveGML(outputFileFullPath);
-
-            return File(outputFileFullPath, "text/plain", outputFilename);
+            return RedirectToFile(outputFilename);
         }
 
-        [ActionName("GetJSON")]
-        [HttpGet]
-        public async Task<ActionResult> GetJSON()
+        [HttpPost]
+        public async Task<IActionResult> PostJSON([FromForm] IFormFile req)
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDs(Request);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "json");
-            string outputFileFullPath = System.IO.Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
+            string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
-            NeuronGraph neuronGraph = GetGraph(requestIDs);
-            AnnotationVizLib.SimpleODataClient.SimpleODataSpatialDataFactory.AppendSpatialDataFromOData(neuronGraph, VikingWebAppSettings.AppSettings.ODataURL, requestIDs, GetNumHops());
-
+            NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
             NeuronJSONView JsonGraph = NeuronJSONView.ToJSON(neuronGraph);
-
             JsonGraph.SaveJSON(outputFileFullPath);
-
-            return File(outputFileFullPath, "text/plain", outputFilename);
+            return RedirectToFile(outputFilename);
         }
 
-        private string GetAndCreateOutputDirectory( )
+        [HttpGet]
+        public async Task<IActionResult> GetDot()
         {
-            string output_dir = "~/Output";
-            if (Server != null)
-                output_dir = Server.MapPath(output_dir);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            string outputFilename = GetOutputFilename(requestIDs, "dot");
+            string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
-            if (!System.IO.Directory.Exists(output_dir))
-                System.IO.Directory.CreateDirectory(output_dir);
-
-            return output_dir;
+            NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
+            NeuronDOTView DotGraph = NeuronDOTView.ToDOT(neuronGraph, false);
+            DotGraph.SaveDOT(outputFileFullPath);
+            return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
         }
 
-        private NeuronGraph GetGraph(ICollection<long> requestIDs)
+        [HttpGet]
+        public async Task<IActionResult> GetTLP()
         {
-            string EndpointURL = AppSettings.WebServiceURL;
-            
-            ConnectionFactory.SetConnection(EndpointURL, AppSettings.EndpointCredentials);
-             
-            if (requestIDs is null || requestIDs.Count == 0)
-                requestIDs = Queries.GetLinkedStructureParentIDs(); 
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            string outputFilename = GetOutputFilename(requestIDs, "tlp");
+            string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
-            return WCFNeuronFactory.BuildGraph(requestIDs, GetNumHops(), EndpointURL, AppSettings.EndpointCredentials);
+            NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
+            // OData spatial data append here if needed
+            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, AppSettings.VolumeURL);
+            TlpGraph.SaveTLP(outputFileFullPath);
+            return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetGML()
+        {
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            string outputFilename = GetOutputFilename(requestIDs, "graphml");
+            string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
+
+            NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
+            NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, AppSettings.VolumeURL);
+            GmlGraph.SaveGML(outputFileFullPath);
+            return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetJSON()
+        {
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            string outputFilename = GetOutputFilename(requestIDs, "json");
+            string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
+
+            NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
+            // OData spatial data append here if needed
+            NeuronJSONView JsonGraph = NeuronJSONView.ToJSON(neuronGraph);
+            JsonGraph.SaveJSON(outputFileFullPath);
+            return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        }
+
+        private async Task<NeuronGraph> GetGraphAsync(ICollection<long> requestIDs)
+        {
+            // TODO: Replace with ODataClient logic
+            // Example: await ODataClient.GetGraphAsync(...)
+            // For now, return a stub or throw NotImplementedException
+            throw new NotImplementedException("ODataClient graph retrieval not yet implemented.");
         }
 
         private uint GetNumHops()
         {
-            string hopstr = Request.RequestContext.HttpContext.Request.QueryString["hops"];
-            if (hopstr is null)
+            if (Request.Query.ContainsKey("hops"))
             {
-                return 1;
+                if (uint.TryParse(Request.Query["hops"], out uint hops))
+                    return hops;
             }
-
-            try
-            {
-                return Convert.ToUInt32(hopstr);
-            }
-            catch (FormatException)
-            {
-                return 1;
-            } 
-        } 
+            return 1;
+        }
     }
 }

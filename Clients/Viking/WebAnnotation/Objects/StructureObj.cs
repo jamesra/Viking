@@ -7,8 +7,8 @@ using System.Diagnostics;
 using WebAnnotation.Service;
 using System.Drawing;
 using System.Windows.Forms;
-
-using Common.UI; 
+ 
+using Viking.Common.UI;
 
 namespace WebAnnotation.Objects
 {

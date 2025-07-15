@@ -1,11 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0-windows</TargetFramework>
-	  <RollForward>Major</RollForward>
+    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+    <Description>Requires Windows 7 or later.</Description>
+    <RollForward>Major</RollForward>
     <RootNamespace>MonogameMathNetExtensions</RootNamespace>
     <AssemblyName>MonogameMathNetExtensions</AssemblyName>
     <AssemblyTitle>MonogameMathNetExtensions</AssemblyTitle>
-    <AssemblyDescription></AssemblyDescription>
+    <AssemblyDescription>MonogameMathNetExtensions (Windows 7 or later required)</AssemblyDescription>
     <AssemblyCompany></AssemblyCompany>
     <AssemblyProduct>MonogameMathNetExtensions</AssemblyProduct>
     <Copyright>Copyright ©  2017</Copyright>
@@ -13,6 +15,7 @@
     <FileVersion>1.0.0.0</FileVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
+  <!-- NOTE: This project only works on Windows 7 or later. -->
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*"/>

@@ -12,35 +12,20 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Antlr" Version="3.5.0.2" />
-    <PackageReference Include="EntityFramework" Version="6.5.1" />
-    <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.3.0" />
-    <PackageReference Include="Microsoft.AspNet.Razor" Version="3.3.0" />
-    <PackageReference Include="Microsoft.AspNet.Web.Optimization" Version="1.1.3" />
-    <PackageReference Include="Microsoft.AspNet.WebApi" Version="5.2.7" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="6.0.0" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.Core" Version="5.2.7" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.WebHost" Version="5.2.7" />
-    <PackageReference Include="Microsoft.AspNet.WebPages" Version="3.3.0" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.6" />
-    <PackageReference Include="Microsoft.Net.Http" Version="2.2.29" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
     <PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
     <PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
     <PackageReference Include="Microsoft.Spatial" Version="8.1.0" />
-    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
-    <PackageReference Include="Microsoft.Web.Infrastructure" Version="1.0.0.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.6" />
+    <PackageReference Include="System.Text.Json" Version="9.0.7" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Content, static, and resource files --> 
-    <Content Include="Global.asax" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Global.asax.cs" />
     <Content Include="Dot\*.*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Resources\**\*.*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Content\**\*.*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Scripts\**\*.*" CopyToOutputDirectory="PreserveNewest" /> 
     <Content Include="SqlServerTypes\**\*.*" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="App_Start\*.*" />
     <Content Include="Utils\*.*" />
     <Content Include="Controllers\*.*" />
     <Content Include="Output\*.*" />
@@ -64,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
+    <ProjectReference Include="..\..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj" />
     <ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj" />
     <ProjectReference Include="..\WebAppSettings\VikingWebAppSettings.csproj" />
   </ItemGroup>

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Common.UI;
+using Viking.Common.UI;
 using WebAnnotation.Service;
 using System.Windows.Forms;
 

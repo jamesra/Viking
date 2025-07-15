@@ -9,5 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="..\GeometryTests\GeometryTests.csproj" />
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\MorphologyMesh\MorphologyMesh.csproj" />
   </ItemGroup>
 </Project>

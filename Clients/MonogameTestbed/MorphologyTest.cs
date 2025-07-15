@@ -172,7 +172,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallTopologyModelFromOData(ulong CellID, Endpoint endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { CellID }, true, DataSource.EndpointMap[endpoint]); 
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new ulong[] { CellID }, true, DataSource.EndpointMap[endpoint]); 
 
             MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return new Mesh3D<IVertex3D<ulong>>[] { MorphologyMesh.TopologyMeshGenerator.Generate(graph.Subgraphs.Values.First()) };
@@ -183,7 +183,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromOData(long[] CellIDs, Endpoint endpoint)
         { 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(CellIDs.Select(id => (ulong)id).ToArray(), true, DataSource.EndpointMap[endpoint]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(CellIDs.Select(id => (ulong)id).ToArray(), true, DataSource.EndpointMap[endpoint]);
 
             //SelectZRange(graph, 231, 235);
             //SelectSubsetOfIDs(graph, TroubleIDS);
@@ -199,7 +199,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, Endpoint endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(LocationIDs.Select(id => (ulong)id).ToArray(), DataSource.EndpointMap[endpoint]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromODataLocationIDs(LocationIDs.Select(id => (ulong)id).ToArray(), DataSource.EndpointMap[endpoint]);
                          
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);

@@ -1,11 +1,7 @@
-﻿using Simple.OData.Client;
+﻿using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Threading.Tasks;
-using System.Web;
-
-
 
 namespace DataExport.Controllers
 {
@@ -15,12 +11,7 @@ namespace DataExport.Controllers
     public static class OutputNameGenerator {
         public static string GetFileFriendlyDateString()
         {
-            
-            bool first = true;
-            
-
             DateTime now = System.DateTime.Now;
-
             return string.Format("nw-{0,04:d4}-{1,02:d2}-{2,02:d2} {3,02:d2}{4,02:d2}{5,02:d2}", now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
         }
 
@@ -60,71 +51,33 @@ namespace DataExport.Controllers
     /// </summary>
     public static class RequestVariables
     {
-        public static ICollection<long> GetIDs(HttpRequestBase Request)
-        {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromRequestFiles(Request.Files);
-            ICollection<long> queryIDs = RequestVariables.GetIDsFromQueryData(Request.QueryString);
-
-            List<long> IDs = new List<long>(requestIDs.Count + queryIDs.Count);
-            IDs.AddRange(requestIDs);
-            IDs.AddRange(queryIDs);
-
-            return IDs;
-        }
-
-        public static ICollection<long> GetIDsFromRequestFiles(HttpFileCollectionBase files)
-        {
-            if (files is null)
-                return Array.Empty<long>();
-
-            List<long> ids = new List<long>();
-
-            for (int i = 0; i < files.Count; i++)
-            {
-                var f = files[i];
-
-                byte[] buffer = new byte[f.ContentLength];
-                int length = f.InputStream.Read(buffer, 0, f.ContentLength);
-                string ids_string = System.Text.Encoding.UTF8.GetString(buffer);
-
-                ids.AddRange(RequestVariables.ParseIDString(ids_string));
-            }
-
-            return ids;
-        }
-
-        /// <summary>
-        /// A query can specify IDs using either the IDs
-        /// </summary>
-        /// <param name="QueryData"></param>
-        /// <returns></returns>
-        public static ICollection<long> GetIDsFromQueryData(NameValueCollection  QueryData)
+        public static ICollection<long> GetIDsFromQueryData(IQueryCollection queryData)
         {
             //A hack, but should only occur in unit testing
-            if (QueryData is null)
+            if (queryData is null)
                 return new long[] { 180, 476, 514 };
 
             SortedSet<long> IDs = new SortedSet<long>();
 
-            IDs.UnionWith(ParseIDString(QueryData["id"]));
-            IDs.UnionWith(ParseIDString(QueryData["ids"]));
-            IDs.UnionWith(ParseIDString(QueryData["$id"]));
-            IDs.UnionWith(ParseIDString(QueryData["$ids"]));
+            IDs.UnionWith(ParseIDString(queryData["id"].ToString()));
+            IDs.UnionWith(ParseIDString(queryData["ids"].ToString()));
+            IDs.UnionWith(ParseIDString(queryData["$id"].ToString()));
+            IDs.UnionWith(ParseIDString(queryData["$ids"].ToString()));
 
-            string query_string = QueryData["query"];
-            if (query_string != null)
+            string query_string = queryData["query"].ToString();
+            if (!string.IsNullOrEmpty(query_string))
             {
                 IDs.UnionWith(GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, query_string));
             }
 
-            query_string = QueryData["$query"];
-            if (query_string != null)
+            query_string = queryData["$query"].ToString();
+            if (!string.IsNullOrEmpty(query_string))
             {
                 IDs.UnionWith(GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, query_string));
             }
 
             return IDs;
-        } 
+        }
 
         public static ICollection<long> ParseIDString(string idListstr)
         {
@@ -148,85 +101,26 @@ namespace DataExport.Controllers
                 {
                     ICollection<long> query_ids = GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, id);
                     ids.AddRange(query_ids);
-                    //Try to parse a 
-                    /*
-                    var task = GetIDsFromQueryAsync(VikingWebAppSettings.AppSettings.ODataURL, id);
-                    query_tasks.Add(task);
-                    continue;
-                    */
                 }
             }
-            /*
-            foreach(var query_task in query_tasks)
-            { 
-                if(!query_task.IsFaulted)
-                {
-                    ids.AddRange(query_task.Result);
-                }
-            }
-            */
 
             return ids;
         }
         
         public static ICollection<long> GetIDsFromQuery(Uri ODataURI, string query)
         {  
-            ODataClient client = new ODataClient(ODataURI);
-            IEnumerable<IDictionary<string, object>> packages = null;
-
-            try
-            {
-                Task<IEnumerable<IDictionary<string, object>>> packages_task = client.FindEntriesAsync(query);
-                packages_task.Wait();
-                packages = packages_task.Result;
-            }
-            catch(Simple.OData.Client.WebRequestException e)
-            {
-                System.Diagnostics.Trace.WriteLine(string.Format("Exception requesting OData\n{0}\n{1}", query, e.ToString()));
-                return new List<long>();
-            }
-
-            List<long> IDs = new List<long>();
-
-            foreach (var package in packages)
-            {
-                if (package.ContainsKey("ID"))
-                {
-                    long ID = System.Convert.ToInt64(package["ID"]);
-                    IDs.Add(ID);
-                }
-                else if(package.ContainsKey("__result"))
-                {
-                    long ID = System.Convert.ToInt64(package["__result"]);
-                    IDs.Add(ID);
-                }
-                else
-                {
-                    System.Diagnostics.Trace.WriteLine("Unable to parse response from query: " + query);
-                    continue;
-                }
-            }
-
-            return IDs;
+            // TODO: Replace with AnnotationVizLibODataClient implementation
+            // For now, return empty collection
+            System.Diagnostics.Trace.WriteLine($"OData query not implemented: {query}");
+            return new List<long>();
         }
 
         public async static Task<ICollection<long>> GetIDsFromQueryAsync(Uri ODataURI, string query)
         { 
-            ODataClient client = new ODataClient(ODataURI);
-
-            IEnumerable<IDictionary<string,object>> packages = await client.FindEntriesAsync(query); 
-            List<long> IDs = new List<long>();
-
-            foreach(var package in packages)
-            {
-                if (!package.ContainsKey("ID"))
-                    continue; 
-
-                long ID = System.Convert.ToInt64(package["ID"]);
-                IDs.Add(ID);
-            }
-
-            return IDs;
-        } 
+            // TODO: Replace with AnnotationVizLibODataClient implementation
+            // For now, return empty collection
+            System.Diagnostics.Trace.WriteLine($"OData query not implemented: {query}");
+            return new List<long>();
+        }
     }
 }

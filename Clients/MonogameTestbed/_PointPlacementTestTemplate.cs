@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Geometry.Meshing;
 using MathNet.Numerics.LinearAlgebra;
-using AnnotationVizLib.SimpleOData;
+using AnnotationVizLib.OData;
 
 
 namespace MonogameTestbed

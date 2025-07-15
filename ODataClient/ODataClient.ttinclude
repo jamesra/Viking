@@ -40,6 +40,9 @@ THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 <#@ Import Namespace="System.Text"#>
 <#@ Import Namespace="System.Net"#>
 <#
+    // Detect target framework from the project file or environment
+    string targetFramework = GetTargetFramework();
+    
     CodeGenerationContext context;
     if (!string.IsNullOrWhiteSpace(this.Edmx))
     {
@@ -93,6 +96,47 @@ THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         this.Warning(warning);
     }
 #><#+
+/// <summary>
+/// Gets the target framework from the project file or environment
+/// </summary>
+/// <returns>The target framework string</returns>
+private string GetTargetFramework()
+{
+    // Try to get from MSBuild property first
+    string framework = Environment.GetEnvironmentVariable("T4TargetFramework");
+    if (!string.IsNullOrEmpty(framework))
+    {
+        return framework;
+    }
+    
+    // Try to get from environment variable
+    framework = Environment.GetEnvironmentVariable("TargetFramework");
+    if (!string.IsNullOrEmpty(framework))
+    {
+        return framework;
+    }
+    
+    // Try to get from MSBuild properties
+    framework = Environment.GetEnvironmentVariable("MSBuildTargetFramework");
+    if (!string.IsNullOrEmpty(framework))
+    {
+        return framework;
+    }
+    
+    // Default to net48 for backward compatibility
+    return "net48";
+}
+
+/// <summary>
+/// Determines if we should use CsdlReader (for net9.0) or EdmxReader (for net48)
+/// </summary>
+/// <returns>True if using CsdlReader, false if using EdmxReader</returns>
+private bool UseCsdlReader()
+{
+    string framework = GetTargetFramework();
+    return framework.StartsWith("net9") || framework.StartsWith("net8") || framework.StartsWith("net7") || framework.StartsWith("net6") || framework.StartsWith("netstandard");
+}
+
 /// <summary>
 /// The string for the edmx content.
 /// </summary>
@@ -860,7 +904,7 @@ public class CodeGenerationContext
                 HttpWebResponse webResponse = e.Response as HttpWebResponse;
                 if (webResponse != null && webResponse.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    throw new WebException("Failed to access the metadata document. The OData service requires authentication for accessing it. Please download the metadata, store it into a local file, and set the value of “MetadataDocumentUri” in the .odata.config file to the file path. After that, run custom tool again to generate the OData Client code.");
+                    throw new WebException("Failed to access the metadata document. The OData service requires authentication for accessing it. Please download the metadata, store it into a local file, and set the value of "MetadataDocumentUri" in the .odata.config file to the file path. After that, run custom tool again to generate the OData Client code.");
                 }
                 else
                 {
@@ -3461,7 +3505,11 @@ namespace <#= fullNamespace #>
                 global::System.Xml.XmlReader reader = CreateXmlReader(Edmx);
                 try
                 {
+<#+ if (UseCsdlReader()) { #>
+                    return global::Microsoft.OData.Edm.Csdl.CsdlReader.Parse(reader, getReferencedModelFromMap);
+<#+ } else { #>
                     return global::Microsoft.OData.Edm.Csdl.EdmxReader.Parse(reader, getReferencedModelFromMap);
+<#+ } #>
                 }
                 finally
                 {
@@ -3479,7 +3527,11 @@ namespace <#= fullNamespace #>
                 global::System.Xml.XmlReader reader = CreateXmlReader(Edmx);
                 try
                 {
+<#+ if (UseCsdlReader()) { #>
+                    return global::Microsoft.OData.Edm.Csdl.CsdlReader.Parse(reader);
+<#+ } else { #>
                     return global::Microsoft.OData.Edm.Csdl.EdmxReader.Parse(reader);
+<#+ } #>
                 }
                 finally
                 {
@@ -3582,7 +3634,7 @@ namespace <#= fullNamespace #>
 <#+
     }
 
-    internal override void WriteDeclarationStartForStaticCreateMethod(string typeName, string fixedTypeName)
+    internal override void WriteDeclarationStartForStaticCreateMethod(string typeName, string fixedTypeName )
     {
 #>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "<#=T4Version#>")]
@@ -4510,7 +4562,11 @@ Namespace <#= fullNamespace #>
             Private Shared Function LoadModelFromString() As Global.Microsoft.OData.Edm.IEdmModel
                 Dim reader As Global.System.Xml.XmlReader = CreateXmlReader(Edmx)
                 Try
+<#+ if (UseCsdlReader()) { #>
+                    Return Global.Microsoft.OData.Edm.Csdl.CsdlReader.Parse(reader, AddressOf getReferencedModelFromMap)
+<#+ } else { #>
                     Return Global.Microsoft.OData.Edm.Csdl.EdmxReader.Parse(reader, AddressOf getReferencedModelFromMap)
+<#+ } #>
                 Finally
                     CType(reader,Global.System.IDisposable).Dispose
                 End Try
@@ -4524,7 +4580,11 @@ Namespace <#= fullNamespace #>
             Private Shared Function LoadModelFromString() As Global.Microsoft.OData.Edm.IEdmModel
                 Dim reader As Global.System.Xml.XmlReader = CreateXmlReader(Edmx)
                 Try
+<#+ if (UseCsdlReader()) { #>
+                    Return Global.Microsoft.OData.Edm.Csdl.CsdlReader.Parse(reader)
+<#+ } else { #>
                     Return Global.Microsoft.OData.Edm.Csdl.EdmxReader.Parse(reader)
+<#+ } #>
                 Finally
                     CType(reader,Global.System.IDisposable).Dispose
                 End Try
@@ -4892,7 +4952,7 @@ Namespace <#= fullNamespace #>
         }
 #>
         Public Function <#= actionName #>(<#= parameters #>) As <#= returnTypeName #>
-            Return New <#= returnTypeName #>(Me, Me.BaseUri.OriginalString.Trim("/"C) + "/<#= originalActionName #>"<#= string.IsNullOrEmpty(parameterValues) ? string.Empty : ", " + parameterValues #>)
+            Return New <#= returnTypeName #>(Me, Me.BaseUri.OriginalString.Trim('/') + "/<#= originalActionName #>"<#= string.IsNullOrEmpty(parameterValues) ? string.Empty : ", " + parameterValues #>)
         End Function
 <#+
     }

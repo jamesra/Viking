@@ -7,7 +7,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MorphologyMesh;
 using System.Collections.Immutable;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
+using FsCheck.Fluent;
 
 namespace MorphologyMeshTest
 {

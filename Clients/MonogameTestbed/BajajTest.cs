@@ -1000,7 +1000,7 @@ namespace MonogameTestbed
 
         public void Initialize(double tolerance = 2.0, int hops = 1)
         {
-            Morphology = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(SliceLocations.Select(id => id).ToList(), Endpoint, hops: hops);
+            Morphology = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(SliceLocations.Select(id => id).ToList(), true, Endpoint);
 
             //Find the linked locations and add those to the graph
             //////////////
@@ -1284,23 +1284,23 @@ namespace MonogameTestbed
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
 
 
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(GlialDebug1, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 180 }, false, DataSource.EndpointMap[ENDPOINT.RC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new long[] { 40429 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(GlialDebug1, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 180 }, true, DataSource.EndpointMap[ENDPOINT.RC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 40429 }, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //graph = graph.Subgraphs.Values.First();
 
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchInteriorHole, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicBranchTroubleIDS, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(BasicBranchInteriorHole, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(BasicBranchTroubleIDS, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
 
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(BasicInteriorHoleOverAdjacentExteriorRing, DataSource.EndpointMap[ENDPOINT.RPC1]);
-            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(HorseshoeInteriorHoleOverAdjacentExteriorRing, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(BasicInteriorHoleOverAdjacentExteriorRing, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(HorseshoeInteriorHoleOverAdjacentExteriorRing, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
 
             ///////////Old direct loading code///////////////////////////
             /*
             /////////////
             ///This is the major test of mesh generation that covers as many cases as I could think of
-            //this.Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(NightmareTroubleIDS, DataSource.EndpointMap[ENDPOINT.TEST]);
-            Graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataLocationIDs(DelaunayTest20, DataSource.EndpointMap[ENDPOINT.RPC1]);
+            //this.Graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(NightmareTroubleIDS, true, DataSource.EndpointMap[ENDPOINT.TEST]);
+            Graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(DelaunayTest20, true, DataSource.EndpointMap[ENDPOINT.RPC1]);
             //////////////
 
             //BajajMeshGenerator.ConvertToMeshGraph(graph);

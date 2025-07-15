@@ -1,88 +1,94 @@
 ﻿using AnnotationVizLib;
-using AnnotationVizLib.WCFClient;
-using System.Web.Mvc;
+using AnnotationVizLib.OData; // Use correct namespace
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http; 
+using Microsoft.AspNetCore.Hosting;
 using VikingWebAppSettings;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace DataExport.Controllers
 {
+    [ApiController]
+    [Route("[controller]/[action]")]
     public class MotifController : Controller
     {
-        public string DefaultOutputFile = "motifs";
-
-        private static long _next_id = 0;
-
-        public static long NextFilenameID => _next_id++;
-
-        public string GetOutputFilename(string ext)
+        private readonly IWebHostEnvironment _env;
+        public MotifController(IWebHostEnvironment env)
         {
-            return string.Format("{0}{1}{2}.{3}", DefaultOutputFile, NextFilenameID, OutputNameGenerator.GetFileFriendlyDateString(),  ext);
+            _env = env;
         }
 
-        //
-        // GET: /Motifs/ 
-        [ActionName("GetDot")]
-        public ActionResult GetDot()
+        public string DefaultOutputFile = "motifs";
+        private static long _next_id = 0;
+        public static long NextFilenameID => _next_id++;
+
+        private string GetOutputFilename(string ext)
         {
-            string EndpointURL = AppSettings.WebServiceURL; 
-            string userDotDirectory = Server.MapPath("~/Output/");
+            return $"{DefaultOutputFile}{NextFilenameID}{OutputNameGenerator.GetFileFriendlyDateString()}.{ext}";
+        }
 
-            if (!System.IO.Directory.Exists(userDotDirectory))
-                System.IO.Directory.CreateDirectory(userDotDirectory);
+        private string GetAndCreateOutputDirectory()
+        {
+            string outputDir = Path.Combine(_env.ContentRootPath, "Output");
+            if (!Directory.Exists(outputDir))
+                Directory.CreateDirectory(outputDir);
+            return outputDir;
+        }
 
+        [HttpGet]
+        public async Task<IActionResult> GetDot()
+        {
+            string userDotDirectory = GetAndCreateOutputDirectory();
             string outputFilename = GetOutputFilename("dot");
-            string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
+            string userDotFileFullPath = Path.Combine(userDotDirectory, outputFilename);
 
-            MotifGraph motifGraph = WCFMotifFactory.BuildGraph(EndpointURL, AppSettings.EndpointCredentials);
+            MotifGraph motifGraph = await GetMotifGraphAsync();
             motifGraph.AddEdgeStatistics();
             MotifDOTView DotGraph = MotifDOTView.ToDOT(motifGraph);
             DotGraph.SaveDOT(userDotFileFullPath);
 
-            return File(userDotFileFullPath, "text/plain", outputFilename);            
+            return PhysicalFile(userDotFileFullPath, "text/plain", outputFilename);
         }
 
-
-        [ActionName("GetTLP")]
-        public ActionResult GetTLP()
+        [HttpGet]
+        public async Task<IActionResult> GetTLP()
         {
-            string EndpointURL = AppSettings.WebServiceURL;
-            string VolumeURL = AppSettings.VolumeURL;
-            string userDotDirectory = Server.MapPath("~/Output/");
-
-            if (!System.IO.Directory.Exists(userDotDirectory))
-                System.IO.Directory.CreateDirectory(userDotDirectory);
-
+            string userDotDirectory = GetAndCreateOutputDirectory();
             string outputFilename = GetOutputFilename("tlp");
-            string userDotFileFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
-             
-            MotifGraph motifGraph = WCFMotifFactory.BuildGraph(EndpointURL, AppSettings.EndpointCredentials);
+            string userDotFileFullPath = Path.Combine(userDotDirectory, outputFilename);
+
+            MotifGraph motifGraph = await GetMotifGraphAsync();
             motifGraph.AddEdgeStatistics();
-            MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, VolumeURL);
+            MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, AppSettings.VolumeURL);
             TlpGraph.SaveTLP(userDotFileFullPath);
 
-
-            return File(userDotFileFullPath, "text/plain", outputFilename);
+            return PhysicalFile(userDotFileFullPath, "text/plain", outputFilename);
         }
 
-        [ActionName("GetJSON")]
-        public ActionResult GetJSON()
+        [HttpGet]
+        public async Task<IActionResult> GetJSON()
         {
-            string EndpointURL = AppSettings.WebServiceURL;
-            string VolumeURL = AppSettings.VolumeURL;
-            string userDotDirectory = Server.MapPath("~/Output/");
-
-            if (!System.IO.Directory.Exists(userDotDirectory))
-                System.IO.Directory.CreateDirectory(userDotDirectory);
-
+            string userDotDirectory = GetAndCreateOutputDirectory();
             string outputFilename = GetOutputFilename("json");
-            string userJSONFullPath = System.IO.Path.Combine(userDotDirectory, outputFilename);
+            string userJSONFullPath = Path.Combine(userDotDirectory, outputFilename);
 
-            MotifGraph motifGraph = WCFMotifFactory.BuildGraph(EndpointURL, AppSettings.EndpointCredentials);
+            MotifGraph motifGraph = await GetMotifGraphAsync();
             motifGraph.AddEdgeStatistics();
             MotifJSONView JsonGraph = MotifJSONView.ToJSON(motifGraph);
             JsonGraph.SaveJSON(userJSONFullPath);
 
+            return PhysicalFile(userJSONFullPath, "text/plain", outputFilename);
+        }
 
-            return File(userJSONFullPath, "text/plain", outputFilename);
+        private async Task<MotifGraph> GetMotifGraphAsync()
+        {
+            // TODO: Replace with ODataClient logic
+            // Example: await ODataClient.GetMotifGraphAsync(...)
+            // For now, return a stub or throw NotImplementedException
+            throw new NotImplementedException("ODataClient motif graph retrieval not yet implemented.");
         }
     }
 }
