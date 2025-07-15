@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);NU1603;NU1605</NoWarn>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <NoWarn>$(NoWarn);NU1603;NU1605</NoWarn>
+  </PropertyGroup>
+</Project> 

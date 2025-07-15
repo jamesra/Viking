@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Input;
 using Geometry.Meshing;
 using MathNet.Numerics.LinearAlgebra;
 using AnnotationVizLib.OData;
+using VikingXNAGraphics;
 
 
 namespace MonogameTestbed
@@ -124,5 +125,12 @@ namespace MonogameTestbed
             CircleView.Draw(window.GraphicsDevice, this.scene, window.basicEffect, window.overlayEffect, Views_A);
             CircleView.Draw(window.GraphicsDevice, this.scene, window.basicEffect, window.overlayEffect, Views_B);
         }
+
+        void IGraphicsTest.UnloadContent(MonoTestbed window)
+        {
+            return;
+        }
+
+        string IGraphicsTest.Title => "Point Placement Test";
     }
 }

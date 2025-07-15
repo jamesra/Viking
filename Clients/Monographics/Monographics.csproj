@@ -38,6 +38,7 @@
 		<Content Include="MonogameContent\LineCurvePixelShaderShared.fx" />
 	</ItemGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
 		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
 		<ProjectReference Include="..\..\Triangle.NET\Triangle\Triangle.csproj" />
 		<ProjectReference Include="..\..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj" />

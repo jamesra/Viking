@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using VikingXNA;
+using VikingXNAGraphics;
 
 
 namespace MonogameTestbed

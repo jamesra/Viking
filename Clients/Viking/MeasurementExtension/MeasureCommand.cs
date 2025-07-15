@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Windows.Forms;
 using VikingXNA;
 using VikingXNAGraphics;
-using HorizontalAlignment = VikingXNAGraphics.HorizontalAlignment; 
 
 namespace MeasurementExtension
 {
@@ -165,8 +164,8 @@ namespace MeasurementExtension
             var label_size = VikingXNAGraphics.Global.DefaultFont.MeasureString(distanceLabelString) * fontScaleForVolume;
             var half_label_size = label_size / 2;
             GridVector2 offset = new GridVector2(
-                anchor.Horizontal == HorizontalAlignment.LEFT ? 0 : anchor.Horizontal == HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
-                anchor.Vertical == VerticalAlignment.BOTTOM ? -label_size.Y : anchor.Vertical == VerticalAlignment.TOP ? 0 : -half_label_size.Y
+                anchor.Horizontal == VikingXNAGraphics.HorizontalAlignment.LEFT ? 0 : anchor.Horizontal == VikingXNAGraphics.HorizontalAlignment.RIGHT ? -label_size.X : -half_label_size.X,
+                anchor.Vertical == VikingXNAGraphics.VerticalAlignment.BOTTOM ? -label_size.Y : anchor.Vertical == VikingXNAGraphics.VerticalAlignment.TOP ? 0 : -half_label_size.Y
             );
 
             DrawPosition += offset;
@@ -198,8 +197,8 @@ namespace MeasurementExtension
         private Alignment FindTextAlignment(GridVector2 origin, GridVector2 target)
         {
             return Alignment.TopLeft;
-            HorizontalAlignment hAlign = origin.X < target.X ? HorizontalAlignment.RIGHT : HorizontalAlignment.LEFT;
-            VerticalAlignment vAlign = origin.Y < target.Y ? VerticalAlignment.BOTTOM : VerticalAlignment.TOP;
+            VikingXNAGraphics.HorizontalAlignment hAlign = origin.X < target.X ? VikingXNAGraphics.HorizontalAlignment.RIGHT : VikingXNAGraphics.HorizontalAlignment.LEFT;
+            VikingXNAGraphics.VerticalAlignment vAlign = origin.Y < target.Y ? VikingXNAGraphics.VerticalAlignment.BOTTOM : VikingXNAGraphics.VerticalAlignment.TOP;
             return new Alignment { Horizontal = hAlign, Vertical = vAlign };
                 
         }
@@ -212,8 +211,8 @@ namespace MeasurementExtension
         /// <returns></returns>
         private Anchor FindTextAnchor(GridVector2 origin, GridVector2 target)
         { 
-            HorizontalAlignment hAlign = origin.X <= target.X ? HorizontalAlignment.RIGHT : HorizontalAlignment.LEFT;
-            VerticalAlignment vAlign = origin.Y < target.Y ? VerticalAlignment.BOTTOM : VerticalAlignment.TOP;
+            VikingXNAGraphics.HorizontalAlignment hAlign = origin.X <= target.X ? VikingXNAGraphics.HorizontalAlignment.RIGHT : VikingXNAGraphics.HorizontalAlignment.LEFT;
+            VikingXNAGraphics.VerticalAlignment vAlign = origin.Y < target.Y ? VikingXNAGraphics.VerticalAlignment.BOTTOM : VikingXNAGraphics.VerticalAlignment.TOP;
             return new Anchor { Horizontal = hAlign, Vertical = vAlign };
                 
         }

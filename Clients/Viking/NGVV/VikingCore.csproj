@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFrameworks>net48;net9.0-windows</TargetFrameworks>
     <RootNamespace>Viking</RootNamespace>
     <AssemblyName>VikingCore</AssemblyName>
     <UseWPF>true</UseWPF>

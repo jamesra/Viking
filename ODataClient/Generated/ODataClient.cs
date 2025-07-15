@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.OData.Client;
 
-namespace ODataClient
+namespace ODataClient.ConnectomeDataModel
 {
     // Fallback OData client structure for when metadata is not accessible
     // This provides a basic structure that can be extended when the service is available
@@ -52,6 +52,12 @@ namespace ODataClient
         public string Label { get; set; }
         public string Username { get; set; }
         public DateTimeOffset LastModified { get; set; }
+        
+        // Navigation properties
+        public ICollection<Location> Locations { get; set; } = new List<Location>();
+        public ICollection<Structure> Children { get; set; } = new List<Structure>();
+        public StructureType Type { get; set; }
+        public DataServiceCollection<LocationLink> LocationLinks { get; set; } = new DataServiceCollection<LocationLink>();
     }
 
     public partial class Location
@@ -70,6 +76,15 @@ namespace ODataClient
         public short TypeCode { get; set; }
         public DateTimeOffset LastModified { get; set; }
         public DateTimeOffset Created { get; set; }
+        public string Tags { get; set; }
+        
+        // Navigation properties
+        public VolumeShape VolumeShape { get; set; }
+        public MosaicShape MosaicShape { get; set; }
+        
+        // Extension methods
+        public bool IsUntraceable() => false;
+        public bool IsVericosityCap() => false;
     }
 
     public partial class StructureType
@@ -125,5 +140,87 @@ namespace ODataClient
     public static class ExtensionMethods
     {
         // Placeholder extension methods - these would be generated from actual metadata
+    }
+    
+    public partial class VolumeShape
+    {
+        public Geometry Geometry { get; set; }
+    }
+    
+    public partial class MosaicShape
+    {
+        public Geometry Geometry { get; set; }
+    }
+    
+    public partial class Geometry
+    {
+        public byte[] WellKnownBinary { get; set; }
+        public string WellKnownText { get; set; }
+        public int? CoordinateSystemId { get; set; }
+    }
+    
+    public partial class Scale
+    {
+        public AxisUnits X { get; set; }
+        public AxisUnits Y { get; set; }
+        public AxisUnits Z { get; set; }
+    }
+    
+    public partial class AxisUnits
+    {
+        public double Value { get; set; }
+        public string Units { get; set; }
+    }
+}
+
+namespace ODataClient.ConnectomeODataV4
+{
+    // Container class for ConnectomeODataV4 namespace
+    public partial class Container : DataServiceContext
+    {
+        public Container(Uri serviceRoot) : base(serviceRoot, ODataProtocolVersion.V4)
+        {
+            this.ResolveName = new Func<Type, string>(this.ResolveNameFromType);
+            this.ResolveType = new Func<string, Type>(this.ResolveTypeFromName);
+            this.OnContextCreated();
+        }
+
+        partial void OnContextCreated();
+
+        protected Type ResolveTypeFromName(string typeName)
+        {
+            // Placeholder for type resolution
+            return null;
+        }
+
+        protected string ResolveNameFromType(Type clientType)
+        {
+            // Placeholder for name resolution
+            return clientType.Name;
+        }
+
+        // Placeholder for Scale method
+        public IQueryable<ODataClient.ConnectomeDataModel.Scale> Scale()
+        {
+            // This would be implemented based on actual metadata
+            return new List<ODataClient.ConnectomeDataModel.Scale>().AsQueryable();
+        }
+
+        // Placeholder for Structures property
+        public IQueryable<ODataClient.ConnectomeDataModel.Structure> Structures
+        {
+            get
+            {
+                // This would be implemented based on actual metadata
+                return new List<ODataClient.ConnectomeDataModel.Structure>().AsQueryable();
+            }
+        }
+
+        // Placeholder for StructureLocationLinks method
+        public IQueryable<ODataClient.ConnectomeDataModel.LocationLink> StructureLocationLinks(long structureId)
+        {
+            // This would be implemented based on actual metadata
+            return new List<ODataClient.ConnectomeDataModel.LocationLink>().AsQueryable();
+        }
     }
 } 

@@ -17,7 +17,7 @@
     <PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
   </ItemGroup>
 
-  <!-- Generate OData Client during build -->
+  <!-- Generate OData Client during build using modern Microsoft.OData.CLI -->
   <Target Name="GenerateODataClient" BeforeTargets="Build" Condition="'$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
       <ODataMetadataUri>http://websvc1.connectomes.utah.edu/RC1/OData/$metadata</ODataMetadataUri>
@@ -27,8 +27,8 @@
     <!-- Create output directory -->
     <MakeDir Directories="$(MSBuildProjectDirectory)\Generated" />
     
-    <!-- Generate OData client using Microsoft.OData.CLI -->
-    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient.cs&quot;" 
+    <!-- Generate OData client using modern Microsoft.OData.CLI -->
+    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient.ConnectomeDataModel&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient.cs&quot;" 
           ContinueOnError="true" 
           IgnoreExitCode="true" />
     
@@ -44,7 +44,7 @@
     
     <MakeDir Directories="$(MSBuildProjectDirectory)\Generated" />
     
-    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient.cs&quot;" />
+    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient.ConnectomeDataModel&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient.cs&quot;" />
     
     <Message Text="OData client manually generated: $(GeneratedODataFile)" Importance="high" />
   </Target>

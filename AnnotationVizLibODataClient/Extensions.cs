@@ -1,9 +1,11 @@
-﻿namespace AnnotationVizLib.OData
+﻿using ODataClient.ConnectomeDataModel;
+
+namespace AnnotationVizLib.OData
 {
 
     public static class ODataExtensions
     {
-        public static UnitsAndScale.Scale ToGeometryScale(this ODataClient.Geometry.Scale scale)
+        public static UnitsAndScale.Scale ToGeometryScale(this ODataClient.ConnectomeDataModel.Scale scale)
         {
             return new UnitsAndScale.Scale(new UnitsAndScale.AxisUnits(scale.X.Value, scale.X.Units),
                                       new UnitsAndScale.AxisUnits(scale.Y.Value, scale.Y.Units),

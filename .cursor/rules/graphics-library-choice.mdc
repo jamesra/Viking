@@ -1,0 +1,5 @@
+---
+description: Projects using the Microsoft.XNA namespace.  Projects that use XNA or Monogame.
+alwaysApply: false
+---
+Projects in this solution use VikingXNAGraphics for net48 and Monographics for net9.0 projects.  net48 projects use Monogame 3.7.x and net9.0 projects use the latest version of Monogame. 

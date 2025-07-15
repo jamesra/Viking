@@ -20,7 +20,7 @@ namespace AnnotationVizLib.OData
 
         public static NeuronGraph FromOData(ICollection<long> StructureIDs, uint numHops, Uri Endpoint)
         {
-            ODataClient.ConnectomeODataV4.Container container = new ODataClient.ConnectomeODataV4.Container(Endpoint);
+            Container container = new Container(Endpoint);
 
             var scale_retval = container.Scale();
             var scale = scale_retval.GetValue().ToGeometryScale();

@@ -33,7 +33,7 @@ param(
     [string]$OutputDirectory = "Generated",
     
     [Parameter(Mandatory=$false)]
-    [string]$Namespace = "ODataClient"
+    [string]$Namespace = "ODataClient.ConnectomeDataModel"
 )
 
 $ErrorActionPreference = "Stop"

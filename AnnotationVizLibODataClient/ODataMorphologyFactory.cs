@@ -1,5 +1,4 @@
 ﻿using ODataClient.ConnectomeDataModel;
-using ODataClient.ConnectomeODataV4;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +9,7 @@ namespace AnnotationVizLib.OData
     {
         public static MorphologyGraph FromOData(ICollection<long> StructureIDs, bool include_children, Uri Endpoint)
         {
-            ODataClient.ConnectomeODataV4.Container container = new ODataClient.ConnectomeODataV4.Container(Endpoint)
+            Container container = new Container(Endpoint)
             {
                 MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
             };

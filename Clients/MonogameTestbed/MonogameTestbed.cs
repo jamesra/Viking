@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using VikingXNA;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {

@@ -8,8 +8,8 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-// Generation date: 7/15/2025 2:21:54 PM
-namespace ODataClient
+// Generation date: 7/15/2025 3:21:38 PM
+namespace ODataClient.ConnectomeDataModel
 {
     /// <summary>
     /// There are no comments for Container in the schema.
@@ -47,7 +47,7 @@ namespace ODataClient
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
         protected global::System.Type ResolveTypeFromName(string typeName)
         {
-            global::System.Type resolvedType = this.DefaultResolveType(typeName, "ConnectomeODataV4", "ODataClient");
+            global::System.Type resolvedType = this.DefaultResolveType(typeName, "ConnectomeODataV4", "ODataClient.ConnectomeDataModel");
             if ((resolvedType != null))
             {
                 return resolvedType;
@@ -62,7 +62,7 @@ namespace ODataClient
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
         protected string ResolveNameFromType(global::System.Type clientType)
         {
-            if (clientType.Namespace.Equals("ODataClient", global::System.StringComparison.Ordinal))
+            if (clientType.Namespace.Equals("ODataClient.ConnectomeDataModel", global::System.StringComparison.Ordinal))
             {
                 return string.Concat("ConnectomeODataV4.", clientType.Name);
             }
@@ -309,55 +309,55 @@ namespace ODataClient
         /// <summary>
         /// There are no comments for Scale in the schema.
         /// </summary>
-        public virtual global::Microsoft.OData.Client.DataServiceQuerySingle<global::ODataClient.Scale> Scale()
+        public virtual global::Microsoft.OData.Client.DataServiceQuerySingle<global::ODataClient.ConnectomeDataModel.Scale> Scale()
         {
-            return this.CreateFunctionQuerySingle<global::ODataClient.Scale>("", "Scale", false);
+            return this.CreateFunctionQuerySingle<global::ODataClient.ConnectomeDataModel.Scale>("", "Scale", false);
         }
         /// <summary>
         /// There are no comments for Network in the schema.
         /// </summary>
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Structure> Network(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> Network(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
         {
-            return this.CreateFunctionQuery<global::ODataClient.Structure>("", "Network", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
+            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.Structure>("", "Network", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
                     new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
         }
         /// <summary>
         /// There are no comments for NetworkChildStructures in the schema.
         /// </summary>
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Structure> NetworkChildStructures(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> NetworkChildStructures(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
         {
-            return this.CreateFunctionQuery<global::ODataClient.Structure>("", "NetworkChildStructures", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
+            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.Structure>("", "NetworkChildStructures", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
                     new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
         }
         /// <summary>
         /// There are no comments for NetworkLinks in the schema.
         /// </summary>
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureLink> NetworkLinks(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> NetworkLinks(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
         {
-            return this.CreateFunctionQuery<global::ODataClient.StructureLink>("", "NetworkLinks", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
+            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.StructureLink>("", "NetworkLinks", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
                     new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
         }
         /// <summary>
         /// There are no comments for StructureLocationLinks in the schema.
         /// </summary>
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> StructureLocationLinks(long StructureID)
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> StructureLocationLinks(long StructureID)
         {
-            return this.CreateFunctionQuery<global::ODataClient.LocationLink>("", "StructureLocationLinks", false, new global::Microsoft.OData.Client.UriOperationParameter("StructureID", StructureID));
+            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.LocationLink>("", "StructureLocationLinks", false, new global::Microsoft.OData.Client.UriOperationParameter("StructureID", StructureID));
         }
         /// <summary>
         /// There are no comments for NetworkEdgeSpatialData in the schema.
         /// </summary>
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureSpatialCache> NetworkEdgeSpatialData(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureSpatialCache> NetworkEdgeSpatialData(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
         {
-            return this.CreateFunctionQuery<global::ODataClient.StructureSpatialCache>("", "NetworkEdgeSpatialData", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
+            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.StructureSpatialCache>("", "NetworkEdgeSpatialData", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
                     new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
         }
         /// <summary>
         /// There are no comments for NetworkSpatialData in the schema.
         /// </summary>
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureSpatialCache> NetworkSpatialData(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureSpatialCache> NetworkSpatialData(global::System.Collections.Generic.ICollection<long> IDs, int Hops)
         {
-            return this.CreateFunctionQuery<global::ODataClient.StructureSpatialCache>("", "NetworkSpatialData", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
+            return this.CreateFunctionQuery<global::ODataClient.ConnectomeDataModel.StructureSpatialCache>("", "NetworkSpatialData", false, new global::Microsoft.OData.Client.UriOperationParameter("IDs", IDs),
                     new global::Microsoft.OData.Client.UriOperationParameter("Hops", Hops));
         }
     }
@@ -388,7 +388,7 @@ namespace ODataClient
         /// There are no comments for Structures in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Structure> Structures
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> Structures
         {
             get
             {
@@ -398,18 +398,18 @@ namespace ODataClient
                 }
                 if ((this._Structures == null))
                 {
-                    this._Structures = Context.CreateQuery<global::ODataClient.Structure>(GetPath("Structures"));
+                    this._Structures = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.Structure>(GetPath("Structures"));
                 }
                 return this._Structures;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Structure> _Structures;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> _Structures;
         /// <summary>
         /// There are no comments for Children in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureType> Children
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureType> Children
         {
             get
             {
@@ -419,18 +419,18 @@ namespace ODataClient
                 }
                 if ((this._Children == null))
                 {
-                    this._Children = Context.CreateQuery<global::ODataClient.StructureType>(GetPath("Children"));
+                    this._Children = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.StructureType>(GetPath("Children"));
                 }
                 return this._Children;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureType> _Children;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureType> _Children;
         /// <summary>
         /// There are no comments for Parent in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureTypeSingle Parent
+        public virtual global::ODataClient.ConnectomeDataModel.StructureTypeSingle Parent
         {
             get
             {
@@ -440,18 +440,18 @@ namespace ODataClient
                 }
                 if ((this._Parent == null))
                 {
-                    this._Parent = new global::ODataClient.StructureTypeSingle(this.Context, GetPath("Parent"));
+                    this._Parent = new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(this.Context, GetPath("Parent"));
                 }
                 return this._Parent;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureTypeSingle _Parent;
+        private global::ODataClient.ConnectomeDataModel.StructureTypeSingle _Parent;
         /// <summary>
         /// There are no comments for SourceOfLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.PermittedStructureLink> SourceOfLinks
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> SourceOfLinks
         {
             get
             {
@@ -461,18 +461,18 @@ namespace ODataClient
                 }
                 if ((this._SourceOfLinks == null))
                 {
-                    this._SourceOfLinks = Context.CreateQuery<global::ODataClient.PermittedStructureLink>(GetPath("SourceOfLinks"));
+                    this._SourceOfLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink>(GetPath("SourceOfLinks"));
                 }
                 return this._SourceOfLinks;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.PermittedStructureLink> _SourceOfLinks;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> _SourceOfLinks;
         /// <summary>
         /// There are no comments for TargetOfLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.PermittedStructureLink> TargetOfLinks
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> TargetOfLinks
         {
             get
             {
@@ -482,13 +482,13 @@ namespace ODataClient
                 }
                 if ((this._TargetOfLinks == null))
                 {
-                    this._TargetOfLinks = Context.CreateQuery<global::ODataClient.PermittedStructureLink>(GetPath("TargetOfLinks"));
+                    this._TargetOfLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink>(GetPath("TargetOfLinks"));
                 }
                 return this._TargetOfLinks;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.PermittedStructureLink> _TargetOfLinks;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> _TargetOfLinks;
     }
     /// <summary>
     /// There are no comments for StructureType in the schema.
@@ -858,7 +858,7 @@ namespace ODataClient
         /// There are no comments for Property Structures in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Structure> Structures
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Structure> Structures
         {
             get
             {
@@ -873,14 +873,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Structure> _Structures = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Structure>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnStructuresChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Structure> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Structure> _Structures = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Structure>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnStructuresChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Structure> value);
         partial void OnStructuresChanged();
         /// <summary>
         /// There are no comments for Property Children in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureType> Children
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureType> Children
         {
             get
             {
@@ -895,14 +895,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureType> _Children = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureType>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnChildrenChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureType> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureType> _Children = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureType>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnChildrenChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureType> value);
         partial void OnChildrenChanged();
         /// <summary>
         /// There are no comments for Property Parent in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureType Parent
+        public virtual global::ODataClient.ConnectomeDataModel.StructureType Parent
         {
             get
             {
@@ -917,14 +917,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureType _Parent;
-        partial void OnParentChanging(global::ODataClient.StructureType value);
+        private global::ODataClient.ConnectomeDataModel.StructureType _Parent;
+        partial void OnParentChanging(global::ODataClient.ConnectomeDataModel.StructureType value);
         partial void OnParentChanged();
         /// <summary>
         /// There are no comments for Property SourceOfLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.PermittedStructureLink> SourceOfLinks
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> SourceOfLinks
         {
             get
             {
@@ -939,14 +939,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.PermittedStructureLink> _SourceOfLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.PermittedStructureLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnSourceOfLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.PermittedStructureLink> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> _SourceOfLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.PermittedStructureLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnSourceOfLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> value);
         partial void OnSourceOfLinksChanged();
         /// <summary>
         /// There are no comments for Property TargetOfLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.PermittedStructureLink> TargetOfLinks
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> TargetOfLinks
         {
             get
             {
@@ -961,8 +961,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.PermittedStructureLink> _TargetOfLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.PermittedStructureLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnTargetOfLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.PermittedStructureLink> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> _TargetOfLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.PermittedStructureLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnTargetOfLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> value);
         partial void OnTargetOfLinksChanged();
         /// <summary>
         /// This event is raised when the value of the property is changed
@@ -1009,7 +1009,7 @@ namespace ODataClient
         /// There are no comments for Locations in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Location> Locations
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Location> Locations
         {
             get
             {
@@ -1019,18 +1019,18 @@ namespace ODataClient
                 }
                 if ((this._Locations == null))
                 {
-                    this._Locations = Context.CreateQuery<global::ODataClient.Location>(GetPath("Locations"));
+                    this._Locations = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.Location>(GetPath("Locations"));
                 }
                 return this._Locations;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Location> _Locations;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Location> _Locations;
         /// <summary>
         /// There are no comments for Children in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Structure> Children
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> Children
         {
             get
             {
@@ -1040,18 +1040,18 @@ namespace ODataClient
                 }
                 if ((this._Children == null))
                 {
-                    this._Children = Context.CreateQuery<global::ODataClient.Structure>(GetPath("Children"));
+                    this._Children = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.Structure>(GetPath("Children"));
                 }
                 return this._Children;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Structure> _Children;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> _Children;
         /// <summary>
         /// There are no comments for Parent in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureSingle Parent
+        public virtual global::ODataClient.ConnectomeDataModel.StructureSingle Parent
         {
             get
             {
@@ -1061,18 +1061,18 @@ namespace ODataClient
                 }
                 if ((this._Parent == null))
                 {
-                    this._Parent = new global::ODataClient.StructureSingle(this.Context, GetPath("Parent"));
+                    this._Parent = new global::ODataClient.ConnectomeDataModel.StructureSingle(this.Context, GetPath("Parent"));
                 }
                 return this._Parent;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureSingle _Parent;
+        private global::ODataClient.ConnectomeDataModel.StructureSingle _Parent;
         /// <summary>
         /// There are no comments for Type in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureTypeSingle Type
+        public virtual global::ODataClient.ConnectomeDataModel.StructureTypeSingle Type
         {
             get
             {
@@ -1082,18 +1082,18 @@ namespace ODataClient
                 }
                 if ((this._Type == null))
                 {
-                    this._Type = new global::ODataClient.StructureTypeSingle(this.Context, GetPath("Type"));
+                    this._Type = new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(this.Context, GetPath("Type"));
                 }
                 return this._Type;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureTypeSingle _Type;
+        private global::ODataClient.ConnectomeDataModel.StructureTypeSingle _Type;
         /// <summary>
         /// There are no comments for SourceOfLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureLink> SourceOfLinks
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> SourceOfLinks
         {
             get
             {
@@ -1103,18 +1103,18 @@ namespace ODataClient
                 }
                 if ((this._SourceOfLinks == null))
                 {
-                    this._SourceOfLinks = Context.CreateQuery<global::ODataClient.StructureLink>(GetPath("SourceOfLinks"));
+                    this._SourceOfLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.StructureLink>(GetPath("SourceOfLinks"));
                 }
                 return this._SourceOfLinks;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureLink> _SourceOfLinks;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> _SourceOfLinks;
         /// <summary>
         /// There are no comments for TargetOfLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureLink> TargetOfLinks
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> TargetOfLinks
         {
             get
             {
@@ -1124,18 +1124,18 @@ namespace ODataClient
                 }
                 if ((this._TargetOfLinks == null))
                 {
-                    this._TargetOfLinks = Context.CreateQuery<global::ODataClient.StructureLink>(GetPath("TargetOfLinks"));
+                    this._TargetOfLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.StructureLink>(GetPath("TargetOfLinks"));
                 }
                 return this._TargetOfLinks;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureLink> _TargetOfLinks;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> _TargetOfLinks;
         /// <summary>
         /// There are no comments for StructureSpatialCache in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureSpatialCacheSingle StructureSpatialCache
+        public virtual global::ODataClient.ConnectomeDataModel.StructureSpatialCacheSingle StructureSpatialCache
         {
             get
             {
@@ -1145,18 +1145,18 @@ namespace ODataClient
                 }
                 if ((this._StructureSpatialCache == null))
                 {
-                    this._StructureSpatialCache = new global::ODataClient.StructureSpatialCacheSingle(this.Context, GetPath("StructureSpatialCache"));
+                    this._StructureSpatialCache = new global::ODataClient.ConnectomeDataModel.StructureSpatialCacheSingle(this.Context, GetPath("StructureSpatialCache"));
                 }
                 return this._StructureSpatialCache;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureSpatialCacheSingle _StructureSpatialCache;
+        private global::ODataClient.ConnectomeDataModel.StructureSpatialCacheSingle _StructureSpatialCache;
         /// <summary>
         /// There are no comments for LocationLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> LocationLinks
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> LocationLinks
         {
             get
             {
@@ -1166,13 +1166,13 @@ namespace ODataClient
                 }
                 if ((this._LocationLinks == null))
                 {
-                    this._LocationLinks = Context.CreateQuery<global::ODataClient.LocationLink>(GetPath("LocationLinks"));
+                    this._LocationLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.LocationLink>(GetPath("LocationLinks"));
                 }
                 return this._LocationLinks;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> _LocationLinks;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> _LocationLinks;
     }
     /// <summary>
     /// There are no comments for Structure in the schema.
@@ -1484,7 +1484,7 @@ namespace ODataClient
         /// There are no comments for Property Locations in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Location> Locations
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Location> Locations
         {
             get
             {
@@ -1499,14 +1499,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Location> _Locations = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Location>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnLocationsChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Location> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Location> _Locations = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Location>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnLocationsChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Location> value);
         partial void OnLocationsChanged();
         /// <summary>
         /// There are no comments for Property Children in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Structure> Children
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Structure> Children
         {
             get
             {
@@ -1521,14 +1521,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Structure> _Children = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Structure>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnChildrenChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.Structure> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Structure> _Children = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Structure>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnChildrenChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.Structure> value);
         partial void OnChildrenChanged();
         /// <summary>
         /// There are no comments for Property Parent in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.Structure Parent
+        public virtual global::ODataClient.ConnectomeDataModel.Structure Parent
         {
             get
             {
@@ -1543,14 +1543,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.Structure _Parent;
-        partial void OnParentChanging(global::ODataClient.Structure value);
+        private global::ODataClient.ConnectomeDataModel.Structure _Parent;
+        partial void OnParentChanging(global::ODataClient.ConnectomeDataModel.Structure value);
         partial void OnParentChanged();
         /// <summary>
         /// There are no comments for Property Type in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureType Type
+        public virtual global::ODataClient.ConnectomeDataModel.StructureType Type
         {
             get
             {
@@ -1565,14 +1565,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureType _Type;
-        partial void OnTypeChanging(global::ODataClient.StructureType value);
+        private global::ODataClient.ConnectomeDataModel.StructureType _Type;
+        partial void OnTypeChanging(global::ODataClient.ConnectomeDataModel.StructureType value);
         partial void OnTypeChanged();
         /// <summary>
         /// There are no comments for Property SourceOfLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureLink> SourceOfLinks
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureLink> SourceOfLinks
         {
             get
             {
@@ -1587,14 +1587,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureLink> _SourceOfLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnSourceOfLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureLink> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureLink> _SourceOfLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnSourceOfLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureLink> value);
         partial void OnSourceOfLinksChanged();
         /// <summary>
         /// There are no comments for Property TargetOfLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureLink> TargetOfLinks
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureLink> TargetOfLinks
         {
             get
             {
@@ -1609,14 +1609,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureLink> _TargetOfLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnTargetOfLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.StructureLink> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureLink> _TargetOfLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnTargetOfLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.StructureLink> value);
         partial void OnTargetOfLinksChanged();
         /// <summary>
         /// There are no comments for Property StructureSpatialCache in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureSpatialCache StructureSpatialCache
+        public virtual global::ODataClient.ConnectomeDataModel.StructureSpatialCache StructureSpatialCache
         {
             get
             {
@@ -1631,14 +1631,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureSpatialCache _StructureSpatialCache;
-        partial void OnStructureSpatialCacheChanging(global::ODataClient.StructureSpatialCache value);
+        private global::ODataClient.ConnectomeDataModel.StructureSpatialCache _StructureSpatialCache;
+        partial void OnStructureSpatialCacheChanging(global::ODataClient.ConnectomeDataModel.StructureSpatialCache value);
         partial void OnStructureSpatialCacheChanged();
         /// <summary>
         /// There are no comments for Property LocationLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> LocationLinks
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> LocationLinks
         {
             get
             {
@@ -1653,8 +1653,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> _LocationLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnLocationLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> _LocationLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnLocationLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> value);
         partial void OnLocationLinksChanged();
         /// <summary>
         /// This event is raised when the value of the property is changed
@@ -1701,7 +1701,7 @@ namespace ODataClient
         /// There are no comments for Parent in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureSingle Parent
+        public virtual global::ODataClient.ConnectomeDataModel.StructureSingle Parent
         {
             get
             {
@@ -1711,18 +1711,18 @@ namespace ODataClient
                 }
                 if ((this._Parent == null))
                 {
-                    this._Parent = new global::ODataClient.StructureSingle(this.Context, GetPath("Parent"));
+                    this._Parent = new global::ODataClient.ConnectomeDataModel.StructureSingle(this.Context, GetPath("Parent"));
                 }
                 return this._Parent;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureSingle _Parent;
+        private global::ODataClient.ConnectomeDataModel.StructureSingle _Parent;
         /// <summary>
         /// There are no comments for LocationLinksA in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> LocationLinksA
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> LocationLinksA
         {
             get
             {
@@ -1732,18 +1732,18 @@ namespace ODataClient
                 }
                 if ((this._LocationLinksA == null))
                 {
-                    this._LocationLinksA = Context.CreateQuery<global::ODataClient.LocationLink>(GetPath("LocationLinksA"));
+                    this._LocationLinksA = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.LocationLink>(GetPath("LocationLinksA"));
                 }
                 return this._LocationLinksA;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> _LocationLinksA;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> _LocationLinksA;
         /// <summary>
         /// There are no comments for LocationLinksB in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> LocationLinksB
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> LocationLinksB
         {
             get
             {
@@ -1753,18 +1753,18 @@ namespace ODataClient
                 }
                 if ((this._LocationLinksB == null))
                 {
-                    this._LocationLinksB = Context.CreateQuery<global::ODataClient.LocationLink>(GetPath("LocationLinksB"));
+                    this._LocationLinksB = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.LocationLink>(GetPath("LocationLinksB"));
                 }
                 return this._LocationLinksB;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> _LocationLinksB;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> _LocationLinksB;
         /// <summary>
         /// There are no comments for LocationLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> LocationLinks
+        public virtual global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> LocationLinks
         {
             get
             {
@@ -1774,13 +1774,13 @@ namespace ODataClient
                 }
                 if ((this._LocationLinks == null))
                 {
-                    this._LocationLinks = Context.CreateQuery<global::ODataClient.LocationLink>(GetPath("LocationLinks"));
+                    this._LocationLinks = Context.CreateQuery<global::ODataClient.ConnectomeDataModel.LocationLink>(GetPath("LocationLinks"));
                 }
                 return this._LocationLinks;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> _LocationLinks;
+        private global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> _LocationLinks;
     }
     /// <summary>
     /// There are no comments for Location in the schema.
@@ -2256,7 +2256,7 @@ namespace ODataClient
         /// There are no comments for Property MosaicShape in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.DbGeometry MosaicShape
+        public virtual global::ODataClient.ConnectomeDataModel.DbGeometry MosaicShape
         {
             get
             {
@@ -2271,14 +2271,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.DbGeometry _MosaicShape;
-        partial void OnMosaicShapeChanging(global::ODataClient.DbGeometry value);
+        private global::ODataClient.ConnectomeDataModel.DbGeometry _MosaicShape;
+        partial void OnMosaicShapeChanging(global::ODataClient.ConnectomeDataModel.DbGeometry value);
         partial void OnMosaicShapeChanged();
         /// <summary>
         /// There are no comments for Property VolumeShape in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.DbGeometry VolumeShape
+        public virtual global::ODataClient.ConnectomeDataModel.DbGeometry VolumeShape
         {
             get
             {
@@ -2293,8 +2293,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.DbGeometry _VolumeShape;
-        partial void OnVolumeShapeChanging(global::ODataClient.DbGeometry value);
+        private global::ODataClient.ConnectomeDataModel.DbGeometry _VolumeShape;
+        partial void OnVolumeShapeChanging(global::ODataClient.ConnectomeDataModel.DbGeometry value);
         partial void OnVolumeShapeChanged();
         /// <summary>
         /// There are no comments for Property Width in the schema.
@@ -2322,7 +2322,7 @@ namespace ODataClient
         /// There are no comments for Property Parent in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.Structure Parent
+        public virtual global::ODataClient.ConnectomeDataModel.Structure Parent
         {
             get
             {
@@ -2337,14 +2337,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.Structure _Parent;
-        partial void OnParentChanging(global::ODataClient.Structure value);
+        private global::ODataClient.ConnectomeDataModel.Structure _Parent;
+        partial void OnParentChanging(global::ODataClient.ConnectomeDataModel.Structure value);
         partial void OnParentChanged();
         /// <summary>
         /// There are no comments for Property LocationLinksA in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> LocationLinksA
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> LocationLinksA
         {
             get
             {
@@ -2359,14 +2359,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> _LocationLinksA = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnLocationLinksAChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> _LocationLinksA = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnLocationLinksAChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> value);
         partial void OnLocationLinksAChanged();
         /// <summary>
         /// There are no comments for Property LocationLinksB in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> LocationLinksB
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> LocationLinksB
         {
             get
             {
@@ -2381,14 +2381,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> _LocationLinksB = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnLocationLinksBChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> _LocationLinksB = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnLocationLinksBChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> value);
         partial void OnLocationLinksBChanged();
         /// <summary>
         /// There are no comments for Property LocationLinks in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> LocationLinks
+        public virtual global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> LocationLinks
         {
             get
             {
@@ -2403,8 +2403,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> _LocationLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
-        partial void OnLocationLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.LocationLink> value);
+        private global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> _LocationLinks = new global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink>(null, global::Microsoft.OData.Client.TrackingMode.None);
+        partial void OnLocationLinksChanging(global::Microsoft.OData.Client.DataServiceCollection<global::ODataClient.ConnectomeDataModel.LocationLink> value);
         partial void OnLocationLinksChanged();
         /// <summary>
         /// This event is raised when the value of the property is changed
@@ -2451,7 +2451,7 @@ namespace ODataClient
         /// There are no comments for Structure in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureSingle Structure
+        public virtual global::ODataClient.ConnectomeDataModel.StructureSingle Structure
         {
             get
             {
@@ -2461,13 +2461,13 @@ namespace ODataClient
                 }
                 if ((this._Structure == null))
                 {
-                    this._Structure = new global::ODataClient.StructureSingle(this.Context, GetPath("Structure"));
+                    this._Structure = new global::ODataClient.ConnectomeDataModel.StructureSingle(this.Context, GetPath("Structure"));
                 }
                 return this._Structure;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureSingle _Structure;
+        private global::ODataClient.ConnectomeDataModel.StructureSingle _Structure;
     }
     /// <summary>
     /// There are no comments for StructureSpatialCache in the schema.
@@ -2535,7 +2535,7 @@ namespace ODataClient
         /// There are no comments for Property BoundingRect in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.DbGeometry BoundingRect
+        public virtual global::ODataClient.ConnectomeDataModel.DbGeometry BoundingRect
         {
             get
             {
@@ -2550,8 +2550,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.DbGeometry _BoundingRect;
-        partial void OnBoundingRectChanging(global::ODataClient.DbGeometry value);
+        private global::ODataClient.ConnectomeDataModel.DbGeometry _BoundingRect;
+        partial void OnBoundingRectChanging(global::ODataClient.ConnectomeDataModel.DbGeometry value);
         partial void OnBoundingRectChanged();
         /// <summary>
         /// There are no comments for Property Area in the schema.
@@ -2672,7 +2672,7 @@ namespace ODataClient
         /// There are no comments for Property ConvexHull in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.DbGeometry ConvexHull
+        public virtual global::ODataClient.ConnectomeDataModel.DbGeometry ConvexHull
         {
             get
             {
@@ -2687,8 +2687,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.DbGeometry _ConvexHull;
-        partial void OnConvexHullChanging(global::ODataClient.DbGeometry value);
+        private global::ODataClient.ConnectomeDataModel.DbGeometry _ConvexHull;
+        partial void OnConvexHullChanging(global::ODataClient.ConnectomeDataModel.DbGeometry value);
         partial void OnConvexHullChanged();
         /// <summary>
         /// There are no comments for Property LastModified in the schema.
@@ -2717,7 +2717,7 @@ namespace ODataClient
         /// There are no comments for Property Structure in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.Structure Structure
+        public virtual global::ODataClient.ConnectomeDataModel.Structure Structure
         {
             get
             {
@@ -2732,8 +2732,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.Structure _Structure;
-        partial void OnStructureChanging(global::ODataClient.Structure value);
+        private global::ODataClient.ConnectomeDataModel.Structure _Structure;
+        partial void OnStructureChanging(global::ODataClient.ConnectomeDataModel.Structure value);
         partial void OnStructureChanged();
         /// <summary>
         /// This event is raised when the value of the property is changed
@@ -2844,7 +2844,7 @@ namespace ODataClient
         /// <param name="y">Initial value of Y.</param>
         /// <param name="z">Initial value of Z.</param>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public static Scale CreateScale(global::ODataClient.AxisUnits x, global::ODataClient.AxisUnits y, global::ODataClient.AxisUnits z)
+        public static Scale CreateScale(global::ODataClient.ConnectomeDataModel.AxisUnits x, global::ODataClient.ConnectomeDataModel.AxisUnits y, global::ODataClient.ConnectomeDataModel.AxisUnits z)
         {
             Scale scale = new Scale();
             if ((x == null))
@@ -2869,7 +2869,7 @@ namespace ODataClient
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
         [global::System.ComponentModel.DataAnnotations.RequiredAttribute(ErrorMessage = "X is required.")]
-        public virtual global::ODataClient.AxisUnits X
+        public virtual global::ODataClient.ConnectomeDataModel.AxisUnits X
         {
             get
             {
@@ -2884,15 +2884,15 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.AxisUnits _X;
-        partial void OnXChanging(global::ODataClient.AxisUnits value);
+        private global::ODataClient.ConnectomeDataModel.AxisUnits _X;
+        partial void OnXChanging(global::ODataClient.ConnectomeDataModel.AxisUnits value);
         partial void OnXChanged();
         /// <summary>
         /// There are no comments for Property Y in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
         [global::System.ComponentModel.DataAnnotations.RequiredAttribute(ErrorMessage = "Y is required.")]
-        public virtual global::ODataClient.AxisUnits Y
+        public virtual global::ODataClient.ConnectomeDataModel.AxisUnits Y
         {
             get
             {
@@ -2907,15 +2907,15 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.AxisUnits _Y;
-        partial void OnYChanging(global::ODataClient.AxisUnits value);
+        private global::ODataClient.ConnectomeDataModel.AxisUnits _Y;
+        partial void OnYChanging(global::ODataClient.ConnectomeDataModel.AxisUnits value);
         partial void OnYChanged();
         /// <summary>
         /// There are no comments for Property Z in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
         [global::System.ComponentModel.DataAnnotations.RequiredAttribute(ErrorMessage = "Z is required.")]
-        public virtual global::ODataClient.AxisUnits Z
+        public virtual global::ODataClient.ConnectomeDataModel.AxisUnits Z
         {
             get
             {
@@ -2930,8 +2930,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.AxisUnits _Z;
-        partial void OnZChanging(global::ODataClient.AxisUnits value);
+        private global::ODataClient.ConnectomeDataModel.AxisUnits _Z;
+        partial void OnZChanging(global::ODataClient.ConnectomeDataModel.AxisUnits value);
         partial void OnZChanged();
         /// <summary>
         /// This event is raised when the value of the property is changed
@@ -2978,7 +2978,7 @@ namespace ODataClient
         /// There are no comments for Source in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureSingle Source
+        public virtual global::ODataClient.ConnectomeDataModel.StructureSingle Source
         {
             get
             {
@@ -2988,18 +2988,18 @@ namespace ODataClient
                 }
                 if ((this._Source == null))
                 {
-                    this._Source = new global::ODataClient.StructureSingle(this.Context, GetPath("Source"));
+                    this._Source = new global::ODataClient.ConnectomeDataModel.StructureSingle(this.Context, GetPath("Source"));
                 }
                 return this._Source;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureSingle _Source;
+        private global::ODataClient.ConnectomeDataModel.StructureSingle _Source;
         /// <summary>
         /// There are no comments for Target in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureSingle Target
+        public virtual global::ODataClient.ConnectomeDataModel.StructureSingle Target
         {
             get
             {
@@ -3009,13 +3009,13 @@ namespace ODataClient
                 }
                 if ((this._Target == null))
                 {
-                    this._Target = new global::ODataClient.StructureSingle(this.Context, GetPath("Target"));
+                    this._Target = new global::ODataClient.ConnectomeDataModel.StructureSingle(this.Context, GetPath("Target"));
                 }
                 return this._Target;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureSingle _Target;
+        private global::ODataClient.ConnectomeDataModel.StructureSingle _Target;
     }
     /// <summary>
     /// There are no comments for StructureLink in the schema.
@@ -3211,7 +3211,7 @@ namespace ODataClient
         /// There are no comments for Property Source in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.Structure Source
+        public virtual global::ODataClient.ConnectomeDataModel.Structure Source
         {
             get
             {
@@ -3226,14 +3226,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.Structure _Source;
-        partial void OnSourceChanging(global::ODataClient.Structure value);
+        private global::ODataClient.ConnectomeDataModel.Structure _Source;
+        partial void OnSourceChanging(global::ODataClient.ConnectomeDataModel.Structure value);
         partial void OnSourceChanged();
         /// <summary>
         /// There are no comments for Property Target in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.Structure Target
+        public virtual global::ODataClient.ConnectomeDataModel.Structure Target
         {
             get
             {
@@ -3248,8 +3248,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.Structure _Target;
-        partial void OnTargetChanging(global::ODataClient.Structure value);
+        private global::ODataClient.ConnectomeDataModel.Structure _Target;
+        partial void OnTargetChanging(global::ODataClient.ConnectomeDataModel.Structure value);
         partial void OnTargetChanged();
         /// <summary>
         /// This event is raised when the value of the property is changed
@@ -3296,7 +3296,7 @@ namespace ODataClient
         /// There are no comments for SourceType in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureTypeSingle SourceType
+        public virtual global::ODataClient.ConnectomeDataModel.StructureTypeSingle SourceType
         {
             get
             {
@@ -3306,18 +3306,18 @@ namespace ODataClient
                 }
                 if ((this._SourceType == null))
                 {
-                    this._SourceType = new global::ODataClient.StructureTypeSingle(this.Context, GetPath("SourceType"));
+                    this._SourceType = new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(this.Context, GetPath("SourceType"));
                 }
                 return this._SourceType;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureTypeSingle _SourceType;
+        private global::ODataClient.ConnectomeDataModel.StructureTypeSingle _SourceType;
         /// <summary>
         /// There are no comments for TargetType in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureTypeSingle TargetType
+        public virtual global::ODataClient.ConnectomeDataModel.StructureTypeSingle TargetType
         {
             get
             {
@@ -3327,13 +3327,13 @@ namespace ODataClient
                 }
                 if ((this._TargetType == null))
                 {
-                    this._TargetType = new global::ODataClient.StructureTypeSingle(this.Context, GetPath("TargetType"));
+                    this._TargetType = new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(this.Context, GetPath("TargetType"));
                 }
                 return this._TargetType;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureTypeSingle _TargetType;
+        private global::ODataClient.ConnectomeDataModel.StructureTypeSingle _TargetType;
     }
     /// <summary>
     /// There are no comments for PermittedStructureLink in the schema.
@@ -3434,7 +3434,7 @@ namespace ODataClient
         /// There are no comments for Property SourceType in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureType SourceType
+        public virtual global::ODataClient.ConnectomeDataModel.StructureType SourceType
         {
             get
             {
@@ -3449,14 +3449,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureType _SourceType;
-        partial void OnSourceTypeChanging(global::ODataClient.StructureType value);
+        private global::ODataClient.ConnectomeDataModel.StructureType _SourceType;
+        partial void OnSourceTypeChanging(global::ODataClient.ConnectomeDataModel.StructureType value);
         partial void OnSourceTypeChanged();
         /// <summary>
         /// There are no comments for Property TargetType in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.StructureType TargetType
+        public virtual global::ODataClient.ConnectomeDataModel.StructureType TargetType
         {
             get
             {
@@ -3471,8 +3471,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.StructureType _TargetType;
-        partial void OnTargetTypeChanging(global::ODataClient.StructureType value);
+        private global::ODataClient.ConnectomeDataModel.StructureType _TargetType;
+        partial void OnTargetTypeChanging(global::ODataClient.ConnectomeDataModel.StructureType value);
         partial void OnTargetTypeChanged();
         /// <summary>
         /// This event is raised when the value of the property is changed
@@ -3519,7 +3519,7 @@ namespace ODataClient
         /// There are no comments for LocationA in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.LocationSingle LocationA
+        public virtual global::ODataClient.ConnectomeDataModel.LocationSingle LocationA
         {
             get
             {
@@ -3529,18 +3529,18 @@ namespace ODataClient
                 }
                 if ((this._LocationA == null))
                 {
-                    this._LocationA = new global::ODataClient.LocationSingle(this.Context, GetPath("LocationA"));
+                    this._LocationA = new global::ODataClient.ConnectomeDataModel.LocationSingle(this.Context, GetPath("LocationA"));
                 }
                 return this._LocationA;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.LocationSingle _LocationA;
+        private global::ODataClient.ConnectomeDataModel.LocationSingle _LocationA;
         /// <summary>
         /// There are no comments for LocationB in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.LocationSingle LocationB
+        public virtual global::ODataClient.ConnectomeDataModel.LocationSingle LocationB
         {
             get
             {
@@ -3550,13 +3550,13 @@ namespace ODataClient
                 }
                 if ((this._LocationB == null))
                 {
-                    this._LocationB = new global::ODataClient.LocationSingle(this.Context, GetPath("LocationB"));
+                    this._LocationB = new global::ODataClient.ConnectomeDataModel.LocationSingle(this.Context, GetPath("LocationB"));
                 }
                 return this._LocationB;
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.LocationSingle _LocationB;
+        private global::ODataClient.ConnectomeDataModel.LocationSingle _LocationB;
     }
     /// <summary>
     /// There are no comments for LocationLink in the schema.
@@ -3679,7 +3679,7 @@ namespace ODataClient
         /// There are no comments for Property LocationA in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.Location LocationA
+        public virtual global::ODataClient.ConnectomeDataModel.Location LocationA
         {
             get
             {
@@ -3694,14 +3694,14 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.Location _LocationA;
-        partial void OnLocationAChanging(global::ODataClient.Location value);
+        private global::ODataClient.ConnectomeDataModel.Location _LocationA;
+        partial void OnLocationAChanging(global::ODataClient.ConnectomeDataModel.Location value);
         partial void OnLocationAChanged();
         /// <summary>
         /// There are no comments for Property LocationB in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.Location LocationB
+        public virtual global::ODataClient.ConnectomeDataModel.Location LocationB
         {
             get
             {
@@ -3716,8 +3716,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.Location _LocationB;
-        partial void OnLocationBChanging(global::ODataClient.Location value);
+        private global::ODataClient.ConnectomeDataModel.Location _LocationB;
+        partial void OnLocationBChanging(global::ODataClient.ConnectomeDataModel.Location value);
         partial void OnLocationBChanged();
         /// <summary>
         /// This event is raised when the value of the property is changed
@@ -3746,7 +3746,7 @@ namespace ODataClient
         /// There are no comments for Property Geometry in the schema.
         /// </summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        public virtual global::ODataClient.DbGeometryWellKnownValue Geometry
+        public virtual global::ODataClient.ConnectomeDataModel.DbGeometryWellKnownValue Geometry
         {
             get
             {
@@ -3761,8 +3761,8 @@ namespace ODataClient
             }
         }
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.OData.Client.Design.T4", "#VersionNumber#")]
-        private global::ODataClient.DbGeometryWellKnownValue _Geometry;
-        partial void OnGeometryChanging(global::ODataClient.DbGeometryWellKnownValue value);
+        private global::ODataClient.ConnectomeDataModel.DbGeometryWellKnownValue _Geometry;
+        partial void OnGeometryChanging(global::ODataClient.ConnectomeDataModel.DbGeometryWellKnownValue value);
         partial void OnGeometryChanged();
         /// <summary>
         /// This event is raised when the value of the property is changed
@@ -3877,114 +3877,114 @@ namespace ODataClient
     public static class ExtensionMethods
     {
         /// <summary>
-        /// Get an entity of type global::ODataClient.StructureType as global::ODataClient.StructureTypeSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.StructureType as global::ODataClient.ConnectomeDataModel.StructureTypeSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="_keys">dictionary with the names and values of keys</param>
-        public static global::ODataClient.StructureTypeSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureType> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
+        public static global::ODataClient.ConnectomeDataModel.StructureTypeSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureType> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
         {
-            return new global::ODataClient.StructureTypeSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.StructureType as global::ODataClient.StructureTypeSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.StructureType as global::ODataClient.ConnectomeDataModel.StructureTypeSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="iD">The value of iD</param>
-        public static global::ODataClient.StructureTypeSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureType> _source,
+        public static global::ODataClient.ConnectomeDataModel.StructureTypeSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureType> _source,
             long iD)
         {
             global::System.Collections.Generic.IDictionary<string, object> _keys = new global::System.Collections.Generic.Dictionary<string, object>
             {
                 { "ID", iD }
             };
-            return new global::ODataClient.StructureTypeSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.StructureTypeSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.Structure as global::ODataClient.StructureSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.Structure as global::ODataClient.ConnectomeDataModel.StructureSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="_keys">dictionary with the names and values of keys</param>
-        public static global::ODataClient.StructureSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Structure> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
+        public static global::ODataClient.ConnectomeDataModel.StructureSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
         {
-            return new global::ODataClient.StructureSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.StructureSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.Structure as global::ODataClient.StructureSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.Structure as global::ODataClient.ConnectomeDataModel.StructureSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="iD">The value of iD</param>
-        public static global::ODataClient.StructureSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Structure> _source,
+        public static global::ODataClient.ConnectomeDataModel.StructureSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> _source,
             long iD)
         {
             global::System.Collections.Generic.IDictionary<string, object> _keys = new global::System.Collections.Generic.Dictionary<string, object>
             {
                 { "ID", iD }
             };
-            return new global::ODataClient.StructureSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.StructureSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.Location as global::ODataClient.LocationSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.Location as global::ODataClient.ConnectomeDataModel.LocationSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="_keys">dictionary with the names and values of keys</param>
-        public static global::ODataClient.LocationSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Location> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
+        public static global::ODataClient.ConnectomeDataModel.LocationSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Location> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
         {
-            return new global::ODataClient.LocationSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.LocationSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.Location as global::ODataClient.LocationSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.Location as global::ODataClient.ConnectomeDataModel.LocationSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="iD">The value of iD</param>
-        public static global::ODataClient.LocationSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Location> _source,
+        public static global::ODataClient.ConnectomeDataModel.LocationSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Location> _source,
             long iD)
         {
             global::System.Collections.Generic.IDictionary<string, object> _keys = new global::System.Collections.Generic.Dictionary<string, object>
             {
                 { "ID", iD }
             };
-            return new global::ODataClient.LocationSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.LocationSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.StructureSpatialCache as global::ODataClient.StructureSpatialCacheSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.StructureSpatialCache as global::ODataClient.ConnectomeDataModel.StructureSpatialCacheSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="_keys">dictionary with the names and values of keys</param>
-        public static global::ODataClient.StructureSpatialCacheSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureSpatialCache> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
+        public static global::ODataClient.ConnectomeDataModel.StructureSpatialCacheSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureSpatialCache> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
         {
-            return new global::ODataClient.StructureSpatialCacheSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.StructureSpatialCacheSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.StructureSpatialCache as global::ODataClient.StructureSpatialCacheSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.StructureSpatialCache as global::ODataClient.ConnectomeDataModel.StructureSpatialCacheSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="iD">The value of iD</param>
-        public static global::ODataClient.StructureSpatialCacheSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureSpatialCache> _source,
+        public static global::ODataClient.ConnectomeDataModel.StructureSpatialCacheSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureSpatialCache> _source,
             long iD)
         {
             global::System.Collections.Generic.IDictionary<string, object> _keys = new global::System.Collections.Generic.Dictionary<string, object>
             {
                 { "ID", iD }
             };
-            return new global::ODataClient.StructureSpatialCacheSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.StructureSpatialCacheSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.StructureLink as global::ODataClient.StructureLinkSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.StructureLink as global::ODataClient.ConnectomeDataModel.StructureLinkSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="_keys">dictionary with the names and values of keys</param>
-        public static global::ODataClient.StructureLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureLink> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
+        public static global::ODataClient.ConnectomeDataModel.StructureLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
         {
-            return new global::ODataClient.StructureLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.StructureLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.StructureLink as global::ODataClient.StructureLinkSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.StructureLink as global::ODataClient.ConnectomeDataModel.StructureLinkSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="sourceID">The value of sourceID</param>
         /// <param name="targetID">The value of targetID</param>
         /// <param name="bidirectional">The value of bidirectional</param>
-        public static global::ODataClient.StructureLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.StructureLink> _source,
+        public static global::ODataClient.ConnectomeDataModel.StructureLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.StructureLink> _source,
             long sourceID, 
             long targetID, 
             bool bidirectional)
@@ -3995,24 +3995,24 @@ namespace ODataClient
                 { "TargetID", targetID }, 
                 { "Bidirectional", bidirectional }
             };
-            return new global::ODataClient.StructureLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.StructureLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.PermittedStructureLink as global::ODataClient.PermittedStructureLinkSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.PermittedStructureLink as global::ODataClient.ConnectomeDataModel.PermittedStructureLinkSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="_keys">dictionary with the names and values of keys</param>
-        public static global::ODataClient.PermittedStructureLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.PermittedStructureLink> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
+        public static global::ODataClient.ConnectomeDataModel.PermittedStructureLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
         {
-            return new global::ODataClient.PermittedStructureLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.PermittedStructureLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.PermittedStructureLink as global::ODataClient.PermittedStructureLinkSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.PermittedStructureLink as global::ODataClient.ConnectomeDataModel.PermittedStructureLinkSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="sourceTypeID">The value of sourceTypeID</param>
         /// <param name="targetTypeID">The value of targetTypeID</param>
-        public static global::ODataClient.PermittedStructureLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.PermittedStructureLink> _source,
+        public static global::ODataClient.ConnectomeDataModel.PermittedStructureLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.PermittedStructureLink> _source,
             long sourceTypeID, 
             long targetTypeID)
         {
@@ -4021,24 +4021,24 @@ namespace ODataClient
                 { "SourceTypeID", sourceTypeID }, 
                 { "TargetTypeID", targetTypeID }
             };
-            return new global::ODataClient.PermittedStructureLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.PermittedStructureLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.LocationLink as global::ODataClient.LocationLinkSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.LocationLink as global::ODataClient.ConnectomeDataModel.LocationLinkSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="_keys">dictionary with the names and values of keys</param>
-        public static global::ODataClient.LocationLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
+        public static global::ODataClient.ConnectomeDataModel.LocationLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> _source, global::System.Collections.Generic.IDictionary<string, object> _keys)
         {
-            return new global::ODataClient.LocationLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.LocationLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
-        /// Get an entity of type global::ODataClient.LocationLink as global::ODataClient.LocationLinkSingle specified by key from an entity set
+        /// Get an entity of type global::ODataClient.ConnectomeDataModel.LocationLink as global::ODataClient.ConnectomeDataModel.LocationLinkSingle specified by key from an entity set
         /// </summary>
         /// <param name="_source">source entity set</param>
         /// <param name="a">The value of a</param>
         /// <param name="b">The value of b</param>
-        public static global::ODataClient.LocationLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.LocationLink> _source,
+        public static global::ODataClient.ConnectomeDataModel.LocationLinkSingle ByKey(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.LocationLink> _source,
             long a, 
             long b)
         {
@@ -4047,12 +4047,12 @@ namespace ODataClient
                 { "A", a }, 
                 { "B", b }
             };
-            return new global::ODataClient.LocationLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
+            return new global::ODataClient.ConnectomeDataModel.LocationLinkSingle(_source.Context, _source.GetKeyPath(global::Microsoft.OData.Client.Serializer.GetKeyString(_source.Context, _keys)));
         }
         /// <summary>
         /// There are no comments for DistinctLabels in the schema.
         /// </summary>
-        public static global::Microsoft.OData.Client.DataServiceQuery<string> DistinctLabels(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.Structure> _source)
+        public static global::Microsoft.OData.Client.DataServiceQuery<string> DistinctLabels(this global::Microsoft.OData.Client.DataServiceQuery<global::ODataClient.ConnectomeDataModel.Structure> _source)
         {
             if (!_source.IsComposable)
             {

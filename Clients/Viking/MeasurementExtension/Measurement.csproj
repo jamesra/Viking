@@ -12,6 +12,10 @@
   <ItemGroup  Condition="'$(TargetFramework)' == 'net48'">
 	 <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
   </ItemGroup>
+
+	<ItemGroup  Condition="'$(TargetFramework)' == 'net9.0-windows'">
+		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8" />
+	</ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\..\..\SIMeasurement\SIMeasurement.csproj" />

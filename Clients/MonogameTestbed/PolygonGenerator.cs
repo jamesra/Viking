@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using GeometryTests;
 using Newtonsoft.Json.Linq;
 using VikingXNA;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
