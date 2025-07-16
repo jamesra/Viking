@@ -97,14 +97,30 @@ Key options:
 - `-multiple-files` - Split into multiple files
 - `-i, --enable-internal` - Use internal visibility
 
-## Migration from T4 Templates
+## Async Support
+
+### .NET 9.0 and Later
+- The generated client and Microsoft.OData.Client 8.x+ provide true async APIs.
+- Use the built-in async methods where available.
+
+### .NET Framework 4.8
+- The generated client (with Microsoft.OData.Client 7.x) does **not** provide true async APIs.
+- **Async wrappers are provided via extension methods** in `ODataClientAsyncExtensions.cs`:
+  - `await query.ToListAsync()`
+  - `await query.FirstOrDefaultAsync()`
+  - `await querySingle.GetValueAsync()`
+- These wrap the public DataServiceQuery APIs in `Task.Run` for compatibility.
+- This is not true async, but allows for async/await code style in consumers.
+
+## Migration to Modern OData Client
 
 ### What Changed
 
-1. **No more T4 templates** - Removed `.tt` and `.ttinclude` files
-2. **Modern tooling** - Uses Microsoft.OData.CLI instead of TextTransform.exe
-3. **Better error handling** - Graceful handling of network issues
-4. **Simplified maintenance** - No complex template logic
+1. **Modern tooling** - Uses Microsoft.OData.CLI instead of legacy approaches
+2. **Better error handling** - Graceful handling of network issues
+3. **Simplified maintenance** - No complex template logic
+4. **Cross-platform** - Works on any OS with .NET
+5. **Future-proof** - Supported by Microsoft going forward
 
 ### Benefits
 

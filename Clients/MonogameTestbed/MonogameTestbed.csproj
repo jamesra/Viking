@@ -41,14 +41,9 @@
 	<ItemGroup>
 		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
 		<Reference Include="System.Drawing" />
-	</ItemGroup>
-	<ItemGroup>
-		<MonoGameContentReference Include="Content\Content.mgcb" />
-	</ItemGroup>
-	<ItemGroup>
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
-		<PackageReference Include="FsCheck" Version="3.3.0" />
+		<PackageReference Include="FsCheck" Version="2.16.3" />
 		<PackageReference Include="FSharp.Core" Version="5.0.2" />
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
 		<PackageReference Include="MIConvexHull" Version="1.1.19.1019" />
@@ -62,6 +57,11 @@
 		<PackageReference Include="System.Collections.Immutable" Version="9.0.7" />
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
 		<PackageReference Include="System.Text.Json" Version="8.0.5" />
+		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+		<PackageReference Include="System.Diagnostics.Debug" Version="4.3.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<MonoGameContentReference Include="Content\Content.mgcb" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
@@ -78,6 +78,7 @@
 		<ProjectReference Include="..\..\TriangleNetGeometryExtensions\TriangleNetGeometryExtensions.csproj" />
 		<ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj" />
 		<ProjectReference Include="..\Monographics\Monographics.csproj" />
+		<ProjectReference Include="..\..\ODataClient\ODataClient.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="Always" />

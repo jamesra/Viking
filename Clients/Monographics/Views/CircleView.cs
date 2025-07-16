@@ -504,7 +504,7 @@ namespace VikingXNAGraphics
         }
 
         public static void Draw(GraphicsDevice device,
-                          VikingXNA.IScene scene,
+                          IScene scene,
                           OverlayShaderEffect overlayEffect,
                           CircleView[] listToDraw)
         {

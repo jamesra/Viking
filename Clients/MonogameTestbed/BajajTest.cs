@@ -443,7 +443,7 @@ namespace MonogameTestbed
             double minZ = mesh.ShapeZ.Min();
             double ZRange = maxZ - minZ;
             
-            meshViewModel.ModelMatrix = Matrix.CreateTranslation(new Vector3(0, 0, -(float)mesh.BoundingBox.CenterPoint.Z)) * Matrix.CreateScale(1, 1, 1f/(float)ZRange);//).ToXNAVector3());
+            meshViewModel.ModelMatrix = Microsoft.Xna.Framework.Matrix.CreateTranslation(new Microsoft.Xna.Framework.Vector3(0, 0, -(float)mesh.BoundingBox.CenterPoint.Z)) * Microsoft.Xna.Framework.Matrix.CreateScale(1, 1, 1f/(float)ZRange);//).ToXNAVector3());
 
             /*
                         for (int iVert =0; iVert < meshViewModel.Verticies.Length;iVert++)
@@ -808,7 +808,7 @@ namespace MonogameTestbed
                 RasterizerState rstate = new RasterizerState
                 {
                     CullMode = CullMode.None,
-                    FillMode = FillMode.Solid,
+                    FillMode = Microsoft.Xna.Framework.Graphics.FillMode.Solid,
                     DepthClipEnable = true
                 };
                 window.GraphicsDevice.RasterizerState = rstate;
@@ -915,8 +915,8 @@ namespace MonogameTestbed
                 double minZ = this.ShapeZ.Min();
                 double ZRange = maxZ - minZ;
 
-                Matrix oldWorld = scene.World;
-                scene.World = Matrix.CreateScale(new Vector3(1, 1, (float)ZRange));
+                Microsoft.Xna.Framework.Matrix oldWorld = scene.World;
+                scene.World = Microsoft.Xna.Framework.Matrix.CreateScale(new Microsoft.Xna.Framework.Vector3(1, 1, (float)ZRange));
 
                 MeshViews[iShownMesh.Value].Draw(window.GraphicsDevice, scene, CullMode);
 
@@ -1000,7 +1000,7 @@ namespace MonogameTestbed
 
         public void Initialize(double tolerance = 2.0, int hops = 1)
         {
-            Morphology = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(SliceLocations.Select(id => id).ToList(), true, Endpoint);
+            Morphology = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(SliceLocations.Select(id => (long)id).ToList(), true, Endpoint);
 
             //Find the linked locations and add those to the graph
             //////////////
@@ -1329,7 +1329,7 @@ namespace MonogameTestbed
 
             GridBox bbox = new GridBox(wrapView.Shapes.BoundingBox(), Graph.Nodes.Values.Min(n => n.Z), Graph.Nodes.Values.Max(n => n.Z));
             scene3D.Camera.Position = (bbox.CenterPoint.XY().ToGridVector3(0) + new GridVector3(0, 0, 10f * (float)bbox.Depth)).ToXNAVector3();
-            scene3D.Camera.LookAt = new Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0); // bbox.CenterPoint.ToXNAVector3();
+            scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.CenterPoint.X, (float)bbox.CenterPoint.Y, 0); // bbox.CenterPoint.ToXNAVector3();
 
             /*
             A = SqlGeometry.STPolyFromText(PolyA.ToSqlChars(), 0).ToPolygon();
@@ -1458,7 +1458,7 @@ namespace MonogameTestbed
                 double MaxZ = wrapView.ShapeZ.Max();
                 double Depth = MaxZ - MinZ;
                 scene3D.Camera.Position = (bbox.Center.ToGridVector3(0) + new GridVector3(0, 0, 100f * (float)Depth)).ToXNAVector3();
-                scene3D.Camera.LookAt = new Vector3((float)bbox.Center.X, (float)bbox.Center.Y, 0); // bbox.CenterPoint.ToXNAVector3();
+                scene3D.Camera.LookAt = new Microsoft.Xna.Framework.Vector3((float)bbox.Center.X, (float)bbox.Center.Y, 0); // bbox.CenterPoint.ToXNAVector3();
             }
 
 

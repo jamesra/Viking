@@ -1,4 +1,5 @@
 ﻿using AnnotationVizLib;
+
 using ColladaIO;
 using Geometry;
 using Geometry.Meshing;
@@ -14,8 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Web.UI.WebControls;
+using System.Threading.Tasks; 
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -26,7 +26,7 @@ namespace MonogameTestbed
     {
         public readonly GridPolygon[] Polygons = null;
         public readonly double[] PolyZ = null;
-        //public PointSetView[] PolyPointsView = null;
+        //public PointSetViewView[] PolyPointsView = null;
         public PointSetView IncompletedVertexView = null;
 
         public CullMode CullMode = CullMode.CullCounterClockwiseFace;
@@ -517,7 +517,7 @@ namespace MonogameTestbed
             if (Program.options.BoundaryIDs.Any() && Program.options.EndpointUri != null)
             {
                 Uri endpoint = Program.options.EndpointUri;
-                boundary_graph_task = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromODataByTypeIDsAsync(Program.options.BoundaryIDs.ToArray(), endpoint, false);
+                boundary_graph_task = AnnotationVizLib.OData.ODataMorphologyFactory.FromODataByTypeIDsAsync(Program.options.BoundaryIDs.Select(id => (long)id).ToArray(), endpoint, false);
                 var boundary_graph = await boundary_graph_task;
                 this.boundaryViewModels = BoundarySurfaceViewModel.CreateBoundarySurfaces(boundary_graph);
 
@@ -531,7 +531,7 @@ namespace MonogameTestbed
                 Console.WriteLine(" From command line parameters");
 
                 Uri endpoint = Program.options.EndpointUri;
-                graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(Program.options.StructureIDs, false, endpoint);
+                graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(Program.options.StructureIDs.Select(id => (long)id).ToList(), false, endpoint);
             }
             else
             {
@@ -550,7 +550,7 @@ namespace MonogameTestbed
                 //Becca's paper, 2nd render
                 //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] {933, 23122, 31687, 23095, 23017, 23856, 39762 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
 
-                graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 476 }, false, DataSource.EndpointMap[Endpoint.TEST]);
+                graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { 476 }, false, DataSource.EndpointMap[Endpoint.TEST]);
 
                 //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 30804, 2713 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);
                 //graph = AnnotationVizLib.SimpleOData.SimpleODataMorphologyFactory.FromOData(new ulong[] { 933 }, false, DataSource.EndpointMap[ENDPOINT.RPC1]);

@@ -175,8 +175,10 @@ namespace MonogameTestbed
         {
             AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new ulong[] { CellID }, true, DataSource.EndpointMap[endpoint]); 
 
-            MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
-            return new Mesh3D<IVertex3D<ulong>>[] { MorphologyMesh.TopologyMeshGenerator.Generate(graph.Subgraphs.Values.First()) };
+            // TODO: TopologyMeshGenerator not available - need to implement or find alternative
+            // MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
+            // return new Mesh3D<IVertex3D<ulong>>[] { MorphologyMesh.TopologyMeshGenerator.Generate(graph.Subgraphs.Values.First()) };
+            return new Mesh3D<IVertex3D<ulong>>[0];
         }
 
         /// <summary>
@@ -200,7 +202,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, Endpoint endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromODataLocationIDs(LocationIDs.Select(id => (ulong)id).ToArray(), DataSource.EndpointMap[endpoint]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(LocationIDs.Select(id => (ulong)id).ToArray(), true, DataSource.EndpointMap[endpoint]);
                          
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);
@@ -245,9 +247,10 @@ namespace MonogameTestbed
         {
             List<Mesh3D<IVertex3D<ulong>>> listMeshes = new List<Mesh3D<IVertex3D<ulong>>>();
 
-            Mesh3D<IVertex3D<ulong>> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
-            if(structureMesh != null)
-                listMeshes.Add(structureMesh);
+            // TODO: SmoothMeshGenerator not available - need to implement or find alternative
+            // Mesh3D<IVertex3D<ulong>> structureMesh = MorphologyMesh.SmoothMeshGenerator.Generate(graph);
+            // if(structureMesh != null)
+            //     listMeshes.Add(structureMesh);
 
             foreach(var subgraph in graph.Subgraphs.Values)
             {

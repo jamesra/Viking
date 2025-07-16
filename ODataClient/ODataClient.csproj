@@ -28,9 +28,7 @@
     <MakeDir Directories="$(MSBuildProjectDirectory)\Generated" />
     
     <!-- Generate OData client using modern Microsoft.OData.CLI -->
-    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient.ConnectomeDataModel&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient.cs&quot;" 
-          ContinueOnError="true" 
-          IgnoreExitCode="true" />
+    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient.ConnectomeDataModel&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient&quot;" ContinueOnError="true" IgnoreExitCode="true" />
     
     <Message Text="OData client generation attempted. Check Generated\ODataClient.cs for output." Importance="high" />
   </Target>
@@ -44,16 +42,15 @@
     
     <MakeDir Directories="$(MSBuildProjectDirectory)\Generated" />
     
-    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient.ConnectomeDataModel&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient.cs&quot;" />
+    <Exec Command="odata-cli generate -m &quot;$(ODataMetadataUri)&quot; -ns &quot;ODataClient.ConnectomeDataModel&quot; -et -o &quot;$(MSBuildProjectDirectory)\Generated&quot; -fn &quot;ODataClient&quot;" />
     
     <Message Text="OData client manually generated: $(GeneratedODataFile)" Importance="high" />
   </Target>
 
   <!-- Include generated files -->
-  <ItemGroup>
-    <Compile Include="Generated\ODataClient.cs.cs" Condition="Exists('Generated\ODataClient.cs.cs')" />
-    <Compile Include="Generated\ODataClient.cs" Condition="Exists('Generated\ODataClient.cs') And !Exists('Generated\ODataClient.cs.cs')" />
-    <Compile Include="Extensions.cs" />
+  <ItemGroup> 
+    <Compile Include="Generated\ODataClient.cs" Condition="Exists('Generated\ODataClient.cs')" />
+    <Compile Include="Generated\ODataClientAsyncExtensions.cs" />
   </ItemGroup>
 
 </Project>

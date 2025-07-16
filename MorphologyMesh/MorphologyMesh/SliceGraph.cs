@@ -76,7 +76,7 @@ namespace MorphologyMesh
             this.Graph = graph;
         }
 
-        internal static async Task<SliceGraph> Create(MorphologyGraph graph, double tolerance=0)
+        public static async Task<SliceGraph> Create(MorphologyGraph graph, double tolerance=0)
         { 
             SliceGraph output = new SliceGraph(graph);
 

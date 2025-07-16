@@ -201,7 +201,7 @@ namespace WebAnnotation.AnnotationObjects
         internal event EventHandler OnAfterDelete;
         internal event EventHandler OnBeforeSave;
         internal event EventHandler OnAfterSave;
-        private event NotifyC OnChildChanged;
+        private event NotifyCollectionChangedEventHandler OnChildChanged;
 
         #region IUIObject Members
 
