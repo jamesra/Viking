@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Viking.AnnotationServiceTypes.Interfaces
 { 
 
-    public interface IStructureType : IEquatable<IStructureType>
+    public interface IStructureTypeReadOnly : IEquatable<IStructureTypeReadOnly>
     {
         ulong ID { get; }
         ulong? ParentID { get; }

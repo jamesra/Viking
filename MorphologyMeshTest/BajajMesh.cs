@@ -9,7 +9,6 @@ using System.Collections.Immutable;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using FsCheck.Fluent;
 
 namespace MorphologyMeshTest
 {
@@ -25,7 +24,7 @@ namespace MorphologyMeshTest
         {
             GeometryArbitraries.Register();
 
-            var configuration = Configuration.QuickThrowOnFailure;
+            var configuration = FsCheck.Configuration.QuickThrowOnFailure;
             configuration.MaxNbOfTest = 4;
             configuration.QuietOnSuccess = false;
             configuration.StartSize = 3;

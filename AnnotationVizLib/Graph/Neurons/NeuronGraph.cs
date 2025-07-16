@@ -198,12 +198,12 @@ namespace AnnotationVizLib
     public class NeuronNode : Node<long, NeuronEdge>
     {
         //Structure this node represents
-        public IStructure Structure;
+        public IStructureReadOnly Structure;
 
         public IEnumerable<ulong> EdgeSourceChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.SourceIDs)); } }
         public IEnumerable<ulong> EdgeTargetChildStructureIDs { get { return this.Edges.Values.SelectMany(e => e.SelectMany(s => s.TargetIDs)); } }
 
-        public NeuronNode(long key, IStructure value)
+        public NeuronNode(long key, IStructureReadOnly value)
             : base(key)
         {
             this.Structure = value;

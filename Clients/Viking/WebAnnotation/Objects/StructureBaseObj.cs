@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics; 
 
-using WebAnnotation.WCFService.Annotation;
 using System.Drawing;
 using System.Windows.Forms;
 
 using Viking.Common;
+using Viking.Common.UI;
 using WebAnnotation.Service;
 
 namespace WebAnnotation.Objects
@@ -215,12 +215,12 @@ namespace WebAnnotation.Objects
             remove => OnAfterSave -= value;
         }
 
-        void IUIObject.ShowProperties()
+        void IUIObjectBasic.ShowProperties()
         {
             Viking.UI.Forms.PropertySheetForm.Show(this);
         }
 
-        ContextMenu IUIObject.ContextMenu
+        ContextMenu IContextMenu.ContextMenu
         {
             get
             {
@@ -235,7 +235,7 @@ namespace WebAnnotation.Objects
 
         Image IUIObject.SmallThumbnail => throw new NotImplementedException();
 
-        string IUIObject.ToolTip => throw new NotImplementedException();
+        string IUIObjectBasic.ToolTip => throw new NotImplementedException();
 
         public virtual void Save()
         {

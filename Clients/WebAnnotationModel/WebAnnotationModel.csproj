@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFramework>net48</TargetFramework>
+		<TargetFrameworks>net48;net9.0-windows</TargetFrameworks>
 		<LangVersion>9.0</LangVersion>
 		<RootNamespace>WebAnnotationModel</RootNamespace>
 		<AssemblyName>WebAnnotationModel</AssemblyName>
@@ -62,7 +62,8 @@
 		<ProjectReference Include="..\Common\Common.csproj" />
 		<ProjectReference Include="..\Viking\NGVV\VikingCore.csproj" />
 	</ItemGroup>
-	<ItemGroup>
+	<!-- Conditional Package References for net48 -->
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
 		<PackageReference Include="Microsoft.OData.Client" Version="6.17.0" />
 		<PackageReference Include="protobuf-net" Version="3.0.62" />
@@ -71,13 +72,14 @@
 		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
 		<PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" />
 		<PackageReference Include="System.Memory" Version="4.5.5" />
-	</ItemGroup>
-	
-	<!-- SQL Server Types - conditional for different frameworks -->
-	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
 	</ItemGroup>
+	<!-- Conditional Package References for net9.0 -->
 	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+		<PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
+		<PackageReference Include="protobuf-net" Version="3.0.62" />
+		<PackageReference Include="System.ServiceModel" Version="1.0.0" />
+		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	</ItemGroup>
 	<PropertyGroup>

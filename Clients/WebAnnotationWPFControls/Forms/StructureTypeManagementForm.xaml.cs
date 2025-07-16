@@ -19,9 +19,9 @@ namespace WebAnnotation.WPF.Forms
         {
             InitializeComponent();
             /*
-            ListPermittedBidirectional.Items.Filter = new Predicate<object>(o => FilterBidirectional(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
-            ListPermittedInputs.Items.Filter = new Predicate<object>(o => FilterInputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
-            ListPermittedOutputs.Items.Filter = new Predicate<object>(o => FilterOutputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
+            ListPermittedBidirectional.Items.Filter = new Predicate<object>(o => FilterBidirectional(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
+            ListPermittedInputs.Items.Filter = new Predicate<object>(o => FilterInputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
+            ListPermittedOutputs.Items.Filter = new Predicate<object>(o => FilterOutputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
             */
             this.Loaded += this.OnLoaded; 
 
@@ -35,9 +35,9 @@ namespace WebAnnotation.WPF.Forms
             CollectionView PermittedTargetTypesCollection = CollectionViewSource.GetDefaultView(ListPermittedOutputs.ItemsSource) as CollectionView;
             CollectionView PermittedBidirectionalTypesCollection = CollectionViewSource.GetDefaultView(ListPermittedBidirectional.ItemsSource) as CollectionView;
 
-            PermittedSourceTypesCollection.Filter = new Predicate<object>(o => FilterInputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
-            PermittedTargetTypesCollection.Filter = new Predicate<object>(o => FilterOutputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
-            PermittedBidirectionalTypesCollection.Filter = new Predicate<object>(o => FilterBidirectional(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLink));
+            PermittedSourceTypesCollection.Filter = new Predicate<object>(o => FilterInputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
+            PermittedTargetTypesCollection.Filter = new Predicate<object>(o => FilterOutputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
+            PermittedBidirectionalTypesCollection.Filter = new Predicate<object>(o => FilterBidirectional(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
             */
         }
           
@@ -53,7 +53,7 @@ namespace WebAnnotation.WPF.Forms
             {
                 FrameworkElement element = sender as FrameworkElement;
                 DataObject data = new DataObject(element.DataContext);
-                data.SetData(typeof(IStructureType), element.DataContext);
+                data.SetData(typeof(IStructureTypeReadOnly), element.DataContext);
                 DragDrop.DoDragDrop(element, data, DragDropEffects.Link);
                 e.Handled = true;
             }

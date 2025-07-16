@@ -4,8 +4,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
   </ItemGroup>
 </Project>

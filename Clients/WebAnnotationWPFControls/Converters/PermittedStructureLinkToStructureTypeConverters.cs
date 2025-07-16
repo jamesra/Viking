@@ -10,9 +10,9 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            IPermittedStructureLink link = value as IPermittedStructureLink;
+            IPermittedStructureLinkReadOnly link = value as IPermittedStructureLinkReadOnly;
             if (link == null)
-                throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
+                throw new ArgumentException(string.Format("Expected an IPermittedStructureLinkReadOnly, got {0}", value));
 
             return Store.StructureTypes.GetObjectByID((long)link.SourceTypeID);
         }
@@ -27,9 +27,9 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            IPermittedStructureLink link = value as IPermittedStructureLink;
+            IPermittedStructureLinkReadOnly link = value as IPermittedStructureLinkReadOnly;
             if (link == null)
-                throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
+                throw new ArgumentException(string.Format("Expected an IPermittedStructureLinkReadOnly, got {0}", value));
 
             return Store.StructureTypes.GetObjectByID((long)link.TargetTypeID);
         }
@@ -44,9 +44,9 @@ namespace WebAnnotation.WPF.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            IPermittedStructureLink link = value as IPermittedStructureLink;
+            IPermittedStructureLinkReadOnly link = value as IPermittedStructureLinkReadOnly;
             if (link == null)
-                throw new ArgumentException(string.Format("Expected an IPermittedStructureLink, got {0}", value));
+                throw new ArgumentException(string.Format("Expected an IPermittedStructureLinkReadOnly, got {0}", value));
 
             ulong myTypeID = System.Convert.ToUInt64(parameter);
             ulong otherTypeID = link.SourceTypeID == myTypeID ? link.TargetTypeID : link.SourceTypeID;

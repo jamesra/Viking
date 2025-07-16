@@ -1,18 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0-windows8.0</TargetFramework>
+    <TargetFrameworks>net48;net9.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'  or '$(TargetFramework)' == 'netstandard2.0'">
     <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0' or '$(TargetFramework)' == 'net9.0-windows8.0' or '$(TargetFramework)' == 'netstandard2.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0' or '$(TargetFramework)' == 'net9.0-windows'">
     <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\..\Clients\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\..\Clients\WebAnnotationModel\WebAnnotationModel.csproj" />
     <ProjectReference Include="..\..\Clients\Common\Common.csproj" />
+    <ProjectReference Include="..\..\SqlGeometryAnnotationExtensions\SqlGeometryAnnotationExtensions.csproj" />
   </ItemGroup>
 </Project>

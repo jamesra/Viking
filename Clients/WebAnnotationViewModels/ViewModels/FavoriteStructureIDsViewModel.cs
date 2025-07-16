@@ -22,8 +22,8 @@ namespace Annotation.ViewModels
             }
         }
 
-        ObservableCollection<IStructureType> _RootStructureTypes = null; 
-        public ObservableCollection<IStructureType> RootStructureTypes
+        ObservableCollection<IStructureTypeReadOnly> _RootStructureTypes = null; 
+        public ObservableCollection<IStructureTypeReadOnly> RootStructureTypes
         {
             get => _RootStructureTypes;
             set
@@ -48,7 +48,7 @@ namespace Annotation.ViewModels
 
         public bool CanDeleteFavorite(object item)
         {
-            if (item is IStructureType TypeObj)
+            if (item is IStructureTypeReadOnly TypeObj)
             {
                 return FavoriteStructureTypeIDs.Contains(TypeObj.ID) ;
             }
@@ -68,7 +68,7 @@ namespace Annotation.ViewModels
 
         public bool CanAddFavorite(object item)
         {
-            if(item is IStructureType TypeObj)
+            if(item is IStructureTypeReadOnly TypeObj)
             {
                 return FavoriteStructureTypeIDs.Contains(TypeObj.ID) == false;
             }
@@ -88,7 +88,7 @@ namespace Annotation.ViewModels
         public FavoriteStructureIDsViewModel(ObservableCollection<ulong> Favorites = null, ObservableCollection<ulong> root_types = null) : this()
         {
             if (root_types is null)
-                _RootStructureTypes = new ObservableCollection<IStructureType>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true));
+                _RootStructureTypes = new ObservableCollection<IStructureTypeReadOnly>(Store.StructureTypes.GetObjectsByIDs(Store.StructureTypes.RootObjects, true));
 
             FavoriteStructureTypeIDs = Favorites;
         }

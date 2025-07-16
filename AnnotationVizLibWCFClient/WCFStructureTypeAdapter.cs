@@ -3,7 +3,7 @@ using AnnotationService.Types;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureTypeAdapter : IStructureType
+    class WCFStructureTypeAdapter : IStructureTypeReadOnly
     {
         private readonly StructureType type;
         public WCFStructureTypeAdapter(StructureType t)
@@ -21,7 +21,7 @@ namespace AnnotationVizLib.WCFClient
 
         public string[] Tags => type.Tags;
 
-        public bool Equals(IStructureType other)
+        public bool Equals(IStructureTypeReadOnly other)
         {
             if (other is null)
                 return false;

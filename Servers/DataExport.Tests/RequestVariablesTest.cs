@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Web;
+using Microsoft.AspNetCore.Http;
 
 namespace DataExport.Tests
 {
@@ -13,7 +13,7 @@ namespace DataExport.Tests
         [TestMethod]
         public void TestODataQueryParametersAsync()
         {
-            HttpContext.Current = new HttpContext(new HttpRequest("", "http://tempuri.org", "id=180,476"), new HttpResponse(new System.IO.StringWriter())); 
+            var context = new DefaultHttpContext();
             Uri.TryCreate("http://webdev.connectomes.utah.edu/RC1Test/OData", UriKind.Absolute, out Uri endpoint);
 
             Task<ICollection<long>> task_ids = RequestVariables.GetIDsFromQueryAsync(endpoint, "Structures?$filter=ID eq 180");
@@ -27,7 +27,7 @@ namespace DataExport.Tests
         [TestMethod]
         public async void TestODataQueryParameters()
         {
-            HttpContext.Current = new HttpContext(new HttpRequest("", "http://tempuri.org", "id=180,476"), new HttpResponse(new System.IO.StringWriter())); 
+            var context = new DefaultHttpContext();
             Uri.TryCreate("http://webdev.connectomes.utah.edu/RC1Test/OData", UriKind.Absolute, out Uri endpoint);
 
             ICollection<long> network_ids = RequestVariables.GetIDsFromQuery(endpoint, "Network(IDs=[172]Hops=0)");
@@ -44,11 +44,14 @@ namespace DataExport.Tests
         [TestMethod]
         public async void TestRequestParametersForODataQueries()
         {
-            HttpRequest test_request = new HttpRequest("", "http://tempuri.org", "$query=(Structures?$filter=startswith(Label,%27CbB5%27)&$select=ID)&Hops=1");
-            HttpContext.Current = new HttpContext(test_request, new HttpResponse(new System.IO.StringWriter()));
+            var context = new DefaultHttpContext();
+            // Set up query parameters for DefaultHttpContext
+            var query = new Microsoft.AspNetCore.Http.QueryCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues> { { "id", "180,476" } });
+            context.Request.QueryString = new QueryString("?id=180,476");
+            context.Request.Query = query;
             Uri.TryCreate("http://webdev.connectomes.utah.edu/RC1Test/OData", UriKind.Absolute, out Uri endpoint);
               
-            ICollection<long> ids = RequestVariables.GetIDsFromQueryData(HttpContext.Current.Request.QueryString);
+            ICollection<long> ids = RequestVariables.GetIDsFromQueryData(context.Request.Query);
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ids.Count == 1);
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ids.Contains(180));
 

@@ -531,12 +531,12 @@ namespace MonogameTestbed
         */
 
         //Polygons with internal polygon merging with external concavity
-        readonly ulong[] TroubleIDS = new ulong[] {
+        readonly long[] TroubleIDS = [
           1333661, //Z = 2
           1333662, //Z = 3
           1333665 //Z =2
 
-        };
+        ];
         Scene scene;
         readonly GamePadStateTracker Gamepad = new GamePadStateTracker();
         readonly GridPolygon A;

@@ -2,7 +2,7 @@
 
 namespace Viking.AnnotationServiceTypes.Interfaces
 {
-    public interface IPermittedStructureLink : IEquatable<IPermittedStructureLink>
+    public interface IPermittedStructureLinkReadOnly : IEquatable<IPermittedStructureLinkReadOnly>
     {
         ulong SourceTypeID { get; }
         ulong TargetTypeID { get; }

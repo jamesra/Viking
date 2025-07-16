@@ -9,14 +9,14 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    public class StructureTypeObj : WCFObjBaseWithParent<long, StructureType, StructureTypeObj>, IStructureType
+    public class StructureTypeObj : WCFObjBaseWithParent<long, StructureType, StructureTypeObj>, IStructureTypeReadOnly
     {
         public override long ID => Data.ID;
 
-        ulong IStructureType.ID => (ulong)this.ID;
-        ulong? IStructureType.ParentID => this.ParentID.HasValue ? new ulong?((ulong)ParentID.Value) : new ulong?();
+        ulong IStructureTypeReadOnly.ID => (ulong)this.ID;
+        ulong? IStructureTypeReadOnly.ParentID => this.ParentID.HasValue ? new ulong?((ulong)ParentID.Value) : new ulong?();
 
-        string[] IStructureType.Tags => this.Data.Tags;
+        string[] IStructureTypeReadOnly.Tags => this.Data.Tags;
 
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.
@@ -262,7 +262,7 @@ namespace WebAnnotationModel
             }
         }
 
-        public bool Equals(IStructureType other)
+        public bool Equals(IStructureTypeReadOnly other)
         {
             if (other is null)
                 return false;

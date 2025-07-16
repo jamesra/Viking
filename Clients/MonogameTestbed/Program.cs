@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CommandLine.Text;
+using Microsoft.Extensions.Logging;
 
 namespace MonogameTestbed
 {
@@ -272,6 +273,8 @@ namespace MonogameTestbed
 
         static TextWriter SynchronizedLogWriter = null;
         static TextWriterTraceListener LogListener = null;
+        static ILoggerFactory LoggerFactory = null;
+        static ILogger Logger = null;
 
         /// <summary>
         /// The main entry point for the application.
@@ -281,7 +284,6 @@ namespace MonogameTestbed
         {
 
             bool HaveConsole = false;
-            ConsoleTraceListener consoleTracer = null;
             try
             {
                 HaveConsole = AllocConsole(); 
@@ -331,15 +333,15 @@ namespace MonogameTestbed
 
                 if(Program.options.Verbose)
                 {
-                    consoleTracer = new ConsoleTraceListener(true)
+                    LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
                     {
-                        Name = "Monogame Testbed Console Tracer"
-                    };
-
-                    Debug.Listeners.Add(consoleTracer);  
-
-                    Trace.WriteLine("Displaying trace messages");
-                    Debug.WriteLine("Displaying debug messages");
+                        builder.AddConsole();
+                        builder.SetMinimumLevel(LogLevel.Debug);
+                    });
+                    Logger = LoggerFactory.CreateLogger("MonogameTestbed");
+                    
+                    Logger.LogInformation("Displaying trace messages");
+                    Logger.LogDebug("Displaying debug messages");
                 } 
 
 
@@ -363,10 +365,9 @@ namespace MonogameTestbed
 
                 if(Program.options.Verbose)
                 {
-                    consoleTracer?.Flush();
-                    Debug.Listeners.Remove(consoleTracer); 
-                    consoleTracer?.Close();
-                    consoleTracer = null;
+                    LoggerFactory?.Dispose();
+                    LoggerFactory = null;
+                    Logger = null;
                 } 
             }
         }
@@ -379,20 +380,27 @@ namespace MonogameTestbed
             DebugLogFile = System.IO.File.CreateText(LogFullPath);
 
             SynchronizedLogWriter = StreamWriter.Synchronized(DebugLogFile);
-            LogListener = new TextWriterTraceListener(SynchronizedLogWriter, "MonogameTestbed Log Listener"); 
-            Debug.Listeners.Add(LogListener); 
-             
-            Trace.UseGlobalLock = true; 
+            
+            LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
+            {
+                builder.AddDebug();
+                builder.AddConsole();
+                builder.SetMinimumLevel(LogLevel.Debug);
+            });
+            Logger = LoggerFactory.CreateLogger("MonogameTestbed");
         }
 
         private static void StopLogger()
         {
-            if(LogListener != null)
+            if(LoggerFactory != null)
             {
-                LogListener.Flush();
-                Debug.Listeners.Remove(LogListener); 
-                LogListener.Close();
-                LogListener = null;
+                LoggerFactory.Dispose();
+                LoggerFactory = null;
+                Logger = null;
+            }
+            
+            if(SynchronizedLogWriter != null)
+            {
                 SynchronizedLogWriter.Close();
                 SynchronizedLogWriter = null;
             }

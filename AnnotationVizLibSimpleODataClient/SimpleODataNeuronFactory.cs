@@ -224,7 +224,7 @@ namespace AnnotationVizLib.SimpleOData
         /// <param name="structs"></param>
         private void AddStructuresAsNodes(ICollection<Structure> structs)
         {
-            foreach (IStructure s in structs)
+            foreach (IStructureReadOnly s in structs)
             {
                 NeuronNode node = new NeuronNode((long)s.ID, s);
                 graph.AddNode(node);

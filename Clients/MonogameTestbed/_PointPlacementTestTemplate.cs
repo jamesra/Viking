@@ -40,6 +40,7 @@ namespace MonogameTestbed
             this.scene = new Scene(window.GraphicsDevice.Viewport, window.Camera);
 
             Gamepad.Update(GamePad.GetState(PlayerIndex.One));
+            return Task.CompletedTask;
         }
 
         public void Update()

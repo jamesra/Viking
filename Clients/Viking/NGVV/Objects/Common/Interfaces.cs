@@ -165,7 +165,7 @@ namespace Viking.Common
         System.Windows.Forms.ContextMenu ContextMenu { get; }
     }
 
-    public interface IUIObjectBasic : IContextMenu
+    public interface IUIObjectBasic 
     {
         void ShowProperties();
 

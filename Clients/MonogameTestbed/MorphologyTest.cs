@@ -173,7 +173,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallTopologyModelFromOData(ulong CellID, Endpoint endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new ulong[] { CellID }, true, DataSource.EndpointMap[endpoint]); 
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(new long[] { (long)CellID }, true, DataSource.EndpointMap[endpoint]); 
 
             // TODO: TopologyMeshGenerator not available - need to implement or find alternative
             // MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
@@ -186,7 +186,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromOData(long[] CellIDs, Endpoint endpoint)
         { 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(CellIDs.Select(id => (ulong)id).ToArray(), true, DataSource.EndpointMap[endpoint]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(CellIDs.Select(id => id).ToArray(), true, DataSource.EndpointMap[endpoint]);
 
             //SelectZRange(graph, 231, 235);
             //SelectSubsetOfIDs(graph, TroubleIDS);
@@ -202,7 +202,7 @@ namespace MonogameTestbed
         /// </summary>
         public ICollection<Mesh3D<IVertex3D<ulong>>> InitSmallSmoothModelFromODataLocations(long[] LocationIDs, Endpoint endpoint)
         {
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(LocationIDs.Select(id => (ulong)id).ToArray(), true, DataSource.EndpointMap[endpoint]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(LocationIDs.Select(id => id).ToArray(), true, DataSource.EndpointMap[endpoint]);
                          
             //MorphologyMesh.TopologyMeshGenerator generator = new MorphologyMesh.TopologyMeshGenerator();
             return RecursivelyGenerateMeshes(graph);

@@ -4,7 +4,7 @@ using System;
 
 namespace WebAnnotationModel.Objects
 {
-    public readonly struct PermittedStructureLinkKey : IEquatable<PermittedStructureLinkKey>, IComparable<PermittedStructureLinkKey>, IPermittedStructureLink
+    public readonly struct PermittedStructureLinkKey : IEquatable<PermittedStructureLinkKey>, IComparable<PermittedStructureLinkKey>, IPermittedStructureLinkReadOnly
     {
         readonly long _SourceTypeID;
         readonly long _TargetTypeID;
@@ -18,11 +18,11 @@ namespace WebAnnotationModel.Objects
 
         public bool Bidirectional => _Bidirectional;
 
-        ulong IPermittedStructureLink.SourceTypeID => (ulong)SourceTypeID;
+        ulong IPermittedStructureLinkReadOnly.SourceTypeID => (ulong)SourceTypeID;
 
-        ulong IPermittedStructureLink.TargetTypeID => (ulong)TargetTypeID;
+        ulong IPermittedStructureLinkReadOnly.TargetTypeID => (ulong)TargetTypeID;
 
-        bool IPermittedStructureLink.Directional => !this.Bidirectional;
+        bool IPermittedStructureLinkReadOnly.Directional => !this.Bidirectional;
 
         public PermittedStructureLinkKey(PermittedStructureLink obj) : this(obj.SourceTypeID, obj.TargetTypeID, obj.Bidirectional)
         {
@@ -52,10 +52,10 @@ namespace WebAnnotationModel.Objects
 
         public override bool Equals(object obj)
         {
-            if (!(obj is IPermittedStructureLink other))
+            if (!(obj is IPermittedStructureLinkReadOnly other))
                 return false;
 
-            return ((IPermittedStructureLink)this).Equals(other);
+            return ((IPermittedStructureLinkReadOnly)this).Equals(other);
         }
 
         public override int GetHashCode()
@@ -112,7 +112,7 @@ namespace WebAnnotationModel.Objects
             return this.Bidirectional.CompareTo(other.Bidirectional);
         }
 
-        bool IEquatable<IPermittedStructureLink>.Equals(IPermittedStructureLink other)
+        bool IEquatable<IPermittedStructureLinkReadOnly>.Equals(IPermittedStructureLinkReadOnly other)
         {
             if (other is null)
                 return false;
@@ -172,7 +172,7 @@ namespace WebAnnotationModel.Objects
 
     public class PermittedStructureLinkObj : WCFObjBaseWithKey<PermittedStructureLinkKey,
         PermittedStructureLink>,
-        IPermittedStructureLink
+        IPermittedStructureLinkReadOnly
     {
         public override PermittedStructureLinkKey ID => new(this);
 
@@ -187,11 +187,11 @@ namespace WebAnnotationModel.Objects
 
         public bool Bidirectional => Data.Bidirectional;
 
-        ulong IPermittedStructureLink.SourceTypeID => (ulong)SourceTypeID;
+        ulong IPermittedStructureLinkReadOnly.SourceTypeID => (ulong)SourceTypeID;
 
-        ulong IPermittedStructureLink.TargetTypeID => (ulong)TargetTypeID;
+        ulong IPermittedStructureLinkReadOnly.TargetTypeID => (ulong)TargetTypeID;
 
-        bool IPermittedStructureLink.Directional => !Bidirectional;
+        bool IPermittedStructureLinkReadOnly.Directional => !Bidirectional;
 
         public override string ToString()
         {
@@ -201,9 +201,9 @@ namespace WebAnnotationModel.Objects
                 return string.Format("{0} -> {1}", SourceTypeID, TargetTypeID);
         }
 
-        public bool Equals(IPermittedStructureLink other)
+        public bool Equals(IPermittedStructureLinkReadOnly other)
         {
-            return ((IPermittedStructureLink)ID).Equals(other);
+            return ((IPermittedStructureLinkReadOnly)ID).Equals(other);
         }
 
         public PermittedStructureLinkObj(long SourceTypeID, long TargetTypeID,

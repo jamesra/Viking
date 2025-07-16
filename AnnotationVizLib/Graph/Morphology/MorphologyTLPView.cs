@@ -120,7 +120,7 @@ namespace AnnotationVizLib
             return node.Key.ToString();
         }
 
-        public string LabelForStructure(IStructure s)
+        public string LabelForStructure(IStructureReadOnly s)
         {
             if (s is null)
                 return "";

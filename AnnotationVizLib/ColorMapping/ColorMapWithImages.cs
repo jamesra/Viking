@@ -79,7 +79,7 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="locations"></param>
         /// <returns></returns>
-        public Color GetColor(ICollection<ILocation> locations)
+        public Color GetColor(ICollection<ILocationReadOnly> locations)
         {
             //Remove locations with Z values not in our lookup list to save a lot of time
             List<GridVector3> listPoints = locations.Where(l => ColorMapTable.ContainsKey((int)l.UnscaledZ)).ToList().ConvertAll(loc => loc.Geometry.Centroid().ToGridVector3(loc.UnscaledZ));

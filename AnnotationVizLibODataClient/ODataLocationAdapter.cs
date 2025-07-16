@@ -9,7 +9,7 @@ using System.Collections.Generic;
 namespace AnnotationVizLib.OData
 {
 
-    public class ODataLocationAdapter : ILocation
+    public class ODataLocationAdapter : ILocationReadOnly
     {
         private readonly Location loc;
         public readonly UnitsAndScale.IScale scale;
@@ -78,7 +78,7 @@ namespace AnnotationVizLib.OData
             }
         }
 
-        public bool Equals(ILocation other)
+        public bool Equals(ILocationReadOnly other)
         {
             if (other is null)
                 return false;
@@ -91,7 +91,7 @@ namespace AnnotationVizLib.OData
 
         public bool Equals(Location other)
         {
-            return this.Equals((ILocation)other);
+            return this.Equals((ILocationReadOnly)other);
         }
     }
 }

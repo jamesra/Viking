@@ -32,6 +32,11 @@
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DataExport\DataExport.csproj" />
+    <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
+    <ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- Test resources and content files -->
     <Content Include="App.config" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Resources\**\*.*" CopyToOutputDirectory="PreserveNewest" />

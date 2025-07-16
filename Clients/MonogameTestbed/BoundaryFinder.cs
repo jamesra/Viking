@@ -3,7 +3,8 @@ using Geometry.Meshing;
 using MorphologyMesh;
 using System;
 using System.Collections.Generic;
-using System.Linq; 
+using System.Linq;
+using TriangleNet;
 
 namespace MonogameTestbed
 {
@@ -20,7 +21,7 @@ namespace MonogameTestbed
             TriangleNet.Meshing.IMesh triangulationMesh = null;
             try
             {
-                triangulationMesh = shapes.Triangulate();
+                triangulationMesh = (TriangleNet.Meshing.IMesh)MeshExtensions.Triangulate(shapes);
             }
             catch(ArgumentException)
             {

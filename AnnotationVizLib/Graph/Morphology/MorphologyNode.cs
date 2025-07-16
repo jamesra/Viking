@@ -12,14 +12,14 @@ namespace AnnotationVizLib
     [Serializable]
     public class MorphologyNode : Node<ulong, MorphologyEdge>, IGeometry
     {
-        public ILocation Location = null;
+        public ILocationReadOnly Location = null;
 
         public ulong ID => this.Location.ID;
 
         //Structure this node represents 
         public MorphologyGraph Graph;
 
-        public MorphologyNode(ulong key, ILocation Location, MorphologyGraph parent)
+        public MorphologyNode(ulong key, ILocationReadOnly Location, MorphologyGraph parent)
             : base(key)
         {
             this.Graph = parent;

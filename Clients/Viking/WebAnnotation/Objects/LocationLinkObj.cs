@@ -12,7 +12,7 @@ namespace WebAnnotation.Objects
     /// This class represents a link between locations. This object is a little unique because it is
     /// not tied to the database object like the other *obj classes
     /// </summary>
-    public class LocationLinkObj : IUIObject
+    public class LocationLinkObj : IUIObject, IContextMenu
     {
         /// <summary>
         /// LocationOnSection is the location on the section being viewed
@@ -47,7 +47,7 @@ namespace WebAnnotation.Objects
             throw new NotImplementedException();
         }
 
-        System.Windows.Forms.ContextMenu IUIObjectBasic.ContextMenu
+        System.Windows.Forms.ContextMenu IContextMenu.ContextMenu
         {
             get
             {

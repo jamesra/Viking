@@ -53,7 +53,7 @@ namespace WebAnnotationModel
         }
     }
 
-    public class LocationObj : WCFObjBaseWithKey<long, Location>, ILocation
+    public class LocationObj : WCFObjBaseWithKey<long, Location>, ILocationReadOnly
     {
         public static bool IsPositionProperty(string propertyName)
         {
@@ -741,29 +741,29 @@ namespace WebAnnotationModel
             }
         }
 
-        ulong ILocation.ID => (ulong)this.ID;
+        ulong ILocationReadOnly.ID => (ulong)this.ID;
 
-        ulong ILocation.ParentID => (ulong)this.ParentID;
+        ulong ILocationReadOnly.ParentID => (ulong)this.ParentID;
 
-        bool ILocation.Terminal => this.Terminal;
+        bool ILocationReadOnly.Terminal => this.Terminal;
 
-        bool ILocation.OffEdge => this.OffEdge;
+        bool ILocationReadOnly.OffEdge => this.OffEdge;
 
-        bool ILocation.IsVericosityCap => this.VericosityCap;
+        bool ILocationReadOnly.IsVericosityCap => this.VericosityCap;
 
-        bool ILocation.IsUntraceable => this.Untraceable;
+        bool ILocationReadOnly.IsUntraceable => this.Untraceable;
 
-        IDictionary<string, string> ILocation.Attributes => this.Attributes.ToDictionary(i => i.Name, i => i.Value);
+        IDictionary<string, string> ILocationReadOnly.Attributes => this.Attributes.ToDictionary(i => i.Name, i => i.Value);
 
-        long ILocation.UnscaledZ => (long)this.Data.Position.Z;
+        long ILocationReadOnly.UnscaledZ => (long)this.Data.Position.Z;
 
-        string ILocation.TagsXml => this.Data.AttributesXml;
+        string ILocationReadOnly.TagsXml => this.Data.AttributesXml;
 
-        LocationType ILocation.TypeCode => this.TypeCode;
+        LocationType ILocationReadOnly.TypeCode => this.TypeCode;
 
-        double ILocation.Z => throw new NotImplementedException(); //Need to know scale of volume
+        double ILocationReadOnly.Z => throw new NotImplementedException(); //Need to know scale of volume
 
-        SqlGeometry ILocation.Geometry => this.VolumeShape;
+        SqlGeometry ILocationReadOnly.Geometry => this.VolumeShape;
 
         /// <summary>
         /// Add the specified name to the attributes if it does not exists, removes it 
@@ -888,7 +888,7 @@ namespace WebAnnotationModel
             OnCreate?.Invoke(this, null);
         }
 
-        bool IEquatable<ILocation>.Equals(ILocation other)
+        bool IEquatable<ILocationReadOnly>.Equals(ILocationReadOnly other)
         {
             if (other is null)
                 return false;

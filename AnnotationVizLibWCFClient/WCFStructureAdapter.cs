@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFStructureAdapter : IStructure
+    class WCFStructureAdapter : IStructureReadOnly
     {
         private readonly Structure structure;
 
@@ -42,11 +42,11 @@ namespace AnnotationVizLib.WCFClient
 
         public string TagsXML => structure.AttributesXml;
 
-        public IStructureType Type => new WCFStructureTypeAdapter(Queries.IDToStructureType[this.structure.TypeID]);
+        public IStructureTypeReadOnly Type => new WCFStructureTypeAdapter(Queries.IDToStructureType[this.structure.TypeID]);
 
         public ulong TypeID => (ulong)structure.TypeID;
 
-        public bool Equals(IStructure other)
+        public bool Equals(IStructureReadOnly other)
         {
             if (other is null)
                 return false;

@@ -402,7 +402,7 @@ namespace MonogameTestbed
 
             labelCamera = new LabelView("", new GridVector2(0, 100));
 
-            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(TroubleIDS, true, DataSource.EndpointMap[Endpoint.TEST]);
+            AnnotationVizLib.MorphologyGraph graph = AnnotationVizLib.OData.ODataMorphologyFactory.FromOData(TroubleIDS.Select(id => (long)id).ToArray(), true, DataSource.EndpointMap[Endpoint.TEST]);
 
             AnnotationVizLib.MorphologyNode[] nodes = graph.Nodes.Values.ToArray();
 

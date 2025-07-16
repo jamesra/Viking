@@ -14,13 +14,13 @@ namespace MonogameTestbed
 {     
     internal class BoundarySurfaceViewModel
     { 
-        public readonly IStructureType Type;
+        public readonly IStructureTypeReadOnly Type;
         public readonly GridVector3[] BoundaryMarkers;
         public readonly TriangulationMesh<TriangulationVertex> TriangulationMesh;
         public readonly GridVector3 Center;
         public readonly Mesh3D<Vertex3D> Mesh;
 
-        public BoundarySurfaceViewModel(IStructureType type, GridVector3[] surface_points)
+        public BoundarySurfaceViewModel(IStructureTypeReadOnly type, GridVector3[] surface_points)
         {
             Type = type;
             Center = surface_points.Centroid();

@@ -76,7 +76,7 @@ namespace MorphologyMesh
 
         public virtual double[] ShapeZ { get; }
 
-        internal virtual bool[] IsUpperShape { get; }
+        public virtual bool[] IsUpperShape { get; }
 
         private readonly Dictionary<IShapeIndex, long> ShapeIndexToVertex = new Dictionary<IShapeIndex, long>();
 

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace AnnotationVizLib.OData
 {
-    class ODataStructureAdapter : IStructure
+    class ODataStructureAdapter : IStructureReadOnly
     {
         private readonly Structure structure;
 
@@ -43,11 +43,11 @@ namespace AnnotationVizLib.OData
 
         public string TagsXML => structure.Tags;
 
-        public IStructureType Type => new ODataStructureTypeAdapter(structure.Type);
+        public IStructureTypeReadOnly Type => new ODataStructureTypeAdapter(structure.Type);
 
         public ulong TypeID => (ulong)structure.TypeID;
 
-        public bool Equals(IStructure other)
+        public bool Equals(IStructureReadOnly other)
         {
             if (other is null)
                 return false;
@@ -60,7 +60,7 @@ namespace AnnotationVizLib.OData
 
         public bool Equals(Structure other)
         {
-            return this.Equals((IStructure)other);
+            return this.Equals((IStructureReadOnly)other);
         }
     }
 }

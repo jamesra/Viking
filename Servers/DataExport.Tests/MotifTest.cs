@@ -3,8 +3,8 @@ using AnnotationVizLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.Collections.Specialized;
-using System.Web;
-using System.Web.Mvc;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DataExport.Tests
 {
@@ -20,10 +20,10 @@ namespace DataExport.Tests
         {
             MotifGraph graph = new MotifGraph();
 
-            MotifNode BC_node = new MotifNode("BC", new IStructure[0]);
-            MotifNode ACII_node = new MotifNode("ACII", new IStructure[0]);
-            MotifNode ACI_node = new MotifNode("ACI", new IStructure[0]);
-            MotifNode GC_node = new MotifNode("GC", new IStructure[0]);
+            MotifNode BC_node = new MotifNode("BC", new IStructureReadOnly[0]);
+            MotifNode ACII_node = new MotifNode("ACII", new IStructureReadOnly[0]);
+            MotifNode ACI_node = new MotifNode("ACI", new IStructureReadOnly[0]);
+            MotifNode GC_node = new MotifNode("GC", new IStructureReadOnly[0]);
 
             MotifEdge BC_GC_edge = new MotifEdge("BC", "GC", "RIBBON SYNAPSE");
             MotifEdge BC_AC_edge = new MotifEdge("BC", "ACII", "RIBBON SYNAPSE");
@@ -62,18 +62,21 @@ namespace DataExport.Tests
             };
 
             // Create mocks
-            var mockedhttpContext = new Mock<HttpContextBase>();
-            var mockedHttpRequest = new Mock<HttpRequestBase>();
-
-            mockedHttpRequest.SetupGet(x => x.QueryString).Returns(queryParams);
-            mockedhttpContext.SetupGet(x => x.Request).Returns(mockedHttpRequest.Object);
+            var mockedHttpContext = new DefaultHttpContext();
+            var mockedHttpRequest = mockedHttpContext.Request;
+            mockedHttpRequest.QueryString = new QueryString("?id=180;476");
              
-            HttpContext.Current = new HttpContext(new HttpRequest("", "http://tempuri.org", "id=180;476"), new HttpResponse(new System.IO.StringWriter()));
-            DataExport.Controllers.MorphologyController controller = new Controllers.MorphologyController();
-            controller.ControllerContext = new ControllerContext(mockedhttpContext.Object, new System.Web.Routing.RouteData(), controller);
+            // Provide a mock IWebHostEnvironment
+            var mockEnv = new Moq.Mock<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+            DataExport.Controllers.MorphologyController controller = new Controllers.MorphologyController(mockEnv.Object);
+            controller.ControllerContext = new ControllerContext()
+            {
+                HttpContext = mockedHttpContext
+            };
             
-            ActionResult result = await controller.GetTLP();
-            Assert.IsTrue(result.GetType() == typeof(FilePathResult));
+            IActionResult result = await controller.GetTLP();
+            // Check for FileResult instead of FilePathResult
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(result is FileResult);
 
         }
     }

@@ -33,7 +33,7 @@ namespace Viking.AnnotationServiceTypes.Interfaces
     /// <summary>
     /// An interface to an annotation that marks a location in a structure.  Locations on the same section should not overlap.  Locations on adjacent structure physically connected should be linked.
     /// </summary>
-    public interface ILocation : IEquatable<ILocation>
+    public interface ILocationReadOnly : IEquatable<ILocationReadOnly>
     {
         /// <summary>
         /// Unique ID of the location

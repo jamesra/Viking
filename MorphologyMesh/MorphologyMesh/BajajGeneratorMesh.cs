@@ -28,7 +28,7 @@ namespace MorphologyMesh
     /// </summary>
     public class BajajGeneratorMesh : MorphRenderMesh
     {
-        internal override bool[] IsUpperShape => Topology.IsUpper;
+        public override bool[] IsUpperShape => Topology.IsUpper;
 
         /// <summary>
         /// Vertex indicies that belong to an upper polygon

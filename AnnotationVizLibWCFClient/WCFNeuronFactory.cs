@@ -10,7 +10,7 @@ namespace AnnotationVizLib.WCFClient
 {
     public class WCFNeuronFactory
     {
-        readonly SortedDictionary<ulong, IStructure> IDToStructure = new SortedDictionary<ulong, IStructure>();
+        readonly SortedDictionary<ulong, IStructureReadOnly> IDToStructure = new SortedDictionary<ulong, IStructureReadOnly>();
 
         static SortedDictionary<long, StructureType> IDToStructureType = null;
 
@@ -59,7 +59,7 @@ namespace AnnotationVizLib.WCFClient
         {
             AddStructuresAsNodes(Nodes);
 
-            foreach (IStructure s in childStructures.Select(s => new WCFStructureAdapter(s)))
+            foreach (IStructureReadOnly s in childStructures.Select(s => new WCFStructureAdapter(s)))
             {
                 if (!IDToStructure.ContainsKey(s.ID))
                     IDToStructure.Add(s.ID, s);
@@ -89,8 +89,8 @@ namespace AnnotationVizLib.WCFClient
                 //After this point both nodes are already in the graph and we can create an edge
                 if (IDToStructure.ContainsKey((ulong)link.SourceID) && IDToStructure.ContainsKey((ulong)link.TargetID))
                 {
-                    IStructure LinkSource = IDToStructure[(ulong)link.SourceID];
-                    IStructure LinkTarget = IDToStructure[(ulong)link.TargetID];
+                    IStructureReadOnly LinkSource = IDToStructure[(ulong)link.SourceID];
+                    IStructureReadOnly LinkTarget = IDToStructure[(ulong)link.TargetID];
 
                     if (LinkTarget.ParentID.HasValue && LinkSource.ParentID.HasValue)
                     {
@@ -139,7 +139,7 @@ namespace AnnotationVizLib.WCFClient
 
             Structure[] LinkedStructurePartners = FindMissingLinkedStructures(proxy, ChildStructures);
 
-            foreach (IStructure s in LinkedStructurePartners.Where(s => !IDToStructure.ContainsKey((ulong)s.ID)).Select(s => new WCFStructureAdapter(s)))
+            foreach (IStructureReadOnly s in LinkedStructurePartners.Where(s => !IDToStructure.ContainsKey((ulong)s.ID)).Select(s => new WCFStructureAdapter(s)))
             {
                 IDToStructure.Add(s.ID, s);
             }
@@ -168,7 +168,7 @@ namespace AnnotationVizLib.WCFClient
 
         private void AddStructuresAsNodes(Structure[] structs)
         {
-            foreach (IStructure s in structs.Select(s => new WCFStructureAdapter(s)))
+            foreach (IStructureReadOnly s in structs.Select(s => new WCFStructureAdapter(s)))
             {
                 NeuronNode node = new NeuronNode((long)s.ID, s);
                 graph.AddNode(node);
@@ -183,7 +183,7 @@ namespace AnnotationVizLib.WCFClient
 
             foreach (Structure s in MissingStructures)
             {
-                IStructure adapter = new WCFStructureAdapter(s);
+                IStructureReadOnly adapter = new WCFStructureAdapter(s);
                 NeuronNode node = new NeuronNode(s.ID, adapter);
                 graph.AddNode(node);
 
@@ -211,7 +211,7 @@ namespace AnnotationVizLib.WCFClient
             SortedSet<ulong> ListAbsentLinkPartners = new SortedSet<ulong>();
 
             //Find missing structures and populate the list
-            foreach (IStructure child in ChildStructures.Select(s => new WCFStructureAdapter(s)))
+            foreach (IStructureReadOnly child in ChildStructures.Select(s => new WCFStructureAdapter(s)))
             {
                 if (!IDToStructure.ContainsKey((ulong)child.ID))
                 {

@@ -9,7 +9,7 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotationModel
 {
-    public class StructureObj : WCFObjBaseWithParent<long, Structure, StructureObj>, IStructure
+    public class StructureObj : WCFObjBaseWithParent<long, Structure, StructureObj>, IStructureReadOnly
     {
         public override long ID => Data.ID;
 
@@ -405,15 +405,15 @@ namespace WebAnnotationModel
             }
         }
 
-        ulong IStructure.ID => (ulong)this.ID;
+        ulong IStructureReadOnly.ID => (ulong)this.ID;
 
-        ulong? IStructure.ParentID => this.ParentID.HasValue ? new ulong?((ulong)ParentID.Value) : new ulong?();
+        ulong? IStructureReadOnly.ParentID => this.ParentID.HasValue ? new ulong?((ulong)ParentID.Value) : new ulong?();
 
-        ulong IStructure.TypeID => (ulong)this.TypeID;
+        ulong IStructureReadOnly.TypeID => (ulong)this.TypeID;
 
-        ICollection<IStructureLink> IStructure.Links => this.Links.Select(sl => (IStructureLink)sl).ToList();
+        ICollection<IStructureLink> IStructureReadOnly.Links => this.Links.Select(sl => (IStructureLink)sl).ToList();
 
-        IStructureType IStructure.Type => this.Type;
+        IStructureTypeReadOnly IStructureReadOnly.Type => this.Type;
 
         public string TagsXML => this.TagsXML;
 
@@ -430,7 +430,7 @@ namespace WebAnnotationModel
             OnCreate?.Invoke(this, null);
         }
 
-        public bool Equals(IStructure other)
+        public bool Equals(IStructureReadOnly other)
         {
             if (other is null)
                 return false;

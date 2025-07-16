@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 using Geometry; 
 
-using Common.UI;
+using Viking.Common.UI;
 using Viking.Common; 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;

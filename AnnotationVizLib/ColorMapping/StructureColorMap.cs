@@ -38,7 +38,7 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="structure"></param>
         /// <returns></returns>
-        public virtual System.Drawing.Color GetColor(IStructure structure)
+        public virtual System.Drawing.Color GetColor(IStructureReadOnly structure)
         {
             return GetColor(structure, out COLORSOURCE source);
         }
@@ -48,7 +48,7 @@ namespace AnnotationVizLib
         /// </summary>
         /// <param name="structure"></param>
         /// <returns></returns>
-        public virtual System.Drawing.Color GetColor(IStructure structure, out COLORSOURCE source)
+        public virtual System.Drawing.Color GetColor(IStructureReadOnly structure, out COLORSOURCE source)
         {
             if (structure is null)
             {
@@ -90,7 +90,7 @@ namespace AnnotationVizLib
             this.LocationColorMap = locationColorMap;
         }
 
-        private System.Drawing.Color GetStructureColorFromMorphology(ICollection<ILocation> locations)
+        private System.Drawing.Color GetStructureColorFromMorphology(ICollection<ILocationReadOnly> locations)
         {
             if (LocationColorMap is null)
                 return System.Drawing.Color.Empty;

@@ -16,7 +16,7 @@ using System.ComponentModel;
 namespace WebAnnotation.AnnotationObjects
 {
     [TreeViewVisible]
-    class StructureTypeObj : IUIObject
+    class StructureTypeObj : IUIObject, IContextMenu
     {
         public override string ToString()
         {
@@ -157,7 +157,7 @@ namespace WebAnnotation.AnnotationObjects
             _Children.Add(child);
 //            SetDBActionForChange(); Don't do this, the database doesn't care if the child changes, tables only carry a parent field
             if(OnChildChanged != null)
-                OnChildChanged(this, new ChildChangeEventArgs(child, CHANGEACTION.ADD)); 
+                OnChildChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, child)); 
         }
 
         private void RemoveChild(StructureTypeObj child)
@@ -165,7 +165,7 @@ namespace WebAnnotation.AnnotationObjects
             _Children.Remove(child);
 //            SetDBActionForChange(); Don't do this, the database doesn't care if the child changes, tables only carry a parent field
             if (OnChildChanged != null)
-                OnChildChanged(this, new ChildChangeEventArgs(child, CHANGEACTION.REMOVE)); 
+                OnChildChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, child)); 
         }
 
         public StructureTypeObj(StructureType data)
@@ -235,12 +235,12 @@ namespace WebAnnotation.AnnotationObjects
             remove => OnAfterSave -= value;
         }
 
-        void IUIObject.ShowProperties()
+        void IUIObjectBasic.ShowProperties()
         {
             Viking.UI.Forms.PropertySheetForm.Show(this); 
         }
 
-        System.Windows.Forms.ContextMenu IUIObject.ContextMenu
+        System.Windows.Forms.ContextMenu IContextMenu.ContextMenu
         {
             get 
             {
@@ -264,9 +264,9 @@ namespace WebAnnotation.AnnotationObjects
 
         System.Drawing.Image IUIObject.SmallThumbnail => null;
 
-        string IUIObject.ToolTip => this.Name;
+        string IUIObjectBasic.ToolTip => this.Name;
 
-        void IUIObject.Save()
+        void IUIObjectBasic.Save()
         {
             if (OnBeforeSave != null)
                 OnBeforeSave(this, null); 
@@ -286,7 +286,7 @@ namespace WebAnnotation.AnnotationObjects
 
         int IUIObject.TreeSelectedImageIndex => 0;
 
-        event ChildChangedEventHandler IUIObject.ChildChanged
+        event NotifyCollectionChangedEventHandler IUIObject.ChildChanged
         {
             add => OnChildChanged += value;
             remove => OnChildChanged -= value;

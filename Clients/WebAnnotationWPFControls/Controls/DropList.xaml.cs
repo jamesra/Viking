@@ -34,13 +34,13 @@ namespace WebAnnotation.WPF.Controls
                 return;
             }
 
-            if(false == DropCommand.CanExecute(e.Data.GetData(typeof(IStructureType))))
+            if(false == DropCommand.CanExecute(e.Data.GetData(typeof(IStructureTypeReadOnly))))
             {
                 e.Handled = false;
                 return; 
             }
 
-            DropCommand.Execute(e.Data.GetData(typeof(IStructureType)));
+            DropCommand.Execute(e.Data.GetData(typeof(IStructureTypeReadOnly)));
         }
 
         private void OnListDragOver(object sender, DragEventArgs e)
@@ -52,7 +52,7 @@ namespace WebAnnotation.WPF.Controls
                 return;
             }
 
-            if (DropCommand.CanExecute(e.Data.GetData(typeof(IStructureType))))
+            if (DropCommand.CanExecute(e.Data.GetData(typeof(IStructureTypeReadOnly))))
             {
                 e.Effects = DragDropEffects.Link;
                 e.Handled = true;

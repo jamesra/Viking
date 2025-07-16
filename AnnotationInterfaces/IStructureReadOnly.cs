@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Viking.AnnotationServiceTypes.Interfaces
 {
-    public interface IStructure : IEquatable<IStructure>
+    public interface IStructureReadOnly : IEquatable<IStructureReadOnly>
     {
         ulong ID { get; }
 
@@ -18,7 +18,7 @@ namespace Viking.AnnotationServiceTypes.Interfaces
             get;
         }
 
-        IStructureType Type
+        IStructureTypeReadOnly Type
         {
             get;
         }

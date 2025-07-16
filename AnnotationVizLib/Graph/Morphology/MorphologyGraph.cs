@@ -20,13 +20,13 @@ namespace AnnotationVizLib
         /// </summary>
         public readonly ulong StructureID = 0;
 
-        public readonly IStructure structure = null;
+        public readonly IStructureReadOnly structure = null;
 
         public readonly IScale scale = null;
 
         public virtual double SectionThickness => scale.Z.Value;
         
-        public IStructureType structureType => structure.Type; 
+        public IStructureTypeReadOnly structureType => structure.Type; 
 
         [field: NonSerialized()]
         private RTree<ulong> _RTree = null;
@@ -47,7 +47,7 @@ namespace AnnotationVizLib
             this.scale = scale;
         }
 
-        public MorphologyGraph(ulong subgraph_id, IScale scale, IStructure structure)
+        public MorphologyGraph(ulong subgraph_id, IScale scale, IStructureReadOnly structure)
         {
             this.StructureID = subgraph_id;
             this.structure = structure;

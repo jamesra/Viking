@@ -8,7 +8,7 @@ using UnitsAndScale;
 
 namespace AnnotationVizLib.SimpleOData
 {
-    public class Location : ILocation, IEquatable<Location>
+    public class Location : ILocationReadOnly, IEquatable<Location>
     {
         public IScale scale { get; set; }
 
@@ -94,7 +94,7 @@ namespace AnnotationVizLib.SimpleOData
             get; internal set;
         }
 
-        double ILocation.Z => (double)UnscaledZ * scale.Z.Value;
+        double ILocationReadOnly.Z => (double)UnscaledZ * scale.Z.Value;
 
         public string TagsXml => this.Tags;
 
@@ -134,7 +134,7 @@ namespace AnnotationVizLib.SimpleOData
             return ID.ToString();
         }
 
-        public bool Equals(ILocation other)
+        public bool Equals(ILocationReadOnly other)
         {
             if (other is null)
                 return false;
@@ -147,7 +147,7 @@ namespace AnnotationVizLib.SimpleOData
 
         public bool Equals(Location other)
         {
-            return this.Equals((ILocation)other);
+            return this.Equals((ILocationReadOnly)other);
         }
     }
 }

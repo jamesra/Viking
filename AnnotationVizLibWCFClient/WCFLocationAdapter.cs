@@ -9,7 +9,7 @@ using UnitsAndScale;
 
 namespace AnnotationVizLib.WCFClient
 {
-    class WCFLocationAdapter : ILocation
+    class WCFLocationAdapter : ILocationReadOnly
     {
         private readonly Location loc;
         public readonly IScale scale;
@@ -103,7 +103,7 @@ namespace AnnotationVizLib.WCFClient
             }
         }
 
-        public bool Equals(ILocation other)
+        public bool Equals(ILocationReadOnly other)
         {
             if (other is null)
                 return false;
