@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
-using Viking.Common;
 using System.Windows.Forms;
+using Viking.Common;
 using WebAnnotation.Service; 
 
 namespace WebAnnotation.Objects
@@ -94,7 +96,7 @@ namespace WebAnnotation.Objects
         internal event EventHandler OnAfterDelete;
         internal event EventHandler OnBeforeSave;
         internal event EventHandler OnAfterSave;
-        private event ChildChangedEventHandler OnChildChanged;
+        private event NotifyCollectionChangedEventHandler OnChildChanged;
 
         protected void ValueChangedEvent(string Column)
         {
@@ -146,7 +148,7 @@ namespace WebAnnotation.Objects
             }
         }
 
-        internal void CallOnChildChanged(ChildChangeEventArgs args)
+        internal void CallOnChildChanged(NotifyCollectionChangedEventArgs args)
         {
             if (OnChildChanged != null)
             {
@@ -158,7 +160,7 @@ namespace WebAnnotation.Objects
 
         #region IUIObject Members
 
-        public event ValueChangedEventHandler ValueChanged
+        public event PropertyChangedEventHandler ValueChanged
         {
             add => OnValueChanged += value;
             remove => OnValueChanged -= value;
@@ -188,7 +190,7 @@ namespace WebAnnotation.Objects
             remove => OnAfterSave -= value;
         }
 
-        public event ChildChangedEventHandler ChildChanged
+        public event NotifyCollectionChangedEventHandler ChildChanged
         {
             add => OnChildChanged += value;
             remove => OnChildChanged -= value;

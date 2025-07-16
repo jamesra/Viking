@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Diagnostics; 
-using WebAnnotation.WCFService.Annotation;
 using System.Drawing;
 using System.Windows.Forms; 
 
@@ -12,6 +11,7 @@ using Viking.Common;
 using Viking.Common.UI;
 using WebAnnotation.Service;
 using System.ComponentModel;
+using WebAnnotationModel;
 
 namespace WebAnnotation.AnnotationObjects
 {
@@ -196,7 +196,7 @@ namespace WebAnnotation.AnnotationObjects
             return Data;
         }
 
-        private event ValueChangedEventHandler OnValueChanged;
+        private event PropertyChangedEventHandler OnValueChanged;
         internal event EventHandler OnBeforeDelete;
         internal event EventHandler OnAfterDelete;
         internal event EventHandler OnBeforeSave;
@@ -205,7 +205,7 @@ namespace WebAnnotation.AnnotationObjects
 
         #region IUIObject Members
 
-        event ValueChangedEventHandler IUIObject.ValueChanged
+        event PropertyChangedEventHandler IUIObject.ValueChanged
         {
             add => OnValueChanged += value;
             remove => OnValueChanged -= value;

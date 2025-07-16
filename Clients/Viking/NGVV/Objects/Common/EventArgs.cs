@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Viking.ViewModels;
 using System.Collections;
+using System.ComponentModel;
 
 namespace Viking.Common
 {
@@ -93,7 +94,8 @@ namespace Viking.Common
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="e"></param>
-    public delegate void ValueChangedEventHandler(object sender, Viking.Common.ValueChangedEventArgs e);
+    public delegate void ValueChangedEventHandler(object sender, ValueChangedEventArgs e);
+    
     public class ValueChangedEventArgs : System.EventArgs
     {
         /// <summary>

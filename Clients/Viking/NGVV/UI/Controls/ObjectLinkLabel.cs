@@ -95,7 +95,7 @@ namespace Viking.UI.Controls
             var contextMenu = new System.Windows.Forms.ContextMenuStrip();
 
             // Get the object's context menu and convert it to ContextMenuStrip
-            using (ContextMenu objectContextMenu = ((IUIObject)_SourceObject).ContextMenu)
+            using (ContextMenu objectContextMenu = ((IContextMenu)_SourceObject).ContextMenu)
             {
                 if (objectContextMenu != null)
                 {

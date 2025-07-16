@@ -87,7 +87,7 @@ namespace WebAnnotation.Objects
         }
 
         List<THISTYPE> _Children = new List<THISTYPE>();
-        [Common.UI.ThisToManyRelation]
+        [Viking.Common.UI.ThisToManyRelation]
         public THISTYPE[] Children => _Children.ToArray();
 
         protected void AddChild(THISTYPE child)

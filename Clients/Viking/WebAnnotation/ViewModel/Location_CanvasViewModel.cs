@@ -13,7 +13,7 @@ using WebAnnotationModel;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Drawing;
-using Common.UI;
+using Viking.Common.UI;
 using WebAnnotation.UI.Commands;
 using System.Collections.Concurrent;
 
@@ -22,7 +22,7 @@ namespace WebAnnotation.ViewModel
     public class Location_CanvasViewModel : Location_ViewModelBase
     {
         public Location_CanvasViewModel(LocationObj location)
-            : base(location)
+            : base(location.ID)
         {
 
         }

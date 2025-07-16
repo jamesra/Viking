@@ -300,8 +300,7 @@ namespace Viking.UI.Controls
             if (mouseNode != null)
             {
                 // Get context menu from the object associated with the node
-                IUIObject obj = mouseNode.Tag as IUIObject;
-                if (obj != null)
+                if (mouseNode.Tag is IContextMenu obj)
                 {
                     using (ContextMenu objectContextMenu = obj.ContextMenu)
                     {

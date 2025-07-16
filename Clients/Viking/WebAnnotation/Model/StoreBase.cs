@@ -6,7 +6,8 @@ using System.ServiceModel;
 using WebAnnotation.Service; 
 using WebAnnotation.Objects;
 using System.Diagnostics; 
-using System.Collections.Concurrent; 
+using System.Collections.Concurrent;
+using WebAnnotationModel;
 
 namespace WebAnnotation
 {
@@ -100,7 +101,7 @@ namespace WebAnnotation
         #region Queries
 
         /// <summary>
-        /// Gets the requested location, first checking locally, then asking the server
+        /// Gets the requested OBJECT, first checking locally, then asking the server
         /// </summary>
         /// <param name="ID"></param>
         /// <returns></returns>
@@ -110,7 +111,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Gets the requested location, first checking locally, then asking the server
+        /// Gets the requested OBJECT, first checking locally, then optionally asking the server
         /// </summary>
         /// <param name="ID"></param>
         /// <param name="AskServer">If false only the local cache is checked</param>

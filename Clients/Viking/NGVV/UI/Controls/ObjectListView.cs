@@ -403,7 +403,7 @@ namespace Viking.UI.BaseClasses
             // if there was an item for that location, add object-specific menu items
             if (listItem != null)
             {
-                IUIObject contextObj = ObjectForItem(listItem);
+                var contextObj = ContextMenuForItem(listItem);
                 if (contextObj != null)
                 {
                     // Convert old ContextMenu to ContextMenuStrip items
@@ -595,6 +595,11 @@ namespace Viking.UI.BaseClasses
         private Viking.Common.IUIObject ObjectForItem(ListViewItem Item)
         {
             return Item?.Tag as IUIObject;
+        }
+
+        private Viking.Common.IContextMenu ContextMenuForItem(ListViewItem Item)
+        {
+            return Item?.Tag as IContextMenu;
         }
 
         protected override void OnColumnClick(System.Windows.Forms.ColumnClickEventArgs e)

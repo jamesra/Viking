@@ -6,8 +6,11 @@ using System.Text;
 using System.Diagnostics;
 using System.ServiceModel; 
 
-using WebAnnotation.Service; 
-using WebAnnotation.Objects;
+using WebAnnotation.Service;
+using WebAnnotationModel;
+using LocationObj = WebAnnotation.Objects.LocationObj;
+using StructureLinkObj = WebAnnotation.Objects.StructureLinkObj;
+using StructureObj = WebAnnotation.Objects.StructureObj;
 
 namespace WebAnnotation
 {

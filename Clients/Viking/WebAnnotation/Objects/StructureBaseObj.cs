@@ -1,19 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Diagnostics; 
 
 using System.Drawing;
 using System.Windows.Forms;
-
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
 using Viking.Common.UI;
-using WebAnnotation.Service;
+using WebAnnotationModel;
 
 namespace WebAnnotation.Objects
 {
-    class StructureBaseObj : IUIObject
+    class StructureBaseObj : IUIObject, IContextMenu
     {
         public override string ToString()
         {
@@ -149,9 +151,9 @@ namespace WebAnnotation.Objects
         {
             get
             {
-                if (_Type == null)
+                if (_Type is null)
                 {
-                    _Type = StructureTypeStore.GetStructureType(Data.TypeID);
+                    _Type = StructureTypeStore.GetObjectByID(Data.TypeID);
                 }
                 return _Type; 
             }
@@ -170,22 +172,22 @@ namespace WebAnnotation.Objects
             }
         }
 
-        protected void FireOnChildChanged(ChildChangeEventArgs args)
+        protected void FireOnChildChanged(NotifyCollectionChangedEventArgs args)
         {
             if(OnChildChanged != null)
                 OnChildChanged(this, args); 
         }
 
-        protected event ValueChangedEventHandler OnValueChanged;
+        protected event PropertyChangedEventHandler OnValueChanged;
         protected event EventHandler OnBeforeDelete;
         protected event EventHandler OnAfterDelete;
         protected event EventHandler OnBeforeSave;
         protected event EventHandler OnAfterSave;
-        protected event ChildChangedEventHandler OnChildChanged;
+        protected event NotifyCollectionChangedEventHandler OnChildChanged;
 
         #region IUIObject Members
 
-        event ValueChangedEventHandler IUIObject.ValueChanged
+        event PropertyChangedEventHandler IUIObject.ValueChanged
         {
             add => OnValueChanged += value;
             remove => OnValueChanged -= value;
@@ -251,7 +253,7 @@ namespace WebAnnotation.Objects
 
         int IUIObject.TreeSelectedImageIndex => throw new NotImplementedException();
 
-        event ChildChangedEventHandler IUIObject.ChildChanged
+        event NotifyCollectionChangedEventHandler IUIObject.ChildChanged
         {
             add => OnChildChanged += value;
             remove => OnChildChanged -= value;

@@ -4,12 +4,16 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
-using WebAnnotation.Objects;
 using Viking;
 using Viking.Common;
 using Geometry;
 using WebAnnotation.UI;
-using Viking.ViewModels; 
+using Viking.ViewModels;
+using WebAnnotationModel;
+using LocationLinkObj = WebAnnotation.Objects.LocationLinkObj;
+using LocationObj = WebAnnotation.Objects.LocationObj;
+using StructureLinkObj = WebAnnotation.Objects.StructureLinkObj;
+using StructureObj = WebAnnotation.Objects.StructureObj;
 
 namespace WebAnnotation.ViewModel
 {
