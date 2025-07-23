@@ -138,16 +138,30 @@ namespace MeasureDistance
         {
             // SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory); // Commented out - not accessible in .NET 9.0
 
-            Parser.Default.ParseArguments<CommandLineOptions>(args)
-                .WithParsed<CommandLineOptions>(opts => 
+            var result = Parser.Default.ParseArguments<CommandLineOptions>(args);
+            result.WithParsed<CommandLineOptions>(opts => 
+            {
+                options = opts;
+                MeasureDistanceForAllLabelClasses();
+            })
+            .WithNotParsed<CommandLineOptions>((errs) => 
+            {
+                // Create a new help text with error information
+                var errorHelpText = HelpText.AutoBuild(Parser.Default);
+                errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
+                errorHelpText.AddPreOptionsLine("The following errors occurred:");
+                
+                foreach (var error in errs)
                 {
-                    options = opts;
-                    MeasureDistanceForAllLabelClasses();
-                })
-                .WithNotParsed<CommandLineOptions>((errs) => 
-                {
-                    Console.WriteLine("Unable to parse command line arguments, aborting");
-                });
+                    errorHelpText.AddPreOptionsLine($"  {error}");
+                }
+                
+                errorHelpText.AddPreOptionsLine("");
+                Console.WriteLine(errorHelpText);
+                
+                // Exit with error code
+                Environment.Exit(1);
+            });
         }
         
         public static void MeasureDistanceForAllLabelClasses()

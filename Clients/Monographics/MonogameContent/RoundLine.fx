@@ -26,8 +26,8 @@ technique Standard
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
 		StencilEnable = true;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	} 
 	pass P0
 	{
@@ -40,8 +40,8 @@ technique Standard
 		ZEnable = true;
 		StencilFunc = LessEqual;
 		StencilEnable = true;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSStandard();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSStandard();
 	}
 }
 
@@ -58,8 +58,8 @@ technique AlphaGradient
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -71,8 +71,8 @@ technique AlphaGradient
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSAlphaGradient();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSAlphaGradient();
 	}
 }
 
@@ -90,8 +90,8 @@ technique NoBlur
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -103,8 +103,8 @@ technique NoBlur
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSNoBlur();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSNoBlur();
 	}
 }
 
@@ -122,8 +122,8 @@ technique AnimatedLinear
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -135,8 +135,8 @@ technique AnimatedLinear
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSAnimatedLinear();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSAnimatedLinear();
 	}
 }
 
@@ -153,8 +153,8 @@ technique AnimatedBidirectional
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -166,8 +166,8 @@ technique AnimatedBidirectional
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSAnimatedBidirectional();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSAnimatedBidirectional();
 	}
 }
 
@@ -185,8 +185,8 @@ technique AnimatedRadial
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -198,8 +198,8 @@ technique AnimatedRadial
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSAnimatedRadial();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSAnimatedRadial();
 	}
 }
 
@@ -217,8 +217,8 @@ technique Ladder
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -230,8 +230,8 @@ technique Ladder
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSLadder();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSLadder();
 	}
 }
 
@@ -248,8 +248,8 @@ technique Dashed
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -261,8 +261,8 @@ technique Dashed
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSDashed();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSDashed();
 	}
 }
 
@@ -313,8 +313,8 @@ technique HalfTube
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -326,8 +326,8 @@ technique HalfTube
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSHalfTubular();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSHalfTubular();
 	}
 }
 
@@ -345,8 +345,8 @@ technique Glow
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -358,8 +358,8 @@ technique Glow
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSGlow();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSGlow();
 	}
 }
 
@@ -377,8 +377,8 @@ technique Textured
 		ZFunc = LessEqual;
 		ZWriteEnable = true;
 		StencilFunc = GreaterEqual;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 DepthOnlyShader();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyShader();
 	}
 	pass P0
 	{
@@ -390,7 +390,7 @@ technique Textured
 		ZEnable = true;
 		ZFunc = LessEqual;
 		StencilFunc = Equal;
-		vertexShader = compile vs_4_0_level_9_3 LineVertexShader();
-		pixelShader = compile ps_4_0_level_9_3 MyPSTextured();
+		vertexShader = compile vs_4_0 LineVertexShader();
+		pixelShader = compile ps_4_0 MyPSTextured();
 	}
 }

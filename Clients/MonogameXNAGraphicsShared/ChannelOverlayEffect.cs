@@ -20,13 +20,24 @@ namespace VikingXNA
             set => _WorldViewProjMatrix.SetValue(value);
         }
 
+
+        public void PrepareHCLToRGB(Texture2D texture)
+        {
+            this.effect.CurrentTechnique = effect.Techniques["HCLToRGB"];
+        }
+
+        public void PrepareRGBToHCL(Texture2D texture)
+        {
+            this.effect.CurrentTechnique = effect.Techniques["RGBToHCL"];
+        }
+
         public void SetEffectTextures(Texture Background, Texture ColorOverlay)
         {
             _BackgroundTexture.SetValue(Background);
             _OverlayTexture.SetValue(ColorOverlay);
 
             if (Background != null && ColorOverlay != null)
-                effect.CurrentTechnique = effect.Techniques["HSOverBackgroundValueOverlayEffect"];
+                effect.CurrentTechnique = effect.Techniques["HSVOverBackgroundValueOverlayEffect"];
             else if (Background is null)
                 effect.CurrentTechnique = effect.Techniques["HSVOnlyOverlayEffect"];
             else if (ColorOverlay is null)

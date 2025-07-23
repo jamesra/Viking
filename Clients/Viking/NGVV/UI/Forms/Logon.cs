@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -571,47 +572,40 @@ namespace Viking.UI.Forms
                 return "Exit";
             }
 
+            return createConnectionAsync(AuthenticationURI, postdata).GetAwaiter().GetResult();
+        }
+
+        async Task<string> createConnectionAsync(Uri AuthenticationURI, string postdata)
+        {
             if (AuthenticationURI.Scheme.ToLower() != "https")
             {
                 throw new ArgumentException("Logon UI, createConnection(): Expected to authenticate to an https URI scheme");
             }
 
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(AuthenticationURI);
-            request.Method = "POST";
-
-            using (StreamWriter stream = new StreamWriter(request.GetRequestStream()))
+            using (var httpClient = new HttpClient())
             {
-                stream.Write(postdata);
-            }
-
-            // Do not validate server certificate, since its user generated for now
-            //ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-
-            try
-            {
-                using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+                try
                 {
-                    if (response is null)
-                        SetUpdateText("Null response");
-                    else if (response.StatusCode != HttpStatusCode.OK)
-                        SetUpdateText(response.StatusDescription);
+                    var content = new StringContent(postdata, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
+                    var response = await httpClient.PostAsync(AuthenticationURI, content);
+                    
+                    if (response.StatusCode != HttpStatusCode.OK)
+                    {
+                        SetUpdateText(response.ReasonPhrase);
+                        return "Exit";
+                    }
                     else
                     {
-                        using (StreamReader streamRead = new StreamReader(response.GetResponseStream()))
-                        {
-                            return streamRead.ReadToEnd();
-                        }
+                        var responseContent = await response.Content.ReadAsStringAsync();
+                        return responseContent;
                     }
                 }
+                catch (HttpRequestException e)
+                {
+                    SetUpdateText("Failure communicating with authentication server.\n" + e.Message);
+                    return "Exit";
+                }
             }
-            catch (WebException e)
-            {
-
-                SetUpdateText("Failure communicating with authentication server.\n" + e.Message);
-                return "Exit";
-            }
-
-            return "Exit";
         }
 
         void username_KeyUp(object sender, System.Windows.Forms.KeyEventArgs e)

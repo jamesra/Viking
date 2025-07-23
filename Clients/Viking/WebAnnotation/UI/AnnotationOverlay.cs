@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Forms.Integration;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
 using Viking.ViewModels;
@@ -1936,7 +1937,7 @@ namespace WebAnnotation
             //Get all the lines to draw first so the text and geometric shapes are over top of them
             LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds));
 
-            graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, float.MaxValue, 0);
+            graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, 1, 0);
 
             if (defaultBlendState == null || defaultBlendState.IsDisposed)
             {

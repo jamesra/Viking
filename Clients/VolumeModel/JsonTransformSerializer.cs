@@ -1,8 +1,9 @@
+using Geometry;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Geometry;
 
 namespace VolumeModel
 {
@@ -16,11 +17,14 @@ namespace VolumeModel
             WriteIndented = false,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+            ReferenceHandler = ReferenceHandler.IgnoreCycles,
             // Allow polymorphic serialization for ITransform implementations
             Converters = 
             {
                 new JsonStringEnumConverter(),
-                new TransformJsonConverter()
+                new TransformJsonConverter(),
+                new ComputedPropertyJsonConverter()
             }
         };
 
@@ -34,8 +38,8 @@ namespace VolumeModel
             
             if (transform == null)
                 throw new ArgumentNullException(nameof(transform));
-
-            JsonSerializer.Serialize(stream, transform, _jsonOptions);
+             
+            JsonSerializer.Serialize(stream, transform, _jsonOptions); 
         }
 
         /// <summary>
@@ -116,9 +120,66 @@ namespace VolumeModel
                 writer.WriteNullValue();
                 return;
             }
-
-            // Serialize the concrete type
+             
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
+        }
+    }
+
+
+    /// <summary>
+    /// Custom JSON converter that filters out computed properties (getter-only properties)
+    /// </summary>
+    public class ComputedPropertyJsonConverter : JsonConverterFactory
+    {
+        public override bool CanConvert(Type typeToConvert)
+        {
+            // Only apply to types that might have computed properties
+            return typeToConvert.Namespace?.StartsWith("Geometry") == true || 
+                   typeToConvert.Namespace?.StartsWith("VolumeModel") == true;
+        }
+
+        public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+        {
+            var converterType = typeof(ComputedPropertyJsonConverterInner<>).MakeGenericType(typeToConvert);
+            return (JsonConverter)Activator.CreateInstance(converterType);
+        }
+
+        private class ComputedPropertyJsonConverterInner<T> : JsonConverter<T>
+        {
+            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                // For reading, we'll use the default behavior
+                return JsonSerializer.Deserialize<T>(ref reader, options);
+            }
+
+            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+            {
+                if (value == null)
+                {
+                    writer.WriteNullValue();
+                    return;
+                }
+
+                var type = typeof(T);
+                var properties = type.GetProperties()
+                    .Where(p => p.CanRead && p.CanWrite) // Only include properties with both getter and setter
+                    .ToList();
+
+                writer.WriteStartObject();
+
+                foreach (var property in properties)
+                {
+                    var propertyValue = property.GetValue(value);
+                    if (propertyValue != null)
+                    {
+                        var propertyName = options.PropertyNamingPolicy?.ConvertName(property.Name) ?? property.Name;
+                        writer.WritePropertyName(propertyName);
+                        JsonSerializer.Serialize(writer, propertyValue, property.PropertyType, options);
+                    }
+                }
+
+                writer.WriteEndObject();
+            }
         }
     }
 } 

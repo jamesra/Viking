@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 using Geometry.Transforms;
 
 namespace Geometry
@@ -81,7 +83,20 @@ namespace Geometry
 
     public interface IITKSerialization
     {
-        void WriteITKTransform(System.IO.StreamWriter stream);
+        /// <summary>
+        /// Return the transform in ITK format
+        /// </summary>
+        /// <returns></returns>
+        string GetITKTransform();
+    }
+
+    public interface IJSonSerialization
+    {
+        /// <summary>
+        /// Return the transform in ITK format
+        /// </summary>
+        /// <returns></returns>
+        string GetJson();
     }
 
     public interface IMemoryMinimization

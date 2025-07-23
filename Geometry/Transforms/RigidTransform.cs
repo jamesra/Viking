@@ -24,19 +24,14 @@ namespace Geometry.Transforms
             Info = info;
         }
 
-        public string ITKTransformString()
+        public string GetITKTransform()
         {
             double Angle = 0;
             GridVector2 CenterOfRotation = GridVector2.Zero;
             var output = $"Rigid2DTransform_double_2_2 vp 3 {Angle} {SourceToTargetOffset.X} {SourceToTargetOffset.Y} fp 2 {CenterOfRotation.X} {CenterOfRotation.Y}";
             return output;
         }
-
-        public void WriteITKTransform(StreamWriter stream)
-        {
-            stream.Write(ITKTransformString());
-        }
-
+         
         public override string ToString()
         {
             return $"Rigid, Src to Tgt Offset: {SourceToTargetOffset}";
@@ -147,19 +142,14 @@ namespace Geometry.Transforms
         }
          
 
-        public string ITKTransformString()
+        public string GetITKTransform()
         {
             double Angle = 0;
             GridVector2 CenterOfRotation = GridVector2.Zero;
             var output = $"Rigid2DTransform_double_2_2 vp 3 {Angle} {SourceToTargetOffset.X} {SourceToTargetOffset.Y} fp 2 {SourceSpaceRotationCenter.X} {SourceSpaceRotationCenter.Y}";
             return output;
         }
-
-        public void WriteITKTransform(StreamWriter stream)
-        {
-            stream.Write(ITKTransformString());
-        }
-
+          
         public override string ToString()
         {
             return $"Rigid, Src to Tgt Offset: {SourceToTargetOffset}";

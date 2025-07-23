@@ -1,15 +1,23 @@
 ﻿using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
-using Utils;
 using Viking.Common;
-//using WebAnnotation.AuthenticationService;
+using Viking.UI;
+using WebAnnotationModel;
+using WebAnnotationModel.Service;
+using System.Net.Http;
+using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
+using Utils;
 
 namespace WebAnnotation
 {
@@ -191,7 +199,7 @@ namespace WebAnnotation
         /// </summary>
 //        static internal readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd";
 
-        private static XRoot UserSettingsDoc;
+        private static XRoot _userSettingsDoc;
 
         public static string EndpointName
         {
@@ -203,12 +211,12 @@ namespace WebAnnotation
         {
             get
             {
-                if (UserSettingsDoc == null)
+                if (_userSettingsDoc is null)
                 {
                     LoadUserPreferences();
                 }
 
-                return UserSettingsDoc.UserSettings;
+                return _userSettingsDoc.UserSettings;
             }
 
         }
@@ -228,23 +236,17 @@ namespace WebAnnotation
         /// <returns></returns>
         internal static bool CanContinueLastTrace(int SectionNumber)
         {
-            if (!Global.LastEditedAnnotationID.HasValue)
-            {
+            if (LastEditedAnnotationID == null)
                 return false;
-            }
+
+            if (_userSettingsDoc == null)
+                return false;
 
             WebAnnotationModel.LocationObj lastLoc = WebAnnotationModel.Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
-            if (lastLoc == null)
-            {
+            if (lastLoc is null)
                 return false;
-            }
 
-            if (lastLoc.Z == SectionNumber)
-            {
-                return false;
-            }
-
-            return true;
+            return (int)Math.Round(lastLoc.Z) != SectionNumber;
         }
 
         #region IInitExtensions Members
@@ -313,26 +315,37 @@ namespace WebAnnotation
 
         private static XDocument GetAboutXML(Uri AboutURI)
         {
-            //See if we can load the WebAnnotationMapping file
-            HttpWebRequest request = WebRequest.CreateHttp(AboutURI);
+            return GetAboutXMLAsync(AboutURI).GetAwaiter().GetResult();
+        }
+
+        private static async Task<XDocument> GetAboutXMLAsync(Uri AboutURI)
+        {
+            HttpClientHandler handler;
             if (AboutURI.Scheme.ToLower() == "https")
             {
-                request.Credentials = Viking.UI.State.UserCredentials;
+                handler = new HttpClientHandler
+                {
+                    Credentials = Viking.UI.State.UserCredentials
+                };
             }
+            else
+            {
+                handler = new HttpClientHandler()
+                {
+                    UseDefaultCredentials = true //Use the default credentials for HTTP requests
+                };
+            }
+
+            using var httpClient = new HttpClient(handler);
             try
             {
-                using (WebResponse response = request.GetResponse())
-                {
-                    using (Stream responseStream = response.GetResponseStream())
-                    {
-                        using (StreamReader XMLStream = new StreamReader(responseStream))
-                        {
-                            return XDocument.Parse(XMLStream.ReadToEnd());
-                        }
-                    }
-                }
+                var response = await httpClient.GetAsync(AboutURI).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                    
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return XDocument.Parse(content);
             }
-            catch (WebException)
+            catch (HttpRequestException)
             {
                 Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "WebAnnotation");
                 return null;
@@ -443,7 +456,7 @@ namespace WebAnnotation
 
                 if (System.IO.File.Exists(UserSettingsFilePath))
                 {
-                    UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
+                    _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
                 }
             }
             catch (Xml.Schema.Linq.LinqToXsdException)
@@ -457,7 +470,7 @@ namespace WebAnnotation
 
                 if (System.IO.File.Exists(UserSettingsFilePath))
                 {
-                    UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
+                    _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
                 }
             }
             catch (System.Xml.XmlException)
@@ -471,7 +484,7 @@ namespace WebAnnotation
 
                 if (System.IO.File.Exists(UserSettingsFilePath))
                 {
-                    UserSettingsDoc = XRoot.Load(UserSettingsFilePath);
+                    _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
                 }
             }
             /*
@@ -491,6 +504,11 @@ namespace WebAnnotation
         /// <returns></returns>
         private static bool CachedResourceIsValid(string CacheFilename, Uri uri)
         {
+            return CachedResourceIsValidAsync(CacheFilename, uri).GetAwaiter().GetResult();
+        }
+
+        private static async Task<bool> CachedResourceIsValidAsync(string CacheFilename, Uri uri)
+        {
             if (uri == null)
             {
                 return true;
@@ -501,89 +519,74 @@ namespace WebAnnotation
                 return false;
             }
 
-            HttpWebRequest headerRequest = HttpWebRequest.CreateHttp(uri);
-            headerRequest.Method = "HEAD";
-            headerRequest.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
-            using (HttpWebResponse headerResponse = headerRequest.GetResponse() as HttpWebResponse)
+            using var httpClient = new HttpClient();
+            try
             {
-                bool valid = headerResponse.LastModified.ToUniversalTime() <= System.IO.File.GetLastWriteTimeUtc(CacheFilename);
+                var request = new HttpRequestMessage(HttpMethod.Head, uri);
+                var response = await httpClient.SendAsync(request);
+
+                if (!response.Content.Headers.LastModified.HasValue) return false;
+                bool valid = response.Content.Headers.LastModified.Value.UtcDateTime <= System.IO.File.GetLastWriteTimeUtc(CacheFilename);
                 return valid;
+
+            }
+            catch
+            {
+                return false;
             }
         }
 
         private static bool LoadServerUserSettings()
         {
+            return LoadServerUserSettingsAsync().GetAwaiter().GetResult();
+        }
+
+        private static async Task<bool> LoadServerUserSettingsAsync()
+        {
             //Try to download the default user settings file
             Uri uri = UserSettingsUri;
-            if (uri != null)
+            if (uri == null) return false;
+            try
             {
-                System.Net.WebRequest request = null;
-                //WebResponse response = null;
-                //Stream stream = null;
-                //FileStream file = null;
+                using var httpClient = new HttpClient();
+                var response = await httpClient.GetAsync(uri);
+                response.EnsureSuccessStatusCode();
+                        
+                byte[] data = await response.Content.ReadAsByteArrayAsync();
 
                 try
                 {
-                    request = HttpWebRequest.CreateHttp(uri);
-
-                    using (WebResponse response = request.GetResponse())
+                    if (System.IO.File.Exists(UserSettingsFilePath))
                     {
-                        using (Stream stream = response.GetResponseStream())
-                        {
-                            byte[] data = new byte[response.ContentLength];
-                            DateTime loopStart = DateTime.UtcNow;
-                            TimeSpan elapsed;
-                            long BytesRead = 0;
-
-                            do
-                            {
-                                BytesRead += stream.Read(data, (int)BytesRead, data.Length - (int)BytesRead);
-                                elapsed = new TimeSpan(DateTime.UtcNow.Ticks - loopStart.Ticks);
-                            }
-                            while (BytesRead < response.ContentLength && elapsed.TotalSeconds < 60);
-
-                            try
-                            {
-                                if (System.IO.File.Exists(UserSettingsFilePath))
-                                {
-                                    System.IO.File.Delete(UserSettingsFilePath);
-                                }
-                            }
-                            catch (System.IO.IOException)
-                            {
-
-                            }
-
-                            using (FileStream file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                            {
-                                file.Write(data, 0, data.Length);
-                            }
-                        }
+                        System.IO.File.Delete(UserSettingsFilePath);
                     }
                 }
-                catch (Exception)
-                {
-                    Trace.WriteLine("Could not load server user settings: " + uri.ToString());
-                    return false;
+                catch (System.IO.IOException)
+                { 
                 }
 
+                using FileStream file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+                await file.WriteAsync(data, 0, data.Length);
                 return true;
-
+            }
+            catch (Exception)
+            {
+                Trace.WriteLine("Could not load server user settings: " + uri.ToString());
+                return false;
             }
 
 
-            return false;
         }
 
         private static void CreateNewUserSettingsFile()
         {
-            Global.UserSettingsDoc = new XRoot(new UserSettings());
+            Global._userSettingsDoc = new XRoot(new UserSettings());
             SaveUserSettings();
         }
 
         public static void SaveUserSettings()
         {
-            Global.UserSettingsDoc.Save(UserSettingsFilePath);
+            Global._userSettingsDoc.Save(UserSettingsFilePath);
         }
 
         #endregion

@@ -15,7 +15,7 @@ Color_Depth_Output MyPSStandard(LINE_PS_INPUT input)
 	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold);
 
 	output.Color = finalColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -28,7 +28,7 @@ Color_Depth_Output MyPSAlphaGradient(LINE_PS_INPUT input)
 	finalColor.a = lineColor.a *  ((input.polar.z * 2) > 1 ? ((1 - input.polar.z) * 2) : (input.polar.z * 2)) * BlurEdge(input.polar.x, blurThreshold);
 
 	output.Color = finalColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -45,7 +45,8 @@ Color_Depth_Output MyPSAlphaDepthGradient(LINE_PS_INPUT input)
 	finalColor.a = 1;
 
 	output.Color = finalColor;
-	output.Depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
+
+	output.Depth = input.polar.z;
 	output.Color.a = 1 - output.Depth;
 	return output;
 }
@@ -54,7 +55,8 @@ Color_Depth_Output MyPSNoBlur(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	output.Color = lineColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
+	
 	return output;
 }
 
@@ -75,8 +77,9 @@ Color_Depth_Output MyPSAnimatedBidirectional(LINE_PS_INPUT input)
 
 	output.Color = finalColor;
 	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
-	output.Depth = input.polar.x;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
+	//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
 	output.Color.a = (1 - depth) * finalColor.a;
+	output.Depth = 0;
 	clip(output.Color.a);
 
 	return output;
@@ -100,9 +103,10 @@ Color_Depth_Output MyPSAnimatedLinear(LINE_PS_INPUT input)
 
 	output.Color = finalColor;
 	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
-	output.Depth = input.polar.x; //depth;
+	 //depth;
 
 					  //output.Color.a = lineColor.a * (1-depth) * modulation * (1-polar.x);  //This version stops animation at line origin
+	output.Depth = 0;
 	output.Color.a = lineColor.a * modulation *(1 - input.polar.x);
 	return output;
 }
@@ -116,7 +120,7 @@ Color_Depth_Output MyPSAnimatedRadial(LINE_PS_INPUT input)
 	finalColor.rgb = lineColor.rgb * modulation;
 	finalColor.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold);
 	output.Color = finalColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -133,7 +137,7 @@ Color_Depth_Output MyPSLadder(LINE_PS_INPUT input)
 	finalColor.rgb = lineColor.rgb;
 	finalColor.a = lineColor.a * modulation;
 	output.Color = finalColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -149,7 +153,7 @@ Color_Depth_Output MyPSDashed(LINE_PS_INPUT input)
 	clip(modulation <= 0 ? -1 : 1); //Adds sharp boundary to arrows
 	 
 	output.Color = lineColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -178,7 +182,7 @@ Color_Depth_Output MyPSModern(LINE_PS_INPUT input)
 	finalColor.a = lineColor.a * a;
 
 	output.Color = finalColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
  
@@ -189,7 +193,7 @@ Color_Depth_Output MyPSTubular(LINE_PS_INPUT input)
 	finalColor.a *= input.polar.x;
 	finalColor.a = finalColor.a * BlurEdge(input.polar.x, blurThreshold);
 	output.Color = finalColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -228,7 +232,7 @@ Color_Depth_Output MyPSHalfTubular(LINE_PS_INPUT input)
 	finalColor.a = finalColor.a * AngleAlpha; // * BlurEdge(polar.x, blurThreshold)
 	*/
 	output.Color = finalColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -238,7 +242,7 @@ Color_Depth_Output MyPSGlow(LINE_PS_INPUT input)
 	Color_Depth_Output output;
 	output.Color = lineColor;
 	output.Color.a *= 1 - input.polar.x;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -247,6 +251,6 @@ Color_Depth_Output MyPSTextured(LINE_PS_INPUT input)
 	Color_Depth_Output output;
 	output.Color = tex2D(ForegroundTextureSampler, input.tex);
 	clip(output.Color.a <= 0 ? -1 : 1);
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }

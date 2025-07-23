@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Geometry.Transforms
 {
@@ -355,14 +357,11 @@ namespace Geometry.Transforms
 
 
         /// <summary>
-        /// Save a transform using the itk transform text format.  Any reference point transform can be a mesh, so we default to that representation
+        /// Express the transform using the itk transform text format.  Any reference point transform can be a mesh, so we default to that representation
         /// </summary>
         /// <param name="stream"></param>
-        public virtual void WriteITKTransform(System.IO.StreamWriter stream)
-        {
-            if (stream is null)
-                throw new ArgumentNullException(nameof(stream));
-
+        public virtual string GetITKTransform()
+        { 
             double Downsample = 1.0;
 
             StringBuilder output = new StringBuilder();
@@ -393,10 +392,10 @@ namespace Geometry.Transforms
             //output += string.Format("{0:g} {1:g} {2:g} {3:g}", 0,0, MappedBounds.Width, MappedBounds.Height);
 
             output.AppendFormat(" {0:d}\n", this.MapPoints.Length);
-
-            stream.Write(output.ToString());
+            
+            return output.ToString();
         }
-
+         
         public virtual void MinimizeMemory()
         {
             try

@@ -106,7 +106,6 @@ namespace MonogameTestbed
         {
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
             graphics = new GraphicsDeviceManager(this);
-            GpuSynchronizationManager.Initialize();
             					VikingXNAGraphics.Global.Content = this.Content;
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             Content.RootDirectory = "Content";
@@ -145,6 +144,9 @@ namespace MonogameTestbed
 #endif
 
             this.IsMouseVisible = true;
+            
+            // Initialize GPU synchronization after the window and graphics device are set up
+            GpuSynchronizationManager.Initialize();
         }
 
         /// <summary>

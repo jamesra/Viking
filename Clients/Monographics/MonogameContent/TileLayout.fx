@@ -58,6 +58,9 @@ VertexShaderOutput VertexShaderFunction(VertexShaderInput input)
     return output;
 }
 
+///This is the pixel shader that blends multiple tiles in a mosaic together.  Pixels are weighted by their distance from the center of the tile.
+///This allows for a smooth transition between tiles and ensures the pixels furthest from the center, which can have more lens effects, are not 
+///used.
 TileBlendPixelShaderOutput TileBlendToGreyscalePixelShaderFunction(VertexShaderOutput input)
 {
     //Shade the texture according to the color parameter
@@ -73,7 +76,7 @@ TileBlendPixelShaderOutput TileBlendToGreyscalePixelShaderFunction(VertexShaderO
 	XDist = (input.TexCoord.x - 0.5);
 	YDist = (input.TexCoord.y - 0.5);
 
-	output.Depth = (XDist * XDist) + (YDist * YDist);
+	output.Depth = (XDist * XDist) + (YDist * YDist) / 2;
 	
     return output; 
 }
@@ -87,7 +90,7 @@ TileBlendPixelShaderOutput TileBlendToHSVPixelShaderFunction(VertexShaderOutput 
 	XDist = (input.TexCoord.x - 0.5);
 	YDist = (input.TexCoord.y - 0.5);
 
-	output.Depth = (XDist * XDist) + (YDist * YDist);
+	output.Depth = (XDist * XDist) + (YDist * YDist) / 2;
 	//output.Depth = input.TexCoordDistanceFromCenter.x + input.TexCoordDistanceFromCenter.y;
 
     //Shade the texture according to the color parameter

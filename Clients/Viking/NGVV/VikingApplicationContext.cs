@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
+using System.Threading.Tasks; 
 using System.Windows.Forms;
 using Viking.UI.Forms;
+using Microsoft.Xna.Framework;
 
 namespace Viking
 {
@@ -18,6 +19,8 @@ namespace Viking
         public VikingApplicationContext(string VolumeURL)
         {
             UI.State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+
+            //Microsoft.Xna.Framework.Content.RootDirectory = "Content";
         }
 
         public void Initialize(string VolumeURL)

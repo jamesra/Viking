@@ -1,12 +1,15 @@
-﻿using Neo4j.Driver.V1;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using CommandLine;
 using CommandLine.Text;
+using Neo4j.Driver;
+using Newtonsoft.Json.Linq;
 
 namespace Neo4JGenerator
 {
@@ -16,13 +19,9 @@ namespace Neo4JGenerator
 
         public static void WriteProgress(string output)
         {
-            if(Program.options.Verbose)
+            if (Program.options.Verbose)
             {
                 Console.Write(output);
-            }
-            else if(!Program.options.Quiet)
-            {
-                Console.Write('.');
             }
         }
 
@@ -32,36 +31,28 @@ namespace Neo4JGenerator
             {
                 Console.WriteLine(output);
             }
-            else if (!Program.options.Quiet)
-            {
-                Console.Write('.');
-            }
         }
 
         static void Main(string[] args)
         {
-            // Microsoft.OData.Client doesn't require V4Adapter.Reference();
-            
             var result = Parser.Default.ParseArguments<CommandLineOptions>(args);
-            result.WithParsed(opts => RunWithOptions(opts))
-                  .WithNotParsed(errs => HandleParseErrors(errs));
+            result.WithParsed(RunWithOptions)
+                  .WithNotParsed(HandleParseErrors);
         }
 
         private static void RunWithOptions(CommandLineOptions opts)
         {
             Program.options = opts;
-            
-            Newtonsoft.Json.Linq.JObject json = null;
+
+            JObject json = null;
+
             if (Program.options.JsonFilename != null)
             {
                 json = DeserializeFromStream(System.IO.File.OpenRead(Program.options.JsonFilename));
             }
             else if(Program.options.JsonURL != null)
             {
-                System.Net.WebClient client = new System.Net.WebClient();
-                System.IO.Stream response = client.OpenRead(Program.options.JsonURL);
-
-                json = DeserializeFromStream(response); 
+                json = DeserializeFromStreamAsync(Program.options.JsonURL).GetAwaiter().GetResult();
             }
 
             if(json is null)
@@ -84,8 +75,21 @@ namespace Neo4JGenerator
 
         private static void HandleParseErrors(IEnumerable<Error> errs)
         {
-            Console.WriteLine("Unable to parse command line arguments, aborting");
-            // Help text is automatically displayed by CommandLineParser 2.x
+            // Create a new help text with error information
+            var errorHelpText = HelpText.AutoBuild(Parser.Default);
+            errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
+            errorHelpText.AddPreOptionsLine("The following errors occurred:");
+            
+            foreach (var error in errs)
+            {
+                errorHelpText.AddPreOptionsLine($"  {error}");
+            }
+            
+            errorHelpText.AddPreOptionsLine("");
+            Console.WriteLine(errorHelpText);
+            
+            // Exit with error code
+            Environment.Exit(1);
         }
 
         public static void ClearAndImportDatabase(JObject json)
@@ -413,7 +417,6 @@ namespace Neo4JGenerator
                 return (Newtonsoft.Json.Linq.JObject)serializer.Deserialize(jsonTextReader);
             }
         }
-        
         
     }
 }

@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Viking.Common;
 using Viking.ViewModels;
@@ -43,37 +45,10 @@ namespace MeasurementExtension
             //CreateXML updates from 11/1/10
 
             Uri MappingURI = new Uri(volume.Host + "/About.xml");
-            HttpWebRequest request = WebRequest.CreateHttp(MappingURI);
-
-            //Attach credentials if using security
-            if (MappingURI.Scheme.ToLower() == "https")
-                request.Credentials = Viking.UI.State.UserCredentials;
-
-            WebResponse response = null;
-            try
-            {
-                response = request.GetResponse();
-            }
-            catch (WebException)
-            {
-                Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "Measurement");
-                response?.Close();
-
-                return true;
-            }
-
-            //Convert the response into an XML document we can parse
-            Stream responseStream = response.GetResponseStream();
-            StreamReader XMLStream = new StreamReader(responseStream);
-            XDocument XMLMapping = XDocument.Parse(XMLStream.ReadToEnd());
-
-            //We are done with HTTP and the stream, so free those resources
-            XMLStream.Close();
-            responseStream.Close();
-            response.Close();
+            var xmlMapping = GetXMLFromUriAsync(MappingURI).GetAwaiter().GetResult();
 
             //See if we can locate a scale tag
-            GetScaleFromXML(Viking.VolumeModel.Volume.GetVolumeElement(XMLMapping));
+            GetScaleFromXML(Viking.VolumeModel.Volume.GetVolumeElement(xmlMapping));
 
             //Even if we couldn't load the default values, the user can set them.  Go ahead and load up.
             //If this module could not function we should return false which would tell Viking to unload it
@@ -81,7 +56,29 @@ namespace MeasurementExtension
 
         }
 
-        private bool GetScaleFromXML(XElement elem)
+        private static async Task<XDocument> GetXMLFromUriAsync(Uri uri)
+        {
+            HttpClientHandler handler;
+            
+            handler = uri.Scheme.ToLower() == "https" ? new HttpClientHandler { Credentials = Viking.UI.State.UserCredentials } : new HttpClientHandler { UseDefaultCredentials = true };
+
+            using var httpClient = new HttpClient(handler);
+            try
+            {
+                var response = await httpClient.GetAsync(uri);
+                response.EnsureSuccessStatusCode();
+                    
+                var content = await response.Content.ReadAsStringAsync();
+                return XDocument.Parse(content);
+            }
+            catch (HttpRequestException)
+            {
+                Trace.WriteLine("Could not locate WebAnnotationMapping.XML, disabling WebAnnotations.", "Measurement");
+                return null;
+            }
+        }
+
+        private static bool GetScaleFromXML(XElement elem)
         {
 
             //Examine the XML document and determine the scale

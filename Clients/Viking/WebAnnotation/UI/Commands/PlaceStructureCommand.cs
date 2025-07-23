@@ -130,8 +130,7 @@ namespace WebAnnotation.UI.Commands
                 offset.Y /= 2;
                 Parent.spriteBatch.DrawString(Parent.fontArial,
                     title,
-                    new Vector2(oldMouse.X - offset.X, oldMouse.Y - offset.Y),
-                    new Microsoft.Xna.Framework.Color(obj.Color.R, obj.Color.G, obj.Color.B, 196));
+                    new Vector2(oldMouse.X - offset.X, oldMouse.Y - offset.Y), obj.Color.ToXNAColor(0.75f));
 
             }
 

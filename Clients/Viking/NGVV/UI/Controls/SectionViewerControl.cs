@@ -158,7 +158,8 @@ namespace Viking.UI.Controls
             set
             {
                 _Magnification = value;
-                tsMagnification.Text = "Magnification: " + value.ToString("F2");
+                if(tsMagnification is not null)
+                    tsMagnification.Text = "Magnification: " + value.ToString("F2");
             }
         }
 
@@ -1341,7 +1342,7 @@ namespace Viking.UI.Controls
 
             Texture backgroundSectionTexture = null;
             Texture ChannelOverlay = null;
-            if (Channelset.Length == 0)
+            if (Channelset.Length == 1)
             {
                 tileLayoutEffect.TileColor = new Microsoft.Xna.Framework.Color(1f, 1f, 1f, 1);
                 tileLayoutEffect.RenderToGreyscale();
@@ -1367,12 +1368,12 @@ namespace Viking.UI.Controls
 
             int NextStencilValue = 0;
 
-            graphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Microsoft.Xna.Framework.Color.Black, float.MaxValue, NextStencilValue++);
+            graphicsDevice.Clear(ClearOptions.DepthBuffer | ClearOptions.Stencil | ClearOptions.Target, Microsoft.Xna.Framework.Color.Black, 1, NextStencilValue++);
 
             //Set a standard starting state for all overlay modules
             graphicsDevice.DepthStencilState = OverlayBackgroundDepthState;
             VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, 1);
-
+             
             if (!ShowOnlyOverlays)
             {
                 //OK, blend the overlay with the underlying greyscale image
@@ -1390,17 +1391,14 @@ namespace Viking.UI.Controls
             if (ShowOverlays)
             {
                 UpdateLumaTextureForOverlayEffects(backgroundSectionTexture);
-                //                List<Vector4> listChannelColors = new List<Vector4>();
-                //Vector4 white = new Microsoft.Xna.Framework.Color(1, 1, 1, 0).ToVector4(); //Use alpha=0 so we blend color with background by default
-                //                Vector4 white = Microsoft.Xna.Framework.Color.White.ToVector4();
-
+                
                 for (int i = 0; i < listOverlays.Length; i++)
                 {
                     ++NextStencilValue;
                     graphicsDevice.DepthStencilState = CreateDepthStateForOverlay(++NextStencilValue);
                     VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, NextStencilValue);
 
-                    graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
+                    graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, 1, 0);
 
                     ISectionOverlayExtension overlayObj = listOverlays[i];
 #if DEBUG
@@ -1428,7 +1426,7 @@ namespace Viking.UI.Controls
                             graphicsDevice.DepthStencilState = CreateDepthStateForOverlay(++NextStencilValue, true);
                             VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, NextStencilValue);
 
-                            graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
+                            graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, 1, 0);
 
                             CurrentCommand.OnDraw(graphicsDevice, scene, basicEffect);
                         }
@@ -1653,7 +1651,7 @@ namespace Viking.UI.Controls
         }
 
 
-        protected Texture DrawSection(GraphicsDevice graphicsDevice, Section section, string channel, Scene scene)
+        protected Texture2D DrawSection(GraphicsDevice graphicsDevice, Section section, string channel, Scene scene)
         {
             //           Microsoft.Xna.Framework.Color[] ColorWheel = new Microsoft.Xna.Framework.Color[] { new Microsoft.Xna.Framework.Color(1f,0,0), 
             //                                             new Microsoft.Xna.Framework.Color(0,1f,0),
@@ -1688,7 +1686,7 @@ namespace Viking.UI.Controls
             //       graphicsDevice.SetRenderTarget(null);
 
             //Clear the stencil buffer before we begin
-            graphicsDevice.Clear(ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
+            graphicsDevice.Clear(ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, 1f, 0);
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
 
             for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
@@ -1696,7 +1694,7 @@ namespace Viking.UI.Controls
                 int level = mapping.AvailableLevels[DownsamplesToRender[iLevel]];
 
                 //Clear the depth buffer before we begin this level, we only want to compare to tiles in our level
-                graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, int.MaxValue);
+                graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, 1f, 0);
 
                 //Use a stencil buffer to prevent lower-res textures from overwriting higer-res textures
                 VikingXNAGraphics.DeviceStateManager.SetDepthStencilValue(graphicsDevice, iLevel);
@@ -1844,7 +1842,7 @@ namespace Viking.UI.Controls
                 return null;
 
             if (renderedTargets.Length > 0)
-                return renderedTargets[0].RenderTarget;
+                return renderTarget;
 
 
             return null; 
@@ -1896,133 +1894,133 @@ namespace Viking.UI.Controls
             return DownsamplesToRender.ToArray();
         }
 
-        private Texture DrawSectionsWithChannels(GraphicsDevice graphicsDevice, ChannelInfo[] Channelset, Scene scene, out Texture ChannelOverlay)
+        private Texture2D DrawSectionsWithChannels(GraphicsDevice graphicsDevice, ChannelInfo[] Channelset, Scene scene, out Texture ChannelOverlay)
         {
-            Texture backgroundSection = null;
+            Texture2D backgroundSection = null;
 
-            List<Texture> renderedSections = new List<Texture>(Channelset.Length - 1);
+            List<Texture2D> renderedSections = new List<Texture2D>(Channelset.Length - 1);
             List<ChannelInfo> renderedChannels = new List<ChannelInfo>(Channelset.Length - 1);
             //            List<float> renderedAlphas = new List<float>(Channelset.Length - 1);
             //            List<float> renderedBetas = new List<float>(Channelset.Length - 1);
             List<Vector4> renderedChannelColors = new List<Vector4>(Channelset.Length - 1);
-
-            //            int DisplayWidth = graphicsDevice.Viewport.Width;
-            //            int DisplayHeight = graphicsDevice.Viewport.Height;
-
-            //            Viewport oldViewport = graphicsDevice.Viewport;
-            //            RenderTargetBinding[] oldRenderTargets = graphicsDevice.GetRenderTargets();
-
             ChannelOverlay = null;
+            try
+            { 
+                //            int DisplayWidth = graphicsDevice.Viewport.Width;
+                //            int DisplayHeight = graphicsDevice.Viewport.Height;
 
-            /*
-            BlendState OriginalBlendState = graphicsDevice.BlendState;
-            BlendState OverlayBlendState = new BlendState();
+                //            Viewport oldViewport = graphicsDevice.Viewport;
+                //            RenderTargetBinding[] oldRenderTargets = graphicsDevice.GetRenderTargets();
 
-            OverlayBlendState.ColorBlendFunction = BlendFunction.Add;
-            OverlayBlendState.AlphaBlendFunction = BlendFunction.Add;
 
-            OverlayBlendState.AlphaSourceBlend = Blend.One;
-            OverlayBlendState.AlphaDestinationBlend = Blend.Zero;
+                /*
+                BlendState OriginalBlendState = graphicsDevice.BlendState;
+                BlendState OverlayBlendState = new BlendState();
 
-            OverlayBlendState.ColorSourceBlend = Blend.One;
-            OverlayBlendState.ColorDestinationBlend = Blend.Zero;
-            */
+                OverlayBlendState.ColorBlendFunction = BlendFunction.Add;
+                OverlayBlendState.AlphaBlendFunction = BlendFunction.Add;
 
-            string oldMode = State.CurrentMode;
+                OverlayBlendState.AlphaSourceBlend = Blend.One;
+                OverlayBlendState.AlphaDestinationBlend = Blend.Zero;
 
-            //Walk through each channel and draw the section
-            foreach (ChannelInfo channel in Channelset)
-            {
-                //Figure out which section we need to load
-                Section sectionToDraw = this.Section.GetSectionToDrawForChannel(channel);
+                OverlayBlendState.ColorSourceBlend = Blend.One;
+                OverlayBlendState.ColorDestinationBlend = Blend.Zero;
+                */
 
-                //Can't draw if the section doesn't exist
-                if (sectionToDraw is null)
-                    continue;
+                string oldMode = State.CurrentMode;
 
-                string ChannelName = channel.ChannelName;
-                if (ChannelName.Length == 0)
+                //Walk through each channel and draw the section
+                foreach (ChannelInfo channel in Channelset)
                 {
-                    ChannelName = this.CurrentChannel;
+                    //Figure out which section we need to load
+                    Section sectionToDraw = this.Section.GetSectionToDrawForChannel(channel);
+
+                    //Can't draw if the section doesn't exist
+                    if (sectionToDraw is null)
+                        continue;
+
+                    string ChannelName = channel.ChannelName;
+                    if (ChannelName.Length == 0)
+                    {
+                        ChannelName = this.CurrentChannel;
+                    }
+
+                    //Find the mapping to use
+                    MappingBase mapping = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform,
+                                                                    sectionToDraw.Number,
+                                                                    ChannelName,
+                                                                    Section.DefaultPyramidTransform);
+
+                    if (mapping is null)
+                        continue;
+
+                    if (mapping.Initialized == false)
+                    {
+                        Task.Run(() => mapping.Initialize(CancellationToken.None));
+                        continue;
+                    }
+
+                    //Change the transform if we need to, but restore it when we are done
+
+                    State.CurrentMode = ChannelName;
+
+                    //if (channel.Greyscale)
+                    //{
+                    tileLayoutEffect.RenderToGreyscale();
+                    //}
+                    //else
+                    //{
+                    //    tileLayoutEffect.RenderToHSV();
+                    //Set the color to render with
+                    //    tileLayoutEffect.TileColor = new Microsoft.Xna.Framework.Color(channel.Color.R,
+                    //                                                                            channel.Color.G,
+                    //                                                                            channel.Color.B,
+                    //                                                                            channel.Color.A);
+                    //}
+
+                    //                GridRectangle renderTargetBounds = scene.VisibleWorldBounds;
+
+                    var renderTarget = DrawSection(graphicsDevice, sectionToDraw, channel.ChannelName, scene);
+
+                    if (channel.Greyscale)
+                    {
+                        backgroundSection = renderTarget;
+                    }
+                    else
+                    {
+                        renderedSections.Add(renderTarget);
+                        renderedChannels.Add(channel);
+                        renderedChannelColors.Add(new Vector4((float)channel.Color.R / 255f,
+                                                              (float)channel.Color.G / 255f,
+                                                              (float)channel.Color.B / 255f,
+                                                              (float)channel.Color.A / 255f));
+
+                        //  SaveTexture(renderTarget, "D:\\Temp\\" + ChannelName + ".png");
+                    }
                 }
 
-                //Find the mapping to use
-                MappingBase mapping = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform,
-                                                                sectionToDraw.Number,
-                                                                ChannelName,
-                                                                Section.DefaultPyramidTransform);
+                State.CurrentMode = oldMode;
 
-                if (mapping is null)
-                    continue;
+                graphicsDevice.DepthStencilState = DepthDisabledState;
 
-                if (mapping.Initialized == false)
-                {
-                    Task.Run(() => mapping.Initialize(CancellationToken.None));
-                    continue;
-                }
+                //Merge the rendered channels to a single RGB image
+                //            Trace.WriteLineIf(renderedChannels.Count > this.mergeHSVImagesEffect.MaxChannels, "Too many channels being rendered, only using the first " + renderedChannels.Count.ToString());
 
-                //Change the transform if we need to, but restore it when we are done
+                ChannelOverlay = MergeRGBImages(graphicsDevice, scene, backgroundSection, renderedSections.ToArray(), renderedChannelColors.ToArray());
 
-                State.CurrentMode = ChannelName;
-
-                //if (channel.Greyscale)
-                //{
-                tileLayoutEffect.RenderToGreyscale();
-                //}
-                //else
-                //{
-                //    tileLayoutEffect.RenderToHSV();
-                //Set the color to render with
-                //    tileLayoutEffect.TileColor = new Microsoft.Xna.Framework.Color(channel.Color.R,
-                //                                                                            channel.Color.G,
-                //                                                                            channel.Color.B,
-                //                                                                            channel.Color.A);
-                //}
-
-
-
-                Texture renderTarget = null;
-                //                GridRectangle renderTargetBounds = scene.VisibleWorldBounds;
-
-                renderTarget = DrawSection(graphicsDevice, sectionToDraw, channel.ChannelName, scene);
-
-                if (channel.Greyscale)
-                {
-                    backgroundSection = renderTarget;
-                }
-                else
-                {
-                    renderedSections.Add(renderTarget);
-                    renderedChannels.Add(channel);
-                    renderedChannelColors.Add(new Vector4((float)channel.Color.R / 255f,
-                                                          (float)channel.Color.G / 255f,
-                                                          (float)channel.Color.B / 255f,
-                                                          (float)channel.Color.A / 255f));
-
-                    //  SaveTexture(renderTarget, "D:\\Temp\\" + ChannelName + ".png");
-                }
             }
 
-            State.CurrentMode = oldMode;
-
-
-
-            graphicsDevice.DepthStencilState = DepthDisabledState;
-
-            //I only support four channels for blending, but I could support eight
-            //Merge the rendered channels to a signle RGB image
-            Trace.WriteLineIf(renderedChannels.Count > this.mergeHSVImagesEffect.MaxChannels, "Too many channels being rendered, only using the first " + renderedChannels.Count.ToString());
-
-            ChannelOverlay = MergeRGBImages(graphicsDevice, scene, renderedSections.ToArray(), renderedChannelColors.ToArray());
-
-            //Free the textures from the channels
-            foreach (RenderTarget2D renderedSection in renderedSections)
+            finally
             {
-                renderedSection.Dispose();
-            }
+                foreach (RenderTarget2D renderedSection in renderedSections)
+                {
+                    renderedSection.Dispose();
+                }
 
-            renderedSections.Clear();
-            renderedSections = null;
+                renderedSections.Clear();
+                renderedSections = null;
+            }            //Free the textures from the channels
+            
             /*
             graphicsDevice.BlendState = OriginalBlendState;
 
@@ -2038,19 +2036,28 @@ namespace Viking.UI.Controls
 
         static BlendState MergeRGBBlendState = null;
 
-        private RenderTarget2D MergeRGBImages(GraphicsDevice graphicsDevice, Scene scene, Texture[] channels, Microsoft.Xna.Framework.Vector4[] Colors)
+        /// <summary>
+        /// This functio n
+        /// </summary>
+        /// <param name="graphicsDevice"></param>
+        /// <param name="scene"></param>
+        /// <param name="channels"></param>
+        /// <param name="Colors"></param>
+        /// <returns></returns>
+        private RenderTarget2D MergeRGBImages(GraphicsDevice graphicsDevice, Scene scene, Texture background, Texture2D[] channels, Microsoft.Xna.Framework.Vector4[] Colors)
         {
             if (channels.Length == 0)
                 return null;
-
-            this.mergeHSVImagesEffect.MergeRGBImages(channels, Colors);
-
+            
+            var colorStats = MergeHSVImagesEffect.CalculateChannelTotals(Colors);
+             
             //this.mergeHSVImagesEffect.Textures = renderedSections.ToArray();
             //this.mergeHSVImagesEffect.HueAlpha = renderedAlphas.ToArray();
             //this.mergeHSVImagesEffect.HueBeta = renderedBetas.ToArray();
 
-            RenderTarget2D renderOverlayTarget = null;
-
+            //We cannot read from an active render target.  So we alternate which target is being written to so we can merge the textures. 
+            RenderTarget2D activeRenderTarget = null;
+            RenderTarget2D inactiveRenderTarget = null;
             BlendState oldBlendState = graphicsDevice.BlendState;
 
             try
@@ -2076,10 +2083,14 @@ namespace Viking.UI.Controls
 
                 try
                 {
-                    renderOverlayTarget = new RenderTarget2D(graphicsDevice,
+                    activeRenderTarget = new RenderTarget2D(graphicsDevice,
                                                              graphicsDevice.Viewport.Width,
-                                                             graphicsDevice.Viewport.Height, false, SurfaceFormat.Rgba64, DepthFormat.None);
-
+                                                             graphicsDevice.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.None, 0,
+                                                             RenderTargetUsage.PreserveContents);
+                    inactiveRenderTarget = new RenderTarget2D(graphicsDevice,
+                                                            graphicsDevice.Viewport.Width,
+                                                            graphicsDevice.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.None, 0,
+                                                            RenderTargetUsage.PreserveContents);                  
                 }
                 catch (InvalidOperationException)
                 {
@@ -2107,53 +2118,80 @@ namespace Viking.UI.Controls
                            new VertexPositionNormalTexture( new Vector3((float)BotLeft.X, (float)TopRight.Y, 0), Vector3.UnitZ,   new Vector2(0,1)),
                            new VertexPositionNormalTexture( new Vector3((float)TopRight.X, (float)TopRight.Y, 0), Vector3.UnitZ, new Vector2(1,1))};
 
-                graphicsDevice.SetRenderTargets(renderOverlayTarget);
-
+                graphicsDevice.SetRenderTargets(inactiveRenderTarget); 
+                graphicsDevice.Clear(new Microsoft.Xna.Framework.Color(0, 0, 0, 0));
+                graphicsDevice.SetRenderTargets(activeRenderTarget);
                 graphicsDevice.Clear(new Microsoft.Xna.Framework.Color(0, 0, 0, 0));
 
+                mergeHSVImagesEffect.PrepareMergeRGBImage(inactiveRenderTarget, channels[0], new Microsoft.Xna.Framework.Color(Colors[0].X, Colors[0].Y, Colors[0].Z, Colors[0].W));
+                 
+                for(int i = 0; i < channels.Length; i++)
+                {
+                    (inactiveRenderTarget, activeRenderTarget) = (activeRenderTarget, inactiveRenderTarget);
+                    graphicsDevice.SetRenderTargets(activeRenderTarget); 
+                    mergeHSVImagesEffect.BaseTexture = inactiveRenderTarget;
+                    mergeHSVImagesEffect.OverlayTexture = channels[i] as Texture2D;
+                    mergeHSVImagesEffect.OverlayColorScalar = new Microsoft.Xna.Framework.Vector4(Colors[i].X / colorStats.ChannelColorSum[0],
+                                                                                                Colors[i].Y / colorStats.ChannelColorSum[1],
+                                                                                                Colors[i].Z / colorStats.ChannelColorSum[2],
+                                                                                                Colors[i].W / colorStats.ChannelColorSum[3]);
+                    mergeHSVImagesEffect.OverlayColor = new Microsoft.Xna.Framework.Color(Colors[i].X,
+                        Colors[i].Y,
+                        Colors[i].Z,
+                        Colors[i].W);
+
+                    foreach (EffectPass pass in mergeHSVImagesEffect.effect.CurrentTechnique.Passes)
+                    {
+                        pass.Apply();
+
+                        graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList,
+                                                                                mesh, 0, mesh.Length,
+                                                                                indicies, 0, indicies.Length / 3);
+                    }
+
+                    //Swap the render targets so we can add the next texture to the running sum
+                    
+                }
+                
+                //When the loop exits the active render target has the sum of each channel and is set as the render target.  We need to normalize the result.
+                
+                /*
+                mergeHSVImagesEffect.PrepareNormalize(inactiveRenderTarget, ChannelColorTotal);
                 foreach (EffectPass pass in mergeHSVImagesEffect.effect.CurrentTechnique.Passes)
                 {
                     pass.Apply();
 
                     graphicsDevice.DrawUserIndexedPrimitives<VertexPositionNormalTexture>(PrimitiveType.TriangleList,
-                                                                            mesh, 0, mesh.Length,
-                                                                            indicies, 0, indicies.Length / 3);
+                        mesh, 0, mesh.Length,
+                        indicies, 0, indicies.Length / 3);
                 }
 
-                graphicsDevice.SetRenderTargets(null);
                 //graphicsDevice.Viewport = oldViewport;
                 graphicsDevice.Textures[0] = null;
+                */
             }
             finally
             {
                 graphicsDevice.BlendState = oldBlendState;
+                graphicsDevice.SetRenderTargets(null);
+                inactiveRenderTarget.Dispose();
             }
 
             //       SaveTexture(renderOverlayTarget, "D:\\Temp\\MergeRGB.png");
 
-            return renderOverlayTarget;
+            return activeRenderTarget;
         }
 
-        private void SaveTexture(Texture2D texture, string filename)
+        private static void SaveTexture(Texture2D texture, string filename)
         {
-            if (texture is null)
-                return;
-
-            System.IO.FileStream saveFile = null;
             try
-            {
-                saveFile = System.IO.File.OpenWrite(filename);
-                texture.SaveAsPng(saveFile, texture.Width, texture.Height);
+            { 
+                using System.IO.FileStream saveFile = System.IO.File.OpenWrite(filename);
+                texture?.SaveAsPng(saveFile, texture.Width, texture.Height);
             }
             catch (System.IO.IOException)
             {
-            }
-            finally
-            {
-                saveFile?.Close();
-
-                saveFile = null;
-            }
+            } 
         }
 
 

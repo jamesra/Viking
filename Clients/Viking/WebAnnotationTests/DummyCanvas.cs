@@ -2,7 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using VikingXNA;
+using VikingXNA; 
+using VikingXNAGraphics; 
 using WebAnnotation;
 
 namespace WebAnnotationTests
@@ -10,6 +11,7 @@ namespace WebAnnotationTests
     class DummyAnnotation : ICanvasView
     {
         public IShape2D Shape;
+         
 
         public DummyAnnotation(IShape2D shape)
         {

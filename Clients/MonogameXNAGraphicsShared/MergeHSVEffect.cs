@@ -3,54 +3,156 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using VikingXNAGraphics;
 
 
 namespace VikingXNA
-{
+{     
+    public readonly struct ChannelSumResult
+    {
+        public readonly float[] ChannelColorSum { get;  }
+        public readonly int[] ChannelUseCount { get;  } 
+        
+        public ChannelSumResult(in float[] channelColorSum, in int[] channelUseCount)
+        {
+            ChannelColorSum = channelColorSum;
+            ChannelUseCount = channelUseCount;
+        }
+    }
+
     public class MergeHSVImagesEffect 
     {
         public Effect effect;
 
         private readonly EffectParameter _WorldViewProjMatrix;
-
-        private readonly EffectParameter _NumTextures;
-
+          
         private readonly EffectParameter _ChannelHueAlpha;
         private readonly EffectParameter _ChannelHueBeta;
 
         //Used for RGB merges
-        private readonly EffectParameter _ChannelColors;
-        private readonly EffectParameter _ChannelColorSum; 
+        private readonly EffectParameter _OverlayColor;
+        private readonly EffectParameter _OverlayColorScalar;
 
-        public readonly int MaxChannels = 4; 
-                
+        private readonly EffectParameter _BaseTexture;
+        private readonly EffectParameter _OverlayTexture;
+        
+        private readonly EffectParameter _OverlayChannelTotals;
+
+        public readonly int MaxChannels = 4;
+
+
+        public float HueAlpha
+        {
+            get => _ChannelHueAlpha.GetValueSingle();
+            set => _ChannelHueAlpha.SetValue(value);
+        }
+
+        public float HueBeta
+        {
+            get => _ChannelHueBeta.GetValueSingle();
+            set => _ChannelHueBeta.SetValue(value);
+        }
+
+        public Color OverlayColor
+        {
+            get => _OverlayColor.GetValueVector4().ToColor();
+            set => _OverlayColor.SetValue(value.ToVector4());
+        }
+
+        public Vector4 OverlayColorScalar
+        {
+            get => _OverlayColorScalar.GetValueVector4();
+            set => _OverlayColorScalar.SetValue(value);
+        }
+
+        public Texture2D BaseTexture
+        {
+            get => _BaseTexture.GetValueTexture2D();
+            set => _BaseTexture.SetValue(value);
+        }
+        
+        public Texture2D OverlayTexture
+        {
+            get => _OverlayTexture.GetValueTexture2D();
+            set => _OverlayTexture.SetValue(value);
+        }
+
         public Matrix WorldViewProjMatrix
         {
             get => _WorldViewProjMatrix.GetValueMatrix();
             set => _WorldViewProjMatrix.SetValue(value);
         }
-
-        public void MergeHSVImages(Texture2D[] Textures, float[] Alphas, float[] Betas)
+        
+        public Vector4 OverlayChannelTotals
         {
-            Debug.Assert((Textures.Length == Alphas.Length) && (Textures.Length == Betas.Length));
+            get => _OverlayChannelTotals.GetValueVector4();
+            set => _OverlayChannelTotals.SetValue(value);
+        }
+        
+        public void PrepareHCLToRGB(Texture2D texture)
+        {
+            this.effect.CurrentTechnique = effect.Techniques["HCLToRGB"]; 
+        }
 
-            this.Textures = Textures; ;
-            this.HueAlpha = Alphas; 
-            this.HueBeta = Betas;
+        public void PrepareRGBToHCL(Texture2D texture)
+        {
+            this.effect.CurrentTechnique = effect.Techniques["RGBToHCL"];
+        }
+
+        public void PrepareMergeHSVImages(Texture2D BaseTexture, Texture2D OverlayTexture, float Alpha, float Beta)
+        { 
+            this.HueAlpha = Alpha; 
+            this.HueBeta = Beta;
 
             this.effect.CurrentTechnique = effect.Techniques["MergeHSVImages"];
         }
 
-        public Vector4 MergeRGBImages(Texture[] Textures, Vector4[] ChannelColors)
-        {
-            Debug.Assert((Textures.Length == ChannelColors.Length));
 
-            this.Textures = Textures;
-            this._ChannelColors.SetValue(ChannelColors); 
+        /// <summary>
+        /// This function merges multiple RGB images into a single image based on the provided channel colors.
+        /// </summary>
+        /// <param name="BaseTexture"></param>
+        /// <param name="OverlayTexture"></param>
+        /// <param name="ChannelColors"></param>
+        /// <param name="ChannelColorSums">The sum of all ChannelColors that will be blended.</param>
+        /// <returns></returns>
+        public void PrepareMergeRGBImage(Texture2D BaseTexture, Texture2D OverlayTexture, Color OverlayColor)
+        {  
+            this.BaseTexture = BaseTexture;
+            this.OverlayTexture = OverlayTexture; 
+              
+            var weighted_colors = OverlayColor.ToVector4();
             
+            /*
+            for(int i = 0; i < 4; i++)
+            {
+                if (ChannelColorSum[i] == 0)
+                    weighted_colors[i] = ChannelInUse[i] ? weighted_colors[i] : 0;
+                else
+                    weighted_colors[i] = ChannelInUse[i] ? weighted_colors[i] / ChannelColorSum[i] : 0; 
+            }
+            */
+
+            this._OverlayColor.SetValue(weighted_colors);
+              
+            this.effect.CurrentTechnique = effect.Techniques["SumRGBImages"];
+
+            return; 
+        }
+        
+        public void PrepareNormalize(Texture2D inputTexture, Vector4 channelTotals)
+        {
+            this.BaseTexture = inputTexture;
+            this.OverlayChannelTotals = channelTotals;
+            this.effect.CurrentTechnique = effect.Techniques["NormalizeByTotal"];
+        }
+
+        
+        public static ChannelSumResult CalculateChannelTotals(Vector4[] ChannelColors)
+        {
             //Sum the channel Colors
             float[] ChannelColorSum = new float[4] {0,0,0,0};
-            float[] ChannelUseCount = new float[4] {0,0,0,0}; 
+            int[] ChannelUseCount = new int[4] {0,0,0,0}; 
             foreach (Vector4 c in ChannelColors)
             {
                 ChannelColorSum[0] += (float)c.X;
@@ -63,74 +165,32 @@ namespace VikingXNA
                 ChannelUseCount[2] += c.Z > 0 ? 1 : 0;
                 ChannelUseCount[3] += c.W > 0 ? 1 : 0; 
             }
+            
+            var result = new ChannelSumResult(ChannelColorSum, ChannelUseCount);
 
-            Vector4 ChannelWeights = new Vector4
-            {
-                /*
-   ChannelWeights.X = ChannelUseCount[0] >  0 ? ChannelColorSum[0] / (float)ChannelUseCount[0] : 0;
-   ChannelWeights.Y = ChannelUseCount[1] > 0 ? ChannelColorSum[1] / (float)ChannelUseCount[1] : 0;
-   ChannelWeights.Z = ChannelUseCount[2] > 0 ? ChannelColorSum[2] / (float)ChannelUseCount[2] : 0; 
-    */
-                X = ChannelUseCount[0],
-                Y = ChannelUseCount[1],
-                Z = ChannelUseCount[2],
-                W = ChannelUseCount[3]
-            };
-
-            _ChannelColorSum.SetValue(ChannelUseCount); 
-
-            this.effect.CurrentTechnique = effect.Techniques["MergeRGBImages"];
-
-            return ChannelWeights; 
-        }
-        
-        private Texture[] Textures
-        {
-            set {
-                string TextureName = "Texture";
-                for (int i = 0; i < value.Length; i++)
-                {
-                    string ParameterName = TextureName + (i+1).ToString();
-                    EffectParameter effectParam = effect.Parameters[ParameterName];
-                    effectParam.SetValue(value[i]);
-
-                    if (i >= MaxChannels)
-                    {
-                        break;
-                    }
-                }
-
-                if (value.Length >= MaxChannels)
-                    _NumTextures.SetValue(MaxChannels);
-                else
-                    _NumTextures.SetValue(value.Length);
-            }
+            return result;
         }
 
-        private float[] HueAlpha
-        {
-            set => _ChannelHueAlpha.SetValue(value);
-        }
 
-        private float[] HueBeta
+        public void SetTextures(Texture2D baseTexture, Texture2D overlayTexture)
         {
-            set => _ChannelHueBeta.SetValue(value);
+            _BaseTexture.SetValue(baseTexture);
+            _OverlayTexture.SetValue(overlayTexture);
         }
 
         public MergeHSVImagesEffect(Effect effect)
         {
             this.effect = effect;
 
-            _WorldViewProjMatrix = effect.Parameters["mWorldViewProj"];
-
-            _NumTextures = effect.Parameters["NumTextures"]; 
-
+            _WorldViewProjMatrix = effect.Parameters["mWorldViewProj"]; 
             _ChannelHueAlpha = effect.Parameters["ChannelHueAlpha"];
-            _ChannelHueBeta = effect.Parameters["ChannelHueBeta"];
+            _ChannelHueBeta = effect.Parameters["ChannelHueBeta"];  
+            _BaseTexture = effect.Parameters["BackgroundTexture"];
+            _OverlayTexture = effect.Parameters["OverlayTexture"];
+            _OverlayChannelTotals = effect.Parameters["OverlayChannelTotals"];
+            _OverlayColor = effect.Parameters["OverlayColor"];
+            _OverlayColorScalar = effect.Parameters["OverlayColorScalar"];
 
-            _ChannelColors = effect.Parameters["ChannelRGBColor"];
-            _ChannelColorSum = effect.Parameters["ChannelRGBColorTotal"];
-            
             effect.CurrentTechnique = effect.Techniques["MergeHSVImages"];
             
         }

@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Viking.VolumeModel;
 using WebAnnotationModel;
+using System.Web;
 
 namespace Viking.AU
 {
@@ -163,22 +164,30 @@ namespace Viking.AU
 
         static async Task Main(string[] args)
         {  
-            var parse_result = await CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args) 
-                .WithParsedAsync(RunAsync);
-             
+            var parse_result = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
+            parse_result.WithNotParsed(e => ShowErrorsAsync(parse_result, e));
+            await parse_result.WithParsedAsync(RunAsync);
+                        
         }
-        //static void ShowErrors(IEnumerable<Error> errors)
-        //{ 
-        //    System.Console.WriteLine(help);
-        //    System.Console.ForegroundColor = ConsoleColor.Red;
-        //    System.Console.WriteLine("Unable to parse command line arguments, aborting");
-        //    foreach(Error e in errors)
-        //    {
-        //        Console.WriteLine(e.ToString());
-        //    }
-        //    System.Console.ResetColor();
-        //    return; 
-        //}
+        
+        static void ShowErrorsAsync(ParserResult<CommandLineOptions> result, IEnumerable<Error> errors)
+        { 
+            // Create a new help text with error information
+            var errorHelpText = HelpText.AutoBuild(result);
+            errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
+            errorHelpText.AddPreOptionsLine("The following errors occurred:");
+            
+            foreach (var error in errors)
+            {
+                errorHelpText.AddPreOptionsLine($"  {error}");
+            }
+            
+            errorHelpText.AddPreOptionsLine("");
+            Console.WriteLine(errorHelpText);
+            
+            // Exit with error code
+            Environment.Exit(1);
+        }
         
         
         static async Task RunAsync(CommandLineOptions options)

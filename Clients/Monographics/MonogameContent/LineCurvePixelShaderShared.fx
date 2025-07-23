@@ -10,7 +10,7 @@ struct LINE_PS_INPUT
 struct Color_Depth_Output
 {
 	float4 Color : COLOR;
-	float Depth : DEPTH;
+	float1 Depth : SV_Depth;
 };
 
 
@@ -32,7 +32,7 @@ Color_Depth_Output DepthOnlyShader(LINE_PS_INPUT input)
 {
 	Color_Depth_Output output;
 	output.Color.a = 0;
-	output.Color.rgb = float3(0, 0, 0);
-	output.Depth = input.polar.x;
+	output.Color.rgb = float3(0, 0, 0); 
+	output.Depth = input.polar.z; 
 	return output;
 }

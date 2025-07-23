@@ -568,6 +568,11 @@ namespace VikingXNAGraphics
                                 (float)rgen.NextDouble());
             return c;
         }
+        
+        public static float[] ToArray(this Microsoft.Xna.Framework.Color c)
+        {
+            return new float[] { (float)c.R / 255f, (float)c.G / 255f, (float)c.B / 255f, (float)c.A / 255f };
+        }
 
         /// <summary>
         /// Return a shade of grey matching the value.  0 is black. 1 is white.

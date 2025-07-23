@@ -412,36 +412,44 @@ namespace Viking.VolumeModel
 
         protected static XDocument LoadHTTP(string path, System.Net.NetworkCredential UserCredentials)
         { 
+            return LoadHTTPAsync(path, UserCredentials).GetAwaiter().GetResult();
+        }
+
+        protected static async Task<XDocument> LoadHTTPAsync(string path, System.Net.NetworkCredential UserCredentials)
+        { 
             Uri pathURI = new Uri(path);
 
-            HttpWebRequest request = WebRequest.Create(pathURI) as HttpWebRequest;
-            if (pathURI.Scheme.ToLower() == "https")
-                request.Credentials = UserCredentials;
-
-            request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
-             
-            XDocument reader = null;
-            try
+            HttpClientHandler handler;
+            if (pathURI.Scheme.ToLower() == "https" && UserCredentials != null)
             {
-                using (WebResponse response = request.GetResponse())
+                handler = new HttpClientHandler
                 {
-
-                    Stream responseStream = response.GetResponseStream();
-
-                    using (StreamReader XMLStream = new StreamReader(responseStream))
-                    {
-
-                        reader = XDocument.Parse(XMLStream.ReadToEnd());
-                    }
-                }
+                    Credentials = UserCredentials
+                };
             }
-            catch (WebException e)
+            else
             {
-                /*PORT: Don't have forms, throw a better exception*/
-                throw new WebException($"Error connecting to volume server: \n{path}\n{e.Message}", e);
+                handler = new HttpClientHandler
+                {
+                    UseDefaultCredentials = true
+                };
             }
             
-            return reader;
+            using (var httpClient = new HttpClient(handler))
+            { 
+                try
+                {
+                    var response = await httpClient.GetAsync(pathURI);
+                    response.EnsureSuccessStatusCode();
+                    
+                    var content = await response.Content.ReadAsStringAsync();
+                    return XDocument.Parse(content);
+                }
+                catch (HttpRequestException e)
+                {
+                    throw new WebException($"Error connecting to volume server: \n{path}\n{e.Message}", e);
+                }
+            }
         }
 
 
@@ -515,7 +523,7 @@ namespace Viking.VolumeModel
             }
             catch (Exception e)
             {
-                Trace.WriteLine(string.Format("Could not open StosZip file: {0}", StosZipPath), "VolumeModel");
+                Trace.WriteLine($"Could not open StosZip file: {StosZipPath}", "VolumeModel");
             }
 
             return true;
@@ -1024,6 +1032,8 @@ namespace Viking.VolumeModel
         private static ITransform LoadSerializedTransformFromCache(string CacheStosPath, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
         {
             ITransform cachedTransform = null;
+            
+            throw new NotImplementedException("This path needs to be updated so binary encoded transforms are written and read");
 
             try
             {
@@ -1033,7 +1043,7 @@ namespace Viking.VolumeModel
                     Trace.WriteLine(outString);
                     using (Stream binFile = System.IO.File.OpenRead(CacheStosPath))
                     {
-                        cachedTransform = JsonTransformSerializer.Deserialize(binFile);
+                        //cachedTransform = JsonTransformSerializer.Deserialize(binFile); 
                     }
                 }
                 else
@@ -1052,9 +1062,8 @@ namespace Viking.VolumeModel
             return cachedTransform;
         }
 
-        private static IContinuousTransform LoadStosFromCache(string CacheStosPath, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
-        {
-            IDiscreteTransform cachedTransform = null;
+        private static async Task<IContinuousTransform> LoadStosFromCache(string CacheStosPath, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
+        { 
             DiscreteTransformWithContinuousFallback continuousTransform = null;
             try
             {
@@ -1067,13 +1076,17 @@ namespace Viking.VolumeModel
                     StosTransformInfo stosInfo = new StosTransformInfo(ControlToVolumeInfo.ControlSection, SectionToControlInfo.MappedSection, CacheLastModifiedUtc);
                     using (Stream stostext = System.IO.File.OpenRead(CacheStosPath) as Stream)
                     {
-                        var cachedTransformTask = TransformFactory.ParseStos(stostext,
+                        var cachedTransform = await TransformFactory.ParseStos(stostext,
                                                                         stosInfo,
-                                                                            1);
+                                                                            1); 
+                        
+                        if(cachedTransform is IContinuousTransform transform)
+                            return transform;
+                        
+                        if(!(cachedTransform is IDiscreteTransform))
+                            throw new NullReferenceException($"Unable to load {stostext} for {stosInfo}");
 
-                        cachedTransform = cachedTransformTask.Result as TriangulationTransform;
-
-                        continuousTransform = new DiscreteTransformWithContinuousFallback(cachedTransform,
+                        continuousTransform = new DiscreteTransformWithContinuousFallback(cachedTransform as IDiscreteTransform,
                                                                                             new RBFTransform(((ITransformControlPoints)cachedTransform).MapPoints, stosInfo),
                                                                                             stosInfo);
                     }
@@ -1085,7 +1098,7 @@ namespace Viking.VolumeModel
             }
             catch (Exception)
             {
-                Trace.WriteLine(string.Format("Exception loading {0}, deleting", CacheStosPath));
+                Trace.WriteLine($"Exception loading {CacheStosPath}, deleting");
                 Geometry.Global.TryDeleteCacheFile(CacheStosPath);
 
                 return null;
@@ -1094,19 +1107,24 @@ namespace Viking.VolumeModel
             return continuousTransform;
         }
 
-        private static void SaveSerializedTransformToCache(string CacheStosPath, object itkTransform)
+        /// <summary>
+        /// Write the straight ITK format transform to the cache file
+        /// </summary>
+        /// <param name="CacheStosPath"></param>
+        /// <param name="itkTransform"></param>
+        /// <returns></returns>
+        private static void SaveSerializedTransformToCache(string CacheStosPath, IITKSerialization itkTransform)
         {
-            using (Stream binFile = System.IO.File.OpenWrite(CacheStosPath))
+            //TODO: This was a binary formatted file before the port to being a modern SDK project.  It should be converted to a binary format again, or the serialization should be updated to use a more efficient format.
+
+            using Stream binFile = System.IO.File.OpenWrite(CacheStosPath);
+            using StreamWriter streamWriter = new StreamWriter(binFile, System.Text.Encoding.UTF8, 1024, true)
             {
-                if (itkTransform is ITransform transform)
-                {
-                    JsonTransformSerializer.Serialize(binFile, transform);
-                }
-                else
-                {
-                    throw new ArgumentException("Object must implement ITransform interface", nameof(itkTransform));
-                }
-            }
+                AutoFlush = true
+            };
+             
+            string itk = itkTransform.GetITKTransform();    
+            streamWriter.Write(itk); 
         }
 
         private static void SaveStosToCache(string CacheStosPath, IITKSerialization itkTransform, StosTransformInfo ControlToVolumeInfo, StosTransformInfo SectionToControlInfo)
@@ -1116,7 +1134,8 @@ namespace Viking.VolumeModel
                 fs.WriteLine(ControlToVolumeInfo.ToString());
                 fs.WriteLine(SectionToControlInfo.ToString());
 
-                itkTransform.WriteITKTransform(fs);
+                string itk = itkTransform.GetITKTransform();
+                fs.WriteLine(itk);
             }
         }
          
@@ -1125,18 +1144,17 @@ namespace Viking.VolumeModel
         /// Adds a transform to each section mapping it into each of the volume spaces we found
         /// </summary>
         public void CreateVolumeTransforms(Viking.Common.IProgressReporter workerThread)
-        {
-            int iSectionProgress = 0;
-            foreach (string TransformKey in Transforms.Keys)
+        { 
+            foreach (string transformKey in Transforms.Keys)
             {
                 //The transform list is sorted by which section the transform maps from. 
                 //Next we'll add transfroms so every transform maps from the mapped section to section #1
-                SortedList<int, ITransform> TList = Transforms[TransformKey];
+                SortedList<int, ITransform> TList = Transforms[transformKey];
 
                 //Create a registration chain so we know what order to register the sections in
                 RegistrationTree tree = RegistrationTree.Build(TList, Sections.Keys);
 
-                iSectionProgress = 0;
+                int iSectionProgress = 0;
                 //OK, walk the tree, adding from the root nodes down
                 foreach (RegistrationTreeNode rootnode in tree.RootNodes.Values)
                 {
@@ -1187,8 +1205,8 @@ namespace Viking.VolumeModel
                                 var transformInfo = ((ITransformInfo)trans)?.Info;
                                 string CacheStosPath = Paths.GetITKSCacheName(info.MappedSection, ControlInfo.ControlSection);
                                 string CacheSerializedPath = Paths.GetSerializerCacheName(info.MappedSection, ControlInfo.ControlSection);
-                                //TList[childSection] = LoadStosFromCache(CacheStosPath, ControlInfo, info);
-                                TList[childSection] = LoadSerializedTransformFromCache(CacheSerializedPath, ControlInfo, info);
+                                TList[childSection] = LoadStosFromCache(CacheStosPath, ControlInfo, info).GetAwaiter().GetResult();
+                                //TList[childSection] = LoadSerializedTransformFromCache(CacheSerializedPath, ControlInfo, info);
 
                                 //CalculateSliceToVolume = true; 
                                 if (TList[childSection] is null)
@@ -1218,13 +1236,21 @@ namespace Viking.VolumeModel
                                     }
                                     catch (Exception)
                                     {
-                                        Trace.WriteLine(string.Format("Exception adding transforms {0} to {1}", trans.ToString(), ControlTrans.ToString()));
+                                        Trace.WriteLine(
+                                            $"Exception adding transforms {trans.ToString()} to {ControlTrans.ToString()}");
                                         trans = TList[childSection];
                                     }
 
                                     if (TList[childSection] is IITKSerialization itkTransform)
                                     {
-                                        SaveSerializedTransformToCache(CacheSerializedPath, itkTransform);
+                                        try { 
+                                            SaveSerializedTransformToCache(CacheSerializedPath, itkTransform);
+                                        }
+                                        catch(System.Text.Json.JsonException e)
+                                        {
+
+                                            System.Diagnostics.Debugger.Break();
+                                        }
                                         SaveStosToCache(CacheStosPath, itkTransform, ControlInfo, info);
                                     }
                                 }

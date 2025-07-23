@@ -1,14 +1,17 @@
 ﻿using CommandLine;
+using CommandLine.Text;
+using Microsoft.Extensions.Logging;
 using System;
-using System.IO;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using CommandLine.Text;
-using Microsoft.Extensions.Logging;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using MathNet.Numerics;
+using VikingXNAGraphics;
 
 namespace MonogameTestbed
 {
@@ -297,7 +300,8 @@ namespace MonogameTestbed
                 }
 #endif
 
-                var argResults = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args)
+                var result = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
+                result
                     .WithParsed<CommandLineOptions>(o =>
                     {
                         o.ToString();
@@ -306,15 +310,33 @@ namespace MonogameTestbed
                     })
                     .WithNotParsed(errors =>
                     {
-                        System.Console.WriteLine($"Unable to parse command line arguments ${errors}, aborting");
-                        return;
+                        // Create a new help text with error information
+                        var errorHelpText = HelpText.AutoBuild<CommandLineOptions>(result);
+                        errorHelpText.AddPreOptionsLine("Aborting: Unable to parse command line arguments"); 
+                        errorHelpText.AddPreOptionsLine($"Arguments: {string.Join(' ', args)}");
+                        errorHelpText.AddPreOptionsLine("");
+                        Console.WriteLine(errorHelpText);
+#if DEBUG
+                        System.Diagnostics.Debugger.Break();
+#endif
+                        // Exit with error code
+                        Environment.Exit(1);
                     });
+                
+                if(result.Tag == CommandLine.ParserResultType.NotParsed)
+                {
+                    // If parsing failed, we exit
+                    return;
+                }
 
-                var helpText = HelpText.AutoBuild(argResults, null, null);
+                // Build help text - we know parsing succeeded at this point
+                var helpText = HelpText.AutoBuild<CommandLineOptions>(result, null, null);
+                
 
                 //If no parameters were supplied or help was requested then print help
                 if (Program.options.ShowHelp)
                 {
+                    helpText = HelpText.AutoBuild<CommandLineOptions>(result, null, null);
                     Console.WriteLine(helpText);
                     while (Console.Read() == 0)
                     {
@@ -348,7 +370,8 @@ namespace MonogameTestbed
                 if (args.Length == 0)
                     Console.WriteLine(helpText);
 
-                Geometry.Global.TryUseNativeMKL();
+                
+                InitializeMathnet();
 
                 using (var game = new MonoTestbed())
                     game.Run();
@@ -358,18 +381,34 @@ namespace MonogameTestbed
                 if (HaveConsole)
                     FreeConsole();
 
-                if (Program.options.Log)
-                {
-                    StopLogger();
-                }
+                if(Program.options is not null)
+                { 
+                    if (Program.options.Log)
+                    {
+                        StopLogger();
+                    }
 
-                if(Program.options.Verbose)
-                {
-                    LoggerFactory?.Dispose();
-                    LoggerFactory = null;
-                    Logger = null;
-                } 
+                    if(Program.options.Verbose)
+                    {
+                        LoggerFactory?.Dispose();
+                        LoggerFactory = null;
+                        Logger = null;
+                    } 
+                }
             }
+        }
+        
+        /// <summary>
+        /// Initialize the Mathnet Numerics lib
+        /// </summary>
+        private static void InitializeMathnet()
+        {
+            int numMathProcs = Environment.ProcessorCount - 1;
+            if (numMathProcs < 1)
+                numMathProcs = 1;
+
+            MathNet.Numerics.Control.MaxDegreeOfParallelism = numMathProcs;
+            Geometry.Global.TryUseNativeMKL();
         }
          
         private static void CreateLogger()
@@ -405,6 +444,8 @@ namespace MonogameTestbed
                 SynchronizedLogWriter = null;
             }
         }
+
+
     }
 #endif
 }

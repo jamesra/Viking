@@ -3,13 +3,13 @@
 
 uniform const float Radius; 
 
-uniform const float radiusSquared = 0.5*0.5;
+static const float radiusSquared = 0.5*0.5;
 
-uniform const float borderStartRadius = 0.475; 
-uniform const float borderStartSquared = 0.475 * 0.475;
+static const float borderStartRadius = 0.475; 
+static const float borderStartSquared = 0.475 * 0.475;
 
-uniform const float borderBlendStartRadius = 0.45;
-uniform const float borderBlendStartSquared = 0.45 * 0.45;
+static const float borderBlendStartRadius = 0.45;
+static const float borderBlendStartSquared = 0.45 * 0.45;
 
 //The convention for annotation textures is that they built from two 8-bit images, one image is loaded to the RGB coordinates of the texture.
 //The other image is loaded into the alpha channel.
@@ -23,14 +23,14 @@ uniform const float borderBlendStartSquared = 0.45 * 0.45;
 
 struct VertexShaderInput
 {
-	float4 Position : POSITION0;
+	float4 Position : POSITION;
 	float4 Color : COLOR0;
     float2 TexCoord : TEXCOORD0;
 };
 
 struct VertexShaderOutput
 {
-    float4 Position : POSITION0;
+    float2 Position : POSITION;
 	float4 HSLColor : COLOR0;
     float2 TexCoord : TEXCOORD0; 
 	float2 CenterDistance : TEXCOORD1;
@@ -38,14 +38,14 @@ struct VertexShaderOutput
 
 struct CircleVertexShaderOutput
 {
-    float4 Position : POSITION0;
+    float2 Position : POSITION;
 	float4 HSLColor : COLOR0;
 	float2 CenterDistance : TEXCOORD0;
 };
 
 struct PixelShaderInput
 {
-    float4 Position : POSITION0;
+    float2 Position : SV_Position;
 	float4 HSLColor : COLOR0;
     float2 TexCoord : TEXCOORD0; 
 	float2 CenterDistance : TEXCOORD1; 
@@ -53,7 +53,7 @@ struct PixelShaderInput
 
 struct CirclePixelShaderInput
 {
-    float4 Position : POSITION0;
+    float2 Position : SV_Position;
 	float4 HSLColor : COLOR0;
 	float2 CenterDistance : TEXCOORD0;
     
@@ -150,8 +150,8 @@ technique RGBTextureOverBackgroundValueOverlayEffect
 {
     pass
     {
-		VertexShader = compile vs_4_0 VertexShaderFunction();
-        PixelShader = compile ps_4_0 RGBATextureOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_3_0 VertexShaderFunction();
+        PixelShader = compile ps_3_0 RGBATextureOverBackgroundLumaPixelShaderFunction();
     }
 
 }
@@ -160,7 +160,7 @@ technique RGBCircleOverBackgroundValueOverlayEffect
 {
     pass
     {
-		VertexShader = compile vs_4_0 CircleVertexShaderFunction();
-        PixelShader = compile ps_4_0 RGBCircleOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_3_0 CircleVertexShaderFunction();
+        PixelShader = compile ps_3_0 RGBCircleOverBackgroundLumaPixelShaderFunction();
     }
 }

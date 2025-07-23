@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
+using System.Linq; 
 
 namespace Geometry
 {
@@ -62,7 +62,7 @@ namespace Geometry
         public GridLineSegment BottomEdge => new GridLineSegment(Corners?[(int)Corner.LowerLeft] ?? default, Corners?[(int)Corner.LowerRight] ?? default);
 
         public GridLineSegment[] Edges => new GridLineSegment[] { TopEdge, BottomEdge, LeftEdge, RightEdge };
-
+         
         public GridRectangle BoundingBox => this;
 
         public ShapeType2D ShapeType => ShapeType2D.RECTANGLE;

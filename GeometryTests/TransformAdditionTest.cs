@@ -81,7 +81,8 @@ namespace GeometryTests
                                                                                                DateTime.UtcNow));
             using (System.IO.StreamWriter fs = System.IO.File.CreateText(outputStosFile))
             {
-                ((Geometry.IITKSerialization)SliceToVolumeTriangulation).WriteITKTransform(fs);
+                string itk = ((Geometry.IITKSerialization)SliceToVolumeTriangulation).GetITKTransform();
+                fs.Write(itk);
 
                 fs.Flush();
             }

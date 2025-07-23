@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -492,20 +493,10 @@ namespace Viking.UI.Forms
 
         string createConnection()
         {
-            if (Credentials == Viking.UI.State.AnonymousCredentials)
-            {
-                return "Read";
-            }
+            string postdata = string.Format("userName={0}&password={1}", Credentials.UserName, Credentials.Password);
+            if (Credentials.UserName == "anonymous")
+                return "Exit";
 
-            if (string.IsNullOrWhiteSpace(Credentials.UserName))
-            {
-                return "Read";
-            }
-
-            string postdata = string.Format("userName={0}&password={1}",
-                this.Credentials.UserName,
-                this.Credentials.Password);
-            
             Uri AuthenticationURI;
             try
             {
@@ -521,51 +512,42 @@ namespace Viking.UI.Forms
                 throw new ArgumentException("Logon UI, createConnection(): Expected to authenticate to an https URI scheme");
             }
 
-            
+            return createConnectionAsync(AuthenticationURI, postdata).GetAwaiter().GetResult();
+        }
 
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(AuthenticationURI);
-            request.Credentials = Credentials;
-            request.Method = "POST";
-
-            using (StreamWriter stream = new StreamWriter(request.GetRequestStream()))
+        async Task<string> createConnectionAsync(Uri AuthenticationURI, string postdata)
+        {
+            using (var httpClient = new HttpClient())
             {
-                stream.Write(postdata);
-            }
-
-            // Do not validate server certificate, since its user generated for now
-            //ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-
-            try
-            {
-                using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+                try
                 {
-                    if (response is null)
-                        SetUpdateText("Null response");
-                    else if (response.StatusCode != HttpStatusCode.OK)
-                        SetUpdateText(response.StatusDescription);
+                    var content = new StringContent(postdata, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
+                    var response = await httpClient.PostAsync(AuthenticationURI, content);
+                    
+                    if (response.StatusCode != HttpStatusCode.OK)
+                    {
+                        SetUpdateText(response.ReasonPhrase);
+                        return "Exit";
+                    }
                     else
                     {
-                        using (StreamReader streamRead = new StreamReader(response.GetResponseStream()))
-                        {
-                            return streamRead.ReadToEnd();
-                        }
+                        var responseContent = await response.Content.ReadAsStringAsync();
+                        return responseContent;
                     }
                 }
-            }
-            catch (WebException e)
-            {
-                SetUpdateText("Failure communicating with authentication server.\n" + e.Message);
-                
-                if(MessageBox.Show("There is a known issue with contacting the authentication server via SSL.  A migration to a new server is being worked on.  Checking your credentials to the authentication server is not required to annotate, but any errors in your credentials will not be detected.  Would you like to continue with the provided credentials?", "Web Exception",
-                    MessageBoxButtons.YesNo) == DialogResult.Yes)
+                catch (HttpRequestException e)
                 {
-                    return Credentials == Viking.UI.State.AnonymousCredentials ? "Read" : "Write";
+                    SetUpdateText("Failure communicating with authentication server.\n" + e.Message);
+                    
+                    if(MessageBox.Show("There is a known issue with contacting the authentication server via SSL.  A migration to a new server is being worked on.  Checking your credentials to the authentication server is not required to annotate, but any errors in your credentials will not be detected.  Would you like to continue with the provided credentials?", "Web Exception",
+                        MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    {
+                        return Credentials == Viking.UI.State.AnonymousCredentials ? "Read" : "Write";
+                    }
+
+                    return "Exit";
                 }
-
-                return "Exit";
             }
-
-            return "Exit";
         }
 
         void username_KeyUp(object sender, System.Windows.Forms.KeyEventArgs e)

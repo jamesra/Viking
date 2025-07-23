@@ -1,7 +1,9 @@
+using MathNet.Numerics;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Geometry
 {
@@ -30,18 +32,41 @@ namespace Geometry
         public static bool TryUseNativeMKL()
         {
             bool loaded = false;
-            try
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                loaded = MathNet.Numerics.Control.TryUseNativeMKL();
-                System.Diagnostics.Trace.WriteLine($"\n\nGeometry: Native MKL library {(loaded ? "" : "not")} found");
-                System.Diagnostics.Trace.WriteLine($"Geometry: Mathnet.Numerics:\n{MathNet.Numerics.Control.Describe()}\n\n");
-                return loaded;
+                try
+                {
+                    loaded = MathNet.Numerics.Control.TryUseNativeMKL();
+                    System.Diagnostics.Trace.WriteLine($"\n\nGeometry: Native MKL library {(loaded ? "" : "not")} found");
+                    System.Diagnostics.Trace.WriteLine($"Geometry: Mathnet.Numerics:\n{MathNet.Numerics.Control.Describe()}\n\n");
+                    return loaded;
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Trace.WriteLine($"Geometry: Unable to load Native MKL library. {e.Message}");
+                    loaded = MathNet.Numerics.Control.TryUseNativeOpenBLAS();
+                    System.Diagnostics.Trace.WriteLine($"\n\nGeometry: Native OpenBLAS library {(loaded ? "" : "not")} found");
+                    System.Diagnostics.Trace.WriteLine($"Geometry: Mathnet.Numerics:\n{MathNet.Numerics.Control.Describe()}\n\n");
+                    return loaded;
+                }
             }
-            catch (Exception e)
+            else
             {
-                System.Diagnostics.Trace.WriteLine($"Geometry: Unable to load Native MKL library. {e.Message}");
-                return false;
-            } 
+                try
+                {
+                    loaded = MathNet.Numerics.Control.TryUseNativeOpenBLAS();
+                    System.Diagnostics.Trace.WriteLine($"\n\nGeometry: Native OpenBLAS library {(loaded ? "" : "not")} found");
+                    System.Diagnostics.Trace.WriteLine($"Geometry: Mathnet.Numerics:\n{MathNet.Numerics.Control.Describe()}\n\n");
+                    return loaded;
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Trace.WriteLine($"Geometry: Unable to load Native OpenBLAS library. {e.Message}");
+                    return false;
+                }
+            }  
+            
+            return false; 
         }
 
         public static bool IsCacheFileValid(string CacheStosPath, DateTime time)

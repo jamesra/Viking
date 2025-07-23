@@ -7,6 +7,11 @@
             return System.Drawing.Color.FromArgb((int)(alpha * 255.0), WinColor);
         }
 
+        public static System.Drawing.Color SetAlpha(this System.Drawing.Color WinColor, double alpha)
+        {
+            return System.Drawing.Color.FromArgb((int)(alpha * 255.0), WinColor);
+        }
+
         public static Microsoft.Xna.Framework.Color ToXNAColor(this System.Drawing.Color color)
         {
             return new Microsoft.Xna.Framework.Color((int)color.R,
@@ -21,6 +26,14 @@
                                                     (int)color.G,
                                                     (int)color.B,
                                                     (int)(alpha * 255.0f));
+        }
+
+        public static Microsoft.Xna.Framework.Color ToXNAColor(this System.Drawing.Color color, double alpha)
+        {
+            return new Microsoft.Xna.Framework.Color((int)color.R,
+                (int)color.G,
+                (int)color.B,
+                (int)(alpha * 255.0f));
         }
 
 

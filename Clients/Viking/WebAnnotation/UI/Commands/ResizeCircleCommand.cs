@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using System.Windows.Forms;
 using VikingXNAGraphics;
+using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -80,10 +81,7 @@ namespace WebAnnotation.UI.Commands
             //            double OldRadius = selected.Radius;
             GridVector2 Pos = Origin;
 
-            Microsoft.Xna.Framework.Color color = new Microsoft.Xna.Framework.Color(CircleColor.R,
-                CircleColor.G,
-                CircleColor.B,
-                128);
+            Microsoft.Xna.Framework.Color color = CircleColor.ToXNAColor(0.5f);
 
             GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, Pos, Radius, color);
 

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace Utils
@@ -57,40 +59,26 @@ namespace Utils
 
         private static XDocument LoadHTTP(Uri path)
         {
-            //Remove the .xml file from the path
-            int iRemove = path.OriginalString.LastIndexOf('/');
-            string VolumePath = path.OriginalString;
-            if (iRemove > 0)
+            return LoadHTTPAsync(path).GetAwaiter().GetResult();
+        }
+
+        private static async Task<XDocument> LoadHTTPAsync(Uri path)
+        {
+            using (var httpClient = new HttpClient())
             {
-                VolumePath = VolumePath.Remove(iRemove);
+                try
+                {
+                    var response = await httpClient.GetAsync(path);
+                    response.EnsureSuccessStatusCode();
+                    
+                    var content = await response.Content.ReadAsStringAsync();
+                    return XDocument.Parse(content);
+                }
+                catch (HttpRequestException e)
+                {
+                    throw new WebException("Error connecting to volume server: \n" + path + "\n" + e.Message, e);
+                }
             }
-
-            HttpWebRequest request = WebRequest.Create(path) as HttpWebRequest;
-
-            request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
-
-            WebResponse response = null;
-            try
-            {
-                response = request.GetResponse();
-            }
-            catch (WebException e)
-            {
-                /*PORT: Don't have forms, throw a better exception*/
-                throw new WebException("Error connecting to volume server: \n" + path + "\n" + e.Message, e);
-            }
-
-            Stream responseStream = response.GetResponseStream();
-
-            StreamReader XMLStream = new StreamReader(responseStream);
-
-            XDocument reader = XDocument.Parse(XMLStream.ReadToEnd());
-
-            XMLStream.Close();
-            responseStream.Close();
-            response.Close();
-
-            return reader;
         }
 
         /// <summary>

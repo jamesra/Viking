@@ -34,7 +34,7 @@ Color_Depth_Output MyPSStandardHSV(LINE_PS_INPUT input)
 	finalColor =  BlendHSLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
     finalColor.a = lineColor.a; 
 	output.Color = finalColor;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
     return output;
 }
 
@@ -50,7 +50,7 @@ Color_Depth_Output MyPSAlphaGradientHSV(LINE_PS_INPUT input)
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -68,7 +68,7 @@ Color_Depth_Output MyPSAlphaDepthGradientHSV(LINE_PS_INPUT input)
 	finalColor = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
 
 	output.Color = finalColor;
-	output.Depth = (polar.z * 2) > 1 ? 1 - ((1 - polar.z) * 2) : 1 - (polar.z * 2);
+	
 	output.Color.a = 1 - output.Depth;
 	return output;
 }
@@ -78,7 +78,7 @@ Color_Depth_Output MyPSNoBlurHSV(LINE_PS_INPUT input)
 	Color_Depth_Output output;
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -102,7 +102,7 @@ Color_Depth_Output MyPSAnimatedBidirectionalHSV(LINE_PS_INPUT input)
 
 	output.Color = finalColor;
 	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
-	output.Depth = input.polar.x;//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
+	//(polar.z * 2) > 1 ? 1-((1-polar.z)*2) : 1-(polar.z * 2);
 	finalColor.a = (1 - depth) * finalColor.a;
 
     clip(finalColor.a);
@@ -115,7 +115,7 @@ Color_Depth_Output MyPSAnimatedBidirectionalHSV(LINE_PS_INPUT input)
 	//float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	//output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, 1);
 	//output.Color.a = (1 - depth) * finalColor.a;
-
+	output.Depth = 0;
 	return output;
 }
 
@@ -137,7 +137,7 @@ Color_Depth_Output MyPSAnimatedLinearHSV(LINE_PS_INPUT input)
 
 	output.Color.rgb = lineColorHSV;
 	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
-	output.Depth = input.polar.x; //depth;
+	 //depth;
 					  //output.Color.a = lineColorHSV.a * (1 - depth) * modulation *(1 - input.polar.x);
 	output.Color.a = lineColorHSV.a * modulation *(1 - input.polar.x);
 	clip(output.Color.a);
@@ -146,7 +146,7 @@ Color_Depth_Output MyPSAnimatedLinearHSV(LINE_PS_INPUT input)
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(lineColorHSV, RGBBackgroundColor, AlphaBlend);
-
+	output.Depth = 0;
 	return output;
 }
 
@@ -162,8 +162,8 @@ Color_Depth_Output MyPSAnimatedRadialHSV(LINE_PS_INPUT input)
 	clip(finalColor.a);
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
-	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
-	output.Depth = polar.x;
+	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a); 
+	output.Depth = 0;
 	return output;
 }
 
@@ -194,7 +194,7 @@ Color_Depth_Output MyPSModernHSV(LINE_PS_INPUT input)
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
-	output.Depth = rho;
+	output.Depth = 0;
 	return output;
 }
 
@@ -215,7 +215,7 @@ Color_Depth_Output MyPSLadderHSV(LINE_PS_INPUT input)
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -235,7 +235,7 @@ Color_Depth_Output MyPSDashedHSV(LINE_PS_INPUT input)
 	  
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -251,7 +251,7 @@ Color_Depth_Output MyPSTubularHSV(LINE_PS_INPUT input)
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -295,7 +295,7 @@ Color_Depth_Output MyPSHalfTubularHSV(LINE_PS_INPUT input)
 	//finalColor.a = finalColor.a * BlurEdge(polar.x, blurThreshold) * AngleAlpha;
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
-	output.Depth = polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -309,7 +309,7 @@ Color_Depth_Output MyPSGlowHSV(LINE_PS_INPUT input)
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(finalColor, RGBBackgroundColor, finalColor.a);
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }
 
@@ -321,6 +321,6 @@ Color_Depth_Output MyPSTexturedHSV(LINE_PS_INPUT input)
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 	output.Color = BlendHSLColorOverBackground(foregroundColor, RGBBackgroundColor, 0);
 	output.Color = foregroundColor.a;
-	output.Depth = input.polar.x;
+	output.Depth = 0;
 	return output;
 }

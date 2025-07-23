@@ -22,7 +22,7 @@ uniform const sampler AnnotationTextureSampler : register(s1) = sampler_state
     MagFilter = POINT;
 }; 
 
-uniform const float InputLumaAlpha = 1.0f; //Defines how we weight blending the input and existing background luma values by default.
+uniform const float InputLumaAlpha; // = 1.0f; //Defines how we weight blending the input and existing background luma values by default.
 
 //The convention for annotation textures is that they built from two 8-bit images, one image is loaded to the RGB coordinates of the texture.
 //The other image is loaded into the alpha channel.

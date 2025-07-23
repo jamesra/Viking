@@ -7,7 +7,9 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
+using CommandLine.Text;
 using Viking.UI.Forms;
+using VikingCoreResources = Viking.Properties.Resources;
 
 
 namespace Viking
@@ -96,15 +98,7 @@ namespace Viking
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-
-            try
-            {
-                MathNet.Numerics.Control.UseNativeMKL();
-            }
-            catch (Exception e)
-            {
-                Trace.WriteLine("Unable to load Native MKL library.  Exception text:\n" + e.Message);
-            }
+             
 
             System.Threading.ThreadPool.GetMaxThreads(out int workThreads, out int portThreads);
             System.Net.ServicePointManager.DefaultConnectionLimit = workThreads;
@@ -196,9 +190,24 @@ namespace Viking
             {
                 website = o.VolumeURL;
                 TryBypassSplash(o);
+            }).WithNotParsed((errors) => 
+            { 
+                // Create a new help text with error information
+                var errorHelpText = HelpText.AutoBuild(options);
+                errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
+                errorHelpText.AddPreOptionsLine("The following errors occurred:");
+                
+                foreach (var error in errors)
+                {
+                    errorHelpText.AddPreOptionsLine($"  {error}");
+                }
+                
+                errorHelpText.AddPreOptionsLine("");
+                Console.WriteLine(errorHelpText);
+                
+                // Show login window as fallback
+                website = ShowLoginWindow(website);
             });
-
-            options.WithNotParsed((o) => { website = ShowLoginWindow(website); });
 
             //Close the program if no website is configured
             if (website is null)
@@ -283,6 +292,26 @@ namespace Viking
             }
 
             return VolumeURL;
+        }
+
+
+        /// <summary>
+        /// Initialize the Mathnet Numerics lib
+        /// </summary>
+        private static void InitializeMathnet()
+        {
+            int numMathProcs = Environment.ProcessorCount - 1;
+            if (numMathProcs < 1)
+                numMathProcs = 1;
+
+            MathNet.Numerics.Control.MaxDegreeOfParallelism = numMathProcs;
+            bool MKLSuccess = Geometry.Global.TryUseNativeMKL();
+            if(MKLSuccess)
+                Console.WriteLine("Success loading MKL Library");
+            else
+            { 
+                Console.WriteLine("Unable to load MKL Libarry"); 
+            }
         }
 
         private static string ShowLoginWindow(string VolumePath, string username=null, string password=null)

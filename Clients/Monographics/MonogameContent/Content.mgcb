@@ -1,10 +1,9 @@
 
 #----------------------------- Global Properties ----------------------------#
 
-/outputDir:bin
-/intermediateDir:obj
-/platform:Windows
-/config:
+/outputDir:$(ProjectDir)/bin/$(Platform)
+/intermediateDir:$(ProjectDir)/obj/$(Platform)
+/platform:DesktopVK 
 /profile:HiDef
 /compress:False
 
@@ -22,8 +21,15 @@
 #begin Arial.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Compressed
 /build:Arial.spritefont
+
+#begin BillboardAnnotation.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:BillboardAnnotation.fx
 
 #begin ChannelOverlayShader.fx
 /importer:EffectImporter
@@ -48,6 +54,30 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=NoChange
 /build:Circle.png
+
+#begin Circle2Minus.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=False
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=NoChange
+/build:Circle2Minus.png
+
+#begin Circle2Plus.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=False
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=False
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=NoChange
+/build:Circle2Plus.png
 
 #begin CircleMask.png
 /importer:TextureImporter
@@ -79,6 +109,12 @@
 /processorParam:DebugMode=Auto
 /build:MergeHSVImages.fx
 
+#begin PolygonOverlayShader.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:PolygonOverlayShader.fx
+
 #begin RGBToHSV.fx
 /importer:EffectImporter
 /processor:EffectProcessor
@@ -89,6 +125,7 @@
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
+/processorParam:Defines=
 /build:RoundCurve.fx
 
 #begin RoundCurveHSV.fx
@@ -138,40 +175,4 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:UpArrowV2.png
-
-#begin PolygonOverlayShader.fx
-/importer:EffectImporter
-/processor:EffectProcessor
-/processorParam:DebugMode=Auto
-/build:PolygonOverlayShader.fx
-
-#begin Circle2Minus.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=False
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=False
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=NoChange
-/build:Circle2Minus.png
-
-#begin Circle2Plus.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=False
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=False
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=NoChange
-/build:Circle2Plus.png
-
-#begin BillboardAnnotation.fx
-/importer:EffectImporter
-/processor:EffectProcessor
-/processorParam:DebugMode=Auto
-/build:BillboardAnnotation.fx
 

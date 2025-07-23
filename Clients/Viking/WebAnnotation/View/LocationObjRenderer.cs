@@ -68,7 +68,7 @@ namespace WebAnnotation
                 //Draw backgrounds again and only update colors where the depth and stencil values match
                 DrawBackgroundsAtDepth(depthGroup, graphicsDevice, basicEffect, overlayEffect, overlayLineManager, overlayCurveManager, Scene, VisibleSectionNumber);
 
-                graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, float.MaxValue, 0);
+                graphicsDevice.Clear(ClearOptions.DepthBuffer, Microsoft.Xna.Framework.Color.Black, 1, 0);
 
                 DepthStencilValue -= DepthStencilStepSize;
             }
