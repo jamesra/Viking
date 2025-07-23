@@ -91,12 +91,14 @@ namespace VikingXNA
         
         public void PrepareHCLToRGB(Texture2D texture)
         {
-            this.effect.CurrentTechnique = effect.Techniques["HCLToRGB"]; 
+            this.effect.CurrentTechnique = effect.Techniques["HCLToRGB"];
+            this.OverlayTexture = texture;
         }
 
         public void PrepareRGBToHCL(Texture2D texture)
         {
             this.effect.CurrentTechnique = effect.Techniques["RGBToHCL"];
+            this.OverlayTexture = texture;
         }
 
         public void PrepareMergeHSVImages(Texture2D BaseTexture, Texture2D OverlayTexture, float Alpha, float Beta)

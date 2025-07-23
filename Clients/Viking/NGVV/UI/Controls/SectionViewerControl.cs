@@ -2127,8 +2127,6 @@ namespace Viking.UI.Controls
                  
                 for(int i = 0; i < channels.Length; i++)
                 {
-                    (inactiveRenderTarget, activeRenderTarget) = (activeRenderTarget, inactiveRenderTarget);
-                    graphicsDevice.SetRenderTargets(activeRenderTarget); 
                     mergeHSVImagesEffect.BaseTexture = inactiveRenderTarget;
                     mergeHSVImagesEffect.OverlayTexture = channels[i] as Texture2D;
                     mergeHSVImagesEffect.OverlayColorScalar = new Microsoft.Xna.Framework.Vector4(Colors[i].X / colorStats.ChannelColorSum[0],
@@ -2149,14 +2147,15 @@ namespace Viking.UI.Controls
                                                                                 indicies, 0, indicies.Length / 3);
                     }
 
-                    //Swap the render targets so we can add the next texture to the running sum
-                    
+                    //Swap the render targets so we can add the next texture to the running sum 
+                    (inactiveRenderTarget, activeRenderTarget) = (activeRenderTarget, inactiveRenderTarget);
+                    graphicsDevice.SetRenderTargets(activeRenderTarget);
                 }
                 
-                //When the loop exits the active render target has the sum of each channel and is set as the render target.  We need to normalize the result.
+                //When the loop exits the inactive render target has the sum of each channel and is set as the render target.  We need to normalize the result.
                 
-                /*
-                mergeHSVImagesEffect.PrepareNormalize(inactiveRenderTarget, ChannelColorTotal);
+                
+                mergeHSVImagesEffect.PrepareRGBToHCL(inactiveRenderTarget);
                 foreach (EffectPass pass in mergeHSVImagesEffect.effect.CurrentTechnique.Passes)
                 {
                     pass.Apply();
@@ -2168,13 +2167,13 @@ namespace Viking.UI.Controls
 
                 //graphicsDevice.Viewport = oldViewport;
                 graphicsDevice.Textures[0] = null;
-                */
+                
             }
             finally
             {
                 graphicsDevice.BlendState = oldBlendState;
                 graphicsDevice.SetRenderTargets(null);
-                inactiveRenderTarget.Dispose();
+                inactiveRenderTarget?.Dispose();
             }
 
             //       SaveTexture(renderOverlayTarget, "D:\\Temp\\MergeRGB.png");
