@@ -5,6 +5,8 @@
     <UseWPF>true</UseWPF>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
 	<LangVersion>9.0</LangVersion>
+    <!-- Disable default embedded resource items to avoid duplicates -->
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
@@ -19,5 +21,12 @@
   </ItemGroup> 
   <ItemGroup>
     <None Include="app.config" />
+  </ItemGroup>
+  
+  <!-- Include Windows Forms resource files -->
+  <ItemGroup>
+    <EmbeddedResource Include="BookmarkGeneralPage.resx" />
+    <EmbeddedResource Include="FolderGeneralPage.resx" />
+    <EmbeddedResource Include="FolderTreeControl.resx" />
   </ItemGroup>
 </Project>

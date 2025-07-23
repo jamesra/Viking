@@ -1,3 +1,0 @@
-2022-02-24 22:42:43.463 -08:00 [INF] Entity Framework Core 5.0.14 initialized 'PersistedGrantDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer' with options: MigrationsAssembly=IdentityServer 
-2022-02-24 22:52:07.356 -08:00 [INF] Entity Framework Core 5.0.14 initialized 'PersistedGrantDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer' with options: MigrationsAssembly=IdentityServer 
-2022-02-24 23:36:38.984 -08:00 [INF] Entity Framework Core 5.0.14 initialized 'PersistedGrantDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer' with options: MigrationsAssembly=IdentityServer 

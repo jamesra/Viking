@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net48</TargetFramework>
     <RootNamespace>Viking</RootNamespace>
     <AssemblyName>Viking</AssemblyName>
     <ApplicationIcon>Viking.ico</ApplicationIcon>
@@ -15,15 +15,43 @@
     <ApplicationVersion>1.1.0.0</ApplicationVersion>
     <FileVersion>1.1.0.0</FileVersion>
     <Deterministic>false</Deterministic>
+    <NoWarn>$(NoWarn);CS0436;CA1014</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
     <PackageReference Include="EntityFramework" Version="6.5.1" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+    <PackageReference Include="System.Memory" Version="4.6.3" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LocalBookmarks\LocalBookmarks.csproj" />
+    <ProjectReference Include="..\MeasurementExtension\Measurement.csproj" />
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
+    <ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Modules\**\System.Memory.dll" />
+    <None Remove="System.Memory.4.6.3\**" />
+    <None Remove="System.Runtime.CompilerServices.Unsafe.6.1.2\**" />
+    <None Remove="System.Numerics.Vectors.4.6.1\**" />
+    <None Remove="System.Buffers.4.6.1\**" />
+  </ItemGroup>
+  <!-- Ensure native SQL Server Types DLLs are copied to output -->
+  <ItemGroup>
+    <None Include="SqlServerTypes\x64\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x86\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

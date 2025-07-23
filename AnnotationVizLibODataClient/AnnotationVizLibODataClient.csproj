@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.OData.Core" Version="7.15.0" />
     <PackageReference Include="Microsoft.OData.Edm" Version="7.15.0" />
     <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+    <PackageReference Include="System.Memory" Version="4.6.3" />
   </ItemGroup>
   
   <!-- Conditional Package References for .NET 9.0 -->

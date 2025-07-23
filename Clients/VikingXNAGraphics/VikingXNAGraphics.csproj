@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
 		<TargetFramework>net48</TargetFramework>
@@ -7,6 +7,7 @@
 		<AssemblyName>VikingXNAGraphics</AssemblyName>
 		<UseWindowsForms>true</UseWindowsForms>
 		<MonoGamePlatform>Windows</MonoGamePlatform>
+		<NoWarn>$(NoWarn);CA1014</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
@@ -18,13 +19,22 @@
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="..\MonogameXNAGraphicsShared\**\*.cs" Exclude="..\MonogameXNAGraphicsShared\obj\**;..\MonogameXNAGraphicsShared\bin\**"></Compile> 
-		<Content Include="..\MonogameXNAGraphicsShared\**\*.fx"></Content>
-		<Content Include="..\MonogameXNAGraphicsShared\**\*.mgcb"></Content>
-		<Content Include="..\MonogameXNAGraphicsShared\**\*.png"></Content>
+		<Content Include="..\MonogameXNAGraphicsShared\Content\bin\Windows\**\*.xnb">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>Content\%(Filename)%(Extension)</Link>
+		</Content>
+		<None Include="..\MonogameXNAGraphicsShared\Content\**\*.fx"> 
+			<Link>Content\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</None>
 	</ItemGroup>
 	<ItemGroup>
 		<Reference Include="MonoGame.Framework">
 			<HintPath>$(NuGetPackageRoot)\monogame.framework.windowsdx\3.7.1\lib\net45\MonoGame.Framework.dll</HintPath>
 		</Reference>
 	</ItemGroup>
+	<Target Name="CompileContent" BeforeTargets="Build">
+		<Exec
+			Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /quiet /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;bin/Windows&quot; /intermediateDir:&quot;obj/Windows&quot;"
+			WorkingDirectory="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content" />
+	</Target>
 </Project> 

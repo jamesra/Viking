@@ -35,6 +35,7 @@
 	<ItemGroup>
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" /> 
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
+		<PackageReference Include="System.Memory" Version="4.6.3" />
 	</ItemGroup>
 	
 	<!-- SQL Server Types - different versions for different frameworks -->

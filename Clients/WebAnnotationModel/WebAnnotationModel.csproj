@@ -8,6 +8,7 @@
 		<Deterministic>true</Deterministic>
 		<WarningLevel>4</WarningLevel>
 		<UseWindowsForms>true</UseWindowsForms>
+		<NoWarn>$(NoWarn);CA1014</NoWarn>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<DefineConstants>DEBUG;TRACE</DefineConstants>
@@ -71,7 +72,7 @@
 		<PackageReference Include="System.ServiceModel" Version="1.0.0" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
 		<PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" />
-		<PackageReference Include="System.Memory" Version="4.5.5" />
+		<PackageReference Include="System.Memory" Version="4.6.3" />
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
 	</ItemGroup>
 	<!-- Conditional Package References for net9.0 -->

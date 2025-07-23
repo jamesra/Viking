@@ -5,11 +5,7 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>RuneWpfControlLibrary</RootNamespace>
     <AssemblyName>RuneWpfControlLibrary</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-  <ItemGroup>
-    <Page Include="GoToLocationForm.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
+
 </Project>

@@ -11,10 +11,14 @@
     <ProjectReference Include="..\Clients\VolumeModel\VolumeModel.csproj" />
   </ItemGroup>
 	  <!-- Conditional Package References -->
-	  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-		  <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
-	  </ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+		<PackageReference Include="System.Memory" Version="4.6.3" />
+	</ItemGroup>
 	  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+		  <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+	  </ItemGroup>
+	  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
 		  <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	  </ItemGroup>
 </Project>

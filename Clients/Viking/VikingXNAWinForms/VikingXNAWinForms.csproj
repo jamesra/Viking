@@ -5,7 +5,9 @@
 		<RootNamespace>VikingXNAWinForms</RootNamespace>
 		<AssemblyName>VikingXNAWinForms</AssemblyName>
 		<UseWindowsForms>true</UseWindowsForms>
-		<MonoGamePlatform>Windows</MonoGamePlatform> 
+		<MonoGamePlatform>Windows</MonoGamePlatform>
+		<!-- Disable default embedded resource items to avoid duplicates -->
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 	</PropertyGroup>
 	
 	<!-- .NET Framework 4.8 specific properties -->
@@ -29,5 +31,11 @@
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="app.config" />
+	</ItemGroup>
+	
+	<!-- Include Windows Forms resource files -->
+	<ItemGroup>
+		<EmbeddedResource Include="GraphicsDeviceControl.resx" />
+		<EmbeddedResource Include="ViewerControl.resx" />
 	</ItemGroup>
 </Project>

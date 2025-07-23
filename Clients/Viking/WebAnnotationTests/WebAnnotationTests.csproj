@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>net48;net9.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;</TargetFrameworks>
     <LangVersion>9.0</LangVersion>
     <RootNamespace>WebAnnotationTests</RootNamespace>
     <AssemblyName>WebAnnotationTests</AssemblyName>
@@ -14,12 +14,14 @@
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\..\..\RTree\RTree.csproj" />
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
-    <ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj" />
+    <ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj" /> 
+    <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
+    <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0'" />
+    <ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="PathAnnotationInteractionTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -28,4 +30,13 @@
     <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
   </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+	    <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
+	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+    </ItemGroup>
 </Project>

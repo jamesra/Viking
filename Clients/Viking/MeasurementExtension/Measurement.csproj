@@ -4,6 +4,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <UseWPF>true</UseWPF>
 	<LangVersion>9.0</LangVersion>
+    <!-- Disable default embedded resource items to avoid duplicates -->
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup> 
 	  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
 		  <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
@@ -28,5 +30,10 @@
   </ItemGroup>  
   <ItemGroup>
     <None Include="app.config" />
+  </ItemGroup>
+  
+  <!-- Include Windows Forms resource files -->
+  <ItemGroup>
+    <EmbeddedResource Include="ScaleForm.resx" />
   </ItemGroup>
 </Project>

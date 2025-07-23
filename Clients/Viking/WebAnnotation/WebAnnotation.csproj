@@ -4,6 +4,8 @@
 		<LangVersion>9.0</LangVersion>
 		<UseWindowsForms>true</UseWindowsForms>
 		<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+		<!-- Disable default embedded resource items to avoid duplicates -->
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<DefineConstants>DEBUG;TRACE</DefineConstants>
@@ -21,6 +23,27 @@
 	<ItemGroup> 
 		<None Include="**\*.config" /> 
 	</ItemGroup>
+	
+	<!-- Include Windows Forms resource files -->
+	<ItemGroup>
+		<EmbeddedResource Include="Properties\Resources.resx" />
+		<EmbeddedResource Include="UI\FindStructureNumberForm.resx" />
+		<EmbeddedResource Include="UI\MergeStructuresForm.resx" />
+		<EmbeddedResource Include="UI\SplitStructuresForm.resx" />
+		<EmbeddedResource Include="UI\StructureChildStructuresPage.resx" />
+		<EmbeddedResource Include="UI\StructureExtendedPropertiesPage.resx" />
+		<EmbeddedResource Include="UI\StructureGeneralPage.resx" />
+		<EmbeddedResource Include="UI\StructureLocationsChangeLogPropertiesPage.resx" />
+		<EmbeddedResource Include="UI\StructureLocationsPage.resx" />
+		<EmbeddedResource Include="UI\StructureNotesPage.resx" />
+		<EmbeddedResource Include="UI\StructureTypeGeneralPage.resx" />
+		<EmbeddedResource Include="UI\StructureTypesRelationsPage.resx" />
+		<EmbeddedResource Include="UI\StructureTypesTree.resx" />
+		<EmbeddedResource Include="UI\StructureTypeStructuresPage.resx" />
+		<EmbeddedResource Include="UI\Controls\ListLocations.resx" />
+		<EmbeddedResource Include="UI\Controls\ListStructures.resx" />
+		<EmbeddedResource Include="UI\Forms\PenAnnotationViewForm.resx" />
+	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
 		<ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
@@ -32,7 +55,8 @@
 		<ProjectReference Include="..\..\..\Utils\Utils.csproj" />
 		<ProjectReference Include="..\..\Common\Common.csproj" />
 		<ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
-		<ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" />
+		<ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
+		<ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" Condition="'$(TargetFramework)' == 'net48'" />
 		<ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj" />
 		<ProjectReference Include="..\..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
@@ -54,8 +78,8 @@
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
 		<PackageReference Include="System.Text.Encodings.Web" Version="9.0.7" />
 		<PackageReference Include="System.ValueTuple" Version="4.6.1" />
-		<PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" />
-		<PackageReference Include="System.Memory" Version="4.5.5" />
+		<PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" Condition="'$(TargetFramework)' == 'net48'" />
+		<PackageReference Include="System.Memory" Version="4.6.3" />
 		<PackageReference Include="LinqToXsd" Version="2.0.2" />
 	</ItemGroup>
 	<ItemGroup>
@@ -66,17 +90,22 @@
 		<Reference Include="System.Xaml" />
 		<Reference Include="PresentationCore" />
 		<Reference Include="PresentationFramework" />
+		<Reference Include="System.Windows.Forms.Integration" />
+		<Reference Include="WindowsFormsIntegration">
+			<HintPath>C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WindowsFormsIntegration.dll</HintPath>
+		</Reference>
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+		<PackageReference Include="Duende.IdentityModel" Version="7.1.0" />
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	</ItemGroup>
 	<PropertyGroup>
 		<PostBuildEvent>
-			mkdir $(SolutionDir)Clients\Viking\Viking\Modules\WebAnnotation
-			copy $(TargetDir)* $(SolutionDir)Clients\Viking\Viking\Modules\WebAnnotation /Y
+			mkdir $(SolutionDir)Clients\Viking\Viking\bin\Debug\net48\Modules\WebAnnotation
+			copy $(TargetDir)* $(SolutionDir)Clients\Viking\Viking\bin\Debug\net48\Modules\WebAnnotation /Y
 		</PostBuildEvent>
 	</PropertyGroup>
 </Project>

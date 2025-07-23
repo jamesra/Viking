@@ -1,13 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0-windows</TargetFramework>
-    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
-    <Description>Requires Windows 7 or later.</Description>
-    <RollForward>Major</RollForward>
+    <TargetFramework>net48</TargetFramework>
     <RootNamespace>MonogameMathNetExtensions</RootNamespace>
     <AssemblyName>MonogameMathNetExtensions</AssemblyName>
     <AssemblyTitle>MonogameMathNetExtensions</AssemblyTitle>
-    <AssemblyDescription>MonogameMathNetExtensions (Windows 7 or later required)</AssemblyDescription>
+    <AssemblyDescription>MonogameMathNetExtensions for .NET Framework 4.8</AssemblyDescription>
     <AssemblyCompany></AssemblyCompany>
     <AssemblyProduct>MonogameMathNetExtensions</AssemblyProduct>
     <Copyright>Copyright ©  2017</Copyright>
@@ -15,11 +12,9 @@
     <FileVersion>1.0.0.0</FileVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-  <!-- NOTE: This project only works on Windows 7 or later. -->
   <ItemGroup>
-    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*"/>
-    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.*" />
+    <PackageReference Include="MathNet.Numerics" Version="4.15.0" />
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.5.1.1679" />
     <PackageReference Include="SharpDX" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct2D1" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />

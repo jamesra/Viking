@@ -14,13 +14,15 @@
     <Version>1.0.0.0</Version>
     <FileVersion>1.0.0.0</FileVersion>
     <!-- Disable Windows Forms serialization warnings for legacy application -->
-    <NoWarn>$(NoWarn);WFO1000</NoWarn>
+    <NoWarn>$(NoWarn);WFO1000;NU1701</NoWarn>
+      <!-- Disable default embedded resource items to avoid duplicates -->
+  <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
   
   <!-- .NET Framework 4.8 specific properties -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
     <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
-    <NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+    <NuGetTargetMoniker>.NETFramework,Version=v4.8.1</NuGetTargetMoniker>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>
@@ -38,7 +40,7 @@
     <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
     <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
     <PackageReference Include="System.ValueTuple" Version="4.6.1" />
-    <PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" />
+    <PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   
   <!-- .NET 9 specific packages -->
@@ -52,6 +54,7 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <PackageReference Include="System.Resources.Extensions" Version="4.6.0" />
     <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
+    <PackageReference Include="System.Memory" Version="4.6.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
@@ -64,6 +67,116 @@
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
     <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />
+  </ItemGroup>
+  
+  <!-- Include Windows Forms resource files with correct logical names -->
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx" />
+    <EmbeddedResource Include="UI\Forms\VikingMain.resx">
+      <LogicalName>Viking.VikingMain.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\LoadingVolumeForm.resx">
+      <LogicalName>Viking.UI.Forms.LoadingVolumeForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\GoToLocationForm.resx">
+      <LogicalName>Viking.UI.Forms.GoToLocationForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\Logon.resx">
+      <LogicalName>Viking.UI.Forms.Logon.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\LogonASPMembership.resx">
+      <LogicalName>Viking.UI.Forms.LogonASPMembership.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\FrameCapturesForm.resx">
+      <LogicalName>Viking.UI.Forms.FrameCapturesForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\PropertySheetForm.resx">
+      <LogicalName>Viking.UI.Forms.PropertySheetForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\AboutBox.resx">
+      <LogicalName>Viking.UI.Forms.AboutBox.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\FindVolumeForm.resx">
+      <LogicalName>Viking.UI.Forms.FindVolumeForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\GenericProgressForm.resx">
+      <LogicalName>Viking.UI.Forms.GenericProgressForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\InputBox.resx">
+      <LogicalName>Viking.UI.Forms.InputBox.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\ScreenshotForm.resx">
+      <LogicalName>Viking.UI.Forms.ScreenshotForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\SectionChooserForm.resx">
+      <LogicalName>Viking.UI.Forms.SectionChooserForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\SectionViewerForm.resx">
+      <LogicalName>Viking.UI.Forms.SectionViewerForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\SetupChannelsForm.resx">
+      <LogicalName>Viking.UI.Forms.SetupChannelsForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\SplashForm.resx">
+      <LogicalName>Viking.UI.Forms.SplashForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\TileExportForm.resx">
+      <LogicalName>Viking.UI.Forms.TileExportForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\VikingForm.resx">
+      <LogicalName>Viking.UI.Forms.VikingForm.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\DockableUserControl.resx">
+      <LogicalName>Viking.UI.BaseClasses.DockableUserControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\DockingTreeControl.resx">
+      <LogicalName>Viking.UI.BaseClasses.DockingTreeControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\DocklingListControl.resx">
+      <LogicalName>Viking.UI.BaseClasses.DocklingListControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\ModuleTabControl.resx">
+      <LogicalName>Viking.UI.BaseClasses.ModuleTabControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\PropertyPageBase.resx">
+      <LogicalName>Viking.UI.BaseClasses.PropertyPageBase.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\BaseClasses\VikingControl.resx">
+      <LogicalName>Viking.UI.BaseClasses.VikingControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\ChannelPickerControl.resx">
+      <LogicalName>Viking.UI.Controls.ChannelPickerControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\ChannelSetupControl.resx">
+      <LogicalName>Viking.UI.Controls.ChannelSetupControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\EnableToolBar.resx">
+      <LogicalName>Viking.UI.Controls.EnableToolBar.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\ObjectLinkLabel.resx">
+      <LogicalName>Viking.UI.Controls.ObjectLinkLabel.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\ObjectTreeView.resx">
+      <LogicalName>Viking.UI.Controls.ObjectTreeView.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\SectionViewerControl.resx">
+      <LogicalName>Viking.UI.Controls.SectionViewerControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\UserCredentialsControl.resx">
+      <LogicalName>Viking.UI.Controls.UserCredentialsControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Controls\VolumeListControl.resx">
+      <LogicalName>Viking.UI.Controls.VolumeListControl.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\VolumeControls\SectionList.resx">
+      <LogicalName>Viking.UI.Controls.SectionList.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PropertyPages\SectionChannelsPage.resx">
+      <LogicalName>Viking.PropertyPages.SectionChannelsPage.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PropertyPages\SectionGeneralPage.resx">
+      <LogicalName>Viking.PropertyPages.SectionGeneralPage.resources</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -83,6 +196,8 @@
     <None Include="Resources\cursor_dupwedge.cur" />
     <None Include="Resources\marclab.png" />
   </ItemGroup>
+  
+
   <ItemGroup>
     <Content Include="Resources\ForkArrow_256.png" />
   </ItemGroup>

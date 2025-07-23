@@ -6,6 +6,7 @@
     <AssemblyName>ODataClient</AssemblyName>
     <RootNamespace>ODataClient</RootNamespace>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);CA1014</NoWarn>
   </PropertyGroup>
 
   <!-- Modern OData Client Package References -->

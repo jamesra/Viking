@@ -88,7 +88,14 @@
 		<Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="Always" />
 		<Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll" CopyToOutputDirectory="Always" />
 	</ItemGroup>
-	<PropertyGroup>
-		<PostBuildEvent>copy $(ProjectDir)..\Monographics\bin\MonoGame\$(ConfigurationName)\Content\*.xnb $(TargetDir)\Content\*</PostBuildEvent>
-	</PropertyGroup>
+	<Target Name="CopyMonogameContentBin" AfterTargets="Build">
+		<ItemGroup>
+			<MonogameContentFiles Include="$(ProjectDir)..\Monographics\MonogameContent\bin\Windows\Content\**\*.*" />
+		</ItemGroup>
+		<MakeDir Directories="$(TargetDir)Content"/>
+		<Copy
+			SourceFiles="@(MonogameContentFiles)"
+			DestinationFiles="@(MonogameContentFiles->'$(TargetDir)Content\%(RecursiveDir)%(Filename)%(Extension)')"
+			SkipUnchangedFiles="true" />
+	</Target>
 </Project>
