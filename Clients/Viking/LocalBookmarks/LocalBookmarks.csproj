@@ -8,6 +8,40 @@
     <!-- Disable default embedded resource items to avoid duplicates -->
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
+	<PropertyGroup>
+		<ModulesDir>..\Viking\Modules</ModulesDir>
+		<ProjectModulesDir>$(ModulesDir)\$(MSBuildProjectName)</ProjectModulesDir>
+	</PropertyGroup>
+  <!-- Post-build event to copy output to Modules folder -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    
+    
+    <!-- Create Modules directory if it doesn't exist -->
+    <Exec Command="if not exist &quot;$(ModulesDir)&quot; mkdir &quot;$(ModulesDir)&quot;" />
+    
+    <!-- Create project-specific directory if it doesn't exist -->
+    <Exec Command="if not exist &quot;$(ProjectModulesDir)&quot; mkdir &quot;$(ProjectModulesDir)&quot;" />
+    
+    <!-- Copy project output to Modules folder (only newer files) -->
+    <ItemGroup>
+      <FilesToCopy Include="$(TargetDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+  
+  <!-- Clean target to remove copied files when build is cleaned -->
+  <Target Name="CleanModules" AfterTargets="Clean"> 
+    
+    <!-- Remove the project-specific target framework folder -->
+    <RemoveDir Directories="$(ProjectModulesDir)\$(TargetFramework)" />
+    
+    <!-- Remove the project-specific folder if it's empty -->
+    <RemoveDir Directories="$(ProjectModulesDir)" Condition="!Exists('$(ProjectModulesDir)\*')" />
+    
+    <!-- Remove the Modules folder if it's empty -->
+    <RemoveDir Directories="$(ModulesDir)" Condition="!Exists('$(ModulesDir)\*')" />
+  </Target>
+  
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
     <PackageReference Include="LinqToXsd" Version="2.0.2" />
