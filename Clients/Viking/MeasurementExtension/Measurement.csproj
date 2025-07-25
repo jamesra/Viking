@@ -1,39 +1,73 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>net48;net9.0-windows</TargetFrameworks>
-    <UseWindowsForms>true</UseWindowsForms>
-    <UseWPF>true</UseWPF>
-	<LangVersion>9.0</LangVersion>
-    <!-- Disable default embedded resource items to avoid duplicates -->
-    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
-  </PropertyGroup> 
-	  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
-		  <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
-		  <NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>	
-	  </PropertyGroup>
-  <ItemGroup  Condition="'$(TargetFramework)' == 'net48'">
-	 <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFramework>net48</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+		<UseWPF>true</UseWPF>
+		<LangVersion>9.0</LangVersion>
+		<!-- Disable default embedded resource items to avoid duplicates -->
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
+		<NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+	</PropertyGroup>
+	<ItemGroup  Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
+	</ItemGroup>
 
 	<ItemGroup  Condition="'$(TargetFramework)' == 'net9.0-windows'">
 		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8" />
 	</ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
-    <ProjectReference Include="..\..\..\SIMeasurement\SIMeasurement.csproj" />
-    <ProjectReference Include="..\..\Common\Common.csproj" />
-    <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
-    <ProjectReference Include="..\NGVV\VikingCore.csproj" />
-    <ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />
-    <ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" Condition=" '$(TargetFramework)' == 'net48' " />
-    <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition=" '$(TargetFramework)' == 'net9.0-windows' " />
-  </ItemGroup>  
-  <ItemGroup>
-    <None Include="app.config" />
-  </ItemGroup>
-  
-  <!-- Include Windows Forms resource files -->
-  <ItemGroup>
-    <EmbeddedResource Include="ScaleForm.resx" />
-  </ItemGroup>
+	<PropertyGroup>
+		<ModulesDir>..\Viking\Modules</ModulesDir>
+		<ProjectModulesDir>$(ModulesDir)\$(MSBuildProjectName)</ProjectModulesDir>
+	</PropertyGroup>
+	<!-- Post-build event to copy output to Modules folder -->
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+
+
+		<!-- Create Modules directory if it doesn't exist -->
+		<Exec Command="if not exist &quot;$(ModulesDir)&quot; mkdir &quot;$(ModulesDir)&quot;" />
+
+		<!-- Create project-specific directory if it doesn't exist -->
+		<Exec Command="if not exist &quot;$(ProjectModulesDir)&quot; mkdir &quot;$(ProjectModulesDir)&quot;" />
+
+		<!-- Copy project output to Modules folder (only newer files) -->
+		<ItemGroup>
+			<FilesToCopy Include="$(TargetDir)**\*.*" />
+		</ItemGroup>
+		<Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="true" />
+	</Target>
+
+	<!-- Clean target to remove copied files when build is cleaned -->
+	<Target Name="CleanModules" AfterTargets="Clean">
+
+		<!-- Remove the project-specific target framework folder -->
+		<RemoveDir Directories="$(ProjectModulesDir)\$(TargetFramework)" />
+
+		<!-- Remove the project-specific folder if it's empty -->
+		<RemoveDir Directories="$(ProjectModulesDir)" Condition="!Exists('$(ProjectModulesDir)\*')" />
+
+		<!-- Remove the Modules folder if it's empty -->
+		<RemoveDir Directories="$(ModulesDir)" Condition="!Exists('$(ModulesDir)\*')" />
+	</Target>
+	<ItemGroup> 
+		
+		<ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
+		<ProjectReference Include="..\..\..\SIMeasurement\SIMeasurement.csproj" />
+		<ProjectReference Include="..\..\Common\Common.csproj" />
+		<ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
+		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
+		<ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />
+		<ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" Condition=" '$(TargetFramework)' == 'net48' " />
+		<ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition=" '$(TargetFramework)' == 'net9.0-windows' " />
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="app.config" />
+	</ItemGroup>
+
+	<!-- Include Windows Forms resource files -->
+	<ItemGroup>
+		<EmbeddedResource Include="ScaleForm.resx" />
+	</ItemGroup>
 </Project>

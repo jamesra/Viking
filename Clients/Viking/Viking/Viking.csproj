@@ -16,6 +16,10 @@
     <FileVersion>1.1.0.0</FileVersion>
     <Deterministic>false</Deterministic>
     <NoWarn>$(NoWarn);CS0436;CA1014</NoWarn>
+    <!-- Debug output configuration -->
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
@@ -54,4 +58,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  
+  <!-- Post-build event to create debug output file -->
+  <Target Name="CreateDebugOutputFile" AfterTargets="Build">
+    <WriteLinesToFile File="$(OutputPath)debug_output.txt" Lines="Debug output will be captured here when Viking runs" Overwrite="true" />
+  </Target>
 </Project>

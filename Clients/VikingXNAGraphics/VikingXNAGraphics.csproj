@@ -34,7 +34,7 @@
 	</ItemGroup>
 	<Target Name="CompileContent" BeforeTargets="Build">
 		<Exec
-			Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /quiet /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;bin/Windows&quot; /intermediateDir:&quot;obj/Windows&quot;"
+			Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;bin/Windows&quot; /intermediateDir:&quot;obj/Windows&quot;"
 			WorkingDirectory="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content" />
 	</Target>
 </Project> 
