@@ -11,7 +11,7 @@ namespace LocalBookmarks
 {
     [Viking.Common.ExtensionTab("Bookmarks", Viking.Common.TABCATEGORY.ACTION)]
     [Viking.Common.SupportedUITypes(new Type[] { typeof(FolderUIObj), typeof(BookmarkUIObj), typeof(string) })]
-    class FolderTreeControl : Viking.UI.BaseClasses.DockingTreeControl
+    class FolderTreeControl : Viking.UI.BaseClasses.DockingTreeControl, IContextMenu
     {
         private ImageList imageList;
         private System.ComponentModel.IContainer components;

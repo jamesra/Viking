@@ -13,7 +13,11 @@ namespace WebAnnotation.Objects
     /// <summary>
     /// Base class for all structure objects in the web annotation system
     /// </summary>
+#if NET48
+    public abstract class StructureBaseObj : IUIObject, IContextMenu
+#else
     public abstract class StructureBaseObj : IUIObject
+#endif
     {
         #region Variables
 
@@ -335,7 +339,9 @@ namespace WebAnnotation.Objects
             // Default implementation - can be overridden by derived classes
         }
 
+#if NET48
         public virtual ContextMenu ContextMenu => null;
+#endif
 
         public virtual Image SmallThumbnail => null;
 

@@ -232,9 +232,11 @@ namespace Viking.Common
 
                     VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
                     if (Extension is null)
+                    {
                         continue;
+                    }
 
-                    Trace.WriteLine("Found extension: " + Extension.Name, "ExtMan");
+                    Trace.WriteLine($"Found extension: {Extension.Name} at {FileName}", "ExtMan");
                     Debug.Assert(ExtensionToAssemblyTable.ContainsKey(Extension) == false, Extension.Name + ":" + FileName + " Extension loaded twice!");
 
                     ExtensionToAssemblyTable.Add(Extension, A);

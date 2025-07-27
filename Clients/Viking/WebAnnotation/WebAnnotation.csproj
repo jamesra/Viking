@@ -48,19 +48,19 @@
 	<Target Name="CleanModules" AfterTargets="Clean">
 
 		<!-- Remove the project-specific target framework folder -->
-		<RemoveDir Directories="$(ProjectModulesDir)\$(TargetFramework)" />
+		<RemoveDir Directories="$(ProjectModulesDir)\$(TargetFramework)" ContinueOnError="true"/>
 
 		<!-- Remove the project-specific folder if it's empty -->
-		<RemoveDir Directories="$(ProjectModulesDir)" Condition="!Exists('$(ProjectModulesDir)\*')" />
+		<RemoveDir Directories="$(ProjectModulesDir)" Condition="!Exists('$(ProjectModulesDir)\*')" ContinueOnError="true"/>
 
 		<!-- Remove the Modules folder if it's empty -->
-		<RemoveDir Directories="$(ModulesDir)" Condition="!Exists('$(ModulesDir)\*')" />
+		<RemoveDir Directories="$(ModulesDir)" Condition="!Exists('$(ModulesDir)\*')" ContinueOnError="true"/>
 
 		<!-- Clean content compilation output -->
-		<RemoveDir Directories="$(ProjectContentOutputDir)\bin" />
-		<RemoveDir Directories="$(ProjectContentOutputDir)\obj" />
-		<RemoveDir Directories="$(ProjectContentOutputDir)\bin" Condition="!Exists('$(ProjectContentOutputDir)\bin\*')"/>
-		<RemoveDir Directories="$(ProjectContentOutputDir)\obj" Condition="!Exists('$(ProjectContentOutputDir)\obj\*')"/>
+		<RemoveDir Directories="$(ProjectContentOutputDir)\bin" ContinueOnError="true"/>
+		<RemoveDir Directories="$(ProjectContentOutputDir)\obj" ContinueOnError="true"/>
+		<RemoveDir Directories="$(ProjectContentOutputDir)\bin" Condition="!Exists('$(ProjectContentOutputDir)\bin\*')" ContinueOnError="true"/>
+		<RemoveDir Directories="$(ProjectContentOutputDir)\obj" Condition="!Exists('$(ProjectContentOutputDir)\obj\*')" ContinueOnError="true"/>
 
 	</Target>
 	

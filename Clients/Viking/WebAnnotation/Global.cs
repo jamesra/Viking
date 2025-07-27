@@ -116,7 +116,7 @@ namespace WebAnnotation
                         }
                         catch (ArgumentException)
                         {
-                            Trace.WriteLine(string.Format("Unable to convert Favorite StructureID to long {0}", ID_str));
+                            Trace.WriteLine($"Unable to convert Favorite StructureID to long {ID_str}");
                         }
                     }
 
@@ -134,13 +134,13 @@ namespace WebAnnotation
                 case NotifyCollectionChangedAction.Add:
                     foreach (object item in e.NewItems)
                     {
-                        Properties.Settings.Default.FavoriteStructureIDs.Add(string.Format("{0}", item));
+                        Properties.Settings.Default.FavoriteStructureIDs.Add($"{item}");
                     }
                     break;
                 case NotifyCollectionChangedAction.Remove:
                     foreach (object item in e.OldItems)
                     {
-                        Properties.Settings.Default.FavoriteStructureIDs.Remove(string.Format("{0}", item));
+                        Properties.Settings.Default.FavoriteStructureIDs.Remove($"{item}");
                     }
                     break;
                 case NotifyCollectionChangedAction.Reset:
@@ -151,11 +151,11 @@ namespace WebAnnotation
                 case NotifyCollectionChangedAction.Replace:
                     foreach (object item in e.OldItems)
                     {
-                        Properties.Settings.Default.FavoriteStructureIDs.Remove(string.Format("{0}", item));
+                        Properties.Settings.Default.FavoriteStructureIDs.Remove($"{item}");
                     }
                     foreach (object item in e.NewItems)
                     {
-                        Properties.Settings.Default.FavoriteStructureIDs.Add(string.Format("{0}", item));
+                        Properties.Settings.Default.FavoriteStructureIDs.Add($"{item}");
                     }
                     break;
             }
