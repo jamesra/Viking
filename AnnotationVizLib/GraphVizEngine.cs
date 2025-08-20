@@ -291,7 +291,7 @@ namespace AnnotationUtils
             }
         }
 
-        static public IList<string> Convert(string GraphVizExe, string DotFileFullPath, string[] OutputExtensions)
+        public static IList<string> Convert(string GraphVizExe, string DotFileFullPath, string[] OutputExtensions)
         { 
             int length = OutputExtensions.Count();
             string DotFilePath = System.IO.Path.GetDirectoryName(DotFileFullPath);

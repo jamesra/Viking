@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.Common;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation.View;
@@ -135,7 +136,7 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public static new string[] DefaultMouseHelpStrings = new string[]
+        public new static string[] DefaultMouseHelpStrings = new string[]
         {
             "Mouse Wheel + SHIFT: Change line width",
         };
@@ -218,7 +219,7 @@ namespace WebAnnotation.UI.Commands
         protected abstract GridVector2[] CalculateTranslatedMosaicControlPoints();
         protected abstract double CalculateFinalLineWidth();
 
-        public virtual string[] HelpStrings
+        string[] IHelpStrings.HelpStrings
         {
             get
             {
@@ -233,7 +234,7 @@ namespace WebAnnotation.UI.Commands
 
         public new ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
 
-        public static new string[] DefaultMouseHelpStrings = new string[]
+        public new static string[] DefaultMouseHelpStrings = new string[]
         {
             "CTRL+Click another curve: Copy control points",
             "Middle Button click: Reset to original size",

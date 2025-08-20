@@ -14,9 +14,9 @@ namespace Viking.VolumeModel
         /// <summary>
         /// Caches tiles, should call ReduceMemoryFootprint occasionally if memory use is a concern
         /// </summary>
-        static public TileCache TileCache = new TileCache();
+        public static TileCache TileCache = new TileCache();
 
-        static public Byte[] ReadToBuffer(this Stream stream, long BytesToRead)
+        public static Byte[] ReadToBuffer(this Stream stream, long BytesToRead)
         {
             Byte[] streamBuffer = new Byte[BytesToRead];
 

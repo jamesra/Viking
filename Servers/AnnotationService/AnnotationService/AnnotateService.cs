@@ -23,6 +23,10 @@ namespace Annotation
     {
         public static string Read = nameof(Roles.Read);
         public static string Write = nameof(Roles.Write);
+        /// <summary>
+        /// A deprecated role that is no longer used, but kept for backwards compatibility.  Equivalent to Write role
+        /// </summary>
+        public static string Modify = nameof(Roles.Modify); 
         public static string Admin = nameof(Roles.Admin);
     }
 
@@ -50,13 +54,13 @@ namespace Annotation
                 try
                 {
                  //   ConnectomeDataModel.Configuration.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
-                    SqlServerTypes.Utilities.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
+                                            SqlServerTypesLoader.Loader.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
                     _isSqlTypesLoaded = true;
                     return;
                 }
                 catch (NullReferenceException)
                 {
-                    SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+                                            SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
                     //ConnectomeDataModel.Configuration.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
                     _isSqlTypesLoaded = true;
                     return;
@@ -66,7 +70,8 @@ namespace Annotation
 
         static AnnotateService()
         {
-            TryLoadSqlServerTypes(); 
+            TryLoadSqlServerTypes();
+            Settings.PrepareSerializers();
         }
 
         public AnnotateService()
@@ -79,9 +84,9 @@ namespace Annotation
             return true;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         bool ICredentials.CanWrite()
         {
+            DemandWritePermissions();
             return true;
         }
 
@@ -102,6 +107,8 @@ namespace Annotation
                 roles += nameof(Roles.Read) + ' ';
 
             if (user.IsInRole(nameof(Roles.Write)))
+                roles += nameof(Roles.Write) + ' ';
+            else if(user.IsInRole(nameof(Roles.Modify)))
                 roles += nameof(Roles.Write) + ' ';
 
             if (user.IsInRole(nameof(Roles.Admin)))
@@ -205,9 +212,9 @@ namespace Annotation
 
         #region IAnnotateStructureTypes Members
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public AnnotationService.Types.StructureType CreateStructureType(AnnotationService.Types.StructureType new_structureType)
         {
+            DemandWritePermissions();
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
                 ConnectomeDataModel.StructureType db_obj = new ConnectomeDataModel.StructureType();
@@ -386,9 +393,9 @@ namespace Annotation
             return Array.Empty<StructureType>();
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] UpdateStructureTypes(AnnotationService.Types.StructureType[] structTypes)
         {
+            DemandWritePermissions();
             return Update(structTypes);
         }
 
@@ -397,9 +404,7 @@ namespace Annotation
         /// </summary>
         protected void DemandAdminPermissions()
         {
-            PrincipalPermission permission = new PrincipalPermission(null, nameof(Roles.Admin));
-
-            permission.Demand();
+            new PrincipalPermission(null, nameof(Roles.Admin)).Demand();
         }
 
         /// <summary>
@@ -407,9 +412,7 @@ namespace Annotation
         /// </summary>
         protected void DemandUser(string username)
         {
-            PrincipalPermission permission = new PrincipalPermission(username, null);
-
-            permission.Demand();
+            new PrincipalPermission(username, null).Demand();
         }
 
         protected void DemandAdminOrUser(string username)
@@ -422,7 +425,21 @@ namespace Annotation
             {
                 DemandUser(username);
             }
+        }
 
+        /// <summary>
+        /// Supports the legacy "modify" role in addition to "write" role.
+        /// </summary>
+        protected void DemandWritePermissions()
+        {
+            try
+            {
+                new PrincipalPermission(null, nameof(Roles.Write)).Demand();
+            }
+            catch (SecurityException)
+            {
+                new PrincipalPermission(null, nameof(Roles.Modify)).Demand();
+            }
         }
 
         /// <summary>
@@ -430,9 +447,9 @@ namespace Annotation
         /// </summary>
         /// <param name="structTypes"></param>
         /// <returns>Returns ID's of each object in the order they were passed. Used to recover ID's of inserted rows</returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] Update(AnnotationService.Types.StructureType[] structTypes)
         {
+            DemandWritePermissions();
             Dictionary<ConnectomeDataModel.StructureType, int> mapNewTypeToIndex = new Dictionary<ConnectomeDataModel.StructureType, int>(structTypes.Length);
             //Stores the ID of each object manipulated for the return value
             long[] listID = new long[structTypes.Length];
@@ -940,9 +957,9 @@ namespace Annotation
             return;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public AnnotationService.Types.StructureLink CreateStructureLink(AnnotationService.Types.StructureLink link)
         {
+            DemandWritePermissions();
             ConnectomeDataModel.StructureLink newRow = new ConnectomeDataModel.StructureLink();
             link.Sync(newRow);
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -955,9 +972,9 @@ namespace Annotation
             return newLink;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public void UpdateStructureLinks(AnnotationService.Types.StructureLink[] links)
         {
+            DemandWritePermissions();
             //Stores the ID of each object manipulated for the return value
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
@@ -1198,15 +1215,15 @@ namespace Annotation
 
 
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] UpdateStructures(AnnotationService.Types.Structure[] structures)
         {
+            DemandWritePermissions();
             return Update(structures);
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] Update(AnnotationService.Types.Structure[] structures)
         {
+            DemandWritePermissions();
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
                 Dictionary<ConnectomeDataModel.Structure, int> mapNewObjToIndex = new Dictionary<ConnectomeDataModel.Structure, int>(structures.Length);
@@ -1303,9 +1320,9 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public CreateStructureRetval CreateStructure(AnnotationService.Types.Structure structure, AnnotationService.Types.Location location)
         {
+            DemandWritePermissions();
             using (var db = GetOrCreateDatabaseContext())
             {
 
@@ -1850,10 +1867,7 @@ namespace Annotation
 
         [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Read))]
         public AnnotationSet GetAnnotationsInMosaicRegion(long section, BoundingRectangle bbox, double MinRadius, long? ModifiedAfterThisUtcTime, out long QueryExecutedTime, out long[] DeletedIDs)
-        {
-            if (bbox is null)
-                throw new ArgumentNullException("bbox");
-            
+        {  
             if (bbox.Width == 0 || bbox.Height == 0)
             {
                 throw new ArgumentException("Bounding box must have non-zero dimensions");
@@ -2109,10 +2123,9 @@ namespace Annotation
             return Array.Empty<long>();
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public AnnotationService.Types.Location CreateLocation(AnnotationService.Types.Location new_location, long[] links)
         {
-
+            DemandWritePermissions();
             using (var db = GetOrCreateDatabaseContext())
             {
 
@@ -2154,9 +2167,9 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public long[] Update(AnnotationService.Types.Location[] locations)
         {
+            DemandWritePermissions();
             Dictionary<ConnectomeDataModel.Location, int> mapNewTypeToIndex = new Dictionary<ConnectomeDataModel.Location, int>(locations.Length);
 
             //Stores the ID of each object manipulated for the return value
@@ -2336,9 +2349,9 @@ namespace Annotation
             return newLink;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public void CreateLocationLink(long SourceID, long TargetID)
         {
+            DemandWritePermissions();
             using (ConnectomeEntities db = new ConnectomeDataModel.ConnectomeEntities())
             {
                 ConnectomeDataModel.LocationLink newLink = _CreateLocationLink(db, SourceID, TargetID, null);
@@ -2349,9 +2362,9 @@ namespace Annotation
             return;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Write))]
         public void DeleteLocationLink(long SourceID, long TargetID)
         {
+            DemandWritePermissions();
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
             {
                 ConnectomeDataModel.LocationLink link;

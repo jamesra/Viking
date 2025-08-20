@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFrameworks>net48;net9.0</TargetFrameworks>
     <LangVersion>9.0</LangVersion>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
@@ -16,7 +18,7 @@
     <PackageReference Include="Microsoft.OData.Client" Version="7.15.0" />
     <PackageReference Include="Microsoft.OData.Core" Version="7.15.0" />
     <PackageReference Include="Microsoft.OData.Edm" Version="7.15.0" />
-    <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
     <PackageReference Include="System.Memory" Version="4.6.3" />
   </ItemGroup>
   

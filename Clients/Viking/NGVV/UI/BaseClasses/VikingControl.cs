@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace Viking.UI.BaseClasses
 {
+    /// <summary>
+    /// Controls wanting to implement context menus should also inherit from IContextMenuProvider
+    /// </summary>
     public class VikingControl : System.Windows.Forms.UserControl
     {
         /// <summary> 

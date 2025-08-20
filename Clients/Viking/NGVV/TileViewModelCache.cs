@@ -39,7 +39,7 @@ namespace Viking
             this.MaxCacheSize = 1 << 28;
         }
 
-        static protected string TileKey(string textureFileName, string TransformName)
+        protected static string TileKey(string textureFileName, string TransformName)
         {
             return $"{textureFileName} {TransformName}";
         }

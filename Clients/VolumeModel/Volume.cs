@@ -338,7 +338,7 @@ namespace Viking.VolumeModel
 
         //A list of all channel names found in the volume
         //TODO: Modify to a per section basis?
-        static private readonly List<string> _ChannelNames = new List<String>();
+        private static readonly List<string> _ChannelNames = new List<String>();
 
         /// <summary>
         /// A list of all channel names found on sections in the volume
@@ -389,7 +389,7 @@ namespace Viking.VolumeModel
 
             XDocument XMLInitData;
             if (uri.Scheme == "http" || uri.Scheme == "https")
-                XMLInitData = LoadHTTP(path, UserCredentials);
+                XMLInitData = LoadHttp(path, UserCredentials);
             else
                 XMLInitData = LoadLocal(uri.LocalPath);
 
@@ -410,9 +410,9 @@ namespace Viking.VolumeModel
         }
         
 
-        protected static XDocument LoadHTTP(string path, System.Net.NetworkCredential UserCredentials)
+        protected static XDocument LoadHttp(string path, System.Net.NetworkCredential UserCredentials)
         { 
-            return LoadHTTPAsync(path, UserCredentials).GetAwaiter().GetResult();
+            return LoadHTTPAsync(path, UserCredentials).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         protected static async Task<XDocument> LoadHTTPAsync(string path, System.Net.NetworkCredential UserCredentials)
@@ -437,6 +437,7 @@ namespace Viking.VolumeModel
             
             using (var httpClient = new HttpClient(handler))
             { 
+                httpClient.Timeout = TimeSpan.FromSeconds(15); // Set a timeout for the request 
                 try
                 {
                     var response = await httpClient.GetAsync(pathURI);
@@ -445,7 +446,7 @@ namespace Viking.VolumeModel
                     var content = await response.Content.ReadAsStringAsync();
                     return XDocument.Parse(content);
                 }
-                catch (HttpRequestException e)
+                catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
                 {
                     throw new WebException($"Error connecting to volume server: \n{path}\n{e.Message}", e);
                 }

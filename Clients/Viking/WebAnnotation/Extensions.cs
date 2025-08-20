@@ -1,8 +1,8 @@
-﻿using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
-using Geometry;
+﻿using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 
 namespace WebAnnotation
 {
@@ -186,12 +186,12 @@ namespace WebAnnotation
             throw new ArgumentException("Unknown annotation type " + annotationType);
         }
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command)
         {
             return StringToLocationType(command.AnnotationType);
         }
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command)
         {
             return StringToLocationType(command.AnnotationType);
         }

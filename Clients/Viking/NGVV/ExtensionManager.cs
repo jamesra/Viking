@@ -37,7 +37,7 @@ namespace Viking.Common
         /// </summary>
         private static readonly Dictionary<System.Type, List<System.Type>> ObjectTypeToCommandTable = new Dictionary<System.Type, List<System.Type>>();
 
-        static public Assembly[] GetExtensionAssemblies()
+        public static Assembly[] GetExtensionAssemblies()
         {
             return ExtensionToAssemblyTable.Values.ToArray();
         }
@@ -48,14 +48,14 @@ namespace Viking.Common
         /// </summary>
         private static readonly Dictionary<System.Type, List<System.Type>> ObjectTypeToPropertyPageTable = new Dictionary<Type, List<Type>>(); 
 
-        static public System.Type[] GetPropertyPages(object Obj)
+        public static System.Type[] GetPropertyPages(object Obj)
         {
             System.Type ObjType = Obj.GetType();
             return GetPropertyPages(ObjType);
         }
 
 
-        static public System.Type[] GetPropertyPages(System.Type ObjType)
+        public static System.Type[] GetPropertyPages(System.Type ObjType)
         {
             List<Type> TypeArray = new List<Type>();
 
@@ -83,7 +83,7 @@ namespace Viking.Common
         /// Expand the passed menu with the items known by the extension manager
         /// </summary>
         /// <param name="menu"></param>
-        static public void AddMenuItems(System.Windows.Forms.MenuStrip menuStrip)
+        public static void AddMenuItems(System.Windows.Forms.MenuStrip menuStrip)
         {
             //Fetch the menu item methods
             foreach (System.Type T in SectionMenuList)
@@ -192,6 +192,9 @@ namespace Viking.Common
             string AssemblyDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             AssemblyDir += System.IO.Path.DirectorySeparatorChar + "Modules";
             
+            // Add custom assembly resolver to handle dependencies in module directories
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+            
             //Check our own assembly for extensions, then check the module directory if possible
             ExtensionManager.SectionOverlayList = new List<System.Type>();
 
@@ -245,8 +248,7 @@ namespace Viking.Common
                 {
                     Trace.WriteLine("Bad image format loading assembly " + FileName + ". This can be OK if it is a support assembly and not an extension module.  Otherwise it usually indicates loading a 64-bit DLL from a 32-bit process.");
                     continue;
-                }
-                
+                } 
             }
         }
 
@@ -270,7 +272,7 @@ namespace Viking.Common
             }
         }
 
-        static internal List<string> RecursiveGetModules(string root)
+        internal static List<string> RecursiveGetModules(string root)
         {
             List<string> listFiles = new List<string>();
 
@@ -354,6 +356,20 @@ namespace Viking.Common
                 }
             }
             catch (System.TypeLoadException except)
+            {
+                VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
+                DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
+
+                if (result == DialogResult.OK)
+                {
+                    return false;
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            catch (System.AggregateException except)
             {
                 VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
                 DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
@@ -604,7 +620,7 @@ namespace Viking.Common
             }
         }
 
-        static public System.Type[] GetExtensionTabCategory(TABCATEGORY Cat)
+        public static System.Type[] GetExtensionTabCategory(TABCATEGORY Cat)
         {
             List<Type> TabList = new List<Type>();
             foreach (System.Type T in ExtensionTabList)
@@ -643,7 +659,7 @@ namespace Viking.Common
             }
         }
 
-        static public System.Type[] GetCommandsForType(System.Type ObjType)
+        public static System.Type[] GetCommandsForType(System.Type ObjType)
         {
             List<System.Type> CommandTypeList = new List<System.Type>();
 
@@ -662,15 +678,15 @@ namespace Viking.Common
             return CommandTypeList.ToArray();
         }
 
-        static private ISectionOverlayExtension[] _SectionOverlays = null;
+        private static ISectionOverlayExtension[] _SectionOverlays = null;
 
         
         /// <summary>
         /// Returns null if CreateSectionOverlays or an empty array if there are no listeners
         /// </summary>
-        static public ISectionOverlayExtension[] SectionOverlays => _SectionOverlays?.ToArray();
+        public static ISectionOverlayExtension[] SectionOverlays => _SectionOverlays?.ToArray();
 
-        static public ISectionOverlayExtension[] CreateSectionOverlays(Viking.UI.Controls.SectionViewerControl parent)
+        public static ISectionOverlayExtension[] CreateSectionOverlays(Viking.UI.Controls.SectionViewerControl parent)
         {
             List<ISectionOverlayExtension> listOverlays = new List<ISectionOverlayExtension>(ExtensionManager.SectionOverlayList.Count);
             for (int i = 0; i < ExtensionManager.SectionOverlayList.Count; i++ )
@@ -695,7 +711,7 @@ namespace Viking.Common
             return _SectionOverlays; 
        }
 
-        static public Viking.Common.IProvideContextMenus[] CreateContextMenuProviders()
+        public static Viking.Common.IProvideContextMenus[] CreateContextMenuProviders()
         {
             List<IProvideContextMenus> listProviders = new List<IProvideContextMenus>(ContextMenuProviderList.Count);
 
@@ -717,6 +733,73 @@ namespace Viking.Common
             } 
 
             return listProviders.ToArray(); 
+        }
+
+        public static ContextMenu CreateContextMenuFromProviders(object Obj, ContextMenu Menu)
+        {
+            //Create a context menu for the object
+            foreach (IProvideContextMenus Provider in ExtensionManager.CreateContextMenuProviders())
+            {
+                try { 
+
+                    ContextMenu NewMenu = Provider.BuildMenuFor(Obj, Menu);
+                }
+                catch (NotImplementedException e)
+                {
+                    Trace.WriteLine($"Error creating context menu from provider {Provider.GetType().Name}: {e.Message}", "ExtMan");
+                    continue; // Skip this provider if it fails
+                }
+            }
+            return Menu;
+        }
+
+        /// <summary>
+        /// Custom assembly resolver to handle dependencies in module directories
+        /// </summary>
+        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            try
+            {
+                // Extract the assembly name from the full name
+                string assemblyName = new AssemblyName(args.Name).Name;
+                string assemblyFileName = assemblyName + ".dll";
+
+                // Get the main application directory
+                string appDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                string modulesDir = Path.Combine(appDir, "Modules");
+
+                // First, try to find the assembly in the main application directory
+                string assemblyPath = Path.Combine(appDir, assemblyFileName);
+                if (File.Exists(assemblyPath))
+                {
+                    Trace.WriteLine($"Loading assembly from main directory: {assemblyPath}", "ExtMan");
+                    return Assembly.LoadFrom(assemblyPath);
+                }
+
+                // Then, search recursively in all module subdirectories
+                if (Directory.Exists(modulesDir))
+                {
+                    string[] moduleDirs = Directory.GetDirectories(modulesDir, "*", SearchOption.AllDirectories);
+                    foreach (string moduleDir in moduleDirs)
+                    {
+                        assemblyPath = Path.Combine(moduleDir, assemblyFileName);
+                        if (File.Exists(assemblyPath))
+                        {
+                            Trace.WriteLine($"Loading assembly from module directory: {assemblyPath}", "ExtMan");
+                            return Assembly.LoadFrom(assemblyPath);
+                        }
+                    }
+                }
+
+                // Assembly not found
+                Trace.WriteLine($"Could not resolve assembly: {args.Name}", "ExtMan");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error in assembly resolver: {ex.Message}", "ExtMan");
+                return null;
+            }
         }
     }
 

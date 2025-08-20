@@ -4,7 +4,7 @@ using Viking.Common;
 
 namespace Viking.Objects
 {
-    public abstract class UIObjBase : IUIObject, IContextMenu
+    public abstract class UIObjBase : IUIObject
     {
         public abstract void Delete();
 

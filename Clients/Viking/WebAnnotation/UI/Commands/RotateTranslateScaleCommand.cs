@@ -8,7 +8,7 @@ namespace WebAnnotation.UI.Commands
 {
     internal abstract class RotateTranslateScaleCommand : TranslateScaleCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        public static new string[] DefaultMouseHelpStrings = new string[]
+        public new static string[] DefaultMouseHelpStrings = new string[]
         {
             "Hold Right click and drag: Rotate"
         };

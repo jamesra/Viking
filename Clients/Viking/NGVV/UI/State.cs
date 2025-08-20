@@ -7,18 +7,18 @@ namespace Viking.UI
 {
     public class State
     {
-        static public VikingMain Appwindow;
+        public static VikingMain Appwindow;
 
-        static public System.Windows.Forms.Form MdiParent => State.Appwindow;
+        public static System.Windows.Forms.Form MdiParent => State.Appwindow;
 
         /// <summary>
         /// Dispatcher for invoking methods on the main thread. 
         /// </summary>
-        static public System.Windows.Threading.Dispatcher MainThreadDispatcher;
+        public static System.Windows.Threading.Dispatcher MainThreadDispatcher;
 
-        static public Viking.UI.Forms.SectionViewerForm ViewerForm;
+        public static Viking.UI.Forms.SectionViewerForm ViewerForm;
 
-        static public void InvalidateViewerControl()
+        public static void InvalidateViewerControl()
         {
             ViewerControl?.Invalidate();
         }
@@ -29,30 +29,30 @@ namespace Viking.UI
         /// This is not going in the right direction for supporting multiple viewer controls,
         /// but that is a major rewrite and I needed the extensions to work cleanly.
         /// </summary>
-        static public Viking.UI.Controls.SectionViewerControl ViewerControl => ViewerForm?.SectionControl;
+        public static Viking.UI.Controls.SectionViewerControl ViewerControl => ViewerForm?.SectionControl;
 
 
-        static public string CurrentMode = "";
+        public static string CurrentMode = "";
 
         
 
         //Stores userAccessLevel for the profided credentials: Include: Admin, Modify, Read
-        static public string[] UserAccessLevel;
+        public static string[] UserAccessLevel;
 
         //Current user access level as a single string value
-        static public string userAccessLevel = "Exit";
+        public static string userAccessLevel = "Exit";
 
         //User credentials used during authentication
-        static public Duende.IdentityModel.Client.TokenResponse UserBearerToken = null;
+        public static Duende.IdentityModel.Client.TokenResponse UserBearerToken = null;
 
-        static public System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
+        public static System.Net.NetworkCredential UserCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
-        static public readonly System.Net.NetworkCredential AnonymousCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
+        public static readonly System.Net.NetworkCredential AnonymousCredentials = new System.Net.NetworkCredential("anonymous", "connectome");
 
-        static private readonly string CacheSubPath = "Cache";
-        static public readonly string CachePath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\" + CacheSubPath;
+        private static readonly string CacheSubPath = "Cache";
+        public static readonly string CachePath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\" + CacheSubPath;
 
-        static public string VolumeCachePath
+        public static string VolumeCachePath
         {
             get
             {
@@ -66,12 +66,12 @@ namespace Viking.UI
             }
         }
 
-        static public string GetVolumeCachePath(string VolumeName)
+        public static string GetVolumeCachePath(string VolumeName)
         {
             return System.IO.Path.Combine(CachePath, VolumeName);
         }
 
-        static public string TextureCachePath => System.IO.Path.Combine(State.VolumeCachePath, "Textures");
+        public static string TextureCachePath => System.IO.Path.Combine(State.VolumeCachePath, "Textures");
 
         public static void ClearVolumeTextureCache()
         {
@@ -168,12 +168,12 @@ namespace Viking.UI
         /// </summary>
         public static bool ShowTileMesh = false;
 
-        static private VolumeViewModel _volume = null;
+        private static VolumeViewModel _volume = null;
 
         /// <summary>
         /// The volume currently being viewed
         /// </summary>
-        static public VolumeViewModel volume
+        public static VolumeViewModel volume
         {
             get => _volume;
             set => _volume = value;
@@ -182,7 +182,7 @@ namespace Viking.UI
         /// <summary>
         /// Arguments passed to Viking on startup
         /// </summary>
-        static public System.Collections.Specialized.NameValueCollection StartupArguments = new System.Collections.Specialized.NameValueCollection();
+        public static System.Collections.Specialized.NameValueCollection StartupArguments = new System.Collections.Specialized.NameValueCollection();
 
     }
 }

@@ -14,7 +14,7 @@ namespace AnnotationVizLib
 
         }
 
-        static public MotifJSONView ToJSON(MotifGraph graph)
+        public static MotifJSONView ToJSON(MotifGraph graph)
         {
             int edgeCount = 0;
             MotifJSONView JSONView = new MotifJSONView

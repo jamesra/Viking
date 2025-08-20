@@ -221,7 +221,7 @@ namespace GeometryTests.Algorithms
         /// <param name="rTree"></param>
         /// <param name="mesh"></param>
         /// <returns></returns>
-        static private bool IntersectsConstrainedLine(EdgeKey proposed, RTree<IEdgeKey> rTree, TriangulationMesh<IVertex2D> mesh)
+        private static bool IntersectsConstrainedLine(EdgeKey proposed, RTree<IEdgeKey> rTree, TriangulationMesh<IVertex2D> mesh)
         {
             GridLineSegment seg = mesh.ToGridLineSegment(proposed);
             foreach (var intersection in rTree.IntersectionGenerator(seg.BoundingBox))

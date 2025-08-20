@@ -7,7 +7,7 @@ namespace Jotunn
         internal static void Initialize()
         {
             MathNet.Numerics.Control.UseNativeMKL();
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+                                SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
         }
     }
 }

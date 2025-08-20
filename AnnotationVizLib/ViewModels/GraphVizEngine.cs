@@ -211,7 +211,7 @@ namespace AnnotationVizLib
         /// <param name="DotFileFullPath">Input .dot file for GraphViz</param>
         /// <param name="OutputExtensions">File extensions for output</param>
         /// <returns></returns>
-        static public IList<string> Convert(string GraphVizExe, string DotFileFullPath, string[] OutputExtensions)
+        public static IList<string> Convert(string GraphVizExe, string DotFileFullPath, string[] OutputExtensions)
         {
             Debug.Assert(System.IO.File.Exists(DotFileFullPath), "Input dot file does not exist");
 

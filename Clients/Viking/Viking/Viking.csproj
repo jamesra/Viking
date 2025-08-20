@@ -23,11 +23,14 @@
 	<ItemGroup>
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
-		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+		<PackageReference Include="System.Buffers" Version="4.6.1" />
 		<PackageReference Include="System.Memory" Version="4.6.3" />
+		<PackageReference Include="Xml.Schema.Linq" Version="2.0.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
+		<ProjectReference Include="..\..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="app.config" />
@@ -47,33 +50,47 @@
 		<None Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<None Include="SqlServerTypes\x64\SqlServerSpatial160.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Include="SqlServerTypes\x86\msvcr120.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<None Include="SqlServerTypes\x86\SqlServerSpatial160.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
+	<!--
+	<PropertyGroup>
+		<TargetDir>$(MSBuildProjectDirectory)\bin\$(\$(OutputPath)</TargetDir>
+	</PropertyGroup>
+	-->
 
 	<!-- Post-build event to create debug output file -->
 	<Target Name="CreateDebugOutputFile" AfterTargets="Build">
 		<WriteLinesToFile File="$(OutputPath)debug_output.txt" Lines="Debug output will be captured here when Viking runs" Overwrite="true" />
 	</Target>
 	<PropertyGroup>
-		<ModulesSourceDir>$(ProjectDir)Modules</ModulesSourceDir>
-		<ModulesTargetDir>$(TargetDir)Modules</ModulesTargetDir>
+		
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<Title>Viking</Title>
 
 	</PropertyGroup>
 
 	<!-- Helper target to copy one module's files -->
-	<Target Name="CopyModules" AfterTargets="PostBuildEvent">
+	<Target Name="CopyModules" AfterTargets="Build">
 		<PropertyGroup>
+			<ModulesSourceDir>$(MSBuildProjectDirectory)\Modules</ModulesSourceDir>
+			<ModulesTargetDir>$(TargetDir)\Modules</ModulesTargetDir>
 			<SourcePath>$(ModulesSourceDir)\$(ModuleName)\$(TargetFramework)</SourcePath>
 			<TargetPath>$(ModulesTargetDir)\$(ModuleName)</TargetPath>
 		</PropertyGroup>
 
-		<Message Text="Processing module: $(ModuleName)" Importance="high"/>
-		<Message Text="Source: $(SourcePath) -> Target: $(TargetPath)" Importance="high"/>
+		<Message Text="Processing module: $(ModuleName)" Importance="high" />
+		<Message Text="Source: $(SourcePath) -&gt; Target: $(TargetPath)" Importance="high" />
 
 		<!-- Only proceed if source exists -->
 		<ItemGroup Condition="Exists('$(SourcePath)')">
@@ -81,8 +98,8 @@
 
 		</ItemGroup>
 
-		<Message Text="Found files for $(ModuleName): @(ModuleFiles->Count())" Importance="high" Condition="Exists('$(SourcePath)')"/>
-		<Message Text="Skipping $(ModuleName) - no $(TargetFramework) folder found" Importance="normal" Condition="!Exists('$(SourcePath)')"/>
+		<Message Text="Found files for $(ModuleName): @(ModuleFiles-&gt;Count())" Importance="high" Condition="Exists('$(SourcePath)')" />
+		<Message Text="Skipping $(ModuleName) - no $(TargetFramework) folder found" Importance="normal" Condition="!Exists('$(SourcePath)')" />
 
 		<!-- Create target directory and copy files -->
 		<MakeDir Directories="$(TargetPath)" Condition="'@(ModuleFiles)' != ''" />
@@ -90,16 +107,42 @@
 		<!--<Copy SourceFiles="@(ModuleFiles)"
           DestinationFiles="@(ModuleFiles->'$(TargetPath)\%(RecursiveDir)%(Filename)%(Extension)')"
           Condition="'@(ModuleFiles)' != ''" /> -->
-		<RemoveDir Directories="$(TargetPath)\Modules" ContinueOnError="true" />
+		<RemoveDir Directories="$(TargetPath)\$(TargetFramework)\Modules" ContinueOnError="true" />
 		<ItemGroup>
 			<LocalBookmarksFilesToCopy Include="$(ModulesSourceDir)\LocalBookmarks\$(TargetFramework)\**" />
 			<MeasurementFilesToCopy Include="$(ModulesSourceDir)\Measurement\$(TargetFramework)\**" />
-			<WebAnnotationsFilesToCopy Include="$(ModulesSourceDir)\WebAnnotations\$(TargetFramework)\**" />
+			<WebAnnotationsFilesToCopy Include="$(ModulesSourceDir)\WebAnnotation\$(TargetFramework)\**" />
+			
+			<LocalBookmarksContentToCopy Include="$(ModulesSourceDir)\LocalBookmarks\$(TargetFramework)\Content\**" />
+			<MeasurementContentToCopy Include="$(ModulesSourceDir)\Measurement\$(TargetFramework)\Content\**" />
+			<WebAnnotationsContentToCopy Include="$(ModulesSourceDir)\WebAnnotation\$(TargetFramework)\Content\**" />
 		</ItemGroup>
 
-		<Copy SourceFiles="@(LocalBookmarksFilesToCopy)"  DestinationFolder="$(TargetPath)\Modules\LocalBookmarks\%(RecursiveDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(MeasurementFilesToCopy)"  DestinationFolder="$(TargetPath)\Modules\Measurement\%(RecursiveDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(WebAnnotationsFilesToCopy)"  DestinationFolder="$(TargetPath)\Modules\WebAnnotations\%(RecursiveDir)" SkipUnchangedFiles="true" />
+		<Message Text="Copying $(ModulesSourceDir)\WebAnnotation\$(TargetFramework) to $(ModulesTargetDir)\WebAnnotation\" Importance="high" />
+		
+		<Copy SourceFiles="@(LocalBookmarksFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\LocalBookmarks\%(RecursiveDir)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(MeasurementFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\Measurement\%(RecursiveDir)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(WebAnnotationsFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\WebAnnotation\%(RecursiveDir)" SkipUnchangedFiles="true" />
+
+		<Message Text="Copying $(ModulesSourceDir)\LocalBookmarks\$(TargetFramework)\Content to $(TargetDir)\Content" Importance="high" />
+
+		<Copy SourceFiles="@(LocalBookmarksContentToCopy)" DestinationFolder="$(TargetDir)\Content" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(MeasurementContentToCopy)" DestinationFolder="$(TargetDir)\Content" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(WebAnnotationsContentToCopy)" DestinationFolder="$(TargetDir)\Content" SkipUnchangedFiles="true" />
+		
+		<!-- Copy Xml.Schema.Linq.dll to main output directory if it exists in any module -->
+		<ItemGroup>
+			<XmlSchemaLinqFiles Include="$(ModulesSourceDir)\**\Xml.Schema.Linq.dll" />
+		</ItemGroup>
+		<Copy SourceFiles="@(XmlSchemaLinqFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="'@(XmlSchemaLinqFiles)' != ''" />
+		<Message Text="Copied Xml.Schema.Linq.dll to main output directory" Importance="normal" Condition="'@(XmlSchemaLinqFiles)' != ''" />
+
+		<!-- Copy System.Memory.dll to main output directory if it exists in any module -->
+		<ItemGroup>
+			<SystemMemoryFiles Include="$(ModulesSourceDir)\**\System.Memory.dll" />
+		</ItemGroup>
+		<Copy SourceFiles="@(SystemMemoryFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="'@(SystemMemoryFiles)' != ''" />
+		<Message Text="Copied System.Memory.dll to main output directory" Importance="normal" Condition="'@(SystemMemoryFiles)' != ''" />
 
 		<!-- Remove duplicate shared DLLs from modules -->
 		<CallTarget Targets="RemoveDuplicateDlls" />
@@ -127,17 +170,27 @@
 			<DuplicateConfigs Include="$(ModulesDir)\**\*.dll.config" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
 		</ItemGroup>
 		
-		<Message Text="Found @(MainAppDlls->Count()) DLLs in main app directory" Importance="normal" />
-		<Message Text="Found @(DuplicateDlls->Count()) duplicate DLLs in modules to remove" Importance="normal" />
+		<Message Text="Found @(MainAppDlls-&gt;Count()) DLLs in main app directory $(TargetDir)" Importance="high" />
+		<Message Text="Found @(DuplicateDlls-&gt;Count()) duplicate DLLs in modules to remove in $(ModulesDir)" Importance="high" />
 		
 		<!-- Delete all duplicate DLLs from modules -->
-		<Delete Files="@(DuplicateDlls)" Condition="'@(DuplicateDlls)' != ''" />
-		<Message Text="Removed @(DuplicateDlls->Count()) duplicate DLLs from modules" Importance="high" />
+		<!-- Temporarily disabled to avoid file lock issues -->
+		<!--<Delete Files="@(DuplicateDlls)" Condition="'@(DuplicateDlls)' != ''" /> -->
+		<Message Text="Removed @(DuplicateDlls-&gt;Count()) duplicate DLLs from modules" Importance="high" />
 		
-		<Delete Files="@(DuplicatePdbs)" Condition="'@(DuplicatePdbs)' != ''" />
-		<Message Text="Removed @(DuplicatePdbs->Count()) duplicate PDBs from modules" Importance="high" />
+		<!--<Delete Files="@(DuplicatePdbs)" Condition="'@(DuplicatePdbs)' != ''" /> -->
+		<Message Text="Removed @(DuplicatePdbs-&gt;Count()) duplicate PDBs from modules" Importance="high" />
 		
-		<Delete Files="@(DuplicateConfigs)" Condition="'@(DuplicateConfigs)' != ''" />
-		<Message Text="Removed @(DuplicateConfigs->Count()) duplicate DLL.CONFIGs from modules" Importance="high" />
+		<!--<Delete Files="@(DuplicateConfigs)" Condition="'@(DuplicateConfigs)' != ''" /> -->
+		<Message Text="Removed @(DuplicateConfigs-&gt;Count()) duplicate DLL.CONFIGs from modules" Importance="high" />
+	</Target>
+
+	<Target Name="CleanModules" AfterTargets="Clean">
+		<PropertyGroup>
+			<ModulesDir>$(TargetDir)Modules</ModulesDir>
+		</PropertyGroup>
+		<!-- Remove the project-specific target framework folder -->
+		<RemoveDir Directories="ModulesDir" ContinueOnError="true" />
+ 
 	</Target>
 </Project>

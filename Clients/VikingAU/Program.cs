@@ -200,8 +200,8 @@ namespace Viking.AU
 
             int numThreads = options.NumThreads ?? System.Environment.ProcessorCount + 1;
 
-            System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
-            SqlServerTypes.Utilities.SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
+            SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
             ConsoleProgressReporter progressReporter = new AU.ConsoleProgressReporter();
 

@@ -46,13 +46,13 @@
 		<PackageReference Include="Duende.IdentityModel" Version="7.1.0" /> 
 		<PackageReference Include="System.Memory" Version="4.6.3" />
 		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
-		<PackageReference Include="System.Text.Json" Version="9.0.7" />
+		<PackageReference Include="System.Text.Json" Version="9.0.8" />
 		<PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
 		<PackageReference Include="System.ValueTuple" Version="4.6.1" />
 		<PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />

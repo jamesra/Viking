@@ -15,7 +15,7 @@ namespace Viking.VolumeModel
             Size = T is null ? 1 : T.Size;
         }
 
-        public override sealed void Dispose()
+        public sealed override void Dispose()
         {
             return;
         }
@@ -32,7 +32,7 @@ namespace Viking.VolumeModel
             this.MaxCacheSize = 1 << 21;
         }
 
-        static protected string TileKey(string textureFileName, string TransformName)
+        protected static string TileKey(string textureFileName, string TransformName)
         {
             return textureFileName + " " + TransformName;
         }

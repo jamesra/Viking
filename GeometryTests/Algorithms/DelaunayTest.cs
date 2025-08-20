@@ -289,29 +289,29 @@ namespace GeometryTests.Algorithms
             //new ConstrainedDelaunaySpec(16, 16 / 2).ToProperty().Check(new Configuration { Replay = FsCheck.Random.StdGen.NewStdGen(1616214556, 296703506), Runner = Config.QuickThrowOnFailure.Runner });
         }
 
-        static public bool[] MeshEdgeFaceCount(IReadOnlyMesh<IVertex> mesh, IReadOnlyList<IEdgeKey> edges, int nFaces)
+        public static bool[] MeshEdgeFaceCount(IReadOnlyMesh<IVertex> mesh, IReadOnlyList<IEdgeKey> edges, int nFaces)
         {
             return edges.Select(e => mesh.Contains(e) && mesh[e].Faces.Count == nFaces).ToArray();
         }
 
-        static public Property MeshEdgeFaceCountProperty(IReadOnlyMesh<IVertex> mesh, IReadOnlyList<IEdgeKey> edges, int nFaces)
+        public static Property MeshEdgeFaceCountProperty(IReadOnlyMesh<IVertex> mesh, IReadOnlyList<IEdgeKey> edges, int nFaces)
         {
             var hasEdges = edges.Select(e => (mesh.Contains(e) && mesh[e].Faces.Count == nFaces).Label(string.Format("Edge {0} has {1} face needs {2}", e, mesh.Contains(e) ? mesh[e].Faces.Count : -1, nFaces))).ToArray();
             return hasEdges.Aggregate((a, b) => a.And(b));
         }
 
-        static public bool[] MeshContainsEdges(IReadOnlyMesh<IVertex> mesh, IReadOnlyList<IEdgeKey> edges)
+        public static bool[] MeshContainsEdges(IReadOnlyMesh<IVertex> mesh, IReadOnlyList<IEdgeKey> edges)
         {
             return edges.Select(e => mesh.Contains(e)).ToArray();
         }
 
-        static public Property MeshContainsEdgesProperty(IReadOnlyMesh<IVertex> mesh, IReadOnlyList<IEdgeKey> edges)
+        public static Property MeshContainsEdgesProperty(IReadOnlyMesh<IVertex> mesh, IReadOnlyList<IEdgeKey> edges)
         {
             var hasEdges = edges.Select(e => mesh.Contains(e).Label(string.Format("Has Edge {0}", e))).ToArray();
             return hasEdges.Aggregate((a, b) => a.And(b));
         }
 
-        static public bool AllPointsColinear(GridVector2[] points)
+        public static bool AllPointsColinear(GridVector2[] points)
         {
             points = points.Distinct().ToArray();
 

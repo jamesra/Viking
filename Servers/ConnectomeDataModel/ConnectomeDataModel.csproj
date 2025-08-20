@@ -5,19 +5,22 @@
     <LangVersion>9.0</LangVersion>
     <UseWPF>false</UseWPF>
     <UseWindowsForms>false</UseWindowsForms>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="EntityFramework" Version="6.5.1" />
+    <PackageReference Include="EntityFramework" Version="6.4.4" />
     <PackageReference Include="EntityFrameworkExtras.EF6" Version="3.0.5" />
     <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-    <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Libs/EntityFrameworkExtras/EntityFrameworkExtras.EF6/EntityFrameworkExtras.EF6.csproj" />
+    <ProjectReference Include="../../SqlServerTypesLoader/SqlServerTypesLoader.csproj" />
   </ItemGroup>
 
   <ItemGroup>

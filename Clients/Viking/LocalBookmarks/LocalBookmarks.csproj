@@ -18,14 +18,21 @@
   </PropertyGroup>
   <!-- Post-build event to copy output to Modules folder -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    
-    
+     
     <!-- Create Modules directory if it doesn't exist -->
     <Exec Command="if not exist &quot;$(ModulesDir)&quot; mkdir &quot;$(ModulesDir)&quot;" />
     
     <!-- Create project-specific directory if it doesn't exist -->
     <Exec Command="if not exist &quot;$(ProjectModuleDir)&quot; mkdir &quot;$(ProjectModuleDir)&quot;" />
     
+    <!-- Ensure Content directory exists in target -->
+    <Exec Command="if not exist &quot;$(ProjectModuleDir)\$(TargetFramework)\Content&quot; mkdir &quot;$(ProjectModuleDir)\$(TargetFramework)\Content&quot;" />
+    
+	  <!-- Copy project output to Modules folder (only newer files) -->
+    <ItemGroup>
+	    <FilesToCopy Include="$(TargetDir)**\*.*" />
+    </ItemGroup>
+	  
     <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModuleDir)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="true" />
 	
   </Target>
@@ -51,18 +58,19 @@
 
   <!-- Compile MonoGame content (only for net48) -->
   <Target Name="CompileContent"
-          BeforeTargets="PrepareForBuild" 
+          AfterTargets="Build" 
           Condition="'$(TargetFramework)' == 'net48'"
           Inputs="Content\Content.mgcb;Content\Arrow.png;Content\Ring.png;Content\Star.png"
-          Outputs="Content\bin\$(TargetFramework)\Arrow.xnb;Content\bin\$(TargetFramework)\Ring.xnb;Content\bin\$(TargetFramework)\Star.xnb">
+          Outputs="$(TargetDir)\Content\Arrow.xnb;$(TargetDir)\Content\Ring.xnb;$(TargetDir)\Content\Star.xnb">
 	  <Message Text="Compiling MonoGame content for $(TargetFramework)..." Importance="normal" />
-	  <Exec Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;($TargetDir)\Content&quot; /intermediateDir:&quot;obj\$(TargetFramework)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)Content" StandardOutputImportance="high" ConsoleToMSBuild="true" />
+	  <Exec Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;$(TargetDir)\Content&quot; /intermediateDir:&quot;$(MSBuildThisFileDirectory)Content\obj\$(TargetFramework)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)Content" StandardOutputImportance="high" ConsoleToMSBuild="true" />
+	   
 	  <Message Text="MonoGame content compilation completed." Importance="normal" />
   </Target>
 
   <!-- Include compiled MonoGame content -->
   <ItemGroup>
-	  <Content Include="Content\bin\$(TargetFramework)\*.xnb">
+	  <Content Include="$(TargetDir)\Content\*.xnb">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		  <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 	  </Content>

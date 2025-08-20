@@ -14,7 +14,7 @@ namespace AnnotationVizLib
 
         }
 
-        static public NeuronJSONView ToJSON(NeuronGraph graph)
+        public static NeuronJSONView ToJSON(NeuronGraph graph)
         {
             int edgeCount = 0;
             NeuronJSONView JSONView = new NeuronJSONView

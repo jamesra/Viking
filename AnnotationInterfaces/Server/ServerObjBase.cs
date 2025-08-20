@@ -9,7 +9,7 @@ namespace Viking.AnnotationServiceTypes
     /// Base of objects used to expose WCF objects, T is the WCF object
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    abstract public class ServerObjBase<T> : INotifyPropertyChanged, INotifyPropertyChanging, ICloneable
+    public abstract class ServerObjBase<T> : INotifyPropertyChanged, INotifyPropertyChanging, ICloneable
         where T : IChangeAction, IEquatable<T>,  new()
     {
         protected T Data;

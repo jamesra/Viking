@@ -34,7 +34,7 @@ namespace Viking.VolumeModel
             return null;
         }
 
-        public async override  Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
+        public override async  Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
         {
             //if (HasBeenWarped == false)
                 //throw new InvalidOperationException($"Mapping is not initialized");

@@ -21,10 +21,16 @@ namespace Viking.UI.Controls
 {
     public partial class UserCredentialsControl : UserControl
     {
-        private static readonly HttpClient httpClient = new HttpClient(new HttpClientHandler()
+        private static HttpClient CreateHttpClient()
         {
-            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true // Do not validate server certificate for now
-        });
+            return new HttpClient(new HttpClientHandler()
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true // Do not validate server certificate for now
+            })
+            {
+                Timeout = TimeSpan.FromSeconds(30) // Add timeout to prevent indefinite hanging
+            };
+        }
 
         public string authenticationURL;
         private string userName = UI.State.AnonymousCredentials.UserName;
@@ -106,83 +112,95 @@ namespace Viking.UI.Controls
             System.Diagnostics.Process.Start("https://155.100.104.153/Viz/Account/Register");
         }      
 
-        void login_handle(object sender, System.EventArgs e)
+        async void login_handle(object sender, System.EventArgs e)
         {
-            this.update_label.Text = "Authenticating...";
-
-            userName = this.textUsername.Text;
-
-            password = this.textPassword.Text;
-
-            
-            if (userName == "")
-                this.update_label.Text = "Enter Username";
-
-            if (password == "")
-                this.update_label.Text = "Enter Password";
-
-            this.Credentials = new NetworkCredential(userName, password); 
-
-            string responseData = createConnection();
-
-            if (responseData == "Exit")
+            try
             {
-                this.update_label.Text = "Oops! Server Error, try again";
-                return;
-            }
+                this.update_label.Text = "Authenticating...";
 
+                userName = this.textUsername.Text;
 
-            if (responseData == "Invalid")
-            {
+                password = this.textPassword.Text;
+
                 
-                this.update_label.Text = "Sorry: Invalid credentials, try again " + counter + "/3" ;
-            }
-            else
-            {
-                if (this.textUsername.Text != readUserName)
-                    System.IO.File.Delete(folderPath + keyFile);
-
-                if (remember_me_check_box.Checked)
+                if (userName == "")
                 {
-                    if (!System.IO.File.Exists(folderPath + keyFile))
-                    {
-                        FileStream fs = System.IO.File.Create(folderPath + keyFile);
-
-                        StreamWriter sw = new StreamWriter(fs);
-
-                        string content = userName + "," + password;
-
-                        string encrypted = EncryptString(content, passkey);
-
-                        sw.Write(encrypted);
-
-                        sw.Flush();
-
-                        sw.Close();
-                       
-                        fs.Close();
-
-                        File.Encrypt(folderPath + keyFile);
-
-
-                    }
+                    this.update_label.Text = "Enter Username";
+                    return;
                 }
 
+                if (password == "")
+                {
+                    this.update_label.Text = "Enter Password";
+                    return;
+                }
+
+                this.Credentials = new NetworkCredential(userName, password); 
+
+                string responseData = await createConnectionAsync().ConfigureAwait(true);
+
+                if (responseData == "Exit")
+                {
+                    this.update_label.Text = "Oops! Server Error, try again";
+                    return;
+                }
+
+
+                if (responseData == "Invalid")
+                {
+                    
+                    this.update_label.Text = "Sorry: Invalid credentials, try again " + counter + "/3" ;
+                }
                 else
                 {
-                    if (System.IO.File.Exists(folderPath + keyFile))
-                    {
+                    if (this.textUsername.Text != readUserName)
                         System.IO.File.Delete(folderPath + keyFile);
+
+                    if (remember_me_check_box.Checked)
+                    {
+                        if (!System.IO.File.Exists(folderPath + keyFile))
+                        {
+                            FileStream fs = System.IO.File.Create(folderPath + keyFile);
+
+                            StreamWriter sw = new StreamWriter(fs);
+
+                            string content = userName + "," + password;
+
+                            string encrypted = EncryptString(content, passkey);
+
+                            sw.Write(encrypted);
+
+                            sw.Flush();
+
+                            sw.Close();
+                           
+                            fs.Close();
+
+                            File.Encrypt(folderPath + keyFile);
+
+
+                        }
                     }
+
+                    else
+                    {
+                        if (System.IO.File.Exists(folderPath + keyFile))
+                        {
+                            System.IO.File.Delete(folderPath + keyFile);
+                        }
+                    }
+
+                    this.update_label.Text = "Login Successful! -- Access Level: " + responseData.ToUpper();
+
+                    State.userAccessLevel = responseData;
+
+                    this.Result = DialogResult.OK;
                 }
-
-                this.update_label.Text = "Login Successful! -- Access Level: " + responseData.ToUpper();
-
-                State.userAccessLevel = responseData;
-
-                this.Result = DialogResult.OK;
             }
-
+            catch (Exception ex)
+            {
+                this.update_label.Text = "Authentication failed: " + ex.Message;
+            }
         }
 
         private string encryptString(string content, string passkey)
@@ -190,46 +208,42 @@ namespace Viking.UI.Controls
             throw new NotImplementedException();
         }
 
-        void Handle_Anonymmous(object sender, System.EventArgs e)
-        {
-            this.update_label.Text = "Authenticating...";
-
-            userName = "anonymous";
-
-            password = "connectome";
-
-            string responseData = createConnection();
-
-            if (responseData == "Read")
-            {
-                this.update_label.Text = "Anonymous Login Successful! -- Access Level: " + responseData.ToUpper();
-
-                State.userAccessLevel = responseData;
-
-                textUsername.Text = userName;
-                textPassword.Text = ""; 
-
-                this.Result = DialogResult.OK;
-            }
-
-            else
-
-                this.update_label.Text = "Oops! Server Error, try again";
-
-        }
-       
-
-        string createConnection()
+        async void Handle_Anonymmous(object sender, System.EventArgs e)
         {
             try
             {
-                return createConnectionAsync().GetAwaiter().GetResult();
+                this.update_label.Text = "Authenticating...";
+
+                userName = "anonymous";
+
+                password = "connectome";
+
+                string responseData = await createConnectionAsync().ConfigureAwait(true);
+
+                if (responseData == "Read")
+                {
+                    this.update_label.Text = "Anonymous Login Successful! -- Access Level: " + responseData.ToUpper();
+
+                    State.userAccessLevel = responseData;
+
+                    textUsername.Text = userName;
+                    textPassword.Text = ""; 
+
+                    this.Result = DialogResult.OK;
+                }
+                else
+                {
+                    this.update_label.Text = "Oops! Server Error, try again";
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                return "Exit";
+                this.update_label.Text = "Authentication failed: " + ex.Message;
             }
         }
+       
+
+
 
         async Task<string> createConnectionAsync()
         {
@@ -244,8 +258,9 @@ namespace Viking.UI.Controls
 
             try
             {
+                using var httpClient = CreateHttpClient();
                 using var content = new StringContent(postdata, Encoding.UTF8, "application/x-www-form-urlencoded");
-                using var response = await httpClient.PostAsync(authenticationURL, content);
+                using var response = await httpClient.PostAsync(authenticationURL, content).ConfigureAwait(false);
 
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
@@ -253,15 +268,22 @@ namespace Viking.UI.Controls
                     return "Exit";
                 }
 
-                string responseData = await response.Content.ReadAsStringAsync();
+                string responseData = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return responseData;
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
+                this.update_label.Text = "Network error: " + ex.Message;
                 return "Exit";
             }
-            catch (TaskCanceledException)
+            catch (TaskCanceledException ex)
             {
+                this.update_label.Text = "Request timed out";
+                return "Exit";
+            }
+            catch (Exception ex)
+            {
+                this.update_label.Text = "Unexpected error: " + ex.Message;
                 return "Exit";
             }
         }

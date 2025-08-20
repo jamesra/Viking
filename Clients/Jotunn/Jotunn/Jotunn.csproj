@@ -261,6 +261,10 @@
       <Project>{dc03688f-0238-445e-8618-a7839575b968}</Project>
       <Name>MonogameWPFLibrary</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj">
+      <Project>{AFB66A86-8FCD-45E5-AC87-2D385032CB0E}</Project>
+      <Name>SqlServerTypesLoader</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">

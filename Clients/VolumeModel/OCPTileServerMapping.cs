@@ -16,7 +16,7 @@ namespace Viking.VolumeModel
 
         #region TextureFileNames
 
-        override public string TileFullPath(int iX, int iY, int DownsampleLevel)
+        public override string TileFullPath(int iX, int iY, int DownsampleLevel)
         {
             string tileFileName = ((int)Math.Log(DownsampleLevel, 2)).ToString("D3") +
                                 '/' + this.TileTextureFileName(iX, iY);

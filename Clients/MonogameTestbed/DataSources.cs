@@ -38,7 +38,7 @@ namespace MonogameTestbed
         }
     }
 
-    static public class DataSource
+    public static class DataSource
     {
         
 

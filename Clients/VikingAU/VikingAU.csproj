@@ -5,7 +5,7 @@
     <NoWarn>$(NoWarn);CA1014</NoWarn>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'  or '$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0' or '$(TargetFramework)' == 'net9.0-windows'">
     <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
@@ -19,5 +19,8 @@
     <ProjectReference Include="..\..\Clients\WebAnnotationModel\WebAnnotationModel.csproj" />
     <ProjectReference Include="..\..\Clients\Common\Common.csproj" />
     <ProjectReference Include="..\..\SqlGeometryAnnotationExtensions\SqlGeometryAnnotationExtensions.csproj" />
+    <ProjectReference Include="..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" /> 
+	<ProjectReference Include="..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
+	  
   </ItemGroup>
 </Project>

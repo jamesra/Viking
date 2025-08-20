@@ -1,5 +1,5 @@
 ﻿
-namespace connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd
+namespace codepharm.net.XSD.WebAnnotationUserSettings.xsd
 {
     using System;
     //using Xml.Schema.Linq;

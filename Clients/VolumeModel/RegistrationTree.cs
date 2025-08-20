@@ -88,7 +88,7 @@ namespace Viking.VolumeModel
             Parent = new int?(sectionNumber);
         }
 
-        override public int GetHashCode()
+        public override int GetHashCode()
         {
             return SectionNumber;
         }

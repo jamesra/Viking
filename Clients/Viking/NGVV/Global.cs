@@ -17,20 +17,20 @@ namespace Viking
         /// <summary>
         /// Shared instance of an HttpClient, using this facilitates KeepAlive use for reusing TCP connections
         /// </summary>
-        static public HttpClient HttpClient => Viking.Common.SharedResources.HttpClient;
+        public static HttpClient HttpClient => Viking.Common.SharedResources.HttpClient;
 
 
-        static public Defaults Default = new Defaults();
+        public static Defaults Default = new Defaults();
 
-        static public LocalTextureCache TextureCache = new LocalTextureCache();
+        public static LocalTextureCache TextureCache = new LocalTextureCache();
 
-        static public TileViewModelCache TileViewModelCache = new TileViewModelCache();
+        public static TileViewModelCache TileViewModelCache = new TileViewModelCache();
 
-        static private readonly Dictionary<int, string> AllocatedTextures = new Dictionary<int, string>();
+        private static readonly Dictionary<int, string> AllocatedTextures = new Dictionary<int, string>();
 
-        static public bool TracePenEvents = false;
+        public static bool TracePenEvents = false;
 
-        static public void AddTexture(Microsoft.Xna.Framework.Graphics.Texture tex, string msg)
+        public static void AddTexture(Microsoft.Xna.Framework.Graphics.Texture tex, string msg)
         {
             //            Trace.WriteLine("Adding Texture: " + tex.GetHashCode().ToString(), "TextureUse");
             /*
@@ -43,7 +43,7 @@ namespace Viking
              */
         }
 
-        static public void RemoveTexture(Microsoft.Xna.Framework.Graphics.Texture tex)
+        public static void RemoveTexture(Microsoft.Xna.Framework.Graphics.Texture tex)
         {
 
             //            Trace.WriteLine("Removing Texture: " + tex.GetHashCode().ToString(), "TextureUse");
@@ -57,7 +57,7 @@ namespace Viking
              */
         }
 
-        static public void PrintAllocatedTextures()
+        public static void PrintAllocatedTextures()
         {
             Trace.WriteLine("Allocated textures", "TextureUse");
 
@@ -75,9 +75,9 @@ namespace Viking
             }
         }
 
-        static private readonly Dictionary<int, string> AllocatedTextureReaders = new Dictionary<int, string>();
+        private static readonly Dictionary<int, string> AllocatedTextureReaders = new Dictionary<int, string>();
 
-        static public void AddTextureReader(object tex, string msg)
+        public static void AddTextureReader(object tex, string msg)
         {
             //            Trace.WriteLine("Adding Texture Reader: " + tex.GetHashCode().ToString(), "TextureUse");
 
@@ -94,7 +94,7 @@ namespace Viking
 
         }
 
-        static public void RemoveTextureReader(object tex)
+        public static void RemoveTextureReader(object tex)
         {
 
             //            Trace.WriteLine("Removing Texture Reader: " + tex.GetHashCode().ToString(), "TextureUse");
@@ -108,9 +108,9 @@ namespace Viking
         /// <summary>
         /// Set to true if textures were loading last time we asked if we needed to refresh
         /// </summary>
-        static private bool _TexturesLoading = true;
+        private static bool _TexturesLoading = true;
 
-        static public bool TexturesLoadedNeedRefresh
+        public static bool TexturesLoadedNeedRefresh
         {
             get
             {
@@ -138,7 +138,7 @@ namespace Viking
 
         }
 
-        static public void PrintAllocatedTextureReaders()
+        public static void PrintAllocatedTextureReaders()
         {
             Trace.WriteLine("Allocated Texture  Readers", "TextureUse");
             List<string> values;

@@ -3,6 +3,8 @@
 	<PropertyGroup>
 		<!-- Target .NET Framework 4.8 -->
 		<TargetFramework>net48</TargetFramework>
+		<LangVersion>9.0</LangVersion>
+		<NoWarn>$(NoWarn);CS0436;CA1014;CS3009;CS3001</NoWarn>
 		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
 		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
 		<RootNamespace>Annotation</RootNamespace>
@@ -13,6 +15,8 @@
 		<FileVersion>1.0.0.0</FileVersion>
 		<Copyright>Copyright © James Anderson 2008</Copyright>
 		<WcfConfigValidationEnabled>True</WcfConfigValidationEnabled>
+		<AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+		<GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<DebugSymbols>true</DebugSymbols>
@@ -43,12 +47,15 @@
 		<PackageReference Include="Microsoft.AspNet.WebApi" Version="5.2.7" />
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="protobuf-net" Version="3.2.52" />
+		<PackageReference Include="protobuf-net" Version="3.2.56" />
 		<PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
 		<PackageReference Include="System.Net.Http" Version="4.3.4" />
+		<PackageReference Include="System.Memory" Version="4.6.3" />
 		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+		<PackageReference Include="System.Buffers" Version="4.6.1" />
 		<PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
+		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
 	</ItemGroup> 
 	<!-- WCF Metadata -->
 	<ItemGroup>
@@ -65,8 +72,10 @@
 	<ItemGroup>
 		<Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="PreserveNewest" />
 		<Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="SqlServerTypes\x64\SqlServerSpatial160.dll" CopyToOutputDirectory="PreserveNewest" />
 		<Content Include="SqlServerTypes\x86\msvcr120.dll" CopyToOutputDirectory="PreserveNewest" />
 		<Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="SqlServerTypes\x86\SqlServerSpatial160.dll" CopyToOutputDirectory="PreserveNewest" />
 		<Content Include="web.config" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 </Project>

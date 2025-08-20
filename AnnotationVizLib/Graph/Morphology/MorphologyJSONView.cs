@@ -30,7 +30,7 @@ namespace AnnotationVizLib
 
         }
 
-        static public MorphologyJSONView ToJSON(MorphologyGraph graph)
+        public static MorphologyJSONView ToJSON(MorphologyGraph graph)
         {
             MorphologyJSONView JSONView = new MorphologyJSONView();
 
@@ -41,7 +41,7 @@ namespace AnnotationVizLib
 
             return JSONView;
         }
-        static private JSONStructureMorphology MorphologyGraphToJSONStructureMorphology(MorphologyGraph graph)
+        private static JSONStructureMorphology MorphologyGraphToJSONStructureMorphology(MorphologyGraph graph)
         {
             JSONStructureMorphology JSONView = new JSONStructureMorphology
             {

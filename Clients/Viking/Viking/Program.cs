@@ -97,7 +97,7 @@ namespace Viking
             //Change to the executing assemblies directory so we can load modules correctly
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
-            SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+                                SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
              
 
             System.Threading.ThreadPool.GetMaxThreads(out int workThreads, out int portThreads);
@@ -107,11 +107,6 @@ namespace Viking
             Application.SetCompatibleTextRenderingDefault(false);
 
             string website = null;
-
-            if (!XNAFrameworkInstalled())
-            {
-                MessageBox.Show("XNA framework 4.0 does not appear to be installed.  Viking will display a blank gray screen without it.  Please check the documentation or internet for links to the XNA Framework 4.0 Redistributable.", "Missing XNA 4.0 Redistributable", MessageBoxButtons.OK);
-            }
 
             var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 

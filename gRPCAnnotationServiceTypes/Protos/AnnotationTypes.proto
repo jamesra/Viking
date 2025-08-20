@@ -33,10 +33,10 @@ message Scale {
 
 message BoundingRectangle {
 
-  double xmin = 1;
-  double ymin = 2;
-  double xmax = 3;
-  double ymax = 4;
+  double XMin = 1;
+  double YMin = 2;
+  double XMax = 3;
+  double YMax = 4;
 }
 
 enum AnnotationType

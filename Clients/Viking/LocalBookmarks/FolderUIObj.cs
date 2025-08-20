@@ -165,7 +165,7 @@ namespace LocalBookmarks
         }
 
 
-        private Microsoft.Xna.Framework.Color? _Color = new Microsoft.Xna.Framework.Color?();
+        private Microsoft.Xna.Framework.Color? _Color = null;
 
         public Microsoft.Xna.Framework.Color Color
         {

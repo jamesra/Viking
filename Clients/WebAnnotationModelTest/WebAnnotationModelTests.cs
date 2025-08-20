@@ -22,10 +22,10 @@ namespace WebAnnotationModelTest
         public System.Net.NetworkCredential TestCredentials;
         //static public EndpointAddress Endpoint;
 
-        static public string Endpoint = "https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc";
-        static public string IdentityEndpoint = "https://identity.connectomes.utah.edu/";
+        public static string Endpoint = "https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc";
+        public static string IdentityEndpoint = "https://identity.connectomes.utah.edu/";
 
-        static public Viking.Tokens.IdentityServerHelper TokenHelper;
+        public static Viking.Tokens.IdentityServerHelper TokenHelper;
 
         [TestInitialize]
         public void Init()

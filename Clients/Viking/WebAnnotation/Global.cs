@@ -1,5 +1,4 @@
-﻿using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -16,7 +15,7 @@ using Viking.UI;
 using WebAnnotationModel;
 using WebAnnotationModel.Service;
 using System.Net.Http;
-using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
+using codepharm.net.XSD.WebAnnotationUserSettings.xsd; 
 using Utils;
 
 namespace WebAnnotation
@@ -538,14 +537,15 @@ namespace WebAnnotation
 
         private static bool LoadServerUserSettings()
         {
-            return LoadServerUserSettingsAsync().GetAwaiter().GetResult();
+            return LoadServerUserSettingsAsync().ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         private static async Task<bool> LoadServerUserSettingsAsync()
         {
             //Try to download the default user settings file
-            Uri uri = UserSettingsUri;
-            if (uri == null) return false;
+            //Uri uri = UserSettingsUri;
+            Uri uri = new Uri("http://codepharm.net/XSD/WebAnnotationUserSettings.xml");
+            if (uri is null) return false;
             try
             {
                 using var httpClient = new HttpClient();

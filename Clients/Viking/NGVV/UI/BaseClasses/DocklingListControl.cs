@@ -131,30 +131,14 @@ namespace Viking.UI.BaseClasses
             if (e.Button == MouseButtons.Right)
             {
                 ListViewItem Item = ListItems.GetItemAt(e.X, e.Y);
-                IUIObject ContextObj = null;
-                if (Item is null)
-                    ContextObj = this.DefaultContextMenuObject;
-                else
-                    ContextObj = Item.Tag as IUIObject;
+                IContextMenu ObjContextMenu = Item?.Tag as IContextMenu;
 
                 //If we clicked an item on the list, show the context menu for the item.
                 //Otherwise, show the generic context menu for the item type the list shows. 
-                if (ContextObj != null)
-                {
-                    //	ListItems.ContextMenu = ContextObj.ContextMenu;
-                    //ContextMenu NewMenu = SharedContextMenu.BuildMenuFor(ContextObj);
-                    //ListItems.ContextMenu = NewMenu; 
-                }
-                else
-                {
-                    //					SupportedUITypesAttribute[] ListTypes = this.GetType().GetCustomAttributes(typeof(SupportedUITypesAttribute), true) as SupportedUITypesAttribute[]; 
-                    //					if(ListTypes != null && ListTypes.Length > 0)
-                    //					{
-                    //                        SupportedUITypesAttribute ListType = ListTypes[0]; 
-
-                    //ListItems.ContextMenu = SharedContextMenu.BuildMenuFor(ListType.ListType); 						
-                    //					}
-                }
+                ContextMenu menu = new ContextMenu();
+                menu = ExtensionManager.CreateContextMenuFromProviders(Item?.Tag, menu);
+                ExtensionManager.CreateContextMenuFromProviders(this.GetType(), menu);
+                menu.Show(this, PointToScreen(e.Location));
             }
         }
 

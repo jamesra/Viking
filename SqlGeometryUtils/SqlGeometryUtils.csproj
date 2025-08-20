@@ -3,6 +3,8 @@
 	<PropertyGroup>
 		<TargetFrameworks>net48;net9.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
+		<AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+		<GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
 		<TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
@@ -40,10 +42,13 @@
 	
 	<!-- SQL Server Types - different versions for different frameworks -->
 	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-		<PackageReference Include="EntityFramework" Version="6.5.1" />
-		<PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
+		<PackageReference Include="EntityFramework" Version="6.4.4" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0' or '$(TargetFramework)' == 'netstandard2.0'">
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="SqlServerTypes\" />
 	</ItemGroup>
 </Project>

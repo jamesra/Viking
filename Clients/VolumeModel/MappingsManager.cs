@@ -62,7 +62,7 @@ namespace Viking.VolumeModel
             this.TransformsForSection = entry;
         }
 
-        public override sealed void Dispose()
+        public sealed override void Dispose()
         {
             if (TransformsForSection != null)
             {

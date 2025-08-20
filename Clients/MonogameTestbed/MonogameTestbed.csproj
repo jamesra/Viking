@@ -54,13 +54,13 @@
 		<PackageReference Include="Microsoft.Spatial" Version="8.1.0" />
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="System.Collections.Immutable" Version="9.0.7" />
+		<PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
-		<PackageReference Include="System.Text.Json" Version="8.0.5" />
-		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+		<PackageReference Include="System.Text.Json" Version="9.0.8" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.8" />
 		<PackageReference Include="System.Diagnostics.Debug" Version="4.3.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
 	</ItemGroup>
 	<ItemGroup>
@@ -92,10 +92,7 @@
 		<ItemGroup>
 			<MonogameContentFiles Include="$(ProjectDir)..\Monographics\MonogameContent\bin\Windows\Content\**\*.*" />
 		</ItemGroup>
-		<MakeDir Directories="$(TargetDir)Content"/>
-		<Copy
-			SourceFiles="@(MonogameContentFiles)"
-			DestinationFiles="@(MonogameContentFiles->'$(TargetDir)Content\%(RecursiveDir)%(Filename)%(Extension)')"
-			SkipUnchangedFiles="true" />
+		<MakeDir Directories="$(TargetDir)Content" />
+		<Copy SourceFiles="@(MonogameContentFiles)" DestinationFiles="@(MonogameContentFiles->'$(TargetDir)Content\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
 	</Target>
 </Project>

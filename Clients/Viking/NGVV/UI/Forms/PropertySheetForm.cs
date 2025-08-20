@@ -32,7 +32,7 @@ namespace Viking.UI.Forms
         /// Mapping of DBObject.Row instances to property sheets. Used so we only display one property sheet
         /// for any given object
         /// </summary>
-        static private readonly Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = new Dictionary<IUIObjectBasic, PropertySheetForm>();
+        private static readonly Dictionary<IUIObjectBasic, PropertySheetForm> ShownProperties = new Dictionary<IUIObjectBasic, PropertySheetForm>();
 
         #endregion
 

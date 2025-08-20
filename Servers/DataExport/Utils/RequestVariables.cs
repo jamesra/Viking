@@ -115,7 +115,7 @@ namespace DataExport.Controllers
             return new List<long>();
         }
 
-        public async static Task<ICollection<long>> GetIDsFromQueryAsync(Uri ODataURI, string query)
+        public static async Task<ICollection<long>> GetIDsFromQueryAsync(Uri ODataURI, string query)
         { 
             // TODO: Replace with AnnotationVizLibODataClient implementation
             // For now, return empty collection

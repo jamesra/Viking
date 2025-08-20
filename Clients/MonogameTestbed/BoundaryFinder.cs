@@ -16,7 +16,7 @@ namespace MonogameTestbed
         /// </summary>
         /// <param name="shapes"></param>
         /// <returns></returns>
-        static public List<GridLineSegment> DetermineBoundary(GridPolygon[] shapes)
+        public static List<GridLineSegment> DetermineBoundary(GridPolygon[] shapes)
         {
             TriangleNet.Meshing.IMesh triangulationMesh = null;
             try

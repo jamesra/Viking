@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using System.Web;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using System.Xml.Linq;
@@ -60,12 +61,7 @@ namespace Viking.UI.Forms
                             document = null;
                             SetUpdateText("No volume found at URL");
 
-                            if (Settings.Default.VolumeURLs.Contains(_VolumeURL))
-                            {
-                                DialogResult result = MessageBox.Show(this, "Error loading volume URL, remove from history?\n\n Details:\n " + except.Message, "Invalid Volume URL", MessageBoxButtons.YesNo);
-                                if (result == DialogResult.Yes)
-                                    Settings.Default.VolumeURLs.Remove(_VolumeURL);
-                            }
+                            
                         }
 
                         if (this.IsHandleCreated)
@@ -239,11 +235,7 @@ namespace Viking.UI.Forms
                 comboVolumeURL.Text = "http://connectomes.utah.edu/Rabbit/Volume.VikingXML";
             }
 
-            if (VolumeURL is null)
-            {
-                VolumeURL = comboVolumeURL.Text;
-            }
-
+            VolumeURL ??= comboVolumeURL.Text;
         }
 
 
@@ -251,82 +243,107 @@ namespace Viking.UI.Forms
         {
             System.Diagnostics.Process.Start("https://connectomes.utah.edu/Viz/Account/Register");
         }
-
-        void login_handle(object sender, System.EventArgs e)
+        
+        /// <summary>
+        /// Prompt the user with a MessageBox asking if a VolumeURL should be removed from the history if it cannot be loaded.
+        /// </summary>
+        /// <param name="_VolumeURL"></param>
+        void CheckRemoveInvalidSavedVolumeURL(string _VolumeURL, WebException except)
         {
-            SetUpdateText("Authenticating...");
+            if (!Settings.Default.VolumeURLs.Contains(_VolumeURL)) return;
+            DialogResult result = MessageBox.Show(this, "Error loading volume URL, remove from history?\n\n Details:\n " + except.Message, "Invalid Volume URL", MessageBoxButtons.YesNo);
+            if (result == DialogResult.Yes)
+                Settings.Default.VolumeURLs.Remove(_VolumeURL);
+        }
 
-            string userName = this.textUsername.Text; 
-            string password = this.textPassword.Text;
-             
-            if (String.IsNullOrEmpty(userName))
-                SetUpdateText("Enter Username");
-
-            if (String.IsNullOrEmpty(password))
-                SetUpdateText("Enter Password");
-
-            this.Credentials = new NetworkCredential(userName, password);
-
-            string responseData = createConnection();
-
-            if (responseData == "Exit")
+        async void login_handle(object sender, System.EventArgs e)
+        {
+            try
             {
-                SetUpdateText("Oops! Server Error, try again");
-                return;
-            } 
+                
+                SetUpdateText("Authenticating...");
 
-            if (responseData == "Invalid")
-            {
-                counter++;
-
-                if (counter == 3)
-                    this.Close();
-
-
-                SetUpdateText("Sorry: Invalid credentials, try again " + counter + "/3");
-            }
-            else //Login successful
-            {
-                if (this.textUsername.Text != UsernameFromCache)
-                    System.IO.File.Delete(this.KeyFileFullPath);
-
-                if (remember_me_check_box.Checked)
+                string userName = this.textUsername.Text; 
+                string password = this.textPassword.Text;
+                 
+                if (String.IsNullOrEmpty(userName))
                 {
-                    try
+                    SetUpdateText("Enter Username");
+                    return;
+                }
+
+                if (String.IsNullOrEmpty(password))
+                {
+                    SetUpdateText("Enter Password");
+                    return;
+                }
+
+                this.Credentials = new NetworkCredential(userName, password);
+
+                string responseData = await createConnectionAsync();
+
+                if (responseData == "Exit")
+                {
+                    SetUpdateText("Oops! Server Error, try again");
+                    return;
+                } 
+
+                if (responseData == "Invalid")
+                {
+                    counter++;
+
+                    if (counter == 3)
+                        this.Close();
+
+
+                    SetUpdateText("Sorry: Invalid credentials, try again " + counter + "/3");
+                }
+                else //Login successful
+                {
+                    if (this.textUsername.Text != UsernameFromCache)
+                        System.IO.File.Delete(this.KeyFileFullPath);
+
+                    if (remember_me_check_box.Checked)
                     {
+                        try
+                        {
 #if DEBUG
-                        WriteCredentialsInFile(new NetworkCredential(userName, password));
+                            WriteCredentialsInFile(new NetworkCredential(userName, password));
 #else
-                        WriteCredentialsInEncryptedFile(new NetworkCredential(userName, password));
+                            WriteCredentialsInEncryptedFile(new NetworkCredential(userName, password));
 #endif
+                        }
+                        catch (IOException except)
+                        {
+                            MessageBox.Show("An exception occured saving your credentials. Viking will continue but your credentials will not be saved for the next login.\nException message:\n" + except.Message);
+                            if (System.IO.File.Exists(this.KeyFileFullPath))
+                            {
+                                System.IO.File.Delete(this.KeyFileFullPath);
+                            }
+                        }
                     }
-                    catch (IOException except)
+
+                    else
                     {
-                        MessageBox.Show("An exception occured saving your credentials. Viking will continue but your credentials will not be saved for the next login.\nException message:\n" + except.Message);
                         if (System.IO.File.Exists(this.KeyFileFullPath))
                         {
                             System.IO.File.Delete(this.KeyFileFullPath);
                         }
                     }
+
+                    SetUpdateText("Login Successful! -- Access Level: " + responseData.ToUpper());
+
+                    State.UserAccessLevel = new string[] { responseData };
+
+                    this.Result = DialogResult.OK;
+
+                    this.Close();
                 }
-
-                else
-                {
-                    if (System.IO.File.Exists(this.KeyFileFullPath))
-                    {
-                        System.IO.File.Delete(this.KeyFileFullPath);
-                    }
-                }
-
-                SetUpdateText("Login Successful! -- Access Level: " + responseData.ToUpper());
-
-                State.UserAccessLevel = new string[] { responseData };
-
-                this.Result = DialogResult.OK;
-
-                this.Close();
             }
-
+            catch (Exception ex)
+            {
+                SetUpdateText("Authentication failed: " + ex.Message);
+            }
         }
 
 
@@ -458,40 +475,49 @@ namespace Viking.UI.Forms
             throw new NotImplementedException();
         }
 
-        void Handle_Anonymmous(object sender, System.EventArgs e)
+        async void Handle_Anonymmous(object sender, System.EventArgs e)
         {
-            if (this.AuthenticationServiceURL != null)
+            try
             {
-                SetUpdateText("Authenticating...");
-
-                this.Credentials = Viking.UI.State.AnonymousCredentials;
-
-                string responseData = createConnection();
-
-                if (responseData == "Read")
+                if (this.AuthenticationServiceURL != null)
                 {
-                    SetUpdateText("Anonymous Login Successful! -- Access Level: " + responseData.ToUpper());
+                    SetUpdateText("Authenticating...");
 
-                    State.UserAccessLevel = new string[] { responseData };
+                    this.Credentials = Viking.UI.State.AnonymousCredentials;
 
+                    string responseData = await createConnectionAsync();
+
+                    if (responseData == "Read")
+                    {
+                        SetUpdateText("Anonymous Login Successful! -- Access Level: " + responseData.ToUpper());
+
+                        State.UserAccessLevel = new string[] { responseData };
+
+                        this.Result = DialogResult.OK;
+
+                        this.Close();
+                    }
+                    else
+                    {
+                        SetUpdateText("Oops! Server Error, try again");
+                    }
+                }
+                else
+                {
                     this.Result = DialogResult.OK;
-
+                    State.UserAccessLevel = new string[] { "Read" };
                     this.Close();
                 }
-
-                else
-
-                    SetUpdateText("Oops! Server Error, try again");
             }
-            else
+            catch (Exception ex)
             {
-                this.Result = DialogResult.OK;
-                State.UserAccessLevel = new string[] { "Read" };
-                this.Close();
+                SetUpdateText("Authentication failed: " + ex.Message);
             }
         }
 
-        string createConnection()
+
+
+        async Task<string> createConnectionAsync()
         {
             string postdata = string.Format("userName={0}&password={1}", Credentials.UserName, Credentials.Password);
             if (Credentials.UserName == "anonymous")
@@ -509,43 +535,41 @@ namespace Viking.UI.Forms
 
             if (AuthenticationURI.Scheme.ToLower() != "https")
             {
-                throw new ArgumentException("Logon UI, createConnection(): Expected to authenticate to an https URI scheme");
+                throw new ArgumentException("Logon UI, createConnectionAsync(): Expected to authenticate to an https URI scheme");
             }
 
-            return createConnectionAsync(AuthenticationURI, postdata).GetAwaiter().GetResult();
-        }
-
-        async Task<string> createConnectionAsync(Uri AuthenticationURI, string postdata)
-        {
             using (var httpClient = new HttpClient())
             {
+                httpClient.Timeout = TimeSpan.FromSeconds(30);
                 try
                 {
                     var content = new StringContent(postdata, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
-                    var response = await httpClient.PostAsync(AuthenticationURI, content);
+                    var response = await httpClient.PostAsync(AuthenticationURI, content).ConfigureAwait(false);
                     
                     if (response.StatusCode != HttpStatusCode.OK)
                     {
-                        SetUpdateText(response.ReasonPhrase);
-                        return "Exit";
+                        if(response.StatusCode == HttpStatusCode.NotFound)
+                        {
+                            SetUpdateText("Not found, assume valid");
+                            return "Read";
+                        }
+                        else
+                        { 
+                            SetUpdateText(response.ReasonPhrase);
+                            return "Exit";
+                        }
                     }
                     else
                     {
-                        var responseContent = await response.Content.ReadAsStringAsync();
+                        var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         return responseContent;
                     }
                 }
-                catch (HttpRequestException e)
+                catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
                 {
                     SetUpdateText("Failure communicating with authentication server.\n" + e.Message);
-                    
-                    if(MessageBox.Show("There is a known issue with contacting the authentication server via SSL.  A migration to a new server is being worked on.  Checking your credentials to the authentication server is not required to annotate, but any errors in your credentials will not be detected.  Would you like to continue with the provided credentials?", "Web Exception",
-                        MessageBoxButtons.YesNo) == DialogResult.Yes)
-                    {
-                        return Credentials == Viking.UI.State.AnonymousCredentials ? "Read" : "Write";
-                    }
-
-                    return "Exit";
+                    //return Credentials == Viking.UI.State.AnonymousCredentials ? "Read" : "Write";
+                    return "Read";
                 }
             }
         }
@@ -833,6 +857,10 @@ namespace Viking.UI.Forms
             {
                 e.Cancel = true;
                 SetUpdateText("Invalid valid URL format");
+            }
+            catch(WebException except)
+            {
+                CheckRemoveInvalidSavedVolumeURL(NewURL, except);
             }
         }
 

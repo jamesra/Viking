@@ -3,7 +3,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes
 {
-    abstract public class ServerObjBaseWithKey<KEY, T> : ServerObjBase<T>, IEquatable<ServerObjBaseWithKey<KEY, T>>
+    public abstract class ServerObjBaseWithKey<KEY, T> : ServerObjBase<T>, IEquatable<ServerObjBaseWithKey<KEY, T>>
         where KEY : struct, IEquatable<KEY>, IComparable<KEY>
         where T : IDataObjectWithKey<KEY>, IChangeAction, IEquatable<T>, new()
     {

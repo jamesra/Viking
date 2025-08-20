@@ -126,18 +126,18 @@ namespace WebAnnotation.View
         private int _Initializing = 0;
         private int _Initialized = 0;
         private bool Initialized => _Initialized > 0;
-        public async Task Initialize()
+        public Task Initialize()
         {
             //If initialized move on
             if (Interlocked.CompareExchange(ref _Initialized, _Initialized, 1) > 0)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             //If another thread is initializing, move on
             if (Interlocked.CompareExchange(ref _Initializing, 1, 0) > 0)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
@@ -166,6 +166,8 @@ namespace WebAnnotation.View
 
             Interlocked.Exchange(ref _Initialized, 1);
             Interlocked.Exchange(ref _Initializing, 0);
+
+            return Task.CompletedTask;
         }
 
         public static double GetRadiusFromPolygonArea(GridPolygon poly, double percentage)

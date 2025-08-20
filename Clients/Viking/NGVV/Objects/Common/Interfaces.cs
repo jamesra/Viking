@@ -56,7 +56,7 @@ namespace Viking.Common
         /// <summary>
         /// GetMenuFor returns a context menu for the passed DataObject or null
         /// </summary>
-        System.Windows.Forms.ContextMenu BuildMenuFor(IContextMenu Obj, System.Windows.Forms.ContextMenu Menu);
+        System.Windows.Forms.ContextMenu BuildMenuFor(object Obj, System.Windows.Forms.ContextMenu Menu);
 
         /// <summary>
         /// GetMenuFor returns a context menu for the passed System.Type or null
@@ -121,6 +121,9 @@ namespace Viking.Common
         void OnCancelChanges();
     }
 
+    /// <summary>
+    /// Implemented by an object to provide a context menu for itself.
+    /// </summary>
     public interface IContextMenu
     {
         System.Windows.Forms.ContextMenu ContextMenu { get; }

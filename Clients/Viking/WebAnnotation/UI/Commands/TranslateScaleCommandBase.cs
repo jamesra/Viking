@@ -11,7 +11,7 @@ namespace WebAnnotation.UI.Commands
 {
     internal abstract class TranslateScaleCommandBase : AnnotationCommandBase
     {
-        public static new string[] DefaultMouseHelpStrings = new string[] {
+        public new static string[] DefaultMouseHelpStrings = new string[] {
            "Hold Left+Click Drag to move",
            "Release Left button to place",
            "Scroll wheel: Change size",

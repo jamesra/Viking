@@ -1,14 +1,9 @@
 ﻿namespace Viking.UI.BaseClasses
 {
     public partial class VikingObjectEventControl : VikingControl
-    {
-        /// <summary>
-        /// When the user brings up the context menu and no item is obviously the source, such as 
-        /// bringing up the context menu for an empty section of a list. DefaultContextMenuObject is
-        /// used to create a context menu. If DefaultContextMenuObject is null, no menu is created. 
-        /// </summary>
-        protected Viking.Common.IUIObject DefaultContextMenuObject = null;
-
+    {  
+        
+        
         #region Variables
         private readonly System.EventHandler OnNewObjectEventHandler = null;
         private readonly System.EventHandler BeforeAnyDeleteEventHandler = null;

@@ -1,4 +1,4 @@
-﻿using connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd;
+﻿using codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -1040,7 +1040,7 @@ namespace WebAnnotation
                             return;
                         }
 
-                        connectomes.utah.edu.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
+                        codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
                         if (a != null)
                         {
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -26,7 +27,25 @@ namespace SqlServerTypes
                 : Path.Combine(rootApplicationPath, @"SqlServerTypes\x86\");
 
             LoadNativeAssembly(nativeBinaryPath, "msvcr120.dll");
-            LoadNativeAssembly(nativeBinaryPath, "SqlServerSpatial140.dll");
+            try
+            { 
+                LoadNativeAssembly(nativeBinaryPath, "SqlServerSpatial160.dll");
+                Trace.WriteLine("Successfully loaded SqlServerSpatial160.dll");
+            }
+            catch (Exception e)
+            {
+                // If SqlServerSpatial160.dll is not found, try loading the older version
+                Trace.WriteLine($"SqlServerSpatial160.dll loading exception {e.Message}\n\nSqlServerSpatial160.dll not found, falling back to SqlServerSpatial140.dll ");
+
+                try { 
+                    LoadNativeAssembly(nativeBinaryPath, "SqlServerSpatial140.dll");
+                }
+                catch (Exception etwo)
+                {
+                    // If SqlServerSpatial160.dll is not found, try loading the older version
+                    Trace.WriteLine($"SqlServerSpatial140.dll loading exception: {etwo.Message}"); 
+                }
+            }
         }
 
         private static void LoadNativeAssembly(string nativeBinaryPath, string assemblyName)
@@ -35,7 +54,7 @@ namespace SqlServerTypes
             var ptr = LoadLibrary(path);
             if (ptr == IntPtr.Zero)
             {
-                throw new Exception(string.Format(
+                throw new System.DllNotFoundException(string.Format(
                     "Error loading {0} (ErrorCode: {1})",
                     assemblyName,
                     Marshal.GetLastWin32Error()));

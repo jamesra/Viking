@@ -77,7 +77,7 @@ namespace Viking.VolumeModel
 
 
         protected ITransform[] _TileTransforms = null;
-        public async override Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
+        public override async Task<ITransform[]> GetOrCreateTransforms(CancellationToken token)
         {
             if (Initialized == false)
             {

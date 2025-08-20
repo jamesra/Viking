@@ -11,15 +11,20 @@ using System.Data.SqlTypes;
 namespace AnnotationService.Types
 {
 
+    [DataContract]
     [ProtoContract()] 
-    public class AnnotationPoint
+    [Serializable]
+    public struct AnnotationPoint
     { 
+        [DataMember]
         [ProtoMember(1)] 
         public double X { get; set; } 
 
+        [DataMember]
         [ProtoMember(2)] 
         public double Y { get; set; } 
 
+        [DataMember]
         [ProtoMember(3)] 
         public double Z { get; set; } 
 
@@ -29,26 +34,30 @@ namespace AnnotationService.Types
             Y = y;
             Z = z;
         }
-        
-        public AnnotationPoint()
-        {}
+         
 
     }
 
+    [DataContract]
     [ProtoContract] 
-    public class BoundingRectangle
+    [Serializable]
+    public struct BoundingRectangle
     {
+        [DataMember]
         [ProtoMember(1)] 
-        public double XMin { get; set; } 
-
-        [ProtoMember(2)] 
-        public double YMin { get; set; } 
-
-        [ProtoMember(3)] 
         public double XMax { get; set; } 
 
-        [ProtoMember(4)] 
+        [DataMember]
+        [ProtoMember(2)] 
+        public double XMin { get; set; } 
+
+        [DataMember]
+        [ProtoMember(3)] 
         public double YMax { get; set; } 
+
+        [DataMember]
+        [ProtoMember(4)] 
+        public double YMin { get; set; } 
 
         public double Width => XMax - XMin;
 
@@ -63,10 +72,7 @@ namespace AnnotationService.Types
             XMax = xmax;
             YMax = ymax;
         }
-
-        public BoundingRectangle()
-        { 
-        }
+         
 
 #if NET48
         public System.Data.Entity.Spatial.DbGeometry ToGeometry()

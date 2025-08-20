@@ -7,7 +7,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 
 namespace Viking.AnnotationServiceTypes
 {
-    abstract public class ServerObjBaseWithParent<KEY, T, THISTYPE> : ServerObjBaseWithKey<KEY, T>, System.Collections.Specialized.INotifyCollectionChanged
+    public abstract class ServerObjBaseWithParent<KEY, T, THISTYPE> : ServerObjBaseWithKey<KEY, T>, System.Collections.Specialized.INotifyCollectionChanged
         where KEY : struct, IEquatable<KEY>, IComparable<KEY>
         where T : IDataObjectWithParent<KEY>, IEquatable<T>, IChangeAction, new()
         where THISTYPE : ServerObjBaseWithParent<KEY, T, THISTYPE>, new()

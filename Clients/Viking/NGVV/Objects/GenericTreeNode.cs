@@ -168,7 +168,7 @@ namespace Viking.UI.Controls
         /// </summary>
         private static readonly System.Collections.Hashtable _TreeViewVisibleChildPropertiesByType = new System.Collections.Hashtable();
 
-        static protected System.Reflection.PropertyInfo[] GetPropertiesForType(System.Type T)
+        protected static System.Reflection.PropertyInfo[] GetPropertiesForType(System.Type T)
         {
             if (_TreeViewVisibleChildPropertiesByType.Contains(T))
                 return (PropertyInfo[])_TreeViewVisibleChildPropertiesByType[T];

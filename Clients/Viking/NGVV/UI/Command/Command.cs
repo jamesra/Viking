@@ -452,13 +452,13 @@ namespace Viking.UI.Commands
             }
         }
 
-        virtual public void OnActivate() { }
+        public virtual void OnActivate() { }
 
-        virtual protected void OnDeactivate() { }
+        protected virtual void OnDeactivate() { }
 
-        virtual public void Undo() { }
+        public virtual void Undo() { }
 
-        virtual public void Redo() { }
+        public virtual void Redo() { }
 
         #region Mouse Events
 

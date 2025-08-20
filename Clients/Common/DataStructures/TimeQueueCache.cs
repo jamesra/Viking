@@ -35,7 +35,7 @@ namespace Viking.Common
     /// <typeparam name="CACHEENTRY">Data type of stores entries, derived from CacheEntry template</typeparam>
     /// <typeparam name="ADDTYPE">Type which is added to cache</typeparam>
     /// <typeparam name="FETCHTYPE">Type returned from cache</typeparam>
-    abstract public class TimeQueueCache<KEY, CACHEENTRY, ADDTYPE, FETCHTYPE>
+    public abstract class TimeQueueCache<KEY, CACHEENTRY, ADDTYPE, FETCHTYPE>
         where CACHEENTRY : CacheEntry<KEY>
         where FETCHTYPE : class
     {
@@ -46,7 +46,7 @@ namespace Viking.Common
 
         protected ConcurrentDictionary<KEY, CACHEENTRY> dictEntries = new ConcurrentDictionary<KEY, CACHEENTRY>();
 
-        abstract protected FETCHTYPE Fetch(CACHEENTRY key);
+        protected abstract FETCHTYPE Fetch(CACHEENTRY key);
 
         /// <summary>
         /// The derived object should create a cache entry for the key/value pair.
@@ -56,11 +56,11 @@ namespace Viking.Common
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        abstract protected CACHEENTRY CreateEntry(KEY key, ADDTYPE value);
+        protected abstract CACHEENTRY CreateEntry(KEY key, ADDTYPE value);
 
-        abstract protected CACHEENTRY CreateEntry(KEY key, Func<KEY,ADDTYPE> valueFactory);
+        protected abstract CACHEENTRY CreateEntry(KEY key, Func<KEY,ADDTYPE> valueFactory);
 
-        abstract protected Task<CACHEENTRY> CreateEntryAsync(KEY key, ADDTYPE value);
+        protected abstract Task<CACHEENTRY> CreateEntryAsync(KEY key, ADDTYPE value);
 
         /// <summary>
         /// Retrieve an entry from the cache

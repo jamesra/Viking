@@ -21,7 +21,7 @@ namespace MorphologyView
         {
             System.Diagnostics.Trace.WriteLine("VikingVolumeViewModule::Initialize()");
 
-            SqlServerTypes.Utilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+                                SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
             InitializeUIDelegate InitUIDelegate = new InitializeUIDelegate(InitializeUI);
 

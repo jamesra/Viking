@@ -55,7 +55,7 @@ namespace Viking
             protected set => _TextureNotFound = value;
         }
 
-        static private bool TextureErrorReported = false;
+        private static bool TextureErrorReported = false;
 
         private readonly int MipMapLevels = 1;
 

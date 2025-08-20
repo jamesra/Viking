@@ -273,7 +273,7 @@ namespace WebAnnotation.UI.Commands
         }
 
 
-        public static new string[] DefaultMouseHelpStrings = new string[] {
+        public new static string[] DefaultMouseHelpStrings = new string[] {
             "Double Left Click: Place final control point, save and exit command",
             "Double Right Click: Pop last control point",
             "Left Click and Drag Control Point: Move existing control point",
@@ -281,7 +281,7 @@ namespace WebAnnotation.UI.Commands
             "No cursor: Command cannot be completed at this location due to invalid geometry. Typically crossed lines."
             };
 
-        public static new string[] DefaultKeyHelpStrings = new string[] {
+        public new static string[] DefaultKeyHelpStrings = new string[] {
             "Escape Key: Cancel command",
             "Page up/down key: Change Magnification",
             "Arrow key: Move view",
