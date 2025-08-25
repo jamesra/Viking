@@ -1,9 +1,9 @@
 /**** You need to replace the following templates to use this script ****/
-/**** RC3 = Name of the database  */
+/**** John = Name of the database  */
 /**** {DATABASE_DIRECTORY} = Directory Datbase lives in if it needs to be created, with the trailing slash i.e. C:\Databases\
 */
 DECLARE @DATABASE_NAME VARCHAR(100)
-SET @DATABASE_NAME = 'Test'
+SET @DATABASE_NAME = 'John'
 DECLARE @DATABASE_DIRECTORY VARCHAR(100)
 SET @DATABASE_DIRECTORY = 'C:\Databases\'
 DECLARE @QUERY VARCHAR(8000)
@@ -56,47 +56,47 @@ BEGIN
 
 	EXEC master.dbo.xp_create_subdir @Path
 	
-	/****** Object:  Database [Test]    Script Date: 06/14/2011 13:13:50 ******/
-	CREATE DATABASE [Test] ON  PRIMARY 
-		( NAME = N'Test', FILENAME = N'C:\Databases\Test\Test.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
+	/****** Object:  Database [John]    Script Date: 06/14/2011 13:13:50 ******/
+	CREATE DATABASE [John] ON  PRIMARY 
+		( NAME = N'John', FILENAME = N'C:\Databases\John\John.mdf' , SIZE = 4096KB , MAXSIZE = UNLIMITED, FILEGROWTH = 1024KB )
 		 LOG ON 
-		( NAME = N'Test_log', FILENAME = N'C:\Databases\Test\Test_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
+		( NAME = N'John_log', FILENAME = N'C:\Databases\John\John_log.ldf' , SIZE = 4096KB , MAXSIZE = 2048GB , FILEGROWTH = 10%)
 		
-	ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 100
+	ALTER DATABASE [John] SET COMPATIBILITY_LEVEL = 100
 	
 	IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 	begin
-		EXEC [Test].[dbo].[sp_fulltext_database] @action = 'enable'
+		EXEC [John].[dbo].[sp_fulltext_database] @action = 'enable'
 	end
 	
-	ALTER DATABASE [Test] SET ANSI_NULL_DEFAULT OFF
-	ALTER DATABASE [Test] SET ANSI_NULLS OFF
-	ALTER DATABASE [Test] SET ANSI_PADDING ON
-	ALTER DATABASE [Test] SET ANSI_WARNINGS OFF
-	ALTER DATABASE [Test] SET ARITHABORT OFF
-	ALTER DATABASE [Test] SET AUTO_CLOSE OFF
-	ALTER DATABASE [Test] SET AUTO_CREATE_STATISTICS ON
-	ALTER DATABASE [Test] SET AUTO_SHRINK OFF
-	ALTER DATABASE [Test] SET AUTO_UPDATE_STATISTICS ON
-	ALTER DATABASE [Test] SET CURSOR_CLOSE_ON_COMMIT OFF
-	ALTER DATABASE [Test] SET CURSOR_DEFAULT  GLOBAL
-	ALTER DATABASE [Test] SET CONCAT_NULL_YIELDS_NULL OFF
-	ALTER DATABASE [Test] SET NUMERIC_ROUNDABORT OFF
-	ALTER DATABASE [Test] SET QUOTED_IDENTIFIER OFF
-	ALTER DATABASE [Test] SET RECURSIVE_TRIGGERS OFF
-	ALTER DATABASE [Test] SET  DISABLE_BROKER
-	ALTER DATABASE [Test] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
-	ALTER DATABASE [Test] SET DATE_CORRELATION_OPTIMIZATION OFF
-	ALTER DATABASE [Test] SET TRUSTWORTHY OFF
-	ALTER DATABASE [Test] SET ALLOW_SNAPSHOT_ISOLATION OFF
-	ALTER DATABASE [Test] SET PARAMETERIZATION SIMPLE
-	ALTER DATABASE [Test] SET READ_COMMITTED_SNAPSHOT OFF
-	ALTER DATABASE [Test] SET HONOR_BROKER_PRIORITY OFF
-	ALTER DATABASE [Test] SET  READ_WRITE
-	ALTER DATABASE [Test] SET RECOVERY SIMPLE
-	ALTER DATABASE [Test] SET  MULTI_USER
-	ALTER DATABASE [Test] SET PAGE_VERIFY CHECKSUM
-	ALTER DATABASE [Test] SET DB_CHAINING OFF
+	ALTER DATABASE [John] SET ANSI_NULL_DEFAULT OFF
+	ALTER DATABASE [John] SET ANSI_NULLS OFF
+	ALTER DATABASE [John] SET ANSI_PADDING ON
+	ALTER DATABASE [John] SET ANSI_WARNINGS OFF
+	ALTER DATABASE [John] SET ARITHABORT OFF
+	ALTER DATABASE [John] SET AUTO_CLOSE OFF
+	ALTER DATABASE [John] SET AUTO_CREATE_STATISTICS ON
+	ALTER DATABASE [John] SET AUTO_SHRINK OFF
+	ALTER DATABASE [John] SET AUTO_UPDATE_STATISTICS ON
+	ALTER DATABASE [John] SET CURSOR_CLOSE_ON_COMMIT OFF
+	ALTER DATABASE [John] SET CURSOR_DEFAULT  GLOBAL
+	ALTER DATABASE [John] SET CONCAT_NULL_YIELDS_NULL OFF
+	ALTER DATABASE [John] SET NUMERIC_ROUNDABORT OFF
+	ALTER DATABASE [John] SET QUOTED_IDENTIFIER OFF
+	ALTER DATABASE [John] SET RECURSIVE_TRIGGERS OFF
+	ALTER DATABASE [John] SET  DISABLE_BROKER
+	ALTER DATABASE [John] SET AUTO_UPDATE_STATISTICS_ASYNC OFF
+	ALTER DATABASE [John] SET DATE_CORRELATION_OPTIMIZATION OFF
+	ALTER DATABASE [John] SET TRUSTWORTHY OFF
+	ALTER DATABASE [John] SET ALLOW_SNAPSHOT_ISOLATION OFF
+	ALTER DATABASE [John] SET PARAMETERIZATION SIMPLE
+	ALTER DATABASE [John] SET READ_COMMITTED_SNAPSHOT OFF
+	ALTER DATABASE [John] SET HONOR_BROKER_PRIORITY OFF
+	ALTER DATABASE [John] SET  READ_WRITE
+	ALTER DATABASE [John] SET RECOVERY SIMPLE
+	ALTER DATABASE [John] SET  MULTI_USER
+	ALTER DATABASE [John] SET PAGE_VERIFY CHECKSUM
+	ALTER DATABASE [John] SET DB_CHAINING OFF
 	
 	print N'Created Database...' 
 	INSERT INTO #UpdateVars Values (DB_ID(N'CreateTables'));
@@ -104,11 +104,11 @@ END
 
 GO 
 
-USE [Test]
+USE [John]
 GO
 
-ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 150; --Ensure we are using a recent DB version, needs to be at least 130 for STRING_SPLIT to be available
- 
+ALTER DATABASE [John] SET COMPATIBILITY_LEVEL = 150; --Ensure we are using a recent DB version, needs to be at least 130 for STRING_SPLIT to be available
+GO
 --------------------------------------------
 --- CREATE MEM OPTIMIZED FILEGROUP AND FILES
 --------------------------------------------
@@ -1156,15 +1156,15 @@ END
 */  
 GO
 
-Use [Test]
+Use [John]
 GO
   
 DECLARE @compat_level int
-SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'Test')
+SET @compat_level = (SELECT compatibility_level FROM sys.databases WHERE name = 'John')
 IF(@compat_level < 120)
 BEGIN
 	print N'Setting the database compatability level to SQL 2014'
-	ALTER DATABASE [Test] SET COMPATIBILITY_LEVEL = 120  
+	ALTER DATABASE [John] SET COMPATIBILITY_LEVEL = 120  
 END
 GO
 
@@ -1368,7 +1368,7 @@ end
      print N'Adding SP to calculate average locations for all structures'
      BEGIN TRANSACTION three
 		
-	    IF EXISTS(select * from sys.procedures where name = 'ApproximaTestructureLocations')
+	    IF EXISTS(select * from sys.procedures where name = 'ApproximateStructureLocation')
 		BEGIN
 			EXEC('DROP PROCEDURE [dbo].[ApproximateStructureLocation]');
 		END
@@ -2579,7 +2579,7 @@ end
  					Select * from LocationLink
 						 WHERE (A in 
 						(SELECT L.ID
-						  FROM [Test].[dbo].[Location] L
+						  FROM [John].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -2588,7 +2588,7 @@ end
 						  OR
 						  (B in 
 						(SELECT L.ID
-						  FROM [Test].[dbo].[Location] L
+						  FROM [John].[dbo].[Location] L
 						  INNER JOIN 
 						   (SELECT ID, TYPEID
 							FROM Structure
@@ -6763,11 +6763,13 @@ end
 
 				SET NOCOUNT ON
 
-				DELETE StructureSpatialCache 
-				WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM DELETED Group By ParentID)
+				DELETE SSC
+				FROM StructureSpatialCache SSC
+				inner join DELETED D on D.ParentID = SSC.ID
 
-				DELETE StructureSpatialCache 
-				WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM INSERTED Group By ParentID)	
+				DELETE SSC  
+				FROM StructureSpatialCache SSC
+				inner join INSERTED I on I.ParentID = SSC.ID 
 
 				INSERT INTO StructureSpatialCache
 				SELECT        S.ID as ID,  
@@ -6867,11 +6869,13 @@ end
 
 				SET NOCOUNT ON
 
-				DELETE StructureSpatialCache 
-				WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM DELETED Group By ParentID)
+				DELETE SSC
+				FROM StructureSpatialCache SSC
+				inner join DELETED D on D.ParentID = SSC.ID
 
-				DELETE StructureSpatialCache 
-				WHERE StructureSpatialCache.ID IN (SELECT ParentID FROM INSERTED Group By ParentID)	
+				DELETE SSC  
+				FROM StructureSpatialCache SSC
+				inner join INSERTED I on I.ParentID = SSC.ID 
 
 				INSERT INTO StructureSpatialCache
 				SELECT        S.ID as ID,  
@@ -7585,7 +7589,7 @@ BEGIN TRANSACTION main
 	RETURNS @Path TABLE
 	(
 		[StartID] [bigint] NOT NULL,				--First node of the path
-		[Path] nvarchar(max) NOT NULL DEFAULT '',	--csv of intermediate nodes along the path
+		[Path] nvarchar(max) NOT NULL DEFAULT '''',	--csv of intermediate nodes along the path
 		[PathLength] [bigint] NOT NULL DEFAULT 0,	--number of entries in the path so far
 		[EndID] [bigint] NOT NULL,					-- where the path ends
 		[Completed] bit NOT NULL DEFAULT 0,			-- true if the path connects from a node in @SourceIDs to a node in @TargetIDs
@@ -7596,8 +7600,8 @@ BEGIN TRANSACTION main
 				[Completed] ASC
 			) WITH (IGNORE_DUP_KEY = OFF)
 	)
-	AS 
-		DECLARE @VisitedIDs mem_integer_list --Nodes we have already visited and checked for a path
+	AS BEGIN
+		DECLARE @VisitedIDs mem_integer_list /*Nodes we have already visited and checked for a path*/
 		DECLARE  @SourceIDs mem_integer_list
 		insert into @SourceIDs VALUES (@SourceID)
 		declare @TargetsRemaining mem_integer_list	--Lists the targets a path has not been located for
@@ -7707,7 +7711,7 @@ BEGIN TRANSACTION main
 					INNER JOIN @OptionCount PC ON PC.OriginID = P.EndID
 					where PC.NumOptions = 1
 				*/
-				UPDATE @Path set [Path] = CASE WHEN [PATH] = '' THEN STR(EndID) ELSE CONCAT([Path],',',STR(EndID)) END,
+				UPDATE @Path set [Path] = CASE WHEN [PATH] = '''' THEN STR(EndID) ELSE CONCAT([Path],'','',STR(EndID)) END,
 								 [EndID] = PO.TargetID,
 								 [PathLength] = [PathLength] + 1,
 								 [Completed] = 0--CASE WHEN (EndID IN (Select * from @TargetIDs)) THEN 1 ELSE 0 END
@@ -7742,7 +7746,7 @@ BEGIN TRANSACTION main
 				--Multiple options, insert a row into the path table for each option
 				INSERT INTO @Path (StartID, [Path], EndID, PathLength, Completed )
 					SELECT P.StartID as StartID,
-						   CASE WHEN P.[PATH] = '' THEN STR(EndID) ELSE CONCAT([Path],',',STR(EndID)) END, --Path
+						   CASE WHEN P.[PATH] = '''' THEN STR(EndID) ELSE CONCAT([Path],'','',STR(EndID)) END, --Path
 						   PO.TargetID as EndID,
 						   [PathLength] = [PathLength] + 1,
 						   [Completed] = 0--CASE WHEN (EndID IN (Select * from @TargetIDs)) THEN 1 ELSE 0 END
@@ -7768,7 +7772,7 @@ BEGIN TRANSACTION main
 	   
 			 INSERT INTO @Path (StartID, [Path], EndID, PathLength, Completed )
 					SELECT P.StartID as StartID,
-						   CASE WHEN P.[PATH] = '' THEN STR(EndID) ELSE CONCAT([Path],',',STR(EndID)) END, --Update Path to include EndID
+						   CASE WHEN P.[PATH] = '''' THEN STR(EndID) ELSE CONCAT([Path],'','',STR(EndID)) END, --Update Path to include EndID
 						   P.EndID as EndID,
 						   [PathLength] = [PathLength] + 1,
 						   [Completed] = 1
@@ -7818,7 +7822,7 @@ BEGIN TRANSACTION main
 	 BEGIN TRANSACTION eighty
 		
 	 EXEC('
-		CREATE FUNCTION [dbo].[ufnLinkedToLocations] 
+		ALTER FUNCTION [dbo].[ufnLinkedToLocations] 
 		(	
 			-- Add the parameters for the function here
 			 @SourceLocIDs mem_integer_list READONLY --The location IDs we are starting from
@@ -7883,9 +7887,430 @@ BEGIN TRANSACTION main
 		   RETURN
 		 end
 
-	INSERT INTO DBVersion values (80, 
+	INSERT INTO DBVersion values (81, 
 		      N'Add functions to list all location links and calculate distance in 3D',getDate(),User_ID())
 	 COMMIT TRANSACTION eighty
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 81)))
+	begin
+     print N'Add functions to find weighted centroid for structures'  
+	 BEGIN TRANSACTION eightyone
+		
+	 EXEC('CREATE FUNCTION [dbo].[WeightedStructureCenters3D](
+				@StructureIDs mem_integer_list READONLY
+			) --The Structure IDs we are calculating, NULL causes us to get all rows
+			RETURNS @Result TABLE (
+				ID bigint,
+				XY geometry,
+				Z float
+			)
+			AS
+			BEGIN
+				DECLARE @TotalArea TABLE(
+					StructureID bigint NOT NULL PRIMARY KEY,
+					TotalArea float NOT NULL
+				)
+    
+				DECLARE @StructureLocations TABLE(
+					StructureID bigint NOT NULL,
+					Area float NOT NULL,
+					X float NOT NULL,
+					Y float NOT NULL,
+					Z float NOT NULL
+				);
+
+				DECLARE @StructureLocationWeights TABLE(
+					StructureID bigint NOT NULL,
+					[Weight] float NOT NULL,
+					X float NOT NULL,
+					Y float NOT NULL,
+					Z float NOT NULL
+				);
+	 
+				INSERT INTO @StructureLocations 
+				SELECT L.ParentID as StructureID, 
+					CASE L.VolumeShape.STDimension()
+						WHEN 0 THEN 0
+						WHEN 1 THEN L.MosaicShape.STLength()
+						WHEN 2 THEN L.MosaicShape.STArea()
+						ELSE 0
+					END as Area,
+					L.VolumeX as X,
+					L.VolumeY as Y,
+					L.Z as Z 
+				FROM Location L
+				inner join @StructureIDs SIDs ON SIDs.ID = L.ParentID; 
+
+				INSERT INTO @TotalArea 
+				SELECT L.StructureID as StructureID, SUM(L.Area) as TotalArea 
+				FROM @StructureLocations L
+				GROUP BY L.StructureID;
+
+				INSERT INTO @StructureLocationWeights
+				SELECT SL.StructureID, 
+					CASE 
+						WHEN A.TotalArea > 0 THEN SL.Area / A.TotalArea
+						ELSE 0
+					END as [Weight],
+					SL.X, SL.Y, SL.Z
+				FROM @StructureLocations SL
+				INNER JOIN @TotalArea A ON A.StructureID = SL.StructureID;
+
+				INSERT INTO @Result
+				SELECT SLW.StructureID as ID, 
+					geometry::STPointFromText(
+					  ''POINT('' + CAST(SUM(SLW.X * SLW.[Weight]) AS VARCHAR(20)) + '' '' +
+					   CAST(SUM(SLW.Y * SLW.[Weight]) AS VARCHAR(20)) + '')'', 0
+					) as XY,
+					SUM(SLW.Z * SLW.[Weight]) as Z 
+				FROM @StructureLocationWeights SLW
+				GROUP BY SLW.StructureID;
+
+				RETURN;
+			END;
+	 ')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	 EXEC('
+		CREATE FUNCTION [dbo].[ufnWeightedStructureCentroidXY]
+	(
+		@StructureID bigint
+	)
+	RETURNS geometry -- The center of the structure annotations in XY, weighted by either area of each location or the length of the location.
+					 --This function cannot return the Z position because it is a scalar valued function
+	AS
+	BEGIN 
+    
+    DECLARE @StructureLocations TABLE(
+        StructureID bigint NOT NULL,
+        Area float NOT NULL,
+        X float NOT NULL,
+        Y float NOT NULL,
+        Z float NOT NULL
+    );
+
+    DECLARE @StructureLocationWeights TABLE(
+        StructureID bigint NOT NULL,
+        [Weight] float NOT NULL,
+        X float NOT NULL,
+        Y float NOT NULL,
+        Z float NOT NULL
+    );
+
+    INSERT INTO @StructureLocations 
+    SELECT L.ParentID as StructureID, 
+        CASE L.VolumeShape.STDimension()
+            WHEN 0 THEN 0
+            WHEN 1 THEN L.MosaicShape.STLength()
+            WHEN 2 THEN L.MosaicShape.STArea()
+            ELSE 0
+        END as Area,
+        L.VolumeX as X,
+        L.VolumeY as Y,
+        L.Z as Z 
+    FROM Location L 
+	WHERE L.ParentID = @StructureID
+	;
+
+	DECLARE @TotalArea FLOAT
+	SELECT @TotalArea = SUM(L.Area) 
+					 FROM @StructureLocations L
+					 GROUP BY L.StructureID;
+
+    INSERT INTO @StructureLocationWeights
+    SELECT SL.StructureID, 
+        CASE 
+            WHEN @TotalArea > 0 THEN SL.Area / @TotalArea
+            ELSE 0
+        END as [Weight],
+        SL.X, SL.Y, SL.Z
+    FROM @StructureLocations SL 
+
+	DECLARE @Result Geometry 
+    SELECT @Result = geometry::STPointFromText(
+        ''POINT('' + CAST(SUM(SLW.X * SLW.[Weight]) AS VARCHAR(20)) + '' '' +
+        CAST(SUM(SLW.Y * SLW.[Weight]) AS VARCHAR(20)) + '')'', 0
+    )
+    FROM @StructureLocationWeights SLW
+    GROUP BY SLW.StructureID;
+	 
+	-- Return the result of the function
+	RETURN @Result
+
+	END
+	
+	 ')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	EXEC('CREATE FUNCTION [dbo].[ufnWeightedStructureCentroidZ]
+		(
+			@StructureID bigint
+		)
+		RETURNS float /*
+		The center of the structure annotations in Z, weighted by either area of each location or the length of the location.
+		This function cannot return the XY position because it is a scalar valued function.  If you need
+		XYZ, use the WeightedStructureCenters3D Table Valued Function instead. */
+		AS
+		BEGIN 
+    
+		DECLARE @StructureLocations TABLE(
+			StructureID bigint NOT NULL,
+			Area float NOT NULL, 
+			Z float NOT NULL
+		);
+
+		DECLARE @StructureLocationWeights TABLE(
+			StructureID bigint NOT NULL,
+			[Weight] float NOT NULL, 
+			Z float NOT NULL
+		);
+
+		INSERT INTO @StructureLocations 
+		SELECT L.ParentID as StructureID, 
+			CASE L.VolumeShape.STDimension()
+				WHEN 0 THEN 0
+				WHEN 1 THEN L.MosaicShape.STLength()
+				WHEN 2 THEN L.MosaicShape.STArea()
+				ELSE 0
+			END as Area, 
+			L.Z as Z 
+		FROM Location L 
+		WHERE L.ParentID = @StructureID
+		;
+
+		DECLARE @TotalArea FLOAT
+		SELECT @TotalArea = SUM(L.Area) 
+						 FROM @StructureLocations L
+						 GROUP BY L.StructureID;
+
+		INSERT INTO @StructureLocationWeights
+		SELECT SL.StructureID, 
+			CASE 
+				WHEN @TotalArea > 0 THEN SL.Area / @TotalArea
+				ELSE 0
+			END as [Weight], 
+			SL.Z
+		FROM @StructureLocations SL 
+
+		DECLARE @Result float 
+		SELECT @Result = SUM(SLW.Z * SLW.[Weight])  
+		FROM @StructureLocationWeights SLW
+		GROUP BY SLW.StructureID;
+	 
+		-- Return the result of the function
+		RETURN @Result
+
+		END
+	 ')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (81, 
+		      N'Add functions to list all location links and calculate distance in 3D',getDate(),User_ID())
+	 COMMIT TRANSACTION eightyone
+	end
+
+	
+	INSERT INTO DBVersion values (82, 
+		      N'Enable Query Store',getDate(),User_ID())
+	 COMMIT TRANSACTION eightytwo
+	end 
+
+	EXEC('
+	-- Enable Query Store on your database
+	ALTER DATABASE John SET QUERY_STORE = ON;
+	ALTER DATABASE John SET QUERY_STORE (
+		OPERATION_MODE = READ_WRITE,
+		CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 30),
+		DATA_FLUSH_INTERVAL_SECONDS = 3000,
+		MAX_STORAGE_SIZE_MB = 1000,
+		INTERVAL_LENGTH_MINUTES = 10
+);
+	')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (82, 
+		      N'Enable Query Store',getDate(),User_ID())
+	 COMMIT TRANSACTION eightytwo
+	end
+
+	
+	INSERT INTO DBVersion values (83, 
+		      N'Improve SelectSectionLocationsAndLinksInMosaicBounds',getDate(),User_ID())
+	 COMMIT TRANSACTION eightythree
+	end 
+
+	EXEC('
+	SET ANSI_NULLS ON
+	GO
+	SET QUOTED_IDENTIFIER ON
+	GO
+
+	ALTER PROCEDURE [dbo].[SelectSectionLocationsAndLinksInMosaicBounds]
+					-- Add the parameters for the stored procedure here
+					@Z float,
+					@BBox geometry,
+					@Radius float,
+					@QueryDate datetime
+				AS
+				BEGIN
+					-- SET NOCOUNT ON added to prevent extra result sets from
+					-- interfering with SELECT statements.
+					SET NOCOUNT ON;
+
+					DECLARE @LocationIDsInBounds mem_integer_list
+
+					-- Get bounding box envelope
+					DECLARE @BBoxEnvelope geometry = @BBox.STEnvelope();
+
+					--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
+
+					INSERT INTO @LocationIDsInBounds (ID)
+					SELECT ID
+					FROM Location 
+					WHERE Z = @Z 
+					AND Radius >= @Radius
+					-- Use envelope filtering for better spatial index utilization
+					AND MosaicShape.STEnvelope().STX >= @BBoxEnvelope.STX
+					AND MosaicShape.STEnvelope().STY >= @BBoxEnvelope.STY
+					AND MosaicShape.STEnvelope().STX <= @BBoxEnvelope.STX + @BBoxEnvelope.STLength() / 2
+					AND MosaicShape.STEnvelope().STY <= @BBoxEnvelope.STY + @BBoxEnvelope.STLength() / 2
+					-- Then apply precise spatial intersection
+					AND MosaicShape.STIntersects(@BBox) = 1
+					ORDER BY ID;
+	 
+					 -- Return locations with conditional filtering
+					IF @QueryDate IS NOT NULL
+						SELECT L.*
+						FROM Location L
+						INNER JOIN @LocationIDsInBounds IDs ON L.ID = IDs.ID
+						WHERE L.LastModified >= @QueryDate
+						ORDER BY L.ID;
+					ELSE
+						SELECT L.*
+						FROM Location L
+						INNER JOIN @LocationIDsInBounds IDs ON L.ID = IDs.ID
+						ORDER BY L.ID;
+	 
+					-- Optimized LocationLink queries using EXISTS instead of IN
+					IF @QueryDate IS NOT NULL
+						SELECT LL.*
+						FROM LocationLink LL
+						WHERE EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.A)
+						OR EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.B)
+						AND LL.Created >= @QueryDate;
+					ELSE
+						SELECT LL.*
+						FROM LocationLink LL
+						WHERE EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.A)
+						OR EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.B);
+								END 
+);
+	')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	EXEC('
+	SET ANSI_NULLS ON
+	GO
+	SET QUOTED_IDENTIFIER ON
+	GO
+
+				ALTER PROCEDURE [dbo].[SelectSectionLocationsAndLinksInVolumeBounds]
+					-- Add the parameters for the stored procedure here
+					@Z float,
+					@BBox geometry,
+					@Radius float,
+					@QueryDate datetime
+				AS
+				BEGIN
+					-- SET NOCOUNT ON added to prevent extra result sets from
+					-- interfering with SELECT statements.
+					SET NOCOUNT ON;
+
+					DECLARE @LocationIDsInBounds mem_integer_list
+
+					-- Get bounding box envelope
+					DECLARE @BBoxEnvelope geometry = @BBox.STEnvelope();
+
+					--Selecting all columns once into LocationsInBounds and then selecting the temp table is a huge time saver.  3-4 seconds instead of 20.
+
+					INSERT INTO @LocationIDsInBounds (ID)
+					SELECT ID
+					FROM Location 
+					WHERE Z = @Z 
+					AND Radius >= @Radius
+					-- Use envelope filtering for better spatial index utilization
+					AND VolumeShape.STEnvelope().STX >= @BBoxEnvelope.STX
+					AND VolumeShape.STEnvelope().STY >= @BBoxEnvelope.STY
+					AND VolumeShape.STEnvelope().STX <= @BBoxEnvelope.STX + @BBoxEnvelope.STLength() / 2
+					AND VolumeShape.STEnvelope().STY <= @BBoxEnvelope.STY + @BBoxEnvelope.STLength() / 2
+					-- Then apply precise spatial intersection
+					AND VolumeShape.STIntersects(@BBox) = 1
+					ORDER BY ID;
+	 
+					 -- Return locations with conditional filtering
+					IF @QueryDate IS NOT NULL
+						SELECT L.*
+						FROM Location L
+						INNER JOIN @LocationIDsInBounds IDs ON L.ID = IDs.ID
+						WHERE L.LastModified >= @QueryDate
+						ORDER BY L.ID;
+					ELSE
+						SELECT L.*
+						FROM Location L
+						INNER JOIN @LocationIDsInBounds IDs ON L.ID = IDs.ID
+						ORDER BY L.ID;
+	 
+					-- Optimized LocationLink queries using EXISTS instead of IN
+					IF @QueryDate IS NOT NULL
+						SELECT LL.*
+						FROM LocationLink LL
+						WHERE EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.A)
+						OR EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.B)
+						AND LL.Created >= @QueryDate;
+					ELSE
+						SELECT LL.*
+						FROM LocationLink LL
+						WHERE EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.A)
+						OR EXISTS (SELECT 1 FROM @LocationIDsInBounds IDs WHERE IDs.ID = LL.B);
+								END 
+);
+	')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION 
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (83, 
+		      N'Improve SelectSectionLocationsAndLinksInMosaicBounds',getDate(),User_ID())
+	 COMMIT TRANSACTION eightythree
 	end
 		   
 COMMIT TRANSACTION main
