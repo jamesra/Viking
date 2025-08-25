@@ -2,11 +2,11 @@
 use [Test]
 GO
  
-CREATE FUNCTION [dbo].[MorphologyPaths]
+ALTER FUNCTION [dbo].[MorphologyPaths]
 	(
 		-- Add the parameters for the function here
 		@SourceID bigint,
-		@TargetIDs integer_list READONLY
+		@TargetIDs mem_integer_list READONLY
 	)
 	RETURNS @Path TABLE
 	(
@@ -25,10 +25,10 @@ CREATE FUNCTION [dbo].[MorphologyPaths]
 	AS
 	BEGIN
 			 
-		declare @VisitedIDs integer_list --Nodes we've already visited and checked for a path
-		declare  @SourceIDs integer_list
+		declare @VisitedIDs mem_integer_list --Nodes we've already visited and checked for a path
+		declare  @SourceIDs mem_integer_list
 		insert into @SourceIDs VALUES (@SourceID)
-		declare @TargetsRemaining integer_list					--Lists the targets a path has not been located for
+		declare @TargetsRemaining mem_integer_list					--Lists the targets a path has not been located for
 		insert into @TargetsRemaining select ID from @TargetIDs
 
 		--Prepopulate the @Path Table
@@ -50,9 +50,9 @@ CREATE FUNCTION [dbo].[MorphologyPaths]
  
 		  while 0 = ANY ( Select Completed from @Path ) AND (Select COUNT(ID) from @TargetsRemaining) > 0
 		  BEGIN
-			  declare @Options integer_list --Possible paths we can explore
+			  declare @Options mem_integer_list --Possible paths we can explore
 			  declare @PathOptions udtLinks  
-			  declare @NextStepOriginIDs integer_list
+			  declare @NextStepOriginIDs mem_integer_list
 	
 			  DELETE FROM @NextStepOriginIDs
 
@@ -103,7 +103,7 @@ CREATE FUNCTION [dbo].[MorphologyPaths]
 			 -- Identify which paths have reached a dead end because there are 
 			 -- no more remaining nodes to check
 			 *******************************************************************/
-			 declare @DeadPathOriginIDs integer_list
+			 declare @DeadPathOriginIDs mem_integer_list
 			 DELETE FROM @DeadPathOriginIDs --This line prevents listing  every dead end reached in the search, but commenting it is useful for debugging which paths were checked
 			 insert into @DeadPathOriginIDs
 				Select OriginID
