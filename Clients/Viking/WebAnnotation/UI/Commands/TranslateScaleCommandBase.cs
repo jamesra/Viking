@@ -143,7 +143,7 @@ namespace WebAnnotation.UI.Commands
                 scalar = 1 / scalar;
             }
 
-            Trace.WriteLine(string.Format("{0} {1} {2}", adjusted_scroll_distance, num_doublings, scalar));
+            Trace.WriteLine($"{adjusted_scroll_distance} {num_doublings} {scalar}");
 
             return scalar;
         }

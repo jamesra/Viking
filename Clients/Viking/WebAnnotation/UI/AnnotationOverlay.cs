@@ -93,7 +93,8 @@ namespace WebAnnotation
         /// <param name="e"></param>
         public static void ShowFaultExceptionMsgBox(Exception e)
         {
-            MessageBox.Show(string.Format("Server did not send proper response to save request.  The change was probably not saved.\nException:\n{0}", e), "Client <-> Server Error", MessageBoxButtons.OK);
+            MessageBox.Show(
+                $"Server did not send proper response to save request.  The change was probably not saved.\nException:\n{e}", "Client <-> Server Error", MessageBoxButtons.OK);
         }
 
         public static bool SaveLocationsWithMessageBoxOnError()

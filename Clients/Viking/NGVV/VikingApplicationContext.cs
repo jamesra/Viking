@@ -29,31 +29,29 @@ namespace Viking
                 throw new ArgumentNullException(nameof(VolumeURL));
             //var cancellationTokenSource = new CancellationTokenSource();
 
-            using (SplashForm Splash = new SplashForm())
+            using SplashForm Splash = new SplashForm();
+            Splash.TrackedTask = System.Threading.Tasks.Task.Run(() => BackgroundLoading(VolumeURL, Splash.progressReporter, cancellationTokenSource.Token));
+
+            //The splash dialog will run until the Volume is initialized 
+            Splash.ShowDialog();
+
+            DialogResult splashResult = Splash.Result;
+
+            Splash.Close();
+
+            if (splashResult == DialogResult.Cancel)
             {
-                Splash.TrackedTask = System.Threading.Tasks.Task.Run(() => BackgroundLoading(VolumeURL, Splash.ProgressReporter, cancellationTokenSource.Token));
+                Trace.WriteLine($"Viking launch cancelled by user");
+                ExitThread();
+                return;
+            }
 
-                //The splash dialog will run until the Volume is initialized 
-                Splash.ShowDialog();
-
-                DialogResult splashResult = Splash.Result;
-
-                Splash.Close();
-
-                if (splashResult == DialogResult.Cancel)
-                {
-                    Trace.WriteLine($"Viking launch cancelled by user");
-                    ExitThread();
-                    return;
-                }
-
-                if (Splash.TrackedTask.IsFaulted)
-                {
-                    Trace.WriteLine($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
-                    MessageBox.Show($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
-                    ExitThread();
-                    return;
-                }
+            if (Splash.TrackedTask.IsFaulted)
+            {
+                Trace.WriteLine($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
+                MessageBox.Show($"Viking launch cancelled after exception:\n {Splash.TrackedTask.Exception}");
+                ExitThread();
+                return;
             }
 
             Trace.WriteLine($"Showing VikingMain window");
@@ -75,16 +73,18 @@ namespace Viking
 
             DateTime startVolume = DateTime.UtcNow;
             //The constructor populates attributes of the volume element.  Then initialize needs to be called to collect more
-            var Volume = new Viking.VolumeModel.Volume(VolumeURL, UI.State.CachePath, progressReporter);
-            
+            var Volume = await Viking.VolumeModel.Volume.CreateAsync(VolumeURL, UI.State.CachePath, progressReporter, token);
+            //new Viking.VolumeModel.Volume(VolumeURL, UI.State.CachePath, progressReporter);
+
             //Start loading textures, this does not need to be done before launching the main app.
             DateTime TextureCacheLoadStart = DateTime.UtcNow;
             var textureCacheTask = Global.TextureCache.PopulateCache(UI.State.GetVolumeCachePath(Volume.Name), token);
-
-            await Volume.Initialize(token, progressReporter);
+             
             DateTime stopVolume = DateTime.UtcNow;
             var elapsedTime = stopVolume - startVolume;
             Trace.WriteLine("Volume Load Time: " + elapsedTime.ToString());
+
+            await Volume.Initialize(token, progressReporter);
 
             UI.State.volume = new Viking.ViewModels.VolumeViewModel(Volume);
 

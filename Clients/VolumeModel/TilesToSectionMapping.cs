@@ -206,24 +206,22 @@ namespace Viking.VolumeModel
         private async Task<DateTime> ServerSideLastModifed(Uri uri, CancellationToken token)
         {
             //HttpWebRequest headerRequest = CreateRequest(uri);
-            using (var headerRequest = CreateRequest())
+            using var headerRequest = CreateRequest();
+            //headerRequest.Method = "HEAD";
+
+            var headerResponse =
+                await headerRequest.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token);
             {
-                //headerRequest.Method = "HEAD";
+                if (false == headerResponse.IsSuccessStatusCode)
+                    return DateTime.MinValue;
 
-                var headerResponse =
-                    await headerRequest.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token);
+                var lastModified = headerResponse.Content.Headers.LastModified;
+                if (lastModified.HasValue)
                 {
-                    if (false == headerResponse.IsSuccessStatusCode)
-                        return DateTime.MinValue;
-
-                    var lastModified = headerResponse.Content.Headers.LastModified;
-                    if (lastModified.HasValue)
-                    {
-                        return lastModified.Value.UtcDateTime;
-                    }
-
-                    return DateTime.MaxValue;
+                    return lastModified.Value.UtcDateTime;
                 }
+
+                return DateTime.MaxValue;
             }
             /*
             using (HttpWebResponse headerResponse = await headerRequest.GetResponseAsync() as HttpWebResponse)
@@ -295,11 +293,9 @@ namespace Viking.VolumeModel
             try
             {
                 var request = CreateRequest();
-                using (var MosaicDataStream = await request.GetStreamAsync(mosaicURI))
-                {
-                    string[] MosaicLines = await MosaicDataStream.ToLinesAsync();
-                    return TransformFactory.LoadMosaic(RootPath, MosaicLines, serverlastModified);
-                }
+                using var MosaicDataStream = await request.GetStreamAsync(mosaicURI);
+                string[] MosaicLines = await MosaicDataStream.ToLinesAsync();
+                return TransformFactory.LoadMosaic(RootPath, MosaicLines, serverlastModified);
                 /*
                 HttpWebRequest request = CreateRequest(mosaicURI);
                 using (WebResponse response = await request.GetResponseAsync())

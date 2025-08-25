@@ -1,5 +1,6 @@
 ﻿using ProtoBuf;
 using System;
+using System.ComponentModel;
 using System.Runtime.Serialization;
 
 
@@ -12,19 +13,30 @@ namespace AnnotationService.Types
     /// </summary>
     [DataContract]
     [ProtoContract]
-    [ProtoInclude(1, typeof(LocationLink))]
-    [ProtoInclude(2, typeof(StructureLink))]
-    [ProtoInclude(3, typeof(PermittedStructureLink))]
+    [ProtoInclude(100, typeof(LocationLink))]
+    [ProtoInclude(101, typeof(StructureLink))]
+    [ProtoInclude(102, typeof(PermittedStructureLink))]
+    [ProtoInclude(103, typeof(DataObjectWithKeyOfLong))]
     public abstract class DataObject
     {
         private DBACTION _DBAction = DBACTION.NONE;
 
         [DataMember]
-        [ProtoMember(10)]
+        [ProtoMember(1)]
         public DBACTION DBAction 
         {
             get => _DBAction;
             set => _DBAction = value;
+        }
+
+        /// <summary>
+        /// Shadow property for Protobuf serialization - sends DBAction as integer
+        /// </summary>
+        [ProtoMember(2)]
+        public int DBActionAsInt
+        {
+            get => (int)_DBAction;
+            set => _DBAction = (DBACTION)value;
         }
     }
 
@@ -33,14 +45,14 @@ namespace AnnotationService.Types
     /// </summary>
     [DataContract]
     [ProtoContract]
-    [ProtoInclude(1, typeof(DataObjectWithParentOfLong))]
-    [ProtoInclude(2, typeof(Location))]
-    [ProtoInclude(3, typeof(LocationPositionOnly))]
+    [ProtoInclude(200, typeof(DataObjectWithParentOfLong))]
+    [ProtoInclude(201, typeof(Location))]
+    [ProtoInclude(202, typeof(LocationPositionOnly))]
     public class DataObjectWithKeyOfLong : DataObject
     {
         private Int64 _ID;
 
-        [ProtoMember(10)]
+        [ProtoMember(3, DataFormat = DataFormat.FixedSize)]
         [DataMember]
         public Int64 ID
         {
@@ -48,20 +60,20 @@ namespace AnnotationService.Types
             set => _ID = value;
         }
     }
-
+    
     /// <summary>
     /// A generic database object that exposes an ID value and Parent of
     /// the same type referring to a row in the same table
     /// </summary>
     [DataContract]
     [ProtoContract]
-    [ProtoInclude(1, typeof(Structure))]
-    [ProtoInclude(2, typeof(StructureType))]
+    [ProtoInclude(300, typeof(Structure))]
+    [ProtoInclude(301, typeof(StructureType))]
     public class DataObjectWithParentOfLong : DataObjectWithKeyOfLong
     {
         private Int64? _ParentID;
 
-        [ProtoMember(10)]
+        [ProtoMember(4)]
         [DataMember]
         public Int64? ParentID
         {

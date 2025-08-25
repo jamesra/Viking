@@ -163,7 +163,8 @@ namespace WebAnnotation.UI
 
             if (keepLoc.ParentID != splitLoc.ParentID)
             {
-                Reason = string.Format("Location IDs must be from the same structure. Structure {0} not equal to {1}", keepLoc.ParentID, splitLoc.ParentID);
+                Reason =
+                    $"Location IDs must be from the same structure. Structure {keepLoc.ParentID} not equal to {splitLoc.ParentID}";
                 return false;
             }
 

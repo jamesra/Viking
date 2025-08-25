@@ -297,5 +297,19 @@ go
 	INNER JOIN (Select $node_id as NodeID, ID, X, Y, Z from graph.Location) LB on LL.B = LB.ID
   GO
 
+  print ' Create Additional Indexes'
+  go
+
+ -- Add indexes for common query patterns
+CREATE NONCLUSTERED INDEX [IX_Graph_Structure_TypeID] ON graph.Structure (TypeID)
+CREATE NONCLUSTERED INDEX [IX_Graph_Structure_ParentID] ON graph.Structure (ParentID)
+CREATE NONCLUSTERED INDEX [IX_Graph_Location_ParentID] ON graph.Location (ParentID)
+CREATE NONCLUSTERED INDEX [IX_Graph_Location_Z] ON graph.Location (Z)
+CREATE NONCLUSTERED INDEX [IX_Graph_Location_TypeCode] ON graph.Location (TypeCode)
+
+-- Composite indexes for common join patterns
+CREATE NONCLUSTERED INDEX [IX_Graph_Location_ParentID_Z] ON graph.Location (ParentID, Z)
+CREATE NONCLUSTERED INDEX [IX_Graph_Structure_TypeID_ParentID] ON graph.Structure (TypeID, ParentID)
+
   print 'Done!'
   go

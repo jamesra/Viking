@@ -265,7 +265,7 @@ namespace WebAnnotation.UI.Commands
             parent.Cursor = Cursors.Cross;
             PenInput = new Viking.UI.PenInputHelper(parent);
             //Ensure any pen subscriptions are released in the OnDeactivate call
-            System.Diagnostics.Trace.WriteLine(string.Format("PlaceCurveWithPenCommand {0} Subscribed to events", ID));
+            System.Diagnostics.Trace.WriteLine($"PlaceCurveWithPenCommand {ID} Subscribed to events");
             PenInput.OnPathChanged += OnPenPathChanged;
             PenInput.OnPathCompleted += OnPenPathComplete;
             PenInput.OnProposedNextSegmentChanged += OnPenProposedNextSegmentChanged;
@@ -324,7 +324,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnDeactivate()
         {
-            System.Diagnostics.Trace.WriteLine(string.Format("PlaceCurveWithPenCommand {0} Unubscribed to events", ID));
+            System.Diagnostics.Trace.WriteLine($"PlaceCurveWithPenCommand {ID} Unubscribed to events");
             PenInput.OnPathChanged -= OnPenPathChanged;
             PenInput.OnPathCompleted -= OnPenPathComplete;
             PenInput.OnProposedNextSegmentChanged -= OnPenProposedNextSegmentChanged;

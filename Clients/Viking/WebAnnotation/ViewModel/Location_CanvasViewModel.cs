@@ -43,14 +43,8 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public GridVector2 SectionPosition
-        {
-            get => modelObj.Position; 
-        }
+        public GridVector2 SectionPosition => modelObj.Position;
 
-        public GridVector2 VolumePosition
-        {
-            get => modelObj.VolumePosition; 
-        }
+        public GridVector2 VolumePosition => modelObj.VolumePosition;
     }
 }

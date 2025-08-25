@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Viking.VolumeModel;
 using WebAnnotationModel;
 using System.Web;
+using Viking.Common;
 
 namespace Viking.AU
 {
@@ -128,12 +129,22 @@ namespace Viking.AU
 
     }
 
-    class ConsoleProgressReporter : Viking.Common.IProgressReporter
+    class ConsoleProgressReporter
     {
         int LastLineLength = 0;
 
-        public void ReportProgress(double ProgressPercentage, string message)
+        public ConsoleProgressReporter(Progress<ProgressInfo> progress = null)
         {
+            if (progress != null)
+            {
+                progress.ProgressChanged += OnReport;
+            }
+        }
+
+        public void OnReport(object sender, ProgressInfo info)
+        {
+            string message = info.Message;
+            string ProgressPercentage = info.Progress.ToString("0.00");
 
             StringBuilder output = new StringBuilder();
             string Details = $"{ProgressPercentage}% {message}";
@@ -149,7 +160,7 @@ namespace Viking.AU
             Console.Write(final_output);
         }
 
-        public void TaskComplete()
+        private void TaskComplete()
         {
             Console.WriteLine("Task Complete");
         }
@@ -204,15 +215,15 @@ namespace Viking.AU
             SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
             ConsoleProgressReporter progressReporter = new AU.ConsoleProgressReporter();
-
-            State.Volume = new Volume(options.VolumeURL, State.CachePath, progressReporter);
+            var progress = new System.Progress<ProgressInfo>();
+            progress.ProgressChanged += progressReporter.OnReport;
 
             var cancellationTokenSource = new CancellationTokenSource();
-            await State.Volume.Initialize(cancellationTokenSource.Token, progressReporter);
-
+            State.Volume = await Volume.CreateAsync(options.VolumeURL, State.CachePath, progress, CancellationToken.None);
+             
             State.MappingsManager = new MappingManager(State.Volume);
 
-            Console.Write("Endpoint: " + State.Volume.Endpoint.EndpointURL.ToString());
+            Console.Write($"Endpoint: {State.Volume.Endpoint.EndpointURL}");
 
             WebAnnotationModel.State.Endpoint = State.Volume.Endpoint.EndpointURL;
             WebAnnotationModel.State.UserCredentials = new System.Net.NetworkCredential(options.Username, options.Password);

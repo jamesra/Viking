@@ -581,7 +581,7 @@ namespace WebAnnotation.UI.Commands
                     {
                         if (active_action != action)
                         {
-                            Trace.WriteLine(string.Format("Hover Action: {0}", action));
+                            Trace.WriteLine($"Hover Action: {action}");
                         }
 
                         active_action = action;

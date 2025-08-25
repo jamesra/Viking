@@ -136,7 +136,7 @@ namespace WebAnnotation.UI.Actions
 
         public override string ToString()
         {
-            return string.Format("{0} {1} {2}", base.ToString(), Type, RetraceType);
+            return $"{base.ToString()} {Type} {RetraceType}";
         }
     }
 
@@ -219,7 +219,7 @@ namespace WebAnnotation.UI.Actions
 
         public override string ToString()
         {
-            return string.Format("{0} {1}", base.ToString(), Type);
+            return $"{base.ToString()} {Type}";
         }
 
     }

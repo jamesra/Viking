@@ -117,7 +117,7 @@ namespace WebAnnotation.ViewModel
             catch (System.ArgumentOutOfRangeException e)
             {
                 //This can occur when the point cannot be mapped
-                System.Diagnostics.Trace.WriteLine(string.Format("Exception adding location link {0}\n{1}", key.ToString(), e.ToString()));
+                System.Diagnostics.Trace.WriteLine($"Exception adding location link {key.ToString()}\n{e.ToString()}");
             }
 
         }

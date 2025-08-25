@@ -122,7 +122,7 @@ namespace WebAnnotation.ViewModel
 
         public override string ToString()
         {
-            return string.Format("Annotations on {0} seen from {1}", AdjacentSection.Number, SectionNumber);
+            return $"Annotations on {AdjacentSection.Number} seen from {SectionNumber}";
         }
 
         protected readonly KeyTracker<long> KnownLocations = new KeyTracker<long>();
@@ -280,7 +280,7 @@ namespace WebAnnotation.ViewModel
             catch (ArgumentOutOfRangeException)
             {
                 //Thrown when the point cannot be mapped.
-                Trace.WriteLine(string.Format("Could not map location {0} on section {1}", loc.ID, loc.Section));
+                Trace.WriteLine($"Could not map location {loc.ID} on section {loc.Section}");
                 return false;
             }
 
@@ -464,7 +464,7 @@ namespace WebAnnotation.ViewModel
 
         public override string ToString()
         {
-            return string.Format("Section {0} annotations", SectionNumber);
+            return $"Section {SectionNumber} annotations";
         }
 
         /// <summary>

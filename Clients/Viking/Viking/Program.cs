@@ -1,4 +1,4 @@
-﻿//#define USEASPMEMBERSHIP
+﻿#define USEASPMEMBERSHIP
 
 using CommandLine;
 using System;

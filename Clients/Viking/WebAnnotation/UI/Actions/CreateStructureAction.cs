@@ -62,7 +62,7 @@ namespace WebAnnotation.UI.Actions
             if (TypeObj == null)
             {
                 //TODO: Prompt the user with a dialog/UI interface to choose the type
-                throw new ArgumentException(string.Format("StructureTypeID {0} not found when assigning type to structure", TypeID));
+                throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");
             }
 
             GridPolygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
@@ -142,7 +142,7 @@ namespace WebAnnotation.UI.Actions
             if (TypeObj == null)
             {
                 //TODO: Prompt the user with a dialog/UI interface to choose the type
-                throw new ArgumentException(string.Format("StructureTypeID {0} not found when assigning type to structure", TypeID));
+                throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");
             }
 
             GridPolyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumeShape);

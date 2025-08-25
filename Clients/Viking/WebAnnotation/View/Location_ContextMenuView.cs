@@ -18,7 +18,7 @@ namespace WebAnnotation.View
             catch (ArgumentException)
             {
                 ContextMenu menu = new ContextMenu();
-                menu.MenuItems.Add(string.Format("Unable to load location {0}", loc.ID));
+                menu.MenuItems.Add($"Unable to load location {loc.ID}");
                 return menu;
             }
 

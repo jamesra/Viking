@@ -51,7 +51,7 @@ namespace AnnotationService.Types
         private string _Xml;
 
         [DataMember]
-        [ProtoMember(1)]
+        [ProtoMember(10)]
         public Int64 TypeID
         {
             get => _Type;
@@ -59,7 +59,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(2)]
+        [ProtoMember(11)]
         public string Notes
         {
             get => _Notes;
@@ -67,7 +67,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(3)]
+        [ProtoMember(12)]
         public bool Verified
         {
             get => _Verified;
@@ -84,7 +84,7 @@ namespace AnnotationService.Types
         */
 
         [DataMember]
-        [ProtoMember(4)]
+        [ProtoMember(13)]
         public string AttributesXml
         {
             get => _Xml;
@@ -92,7 +92,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(5)]
+        [ProtoMember(14)]
         public double Confidence
         {
             get => _Confidence;
@@ -100,7 +100,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(6)]
+        [ProtoMember(15)]
         public StructureLink[] Links
         {
             get => _Links;
@@ -108,7 +108,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(7)]
+        [ProtoMember(16)]
         public Int64[] ChildIDs
         {
             get => _ChildIDs;
@@ -116,7 +116,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(8)]
+        [ProtoMember(17)]
         public string Label
         {
             get => _Label;
@@ -124,7 +124,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(9)]
+        [ProtoMember(18)]
         [Column("Username")]
         public string Username
         {

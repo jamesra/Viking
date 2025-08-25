@@ -194,7 +194,7 @@ namespace WebAnnotation.UI.Commands
             GridLineSegment move_line = PenInput.NewestSegent;
             ICanvasView IntersectedObject = AnnotationOverlay.FirstIntersectedObjectOnSection(Parent.Section.Number, move_line);
             //            ICanvasGeometryView MouseOverAnnotation = ObjectAtPosition(WorldPosition, out distance) as ICanvasGeometryView;
-            System.Diagnostics.Trace.WriteLine(string.Format("{0}", IntersectedObject == null ? "NULL" : IntersectedObject.ToString()));
+            System.Diagnostics.Trace.WriteLine($"{(IntersectedObject == null ? "NULL" : IntersectedObject.ToString())}");
 
             //If the objects changed that means we intersected the boundary of the object.  If we are in pen mode and the intersected object qualifies we should start a retrace and replace command... 
             if (IntersectedObject != null)

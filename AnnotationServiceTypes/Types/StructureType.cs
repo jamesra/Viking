@@ -20,7 +20,7 @@ namespace AnnotationService.Types
         private PermittedStructureLink[] _Links;
 
         [DataMember]
-        [ProtoMember(1)]
+        [ProtoMember(10)]
         public string Name
         {
             get => _Name;
@@ -28,7 +28,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(2)]
+        [ProtoMember(11)]
         public string Notes
         {
             get => _Notes;
@@ -36,7 +36,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(3)]
+        [ProtoMember(12)]
         public string MarkupType
         {
             get => _MarkupType;
@@ -44,7 +44,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(4)]
+        [ProtoMember(13)]
         public string[] Tags
         {
             get => _Tags;
@@ -52,7 +52,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(5)]
+        [ProtoMember(14)]
         public string[] StructureTags
         {
             get => _StructureTags;
@@ -60,7 +60,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(6)]
+        [ProtoMember(15)]
         public bool Abstract
         {
             get => _Abstract;
@@ -68,7 +68,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(7)]
+        [ProtoMember(16)]
         public int Color
         {
             get => _Color;
@@ -76,7 +76,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(8)]
+        [ProtoMember(17)]
         public string Code
         {
             get => _Code;
@@ -84,7 +84,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(9)]
+        [ProtoMember(18)]
         public char HotKey
         {
             get => _HotKey;
@@ -92,7 +92,7 @@ namespace AnnotationService.Types
         }
 
         [DataMember]
-        [ProtoMember(10)]
+        [ProtoMember(19)]
         public PermittedStructureLink[] PermittedLinks
         {
             get => _Links;

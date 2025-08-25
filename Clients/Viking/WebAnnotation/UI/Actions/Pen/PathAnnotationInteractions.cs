@@ -52,7 +52,7 @@ namespace WebAnnotation.UI
 
         public override string ToString()
         {
-            return string.Format("{0} {1} @ {2}", Interaction, Annotation == null ? "null" : Annotation.ToString(), Index);
+            return $"{Interaction} {(Annotation == null ? "null" : Annotation.ToString())} @ {Index}";
         }
 
         public static LocationInteractionLogEvent[] CreateFromLog(IReadOnlyList<InteractionLogEvent> log_entries)
@@ -125,7 +125,7 @@ namespace WebAnnotation.UI
 
         public override string ToString()
         {
-            return string.Format("{0} {1} @ {2}", Interaction, Annotation == null ? "null" : Annotation.ToString(), Index);
+            return $"{Interaction} {(Annotation == null ? "null" : Annotation.ToString())} @ {Index}";
         }
     }
 
@@ -208,7 +208,7 @@ namespace WebAnnotation.UI
 
         public void Add(InteractionLogEvent entry)
         {
-            Trace.WriteLine(string.Format("Add {0}", entry));
+            Trace.WriteLine($"Add {entry}");
             _Entries.Add(entry);
 
             FireOnLogChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, entry));

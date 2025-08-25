@@ -17,7 +17,7 @@ namespace AnnotationService.Types
         AnnotationPoint _Position;
         private double _Radius;
 
-        [ProtoMember(1)]
+        [ProtoMember(10)]
         [DataMember]
         public AnnotationPoint Position
         {
@@ -25,7 +25,7 @@ namespace AnnotationService.Types
             set => _Position = value;
         }
 
-        [ProtoMember(2)]
+        [ProtoMember(11)]
         [DataMember]
         [Column("Radius")]
         public double Radius
@@ -64,7 +64,7 @@ namespace AnnotationService.Types
         private byte[] _MosaicShapeWKB;
         private byte[] _VolumeShapeWKB;
 
-        [ProtoMember(1)]
+        [ProtoMember(10)]
         [DataMember]
         public Int64 ParentID
         {
@@ -72,7 +72,7 @@ namespace AnnotationService.Types
             set => _ParentID = value;
         }
 
-        [ProtoMember(2)]
+        [ProtoMember(11)]
         [DataMember]
         public Int64 Section
         {
@@ -84,7 +84,7 @@ namespace AnnotationService.Types
             }
         }
 
-        [ProtoMember(3)]
+        [ProtoMember(12)]
         [DataMember]
         public AnnotationPoint Position
         {
@@ -92,7 +92,7 @@ namespace AnnotationService.Types
             set => _Position = value;
         }
 
-        [ProtoMember(4)]
+        [ProtoMember(13)]
         [DataMember]
         public AnnotationPoint VolumePosition
         {
@@ -133,7 +133,7 @@ namespace AnnotationService.Types
         }
 #endif
 
-        [ProtoMember(7)]
+        [ProtoMember(14)]
         [DataMember]
         public byte[] MosaicShapeWKB
         {
@@ -147,7 +147,7 @@ namespace AnnotationService.Types
             }
         }
 
-        [ProtoMember(8)]
+        [ProtoMember(15)]
         [DataMember]
         public byte[] VolumeShapeWKB
         {
@@ -161,7 +161,7 @@ namespace AnnotationService.Types
             }
         }
 
-        [ProtoMember(9)]
+        [ProtoMember(16)]
         [DataMember]
         [Column("Closed")]
         public bool Closed
@@ -170,7 +170,7 @@ namespace AnnotationService.Types
             set => _Closed = value;
         }
 
-        [ProtoMember(10)]
+        [ProtoMember(17)]
         [DataMember]
         public string AttributesXml
         {
@@ -178,7 +178,7 @@ namespace AnnotationService.Types
             set => _Xml = value;
         }
 
-        [ProtoMember(11)]
+        [ProtoMember(18)]
         [DataMember]
         [Column("Links")]
         public Int64[] Links
@@ -195,7 +195,7 @@ namespace AnnotationService.Types
             set => _Links = value is null ? null : new SortedSet<Int64>(value);
         }
 
-        [ProtoMember(12)]
+        [ProtoMember(19)]
         [DataMember]
         [Column("Extensible")]
         public bool Terminal
@@ -204,7 +204,7 @@ namespace AnnotationService.Types
             set => _Terminal = value;
         }
 
-        [ProtoMember(13)]
+        [ProtoMember(20)]
         [DataMember]
         [Column("OffEdge")]
         public bool OffEdge
@@ -213,7 +213,7 @@ namespace AnnotationService.Types
             set => _OffEdge = value;
         }
 
-        [ProtoMember(14)]
+        [ProtoMember(21)]
         [DataMember]
         [Column("Radius")]
         public double Radius
@@ -222,7 +222,7 @@ namespace AnnotationService.Types
             set => _Radius = value;
         }
 
-        [ProtoMember(15)]
+        [ProtoMember(22)]
         [DataMember]
         [Column("Width")]
         public double? Width
@@ -231,7 +231,7 @@ namespace AnnotationService.Types
             set => _Width = value;
         }
 
-        [ProtoMember(16)]
+        [ProtoMember(23)]
         [DataMember]
         [Column("TypeCode")]
         public short TypeCode
@@ -240,7 +240,7 @@ namespace AnnotationService.Types
             set => _TypeCode = value;
         }
 
-        [ProtoMember(17)]
+        [ProtoMember(24)]
         [DataMember]
         [Column("LastModified")]
         public Int64 LastModified
@@ -249,7 +249,7 @@ namespace AnnotationService.Types
             set => _LastModified = value;
         }
 
-        [ProtoMember(18)]
+        [ProtoMember(25)]
         [DataMember]
         [Column("Username")]
         public string Username
@@ -351,7 +351,7 @@ namespace AnnotationService.Types
     {
         private Int64 _ChangedColumnMask = 0;
 
-        [ProtoMember(1)]
+        [ProtoMember(30)]
         [DataMember]
         [Column("ChangedColumnMask")]
         public Int64 ChangedColumnMask

@@ -138,7 +138,7 @@ namespace WebAnnotation.UI.Commands
         {
             foreach (InteractionLogEvent e in views)
             {
-                Trace.WriteLine(string.Format("{0} {1}", e.Interaction, e.Annotation == null ? "Empty region" : e.Annotation.ToString()));
+                Trace.WriteLine($"{e.Interaction} {(e.Annotation == null ? "Empty region" : e.Annotation.ToString())}");
             }
 
             // PossibleActions.Clear();
@@ -166,7 +166,8 @@ namespace WebAnnotation.UI.Commands
 
             foreach (InteractionLogEvent e in views)
             {
-                Trace.WriteLine(string.Format("Remove {0} {1}", e.Interaction, e.Annotation == null ? "Empty region" : e.Annotation.ToString()));
+                Trace.WriteLine(
+                    $"Remove {e.Interaction} {(e.Annotation == null ? "Empty region" : e.Annotation.ToString())}");
             }
 
             ActionsForCanvasItem.Clear();

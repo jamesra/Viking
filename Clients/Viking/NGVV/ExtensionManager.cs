@@ -200,7 +200,6 @@ namespace Viking.Common
 
             FindAssemblyExtensions(Assembly.GetExecutingAssembly());
 
-            
             if (Directory.Exists(AssemblyDir) == false)
             {
                 Trace.WriteLine("Unable to find extension directory", "ExtMan");
@@ -298,7 +297,7 @@ namespace Viking.Common
             {
                 Assembly A = ExtensionToAssemblyTable[Extension];
 
-                progressReporter.ReportProgress((int)((double)extensionCount / (double)ExtensionToAssemblyTable.Count), "Loading " + Extension.Name);
+                progressReporter.Report($"Loading {Extension.Name}", (int)((double)extensionCount / (double)ExtensionToAssemblyTable.Count), 100);
 
                 //Before we agree to load an assembly we need to determine if it can initialize correctly
                 bool canInit = CanAssemblyInitialize(A);
@@ -317,7 +316,7 @@ namespace Viking.Common
                 catch(System.Reflection.ReflectionTypeLoadException e)
                 {
                     Trace.WriteLine($"Unable to load {A}.");
-                    progressReporter.ReportProgress(100, $"Unable to load {A}.");
+                    progressReporter.Report($"Unable to load {A}.",100, 100);
                     foreach (var loaderException in e.LoaderExceptions)
                     {
                         Trace.WriteLine($"{loaderException}");
@@ -330,7 +329,7 @@ namespace Viking.Common
                 }
             }
 
-            progressReporter.ReportProgress(100, "Extensions loading complete");
+            progressReporter.Report("Extensions loading complete", 100, 100);
         }
 
         private static bool CanAssemblyInitialize(Assembly A)

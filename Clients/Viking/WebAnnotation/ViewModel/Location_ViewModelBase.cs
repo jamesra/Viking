@@ -7,12 +7,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.Common.UI;
 using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Location_ViewModelBase : Viking.Objects.UIObjBase, IEqualityComparer<Location_ViewModelBase>, IEqualityComparer<LocationObj>, IComparable<Location_ViewModelBase>, System.Windows.IWeakEventListener
+    public class Location_ViewModelBase : Viking.Objects.UIObjBase, IEqualityComparer<Location_ViewModelBase>, IEqualityComparer<LocationObj>, IComparable<Location_ViewModelBase>, System.Windows.IWeakEventListener, IContextMenu
     {
         public readonly LocationObj modelObj;
 
@@ -21,7 +22,7 @@ namespace WebAnnotation.ViewModel
             modelObj = Store.Locations.GetObjectByID(LocationID);
             if (modelObj == null)
             {
-                throw new ArgumentException(string.Format("Could not load location {0} from store", LocationID));
+                throw new ArgumentException($"Could not load location {LocationID} from store");
             }
         }
 
@@ -281,7 +282,7 @@ namespace WebAnnotation.ViewModel
 
         protected ContextMenu _AddCopyLocationIDMenu(ContextMenu menu)
         {
-            MenuItem menuCopyLocationID = new MenuItem(string.Format("Copy Location ID: {0}", ID), ContextMenu_CopyLocationID);
+            MenuItem menuCopyLocationID = new MenuItem($"Copy Location ID: {ID}", ContextMenu_CopyLocationID);
             menu.MenuItems.Add(menuCopyLocationID);
 
             return menu;

@@ -10,10 +10,8 @@ namespace AnnotationService.Types
         /// </summary>
         public static void PrepareSerializers()
         {
-            Serializer.PrepareSerializer<Enum>();
-
+            Serializer.PrepareSerializer<DBACTION>(); 
             Serializer.PrepareSerializer<DataObject>();
-            Serializer.PrepareSerializer<AnnotationSet>();
 
             //Geometry.cs
             Serializer.PrepareSerializer<AnnotationPoint>();
@@ -28,6 +26,8 @@ namespace AnnotationService.Types
             Serializer.PrepareSerializer<Structure>();
             Serializer.PrepareSerializer<StructureType>();
             Serializer.PrepareSerializer<StructureLink>();
+
+            Serializer.PrepareSerializer<AnnotationSet>();
         }
     }
 }

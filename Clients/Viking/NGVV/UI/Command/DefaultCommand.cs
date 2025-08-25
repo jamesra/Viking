@@ -114,7 +114,7 @@ namespace Viking.UI.Commands
             {
                 GridVector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
                 double distance = double.MaxValue;
-                IContextMenu context_obj = null;
+                object context_obj = null;
 
                 if (Parent.ShowOverlays)
                 {
@@ -125,7 +125,7 @@ namespace Viking.UI.Commands
                         {
                             if (newDistance < distance)
                             {
-                                context_obj = nearObj as IContextMenu;
+                                context_obj = nearObj;
                                 distance = newDistance;
                             }
                         }
@@ -136,7 +136,10 @@ namespace Viking.UI.Commands
                 //Right mouse button calls up context menu
                 ContextMenu menu = null;
                 if (context_obj != null)
-                    menu = context_obj.ContextMenu;
+                    if(context_obj is IContextMenu menu_obj)
+                        menu = menu_obj.ContextMenu;
+                    else
+                        menu = new ContextMenu();
                 else
                     menu = new ContextMenu();
 

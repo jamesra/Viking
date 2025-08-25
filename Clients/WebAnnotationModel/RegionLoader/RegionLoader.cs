@@ -216,7 +216,7 @@ namespace WebAnnotationModel
             RegionPyramid<OBJECT> RegionPyramid = GetOrAddRegionPyramidForSection(SectionNumber);
             //If we change the magnification factor we should stop loading regions
 
-            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = RegionPyramid.GetLevel(ScreenPixelSizeInVolume);
+            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = RegionPyramid.GetLevel(ScreenPixelSizeInVolume * 8); //I want annotations to have a radius of at least 4 pixels before I go to the trouble of downloading them.
             GridRange<RegionRequestData<OBJECT>> gridRange = level.SubGridForRegion(VolumeBounds);
 
             DateTime currentTime = DateTime.UtcNow;

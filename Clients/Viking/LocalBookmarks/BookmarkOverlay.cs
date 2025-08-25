@@ -163,7 +163,10 @@ namespace LocalBookmarks
 
         public ContextMenu BuildMenuFor(object Obj, ContextMenu Menu)
         {
-            Menu ??= new ContextMenu();
+            if (Obj is null)
+                return Menu;
+
+            Menu ??= new ContextMenu(); 
 
             if (Obj.GetType() == typeof(FolderUIObj))
             { 

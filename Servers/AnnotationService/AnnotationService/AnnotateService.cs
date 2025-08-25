@@ -52,16 +52,14 @@ namespace Annotation
                     return;
 
                 try
-                {
-                 //   ConnectomeDataModel.Configuration.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
-                                            SqlServerTypesLoader.Loader.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
+                { 
+                    SqlServerTypesLoader.Loader.LoadNativeAssemblies(System.Web.HttpContext.Current.Server.MapPath("~"));
                     _isSqlTypesLoaded = true;
                     return;
                 }
                 catch (NullReferenceException)
                 {
-                                            SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
-                    //ConnectomeDataModel.Configuration.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+                    SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
                     _isSqlTypesLoaded = true;
                     return;
                 }
@@ -72,6 +70,16 @@ namespace Annotation
         {
             TryLoadSqlServerTypes();
             Settings.PrepareSerializers();
+        }
+
+        /// <summary>
+        /// Configure database context with appropriate timeout settings
+        /// </summary>
+        /// <param name="db">The database context to configure</param>
+        /// <param name="timeoutSeconds">Timeout in seconds (default: 300)</param>
+        private static void ConfigureDatabaseTimeout(ConnectomeEntities db, int timeoutSeconds = 300)
+        {
+            db.Database.CommandTimeout = timeoutSeconds;
         }
 
         public AnnotateService()
@@ -1682,7 +1690,7 @@ namespace Annotation
             {
                 DateTime start = DateTime.UtcNow;
 
-                db.Database.CommandTimeout = 30;
+                db.Database.CommandTimeout = 90; // Increased from 30 to 300 seconds (5 minutes)
 
                 try
                 {
@@ -2169,10 +2177,11 @@ namespace Annotation
 
         public long[] Update(AnnotationService.Types.Location[] locations)
         {
+            if (locations == null)
+                throw new ArgumentNullException(nameof(locations));
+            
             DemandWritePermissions();
             Dictionary<ConnectomeDataModel.Location, int> mapNewTypeToIndex = new Dictionary<ConnectomeDataModel.Location, int>(locations.Length);
-
-            //Stores the ID of each object manipulated for the return value
             long[] listID = new long[locations.Length];
 
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -2257,21 +2266,30 @@ namespace Annotation
                                 try
                                 {
                                     deleteRow = db.Locations.Find(t.ID);
-                                    db.LocationLinks.RemoveRange(deleteRow.LocationLinksA);
-                                    db.LocationLinks.RemoveRange(deleteRow.LocationLinksB);
-                                    t.Sync(deleteRow);
-                                    deleteRow.ID = t.ID;
-                                    listID[iObj] = deleteRow.ID;
-                                    db.Locations.Remove(deleteRow);
+                                    if (deleteRow != null)
+                                    {
+                                        db.Entry(deleteRow).Collection(l => l.LocationLinksA).Load();
+                                        db.Entry(deleteRow).Collection(l => l.LocationLinksB).Load();
+                                        db.LocationLinks.RemoveRange(deleteRow.LocationLinksA);
+                                        db.LocationLinks.RemoveRange(deleteRow.LocationLinksB);
+                                        t.Sync(deleteRow);
+                                        deleteRow.ID = t.ID;
+                                        listID[iObj] = deleteRow.ID;
+                                        db.Locations.Remove(deleteRow);
+                                    }
+                                    else
+                                    {
+                                        throw new KeyNotFoundException($"Could not find location to delete: {t.ID}");
+                                    }
                                 }
                                 catch (System.ArgumentNullException)
                                 {
-                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    Debug.WriteLine("Could not find location to update: " + t.ID.ToString());
                                     break;
                                 }
                                 catch (System.InvalidOperationException)
                                 {
-                                    Debug.WriteLine("Could not find structuretype to update: " + t.ID.ToString());
+                                    Debug.WriteLine("Could not find location to update: " + t.ID.ToString());
                                     break;
                                 } 
                                 
@@ -2286,12 +2304,18 @@ namespace Annotation
                 {
                     foreach (var error in e.EntityValidationErrors)
                     {
-                        Console.WriteLine(error.ToString());
+                        Debug.WriteLine($"Validation error: {error}");
                     }
+                    throw; // Re-throw to indicate failure
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Update failed: {ex.Message}");
+                    throw;
                 }
             }
 
-            //Recover the ID's for new objects
+            // Recover IDs for new objects
             foreach (ConnectomeDataModel.Location newObj in mapNewTypeToIndex.Keys)
             {
                 int iIndex = mapNewTypeToIndex[newObj];

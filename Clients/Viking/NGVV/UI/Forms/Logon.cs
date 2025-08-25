@@ -38,8 +38,14 @@ namespace Viking.UI.Forms
 
         private string _VolumeURL;
 
+        /// <summary>
+        /// The task loading the XML Metadata from the volume URL, if it exists
+        /// </summary>
         private Task _LoadVolumeTask = null;
 
+        /// <summary>
+        /// Cancellation token source used for loading the XML Metadata from the volume URL.
+        /// </summary>
         CancellationTokenSource source = null;
 
         public string VolumeURL
@@ -71,7 +77,7 @@ namespace Viking.UI.Forms
 
                 if (_VolumeURL != null)
                 {
-                    _LoadVolumeTask = TryUpdateVolumeMetaData(source.Token);
+                    _LoadVolumeTask = TryUpdateVolumeMetaData(_VolumeURL, source.Token);
                 }
                 else
                 {
@@ -204,11 +210,7 @@ namespace Viking.UI.Forms
                 comboVolumeURL.Text = "http://connectomes.utah.edu/Rabbit/Volume.VikingXML";
             }
 
-            if (VolumeURL is null)
-            {
-                VolumeURL = comboVolumeURL.Text;
-            }
-
+            VolumeURL ??= comboVolumeURL.Text; 
         }
 
 
@@ -217,12 +219,12 @@ namespace Viking.UI.Forms
             System.Diagnostics.Process.Start("https://connectomes.utah.edu/Viz/Account/Register");
         }
 
-        async Task TryUpdateVolumeMetaData(CancellationToken token)
+        async Task TryUpdateVolumeMetaData(string _VolumeURL, CancellationToken token)
         {
             XDocument document = null;
             try
             {
-                document = VolumeModel.Volume.LoadXDocument(_VolumeURL);
+                document = await VolumeModel.Volume.LoadXDocumentAsync(_VolumeURL, token);
 
                 if(token.IsCancellationRequested)
                     return; 
@@ -246,7 +248,7 @@ namespace Viking.UI.Forms
                     if (result == DialogResult.Yes)
                         Settings.Default.VolumeURLs.Remove(_VolumeURL);
                 }
-            }
+            } 
 
             if (this.IsHandleCreated)
             {

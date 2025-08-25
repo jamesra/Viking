@@ -17,7 +17,7 @@ namespace WebAnnotation.View
     public delegate ContextMenu ContextMenuGeneratorDelegate(IViewLocation locationID);
 
     public abstract class LocationCanvasView : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
-                                               IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings
+                                               IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings, IContextMenu
     {
         protected readonly LocationObj modelObj;
 

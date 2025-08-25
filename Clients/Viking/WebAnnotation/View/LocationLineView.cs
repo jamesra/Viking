@@ -101,7 +101,7 @@ namespace WebAnnotation.View
             }
             else
             {
-                throw new ArgumentException(string.Format("Could not map location {0} to volume", obj.ID));
+                throw new ArgumentException($"Could not map location {obj.ID} to volume");
             }
         }
 

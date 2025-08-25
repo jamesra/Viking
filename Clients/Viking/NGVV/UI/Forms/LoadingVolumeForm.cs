@@ -8,19 +8,23 @@ using System.Text;
 using System.Windows.Forms;
 using Viking.Common;
 using System.Diagnostics;
-using Viking.ViewModels; 
-
+using System.Threading.Tasks;
+using System.Threading;
+using Viking.ViewModels;
+using Viking.VolumeModel;
+using VolumeModel;
 
 namespace Viking.UI.Forms
 {
     public partial class LoadingVolumeForm : Form
     {
-        int Progress = 0;
-        int MaxProgress = 100;
-        DateTime startTime;
-        DateTime endLoadTime; 
-
-        readonly string VolumePath; 
+        private int Progress = 0;
+        private int MaxProgress = 100;
+        private DateTime startTime;
+        private DateTime endLoadTime;
+        private readonly string VolumePath;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private Task _loadingTask;
 
         /// <summary>
         /// Using the built-in Dialog result always seems to return DialogResult.Cancel
@@ -29,7 +33,8 @@ namespace Viking.UI.Forms
 
         public LoadingVolumeForm(string path)
         {
-            VolumePath = path; 
+            VolumePath = path;
+            _cancellationTokenSource = new CancellationTokenSource();
             InitializeComponent();
         }
 
@@ -37,10 +42,10 @@ namespace Viking.UI.Forms
         {
             startTime = DateTime.Now;
 
-            backgroundWorker.RunWorkerAsync(null);
+            // Start the async loading task
+            _loadingTask = LoadVolumeAsync(VolumePath, _cancellationTokenSource.Token);
 
             // Add-on Module list initialization
-
             foreach (string AddonName in Viking.Common.ExtensionManager.ExtensionNames)
             {
                 if (AddonName.Length > 0)
@@ -48,57 +53,101 @@ namespace Viking.UI.Forms
             }
         }
 
-        private void OnStoreProgressEvent(object sender, LoadProgressEventArgs e)
+        private async Task LoadVolumeAsync(string volumeUrl, CancellationToken token)
         {
-            this.LabelInfo.Text = e.Info as String;
-            this.Progress = e.Progress;
-            this.MaxProgress = e.MaxProgress;
-
-            PanelProgress.Invalidate();
-
-            if (Progress > MaxProgress)
+            try
             {
-                this.Result = DialogResult.OK;
-                this.Close();
+                // Create progress reporter for UI updates
+                var progress = new Progress<ProgressInfo>(UpdateProgress);
+
+                var progressReporter = new ProgressReporter(progress);
+                 
+                // Run volume loading on background thread
+                var volume = await Volume.CreateAsync(volumeUrl, UI.State.CachePath, progressReporter, token);
+                 
+                // Create view model on UI thread
+                await Task.Factory.StartNew(() =>
+                {
+                    State.volume = new VolumeViewModel(volume);
+                }, token, TaskCreationOptions.None, 
+                    TaskScheduler.FromCurrentSynchronizationContext());
+
+                progressReporter.Report(new ProgressInfo("Loading extensions...", 85, 100));
+                    
+                // Load extensions
+                ExtensionManager.LoadExtensions(progressReporter);
+
+                progressReporter.Report(new ProgressInfo("Complete!", 100, 100));
+                      
+                // Success - close form
+                await Task.Factory.StartNew(() =>
+                {
+                    this.Result = DialogResult.OK;
+                    this.Close();
+                }, token, TaskCreationOptions.None, 
+                   TaskScheduler.FromCurrentSynchronizationContext());
             }
+            catch (OperationCanceledException)
+            {
+                // User cancelled
+                await Task.Factory.StartNew(() =>
+                {
+                    this.Result = DialogResult.Cancel;
+                    this.Close();
+                }, CancellationToken.None, TaskCreationOptions.None, 
+                   TaskScheduler.FromCurrentSynchronizationContext());
+            }
+            catch (Exception ex)
+            {
+                // Handle errors
+                await Task.Factory.StartNew(() =>
+                {
+                    MessageBox.Show($"Error loading volume: {ex.Message}", 
+                        "Loading Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    this.Result = DialogResult.Cancel;
+                    this.Close();
+                }, CancellationToken.None, TaskCreationOptions.None, 
+                   TaskScheduler.FromCurrentSynchronizationContext());
+            }
+        }
+
+        private void UpdateProgress(ProgressInfo info)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<ProgressInfo>(UpdateProgress), info);
+                return;
+            }
+
+            this.LabelInfo.Text = info.Message;
+            this.Progress = (int)info.Progress;
+            this.MaxProgress = (int)info.MaxProgress;
+            PanelProgress.Invalidate();
         }
 
         private void PanelProgress_Paint(object sender, PaintEventArgs e)
         {
-            SolidBrush FillBrush = new SolidBrush(Color.Blue);
-            RectangleF Rect = new Rectangle(new Point(0, 0), PanelProgress.Size);
-            Rect.Width = Rect.Width * (float)(Progress / (float)MaxProgress);
-            e.Graphics.Clear(Color.LightGray);
-            e.Graphics.FillRectangle(FillBrush, Rect);
+            using (SolidBrush FillBrush = new SolidBrush(Color.Blue))
+            {
+                RectangleF Rect = new Rectangle(new Point(0, 0), PanelProgress.Size);
+                Rect.Width = Rect.Width * (float)(Progress / (float)MaxProgress);
+                e.Graphics.Clear(Color.LightGray);
+                e.Graphics.FillRectangle(FillBrush, Rect);
+            }
         }
 
-        private void backgroundWorker_DoWork(object sender, DoWorkEventArgs e)
-        {   
-            // Create Volume first, then VolumeViewModel
-            var volume = new VolumeModel.Volume(this.VolumePath, UI.State.CachePath, null);
-            State.volume = new VolumeViewModel(volume);
-        }   
-
-        private void backgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            this.LabelInfo.Text = e.UserState as String;
-            this.Progress = e.ProgressPercentage;
-            this.MaxProgress = 100;
-
-            PanelProgress.Invalidate();
+            // Cancel the loading operation if form is closing
+            _cancellationTokenSource?.Cancel();
+            base.OnFormClosing(e);
         }
 
-        private void backgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.Result = DialogResult.OK;
-            this.Close();
-
-            endLoadTime = DateTime.Now;
-
-            TimeSpan elapsedTime = endLoadTime.Subtract(startTime);
-            Trace.WriteLine("Total Load Time: " + elapsedTime.ToString()); 
+            _cancellationTokenSource?.Cancel();
         }
 
-        
+
     }
 }

@@ -146,10 +146,8 @@ namespace Viking.VolumeModel
 
             try
             {
-                using (FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Open, FileAccess.Read))
-                {
-                    transforms = JsonTransformSerializer.DeserializeArray(fstream);
-                }
+                using FileStream fstream = new FileStream(CachedTransformsFileName, FileMode.Open, FileAccess.Read);
+                transforms = JsonTransformSerializer.DeserializeArray(fstream);
             }
             catch (Exception e)
             {

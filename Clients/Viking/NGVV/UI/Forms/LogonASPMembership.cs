@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Forms;
@@ -33,49 +34,48 @@ namespace Viking.UI.Forms
 
         protected string AuthenticationURL => AuthenticationServiceURL + "/Account/Authenticate";
 
-
         private string _VolumeURL;
+
+        /// <summary>
+        /// The task loading the XML Metadata from the volume URL, if it exists
+        /// </summary>
+        private Task _LoadVolumeTask = null;
+
+        /// <summary>
+        /// Cancellation token source used for loading the XML Metadata from the volume URL.
+        /// </summary>
+        CancellationTokenSource source = null;
 
         public string VolumeURL
         {
             get => _VolumeURL;
             set
             {
+                if (_VolumeURL == Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(value))
+                    return;
+
                 _VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(value);
+
+                if (_LoadVolumeTask != null)
+                {
+                    if (_LoadVolumeTask.Status != TaskStatus.RanToCompletion)
+                    {
+                        source.Cancel();
+                    }
+
+                    _LoadVolumeTask = null;
+
+                    if (source != null)
+                    {
+                        source = null;
+                    }
+                }
+
+                source = new CancellationTokenSource();
 
                 if (_VolumeURL != null)
                 {
-                    Task.Run(() =>
-                    {
-                        XDocument document = null;
-                        try
-                        {
-                            document = VolumeModel.Volume.LoadXDocument(_VolumeURL);
-                            if (this.IsHandleCreated)
-                            {
-                                this.BeginInvoke(new System.Action(() => comboVolumeURL.Text = _VolumeURL));
-                            }
-                        }
-                        catch (WebException except)
-                        {
-                            document = null;
-                            SetUpdateText("No volume found at URL");
-
-                            
-                        }
-
-                        if (this.IsHandleCreated)
-                        {
-                            try
-                            {
-                                this.Invoke(new System.Action(() => VolumeDocument = document));
-                            }
-                            catch (System.ObjectDisposedException)
-                            {
-                                System.Diagnostics.Trace.WriteLine("Invoking action on disposed object in LogonASPMembership");
-                            }
-                        }
-                    });
+                    _LoadVolumeTask = TryUpdateVolumeMetaData(_VolumeURL, source.Token);
                 }
                 else
                 {
@@ -187,6 +187,44 @@ namespace Viking.UI.Forms
                 this.AcceptButton = btnLogin;
             }
         }
+
+        async Task TryUpdateVolumeMetaData(string _VolumeURL, CancellationToken token)
+        {
+            XDocument document = null;
+            try
+            {
+                document = await VolumeModel.Volume.LoadXDocumentAsync(_VolumeURL, token);
+
+                if (token.IsCancellationRequested)
+                    return;
+
+                if (this.IsHandleCreated)
+                {
+                    this.BeginInvoke(new System.Action(() => comboVolumeURL.Text = _VolumeURL));
+                }
+            }
+            catch (WebException except)
+            {
+                if (token.IsCancellationRequested)
+                    return;
+
+                document = null;
+                SetUpdateText("No volume found at URL");
+
+                if (Settings.Default.VolumeURLs.Contains(_VolumeURL))
+                {
+                    DialogResult result = MessageBox.Show(this, "Error loading volume URL, remove from history?\n\n Details:\n " + except.Message, "Invalid Volume URL", MessageBoxButtons.YesNo);
+                    if (result == DialogResult.Yes)
+                        Settings.Default.VolumeURLs.Remove(_VolumeURL);
+                }
+            }
+
+            if (this.IsHandleCreated)
+            {
+                this.Invoke(new System.Action(() => VolumeDocument = document));
+            }
+        }
+
 
         private void SetUpdateText(string text)
         {

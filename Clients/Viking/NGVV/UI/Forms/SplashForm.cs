@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.Common;
 
 namespace Viking.UI.Forms
 {
@@ -35,18 +36,24 @@ namespace Viking.UI.Forms
                 }
             } }
 
-        public readonly BackgroundThreadProgressReporter ProgressReporter;
-
         /// <summary>
         /// Using the built-in Dialog result always seems to return DialogResult.Cancel
         /// </summary>
         public DialogResult Result = DialogResult.Cancel;
 
+        public IProgressReporter progressReporter {get; private set; }
+
         public SplashForm()
         {
             InitializeComponent();
              
-            ProgressReporter = new BackgroundThreadProgressReporter(this.LoadVolumeWorker);
+            progressReporter = new ProgressReporter(info =>
+            {
+                this.LabelInfo.Text = info.Message as String;
+                this.Progress = (int)Math.Round(info.Progress);
+                this.MaxProgress = (int)Math.Round(info.MaxProgress);
+                PanelProgress.Invalidate();
+            }); 
         }
 
         private void SplashForm_Load(object sender, EventArgs e)

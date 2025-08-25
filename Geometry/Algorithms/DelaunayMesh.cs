@@ -205,9 +205,9 @@ namespace Geometry
                         mesh.AddFace(newFace);
                 }
 
-                if (ReportProgress != null)
+                if (Report != null)
                 {
-                    ReportProgress(mesh);
+                    Report(mesh);
                 }
 
                 return mesh;
@@ -1408,7 +1408,7 @@ namespace Geometry
                     foreach (IEdgeKey e in EdgesToCheck)
                     {
                         if (mesh.Contains(e))
-                            CheckEdgeFlip(mesh, mesh[e] as Edge, ReportProgress);
+                            CheckEdgeFlip(mesh, mesh[e] as Edge, Report);
                     }
                     */
 

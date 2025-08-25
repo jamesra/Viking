@@ -1,9 +1,21 @@
 ﻿namespace Viking.Common
 {
-    public interface IProgressReporter
-    {
-        void ReportProgress(double PercentProgress, string message);
+    public struct ProgressInfo
+    { 
+        public string Message { get; }
+        public double Progress { get; }
+        public double MaxProgress { get; }
 
-        void TaskComplete();
+        public ProgressInfo(string message, double progress, double maxProgress = 100)
+        {
+            Message = message;
+            Progress = progress;
+            MaxProgress = maxProgress;
+        }
+    }
+
+    public interface IProgressReporter : System.IProgress<ProgressInfo>
+    {
+        void Report(string message, double progress, double maxProgress);
     }
 }
