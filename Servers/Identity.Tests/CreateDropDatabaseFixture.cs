@@ -22,7 +22,7 @@ namespace TestIdentityModel
     {
         private bool disposedValue;
         public readonly ApplicationDbContext DataContext;
-        private readonly IConfiguration Config;
+        //private readonly IConfiguration Config;
         public readonly string DatabaseName;
         private static readonly Random rd = new Random();
 

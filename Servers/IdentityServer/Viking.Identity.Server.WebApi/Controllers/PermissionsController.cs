@@ -31,7 +31,23 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
 
         public PermissionsController(ApplicationDbContext context)
         {
-            _context = context; 
+            _context = context;
+            ValidateConnectionString();
+        }
+
+        private void ValidateConnectionString()
+        {
+            try
+            {
+                // Attempt to parse the connection string to ensure it is valid
+                var connectionString = _context.Database.GetDbConnection().ConnectionString;
+                var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+            }
+            catch (ArgumentException ex)
+            {
+                // Log the error and rethrow with additional context
+                throw new InvalidOperationException("The database connection string is invalid. Please check your configuration.", ex);
+            }
         }
 
         [HttpGet("CurrentUser")]

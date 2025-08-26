@@ -26,7 +26,7 @@ namespace DevTestAPI
         {
             services.AddMvcCore()
             .AddAuthorization()
-            .AddJsonFormatters();
+            .AddNewtonsoftJson();
             /*
             services.AddAuthentication("Bearer")
                 .AddIdentityServerAuthentication(options =>
@@ -58,9 +58,9 @@ namespace DevTestAPI
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
+            if (env.EnvironmentName == "Development")
             {
                 app.UseDeveloperExceptionPage();
             }

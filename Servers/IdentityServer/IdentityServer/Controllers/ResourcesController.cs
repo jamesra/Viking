@@ -119,7 +119,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Description,ParentId,ResourceTypeId")] CreateResourceViewModel model)
+        public IActionResult Create([Bind("Id,Name,Description,ParentId,ResourceTypeId")] CreateResourceViewModel model)
         {
             if (ModelState.IsValid)
             {

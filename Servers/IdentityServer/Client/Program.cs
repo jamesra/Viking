@@ -29,7 +29,7 @@ namespace Client
         private const string Client = "ro.viking";
 
         private static async Task Pause()
-        { 
+        {
             Console.WriteLine("Press a key to continue");
             while (Console.KeyAvailable == false)
             {

@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "Identity.Models": {
+      "commandName": "Project"
+    }
+  }
+}

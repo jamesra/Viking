@@ -36,7 +36,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Identity.DataContext\Identity.DataContext.csproj" />
     <ProjectReference Include="..\Identity.Models\Identity.Models.csproj" />
-    <ProjectReference Include="..\IdentityServer\IdentityDataContext\IdentityServer.DataContext.csproj" />
   </ItemGroup>
 
 </Project>

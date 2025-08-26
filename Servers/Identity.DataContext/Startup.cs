@@ -26,6 +26,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connString).EnableDetailedErrors().EnableSensitiveDataLogging());
              
+            
             return services;
         }
 

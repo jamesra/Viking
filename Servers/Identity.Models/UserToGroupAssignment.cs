@@ -7,16 +7,16 @@ namespace Viking.Identity.Models
     {
         [Key]
         [ForeignKey(nameof(ApplicationUser))]
-        public string UserId { get; set; }
+        public string UserId { get; init; }
 
         [ForeignKey(nameof(UserId))]
-        public virtual ApplicationUser User { get; set; }
+        public virtual ApplicationUser User { get; init; }
 
         [Key]
         [ForeignKey(nameof(Models.Group))]
-        public long GroupId { get; set; }
+        public long GroupId { get; init; }
 
         [ForeignKey(nameof(GroupId))]
-        public virtual Group Group { get; set; } 
+        public virtual Group Group { get; init; } 
     }
 }
