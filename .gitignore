@@ -37,3 +37,5 @@ TestResults
 **/net48/
 **/Debug/
 **/Release/
+/Clients/Viking/Viking/Properties/launchSettings.json
+*.log

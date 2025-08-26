@@ -1,0 +1,72 @@
+# Shared Assemblies - These should not be duplicated in modules
+# Copy this list to exclude from module builds
+
+System.Memory.dll
+System.Runtime.CompilerServices.Unsafe.dll
+System.Buffers.dll
+System.Numerics.Vectors.dll
+System.Collections.Immutable.dll
+protobuf-net.dll
+protobuf-net.Core.dll
+protobuf-net.ServiceModel.dll
+Microsoft.SqlServer.Types.dll
+EntityFramework.dll
+EntityFramework.SqlServer.dll
+System.ServiceModel.dll
+System.ServiceModel.Primitives.dll
+Microsoft.OData.Client.dll
+Microsoft.OData.Core.dll
+Microsoft.OData.Edm.dll
+Microsoft.Spatial.dll
+log4net.dll
+Newtonsoft.Json.dll
+System.Text.Json.dll
+System.IO.Pipelines.dll
+System.Text.Encodings.Web.dll
+System.Resources.Extensions.dll
+System.Threading.Tasks.Extensions.dll
+Microsoft.Bcl.AsyncInterfaces.dll
+Duende.IdentityModel.dll
+Thinktecture.IdentityModel.Client.Net45.dll
+
+# Project-specific shared assemblies
+Common.dll
+Geometry.dll
+GraphLib.dll
+RTree.dll
+Utils.dll
+UnitsAndScale.dll
+VikingCore.dll
+VikingWPFUserControls.dll
+VikingXNAGraphics.dll
+VikingXNAWinForms.dll
+VolumeModel.dll
+WCFTokenInjector.dll
+AnnotationInterfaces.dll
+AnnotationServiceTypes.dll
+Annotation.ViewModels.dll
+
+# Math libraries
+MathNet.Numerics.dll
+MathNet.Numerics.Providers.MKL.dll
+MathNet.Numerics.Providers.OpenBLAS.dll
+MathNet.Numerics.MKL.dll
+libMathNetNumericsMKL.dll
+libiomp5md.dll
+
+# Graphics libraries
+MonoGame.Framework.dll
+SharpDX.dll
+SharpDX.Direct2D1.dll
+SharpDX.Direct3D11.dll
+SharpDX.Direct3D9.dll
+SharpDX.DXGI.dll
+SharpDX.Mathematics.dll
+SharpDX.MediaFoundation.dll
+SharpDX.XAudio2.dll
+SharpDX.XInput.dll
+
+# Other libraries
+Triangle.dll
+TriangeNetGeometryExtensions.dll
+Xml.Schema.Linq.dll 
