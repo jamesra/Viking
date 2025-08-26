@@ -32,3 +32,6 @@ TestResults
 **/*.egg-info
 **/*.bak
 **/.idea
+**/.log
+**/.so
+

@@ -41,27 +41,23 @@
   <Target Name="CleanModules" AfterTargets="Clean"> 
     
     <!-- Remove the project-specific target framework folder -->
-    <RemoveDir Directories="$(ProjectModuleDir)\$(TargetFramework)" ContinueOnError="true"/>
+    <RemoveDir Directories="$(ProjectModuleDir)\$(TargetFramework)" ContinueOnError="true" />
     
     <!-- Remove the project-specific folder if it's empty -->
-    <RemoveDir Directories="$(ProjectModuleDir)" Condition="!Exists('$(ProjectModuleDir)\*')" ContinueOnError="true"/>
+    <RemoveDir Directories="$(ProjectModuleDir)" Condition="!Exists('$(ProjectModuleDir)\*')" ContinueOnError="true" />
     
     <!-- Clean content compilation output -->
-    <RemoveDir Directories="$(ProjectContentOutputDir)\bin" ContinueOnError="true"/>
-    <RemoveDir Directories="$(ProjectContentOutputDir)\obj" ContinueOnError="true"/>
-    <RemoveDir Directories="$(ProjectContentOutputDir)\bin" Condition="!Exists('$(ProjectContentOutputDir)\bin\*')" ContinueOnError="true"/>
-    <RemoveDir Directories="$(ProjectContentOutputDir)\obj" Condition="!Exists('$(ProjectContentOutputDir)\obj\*')" ContinueOnError="true"/>
+    <RemoveDir Directories="$(ProjectContentOutputDir)\bin" ContinueOnError="true" />
+    <RemoveDir Directories="$(ProjectContentOutputDir)\obj" ContinueOnError="true" />
+    <RemoveDir Directories="$(ProjectContentOutputDir)\bin" Condition="!Exists('$(ProjectContentOutputDir)\bin\*')" ContinueOnError="true" />
+    <RemoveDir Directories="$(ProjectContentOutputDir)\obj" Condition="!Exists('$(ProjectContentOutputDir)\obj\*')" ContinueOnError="true" />
     <!-- Remove the Content folder if it's empty -->
-    <RemoveDir Directories="$(ProjectContentOutputDir)" Condition="!Exists('$(ProjectContentOutputDir)\*')" ContinueOnError="true"/>
+    <RemoveDir Directories="$(ProjectContentOutputDir)" Condition="!Exists('$(ProjectContentOutputDir)\*')" ContinueOnError="true" />
 	  
   </Target>
 
   <!-- Compile MonoGame content (only for net48) -->
-  <Target Name="CompileContent"
-          AfterTargets="Build" 
-          Condition="'$(TargetFramework)' == 'net48'"
-          Inputs="Content\Content.mgcb;Content\Arrow.png;Content\Ring.png;Content\Star.png"
-          Outputs="$(TargetDir)\Content\Arrow.xnb;$(TargetDir)\Content\Ring.xnb;$(TargetDir)\Content\Star.xnb">
+  <Target Name="CompileContent" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48'" Inputs="Content\Content.mgcb;Content\Arrow.png;Content\Ring.png;Content\Star.png" Outputs="$(TargetDir)\Content\Arrow.xnb;$(TargetDir)\Content\Ring.xnb;$(TargetDir)\Content\Star.xnb">
 	  <Message Text="Compiling MonoGame content for $(TargetFramework)..." Importance="normal" />
 	  <Exec Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;$(TargetDir)\Content&quot; /intermediateDir:&quot;$(MSBuildThisFileDirectory)Content\obj\$(TargetFramework)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)Content" StandardOutputImportance="high" ConsoleToMSBuild="true" />
 	   
@@ -78,7 +74,7 @@
 
   <!-- Hide bin and obj folders from Visual Studio -->
   <ItemGroup>
-	  <Folder Include="Content"/>
+	  <Folder Include="Content" />
   </ItemGroup>
 
 	<ItemGroup>

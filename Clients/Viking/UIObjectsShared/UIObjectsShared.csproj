@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>9.0</LangVersion>
+		<RootNamespace>UIObjectsShared</RootNamespace>
+		<AssemblyName>UIObjectsShared</AssemblyName>
+		<UseWindowsForms>true</UseWindowsForms>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<AssemblyTitle>UIObjectsShared</AssemblyTitle>
+		<AssemblyDescription></AssemblyDescription>
+		<AssemblyCompany></AssemblyCompany>
+		<AssemblyProduct>UIObjectsShared</AssemblyProduct>
+		<AssemblyCopyright>Copyright © 2025</AssemblyCopyright>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<AssemblyFileVersion>1.0.0.0</AssemblyFileVersion>
+		<ComVisible>false</ComVisible>
+		<Guid>0093efd3-e618-40f4-b247-56a0193c622c</Guid>
+	</PropertyGroup>
+	<ItemGroup>
+	  <Folder Include="Properties\" />
+	</ItemGroup>
+</Project>

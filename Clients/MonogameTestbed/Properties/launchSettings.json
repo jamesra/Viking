@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MonogameTestbed": {
+      "commandName": "Project",
+      "commandLineArgs": "-e RPC2 -s 9 -v -l -o C:\\Temp\\Test.dae "
+    }
+  }
+}

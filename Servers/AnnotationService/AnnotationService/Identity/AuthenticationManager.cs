@@ -1,134 +1,16 @@
-﻿using Duende.IdentityModel.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IdentityModel.Policy;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Principal;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
-using System.Threading.Tasks;
+using Duende.IdentityModel.Client;
 
 namespace Annotation.Identity
 {
-    /*
-    public class IdentityValidator : UserNamePasswordValidator
-    {
-        public override void Validate(string userName, string password)
-        {
-            
-
-        }
-    }
-    */
-
-    public class IdentityServerPrincipal : IPrincipal
-    {
-        public IIdentity Identity {get;}
-
-        /// <summary>
-        /// Token associated with identity
-        /// </summary>
-        public string Token { get; }
-
-        private readonly List<string> ValidatedClaims = new List<string>();
-
-        public bool IsInRole(string role)
-        {
-            if (ValidatedClaims.Contains(role))
-                return true; 
-
-            string VolumeName = VikingWebAppSettings.AppSettings.GetApplicationSetting("VolumeName");
-            string ClaimRequired = GetClaimRequired(VolumeName, role);
-
-            var validated = IdentityServerHelper.CheckClaims(Token, ClaimRequired).Result;
-            if(validated)
-            {
-                ValidatedClaims.Add(role);
-            }
-
-            return validated;
-        }
-
-        private string GetClaimRequired(string VolumeName, string permission)
-        {
-            return $"{VolumeName}.{permission}";
-        }
-    }
-
-    public static class IdentityServerHelper
-    { 
-        public const string Secret = "CorrectHorseBatteryStaple";
-
-        private static DiscoveryCache _disco = null;
-
-        public static async Task<DiscoveryDocumentResponse> GetDiscoveryDocumentAsync()
-        {
-            if (_disco is null)
-            {
-                string IdentityServerEndpoint = VikingWebAppSettings.AppSettings.GetIdentityServerURLString();
-                _disco = new DiscoveryCache(IdentityServerEndpoint);
-            }
-
-            var response = await _disco.GetAsync();
-            if (response.IsError)
-            {
-                Trace.WriteLine($"Error retrieving discovery document: {response.Error}");
-                return null;
-            }
-
-            return response;
-        }
-        
-
-        public static async Task<bool> CheckClaims(string AccessToken, string scope)
-        {
-            DiscoveryDocumentResponse disco = await GetDiscoveryDocumentAsync();
-
-            var client = new HttpClient();
-
-            var validation = await client.IntrospectTokenAsync(new TokenIntrospectionRequest()
-            {
-                Address = disco.IntrospectionEndpoint,
-                ClientId = scope,
-                ClientSecret = Secret,
-                Token = AccessToken, 
-            }); 
-
-            if (validation.IsError)
-            {
-#if DEBUG
-                Trace.WriteLine($"{scope}: {validation.Error}");
-#endif
-                return false;
-            }
-#if DEBUG
-            /*
-            Console.WriteLine($"Validated Claim: {scope}");
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            foreach (var claim in validation.Claims)
-            {
-                Console.WriteLine(claim.ToString());
-            }
-            Console.ForegroundColor = ConsoleColor.White;
-
-            Console.WriteLine(validation.Json);
-            */
-#endif
-            bool foundClaim = false;
-            foreach (var c in validation.Claims)
-            { 
-                if (c.Type == "scope")
-                    foundClaim |= c.Value.Split().Contains(scope);
-            }
-
-            return foundClaim;
-        }
-    }
-    
     public class AuthenticationManager : ServiceAuthenticationManager
     {
         public override ReadOnlyCollection<IAuthorizationPolicy> Authenticate(ReadOnlyCollection<IAuthorizationPolicy> authPolicy, Uri listenUri, ref Message message)
@@ -229,27 +111,4 @@ namespace Annotation.Identity
             return false;
         }
     }
-     
-    public class RoleAuthorizationManager : ServiceAuthorizationManager
-    {
-        protected override bool CheckAccessCore(OperationContext operationContext)
-        {
-            //Assign roles to the Principal property for runtime to match with PrincipalPermissionAttributes decorated on the service operation.
-            if (!operationContext.IncomingMessageProperties.ContainsKey("Principal"))
-            { 
-#if DEBUG
-                string[] roles = new string[] { "Admin", "Read", "Write" }; 
-#else
-                string[] roles = new string[] { "Read" }; 
-#endif
-                operationContext.ServiceSecurityContext.AuthorizationContext.Properties["Principal"] = new GenericPrincipal(operationContext.ServiceSecurityContext.PrimaryIdentity, roles);
-                return true;
-            }
-            else
-            {
-                operationContext.ServiceSecurityContext.AuthorizationContext.Properties["Principal"] = operationContext.IncomingMessageProperties["Principal"];
-            }
-            return true;
-        } 
-    } 
 }

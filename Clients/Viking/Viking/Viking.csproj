@@ -12,13 +12,14 @@
 		<AssemblyOriginatorKeyFile>Viking_1_TemporaryKey.pfx</AssemblyOriginatorKeyFile>
 		<ProductName>Viking</ProductName>
 		<PublisherName>Marc Lab</PublisherName>
-		<ApplicationVersion>1.1.0.0</ApplicationVersion>
-		<FileVersion>1.1.0.0</FileVersion>
+		<ApplicationVersion>1.2.0.0</ApplicationVersion>
+		<FileVersion>1.2.0.0</FileVersion>
 		<Deterministic>false</Deterministic>
 		<NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn> 
 		<!-- Enable automatic binding redirects -->
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+		<LangVersion>9.0</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
@@ -80,6 +81,12 @@
 		<PlatformTarget>AnyCPU</PlatformTarget>
 		<Title>Viking</Title>
 
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <IsPublishable>True</IsPublishable>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <IsPublishable>True</IsPublishable>
 	</PropertyGroup>
 
 	<!-- Helper target to copy one module's files -->

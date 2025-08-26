@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>SqlServerTypesLoader</AssemblyName>
+    <RootNamespace>SqlServerTypesLoader</RootNamespace>
+    <Description>SDK for loading SQL Server native spatial assemblies</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>
