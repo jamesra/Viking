@@ -34,4 +34,6 @@ TestResults
 **/.idea
 **/.log
 **/.so
-
+**/net48/
+**/Debug/
+**/Release/
