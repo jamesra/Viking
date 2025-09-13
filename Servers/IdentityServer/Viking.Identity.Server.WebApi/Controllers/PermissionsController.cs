@@ -84,7 +84,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             {
                 appUser = await GetApplicationUser();
             }
-            catch (UnexpectedResultException e)
+            catch (UnexpectedResultException)
             {
                 throw;
 //                return Erro e.Result;
@@ -125,7 +125,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             {
                 appUser = await GetApplicationUser();
             }
-            catch (UnexpectedResultException e)
+            catch (UnexpectedResultException)
             {
                 throw;
             }
@@ -158,7 +158,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 long rId = System.Convert.ToInt64(resourceId);
                 resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Id == rId);
             }
-            catch (FormatException e)
+            catch (FormatException)
             {
                 resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Name == resourceId);
             }
@@ -217,7 +217,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 long rId = System.Convert.ToInt64(resourceId);
                 resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Id == rId);
             }
-            catch (FormatException e)
+            catch (FormatException)
             {
                 resourceObj = await _context.Resource.FirstOrDefaultAsync(r => r.Name == resourceId);
             }

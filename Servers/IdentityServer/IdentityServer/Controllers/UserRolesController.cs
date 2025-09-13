@@ -31,7 +31,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         }
           
         // GET: UserRoles 
-        public async Task<IActionResult> Index()
+        public Task<IActionResult> Index()
         {
             //var Group = ViewData["Group"] as Group; 
 
@@ -56,7 +56,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 }).ToList();
             */
 
-            return View(listRoles);
+            return Task<IActionResult>.FromResult((IActionResult)View(listRoles));
             /*
             return View(await _context.ApplicationUser.Select(
                 user => new UserRolesViewModel

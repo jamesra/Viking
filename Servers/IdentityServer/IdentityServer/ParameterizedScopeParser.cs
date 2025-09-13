@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using IdentityServer4.Validation;
+using Duende.IdentityServer.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Viking.Identity.Data;

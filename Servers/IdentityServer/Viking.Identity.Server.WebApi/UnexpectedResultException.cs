@@ -26,10 +26,5 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
         {
             Result = result;
         }
-
-        protected UnexpectedResultException([NotNull] IActionResult result, SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-            Result = result;
-        }
     } 
 }

@@ -1,0 +1,52 @@
+services:
+  identity-standalone:
+    build:
+      context: ..
+      dockerfile: IdentityServer/IdentityServerStandalone/Dockerfile
+    ports:
+       - "6000:6000"
+       - "6001:6001"
+    image: identity-standalone
+    secrets:
+      - ssl_cert
+    environment:
+      - SSL_CERT_PATH=/run/secrets/ssl_cert
+      - Kestrel__Endpoints__Https__Url=https://+:6001
+      - Kestrel__Endpoints__Https__Certificate__Path=/run/secrets/ssl_cert
+      - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=IdentityViking;Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+      - ConnectionStrings__ConfigConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=IdentityConfig;Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+      - ConnectionStrings__PersistedGrantConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=IdentityPersistedGrants;Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+    volumes:
+      - ./IdentityServerStandalone/appsettings.Docker.json:/app/appsettings.json:ro
+      - ./IdentityServerStandalone/appsettings.DevelopmentTest.json:/app/appsettings.DevelopmentTest.json:ro
+    networks:
+      - identity-network
+
+  identity-webapi:
+    build:
+      context: ..
+      dockerfile: IdentityServer/Viking.Identity.Server.WebApi/Dockerfile
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    image: identity-webapi
+    secrets:
+      - ssl_cert
+    environment:
+      - SSL_CERT_PATH=/run/secrets/ssl_cert
+      - Kestrel__Endpoints__Https__Url=https://+:5001
+      - Kestrel__Endpoints__Https__Certificate__Path=/run/secrets/ssl_cert
+      - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=IdentityViking;Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+    volumes:
+      - ./Viking.Identity.Server.WebApi/appsettings.Docker.json:/app/appsettings.json:ro
+      - ./Viking.Identity.Server.WebApi/appsettings.Development.json:/app/appsettings.Development.json:ro
+    networks:
+      - identity-network
+
+secrets:
+  ssl_cert:
+    file: ${SSL_CERT_PATH}
+
+networks:
+  identity-network:
+    driver: bridge

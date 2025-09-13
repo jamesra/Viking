@@ -25,11 +25,6 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
         public UnexpectedResultException([NotNull] IActionResult result, string message, Exception innerException) : base(message, innerException)
         {
             Result = result;
-        }
-
-        protected UnexpectedResultException([NotNull] IActionResult result, SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-            Result = result;
-        }
+        } 
     } 
 }

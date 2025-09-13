@@ -14,7 +14,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using IdentityServer4.Services;
+using Duende.IdentityServer.Services;
+using IdentityModel.AspNetCore.OAuth2Introspection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -24,6 +25,11 @@ using Viking.Identity.Models;
 using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.Services;
 using Viking.Identity.Server.WebManagement.Extensions;
+using System.Security.Cryptography.X509Certificates;
+using System.IO;
+using JetBrains.Annotations;
+using Viking.SSL;
+using Duende.IdentityModel.Client;
 
 namespace Viking.Identity.Server.WebApi
 {
@@ -51,6 +57,22 @@ namespace Viking.Identity.Server.WebApi
                 };
             });
              
+            // Load SSL certificate configuration
+            var sslOptions = Configuration.GetSection("SSL").Get<SSLOptions>();
+            var sslCert = Certs.LoadSSLCertificate(sslOptions);
+            
+            var vikingConfig = Configuration.GetSection("VikingIdentityServerOptions").Get<VikingIdentityServerOptions>();
+            // Store the certificate in services for potential use by other components
+            if (sslCert != null)
+            {
+                services.AddSingleton(sslCert);
+                Log.Information("SSL certificate loaded and registered for WebApi. Subject: {Subject}, Thumbprint: {Thumbprint}", 
+                    sslCert.Subject, sslCert.Thumbprint);
+            }
+            else
+            {
+                Log.Warning("No SSL certificate loaded for WebApi.");
+            }
 
             services.ConfigureIdentityServerDataContext(Configuration);
 
@@ -60,6 +82,7 @@ namespace Viking.Identity.Server.WebApi
                 loggingBuilder.AddSerilog(dispose: true).AddConsole()
             );
 
+            /*
             services.AddAuthentication(options =>
             {
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -67,8 +90,19 @@ namespace Viking.Identity.Server.WebApi
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme,
                 options => { Configuration.Bind(nameof(JwtBearerOptions), options); });
+            */
+            services.AddAuthentication(OAuth2IntrospectionDefaults.AuthenticationScheme)
+                .AddOAuth2Introspection(options =>
+                {
+                    options.Authority = vikingConfig.Authority;
+                    options.ClientSecret = vikingConfig.Secret;
+                    options.ClientId = "mvc";
+                    options.ClientCredentialStyle = IdentityModel.Client.ClientCredentialStyle.AuthorizationHeader; 
+                    options.EnableCaching = true; 
+                }
+               );
 
-            services.AddTransient<IdentityServer4.Validation.ICustomTokenRequestValidator, UserScopeTokenRequestValidator>();
+            services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, Viking.Identity.Server.WebManagement.Extensions.UserScopeTokenRequestValidator>();
             //services.AddScoped<IAuthorizationHelper, AuthorizationHelper>();
             services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
@@ -115,5 +149,7 @@ namespace Viking.Identity.Server.WebApi
                 endpoints.MapControllers();
             });
         }
+
     }
+
 }

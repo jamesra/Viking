@@ -7,6 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Serilog;
+using System.Security.Cryptography.X509Certificates;
+using System.IO;
+using Viking.SSL;
 
 namespace Viking.Identity.Server.WebApi
 {
@@ -31,6 +34,38 @@ namespace Viking.Identity.Server.WebApi
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
+                    webBuilder.ConfigureKestrel(options =>
+                    {
+                        // Configure HTTPS with custom certificate
+                        var configuration = new ConfigurationBuilder()
+                            .AddEnvironmentVariables()
+                            .AddJsonFile("appsettings.json", optional: true)
+                            .AddJsonFile("appsettings.Docker.json", optional: true)
+                            .Build();
+
+                        var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
+                        var sslCert = Certs.LoadSSLCertificate(sslOptions);
+                        if (sslCert != null)
+                        {
+                            try
+                            {
+                                Log.Information("Certificate found");
+                                options.ConfigureHttpsDefaults(httpsOptions =>
+                                {
+                                    httpsOptions.ServerCertificate = sslCert;
+                                });
+                                Log.Information("Successfully configured Kestrel HTTPS with certificate: {Subject}", sslCert.Subject);
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Error(ex, "Failed to configure Kestrel HTTPS with certificate: {Subject}", sslCert.Subject);
+                            }
+                        } 
+                        else
+                        {
+                            Log.Warning("SSL certificate not found");
+                        }
+                    });
                 });
     }
 }

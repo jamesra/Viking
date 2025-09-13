@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <UserSecretsId>330c09e3-6f93-4770-9ebc-69a8329329a3</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <AssemblyName>Viking.Identity.Server.Standalone</AssemblyName>
@@ -9,26 +9,42 @@
     <ApplicationIcon />
     <OutputType>Exe</OutputType>
     <StartupObject>Viking.Identity.Server.Standalone.Program</StartupObject>
+    <!-- Docker Build Automation -->
+    <DockerfileContext Condition="'$(DOTNET_RUNNING_IN_CONTAINER)' != 'true'">..\..</DockerfileContext>
+    <DockerImageName>identityserver-standalone</DockerImageName>
+    <DockerImageTag>latest</DockerImageTag>
+    <DockerContainerName>identityserver-standalone-container</DockerContainerName>
+    <DockerfileBuildArguments></DockerfileBuildArguments>
+    <DockerfileRunArguments>-p 5000:5000 -p 5001:5001</DockerfileRunArguments>
+    <!-- Enable automatic Docker rebuilds -->
+    <DockerAutoGenerate>true</DockerAutoGenerate>
+    <DockerDevelopmentMode>Fast</DockerDevelopmentMode>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="IdentityServer4.EntityFramework.Storage" Version="4.1.2" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.14.0" />
-    <PackageReference Include="Serilog" Version="2.10.0" />
-    <PackageReference Include="Serilog.AspNetCore" Version="5.0.0" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="3.1.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="4.0.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-    <PackageReference Include="IdentityServer4" Version="4.1.2" />
-    <PackageReference Include="IdentityModel.AspNetCore" Version="4.1.3" />
+	<PackageReference Include="Duende.IdentityServer" Version="7.3.1" />
+    <PackageReference Include="Duende.AspNetCore.Authentication.OAuth2Introspection" Version="6.3.0" />
+    <PackageReference Include="Duende.IdentityServer.EntityFramework.Storage" Version="7.3.1" />
+	<PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.3.1" />
+	<PackageReference Include="Duende.IdentityServer.EntityFramework" Version="7.3.1" />
+    <PackageReference Include="MailKit" Version="4.13.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
+    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" /> 
+	<PackageReference Include="IdentityModel.AspNetCore" Version="4.3.0" />
     <PackageReference Include="IdentityModel.AspNetCore.AccessTokenValidation" Version="1.0.0-preview.0" />
-    <PackageReference Include="IdentityModel.AspNetCore.OAuth2Introspection" Version="5.1.0" />
-    <PackageReference Include="IdentityServer4.AspNetIdentity" Version="4.1.2" />
-    <PackageReference Include="IdentityServer4.EntityFramework" Version="4.1.2" />
+    <PackageReference Include="IdentityModel.AspNetCore.OAuth2Introspection" Version="6.2.0" />
     <PackageReference Include="log4net" Version="2.0.14" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.15" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="5.0.15" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,9 +55,15 @@
 
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Identity.DataContext\Identity.DataContext.csproj" />
-    <ProjectReference Include="..\..\Identity.Models\Identity.Models.csproj" />
-    <ProjectReference Include="..\Identity.Configuration\Identity.Configuration.csproj" />
+    <ProjectReference Include="../../Identity.DataContext/Identity.DataContext.csproj" />
+    <ProjectReference Include="../../Identity.Models/Identity.Models.csproj" />
+    <ProjectReference Include="../Identity.Configuration/Identity.Configuration.csproj" />
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>

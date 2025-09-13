@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  identity-standalone:
+    build:
+      context: .
+      dockerfile: IdentityServerStandalone/Dockerfile
+    ports:
+      - "6000:6000"
+      - "6001:6001"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__IdentityConnection=Server=your-db;Database=IdentityViking;User ID=user;Password=pass;MultipleActiveResultSets=true;TrustServerCertificate=True
+    volumes:
+      - ./custom-appsettings.json:/app/appsettings.Production.json
+    networks:
+      - identity-network
+
+networks:
+  identity-network:
+    driver: bridge

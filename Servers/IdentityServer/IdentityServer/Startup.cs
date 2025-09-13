@@ -3,8 +3,8 @@ using System.Linq;
 using System.Reflection;
 using IdentityModel;
 using IdentityModel.AspNetCore.OAuth2Introspection;
-using IdentityServer4.Extensions;
-using IdentityServer4.Services;
+using Duende.IdentityServer.Extensions;
+using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -228,7 +228,7 @@ namespace Viking.Identity.Server.WebManagement
 
             //services.AddHttpContextAccessor();
             //services.AddTransient<System.Security.Claims.ClaimsPrincipal>(provider => provider.GetService<IHttpContextAccessor>().HttpContext.User);
-            services.AddTransient<IdentityServer4.Validation.ICustomTokenRequestValidator, UserScopeTokenRequestValidator>();
+            services.AddTransient<Duende.IdentityServer.Validation.ICustomTokenRequestValidator, UserScopeTokenRequestValidator>();
                 //services.AddScoped<IAuthorizationHelper, AuthorizationHelper>();
             services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
@@ -321,7 +321,7 @@ namespace Viking.Identity.Server.WebManagement
             ConfigureSSL(builder, sslConfig);
             */
 
-            services.AddTransient<IdentityServer4.Services.IProfileService, IdentityWithExtendedClaimsProfileService>();
+            services.AddTransient<Duende.IdentityServer.Services.IProfileService, IdentityWithExtendedClaimsProfileService>();
               
             services.AddAuthorizationPolicyEvaluator();
 

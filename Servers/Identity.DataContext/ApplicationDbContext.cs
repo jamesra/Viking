@@ -33,6 +33,8 @@ namespace Viking.Identity.Data
             // For example, you can rename the ASP.NET Identity table names and more.
             // Add your customizations after calling base.OnModelCreating(builder);
             
+
+            
             /*
             builder.Entity<Group>()
                 .Property(g => g.NumMemberGroups)
@@ -110,7 +112,7 @@ namespace Viking.Identity.Data
         {
             /////////////////////////////////////////
             /// Create admin user, admin role, and add admin to role
-            var adminUserId = PopulateUser(builder, "admin", "admin");
+            var adminUserId = PopulateAdmin(builder, "Admin", "Admin");
 
             builder.Entity<ApplicationRole>().HasData(
                 new ApplicationRole() { Name = Models.Special.Roles.Admin, NormalizedName = Models.Special.Roles.Admin, Id = Special.Roles.AdminId});
@@ -162,9 +164,10 @@ namespace Viking.Identity.Data
         /// <param name="familyName"></param>
         /// <param name="givenName"></param>
         /// <returns>UserId of the new user</returns>
-        private string PopulateUser(ModelBuilder builder, string username, string password, string email = null, string familyName=null, string givenName = null)
+        private string PopulateAdmin(ModelBuilder builder, string username, string password, string email = null, string familyName=null, string givenName = null)
         {
-            var userId = Guid.NewGuid().ToString();
+            // Use static GUID for admin user to avoid dynamic operations in OnModelCreating
+            var userId = Special.Roles.AdminId;
             var user = new ApplicationUser()
             {
                 FamilyName = familyName ?? username,
@@ -175,15 +178,19 @@ namespace Viking.Identity.Data
                 Id = userId,
             };
 
-            var passwordHash = _passwordHasher.HashPassword(user, password);
-            user.SecurityStamp = Guid.NewGuid().ToString();
-            user.PasswordHash = passwordHash;
+            // Use pre-hashed password to avoid dynamic hashing in OnModelCreating
+            // This is the hash for "Admin" password (pre-generated with static salt)
+            user.SecurityStamp = Special.Roles.SecurityStamp;
+            user.PasswordHash = Special.Roles.AdminPasswordHash;
+            user.ConcurrencyStamp = Special.Roles.ConcurrencyStamp;
 
             builder.Entity<ApplicationUser>().HasData(user);
 
             return userId;
         }
 
+
+         
         /// <summary>
         /// Creates a new user in the context, does not save it to the database.
         /// </summary>
@@ -194,7 +201,7 @@ namespace Viking.Identity.Data
         /// <param name="familyName"></param>
         /// <param name="givenName"></param>
         /// <returns>UserId of the new user</returns>
-        public string CreateUser(string username, string password, string email = null, string givenName = null, string familyName=null)
+        public string CreateUser(string username, string password, string email = null, string givenName = null, string familyName = null)
         {
             var userId = Guid.NewGuid().ToString();
             var user = new ApplicationUser()
@@ -213,7 +220,7 @@ namespace Viking.Identity.Data
             var passwordHash = _passwordHasher.HashPassword(user, password);
             user.SecurityStamp = Guid.NewGuid().ToString();
             user.PasswordHash = passwordHash;
-            
+
             return userId;
         }
 

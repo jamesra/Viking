@@ -1,0 +1,94 @@
+2025-09-10 14:23:25.854 -07:00 [INF] Found certificate by DNS name: codepharm.net
+2025-09-10 14:23:25.883 -07:00 [INF] Successfully configured SSL with certificate. Subject: CN=*.codepharm.net, Thumbprint: BC5936D2371A03884A1821E3CEB218E025CE34B0
+2025-09-10 14:23:26.044 -07:00 [INF] User profile is available. Using 'C:\Users\u0490822\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2025-09-10 14:23:26.418 -07:00 [INF] Now listening on: https://localhost:5001
+2025-09-10 14:23:26.419 -07:00 [INF] Now listening on: http://localhost:5000
+2025-09-10 14:23:26.449 -07:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-09-10 14:23:26.451 -07:00 [INF] Hosting environment: Development
+2025-09-10 14:23:26.452 -07:00 [INF] Content root path: C:\src\git\Viking\Servers\IdentityServer\Viking.Identity.Server.WebApi
+2025-09-10 14:23:27.458 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger - null null
+2025-09-10 14:23:27.568 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger - 301 0 null 113.121ms
+2025-09-10 14:23:27.573 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/index.html - null null
+2025-09-10 14:23:27.618 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/index.html - 200 null text/html;charset=utf-8 45.4785ms
+2025-09-10 14:23:27.637 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/swagger-ui.css - null null
+2025-09-10 14:23:27.638 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/_vs/browserLink - null null
+2025-09-10 14:23:27.637 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/swagger-ui-standalone-preset.js - null null
+2025-09-10 14:23:27.637 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/swagger-ui-bundle.js - null null
+2025-09-10 14:23:27.643 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/_framework/aspnetcore-browser-refresh.js - null null
+2025-09-10 14:23:27.700 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/_framework/aspnetcore-browser-refresh.js - 200 16543 application/javascript; charset=utf-8 56.7429ms
+2025-09-10 14:23:27.702 -07:00 [INF] Sending file. Request path: '/swagger-ui.css'. Physical path: 'N/A'
+2025-09-10 14:23:27.702 -07:00 [INF] Sending file. Request path: '/swagger-ui-standalone-preset.js'. Physical path: 'N/A'
+2025-09-10 14:23:27.704 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/swagger-ui.css - 200 144929 text/css 67.3132ms
+2025-09-10 14:23:27.705 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/swagger-ui-standalone-preset.js - 200 312163 text/javascript 67.6597ms
+2025-09-10 14:23:27.711 -07:00 [INF] Sending file. Request path: '/swagger-ui-bundle.js'. Physical path: 'N/A'
+2025-09-10 14:23:27.713 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/swagger-ui-bundle.js - 200 1061536 text/javascript 75.8235ms
+2025-09-10 14:23:27.891 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/favicon-32x32.png - null null
+2025-09-10 14:23:27.893 -07:00 [INF] Sending file. Request path: '/favicon-32x32.png'. Physical path: 'N/A'
+2025-09-10 14:23:27.894 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/favicon-32x32.png - 200 628 image/png 2.9636ms
+2025-09-10 14:23:28.198 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/_vs/browserLink - 200 null text/javascript; charset=UTF-8 560.6278ms
+2025-09-10 14:23:28.221 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/v1/swagger.json - null null
+2025-09-10 14:23:28.228 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 7.199ms
+2025-09-10 14:23:43.745 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/Permissions/CurrentUser - null null
+2025-09-10 14:23:43.925 -07:00 [INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+2025-09-10 14:23:43.928 -07:00 [INF] AuthenticationScheme: Bearer was challenged.
+2025-09-10 14:23:43.929 -07:00 [INF] HTTP GET /Permissions/CurrentUser responded 401 in 181.9549 ms
+2025-09-10 14:23:43.932 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/Permissions/CurrentUser - 401 0 null 187.4412ms
+2025-09-10 14:23:46.973 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/Permissions/CurrentUser - null null
+2025-09-10 14:23:46.981 -07:00 [INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+2025-09-10 14:23:46.981 -07:00 [INF] AuthenticationScheme: Bearer was challenged.
+2025-09-10 14:23:46.982 -07:00 [INF] HTTP GET /Permissions/CurrentUser responded 401 in 7.6312 ms
+2025-09-10 14:23:46.983 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/Permissions/CurrentUser - 401 0 null 10.2423ms
+2025-09-10 15:35:46.687 -07:00 [INF] Found certificate by DNS name: codepharm.net
+2025-09-10 15:35:46.720 -07:00 [INF] Successfully configured SSL with certificate. Subject: CN=*.codepharm.net, Thumbprint: BC5936D2371A03884A1821E3CEB218E025CE34B0
+2025-09-10 15:35:46.916 -07:00 [INF] User profile is available. Using 'C:\Users\u0490822\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2025-09-10 15:35:46.955 -07:00 [INF] Attempting to load certificate from: /run/secrets/ssl_cert
+2025-09-10 15:35:46.956 -07:00 [ERR] Certificate file does not exist at: /run/secrets/ssl_cert
+2025-09-10 15:35:47.431 -07:00 [INF] Now listening on: https://localhost:5001
+2025-09-10 15:35:47.432 -07:00 [INF] Now listening on: http://localhost:5000
+2025-09-10 15:35:47.517 -07:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-09-10 15:35:47.518 -07:00 [INF] Hosting environment: Development
+2025-09-10 15:35:47.518 -07:00 [INF] Content root path: C:\src\git\Viking\Servers\IdentityServer\Viking.Identity.Server.WebApi
+2025-09-10 15:35:49.518 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger - null null
+2025-09-10 15:35:49.666 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger - 301 0 null 151.05ms
+2025-09-10 15:35:49.671 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/index.html - null null
+2025-09-10 15:35:49.715 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/index.html - 200 null text/html;charset=utf-8 43.9611ms
+2025-09-10 15:35:49.735 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/swagger-ui.css - null null
+2025-09-10 15:35:49.735 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/_framework/aspnetcore-browser-refresh.js - null null
+2025-09-10 15:35:49.735 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/_vs/browserLink - null null
+2025-09-10 15:35:49.749 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/_framework/aspnetcore-browser-refresh.js - 200 16543 application/javascript; charset=utf-8 14.0589ms
+2025-09-10 15:35:49.756 -07:00 [INF] Sending file. Request path: '/swagger-ui.css'. Physical path: 'N/A'
+2025-09-10 15:35:49.757 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/swagger-ui.css - 499 144929 text/css 22.0848ms
+2025-09-10 15:35:49.779 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/_vs/browserLink - 200 null text/javascript; charset=UTF-8 43.8836ms
+2025-09-10 15:35:49.830 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/favicon-32x32.png - null null
+2025-09-10 15:35:49.833 -07:00 [INF] Sending file. Request path: '/favicon-32x32.png'. Physical path: 'N/A'
+2025-09-10 15:35:49.834 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/favicon-32x32.png - 200 628 image/png 4.2227ms
+2025-09-10 15:35:49.847 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/v1/swagger.json - null null
+2025-09-10 15:35:49.852 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 5.0353ms
+2025-09-10 15:36:31.474 -07:00 [INF] Found certificate by DNS name: codepharm.net
+2025-09-10 15:36:31.498 -07:00 [INF] Successfully configured SSL with certificate. Subject: CN=*.codepharm.net, Thumbprint: BC5936D2371A03884A1821E3CEB218E025CE34B0
+2025-09-10 15:36:31.605 -07:00 [INF] User profile is available. Using 'C:\Users\u0490822\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2025-09-10 15:36:31.619 -07:00 [INF] Attempting to load certificate from: /run/secrets/ssl_cert
+2025-09-10 15:36:31.620 -07:00 [ERR] Certificate file does not exist at: /run/secrets/ssl_cert
+2025-09-10 15:36:31.854 -07:00 [INF] Now listening on: https://localhost:5001
+2025-09-10 15:36:31.855 -07:00 [INF] Now listening on: http://localhost:5000
+2025-09-10 15:36:31.880 -07:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-09-10 15:36:31.881 -07:00 [INF] Hosting environment: Development
+2025-09-10 15:36:31.881 -07:00 [INF] Content root path: C:\src\git\Viking\Servers\IdentityServer\Viking.Identity.Server.WebApi
+2025-09-10 15:36:33.250 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger - null null
+2025-09-10 15:36:33.366 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger - 301 0 null 118.5196ms
+2025-09-10 15:36:33.371 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/index.html - null null
+2025-09-10 15:36:33.414 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/index.html - 200 null text/html;charset=utf-8 42.9908ms
+2025-09-10 15:36:33.436 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/_framework/aspnetcore-browser-refresh.js - null null
+2025-09-10 15:36:33.436 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/_vs/browserLink - null null
+2025-09-10 15:36:33.436 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/swagger-ui.css - null null
+2025-09-10 15:36:33.480 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/_framework/aspnetcore-browser-refresh.js - 200 16543 application/javascript; charset=utf-8 44.1536ms
+2025-09-10 15:36:33.491 -07:00 [INF] Sending file. Request path: '/swagger-ui.css'. Physical path: 'N/A'
+2025-09-10 15:36:33.492 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/swagger-ui.css - 499 144929 text/css 55.8428ms
+2025-09-10 15:36:33.498 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/_vs/browserLink - 200 null text/javascript; charset=UTF-8 61.5906ms
+2025-09-10 15:36:33.524 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/favicon-32x32.png - null null
+2025-09-10 15:36:33.530 -07:00 [INF] Sending file. Request path: '/favicon-32x32.png'. Physical path: 'N/A'
+2025-09-10 15:36:33.531 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/favicon-32x32.png - 499 628 image/png 7.1497ms
+2025-09-10 15:36:33.544 -07:00 [INF] Request starting HTTP/2 GET https://localhost:5001/swagger/v1/swagger.json - null null
+2025-09-10 15:36:33.550 -07:00 [INF] Request finished HTTP/2 GET https://localhost:5001/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 5.5034ms

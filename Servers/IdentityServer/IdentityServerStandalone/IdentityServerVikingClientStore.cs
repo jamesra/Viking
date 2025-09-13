@@ -1,9 +1,9 @@
-﻿using IdentityServer4;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Duende.IdentityServer;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using Microsoft.Extensions.Options;
 using Viking.Identity.Data;
 using Viking.Identity.Server;

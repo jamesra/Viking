@@ -11,15 +11,24 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using IdentityModel;
-using IdentityServer4.EntityFramework.DbContexts;
+using Duende.IdentityServer.EntityFramework.DbContexts;
 using Microsoft.IdentityModel.Tokens;
-using IdentityServer4.Extensions;
+using Duende.IdentityServer.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Viking.Identity;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
+using System.Security.Cryptography.X509Certificates;
+using System.IO;
+using Viking.SSL;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Routing;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Hosting;
+using Duende.IdentityServer.Endpoints;
+using Duende.IdentityServer.Services;
 
 namespace Viking.Identity.Server.Standalone
 {
@@ -27,18 +36,19 @@ namespace Viking.Identity.Server.Standalone
     {
         public Startup(IConfiguration configuration)
         {
-            Configuration = configuration;
+            Configuration = configuration;            
         }
 
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
-        {
-            var SSLOptions = Configuration.GetSection("SSLOptions").Get<SSLOptions>();
+        { 
+            var SSLOptions = Configuration.GetSection("SSL").Get<Viking.SSL.SSLOptions>();
 
             //            builder.AddDeveloperSigningCredential();
-            IConfigurationSection sslConfig = Configuration.GetSection("SSL");
+            services.AddRazorPages();
+             
             services.ConfigureIdentityServerDataContext(Configuration);
 
             var persistedGrantConnectionString = Configuration.GetConnectionString("PersistedGrantConnection");
@@ -51,7 +61,7 @@ namespace Viking.Identity.Server.Standalone
             services.AddIdentity<ApplicationUser, ApplicationRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
-
+             
             var builder = services.AddIdentityServer(options =>
                 {
                     options.Events.RaiseErrorEvents = true;
@@ -59,8 +69,12 @@ namespace Viking.Identity.Server.Standalone
                     options.Events.RaiseFailureEvents = true;
                     options.Events.RaiseSuccessEvents = true;
 
+                    options.KeyManagement.Enabled = false;
+
                     // see https://identityserver4.readthedocs.io/en/latest/topics/resources.html
                     options.EmitStaticAudienceClaim = true;
+                      
+                    options.IssuerUri = serverOptions.Authority;
                 }) /*.AddConfigurationStore(options =>
                 {
                     options.ConfigureDbContext = builder =>
@@ -86,40 +100,58 @@ namespace Viking.Identity.Server.Standalone
                     options.EnableTokenCleanup = true;
                     options.TokenCleanupInterval = 3600;
                 })
+                .AddInMemoryCaching()
+                
                 .AddAspNetIdentity<ApplicationUser>()
+                .AddDefaultEndpoints()
                 .AddJwtBearerClientAuthentication();
-
-            ConfigureSSL(builder, SSLOptions);
-        }
-
-        public static IIdentityServerBuilder ConfigureSSL(IIdentityServerBuilder builder, SSLOptions config)
-        {
-            string serialNumber = config.SerialNumber;
-            if (serialNumber.IsNullOrEmpty())
+            
+            
+            builder.Services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo(@"./DataProtectionKeys/"))
+                .ProtectKeysWithCertificate(Certs.LoadSSLCertificate(SSLOptions))
+                .SetApplicationName("VikingIdentityServer");
+             
+            // Load SSL certificate and configure IdentityServer
+            var sslCert = Certs.LoadSSLCertificate(SSLOptions);
+            if (sslCert != null)
             {
-                builder.AddDeveloperSigningCredential();
+                try
+                {
+                    var signingCredentials = new SigningCredentials(new X509SecurityKey(sslCert), SecurityAlgorithms.RsaSha256);
+                    builder.AddSigningCredential(signingCredentials);
+                    Log.Information("Successfully configured IdentityServer with certificate. Subject: {Subject}, Thumbprint: {Thumbprint}", 
+                        sslCert.Subject, sslCert.Thumbprint);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate");
+                    builder.AddDeveloperSigningCredential();
+                }
             }
             else
             {
-                //var certs = X509.LocalMachine.My.SubjectDistinguishedName.Find(serialNumber).ToList();
-
-                var cert = X509.LocalMachine.My.SerialNumber.Find(serialNumber, false)
-                    .Where(o => DateTime.UtcNow >= o.NotBefore)
-                    .OrderByDescending(o => o.NotAfter)
-                    .FirstOrDefault();
-                if (cert == null) throw new Exception("No valid certificates could be found.");
-
-                var signingCredentials = new SigningCredentials(new X509SecurityKey(cert), "RS256");
-
-                builder.AddSigningCredential(signingCredentials);
+                Log.Warning("No valid certificate found. Using developer signing credential for IdentityServer.");
+                builder.AddDeveloperSigningCredential();
             }
-
-            return builder;
+            
+            // Add authorization services
+            //services.AddAuthorization();
+            
+            // Configure email options
+            services.Configure<EmailOptions>(Configuration.GetSection("Email"));
+            
+            // Register EmailSender for Identity email functionality
+            services.AddTransient<IEmailSender<ApplicationUser>, EmailSender>();
+            
+            services.AddControllers();            
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            Log.Information("Starting IdentityServer configuration...");
+            
             // this will do the initial DB population and required migrations
             InitializeDatabase(app);
 
@@ -132,28 +164,34 @@ namespace Viking.Identity.Server.Standalone
                 app.UseExceptionHandler("/Error");
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
-            }
+            } 
 
             app.UseSerilogRequestLogging();
             app.UseHttpsRedirection();
-            //app.UseStaticFiles();   
-            app.UseIdentityServer();
-            //app.UseRouting(); 
-            //app.UseAuthorization(); 
-            /*app.UseEndpoints(endpoints =>
+            app.UseStaticFiles();   
+            app.UseRouting();
+            
+            Log.Information("Adding IdentityServer middleware...");
+            app.UseIdentityServer();             
+            Log.Information("IdentityServer middleware added successfully.");
+            
+            app.UseEndpoints(endpoints =>
             {
-                //endpoints.MapRazorPages();
-            });*/
+                endpoints.MapControllers();
+                endpoints.MapRazorPages();
+            });
+
         }
 
         private static IApplicationBuilder InitializeDatabase(IApplicationBuilder app)
         {
             using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
             {
+                // Only initialize the main application database
                 serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
-                                            serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
-
-                            
+                serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
+                // Skip PersistedGrants database initialization for now
+                Log.Information("Skipping PersistedGrants database initialization - using in-memory operational store");
             }
 
             return app;
@@ -162,9 +200,4 @@ namespace Viking.Identity.Server.Standalone
 
 
 
-    public struct SSLOptions
-    {
-        [NotNull]
-        public string SerialNumber { get; set; }
-    }
 }

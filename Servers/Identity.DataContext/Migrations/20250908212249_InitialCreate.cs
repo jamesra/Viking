@@ -1,10 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
-using System;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Viking.Identity.Data.Migrations.Application
+#nullable disable
+
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
+namespace Viking.Identity.Data.Migrations
 {
-    public partial class InitialApplicationDatabaseMigration : Migration
+    /// <inheritdoc />
+    public partial class InitialCreate : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -12,7 +18,7 @@ namespace Viking.Identity.Data.Migrations.Application
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Discriminator = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Discriminator = table.Column<string>(type: "nvarchar(21)", maxLength: 21, nullable: false),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true)
@@ -54,7 +60,8 @@ namespace Viking.Identity.Data.Migrations.Application
                 name: "ResourceTypes",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false)
+                    Id = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", maxLength: 4096, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -195,33 +202,33 @@ namespace Viking.Identity.Data.Migrations.Application
                     Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
                     ParentID = table.Column<long>(type: "bigint", nullable: true),
-                    TypeId = table.Column<string>(type: "nvarchar(128)", nullable: false)
+                    ResourceTypeId = table.Column<string>(type: "nvarchar(128)", nullable: false),
+                    Endpoint = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Resource", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Resource_Resource_ParentID",
-                        column: x => x.ParentID,
-                        principalTable: "Resource",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Resource_ResourceTypes_TypeId",
-                        column: x => x.TypeId,
+                        name: "FK_Resource_ResourceTypes_ResourceTypeId",
+                        column: x => x.ResourceTypeId,
                         principalTable: "ResourceTypes",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Resource_Resource_ParentID",
+                        column: x => x.ParentID,
+                        principalTable: "Resource",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "GrantedGroupPermissions",
                 columns: table => new
                 {
-                    ResourceId = table.Column<long>(type: "bigint", nullable: false),
                     PermissionId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ResourceId = table.Column<long>(type: "bigint", nullable: false),
                     GroupId = table.Column<long>(type: "bigint", nullable: false),
-                    GranteeType = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    GranteeType = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -230,8 +237,7 @@ namespace Viking.Identity.Data.Migrations.Application
                         name: "FK_GrantedGroupPermissions_Resource_GroupId",
                         column: x => x.GroupId,
                         principalTable: "Resource",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_GrantedGroupPermissions_Resource_ResourceId",
                         column: x => x.ResourceId,
@@ -244,10 +250,10 @@ namespace Viking.Identity.Data.Migrations.Application
                 name: "GrantedUserPermissions",
                 columns: table => new
                 {
-                    ResourceId = table.Column<long>(type: "bigint", nullable: false),
                     PermissionId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ResourceId = table.Column<long>(type: "bigint", nullable: false),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    GranteeType = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    GranteeType = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -256,8 +262,7 @@ namespace Viking.Identity.Data.Migrations.Application
                         name: "FK_GrantedUserPermissions_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_GrantedUserPermissions_Resource_ResourceId",
                         column: x => x.ResourceId,
@@ -280,8 +285,7 @@ namespace Viking.Identity.Data.Migrations.Application
                         name: "FK_GroupToGroupAssignments_Resource_ContainerGroupId",
                         column: x => x.ContainerGroupId,
                         principalTable: "Resource",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_GroupToGroupAssignments_Resource_MemberGroupId",
                         column: x => x.MemberGroupId,
@@ -317,17 +321,28 @@ namespace Viking.Identity.Data.Migrations.Application
             migrationBuilder.InsertData(
                 table: "AspNetRoles",
                 columns: new[] { "Id", "ConcurrencyStamp", "Discriminator", "Name", "NormalizedName" },
-                values: new object[] { "747fdd8a-2f9e-48ee-ac5e-cec25e832765", "1a8edd37-13a5-4bca-a4c4-1e5c487b3757", "ApplicationRole", "Administrator", "Administrator" });
+                values: new object[] { "cdf2b676-7edc-4d96-9ebb-8d1968734482", null, "ApplicationRole", "Administrator", "Administrator" });
+
+            migrationBuilder.InsertData(
+                table: "AspNetUsers",
+                columns: new[] { "Id", "AccessFailedCount", "ConcurrencyStamp", "Email", "EmailConfirmed", "FamilyName", "GivenName", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "RegistrationDate", "SecurityStamp", "TwoFactorEnabled", "UserName" },
+                values: new object[] { "cdf2b676-7edc-4d96-9ebb-8d1968734482", 0, "00000000-0000-0000-0000-000000000002", null, false, "Admin", "Admin", false, null, null, "Admin", "AQAAAAIAAYagAAAAEDKMBJbPxtr/NrITzaue6aME85hg8fyvMrSJ4q6ImyKzDBSzY3p/7PVXokBsAAYdGw==", null, false, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "00000000-0000-0000-0000-000000000001", false, "Admin" });
 
             migrationBuilder.InsertData(
                 table: "ResourceTypes",
-                column: "Id",
-                value: "Group");
+                columns: new[] { "Id", "Description" },
+                values: new object[,]
+                {
+                    { "Group", null },
+                    { "OrganizationalUnit", null },
+                    { "Resource", null },
+                    { "Volume", null }
+                });
 
             migrationBuilder.InsertData(
-                table: "ResourceTypes",
-                column: "Id",
-                value: "Volume");
+                table: "AspNetUserRoles",
+                columns: new[] { "RoleId", "UserId" },
+                values: new object[] { "cdf2b676-7edc-4d96-9ebb-8d1968734482", "cdf2b676-7edc-4d96-9ebb-8d1968734482" });
 
             migrationBuilder.InsertData(
                 table: "Permissions",
@@ -335,15 +350,20 @@ namespace Viking.Identity.Data.Migrations.Application
                 values: new object[,]
                 {
                     { "Access Manager", "Group", "Add/Remove group members" },
-                    { "Read", "Volume", null },
                     { "Annotate", "Volume", null },
+                    { "Read", "Volume", null },
                     { "Review", "Volume", null }
                 });
 
             migrationBuilder.InsertData(
                 table: "Resource",
-                columns: new[] { "Id", "Description", "Name", "ParentID", "TypeId" },
+                columns: new[] { "Id", "Description", "Name", "ParentID", "ResourceTypeId" },
                 values: new object[] { -1L, null, "Everyone", null, "Group" });
+
+            migrationBuilder.InsertData(
+                table: "UserToGroupAssignments",
+                columns: new[] { "GroupId", "UserId" },
+                values: new object[] { -1L, "cdf2b676-7edc-4d96-9ebb-8d1968734482" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -405,9 +425,9 @@ namespace Viking.Identity.Data.Migrations.Application
                 column: "ParentID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Resource_TypeId",
+                name: "IX_Resource_ResourceTypeId",
                 table: "Resource",
-                column: "TypeId");
+                column: "ResourceTypeId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserToGroupAssignments_UserId",
@@ -415,6 +435,7 @@ namespace Viking.Identity.Data.Migrations.Application
                 column: "UserId");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

@@ -5,8 +5,11 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using IdentityServer4;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Duende.IdentityServer;
 using Microsoft.Extensions.Hosting;
 
 namespace DevTest

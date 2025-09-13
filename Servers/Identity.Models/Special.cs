@@ -15,12 +15,15 @@
         public static implicit operator string(GroupInfo gi) => gi.Name;
     }
 
-    public class Special
+    public static class Special
     {
         public static class Roles
         {
             public const string Admin = "Administrator";
             public const string AdminId = "cdf2b676-7edc-4d96-9ebb-8d1968734482";
+            public const string AdminPasswordHash = "AQAAAAIAAYagAAAAEDKMBJbPxtr/NrITzaue6aME85hg8fyvMrSJ4q6ImyKzDBSzY3p/7PVXokBsAAYdGw==";
+            public const string SecurityStamp = "00000000-0000-0000-0000-000000000001";
+            public const string ConcurrencyStamp = "00000000-0000-0000-0000-000000000002";
         }
 
         public static class Groups

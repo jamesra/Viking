@@ -65,11 +65,13 @@ namespace DevTestAPI
                 app.UseDeveloperExceptionPage();
             }
 
-            
             app.UseAuthentication();
-            //app.UseMvc();
             app.UseStaticFiles();
-            app.UseMvcWithDefaultRoute();
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapDefaultControllerRoute();
+            });
         }
     }
 }

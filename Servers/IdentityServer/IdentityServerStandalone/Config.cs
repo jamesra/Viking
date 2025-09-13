@@ -2,11 +2,13 @@
 using IdentityModel;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
-using IdentityServer4;
-using IdentityServer4.Models;
+using Duende.IdentityServer;
+using Duende.IdentityServer.Models;
 using System.Collections.Generic;
 using System.Linq;
 using Viking.Identity.Server;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
 
 
 namespace Viking.Identity
@@ -39,10 +41,11 @@ namespace Viking.Identity
         {
             return new List<ApiResource>
             {
-                new ApiResource("Viking.Annotation", "Viking Annotation API")
+                new ApiResource("Viking.Annotation.API", "Viking Annotation API")
                 {
                     UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
-                    ApiSecrets = { new Secret(options.Secret.Sha256())}
+                    ApiSecrets = { new Secret(options.Secret.Sha256())},
+                    Scopes = options.ApiScopes.Select(s => s.Name).ToList()
                 },
             };
         }
@@ -119,12 +122,11 @@ namespace Viking.Identity
         // clients want to access resources (aka scopes)
         public static IEnumerable<Client> GetClients(VikingIdentityServerOptions options)
         { 
-            var allowedScopes = AnnotationScopes.Union(options.ApiScopes.Select(s => s.Name)).ToArray();
+            var allowedScopes = AnnotationScopes.Union(options.ApiScopes.Select(s => s.Name)).Distinct().ToArray();
 
             // client credentials client
-            return new List<Client>
-            {
-                /*
+            var result =  new List<Client>
+            { 
                 new Client
                 {
                     ClientId = "Viking",
@@ -132,12 +134,10 @@ namespace Viking.Identity
 
                     ClientSecrets =
                     {
-                        new Secret(Secret.Sha256()) //"My co-workers remove eyeballs from cute mammals for a living"
+                        new Secret(options.Secret.Sha256())
                     },
                     AllowedScopes = AnnotationScopes,
-                },
-                */
-                /*
+                }, 
                 // resource owner password grant client
                 new Client
                 {
@@ -146,11 +146,10 @@ namespace Viking.Identity
                      
                     ClientSecrets =
                     {
-                        new Secret(Secret.Sha256())
+                        new Secret("ro.viking.secret".Sha256())
                     },
                     AllowedScopes = AnnotationScopes
-                },
-                */
+                }, 
                 // OpenID Connect hybrid flow and client credentials client (MVC)
                 new Client
                 {
@@ -170,8 +169,29 @@ namespace Viking.Identity
                     PostLogoutRedirectUris = { options.Authority + "signout-callback-oidc"},
                     AllowedScopes = allowedScopes,
                     AllowOfflineAccess = true
+                },
+                // OpenID Connect hybrid flow and client credentials client (MVC)
+                new Client
+                {
+                    ClientId = "web", 
+                    //AllowedGrantTypes = GrantTypes.HybridAndClientCredentials,
+                    AllowedGrantTypes = GrantTypes.Code,
+
+                    RequireConsent = false,
+
+                    ClientSecrets =
+                    {
+                        new Secret(options.Secret.Sha256())
+                    },
+
+                    RedirectUris = { options.Authority + "signin-oidc" },
+                    PostLogoutRedirectUris = { options.Authority + "signout-callback-oidc"},
+                    AllowedScopes = allowedScopes,
+                    AllowOfflineAccess = true
                 }
             };
+
+            return result;
         }
     }
 }

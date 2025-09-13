@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Identity.Models"
+		},
+		{
+			"path": "../Identity.DataContext"
+		}
+	],
+	"settings": {}
+}
