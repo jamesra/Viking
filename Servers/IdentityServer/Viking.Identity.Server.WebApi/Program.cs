@@ -38,33 +38,39 @@ namespace Viking.Identity.Server.WebApi
                     {
                         // Configure HTTPS with custom certificate
                         var configuration = new ConfigurationBuilder()
-                            .AddEnvironmentVariables()
+                            .SetBasePath(Directory.GetCurrentDirectory())
                             .AddJsonFile("appsettings.json", optional: true)
-                            .AddJsonFile("appsettings.Docker.json", optional: true)
+                            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+                            .AddEnvironmentVariables()
                             .Build();
 
                         var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
-                        var sslCert = Certs.LoadSSLCertificate(sslOptions);
-                        if (sslCert != null)
+
+                        options.ListenLocalhost(6000); // HTTP port
+                        options.ListenLocalhost(sslOptions.Port, listenOptions => // HTTPS port
                         {
-                            try
+                            var sslCert = Certs.LoadSSLCertificate(sslOptions);
+                            if (sslCert != null)
                             {
-                                Log.Information("Certificate found");
-                                options.ConfigureHttpsDefaults(httpsOptions =>
+                                try
                                 {
-                                    httpsOptions.ServerCertificate = sslCert;
-                                });
-                                Log.Information("Successfully configured Kestrel HTTPS with certificate: {Subject}", sslCert.Subject);
+                                    Log.Information("Certificate found");
+                                    options.ConfigureHttpsDefaults(httpsOptions =>
+                                    {
+                                        httpsOptions.ServerCertificate = sslCert;
+                                    });
+                                    Log.Information("Successfully configured Kestrel HTTPS with certificate: {Subject}", sslCert.Subject);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Error(ex, "Failed to configure Kestrel HTTPS with certificate: {Subject}", sslCert.Subject);
+                                }
                             }
-                            catch (Exception ex)
+                            else
                             {
-                                Log.Error(ex, "Failed to configure Kestrel HTTPS with certificate: {Subject}", sslCert.Subject);
+                                Log.Warning("SSL certificate not found");
                             }
-                        } 
-                        else
-                        {
-                            Log.Warning("SSL certificate not found");
-                        }
+                        });
                     });
                 });
     }
