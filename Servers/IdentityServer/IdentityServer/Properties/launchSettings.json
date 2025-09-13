@@ -23,11 +23,11 @@
     "IdentityServer": {
       "commandName": "Project",
       "workingDirectory": "C:\\src\\git\\Viking\\Servers\\IdentityServer\\IdentityServer",
-      "launchUrl": "https://localhost:5000",
+      "launchUrl": "https://localhost:4001",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:5001"
+      "applicationUrl": "https://localhost:4001"
     },
     "IdentityServerIISRemote": {
       "commandName": "IIS",

@@ -55,10 +55,7 @@ namespace Viking.Identity.Server.WebApi
                                 try
                                 {
                                     Log.Information("Certificate found");
-                                    options.ConfigureHttpsDefaults(httpsOptions =>
-                                    {
-                                        httpsOptions.ServerCertificate = sslCert;
-                                    });
+                                    listenOptions.UseHttps(sslCert);
                                     Log.Information("Successfully configured Kestrel HTTPS with certificate: {Subject}", sslCert.Subject);
                                 }
                                 catch (Exception ex)

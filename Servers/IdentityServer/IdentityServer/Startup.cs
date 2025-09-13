@@ -21,6 +21,7 @@ using Viking.Identity.Models;
 using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.WebManagement.Extensions;
 using Viking.Identity.Server.Services;
+using Viking.SSL;
 
 namespace Viking.Identity.Server.WebManagement
 {
@@ -234,31 +235,12 @@ namespace Viking.Identity.Server.WebManagement
             services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
             //services.AddTransient<IdentityServer.Extensions.AuthorizationHelper>();
 
-            var https_port_section = Configuration.GetSection("https_port");
-            int? https_port = new int?();
-
-            if (https_port_section.Value != null)
-            { 
-                try
-                {
-                    https_port = System.Convert.ToInt32(https_port_section.Value);
-                }
-
-                catch (System.FormatException)
-                {
-                    https_port = new int?();
-                    Log.Logger.Warning($"https_port in appsettings.json : {https_port_section.Value} could not be parsed to a port number.  Using default.");
-                } 
-            }
-            else
-            {
-                Log.Logger.Information($"https_port not set in appsettings.json");
-            }
+            var sslOptions = Configuration.GetSection("SSL").Get<Viking.SSL.SSLOptions>();
 
             services.AddHttpsRedirection(options =>
             {
                 options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
-                options.HttpsPort = https_port;
+                options.HttpsPort = sslOptions.Port;
             });
 
             services.AddIdentity<ApplicationUser, ApplicationRole>(config =>

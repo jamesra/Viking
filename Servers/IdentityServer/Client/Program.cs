@@ -16,13 +16,13 @@ namespace Client
     public class Program
     {
 
-        private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/identityserver/"; 
-        //private const string IdentityServerEndpoint = "https://localhost:5001/";
+        //private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/identityserver/"; 
+        private const string IdentityServerEndpoint = "https://localhost:5001/";
         //private const string IdentityServerEndpoint = "https://localhost:44387/";
 
-        private const string IdentityServerApiEndpoint = "https://identity.connectomes.utah.edu/api/";
+        //private const string IdentityServerApiEndpoint = "https://identity.connectomes.utah.edu/api/";
         //private const string IdentityServerApiEndpoint = "https://localhost:44387/";
-        //private const string IdentityServerApiEndpoint = "https://localhost:5001/";
+        private const string IdentityServerApiEndpoint = "https://localhost:5001/";
 
         private const string Secret = "CorrectHorseBatteryStaple";
 

@@ -59,6 +59,13 @@ namespace Viking.Identity.Server.WebApi
              
             // Load SSL certificate configuration
             var sslOptions = Configuration.GetSection("SSL").Get<SSLOptions>();
+            services.AddHttpsRedirection(options =>
+            {
+                options.RedirectStatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status308PermanentRedirect;
+                options.HttpsPort = sslOptions.Port;
+            });
+            services.AddRazorPages();
+
             var sslCert = Certs.LoadSSLCertificate(sslOptions);
             
             var vikingConfig = Configuration.GetSection("VikingIdentityServerOptions").Get<VikingIdentityServerOptions>();

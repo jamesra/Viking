@@ -47,6 +47,11 @@ namespace Viking.Identity.Server.Standalone
             var SSLOptions = Configuration.GetSection("SSL").Get<Viking.SSL.SSLOptions>();
 
             //            builder.AddDeveloperSigningCredential();
+            services.AddHttpsRedirection(options =>
+            {
+                options.RedirectStatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status308PermanentRedirect;
+                options.HttpsPort = SSLOptions.Port;
+            });
             services.AddRazorPages();
              
             services.ConfigureIdentityServerDataContext(Configuration);
