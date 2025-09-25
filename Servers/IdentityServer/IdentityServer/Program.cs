@@ -41,8 +41,8 @@ namespace Viking.Identity.Server.WebManagement
 
                         var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
 
-                        options.ListenLocalhost(4000); // HTTP port
-                        options.ListenLocalhost(sslOptions.Port, listenOptions => // HTTPS port
+                        options.ListenAnyIP(80); // HTTP port
+                        options.ListenAnyIP(443, listenOptions => // HTTPS port
                         {
                             var sslCert = Certs.LoadSSLCertificate(sslOptions);
                             if (sslCert != null)

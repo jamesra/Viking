@@ -236,7 +236,17 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     if (firstUser)
                     {
                         await _userManager.AddToRoleAsync(user, Special.Roles.Admin);
+                        _logger.LogInformation("First user registered - automatically assigned admin role.");
                     }
+
+                    // Add all users to the "Everyone" group
+                    var everyoneGroupAssignment = new UserToGroupAssignment
+                    {
+                        UserId = user.Id,
+                        GroupId = Special.Groups.Everyone
+                    };
+                    _context.UserToGroupAssignments.Add(everyoneGroupAssignment);
+                    await _context.SaveChangesAsync();
 
                     try
                     {

@@ -324,11 +324,6 @@ namespace Viking.Identity.Data.Migrations
                 values: new object[] { "cdf2b676-7edc-4d96-9ebb-8d1968734482", null, "ApplicationRole", "Administrator", "Administrator" });
 
             migrationBuilder.InsertData(
-                table: "AspNetUsers",
-                columns: new[] { "Id", "AccessFailedCount", "ConcurrencyStamp", "Email", "EmailConfirmed", "FamilyName", "GivenName", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "RegistrationDate", "SecurityStamp", "TwoFactorEnabled", "UserName" },
-                values: new object[] { "cdf2b676-7edc-4d96-9ebb-8d1968734482", 0, "00000000-0000-0000-0000-000000000002", null, false, "Admin", "Admin", false, null, null, "Admin", "AQAAAAIAAYagAAAAEDKMBJbPxtr/NrITzaue6aME85hg8fyvMrSJ4q6ImyKzDBSzY3p/7PVXokBsAAYdGw==", null, false, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "00000000-0000-0000-0000-000000000001", false, "Admin" });
-
-            migrationBuilder.InsertData(
                 table: "ResourceTypes",
                 columns: new[] { "Id", "Description" },
                 values: new object[,]
@@ -338,11 +333,6 @@ namespace Viking.Identity.Data.Migrations
                     { "Resource", null },
                     { "Volume", null }
                 });
-
-            migrationBuilder.InsertData(
-                table: "AspNetUserRoles",
-                columns: new[] { "RoleId", "UserId" },
-                values: new object[] { "cdf2b676-7edc-4d96-9ebb-8d1968734482", "cdf2b676-7edc-4d96-9ebb-8d1968734482" });
 
             migrationBuilder.InsertData(
                 table: "Permissions",
@@ -359,11 +349,6 @@ namespace Viking.Identity.Data.Migrations
                 table: "Resource",
                 columns: new[] { "Id", "Description", "Name", "ParentID", "ResourceTypeId" },
                 values: new object[] { -1L, null, "Everyone", null, "Group" });
-
-            migrationBuilder.InsertData(
-                table: "UserToGroupAssignments",
-                columns: new[] { "GroupId", "UserId" },
-                values: new object[] { -1L, "cdf2b676-7edc-4d96-9ebb-8d1968734482" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",

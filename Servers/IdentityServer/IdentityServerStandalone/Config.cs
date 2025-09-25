@@ -165,8 +165,9 @@ namespace Viking.Identity
                         new Secret(options.Secret.Sha256())
                     },
 
-                    RedirectUris = { options.Authority + "signin-oidc" },
-                    PostLogoutRedirectUris = { options.Authority + "signout-callback-oidc"},
+                    RedirectUris = { $"{options.Authority}signin-oidc" },
+                    FrontChannelLogoutUri = $"{options.Authority}signout-oidc",
+                    PostLogoutRedirectUris = { $"{options.Authority}signout-callback-oidc" },
                     AllowedScopes = allowedScopes,
                     AllowOfflineAccess = true
                 },
@@ -184,8 +185,8 @@ namespace Viking.Identity
                         new Secret(options.Secret.Sha256())
                     },
 
-                    RedirectUris = { options.Authority + "signin-oidc" },
-                    PostLogoutRedirectUris = { options.Authority + "signout-callback-oidc"},
+                    RedirectUris = { $"{options.Authority}signin-oidc" },
+                    PostLogoutRedirectUris = { $"{options.Authority}signout-callback-oidc"},
                     AllowedScopes = allowedScopes,
                     AllowOfflineAccess = true
                 }

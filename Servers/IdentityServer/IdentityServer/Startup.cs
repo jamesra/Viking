@@ -239,8 +239,7 @@ namespace Viking.Identity.Server.WebManagement
 
             services.AddHttpsRedirection(options =>
             {
-                options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
-                options.HttpsPort = sslOptions.Port;
+                options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect; 
             });
 
             services.AddIdentity<ApplicationUser, ApplicationRole>(config =>

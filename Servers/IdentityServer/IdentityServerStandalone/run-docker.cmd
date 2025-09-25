@@ -1,1 +1,1 @@
-docker run -d --name identityserver-standalone -p 6000:6000 -p 6001:6001 -v ./appsettings.json:/app/appsettings.json -v appsettings.Production.json:/app/appsettings.Production.json identityserver:latest
+docker run -d --name identityserver-standalone -p 6000:6000 -p 5001:5001 -v ./appsettings.json:/app/appsettings.json -v appsettings.Production.json:/app/appsettings.Production.json identityserver:latest

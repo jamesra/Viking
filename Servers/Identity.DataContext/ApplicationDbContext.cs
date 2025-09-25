@@ -111,16 +111,9 @@ namespace Viking.Identity.Data
         private void InitialPopulationOfDatabase(ModelBuilder builder)
         {
             /////////////////////////////////////////
-            /// Create admin user, admin role, and add admin to role
-            var adminUserId = PopulateAdmin(builder, "Admin", "Admin");
-
+            /// Create admin role (no default admin user - first registered user gets admin rights)
             builder.Entity<ApplicationRole>().HasData(
                 new ApplicationRole() { Name = Models.Special.Roles.Admin, NormalizedName = Models.Special.Roles.Admin, Id = Special.Roles.AdminId});
-
-            builder.Entity<IdentityUserRole<string>>().HasData(new IdentityUserRole<string>[]
-            {
-                new IdentityUserRole<string>() {RoleId = Special.Roles.AdminId, UserId = adminUserId}
-            });
               
             ///////////////////////////////////////
             /// Create resource types and standard resource permisssions
@@ -146,12 +139,7 @@ namespace Viking.Identity.Data
                EveryoneGroup
             });
 
-            builder.Entity<UserToGroupAssignment>().HasData(new UserToGroupAssignment[]
-            {
-                new UserToGroupAssignment() {GroupId = Special.Groups.Everyone, UserId = adminUserId}
-            });
-
-
+            // Note: UserToGroupAssignment for Everyone group will be created when first user registers
         }
 
         /// <summary>
@@ -174,7 +162,7 @@ namespace Viking.Identity.Data
                 GivenName = givenName ?? username,
                 Email = email ?? null,
                 UserName = username,
-                NormalizedUserName = username,
+                NormalizedUserName = username.ToUpper(),
                 Id = userId,
             };
 

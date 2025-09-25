@@ -9,15 +9,16 @@ namespace Viking.SSL
 
     public struct SSLOptions
     {
-        /// <summary>
-        /// Port to use for SSL
-        /// </summary>
-        public int Port { get; set; }
 
         /// <summary>
         /// 1st Check: File path of certificate
         /// </summary>
         public string CertificatePath { get; set; }
+
+        /// <summary>
+        /// File path of private key (used with CertificatePath for PEM files)
+        /// </summary>
+        public string KeyPath { get; set; }
 
 
         /// <summary>

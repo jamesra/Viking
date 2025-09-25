@@ -143,13 +143,6 @@ namespace Viking.Identity.Data.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("AspNetUserRoles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = "cdf2b676-7edc-4d96-9ebb-8d1968734482",
-                            RoleId = "cdf2b676-7edc-4d96-9ebb-8d1968734482"
-                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -245,25 +238,6 @@ namespace Viking.Identity.Data.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "cdf2b676-7edc-4d96-9ebb-8d1968734482",
-                            AccessFailedCount = 0,
-                            ConcurrencyStamp = "00000000-0000-0000-0000-000000000002",
-                            EmailConfirmed = false,
-                            FamilyName = "Admin",
-                            GivenName = "Admin",
-                            LockoutEnabled = false,
-                            NormalizedUserName = "Admin",
-                            PasswordHash = "AQAAAAIAAYagAAAAEDKMBJbPxtr/NrITzaue6aME85hg8fyvMrSJ4q6ImyKzDBSzY3p/7PVXokBsAAYdGw==",
-                            PhoneNumberConfirmed = false,
-                            RegistrationDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            SecurityStamp = "00000000-0000-0000-0000-000000000001",
-                            TwoFactorEnabled = false,
-                            UserName = "Admin"
-                        });
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.GrantedGroupPermission", b =>
@@ -460,13 +434,6 @@ namespace Viking.Identity.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("UserToGroupAssignments");
-
-                    b.HasData(
-                        new
-                        {
-                            GroupId = -1L,
-                            UserId = "cdf2b676-7edc-4d96-9ebb-8d1968734482"
-                        });
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.ApplicationRole", b =>

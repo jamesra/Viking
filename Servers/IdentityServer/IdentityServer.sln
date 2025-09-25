@@ -30,11 +30,16 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
 		.env = .env
+		.env.Development = .env.Development
+		.env.Docker = .env.Docker
+		.env.Production = .env.Production
 		docker-compose.yml = docker-compose.yml
 		..\Certs\Readme.rst = ..\Certs\Readme.rst
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityManagementWebsite", "IdentityServer\IdentityManagementWebsite.csproj", "{03BF1ADE-98A9-0401-41CE-7A7C212E60FF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeyGenerator", "KeyGenerator\KeyGenerator.csproj", "{5263CDBC-4E98-9912-38C3-E782AEB23551}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -121,6 +126,12 @@ Global
 		{03BF1ADE-98A9-0401-41CE-7A7C212E60FF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{03BF1ADE-98A9-0401-41CE-7A7C212E60FF}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{03BF1ADE-98A9-0401-41CE-7A7C212E60FF}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{5263CDBC-4E98-9912-38C3-E782AEB23551}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5263CDBC-4E98-9912-38C3-E782AEB23551}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5263CDBC-4E98-9912-38C3-E782AEB23551}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5263CDBC-4E98-9912-38C3-E782AEB23551}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5263CDBC-4E98-9912-38C3-E782AEB23551}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{5263CDBC-4E98-9912-38C3-E782AEB23551}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

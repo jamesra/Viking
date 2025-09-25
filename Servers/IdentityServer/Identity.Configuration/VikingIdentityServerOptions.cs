@@ -7,7 +7,9 @@ namespace Viking.Identity.Server
         public string Secret { get; set; } = "CorrectHorseBatteryStaple";
 
         public string Authority { get; set; }
-          
+
+        public string MetadataAddress { get; set; }
+
         public ApiScope[] ApiScopes { get; set; } = new ApiScope[]
         {
             new ApiScope(name: "Viking.Annotation", displayName:"Access to Annotate a volume")

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -22,6 +22,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+	<PackageReference Include="ConfigurationSubstitutor" Version="1.5.1" />
+	<PackageReference Include="DotNetEnv" Version="3.1.1" />
 	<PackageReference Include="Duende.IdentityServer" Version="7.3.1" />
     <PackageReference Include="Duende.AspNetCore.Authentication.OAuth2Introspection" Version="6.3.0" />
     <PackageReference Include="Duende.IdentityServer.EntityFramework.Storage" Version="7.3.1" />
@@ -58,12 +60,42 @@
     <ProjectReference Include="../../Identity.DataContext/Identity.DataContext.csproj" />
     <ProjectReference Include="../../Identity.Models/Identity.Models.csproj" />
     <ProjectReference Include="../Identity.Configuration/Identity.Configuration.csproj" />
-    <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
+	<!-- Debug configuration -->
+	<ItemGroup>
+		<Content Include="../.env" Condition="Exists('../.env')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="wwwroot\" />
-  </ItemGroup>
+    <!-- Debug configuration -->
+    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+	    <Content Include="../.env.Development" Condition="Exists('../.env.Development')">
+		    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    </Content>
+    </ItemGroup>
+
+    <!-- Release configuration -->
+    <ItemGroup Condition="'$(Configuration)' == 'Release'">
+	    <Content Include="../.env.Production" Condition="Exists('../.env.Production')">
+		    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    </Content>
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Properties\" />
+    </ItemGroup>
+
+	<Target Name="CheckEnvFile" BeforeTargets="Build">
+		<Warning Text="WARNING: .env file not found at ../.env.&#xA;This file is optional for Docker Deployments.&#xA;If you need environment-specific configuration, create this file." Condition="!Exists('../.env')" />
+	</Target>
+
+	<Target Name="CheckDevelopmentEnvFile" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+		<Warning Text="WARNING: .env.Development file not found at ../.env.Development.&#xA;This file is optional for Docker Deployments.&#xA;If you need environment-specific configuration, create this file." Condition="!Exists('../.env.Development')" />
+	</Target>
+
+	<Target Name="CheckProductionEnvFile" BeforeTargets="Build" Condition="'$(Configuration)' == 'Release'">
+		<Warning Text="WARNING: .env.Production file not found at ../.env.Production.&#xA;This file is optional for Docker Deployments.&#xA;If you need environment-specific configuration, create this file." Condition="!Exists('../.env.Production')" />
+	</Target>
 
 </Project>
