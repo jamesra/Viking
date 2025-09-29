@@ -60,6 +60,9 @@ namespace Viking.Identity.Server.WebManagement
                 Log.Information("Starting IdentityManagementWebsite...");
                 var builder = WebApplication.CreateBuilder(args);
 
+                // Enable environment variable substitution in the main configuration
+                builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
+
                 // Configure Serilog
                 builder.Host.UseSerilog((context, services, configuration) => configuration
                     .ReadFrom.Configuration(context.Configuration)
@@ -228,13 +231,14 @@ namespace Viking.Identity.Server.WebManagement
                     .AddJsonFile("appsettings.json", optional: true)
                     .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
                     .AddEnvironmentVariables()
-                    .EnableSubstitutions()
+                    .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw)
                     .Build();
 
                 var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
-                var https_port = configuration.GetValue<int>("https_port", 443);
+                var http_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_HTTP_PORT");
+                var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_HTTPS_PORT");
 
-                options.ListenAnyIP(80); // HTTP port
+                options.ListenAnyIP(http_port); // HTTP port
                 options.ListenAnyIP(https_port, listenOptions => // HTTPS port
                 {
                     var sslCert = Certs.LoadSSLCertificate(sslOptions);

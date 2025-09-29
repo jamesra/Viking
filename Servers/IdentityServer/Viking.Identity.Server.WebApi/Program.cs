@@ -60,6 +60,10 @@ public class Program
 
             var builder = WebApplication.CreateBuilder(args);
 
+            // Enable environment variable substitution in the main configuration
+            builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
+
+
             // Configure Serilog
             builder.Host.UseSerilog();
 
@@ -72,7 +76,7 @@ public class Program
                                .AddJsonFile("appsettings.json", optional: true)
                                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
                                .AddEnvironmentVariables()
-                               .EnableSubstitutions()
+                               .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw)
                                .Build();
 
             var http_port = configuration.GetValue<int>("IDENTITY_WEBAPI_HTTP_PORT");

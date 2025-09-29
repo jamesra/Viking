@@ -44,6 +44,12 @@ namespace Viking.Identity.Server.Standalone
         {
             IdentityModelEventSource.ShowPII = true; // Enable detailed error messages for development
 
+            var envFile = ".env";
+            Env.TraversePath().Load(envFile);
+
+            var buildEnvFile = $".env.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}";
+            Env.TraversePath().Load(buildEnvFile);
+
             // Configure Serilog
             Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
@@ -51,17 +57,35 @@ namespace Viking.Identity.Server.Standalone
                 .WriteTo.File("IdentityServerApiLogs.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
                 .CreateLogger();
 
-            var envFile= ".env";
-            Env.TraversePath().Load(envFile);
-
-            var buildEnvFile = $".env.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}";
-            Env.TraversePath().Load(buildEnvFile);
-
-
             try
             {
                 Log.Information("Starting IdentityServer...");
-            CreateHostBuilder(args).Build().Run();
+                var builder = WebApplication.CreateBuilder(args);
+
+                // Enable environment variable substitution in the main configuration
+                builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
+
+                // Configure Serilog
+                builder.Host.UseSerilog((context, services, configuration) => configuration
+                    .ReadFrom.Configuration(context.Configuration)
+                    .ReadFrom.Services(services)
+                    .Enrich.FromLogContext() 
+                    .WriteTo.Console() 
+                    .WriteTo.File("IdentityServerApiLogs.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
+                );
+
+                // Configure services
+                ConfigureServices(builder.Services, builder.Configuration);
+
+                // Configure Kestrel
+                ConfigureKestrel(builder.WebHost);
+
+                var app = builder.Build();
+
+                // Configure the HTTP request pipeline
+                Configure(app, builder.Environment);
+
+                app.Run();
             }
             catch (Exception ex)
             {
@@ -73,60 +97,51 @@ namespace Viking.Identity.Server.Standalone
             }
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((ctx, builder) =>
+        private static void ConfigureKestrel(IWebHostBuilder webHostBuilder)
+        {
+            webHostBuilder.ConfigureKestrel(options =>
+            {
+                var configuration = new ConfigurationBuilder()
+                        .SetBasePath(Directory.GetCurrentDirectory())
+                        .AddJsonFile("appsettings.json", optional: true)
+                        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+                        .AddEnvironmentVariables()
+                        .EnableSubstitutions("${", "}", true)
+                        .Build();
+
+                var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
+
+                var http_port = configuration.GetValue<int>("IDENTITY_STANDALONE_CONTAINER_HTTP_PORT");
+                var https_port = configuration.GetValue<int>("IDENTITY_STANDALONE_CONTAINER_HTTPS_PORT");
+
+                // Configure HTTP and HTTPS endpoints
+                options.ListenAnyIP(http_port); // HTTP port
+                options.ListenAnyIP(https_port, listenOptions => // HTTPS port
                 {
-                    builder.EnableSubstitutionsWithDelimitedFallbackDefaults("${", "}", ":", UnresolvedVariableBehaviour.Throw);
-                })
-                .UseSerilog()
-                .ConfigureWebHostDefaults(webBuilder =>
-                {                    
-                    webBuilder.ConfigureServices((context, services) => ConfigureServices(services, context.Configuration));
-                    webBuilder.Configure((context, app) => Configure(app, context.HostingEnvironment));
-                    webBuilder.ConfigureKestrel(options =>
+                    // Configure HTTPS with custom certificate 
+                    var cert = Certs.LoadSSLCertificate(sslOptions);
+                    if(cert != null)
                     {
-                        var configuration = new ConfigurationBuilder()
-                                .SetBasePath(Directory.GetCurrentDirectory())
-                                .AddJsonFile("appsettings.json", optional: true)
-                                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
-                                .AddEnvironmentVariables()
-                                .EnableSubstitutions()
-                                .Build();
-
-                        var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
-
-                        var http_port = configuration.GetValue<int>("IDENTITY_STANDALONE_CONTAINER_HTTP_PORT");
-                        var https_port = configuration.GetValue<int>("IDENTITY_STANDALONE_CONTAINER_HTTPS_PORT");
-
-                        // Configure HTTP and HTTPS endpoints
-                        options.ListenAnyIP(http_port); // HTTP port
-                        options.ListenAnyIP(https_port, listenOptions => // HTTPS port
+                        try
                         {
-                            // Configure HTTPS with custom certificate 
-                            var cert = Certs.LoadSSLCertificate(sslOptions);
-                            if(cert != null)
-                            {
-                                try
-                                {
-                                    Log.Information("Certificate found");
-                                    listenOptions.UseHttps(cert);
-                                    Log.Information("Successfully configured Kestrel HTTPS with certificate: {Subject}", cert.Subject);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Log.Error(ex, "Failed to load certificate into Kestrel.");
-                                    listenOptions.UseHttps(); // Fallback to development certificate
-                                }
-                            } 
-                            else
-                            {
-                                Log.Warning("SSL configuration not found or certificate path is empty - using development certificate");
-                                listenOptions.UseHttps(); // Use development certificate
-                            }
-                        });
-                    });
+                            Log.Information("Certificate found");
+                            listenOptions.UseHttps(cert);
+                            Log.Information("Successfully configured Kestrel HTTPS with certificate: {Subject}", cert.Subject);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error(ex, "Failed to load certificate into Kestrel.");
+                            listenOptions.UseHttps(); // Fallback to development certificate
+                        }
+                    } 
+                    else
+                    {
+                        Log.Warning("SSL configuration not found or certificate path is empty - using development certificate");
+                        listenOptions.UseHttps(); // Use development certificate
+                    }
                 });
+            });
+        }
 
         private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
@@ -301,7 +316,7 @@ namespace Viking.Identity.Server.Standalone
             services.AddTransient<IEmailSender<ApplicationUser>, EmailSender>();
         }
 
-        private static void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        private static void Configure(WebApplication app, IWebHostEnvironment env)
         {
             Log.Information("Starting IdentityServer configuration...");
 
@@ -331,54 +346,50 @@ namespace Viking.Identity.Server.Standalone
             Log.Information("IdentityServer middleware added successfully.");
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints =>
+            // Modern top-level route registrations (replaces UseEndpoints)
+            app.MapRazorPages().RequireAuthorization();
+            
+            // Default homepage
+            app.MapGet("/", async context =>
             {
-                endpoints.MapRazorPages().RequireAuthorization();
-                
-                // Default homepage
-                endpoints.MapGet("/", async context =>
+                context.Response.ContentType = "text/html";
+                await context.Response.WriteAsync(@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Identity Server</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; background-color: #f5f5f5; }
+                        h1 { color: #333; font-size: 3em; margin-bottom: 20px; }
+                        p { color: #666; font-size: 1.2em; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Identity Server</h1>
+                    <p>Welcome to the Viking Identity Server</p>
+                </body>
+                </html>");
+            });
+             
+            Log.Information("Endpoints mapped successfully.");
+
+            // Log endpoints immediately
+            var endpointDataSource = app.Services.GetRequiredService<EndpointDataSource>();
+            Log.Information("Immediate endpoint count: {Count}", endpointDataSource.Endpoints.Count);
+
+            // Schedule delayed endpoint logging
+            var lifetime = app.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+            lifetime.ApplicationStarted.Register(() =>
+            {
+                Task.Delay(5000).ContinueWith(_ => // Wait 5 seconds after startup
                 {
-                    context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync(@"
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Identity Server</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; background-color: #f5f5f5; }
-                            h1 { color: #333; font-size: 3em; margin-bottom: 20px; }
-                            p { color: #666; font-size: 1.2em; }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>Identity Server</h1>
-                        <p>Welcome to the Viking Identity Server</p>
-                    </body>
-                    </html>");
-                });
+                    var delayedEndpointDataSource = app.Services.GetRequiredService<EndpointDataSource>();
+                    Log.Information("Delayed endpoint count: {Count}", delayedEndpointDataSource.Endpoints.Count);
 
-                endpoints.MapRazorPages();
-                Log.Information("Endpoints mapped successfully.");
-
-
-                // Log endpoints immediately
-                var endpointDataSource = endpoints.ServiceProvider.GetRequiredService<EndpointDataSource>();
-                Log.Information("Immediate endpoint count: {Count}", endpointDataSource.Endpoints.Count);
-
-                // Schedule delayed endpoint logging
-                var lifetime = endpoints.ServiceProvider.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
-                lifetime.ApplicationStarted.Register(() =>
-                {
-                    Task.Delay(5000).ContinueWith(_ => // Wait 5 seconds after startup
+                    foreach (var endpoint in delayedEndpointDataSource.Endpoints)
                     {
-                        var delayedEndpointDataSource = endpoints.ServiceProvider.GetRequiredService<EndpointDataSource>();
-                        Log.Information("Delayed endpoint count: {Count}", delayedEndpointDataSource.Endpoints.Count);
-
-                        foreach (var endpoint in delayedEndpointDataSource.Endpoints)
-                        {
-                            Log.Information("Delayed Endpoint: {DisplayName}", endpoint.DisplayName);
-                        }
-                    });
+                        Log.Information("Delayed Endpoint: {DisplayName}", endpoint.DisplayName);
+                    }
                 });
             });
         }
