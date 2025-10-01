@@ -26,7 +26,8 @@ namespace Annotation
         /// <summary>
         /// A deprecated role that is no longer used, but kept for backwards compatibility.  Equivalent to Write role
         /// </summary>
-        public static string Modify = nameof(Roles.Modify); 
+        public static string Modify = nameof(Roles.Modify);
+        public static string Annotate = nameof(Roles.Annotate);
         public static string Admin = nameof(Roles.Admin);
     }
 
@@ -446,7 +447,15 @@ namespace Annotation
             }
             catch (SecurityException)
             {
-                new PrincipalPermission(null, nameof(Roles.Modify)).Demand();
+                try
+                {
+                    new PrincipalPermission(null, nameof(Roles.Annotate)).Demand();
+                }
+                catch (SecurityException)
+                {
+                    new PrincipalPermission(null, nameof(Roles.Modify)).Demand();
+                }
+            
             }
         }
 

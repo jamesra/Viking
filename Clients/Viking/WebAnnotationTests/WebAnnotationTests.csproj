@@ -17,7 +17,7 @@
     <ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj" /> 
     <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
     <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0'" />
-    <ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" Condition="'$(TargetFramework)' == 'net48'" />
+    <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DummyCanvas.cs" />

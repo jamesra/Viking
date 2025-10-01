@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  grpc-annotation-service:
+    build:
+      context: .
+      dockerfile: Servers/GrpcAnnotationService/Dockerfile
+    ports:
+      - "5001:80"
+      - "5002:443"
+    volumes:
+      - ./Servers/GrpcAnnotationService/appsettings.json:/app/appsettings.json:ro
+      - ./Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+    networks:
+      - viking-network
+
+  grpc-annotation:
+    build:
+      context: .
+      dockerfile: Servers/GrpcAnnotation/Dockerfile
+    ports:
+      - "5000:80"
+      - "5003:443"
+    volumes:
+      - ./Servers/GrpcAnnotation/appsettings.json:/app/appsettings.json:ro
+      - ./Servers/GrpcAnnotation/appsettings.Development.json:/app/appsettings.Development.json:ro
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+    networks:
+      - viking-network
+
+  segmentation-server:
+    build:
+      context: .
+      dockerfile: Servers/SegmentationServer/Dockerfile
+    ports:
+      - "50051:50051"
+    volumes:
+      - C:/Temp/.X11-unix:/tmp/.X11-unix
+      - C:/src/git/SAM2-docker:/home/user/SAM2-Docker
+    environment:
+      - DISPLAY
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - viking-network
+
+networks:
+  viking-network:
+    driver: bridge

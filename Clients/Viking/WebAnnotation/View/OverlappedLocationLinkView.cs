@@ -16,11 +16,11 @@ namespace WebAnnotation.View
     /// <summary>
     /// Renders arrows for location links that are overlapped by an annotation on the section
     /// </summary>
-    internal class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView, Viking.Common.IContextMenu,
+    internal class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView,
                                        IMouseActionSupport, IPenActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelpStrings
     {
-        public TextureCircleView circleView;
-        public LabelView label;
+        private TextureCircleView circleView;
+        private LabelView label;
         private readonly LocationLinkKey linkKey;
 
         public GridCircle Circle
@@ -56,15 +56,7 @@ namespace WebAnnotation.View
         }
 
         public GridRectangle BoundingBox => Circle.BoundingBox;
-
-        public ContextMenu ContextMenu
-        {
-            get
-            {
-                LocationLink_CanvasContextMenuView contextMenuView = new LocationLink_CanvasContextMenuView(linkKey);
-                return contextMenuView.ContextMenu;
-            }
-        }
+          
 
         public bool IsVisible(Scene scene)
         {

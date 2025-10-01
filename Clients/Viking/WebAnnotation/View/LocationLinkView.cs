@@ -154,7 +154,7 @@ namespace WebAnnotation.ViewModel
             this.mapProvider = mapProvider;
             UpdatePropertiesFromLocations(mapProvider);
 
-            ContextMenuGenerator = LocationLink_CanvasContextMenuView.ContextMenuGenerator;
+            //ContextMenuGenerator = LocationLink_CanvasContextMenuView.ContextMenuGenerator;
 
             lineView = CreateView();
         }

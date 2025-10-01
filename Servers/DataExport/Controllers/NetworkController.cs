@@ -155,6 +155,9 @@ namespace DataExport.Controllers
             // TODO: Replace with ODataClient logic
             // Example: await ODataClient.GetGraphAsync(...)
             // For now, return a stub or throw NotImplementedException
+            
+            return ODataNeuronFactory.FromOData(requestIDs, GetNumHops(), AppSettings.ODataURL);
+
             throw new NotImplementedException("ODataClient graph retrieval not yet implemented.");
         }
 

@@ -22,4 +22,8 @@ RUN dotnet publish "GrpcAnnotationService.csproj" -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Create volume mount points for configuration files
+VOLUME ["/app/appsettings.json", "/app/appsettings.Development.json"]
+
 ENTRYPOINT ["dotnet", "GrpcAnnotationService.dll"]

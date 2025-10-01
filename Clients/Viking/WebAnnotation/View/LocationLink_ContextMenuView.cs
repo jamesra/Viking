@@ -2,59 +2,38 @@
 using System.Windows.Forms;
 using Viking.AnnotationServiceTypes;
 using Viking.Common;
+using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
-    internal class LocationLink_CanvasContextMenuView : IContextMenu
-    {
-        public LocationLinkKey linkKey;
-
-        public LocationLink_CanvasContextMenuView(LocationLinkKey link)
+    public class LocationLink_CanvasContextMenuView : IProvideContextMenus
+    {  
+        public LocationLink_CanvasContextMenuView()
         {
-            linkKey = link;
         }
-
-        public static ContextMenu ContextMenuGenerator(IViewLocationLink link)
-        {
-            LocationLink_CanvasContextMenuView contextMenuView = new LocationLink_CanvasContextMenuView(link.Key);
-            return contextMenuView.ContextMenu;
-        }
-
-        public System.Windows.Forms.ContextMenu ContextMenu
-        {
-            get
-            {
-                ContextMenu menu = new ContextMenu();
-
-                MenuItem menuSeperator = new MenuItem();
-                MenuItem menuDelete = new MenuItem("Delete Link", ContextMenu_OnDelete);
-
-                menu.MenuItems.Add(menuSeperator);
-                menu.MenuItems.Add(menuDelete);
-
-                menu.MenuItems.Add(menuSeperator);
-
-                MenuItem menuSplit = new MenuItem("Split structure", ContextMenu_OnSplit);
-                menu.MenuItems.Add(menuSplit);
-
-                return menu;
-            }
-        }
-
+         
         private static WebAnnotation.UI.SplitStructuresForm SplitForm = null;
         protected void ContextMenu_OnSplit(object sender, EventArgs e)
         {
-            if (SplitForm == null)
-            {
-                SplitForm = new WebAnnotation.UI.SplitStructuresForm
+            if (SplitForm is null)
+            { 
+                if (sender is MenuItem menuItem)
                 {
-                    SplitID = linkKey.A,
-                    KeepID = linkKey.B
-                };
-                SplitForm.FormClosed += OnSplitFormClosed;
-                SplitForm.Show();
+                    if (menuItem.Tag is LocationLinkKey linkKey)
+                    {
+
+                        SplitForm = new WebAnnotation.UI.SplitStructuresForm
+                        {
+                            SplitID = linkKey.A,
+                            KeepID = linkKey.B
+                        };
+                        SplitForm.FormClosed += OnSplitFormClosed;
+                        SplitForm.Show();
+                    }
+                }
             }
+
         }
 
         private static void OnSplitFormClosed(object sender, FormClosedEventArgs e)
@@ -64,12 +43,40 @@ namespace WebAnnotation.View
 
         protected void ContextMenu_OnDelete(object sender, EventArgs e)
         {
-            Delete();
+            if (sender is MenuItem menuItem)
+            {
+                if (menuItem.Tag is LocationLinkKey linkKey)
+                {
+                    Store.LocationLinks.DeleteLink(linkKey.A, linkKey.B);
+                }
+            } 
+        } 
+        public ContextMenu BuildMenuFor(object Obj, ContextMenu menu)
+        {
+            if (Obj is LocationLinkView link)
+            {
+                MenuItem menuSeperator = new MenuItem();
+                MenuItem menuDelete = new MenuItem("Delete Link", ContextMenu_OnDelete);
+                menuDelete.Tag = link.Key;
+
+                menu.MenuItems.Add(menuSeperator);
+                menu.MenuItems.Add(menuDelete);
+
+                menu.MenuItems.Add(menuSeperator);
+
+                MenuItem menuSplit = new MenuItem("Split structure", ContextMenu_OnSplit);
+                menuSplit.Tag = link.Key;
+                menu.MenuItems.Add(menuSplit);
+
+                return menu;
+            }
+
+            return menu;
         }
 
-        public void Delete()
+        public ContextMenu BuildMenuFor(Type ObjType, ContextMenu Menu)
         {
-            Store.LocationLinks.DeleteLink(linkKey.A, linkKey.B);
+            return Menu;
         }
     }
 }

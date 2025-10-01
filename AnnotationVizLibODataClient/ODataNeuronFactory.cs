@@ -3,6 +3,8 @@ using ODataClient.ConnectomeDataModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace AnnotationVizLib.OData
 {
@@ -22,8 +24,10 @@ namespace AnnotationVizLib.OData
         {
             Container container = new Container(Endpoint);
 
+            /*
             var scale_retval = container.Scale();
             var scale = scale_retval.GetValue().ToGeometryScale();
+            */
 
             ODataNeuronFactory graphFactory = new ODataNeuronFactory();
 
@@ -35,7 +39,7 @@ namespace AnnotationVizLib.OData
 
             if (IDToStructureType is null)
             {
-                ODataNeuronFactory.PopulateStructureTypeDictionary(container.StructureTypes.ToList());
+                ODataNeuronFactory.PopulateStructureTypeDictionary(container.StructureTypes.GetAllPages());
             }
 
             //List<long> listNetworkStructureID = container.Network(StructureIDs, (int)numHops).ToList();
@@ -48,8 +52,13 @@ namespace AnnotationVizLib.OData
 
             return graphFactory.graph;
         }
+         
+        public static Task<NeuronGraph> FromODataAsync(ICollection<long> StructureIDs, uint numHops, Uri Endpoint)
+        {
+            return Task.Run(() => FromOData(StructureIDs, numHops, Endpoint));
+        } 
 
-        private static void PopulateStructureTypeDictionary(ICollection<StructureType> types)
+        private static void PopulateStructureTypeDictionary(IEnumerable<StructureType> types)
         {
             ODataNeuronFactory.IDToStructureType = new SortedDictionary<long, StructureType>();
 
@@ -58,6 +67,7 @@ namespace AnnotationVizLib.OData
                 ODataNeuronFactory.IDToStructureType.Add(t.ID, t);
             }
         }
+         
 
         private void PopulateStructureDictionary(ICollection<Structure> structs)
         {

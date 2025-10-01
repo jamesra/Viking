@@ -216,7 +216,7 @@ namespace Viking.UI.Forms
 
         void linkLabel1_Click(object sender, System.EventArgs e)
         {
-            System.Diagnostics.Process.Start("https://connectomes.utah.edu/Viz/Account/Register");
+            System.Diagnostics.Process.Start("https://identity.codepharm.net:4001/");
         }
 
         async Task TryUpdateVolumeMetaData(string _VolumeURL, CancellationToken token)
@@ -295,7 +295,7 @@ namespace Viking.UI.Forms
             var TokenHelper = new Viking.Tokens.IdentityServerHelper()
             {
                 IdentityServerURL = new Uri(this.AuthenticationServiceURL),
-                ClientId = "ro.viking",
+                ClientId = "Viking",
                 ClientSecret = "CorrectHorseBatteryStaple"
             };
 

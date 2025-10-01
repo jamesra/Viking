@@ -100,7 +100,7 @@
   <!-- Use VikingXNAGraphics for net48 and Monographics for net9.0 -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 	<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
-    <ProjectReference Include="..\..\VikingXNAGraphics\VikingXNAGraphics.csproj" />
+    <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" />
   </ItemGroup>
   
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">

@@ -6,6 +6,9 @@ using System.Linq;
 
 namespace AnnotationVizLib.OData
 {
+    /// <summary>
+    /// Represents a read-only adapter around an OData Structure object
+    /// </summary>
     class ODataStructureAdapter : IStructureReadOnly
     {
         private readonly Structure structure;

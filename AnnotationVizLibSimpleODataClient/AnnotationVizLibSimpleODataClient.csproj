@@ -3,7 +3,7 @@
     <TargetFrameworks>net48</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
-	  <PackageReference Include="Simple.OData.V4.Client" Version="4.27.0" />
+	  <PackageReference Include="Simple.OData.V4.Client" Version="6.0.1" />
       <PackageReference Include="EntityFramework" Version="6.5.1" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
