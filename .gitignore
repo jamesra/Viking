@@ -39,3 +39,4 @@ TestResults
 **/Release/
 /Clients/Viking/Viking/Properties/launchSettings.json
 *.log
+*.csproj.user
