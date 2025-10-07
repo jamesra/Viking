@@ -21,9 +21,8 @@
         {
             public const string Admin = "Administrator";
             public const string AdminId = "cdf2b676-7edc-4d96-9ebb-8d1968734482";
-            public const string AdminPasswordHash = "AQAAAAIAAYagAAAAEMyM4WI9BttHIkXcpkuoazVKSOkiTP/C1/3b3enpOUCFaGvS4QEPfqLj8zDlSX/dIA==";
-            public const string SecurityStamp = "00000000-0000-0000-0000-000000000001";
-            public const string ConcurrencyStamp = "00000000-0000-0000-0000-000000000002";
+            // Note: AdminPasswordHash, SecurityStamp, and ConcurrencyStamp removed - 
+            // admin user is created dynamically on first login, not seeded statically
         }
 
         public static class Groups

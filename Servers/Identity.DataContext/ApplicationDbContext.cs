@@ -142,40 +142,6 @@ namespace Viking.Identity.Data
             // Note: UserToGroupAssignment for Everyone group will be created when first user registers
         }
 
-        /// <summary>
-        /// Creates a user
-        /// </summary>
-        /// <param name="builder"></param>
-        /// <param name="username"></param>
-        /// <param name="password"></param>
-        /// <param name="email"></param>
-        /// <param name="familyName"></param>
-        /// <param name="givenName"></param>
-        /// <returns>UserId of the new user</returns>
-        private string PopulateAdmin(ModelBuilder builder, string username, string password, string email = null, string familyName=null, string givenName = null)
-        {
-            // Use static GUID for admin user to avoid dynamic operations in OnModelCreating
-            var userId = Special.Roles.AdminId;
-            var user = new ApplicationUser()
-            {
-                FamilyName = familyName ?? username,
-                GivenName = givenName ?? username,
-                Email = email ?? null,
-                UserName = username,
-                NormalizedUserName = username.ToUpper(),
-                Id = userId,
-            };
-
-            // Use pre-hashed password to avoid dynamic hashing in OnModelCreating
-            // This is the hash for "Admin" password (pre-generated with static salt)
-            user.SecurityStamp = Special.Roles.SecurityStamp;
-            user.PasswordHash = Special.Roles.AdminPasswordHash;
-            user.ConcurrencyStamp = Special.Roles.ConcurrencyStamp;
-
-            builder.Entity<ApplicationUser>().HasData(user);
-
-            return userId;
-        }
 
 
          
