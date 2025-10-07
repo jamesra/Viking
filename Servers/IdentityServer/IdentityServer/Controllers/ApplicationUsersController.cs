@@ -134,21 +134,41 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     return Unauthorized();
                 }
 
+                // Always reload the user from database to get the latest concurrency stamp
+                var currentUser = await _context.ApplicationUser
+                    .Include("GroupAssignments.Group")
+                    .SingleOrDefaultAsync(u => u.Id == applicationUser.Id);
+                
+                if (currentUser == null)
+                {
+                    return NotFound();
+                }
+                
+                // Update the current user's properties with the new values from the form
+                currentUser.FamilyName = applicationUser.FamilyName;
+                currentUser.GivenName = applicationUser.GivenName;
+                currentUser.UserName = applicationUser.UserName;
+                currentUser.NormalizedUserName = applicationUser.NormalizedUserName;
+                currentUser.Email = applicationUser.Email;
+                currentUser.NormalizedEmail = applicationUser.NormalizedEmail;
+                currentUser.EmailConfirmed = applicationUser.EmailConfirmed;
+                currentUser.PhoneNumber = applicationUser.PhoneNumber;
+                currentUser.PhoneNumberConfirmed = applicationUser.PhoneNumberConfirmed;
+                currentUser.TwoFactorEnabled = applicationUser.TwoFactorEnabled;
+                currentUser.LockoutEnd = applicationUser.LockoutEnd;
+                currentUser.LockoutEnabled = applicationUser.LockoutEnabled;
+                currentUser.AccessFailedCount = applicationUser.AccessFailedCount;
+                
                 try
                 {
-                    _context.Update(applicationUser);
+                    _context.Update(currentUser);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!ApplicationUserExists(applicationUser.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    // If we still get a concurrency exception, show error to user
+                    ModelState.AddModelError("", "The record you attempted to edit was modified by another user after you got the original value. Please refresh and try again.");
+                    return View(currentUser);
                 }
                 return RedirectToAction(nameof(Index));
             }
@@ -236,13 +256,32 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!ApplicationUserExists(applicationUser.Id))
+                    // Handle concurrency conflicts by reloading the entity and retrying
+                    var currentUser = await _context.ApplicationUser
+                        .Include("GroupAssignments")
+                        .SingleOrDefaultAsync(u => u.Id == applicationUser.Id);
+                    
+                    if (currentUser == null)
                     {
                         return NotFound();
                     }
-                    else
+                    
+                    try
                     {
-                        throw;
+                        // Apply the group membership changes to the current user
+                        foreach(var org in UserOrganizations)
+                        {
+                            currentUser.UpdateGroupMembership(org); 
+                        } 
+
+                        _context.Update(currentUser);
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        // If still failing after reload, show error to user
+                        ModelState.AddModelError("", "The record you attempted to edit was modified by another user after you got the original value. Please refresh and try again.");
+                        return View(currentUser);
                     }
                 }
                 return RedirectToAction(nameof(Index));

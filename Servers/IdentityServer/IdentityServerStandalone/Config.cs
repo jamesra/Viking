@@ -20,12 +20,7 @@ namespace Viking.Identity
 
         public const string AuthenticationSchemes = "Bearer, Introspection, Cookies, idsrv";
 
-        public readonly struct Policy
-        {
-            public const string GroupAccessManager = "Access Manager";
-            public const string OrgUnitAdmin = "Administrator";
-            public const string BearerToken = "BearerToken";
-        }
+        
 
         // scopes define the resources in your system
         public static IEnumerable<IdentityResource> GetIdentityResources()
@@ -150,6 +145,18 @@ namespace Viking.Identity
                     },
                     AllowedScopes = AnnotationScopes
                 }, 
+                // API Client for token introspection, used by WebApi project to validate tokens
+                new Client
+                {
+                    ClientId = "api",
+                    ClientName = "API Resource",
+                    ClientSecrets =
+                    {
+                        new Secret(options.Secret.Sha256())
+                    },
+                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+                    AllowedScopes = allowedScopes
+                },
                 // OpenID Connect hybrid flow and client credentials client (MVC)
                 new Client
                 {

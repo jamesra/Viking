@@ -17,16 +17,18 @@ namespace Client
     {
 
         //private const string IdentityServerEndpoint = "https://identity.connectomes.utah.edu/identityserver/"; 
-        private const string IdentityServerEndpoint = "https://localhost:5001/";
+        //private const string IdentityServerEndpoint = "https://localhost:5001/";
+        private const string IdentityServerEndpoint = "https://identity.codepharm.net:5001/";
         //private const string IdentityServerEndpoint = "https://localhost:44387/";
 
         //private const string IdentityServerApiEndpoint = "https://identity.connectomes.utah.edu/api/";
         //private const string IdentityServerApiEndpoint = "https://localhost:44387/";
-        private const string IdentityServerApiEndpoint = "https://localhost:5001/";
+        //private const string IdentityServerApiEndpoint = "https://localhost:6001/";
+        private const string IdentityServerApiEndpoint = "https://identity.codepharm.net:6001/";
 
         private const string Secret = "CorrectHorseBatteryStaple";
 
-        private const string Client = "ro.viking";
+        private const string Client = "api";
 
         private static async Task Pause()
         {
@@ -60,10 +62,10 @@ namespace Client
                 {
                     Address = disco.TokenEndpoint,
                     UserName = "jamesan",
-                    Password = "Wat>com3",
+                    Password = "JulyNinth2005!",
                     ClientId = Client,
                     ClientSecret = Secret,
-                    Scope = $"openid Viking.Annotation {VolumeName}.Read {VolumeName}.Annotate", //Add desired permissions to scope
+                    Scope = $"openid Viking.Annotation {VolumeName}.Read", //Add desired permissions to scope
                 });
 
                 //var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");

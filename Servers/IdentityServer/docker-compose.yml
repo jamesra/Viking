@@ -2,7 +2,7 @@ services:
   identity-standalone:
     env_file:
         - .env
-        - .env.docker  
+        - .env.Docker
     build:
       context: ..
       dockerfile: IdentityServer/IdentityServerStandalone/Dockerfile

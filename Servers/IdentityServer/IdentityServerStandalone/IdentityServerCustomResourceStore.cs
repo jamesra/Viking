@@ -48,11 +48,16 @@ namespace Viking.Identity
                 {
                     UserClaims = { JwtClaimTypes.Role, JwtClaimTypes.Id, JwtClaimTypes.Name},
                     ApiSecrets = { _Secret },
-                    Scopes = options.ApiScopes.Select(s => s.Name).ToArray()//{"Viking.Annotation"}
+                    Scopes = options.ApiScopes.Select(s => s.Name).Append("Viking.Annotation").ToArray()
                 },
             };
         }
 
+        /// <summary>
+        /// Converts a Resource to an ApiResource
+        /// </summary>
+        /// <param name="r"></param>
+        /// <returns></returns>
         private ApiResource ResourceToResourceApi(Resource r)
         {
             return new ApiResource()
@@ -65,6 +70,11 @@ namespace Viking.Identity
             };
         }
 
+        /// <summary>
+        /// Converts an IEnumerable<Resource> to an IEnumerable<ApiResource>
+        /// </summary>
+        /// <param name="resources"></param>
+        /// <returns></returns>
         private IEnumerable<ApiResource> ResourceToResourceApi(IEnumerable<Resource> resources)
         {
             return resources.Select(r => ResourceToResourceApi(r));

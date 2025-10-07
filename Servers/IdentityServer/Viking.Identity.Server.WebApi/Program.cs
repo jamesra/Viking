@@ -63,6 +63,8 @@ public class Program
             // Enable environment variable substitution in the main configuration
             builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
 
+            // Enable environment variable substitution in the main configuration
+            builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
 
             // Configure Serilog
             builder.Host.UseSerilog();
@@ -79,8 +81,13 @@ public class Program
                                .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw)
                                .Build();
 
-            var http_port = configuration.GetValue<int>("IDENTITY_WEBAPI_HTTP_PORT");
-            var https_port = configuration.GetValue<int>("IDENTITY_WEBAPI_HTTPS_PORT");
+            var http_port = configuration.GetValue<int>("IDENTITY_WEBAPI_CONTAINER_HTTP_PORT");
+            var https_port = configuration.GetValue<int>("IDENTITY_WEBAPI_CONTAINER_HTTPS_PORT");
+            
+            Log.Information("DEBUG: http_port = {HttpPort}, https_port = {HttpsPort}", http_port, https_port);
+            Log.Information("DEBUG: Environment variables - IDENTITY_WEBAPI_HTTP_PORT = {HttpPortEnv}, IDENTITY_WEBAPI_HTTPS_PORT = {HttpsPortEnv}", 
+                Environment.GetEnvironmentVariable("IDENTITY_WEBAPI_HTTP_PORT"), 
+                Environment.GetEnvironmentVariable("IDENTITY_WEBAPI_HTTPS_PORT"));
 
 
             // Configure Kestrel with SSL
@@ -159,7 +166,7 @@ public class Program
                 {
                     options.Authority = vikingConfig?.Authority;
                     options.ClientSecret = vikingConfig?.Secret;
-                    options.ClientId = "mvc";
+                    options.ClientId = "api";
                     options.ClientCredentialStyle = IdentityModel.Client.ClientCredentialStyle.AuthorizationHeader;
                     options.EnableCaching = true;
                 });

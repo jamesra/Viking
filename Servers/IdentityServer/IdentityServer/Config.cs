@@ -11,14 +11,7 @@ namespace Viking.Identity.Server.WebManagement
         //internal const string Secret = "CorrectHorseBatteryStaple"; 
 
         public const string AuthenticationSchemes = "Bearer, Introspection, Cookies, idsrv";
-
-        public readonly struct Policy
-        {
-            public const string GroupAccessManager = "Access Manager";
-            public const string OrgUnitAdmin = "Administrator";
-            public const string BearerToken = "BearerToken";
-        }
-
+         
         // scopes define the resources in your system
         public static IEnumerable<IdentityResource> GetIdentityResources()
         { 
@@ -117,7 +110,7 @@ namespace Viking.Identity.Server.WebManagement
 
             // client credentials client
             return new List<Client>
-            {
+            { 
                 /*
                 new Client
                 {
@@ -126,12 +119,10 @@ namespace Viking.Identity.Server.WebManagement
 
                     ClientSecrets =
                     {
-                        new Secret(Secret.Sha256()) //"My co-workers remove eyeballs from cute mammals for a living"
+                        new Secret(options.Secret.Sha256()) //"My co-workers remove eyeballs from cute mammals for a living"
                     },
                     AllowedScopes = AnnotationScopes,
-                },
-                */
-                /*
+                }, 
                 // resource owner password grant client
                 new Client
                 {
@@ -140,16 +131,31 @@ namespace Viking.Identity.Server.WebManagement
                      
                     ClientSecrets =
                     {
-                        new Secret(Secret.Sha256())
+                        new Secret(options.Secret.Sha256())
                     },
                     AllowedScopes = AnnotationScopes
-                },
+                }, 
                 */
+                // API Client for token introspection
+                new Client
+                {
+                    ClientId = "api",
+                    ClientName = "API Resource",
+                    ClientSecrets =
+                    {
+                        new Secret(options.Secret.Sha256())
+                    },
+                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+                    RedirectUris = { options.Authority + "signin-oidc" },
+                    PostLogoutRedirectUris = { options.Authority + "signout-callback-oidc"},
+                    AllowedScopes = allowedScopes
+                },
+
                 // OpenID Connect hybrid flow and client credentials client (MVC)
                 new Client
                 {
                     ClientId = "mvc",
-                    ClientName = "MVC Client",
+                    ClientName = "Management Website Client",
                     //AllowedGrantTypes = GrantTypes.HybridAndClientCredentials,
                     AllowedGrantTypes = GrantTypes.Code,
 

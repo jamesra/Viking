@@ -49,10 +49,14 @@ namespace Viking.Identity.Server.WebManagement
             Env.TraversePath().Load(buildEnvFile);
 
             // Configure Serilog
+            var logPath = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Docker" 
+                ? "/var/log/supervisor/identity-server/IdentityManagerLogs.json"
+                : "IdentityManagerLogs.json";
+            
             Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
-                .WriteTo.File("IdentityManagerLogs.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
+                .WriteTo.File(logPath, Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
                 .CreateLogger();
 
             try
@@ -64,26 +68,29 @@ namespace Viking.Identity.Server.WebManagement
                 builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
 
                 // Configure Serilog
+                var managementLogPath = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Docker" 
+                    ? "/var/log/supervisor/identity-server/IdentityServerManagement.json"
+                    : "IdentityServerManagement.json";
+                
                 builder.Host.UseSerilog((context, services, configuration) => configuration
                     .ReadFrom.Configuration(context.Configuration)
                     .ReadFrom.Services(services)
-                    .Enrich.FromLogContext()
-#if DEBUG
-                    .WriteTo.Console()
-#endif
-                    .WriteTo.File("IdentityServerManagement.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
+                    .Enrich.FromLogContext() 
+                    .WriteTo.Console() 
+                    .WriteTo.File(managementLogPath, Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
                 );
 
                 // Configure services
                 ConfigureServices(builder.Services, builder.Configuration);
-
+                Log.Information("=== Configure Services Complete ===");
                 // Configure Kestrel
-                ConfigureKestrel(builder.WebHost);
-
+                ConfigureKestrel(builder.WebHost, builder.Configuration);
+                Log.Information("=== Configure Kestrel Complete ===");
                 var app = builder.Build();
 
                 // Configure the HTTP request pipeline
                 Configure(app, builder.Environment);
+                Log.Information("=== Configure Pipeline Complete ===");
 
                 app.Run();
             }
@@ -93,21 +100,14 @@ namespace Viking.Identity.Server.WebManagement
             }
             finally
             {
+                Log.Information("Web Management exit");
                 Log.CloseAndFlush();
             }
         }
 
         private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
-            // Add CORS policy service
-            services.AddSingleton<ICorsPolicyService>((container) => {
-                var logger = container.GetRequiredService<ILogger<DefaultCorsPolicyService>>();
-                return new DefaultCorsPolicyService(logger) {
-                    AllowAll = true
-                };
-            });
-
-            // Configure Identity Server Data Context
+            // Configure Identity Server Data Context (must be first for database dependencies)
             services.ConfigureIdentityServerDataContext(configuration);
 
             // Add controllers and views
@@ -135,13 +135,38 @@ namespace Viking.Identity.Server.WebManagement
                 configuration.GetSection(nameof(VikingIdentityServerOptions)));
 
             // Configure OAuth2 Introspection options
+            Console.WriteLine(" Loading OAuth2IntrospectionOptions configuration...");
             var OAuth2ConfigurationSection = configuration.GetSection(nameof(OAuth2IntrospectionOptions));
             if (OAuth2ConfigurationSection is null)
+            {
+                Console.WriteLine(" ERROR: OAuth2IntrospectionOptions section missing from configuration");
                 throw new ArgumentException(
                     $"{nameof(OAuth2IntrospectionOptions)} section missing from appsettings.json configuration");
+            }
 
+            Console.WriteLine(" OAuth2IntrospectionOptions section found, deserializing...");
             OAuth2IntrospectionOptions OAuth2Options = OAuth2ConfigurationSection.Get<OAuth2IntrospectionOptions>();
-            OAuth2Options.Validate();
+            
+            if (OAuth2Options == null)
+            {
+                Console.WriteLine(" ERROR: OAuth2IntrospectionOptions deserialization returned null");
+                Console.WriteLine(" Configuration section exists but failed to deserialize");
+                throw new InvalidOperationException("Failed to deserialize OAuth2IntrospectionOptions from configuration");
+            }
+             
+            Console.WriteLine(" Validating OAuth2IntrospectionOptions...");
+            try
+            {
+                OAuth2Options.Validate();
+                Console.WriteLine(" OAuth2IntrospectionOptions validation passed");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($" ERROR: OAuth2IntrospectionOptions validation failed: {ex.Message}");
+                Console.WriteLine($" Exception type: {ex.GetType().Name}");
+                Console.WriteLine($" Stack trace: {ex.StackTrace}");
+                throw;
+            }
 
             // Configure authentication
             services.AddAuthentication(options =>
@@ -168,17 +193,15 @@ namespace Viking.Identity.Server.WebManagement
             services.AddScoped<IAuthorizationHandler, ResourceIdPermissionsAuthorizationHandler>();
             services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
 
-            // Configure SSL and HTTPS redirection
-            var sslOptions = configuration.GetSection("SSL").Get<Viking.SSL.SSLOptions>();
-            var https_port = configuration.GetValue<int>("https_port", 443);
-
+            // Configure SSL and HTTPS redirection 
+            var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT"); 
             services.AddHttpsRedirection(options =>
             {
                 options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
                 options.HttpsPort = https_port;
             });
 
-            // Configure Identity
+            // Configure Identity (after database context)
             services.AddIdentity<ApplicationUser, ApplicationRole>(config =>
              { 
                  config.SignIn.RequireConfirmedEmail = true;  
@@ -190,7 +213,7 @@ namespace Viking.Identity.Server.WebManagement
             services.AddTransient<IEmailSender, EmailSender>();
             services.AddTransient<IPermissionsViewModelHelper, PermissionsViewModelHelper>();
 
-            // Add HTTP context accessor (commented out in original but commonly needed)
+            // Add HTTP context accessor
             services.AddHttpContextAccessor();
 
             // Add profile service
@@ -199,16 +222,24 @@ namespace Viking.Identity.Server.WebManagement
             // Add authorization policy evaluator
             services.AddAuthorizationPolicyEvaluator();
 
-            // Configure authorization policies
+            // Configure authorization policies (after authentication services)
             services.AddAuthorization(options =>
             {
                 var builder = new AuthorizationPolicyBuilder();
                 builder.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
                 builder.RequireAuthenticatedUser();
                 options.AddPolicy("protectedScope", policy => policy.RequireClaim("scope", "Viking.Annotation"));
-                options.AddPolicy(Config.Policy.BearerToken, builder.Build());
-                options.AddPolicy(Config.Policy.GroupAccessManager, policy => policy.Requirements.Add(Authorization.Operations.GroupAccessManager));
-                options.AddPolicy(Config.Policy.OrgUnitAdmin, policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
+                options.AddPolicy(Policy.BearerToken, builder.Build());
+                options.AddPolicy(Policy.GroupAccessManager, policy => policy.Requirements.Add(Authorization.Operations.GroupAccessManager));
+                options.AddPolicy(Policy.OrgUnitAdmin, policy => policy.Requirements.Add(Authorization.Operations.OrgUnitAdmin));
+            });
+
+            // Add CORS policy service (after other services are configured)
+            services.AddSingleton<ICorsPolicyService>((container) => {
+                var logger = container.GetRequiredService<ILogger<DefaultCorsPolicyService>>();
+                return new DefaultCorsPolicyService(logger) {
+                    AllowAll = true
+                };
             });
 
             // Configure SMTP options
@@ -221,22 +252,14 @@ namespace Viking.Identity.Server.WebManagement
             });
         }
 
-        private static void ConfigureKestrel(IWebHostBuilder webHostBuilder)
+        private static void ConfigureKestrel(IWebHostBuilder webHostBuilder, IConfiguration configuration)
         {
             webHostBuilder.ConfigureKestrel(options =>
             {
                 // Configure HTTPS with custom certificate
-                var configuration = new ConfigurationBuilder()
-                    .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json", optional: true)
-                    .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
-                    .AddEnvironmentVariables()
-                    .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw)
-                    .Build();
-
                 var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
-                var http_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_HTTP_PORT");
-                var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_HTTPS_PORT");
+                var http_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT");
+                var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT");
 
                 options.ListenAnyIP(http_port); // HTTP port
                 options.ListenAnyIP(https_port, listenOptions => // HTTPS port
@@ -246,7 +269,6 @@ namespace Viking.Identity.Server.WebManagement
                     {
                         try
                         {
-                            Log.Information("Certificate found");
                             listenOptions.UseHttps(sslCert);
                             Log.Information("Successfully configured Kestrel HTTPS with certificate: {Subject}", sslCert.Subject);
                         }
@@ -265,13 +287,18 @@ namespace Viking.Identity.Server.WebManagement
 
         private static void Configure(WebApplication app, IWebHostEnvironment env)
         {
+            Console.WriteLine(" Starting IdentityManagementWebsite configuration...");
             Log.Information("Starting IdentityManagementWebsite configuration...");
 
             // Initialize database
+            Console.WriteLine(" About to initialize database...");
             InitializeDatabase(app);
+            Console.WriteLine(" Database initialization complete");
 
+            Console.WriteLine(" Checking environment...");
             if (env.IsDevelopment())
             {
+                Console.WriteLine(" Using Development environment");
                 Log.Information("Using Developer Exception Pages...");
                 app.UseDeveloperExceptionPage();
                 // Note: UseDatabaseErrorPage is obsolete in .NET 9, using DatabaseDeveloperPageExceptionFilter instead
@@ -279,21 +306,39 @@ namespace Viking.Identity.Server.WebManagement
             }
             else
             {
+                Console.WriteLine(" Using Production environment");
                 Log.Information("Using Error page for exceptions...");
                 app.UseExceptionHandler("/Home/Error");
             }
 
+            Console.WriteLine(" Configuring middleware...");
             app.UseSerilogRequestLogging();
+            Console.WriteLine(" Serilog request logging configured");
+
             app.UseHttpsRedirection();
+            Console.WriteLine(" HTTPS redirection configured");
+            
             app.UseStaticFiles();
+            Console.WriteLine(" Static files configured");
+
             app.UseRouting();
+            Console.WriteLine(" Routing configured");
+            
             app.UseAuthentication();
+            Console.WriteLine(" Authentication configured");
+            
             app.UseAuthorization();
+            Console.WriteLine(" Authorization configured");
 
             // Modern top-level route registrations (replaces UseEndpoints)
             // We cannot require authorization on all routes or users are unable to login
+            Console.WriteLine(" Mapping routes...");
             app.MapDefaultControllerRoute();
+            Console.WriteLine(" Default controller route mapped");
+            
             app.MapControllers();
+            Console.WriteLine(" Controllers mapped");
+            Console.WriteLine(" === Configure Pipeline Complete ===");
         }
 
         private static IApplicationBuilder InitializeDatabase(IApplicationBuilder app)

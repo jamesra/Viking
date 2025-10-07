@@ -27,6 +27,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Viking.Identity;
@@ -50,12 +51,6 @@ namespace Viking.Identity.Server.Standalone
             var buildEnvFile = $".env.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}";
             Env.TraversePath().Load(buildEnvFile);
 
-            // Configure Serilog
-            Log.Logger = new LoggerConfiguration()
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
-                .WriteTo.File("IdentityServerApiLogs.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
-                .CreateLogger();
 
             try
             {
@@ -128,9 +123,19 @@ namespace Viking.Identity.Server.Standalone
                             listenOptions.UseHttps(cert);
                             Log.Information("Successfully configured Kestrel HTTPS with certificate: {Subject}", cert.Subject);
                         }
+                        catch (CryptographicException ex)
+                        {
+                            Log.Error(ex, "Failed to load certificate into Kestrel due to cryptographic error.");
+                            listenOptions.UseHttps(); // Fallback to development certificate
+                        }
+                        catch (ArgumentException ex)
+                        {
+                            Log.Error(ex, "Failed to load certificate into Kestrel due to invalid certificate format.");
+                            listenOptions.UseHttps(); // Fallback to development certificate
+                        }
                         catch (Exception ex)
                         {
-                            Log.Error(ex, "Failed to load certificate into Kestrel.");
+                            Log.Error(ex, "Failed to load certificate into Kestrel due to unexpected error.");
                             listenOptions.UseHttps(); // Fallback to development certificate
                         }
                     } 
@@ -149,13 +154,31 @@ namespace Viking.Identity.Server.Standalone
             var SSLOptions = configuration.GetSection("SSL").Get<Viking.SSL.SSLOptions>();
             var sslCert = Certs.LoadSSLCertificate(SSLOptions);
 
+            // Configure basic services
+            ConfigureBasicServices(services, https_port);
+            
+            // Configure Identity Server
+            ConfigureIdentityServer(services, configuration, sslCert);
+            
+            // Configure Data Protection
+            ConfigureDataProtection(services, sslCert);
+            
+            // Configure Email services
+            ConfigureEmailServices(services, configuration);
+        }
+
+        private static void ConfigureBasicServices(IServiceCollection services, int httpsPort)
+        {
             services.AddHttpsRedirection(options =>
             {
                 options.RedirectStatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status308PermanentRedirect;
-                options.HttpsPort = https_port;
+                options.HttpsPort = httpsPort;
             });
             services.AddRazorPages();
+        }
 
+        private static void ConfigureIdentityServer(IServiceCollection services, IConfiguration configuration, X509Certificate2 sslCert)
+        {
             services.ConfigureIdentityServerDataContext(configuration);
 
             var persistedGrantConnectionString = configuration.GetConnectionString("PersistedGrantConnection");
@@ -255,9 +278,69 @@ namespace Viking.Identity.Server.Standalone
 
             Log.Information("=== END IDENTITYSERVER CONFIGURATION DEBUG ===");
 
+            // Configure SSL certificate and signing credentials
+            ConfigureSigningCredentials(builder, sslCert);
+        }
+
+        private static void ConfigureSigningCredentials(IIdentityServerBuilder builder, X509Certificate2 sslCert)
+        {
+            if (sslCert != null)
+            {
+                // Validate that the certificate has a private key
+                if (!sslCert.HasPrivateKey)
+                {
+                    Log.Warning("Certificate does not have a private key. Cannot use for signing. Subject: {Subject}, Thumbprint: {Thumbprint}. Using developer signing credential instead.",
+                        sslCert.Subject, sslCert.Thumbprint);
+                    builder.AddDeveloperSigningCredential();
+                    return;
+                }
+
+                try
+                {
+                    // Additional validation - try to access the private key to ensure it's usable
+                    using (var rsa = sslCert.GetRSAPrivateKey())
+                    {
+                        if (rsa == null)
+                        {
+                            Log.Warning("Certificate private key is not accessible or not RSA. Subject: {Subject}, Thumbprint: {Thumbprint}. Using developer signing credential instead.",
+                                sslCert.Subject, sslCert.Thumbprint);
+                            builder.AddDeveloperSigningCredential();
+                            return;
+                        }
+                    }
+
+                    builder.AddSigningCredential(sslCert);
+                    Log.Information("Successfully configured IdentityServer with certificate signing credential. Subject: {Subject}, Thumbprint: {Thumbprint}, HasPrivateKey: {HasPrivateKey}",
+                        sslCert.Subject, sslCert.Thumbprint, sslCert.HasPrivateKey);
+                }
+                catch (CryptographicException ex)
+                {
+                    Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate due to cryptographic error. Using developer signing credential instead.");
+                    builder.AddDeveloperSigningCredential();
+                }
+                catch (ArgumentException ex)
+                {
+                    Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate due to invalid certificate format. Using developer signing credential instead.");
+                    builder.AddDeveloperSigningCredential();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate due to unexpected error. Using developer signing credential instead.");
+                    builder.AddDeveloperSigningCredential();
+                }
+            }
+            else
+            {
+                Log.Warning("No valid certificate found. Using developer signing credential for IdentityServer.");
+                builder.AddDeveloperSigningCredential();
+            }
+        }
+
+        private static void ConfigureDataProtection(IServiceCollection services, X509Certificate2 sslCert)
+        {
             // Configure Data Protection with Docker-compatible settings
             var dataProtectionKeysPath = @"./DataProtectionKeys/";
-            var dataProtectionBuilder = builder.Services.AddDataProtection()
+            var dataProtectionBuilder = services.AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
                 .SetApplicationName("VikingIdentityServer");
 
@@ -273,9 +356,17 @@ namespace Viking.Identity.Server.Standalone
                         dataProtectionBuilder.ProtectKeysWithCertificate(sslCert);
                         Log.Information("Data Protection configured with certificate encryption");
                     }
+                    catch (CryptographicException ex)
+                    {
+                        Log.Warning(ex, "Failed to configure Data Protection with certificate due to cryptographic error, using file system protection only");
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        Log.Warning(ex, "Failed to configure Data Protection with certificate due to invalid certificate format, using file system protection only");
+                    }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, "Failed to configure Data Protection with certificate, using file system protection only");
+                        Log.Warning(ex, "Failed to configure Data Protection with certificate due to unexpected error, using file system protection only");
                     }
                 }
                 else
@@ -287,28 +378,10 @@ namespace Viking.Identity.Server.Standalone
             {
                 Log.Information("Docker environment detected - Data Protection configured with file system protection only");
             }
+        }
 
-            // Load SSL certificate and configure IdentityServer 
-            if (sslCert != null)
-            {
-                try
-                {
-                    builder.AddSigningCredential(sslCert);
-                    Log.Information("Successfully configured IdentityServer with certificate. Subject: {Subject}, Thumbprint: {Thumbprint}",
-                        sslCert.Subject, sslCert.Thumbprint);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Failed to configure IdentityServer signing credentials with certificate");
-                    builder.AddDeveloperSigningCredential();
-                }
-            }
-            else
-            {
-                Log.Warning("No valid certificate found. Using developer signing credential for IdentityServer.");
-                builder.AddDeveloperSigningCredential();
-            }
-
+        private static void ConfigureEmailServices(IServiceCollection services, IConfiguration configuration)
+        {
             // Configure email options
             services.Configure<EmailOptions>(configuration.GetSection("Email"));
 
@@ -369,29 +442,7 @@ namespace Viking.Identity.Server.Standalone
                     <p>Welcome to the Viking Identity Server</p>
                 </body>
                 </html>");
-            });
-             
-            Log.Information("Endpoints mapped successfully.");
-
-            // Log endpoints immediately
-            var endpointDataSource = app.Services.GetRequiredService<EndpointDataSource>();
-            Log.Information("Immediate endpoint count: {Count}", endpointDataSource.Endpoints.Count);
-
-            // Schedule delayed endpoint logging
-            var lifetime = app.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
-            lifetime.ApplicationStarted.Register(() =>
-            {
-                Task.Delay(5000).ContinueWith(_ => // Wait 5 seconds after startup
-                {
-                    var delayedEndpointDataSource = app.Services.GetRequiredService<EndpointDataSource>();
-                    Log.Information("Delayed endpoint count: {Count}", delayedEndpointDataSource.Endpoints.Count);
-
-                    foreach (var endpoint in delayedEndpointDataSource.Endpoints)
-                    {
-                        Log.Information("Delayed Endpoint: {DisplayName}", endpoint.DisplayName);
-                    }
-                });
-            });
+            }); 
         }
 
         private static IApplicationBuilder InitializeDatabase(IApplicationBuilder app)

@@ -11,6 +11,9 @@ namespace Viking.Identity.Server.WebManagement.Extensions
 
         public static void UpdateUsersPermissions(this Resource resource, IEnumerable<UserResourcePermissionsViewModel> models)
         {
+            if(models is null)
+                return;
+
             foreach (var model in models)
             {
                 resource.UpdateUserPermissions(model);
@@ -19,6 +22,12 @@ namespace Viking.Identity.Server.WebManagement.Extensions
 
         public static void UpdateUserPermissions(this Resource resource, UserResourcePermissionsViewModel model)
         {
+            if(model is null)
+                return;
+
+            if(model.Permissions is null)
+                return;
+
             foreach(var permission in model.Permissions)
             {
                 resource.UpdateUserPermissions(model.GranteeId, model.Permissions);
@@ -31,8 +40,11 @@ namespace Viking.Identity.Server.WebManagement.Extensions
         /// <param name="user"></param>
         /// <param name="org"></param>
         public static void UpdateUserPermissions(this Resource resource, string userId, IList<ItemSelectedViewModel<string>> permissions)
-        { 
-            foreach(var permission in permissions)
+        {
+            if (permissions is null)
+                return;
+
+            foreach (var permission in permissions)
             {
                 resource.UpdateUserPermissions(userId, permission.Id, permission.Selected);
             }
@@ -45,6 +57,9 @@ namespace Viking.Identity.Server.WebManagement.Extensions
 
         public static void UpdateGroupsPermissions(this Resource resource, IEnumerable<GroupResourcePermissionsViewModel> models)
         {
+            if(models is null)
+                return;
+
             foreach (var model in models)
             {
                 resource.UpdateGroupPermissions(model);
@@ -53,6 +68,12 @@ namespace Viking.Identity.Server.WebManagement.Extensions
 
         public static void UpdateGroupPermissions(this Resource resource, GroupResourcePermissionsViewModel model)
         {
+            if (model is null)
+                return;
+
+            if(model.Permissions is null)
+                return;
+
             foreach (var permission in model.Permissions)
             {
                 resource.UpdateGroupPermissions(model.GranteeId, model.Permissions);
@@ -66,6 +87,9 @@ namespace Viking.Identity.Server.WebManagement.Extensions
         /// <param name="org"></param>
         public static void UpdateGroupPermissions(this Resource resource, long groupId, IList<ItemSelectedViewModel<string>> permissions)
         {
+            if(permissions is null)
+                return;
+
             foreach (var permission in permissions)
             {
                 resource.UpdateGroupPermissions(groupId, permission.Id, permission.Selected);

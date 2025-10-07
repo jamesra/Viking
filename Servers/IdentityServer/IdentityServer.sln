@@ -30,10 +30,16 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
 		.env = .env
+		.env.All = .env.All
+		.env.All.Development = .env.All.Development
+		.env.All.Docker = .env.All.Docker
+		.env.All.Production = .env.All.Production
 		.env.Development = .env.Development
 		.env.Docker = .env.Docker
 		.env.Production = .env.Production
+		docker-compose-all.yml = docker-compose-all.yml
 		docker-compose.yml = docker-compose.yml
+		Dockerfile = Dockerfile
 		..\Certs\Readme.rst = ..\Certs\Readme.rst
 	EndProjectSection
 EndProject
