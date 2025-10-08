@@ -25,16 +25,39 @@ namespace Annotation.Identity
 
         public JwtMessageInspector()
         {
-            _authority = ConfigurationManager.AppSettings["IdentityServer:Authority"];
-            _audience = ConfigurationManager.AppSettings["IdentityServer:Audience"];
+            _authority = ConfigurationManager.AppSettings["IdentityServer:authority"];
+            _audience = ConfigurationManager.AppSettings["IdentityServer:audience"] ?? "Viking.Annotation.API";
             
             _tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:ValidateIssuerSigningKey"] ?? "true"),
-                ValidateIssuer = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:ValidateIssuer"] ?? "true"),
-                ValidateAudience = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:ValidateAudience"] ?? "true"),
-                ValidateLifetime = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:ValidateLifetime"] ?? "true"),
-                ClockSkew = TimeSpan.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:ClockSkew"] ?? "00:05:00"),
+                ValidateIssuer = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:validateIssuer"] ?? "true"),
+                ValidateAudience = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:validateAudience"] ?? "true"),
+                ValidateLifetime = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:validateLifetime"] ?? "true"),
+                ClockSkew = TimeSpan.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:clockSkew"] ?? "00:05:00"),
+                ValidIssuer = _authority,
+                ValidAudience = _audience,
+                // You'll need to configure the signing key based on your IdentityServer setup
+                // IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ConfigurationManager.AppSettings["IdentityServer:IssuerSigningKey"]))
+            };
+        }
+
+        public JwtMessageInspector(string Authority, 
+                                   string Audience, 
+                                   bool ValidateIssuerSigningKey = true,
+                                   bool ValidateIssuer = true,
+                                   bool ValidateLifetime = true)
+        {
+            _authority = Authority;
+            _audience = Audience;
+
+            _tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:ValidateIssuerSigningKey"] ?? "true"),
+                ValidateIssuer = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:validateIssuer"] ?? "true"),
+                ValidateAudience = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:validateAudience"] ?? "true"),
+                ValidateLifetime = bool.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:validateLifetime"] ?? "true"),
+                ClockSkew = TimeSpan.Parse(ConfigurationManager.AppSettings["JWT:TokenValidationParameters:clockSkew"] ?? "00:05:00"),
                 ValidIssuer = _authority,
                 ValidAudience = _audience,
                 // You'll need to configure the signing key based on your IdentityServer setup

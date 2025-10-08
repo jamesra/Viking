@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -15,25 +16,37 @@ using System.Windows.Threading;
 using System.Xml.Linq;
 using Utils;
 using Viking.Properties;
+using Viking.Services;
 
 namespace Viking.UI.Forms
 {
     public partial class Logon : Form
-    { 
-        private string _AuthenticationServiceURL = null;
-        public string AuthenticationServiceURL
+    {
+        private Uri _AuthenticationServiceURL = null;
+        public Uri AuthenticationServiceURL
         {
             get => _AuthenticationServiceURL;
             set
             {
-                _AuthenticationServiceURL = value is null ? null : (new Uri(value).AbsoluteUri);  
-                OnAuthenticationServiceURLChanged(_AuthenticationServiceURL);
+                var changed = _AuthenticationServiceURL != value;
+                _AuthenticationServiceURL = value;
+
+                if (changed)
+                    OnAuthenticationServiceURLChanged(_AuthenticationServiceURL);
             }
         }
 
-        protected string RegistrationURL => AuthenticationServiceURL + "/Account/Register";
+        /// <summary>
+        /// URL for the API that answers questions about what authority a token has.
+        /// </summary>
+        public Uri IdentityApiURL
+        {
+            get; set;
+        }
 
-        protected string AuthenticationURL => AuthenticationServiceURL + "/Account/Authenticate";
+        protected Uri RegistrationURL => new Uri(AuthenticationServiceURL, "Account/Register");
+
+        protected Uri AuthenticationURL => new Uri(AuthenticationServiceURL, "/Account/Authenticate");
 
 
         private string _VolumeURL;
@@ -101,9 +114,9 @@ namespace Viking.UI.Forms
         }
 
         private string VolumeName
-        { 
-                get;
-                set; 
+        {
+            get;
+            set;
         }
 
         private string userName = UI.State.AnonymousCredentials.UserName;
@@ -124,7 +137,7 @@ namespace Viking.UI.Forms
 
         protected string passkey => "marclab.connectome.utah";
 
-        public Logon(string authenticationURL, string VolumePath = null)
+        public Logon(Uri authenticationURL, string VolumePath = null)
         {
             this.AuthenticationServiceURL = authenticationURL;
 
@@ -152,11 +165,14 @@ namespace Viking.UI.Forms
             {
                 System.IO.Directory.CreateDirectory(this.KeyFileFolderPath);
             }
-#if DEBUG             
-            NetworkCredential cachedCredentials = ReadCredentialsFromFile();
-#else
-            NetworkCredential cachedCredentials = ReadCredentialsFromEncryptedFile();
-#endif
+            // Use modern Windows Credential Manager for secure credential storage
+            NetworkCredential cachedCredentials = WindowsCredentialManager.GetCredentials();
+
+            // If no modern credentials found, try to migrate from legacy storage
+            if (cachedCredentials == null)
+            {
+                cachedCredentials = MigrateLegacyCredentials();
+            }
             if (cachedCredentials is null)
             {
                 this.btnLogin.Enabled = false;
@@ -175,6 +191,11 @@ namespace Viking.UI.Forms
             this.BeginInvoke(new System.Action(() => update_label.Text = text));
         }
 
+        private void ShowError(string text)
+        {
+            this.BeginInvoke(new System.Action(() => update_label.Text = text));
+        }
+
         private void Logon_Load(object sender, EventArgs e)
         {
             if (Settings.Default.VolumeURLs is null)
@@ -184,7 +205,7 @@ namespace Viking.UI.Forms
 
             for (int i = Settings.Default.VolumeURLs.Count - 1; i >= 0; i--)
             {
-                if (Settings.Default.VolumeURLs[0] is null)
+                if (Settings.Default.VolumeURLs[i] is null)
                     Settings.Default.VolumeURLs.RemoveAt(i);
             }
 
@@ -210,7 +231,7 @@ namespace Viking.UI.Forms
                 comboVolumeURL.Text = "http://connectomes.utah.edu/Rabbit/Volume.VikingXML";
             }
 
-            VolumeURL ??= comboVolumeURL.Text; 
+            VolumeURL ??= comboVolumeURL.Text;
         }
 
 
@@ -226,8 +247,8 @@ namespace Viking.UI.Forms
             {
                 document = await VolumeModel.Volume.LoadXDocumentAsync(_VolumeURL, token);
 
-                if(token.IsCancellationRequested)
-                    return; 
+                if (token.IsCancellationRequested)
+                    return;
 
                 if (this.IsHandleCreated)
                 {
@@ -236,7 +257,7 @@ namespace Viking.UI.Forms
             }
             catch (WebException except)
             {
-                if(token.IsCancellationRequested)
+                if (token.IsCancellationRequested)
                     return;
 
                 document = null;
@@ -248,7 +269,7 @@ namespace Viking.UI.Forms
                     if (result == DialogResult.Yes)
                         Settings.Default.VolumeURLs.Remove(_VolumeURL);
                 }
-            } 
+            }
 
             if (this.IsHandleCreated)
             {
@@ -272,43 +293,72 @@ namespace Viking.UI.Forms
             //return;
         }
 
+        // Add a loading indicator and error label to your form (designer code not shown)
+        // For example, add: Label lblError, ProgressBar progressBarLoading
+
+        private void SetLoadingState(bool isLoading)
+        {
+            btnLogin.Enabled = !isLoading;
+        }
+
+
         async Task login_handle()
         {
+            SetLoadingState(true);
+            ShowError(""); // Clear previous errors
+
             SetUpdateText($"Authenticating to {this.AuthenticationServiceURL}...");
 
             userName = this.textUsername.Text;
-
             password = this.textPassword.Text;
 
             if (String.IsNullOrEmpty(userName))
             {
-                SetUpdateText("Enter Username");
+                ShowError("Enter Username");
+                SetLoadingState(false);
                 return;
             }
 
             if (String.IsNullOrEmpty(password))
             {
-                SetUpdateText("Enter Password");
+                ShowError("Enter Password");
+                SetLoadingState(false);
                 return;
             }
-             
-            var TokenHelper = new Viking.Tokens.IdentityServerHelper()
+
+            var ApiTokenHelper = new Viking.Tokens.IdentityServerHelper()
             {
-                IdentityServerURL = new Uri(this.AuthenticationServiceURL),
-                ClientId = "Viking",
-                ClientSecret = "CorrectHorseBatteryStaple"
+                IdentityServerURL = this.AuthenticationServiceURL,
+                IdentityApiURL = this.IdentityApiURL,
+                ClientId = "api",
+                ClientSecret = ConfigurationManager.AppSettings["ApiClientSecret"]
             };
 
-            var id_token_response = await TokenHelper.RetrieveBearerToken(userName, password);
+            var TokenHelper = new Viking.Tokens.IdentityServerHelper()
+            {
+                IdentityServerURL = this.AuthenticationServiceURL,
+                IdentityApiURL = this.IdentityApiURL,
+                ClientId = "Viking",
+                ClientSecret = ConfigurationManager.AppSettings["VikingClientSecret"]
+            };
+
+            var id_token_response = await ApiTokenHelper.RetrieveBearerToken(userName, password);
             if (id_token_response is null)
             {
-                SetUpdateText($"No token returned");
+                ShowError("No token returned");
+                SetLoadingState(false);
                 return;
             }
-
-            if(id_token_response.IsError)
+            else
             {
-                SetUpdateText($"{id_token_response.Error}\n{id_token_response.HttpErrorReason}");
+                //Save the credentials if we got a token back
+                TryUpdateSavedCredentials();
+            }
+
+            if (id_token_response.IsError)
+            {
+                ShowError($"{id_token_response.Error}\n{id_token_response.HttpErrorReason}");
+                SetLoadingState(false);
                 return;
             }
 
@@ -317,82 +367,137 @@ namespace Viking.UI.Forms
             try
             {
                 volumePermissions = await TokenHelper.RetrieveUserVolumePermissions(id_token, VolumeName);
-                if (volumePermissions != null && volumePermissions.Length > 0)
+                if (volumePermissions == null || volumePermissions.Length == 0)
                 {
-                    SetUpdateText($"Login Successful!\n{VolumeName} permissions: {volumePermissions.ToCsv()}");
-                }
-                else
-                {
-                    SetUpdateText($"User does not have permissions in volume");
+                    ShowError("User does not have permissions in volume");
+                    SetLoadingState(false);
+                    return;
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                SetUpdateText($"Error retrieving permissions");
+                ShowError("Error retrieving permissions");
                 MessageBox.Show(e.ToString(), "Error retrieving permissions", MessageBoxButtons.OK);
+                SetLoadingState(false);
                 return;
             }
 
             List<string> list_permissions = new List<string>
-            {
-                "openid",
-                "Viking.Annotation"
-            };
+    {
+        "openid",
+        "Viking.Annotation"
+    };
             list_permissions.AddRange(volumePermissions.Select(p => $"{VolumeName}.{p}"));
 
             var bearer_token_response = await TokenHelper.RetrieveBearerToken(userName, password, list_permissions.ToArray());
             if (bearer_token_response.IsError)
             {
-                SetUpdateText($"{id_token_response.Error}\n{id_token_response.HttpErrorReason}");
+                ShowError($"{id_token_response.Error}\n{id_token_response.HttpErrorReason}");
+                SetLoadingState(false);
                 return;
             }
 
             this.BearerToken = bearer_token_response as TokenResponse;
-
             this.Credentials = new NetworkCredential(userName, password);
-            //this.Credentials = new NetworkCredential("jamesan", "4%w%o06");
-
             State.UserAccessLevel = volumePermissions;
 
+            SetUpdateText("Login Successful! -- Access Level: ");
+            this.Result = DialogResult.OK;
+            SetLoadingState(false);
+
+            this.BeginInvoke(new Action(() => this.Close()));
+        }
+
+        private void TryUpdateSavedCredentials()
+        {
+            // Clear old credential storage if username changed
             if (this.textUsername.Text != readUserName)
-                System.IO.File.Delete(this.KeyFileFullPath);
+            {
+                WindowsCredentialManager.DeleteCredentials();
+                // Clean up any legacy credential files
+                if (System.IO.File.Exists(this.KeyFileFullPath))
+                {
+                    try { System.IO.File.Delete(this.KeyFileFullPath); } catch { }
+                }
+            }
 
             if (remember_me_check_box.Checked)
             {
                 try
                 {
-#if DEBUG
-                    WriteCredentialsInFile(new NetworkCredential(userName, password));
-#else
-                    WriteCredentialsInEncryptedFile(new NetworkCredential(userName, password));
-#endif
-                }
-                catch (IOException except)
-                {
-                    MessageBox.Show("An exception occured saving your credentials. Viking will continue but your credentials will not be saved for the next login.\nException message:\n" + except.Message);
-                    if (System.IO.File.Exists(this.KeyFileFullPath))
+                    // Use modern Windows Credential Manager for secure credential storage
+                    bool saved = WindowsCredentialManager.SaveCredentials(userName, password, this.AuthenticationServiceURL?.ToString());
+                    if (!saved)
                     {
-                        System.IO.File.Delete(this.KeyFileFullPath);
+                        MessageBox.Show("Unable to save credentials securely. Your credentials will not be remembered for the next login.");
                     }
                 }
-            }
-
-            else
-            {
-                if (System.IO.File.Exists(this.KeyFileFullPath))
+                catch (Exception except)
                 {
-                    System.IO.File.Delete(this.KeyFileFullPath);
+                    MessageBox.Show("An exception occurred saving your credentials. Viking will continue but your credentials will not be saved for the next login.\nException message:\n" + except.Message);
                 }
             }
-
-            SetUpdateText("Login Successful! -- Access Level: ");
-
-            this.Result = DialogResult.OK;
-
-            this.BeginInvoke(new Action(() => this.Close()));
+            else
+            {
+                // Remove saved credentials if "remember me" is unchecked
+                WindowsCredentialManager.DeleteCredentials();
+            }
         }
 
 
+        /// <summary>
+        /// Migrates credentials from legacy storage to Windows Credential Manager.
+        /// This method handles the transition from old file-based storage to modern credential management.
+        /// </summary>
+        private NetworkCredential MigrateLegacyCredentials()
+        {
+            try
+            {
+                NetworkCredential legacyCredentials = null;
+
+#if DEBUG
+                legacyCredentials = ReadCredentialsFromFile();
+#else
+                legacyCredentials = ReadCredentialsFromEncryptedFile();
+#endif
+
+                if (legacyCredentials != null)
+                {
+                    // Migrate to Windows Credential Manager
+                    WindowsCredentialManager.SaveCredentials(
+                        legacyCredentials.UserName,
+                        legacyCredentials.Password,
+                        this.AuthenticationServiceURL?.ToString());
+
+                    // Clean up legacy files after successful migration
+                    try
+                    {
+                        if (System.IO.File.Exists(this.KeyFileFullPath))
+                        {
+                            System.IO.File.Delete(this.KeyFileFullPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Warning: Could not delete legacy credential file: {ex.Message}");
+                    }
+
+                    return legacyCredentials;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error during credential migration: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// [DEPRECATED] Legacy credential storage method. Use WindowsCredentialManager instead.
+        /// Kept for backward compatibility and migration purposes.
+        /// </summary>
+        [Obsolete("Use WindowsCredentialManager.SaveCredentials() instead. This method will be removed in a future version.")]
         private bool WriteCredentialsInFile(NetworkCredential credentials)
         {
             if (System.IO.File.Exists(this.KeyFileFullPath))
@@ -422,6 +527,11 @@ namespace Viking.UI.Forms
             return false;
         }
 
+        /// <summary>
+        /// [DEPRECATED] Legacy credential storage method. Use WindowsCredentialManager instead.
+        /// Kept for backward compatibility and migration purposes.
+        /// </summary>
+        [Obsolete("Use WindowsCredentialManager.SaveCredentials() instead. This method will be removed in a future version.")]
         private bool WriteCredentialsInEncryptedFile(NetworkCredential credentials)
         {
             if (System.IO.File.Exists(this.KeyFileFullPath))
@@ -451,6 +561,11 @@ namespace Viking.UI.Forms
             return false;
         }
 
+        /// <summary>
+        /// [DEPRECATED] Legacy credential retrieval method. Use WindowsCredentialManager instead.
+        /// Kept for backward compatibility and migration purposes.
+        /// </summary>
+        [Obsolete("Use WindowsCredentialManager.GetCredentials() instead. This method will be removed in a future version.")]
         private NetworkCredential ReadCredentialsFromFile()
         {
             string keyFileFullPath = this.KeyFileFullPath;
@@ -484,6 +599,11 @@ namespace Viking.UI.Forms
             return null;
         }
 
+        /// <summary>
+        /// [DEPRECATED] Legacy credential retrieval method. Use WindowsCredentialManager instead.
+        /// Kept for backward compatibility and migration purposes.
+        /// </summary>
+        [Obsolete("Use WindowsCredentialManager.GetCredentials() instead. This method will be removed in a future version.")]
         private NetworkCredential ReadCredentialsFromEncryptedFile()
         {
             string keyFileFullPath = this.KeyFileFullPath;
@@ -590,7 +710,7 @@ namespace Viking.UI.Forms
                 {
                     var content = new StringContent(postdata, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
                     var response = await httpClient.PostAsync(AuthenticationURI, content);
-                    
+
                     if (response.StatusCode != HttpStatusCode.OK)
                     {
                         SetUpdateText(response.ReasonPhrase);
@@ -658,12 +778,12 @@ namespace Viking.UI.Forms
 
         private void annotationsLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            System.Diagnostics.Process.Start(this.AuthenticationServiceURL);
+            System.Diagnostics.Process.Start(this.AuthenticationServiceURL.ToString());
         }
 
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            System.Diagnostics.Process.Start(this.RegistrationURL);
+            System.Diagnostics.Process.Start(this.RegistrationURL.ToString());
         }
 
         private void pictureBox1_Click(object sender, EventArgs e)
@@ -791,8 +911,26 @@ namespace Viking.UI.Forms
                         return;
                     }
 
-                    AuthenticationServiceURL = endpointElement.Attributes().FirstOrDefault(a => a.Name.LocalName == "Authentication")?.Value;
-                    
+                    try
+                    {
+                        AuthenticationServiceURL = new Uri(endpointElement.Attributes().FirstOrDefault(a => a.Name.LocalName == "Authentication")?.Value);
+                    }
+                    catch (UriFormatException)
+                    {
+                        AuthenticationServiceURL = null;
+                    }
+
+                    try
+                    {
+                        IdentityApiURL = new Uri(endpointElement.Attributes().FirstOrDefault(a => a.Name.LocalName == "IdentityApi")?.Value);
+                    }
+                    catch (UriFormatException)
+                    {
+                        IdentityApiURL = AuthenticationURL;
+                        SetUpdateText($"Volume is missing the Api URL");
+                    }
+
+
                     //this.AuthenticationServiceURL = "https://identity.connectomes.utah.edu/";
                     //TODO: Place authentication URL back in the xml file
                     //this.AuthenticationServiceURL = AuthenticationURLForVolume(volElem);
@@ -804,7 +942,7 @@ namespace Viking.UI.Forms
             }
         }
 
-        private void OnAuthenticationServiceURLChanged(string service)
+        private void OnAuthenticationServiceURLChanged(Uri service)
         {
             if (service is null)
             {
@@ -823,13 +961,13 @@ namespace Viking.UI.Forms
 
         private void DisableLogins()
         {
-            if(groupCredentials != null)
+            if (groupCredentials != null)
                 groupCredentials.Enabled = false;
         }
 
         private void EnableLogins()
         {
-            if(groupCredentials != null)
+            if (groupCredentials != null)
                 groupCredentials.Enabled = true;
 
             BeginInvoke(new Action(() => createConnection()));

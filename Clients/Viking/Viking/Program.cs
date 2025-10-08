@@ -1,4 +1,4 @@
-﻿#define USEASPMEMBERSHIP
+﻿// #define USEASPMEMBERSHIP
 
 using CommandLine;
 using System;
@@ -10,6 +10,8 @@ using System.Windows.Forms;
 using CommandLine.Text;
 using Viking.UI.Forms;
 using VikingCoreResources = Viking.Properties.Resources;
+using Squirrel;
+using System.Linq;
 
 
 namespace Viking
@@ -78,6 +80,9 @@ namespace Viking
         [STAThread]
         static void Main(string[] args)
         {
+            // Check for Squirrel updates
+            CheckForUpdates();
+
             Application.EnableVisualStyles();
 
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();
@@ -313,7 +318,7 @@ namespace Viking
         {
 
 #if !USEASPMEMBERSHIP
-            using (Logon vikingLogon = new Logon(VolumePath))
+            using (Logon vikingLogon = new Logon(VolumePath is null ? null : new Uri(VolumePath)))
             {
                 vikingLogon.ShowDialog();
 
@@ -326,7 +331,7 @@ namespace Viking
                 UI.State.UserCredentials = vikingLogon.Credentials;
 
                 Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
-                Viking.Tokens.TokenInjector.BearerTokenAuthority = vikingLogon.AuthenticationServiceURL;
+                Viking.Tokens.TokenInjector.BearerTokenAuthority = vikingLogon.AuthenticationServiceURL.ToString();
 
                 return vikingLogon.VolumeURL;
             }
@@ -396,6 +401,41 @@ namespace Viking
                 {
                     Debug.WriteLine($"Could not parse {number}\n{e}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Check for Squirrel updates and apply them if available
+        /// </summary>
+        private static void CheckForUpdates()
+        {
+            try
+            {
+                using (var mgr = new UpdateManager("http://codepharm.net/viking/releases/"))
+                {
+                    var updateInfo = mgr.CheckForUpdate().Result;
+                    if (updateInfo.ReleasesToApply.Any())
+                    {
+                        Trace.WriteLine($"Found {updateInfo.ReleasesToApply.Count} updates to apply", "Viking");
+                        
+                        // Apply updates
+                        mgr.UpdateApp().Wait();
+                        
+                        Trace.WriteLine("Updates applied successfully, restarting application", "Viking");
+                        
+                        // Restart the application
+                        UpdateManager.RestartApp();
+                    }
+                    else
+                    {
+                        Trace.WriteLine("No updates available", "Viking");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error checking for updates: {ex.Message}", "Viking");
+                // Continue with application startup even if update check fails
             }
         }
     }

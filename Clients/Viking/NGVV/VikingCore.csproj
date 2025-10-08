@@ -41,6 +41,7 @@
     <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
     <PackageReference Include="System.ValueTuple" Version="4.6.1" />
     <PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" Condition="'$(TargetFramework)' == 'net48'" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="6.0.0" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   
   <!-- .NET 9 specific packages -->
@@ -184,7 +185,9 @@
     <None Include="app.config" />
     <None Include="ClassDiagram1.cd" />
     <None Include="Properties\CVS\app.manifest" />
-    <None Include="Properties\Settings.settings" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+    </None>
     <None Include="Resources\marclab.png" />
     <None Include="Resources\scissors_16xLG.png" />
     <None Include="Resources\Scissors2.ico" />

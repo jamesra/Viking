@@ -23,7 +23,15 @@ namespace Viking.Tokens
         public string ClientId { get; set; } = "ro.viking";
         public string ClientSecret { get; set; } = "CorrectHorseBatteryStaple";
 
+        /// <summary>
+        /// Uri of service that provides tokens
+        /// </summary>
         public Uri IdentityServerURL { get; set; }
+
+        /// <summary>
+        /// Uri of Api service that informs about what authority a token holder can request.
+        /// </summary>
+        public Uri IdentityApiURL { get; set;}
 
         private DiscoveryCache _disco = null;
 
@@ -163,7 +171,7 @@ namespace Viking.Tokens
             using (var client = new System.Net.Http.HttpClient())
             {
                 client.SetBearerToken(user_token.AccessToken); 
-                var address_uri = $"{IdentityServerURL.Scheme}://" + IdentityServerURL.Host.UriCombine($"api/permissions/resource/{VolumeName}");
+                var address_uri = new Uri(IdentityApiURL, $"Permissions/resource/{VolumeName}");
                 string address = address_uri.ToString();
 
                 var response = await client.GetStringAsync(address); 

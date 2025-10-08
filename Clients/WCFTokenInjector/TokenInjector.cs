@@ -17,7 +17,25 @@ namespace Viking.Tokens
         public object BeforeSendRequest(ref Message request, IClientChannel channel)
         { 
             if (BearerTokenAuthority != null && BearerToken != null)
-                request.Headers.Add(MessageHeader.CreateHeader("Bearer", BearerTokenAuthority, BearerToken.AccessToken));
+            {
+                // Add bearer token to HTTP Authorization header
+                HttpRequestMessageProperty httpRequestMessage;
+                object httpRequestMessageObject;
+                if (request.Properties.TryGetValue(HttpRequestMessageProperty.Name, out httpRequestMessageObject))
+                {
+                    httpRequestMessage = httpRequestMessageObject as HttpRequestMessageProperty;
+                    if (httpRequestMessage != null && string.IsNullOrEmpty(httpRequestMessage.Headers["Authorization"]))
+                    {
+                        httpRequestMessage.Headers["Authorization"] = $"Bearer {BearerToken.AccessToken}";
+                    }
+                }
+                else
+                {
+                    httpRequestMessage = new HttpRequestMessageProperty();
+                    httpRequestMessage.Headers["Authorization"] = $"Bearer {BearerToken.AccessToken}";
+                    request.Properties.Add(HttpRequestMessageProperty.Name, httpRequestMessage);
+                }
+            }
             return null;
         }
     }
