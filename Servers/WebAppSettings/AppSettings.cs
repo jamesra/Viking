@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using System.Web.Configuration;
+using System.Configuration;
 using UnitsAndScale;
 
 namespace VikingWebAppSettings
@@ -17,12 +17,12 @@ namespace VikingWebAppSettings
     {
         public static string GetApplicationSetting(string name)
         {
-            if (!WebConfigurationManager.AppSettings.HasKeys())
+            if (!ConfigurationManager.AppSettings.HasKeys())
             {
                 throw new ArgumentException(name + " not configured in AppSettings");
             }
 
-            string setting = WebConfigurationManager.AppSettings[name];
+            string? setting = ConfigurationManager.AppSettings[name];
             if (setting == null)
             {
                 throw new ArgumentException(name + " not configured in AppSettings");
@@ -72,20 +72,20 @@ namespace VikingWebAppSettings
 
         public static string GetConnectionString(string name)
         { 
-            if (WebConfigurationManager.ConnectionStrings == null)
+            if (ConfigurationManager.ConnectionStrings == null)
             {
-                throw new ArgumentException("WebConfigurationManager.ConnectionStrings is null");
+                throw new ArgumentException("ConfigurationManager.ConnectionStrings is null");
             }
-            if (WebConfigurationManager.ConnectionStrings.Count == 0)
+            if (ConfigurationManager.ConnectionStrings.Count == 0)
             {
                 throw new ArgumentException("Connection string " + name + " not configured.");
             }
-            if (WebConfigurationManager.ConnectionStrings[name] == null)
+            if (ConfigurationManager.ConnectionStrings[name] == null)
             {
                 throw new ArgumentException("Connection string " + name + " has a null ConnectionStringSettings value");
             }
 
-            string conn_string = WebConfigurationManager.ConnectionStrings[name].ConnectionString;
+            string? conn_string = ConfigurationManager.ConnectionStrings[name].ConnectionString;
             if(conn_string == null)
             {
                 throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
@@ -110,23 +110,22 @@ namespace VikingWebAppSettings
             }
         }
 
-        public static Uri VolumeURI
+        public static Uri? VolumeURI
         {
             get
             {
-                Uri uri = null;
-                if (Uri.TryCreate(VolumeURL, UriKind.Absolute, out uri))
+                if (Uri.TryCreate(VolumeURL, UriKind.Absolute, out Uri? uri))
                     return uri;
 
                 return null;
             }
         }
 
-        public static Uri ODataURL
+        public static Uri? ODataURL
         {
             get
             {
-                return VolumeURI.Append("OData");
+                return VolumeURI?.Append("OData");
             }
         }
 

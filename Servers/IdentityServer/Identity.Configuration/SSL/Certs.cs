@@ -49,10 +49,29 @@ namespace Viking.SSL
                     else
                     {
                         Log.Information("Loading single certificate file");
-                        // Load without password (single certificate file)
-                        cert = X509CertificateLoader.LoadCertificateFromFile(config.CertificatePath);
-                        Log.Information("Successfully loaded certificate from file: {CertificatePath}", config.CertificatePath);
+                        // Try to load as PFX without password first (it might contain the private key)
+                        try
+                        {
+                            cert = X509CertificateLoader.LoadPkcs12FromFile(config.CertificatePath, null);
+                            Log.Information("Successfully loaded certificate from file as PFX: {CertificatePath}, HasPrivateKey: {HasPrivateKey}", 
+                                config.CertificatePath, cert?.HasPrivateKey ?? false);
+                        }
+                        catch (Exception)
+                        {
+                            // If PFX loading fails, try loading as plain certificate
+                            cert = X509CertificateLoader.LoadCertificateFromFile(config.CertificatePath);
+                            Log.Information("Successfully loaded certificate from file: {CertificatePath}, HasPrivateKey: {HasPrivateKey}", 
+                                config.CertificatePath, cert?.HasPrivateKey ?? false);
+                        }
                     }
+                    
+                    // Log warning if certificate doesn't have private key
+                    if (cert != null && !cert.HasPrivateKey)
+                    {
+                        Log.Warning("Certificate loaded but does not contain a private key. This certificate cannot be used for signing operations. Path: {CertificatePath}", 
+                            config.CertificatePath);
+                    }
+                    
                     return cert;
                 }
                 catch (Exception ex)
@@ -73,7 +92,13 @@ namespace Viking.SSL
                     cert = FindCertificateByDnsName(config.DnsName);
                     if (cert != null)
                     {
-                        Log.Information("Found certificate by DNS name: {DnsName}", config.DnsName);
+                        Log.Information("Found certificate by DNS name: {DnsName}, HasPrivateKey: {HasPrivateKey}", 
+                            config.DnsName, cert.HasPrivateKey);
+                        
+                        if (!cert.HasPrivateKey)
+                        {
+                            Log.Warning("Certificate found by DNS name does not have an accessible private key. This certificate cannot be used for signing operations.");
+                        }
                     }
                     return cert;
                 }
@@ -92,7 +117,13 @@ namespace Viking.SSL
 
                     if (cert != null)
                     {
-                        Log.Information("Found certificate by serial number: {SerialNumber}", config.SerialNumber);
+                        Log.Information("Found certificate by serial number: {SerialNumber}, HasPrivateKey: {HasPrivateKey}", 
+                            config.SerialNumber, cert.HasPrivateKey);
+                        
+                        if (!cert.HasPrivateKey)
+                        {
+                            Log.Warning("Certificate found by serial number does not have an accessible private key. This certificate cannot be used for signing operations.");
+                        }
                     }
 
                     return cert;

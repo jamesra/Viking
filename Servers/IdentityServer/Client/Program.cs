@@ -5,6 +5,7 @@ using IdentityModel.Client;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -58,6 +59,7 @@ namespace Client
 
                 HttpClient client = new HttpClient();
 
+                var requested_scopes = new List<string> { "openid", "Viking.Annotation", $"{VolumeName}.Read", $"{VolumeName}.Annotate" };
                 var tokenResponse = await client.RequestPasswordTokenAsync(new PasswordTokenRequest
                 {
                     Address = disco.TokenEndpoint,
@@ -65,7 +67,7 @@ namespace Client
                     Password = "JulyNinth2005!",
                     ClientId = Client,
                     ClientSecret = Secret,
-                    Scope = $"openid Viking.Annotation {VolumeName}.Read", //Add desired permissions to scope
+                    Scope = string.Join(" ", requested_scopes), //Add desired permissions to scope
                 });
 
                 //var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
@@ -120,13 +122,13 @@ namespace Client
 
                 Console.WriteLine("\n\n");
 
-                await CheckClaims(disco, tokenResponse, Client, "RC1.Read");
-                await CheckClaims(disco, tokenResponse, Client, "RC1.Annotate");
-                await CheckClaims(disco, tokenResponse, Client, "Viking.Annotation");
-                await CheckClaims(disco, tokenResponse, Client, "openid");
+                await CheckClaims(disco, tokenResponse, Client, requested_scopes, "RC1.Read");
+                await CheckClaims(disco, tokenResponse, Client, requested_scopes, "RC1.Annotate");
+                await CheckClaims(disco, tokenResponse, Client, requested_scopes, "Viking.Annotation");
+                await CheckClaims(disco, tokenResponse, Client, requested_scopes, "openid");
 
-                await CheckClaims(disco, tokenResponse, Client, "Bogus.Read");
-                await CheckClaims(disco, tokenResponse, Client, "RC1.Bogus");
+                await CheckClaims(disco, tokenResponse, Client, requested_scopes, "Bogus.Read");
+                await CheckClaims(disco, tokenResponse, Client, requested_scopes, "RC1.Bogus");
 
                 /*
                 // call api
@@ -199,7 +201,7 @@ namespace Client
             return true;
         }
 
-        private static async Task<bool> CheckClaims(DiscoveryDocumentResponse disco, TokenResponse tokenResponse, string clientId, string scope)
+        private static async Task<bool> CheckClaims(DiscoveryDocumentResponse disco, TokenResponse tokenResponse, string clientId,  ICollection<string> requested_scopes, string scope)
         {
             //The way I'm using scope and client is a bit odd, after a lot of troubleshooting I am basing it off of this post:
             //https://stackoverflow.com/questions/42126909/how-to-correctly-use-the-introspection-endpoint-with-identity-server-4
@@ -219,7 +221,9 @@ namespace Client
 
             if (validation.IsError)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"Could not connect to client {clientId} to validate scope claim {scope}:\n\t{validation.Error}");
+                Console.ForegroundColor = ConsoleColor.White;
                 return false;
             }
 
@@ -237,14 +241,15 @@ namespace Client
 
             //Console.WriteLine(validation.Json);
 
-            Console.ForegroundColor = FoundClaim ? ConsoleColor.Green : ConsoleColor.Red;
+            bool ClaimMatchesExpectation = requested_scopes.Contains(scope) == FoundClaim;
+            Console.ForegroundColor = ClaimMatchesExpectation ? ConsoleColor.Green : ConsoleColor.Red;
             if (FoundClaim)
             {
-                Console.WriteLine($"Validated scope claim: {scope}");
+                Console.WriteLine($"Validated scope claim: {scope} - Matched expectation: {ClaimMatchesExpectation}");
             }
             else
             {
-                Console.WriteLine($"Cound not validate scope claim: {scope}");
+                Console.WriteLine($"Cound not validate scope claim: {scope} - Matched expectation: {ClaimMatchesExpectation}");
             }
 
             Console.ForegroundColor = ConsoleColor.White;

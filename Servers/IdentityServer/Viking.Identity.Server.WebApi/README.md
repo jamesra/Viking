@@ -114,7 +114,7 @@ docker run -d \
   -e ConnectionStrings__IdentityConnection="Server=your-db-server;Database=IdentityViking;User ID=your-user;Password=your-password;MultipleActiveResultSets=true;TrustServerCertificate=True" \
   -e JwtBearerOptions__Authority="https://your-identity-server.com/identityserver/" \
   -e JwtBearerOptions__RequireHttpsMetadata="true" \
-  -e JwtBearerOptions__TokenValidationParameters__ValidAudience="Viking.Annotation" \
+  -e JwtBearerOptions__TokenValidationParameters__ValidAudience="Viking.Annotation.API" \
   identity-webapi:latest
 ```
 
@@ -164,7 +164,7 @@ Create a custom `appsettings.json` file and mount it:
       "ValidateTokenReplay": true,
       "ValidateIssuerSigningKey": true,
       "NameClaimType": "name",
-      "ValidAudience": "Viking.Annotation",
+      "ValidAudience": "Viking.Annotation.API",
       "ValidTypes": [ "at+jwt" ]
     }
   },

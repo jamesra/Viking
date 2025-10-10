@@ -1,5 +1,30 @@
 # IdentityServerStandalone
 
+## Authentication
+
+### Clients
+
+    mvc - The Viking.Identity.Server.WebApi client
+    web - Believed deprecated
+    viking - The Viking Application 
+    ro.viking - A read-only client of Annotation data, possibly anonymous users
+
+### Scopes
+
+       Viking.Annotations - Access to the API in Viking.Identity.Server.WebApi
+       Volume
+
+           - Read   - Read-only access to the volume
+           - Modify - Read and write access to the volume
+           - Admin  - Full access to the volume, includes more dangerous operations such as merge/split
+ 
+
+### Apis
+
+    
+
+
+
 ## Docker Build Instructions
 
 **Important**: This Dockerfile must be built from the **Server folder** (parent directory of IdentityServer), not from the IdentityServerStandalone folder itself.
