@@ -453,7 +453,15 @@ namespace Annotation
                 }
                 catch (SecurityException)
                 {
-                    new PrincipalPermission(null, nameof(Roles.Modify)).Demand();
+                    try
+                    {
+                        new PrincipalPermission(null, nameof(Roles.Modify)).Demand();
+                    }
+                    catch(SecurityException)
+                    {
+                        new PrincipalPermission(null, nameof(Roles.Admin)).Demand();
+                    }
+                    
                 }
             
             }

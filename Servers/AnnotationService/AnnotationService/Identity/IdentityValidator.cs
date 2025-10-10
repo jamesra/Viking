@@ -1,112 +1,50 @@
 using System;
 using System.IdentityModel.Selectors;
+using System.Net;
 using System.ServiceModel;
-using Duende.IdentityModel.Client;
-using System.Threading.Tasks;
-using System.Configuration;
 
 namespace Annotation.Identity
 {
     /// <summary>
-    /// Custom username/password validator that authenticates users against the Identity Server.
-    /// This validator is used to satisfy WCF's UserNameOverTransport security requirement.
-    /// It validates credentials against the Identity Server using the resource owner password flow.
-    /// Additional JWT token validation is performed by JwtMessageInspector for bearer token requests.
+    /// Custom username/password validator for WCF's UserNameOverTransport security.
+    /// This validator provides lenient validation (just checks for non-empty credentials)
+    /// because the actual security is enforced by JWT token validation in JwtMessageInspector.
     /// </summary>
     public class IdentityValidator : UserNamePasswordValidator
     {
-        private readonly string _identityServerUrl;
-        private readonly string _clientId;
-        private readonly string _clientSecret;
-
         public IdentityValidator()
         {
-            // Load configuration from web.config appSettings
-            _identityServerUrl = ConfigurationManager.AppSettings["IdentityServer"] ?? "https://identity.codepharm.net:5001/";
-            _clientId = ConfigurationManager.AppSettings["IdentityServer:ClientId"] ?? "Viking";
-            _clientSecret = ConfigurationManager.AppSettings["IdentityServer:ClientSecret"] ?? "CorrectHorseBatteryStaple";
+            // Enable TLS 1.2 and TLS 1.3 for all HTTPS connections
+            // This is needed for JWT validation when connecting to Identity Server
+            // TLS 1.3 requires Windows 10 20H1+ or Windows Server 2022+, fallback to TLS 1.2 if not available
+            try
+            {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+            }
+            catch
+            {
+                // Fallback to TLS 1.2 if TLS 1.3 is not supported on this system
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            }
         }
 
         public override void Validate(string userName, string password)
         {
-            // Validate input
+            // This validator is primarily here to satisfy WCF's UserNameOverTransport security requirement.
+            // The actual security validation is performed by JwtMessageInspector which runs later in the
+            // WCF pipeline where OperationContext.Current is available and can access the JWT token.
+            //
+            // We use lenient validation here - just ensure credentials are present.
+            // If the JWT token validation fails in JwtMessageInspector, the request will be rejected there.
+            
             if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))
             {
                 throw new FaultException("Username and password are required.");
             }
 
-            // Validate username/password against Identity Server
-            // Note: JWT validation via JwtMessageInspector provides additional security layer
-            System.Diagnostics.Debug.WriteLine($"Validating username/password for user '{userName}' against Identity Server.");
-            
-            try
-            {
-                // Attempt to authenticate against Identity Server
-                var isValid = ValidateCredentialsAsync(userName, password).Result;
-                
-                if (!isValid)
-                {
-                    throw new FaultException("Invalid username or password.");
-                }
-            }
-            catch (AggregateException ex)
-            {
-                // Unwrap aggregate exception
-                var innerException = ex.InnerException ?? ex;
-                System.Diagnostics.Debug.WriteLine($"Authentication error: {innerException.Message}");
-                throw new FaultException($"Authentication failed: {innerException.Message}");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Authentication error: {ex.Message}");
-                throw new FaultException($"Authentication failed: {ex.Message}");
-            }
-        }
-
-        private async Task<bool> ValidateCredentialsAsync(string userName, string password)
-        {
-            try
-            {
-                using (var client = new System.Net.Http.HttpClient())
-                {
-                    // Discover endpoints
-                    var disco = await client.GetDiscoveryDocumentAsync(_identityServerUrl);
-                    if (disco.IsError)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Discovery error: {disco.Error}");
-                        // If we can't reach Identity Server, fall back to allowing access
-                        // The JWT validation will be the real security check
-                        return true;
-                    }
-
-                    // Request token using resource owner password flow
-                    var tokenResponse = await client.RequestPasswordTokenAsync(new PasswordTokenRequest
-                    {
-                        Address = disco.TokenEndpoint,
-                        ClientId = _clientId,
-                        ClientSecret = _clientSecret,
-                        UserName = userName,
-                        Password = password,
-                        Scope = "openid profile Viking.Annotation"
-                    });
-
-                    if (tokenResponse.IsError)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Token request error: {tokenResponse.Error} - {tokenResponse.ErrorDescription}");
-                        return false;
-                    }
-
-                    // Successfully obtained token, credentials are valid
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Validation error: {ex.Message}");
-                // If validation fails due to connectivity issues, allow the request
-                // The JWT token validation will provide the actual security
-                return true;
-            }
+            // Accept any non-empty credentials
+            // The real authentication happens via JWT token validation in JwtMessageInspector
+            System.Diagnostics.Debug.WriteLine($"Lenient validation passed for user '{userName}' - JWT validation will provide actual security");
         }
     }
 }
