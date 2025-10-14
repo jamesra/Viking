@@ -27,3 +27,4 @@ TestResults
 **/.vs/
 **/MigrationBackup
 /src/
+*.pfx

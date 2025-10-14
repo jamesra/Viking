@@ -42,7 +42,7 @@ COPY IdentityServer/Viking.Identity.Server.Extensions/ IdentityServer/Viking.Ide
 
 COPY IdentityServer/IdentityServerStandalone/ IdentityServer/IdentityServerStandalone/
 COPY IdentityServer/Viking.Identity.Server.WebApi/ IdentityServer/Viking.Identity.Server.WebApi/
-COPY IdentityServer/IdentityServer/ IdentityServer/IdentityServer/
+COPY IdentityServer/Viking.Identity.Server.WebManagement/ IdentityServer/Viking.Identity.Server.WebManagement/
 
 # Build IdentityServerStandalone
 WORKDIR "/src/IdentityServer/IdentityServerStandalone"
@@ -54,8 +54,8 @@ WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebApi"
 RUN dotnet restore "Viking.Identity.Server.WebApi.csproj"
 RUN dotnet build "Viking.Identity.Server.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build/identity-webapi
 
-# Build IdentityServer (main management website)
-WORKDIR "/src/IdentityServer/IdentityServer"
+# Build Viking.Identity.Server.WebManagement (main management website)
+WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebManagement"
 RUN dotnet restore "IdentityManagementWebsite.csproj"
 RUN dotnet build "IdentityManagementWebsite.csproj" -c $BUILD_CONFIGURATION -o /app/build/identity-server
 
@@ -70,8 +70,8 @@ RUN dotnet publish "IdentityServerStandalone.csproj" -c $BUILD_CONFIGURATION -o 
 WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebApi"
 RUN dotnet publish "Viking.Identity.Server.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish/identity-webapi /p:UseAppHost=false --runtime linux-x64 --self-contained false
 
-# Publish IdentityServer
-WORKDIR "/src/IdentityServer/IdentityServer"
+# Publish Viking.Identity.Server.WebManagement
+WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebManagement"
 RUN dotnet publish "IdentityManagementWebsite.csproj" -c $BUILD_CONFIGURATION -o /app/publish/identity-server /p:UseAppHost=false --runtime linux-x64 --self-contained false
 
 # Generate Data Protection keys

@@ -56,8 +56,8 @@ services:
       - ./IdentityServerStandalone/appsettings.Docker.json:/app/identity-standalone/appsettings.Docker.json:ro
       - ./Viking.Identity.Server.WebApi/appsettings.json:/app/identity-webapi/appsettings.json:ro
       - ./Viking.Identity.Server.WebApi/appsettings.Docker.json:/app/identity-webapi/appsettings.Docker.json:ro
-      - ./IdentityServer/appsettings.json:/app/identity-server/appsettings.json:ro
-      - ./IdentityServer/appsettings.Docker.json:/app/identity-server/appsettings.Docker.json:ro
+      - ./Viking.Identity.Server.WebManagement/appsettings.json:/app/identity-server/appsettings.json:ro
+      - ./Viking.Identity.Server.WebManagement/appsettings.Docker.json:/app/identity-server/appsettings.Docker.json:ro
       # Environment files
       - ./.env.All:/app/.env.All:ro
       - ./.env.All.Docker:/app/.env.All.Docker:ro

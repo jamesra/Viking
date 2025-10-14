@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using IdentityModel;
+using DotNetEnv;
 
 
 namespace Client
@@ -27,7 +28,7 @@ namespace Client
         //private const string IdentityServerApiEndpoint = "https://localhost:6001/";
         private const string IdentityServerApiEndpoint = "https://identity.codepharm.net:6001/";
 
-        private const string Secret = "CorrectHorseBatteryStaple";
+        private static string Secret = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET") ?? "CorrectHorseBatteryStaple"; // TODO: Remove fallback in production
 
         private const string Client = "api";
 
@@ -41,6 +42,13 @@ namespace Client
         }
         public static async Task Main(string[] args)
         {
+            var envFile = ".env";
+            Env.TraversePath().Load(envFile);
+
+            var buildEnvFile = $".env.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}";
+            Env.TraversePath().Load(buildEnvFile);
+            Secret = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET") ?? "CorrectHorseBatteryStaple"; // TODO: Remove fallback in production
+
             try
             {
                 const string VolumeName = "RC1";
@@ -58,6 +66,9 @@ namespace Client
                 //var tokenClient = new TokenClient(disco.TokenEndpoint, Client , Secret);
 
                 HttpClient client = new HttpClient();
+
+                Console.WriteLine($"Client: {Client}");
+                Console.WriteLine($"Client Secret: {Secret}");
 
                 var requested_scopes = new List<string> { "openid", "Viking.Annotation", $"{VolumeName}.Read", $"{VolumeName}.Annotate" };
                 var tokenResponse = await client.RequestPasswordTokenAsync(new PasswordTokenRequest

@@ -4,7 +4,7 @@ namespace Viking.Identity.Server
 {
     public class VikingIdentityServerOptions
     {
-        public string Secret { get; set; } = "CorrectHorseBatteryStaple";
+        public string Secret { get; set; } = string.Empty; // Must be configured via appsettings or environment variable
 
         public string Authority { get; set; }
 

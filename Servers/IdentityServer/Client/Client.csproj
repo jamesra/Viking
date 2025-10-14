@@ -11,6 +11,28 @@
 
   <ItemGroup>
     <PackageReference Include="IdentityModel" Version="7.0.0" />
+	  <PackageReference Include="DotNetEnv" Version="3.1.1" />
   </ItemGroup>
+
+	<!-- Debug configuration -->
+	<ItemGroup>
+		<Content Include="../.env" Condition="Exists('../.env')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<!-- Debug configuration -->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<Content Include="../.env.Development" Condition="Exists('../.env.Development')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<!-- Release configuration -->
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+		<Content Include="../.env.Production" Condition="Exists('../.env.Production')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
 </Project>
