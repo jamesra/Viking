@@ -14,9 +14,9 @@
        Viking.Annotations - Access to the API in Viking.Identity.Server.WebApi
        Volume
 
-           - Read   - Read-only access to the volume
-           - Modify - Read and write access to the volume
-           - Admin  - Full access to the volume, includes more dangerous operations such as merge/split
+           - Read     - Read-only access to the volume
+           - Annotate - Annotate/modify access to the volume
+           - Review   - Full review access to the volume, includes more dangerous operations such as merge/split
  
 
 ### Apis
