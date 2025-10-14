@@ -1,0 +1,38 @@
+﻿@model Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourcePermissionsEditGridViewModel
+
+@{
+    ViewData["Title"] = "Permissions Granted";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Permissions</h2>
+
+<form asp-action="Edit">
+    <partial name="~/Views/Shared/_ResourcePermissionsGridViewPartialView.cshtml" for="@Model"/>
+    <div class="form-group">
+        <input type="submit" value="Update" class="btn btn-default" />
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div id="successMessage" class="alert alert-success" role="alert" style="display: inline-block; margin-left: 15px; margin-bottom: 0; padding: 6px 12px;">
+                @TempData["SuccessMessage"]
+            </div>
+        }
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        (function() {
+            var successMessage = document.getElementById('successMessage');
+            if (successMessage) {
+                setTimeout(function() {
+                    successMessage.style.transition = 'opacity 0.5s';
+                    successMessage.style.opacity = '0';
+                    setTimeout(function() {
+                        successMessage.style.display = 'none';
+                    }, 500);
+                }, 2000);
+            }
+        })();
+    </script>
+}

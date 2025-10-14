@@ -194,7 +194,7 @@ namespace Viking.Identity.Server.WebManagement
             services.AddScoped<IAuthorizationHandler, ResourcePermissionsAuthorizationHandler>();
 
             // Configure SSL and HTTPS redirection 
-            var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT"); 
+            var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 4001); 
             services.AddHttpsRedirection(options =>
             {
                 options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
@@ -242,8 +242,8 @@ namespace Viking.Identity.Server.WebManagement
                 };
             });
 
-            // Configure SMTP options
-            services.Configure<SMTPOptions>(configuration.GetSection("SMTP"));
+            // Configure Email options
+            services.Configure<Viking.Identity.Server.Services.EmailOptions>(configuration.GetSection("Email"));
 
             // Configure access token management
             services.AddAccessTokenManagement(options =>
@@ -258,8 +258,10 @@ namespace Viking.Identity.Server.WebManagement
             {
                 // Configure HTTPS with custom certificate
                 var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
-                var http_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT");
-                var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT");
+                var http_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT", 4000);
+                var https_port = configuration.GetValue<int>("IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT", 4001);
+
+                Log.Information("Configuring Kestrel to listen on HTTP port {HttpPort} and HTTPS port {HttpsPort}", http_port, https_port);
 
                 options.ListenAnyIP(http_port); // HTTP port
                 options.ListenAnyIP(https_port, listenOptions => // HTTPS port

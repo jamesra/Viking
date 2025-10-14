@@ -9,7 +9,7 @@
                 @Html.HiddenFor(x => Model[i].Name)
                 @Html.CheckBoxFor(x => Model[i].Selected, Model[i].Name)
                 @Html.DisplayFor(x => Model[i].Name) 
-                @Html.Partial("~/Views/Shared/GroupSelectedChecklist", Model[i].Children)  
+                @await Html.PartialAsync("~/Views/Shared/GroupSelectedChecklist", Model[i].Children)  
             </td>
         </tr>            
     }

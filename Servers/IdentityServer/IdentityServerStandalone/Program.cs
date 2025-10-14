@@ -169,6 +169,9 @@ namespace Viking.Identity.Server.Standalone
 
         private static void ConfigureBasicServices(IServiceCollection services, int httpsPort)
         {
+            if (httpsPort == 0)
+                httpsPort = 5001; // Default HTTPS port
+            
             services.AddHttpsRedirection(options =>
             {
                 options.RedirectStatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status308PermanentRedirect;

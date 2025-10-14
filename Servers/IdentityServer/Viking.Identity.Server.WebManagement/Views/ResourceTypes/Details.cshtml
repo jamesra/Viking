@@ -37,7 +37,7 @@
             @Html.DisplayNameFor(model => model.Permissions)
         </dt>
         <dd>
-            @Html.Partial("~/Views/Shared/EditResourceTypePermissionsList.cshtml", Model)
+            @await Html.PartialAsync("~/Views/Shared/EditResourceTypePermissionsList.cshtml", Model)
         </dd>
     </dl>
 </div>

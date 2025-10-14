@@ -208,7 +208,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                         throw;
                     }
                 }
-                return RedirectToAction(nameof(ResourcesController.Details), "Groups", new { id = id });
+                TempData["SuccessMessage"] = "Update submitted";
+                return RedirectToAction(nameof(Edit), new { id = id });
             }
 //            ViewData["ResourceId"] = new SelectList(_context.Group, "Id", "Name", grantedUserPermission.ResourceId);
             return View(grantedPermissions);

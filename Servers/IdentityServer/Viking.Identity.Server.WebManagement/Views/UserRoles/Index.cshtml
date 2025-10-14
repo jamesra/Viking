@@ -42,7 +42,7 @@
                 foreach (var item in Model.UsersRoles)
                 {
                     <tr>
-                        @{ @Html.Partial("View", new EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
+                        @{ @await Html.PartialAsync("View", new EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
                     </tr>
                 }
             }
@@ -51,7 +51,7 @@
                 foreach (var item in Model.UsersRoles)
                 {
                     <tr>
-                        @{ @Html.Partial("ReadOnlyUserRolesView", new EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
+                        @{ @await Html.PartialAsync("ReadOnlyUserRolesView", new EditUserRolesViewModel() { AvailableRoles = Model.AvailableRoles, Username = item.Username, Roles = item.Roles }); }
                     </tr> 
                 }
             }
