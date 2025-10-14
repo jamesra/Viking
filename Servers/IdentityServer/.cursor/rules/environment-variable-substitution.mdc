@@ -1,0 +1,5 @@
+---
+description: Configuration & Environment
+alwaysApply: false
+---
+Always use environment variable substitution syntax ${VAR_NAME} in appsettings.json and never hardcode environment-specific values. The solution uses ConfigurationSubstitution library with this pattern extensively.

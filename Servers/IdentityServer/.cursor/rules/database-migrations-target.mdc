@@ -1,0 +1,5 @@
+---
+description: Entity Framework & Data
+alwaysApply: false
+---
+When creating database migrations, always target the Identity.DataContext project and ensure migrations are in the Migrations folder.

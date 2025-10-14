@@ -1,0 +1,5 @@
+---
+description: Entity Framework & Data
+alwaysApply: false
+---
+Always use composite keys for junction tables and many-to-many relationships following the pattern: builder.Entity<T>().HasKey(x => new { x.Property1, x.Property2 }).

@@ -1,0 +1,5 @@
+---
+description: Entity Framework & Data
+alwaysApply: false
+---
+Use [NotMapped] for computed properties that derive from navigation properties, and use virtual properties for all EF navigation properties.
