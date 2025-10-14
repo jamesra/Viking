@@ -28,7 +28,7 @@ namespace Annotation
         /// </summary>
         public static string Modify = nameof(Roles.Modify);
         public static string Annotate = nameof(Roles.Annotate);
-        public static string Admin = nameof(Roles.Admin);
+        public static string Review = nameof(Roles.Review);
     }
 
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single, ConcurrencyMode = ConcurrencyMode.Multiple)]
@@ -99,7 +99,7 @@ namespace Annotation
             return true;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Review))]
         bool ICredentials.CanAdmin()
         {
             return true;
@@ -111,17 +111,18 @@ namespace Annotation
                 return "";
 
             var user = HttpContext.Current.User;
+
             string roles = "";
             if (user.IsInRole(nameof(Roles.Read)))
-                roles += nameof(Roles.Read) + ' ';
-
+                roles += nameof(Roles.Read) + ' '; 
             if (user.IsInRole(nameof(Roles.Write)))
                 roles += nameof(Roles.Write) + ' ';
             else if(user.IsInRole(nameof(Roles.Modify)))
                 roles += nameof(Roles.Write) + ' ';
-
-            if (user.IsInRole(nameof(Roles.Admin)))
-                roles += nameof(Roles.Admin) + ' ';
+            else if (user.IsInRole(nameof(Roles.Annotate)))
+                roles += nameof(Roles.Annotate) + ' ';
+            if (user.IsInRole(nameof(Roles.Review)))
+                roles += nameof(Roles.Review) + ' ';
              
             return roles.Trim();
         }
@@ -409,15 +410,15 @@ namespace Annotation
         }
 
         /// <summary>
-        /// Raise a SecurityException if the caller is not in the admin role
+        /// Raise a SecurityException if the caller is not in the review role
         /// </summary>
         protected void DemandAdminPermissions()
         {
-            new PrincipalPermission(null, nameof(Roles.Admin)).Demand();
+            new PrincipalPermission(null, nameof(Roles.Review)).Demand();
         }
 
         /// <summary>
-        /// Raise a SecurityException if the caller is not in the admin role
+        /// Raise a SecurityException if the caller is not in the review role
         /// </summary>
         protected void DemandUser(string username)
         {
@@ -459,7 +460,7 @@ namespace Annotation
                     }
                     catch(SecurityException)
                     {
-                        new PrincipalPermission(null, nameof(Roles.Admin)).Demand();
+                        new PrincipalPermission(null, nameof(Roles.Review)).Demand();
                     }
                     
                 }
@@ -883,7 +884,7 @@ namespace Annotation
             }
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Review))]
         public AnnotationService.Types.PermittedStructureLink CreatePermittedStructureLink(AnnotationService.Types.PermittedStructureLink link)
         {
             ConnectomeDataModel.PermittedStructureLink newRow = new ConnectomeDataModel.PermittedStructureLink();
@@ -898,7 +899,7 @@ namespace Annotation
             return newLink;
         }
 
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Review))]
         public void UpdatePermittedStructureLinks(AnnotationService.Types.PermittedStructureLink[] links)
         {
             //Stores the ID of each object manipulated for the return value
@@ -1409,7 +1410,7 @@ namespace Annotation
         /// <param name="StructureA"></param>
         /// <param name="StructureB"></param>
         /// <returns>ID of new structure</returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Review))]
         public long Merge(long KeepID, long MergeID)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -1427,7 +1428,7 @@ namespace Annotation
         /// <param name="StructureA">Structure to split</param>
         /// <param name="locLink">Location Link to split structure at</param>
         /// <returns>ID of new structure</returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Review))]
         public long Split(long KeepStructureID, long LocationIDInSplitStructure)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())
@@ -1445,7 +1446,7 @@ namespace Annotation
         /// <param name="StructureA">Structure to split</param>
         /// <param name="locLink">Location Link to split structure at</param>
         /// <returns>ID of new structure</returns>
-        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Admin))]
+        [PrincipalPermission(SecurityAction.Demand, Role = nameof(Roles.Review))]
         public long SplitAtLocationLink(long LocationIDOfKeepStructure, long LocationIDOfSplitStructure)
         {
             using (ConnectomeEntities db = GetOrCreateDatabaseContext())

@@ -223,6 +223,18 @@ namespace Annotation.Identity
              
             var roles = roleClaims.Select(c => c.Value).ToList();
             roles.AddRange(volumeRoleClaims);
+            
+            // Map JWT role names to service role names
+            // "admin" (volume-specific role) → "Review" (service role name)
+            for (int i = 0; i < roles.Count; i++)
+            {
+                if (roles[i].Equals("admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    var originalRole = roles[i];
+                    roles[i] = "Review";
+                    System.Diagnostics.Debug.WriteLine($"Mapped role '{originalRole}' -> 'Review'");
+                }
+            }
              
             // Debug: Log all extracted roles
             System.Diagnostics.Debug.WriteLine($"Total roles extracted: {roles.Count}");

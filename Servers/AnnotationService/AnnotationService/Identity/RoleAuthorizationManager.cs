@@ -76,7 +76,7 @@ namespace Annotation.Identity
                 if (principal is GenericPrincipal genericPrincipal)
                 {
                     // Test common roles
-                    var testRoles = new[] { "Read", "Write", "Admin", "Delete" };
+                    var testRoles = new[] { "Read", "Write", "Annotate", "Review", "Delete" };
                     System.Diagnostics.Debug.WriteLine($"Role checks:");
                     foreach (var role in testRoles)
                     {
