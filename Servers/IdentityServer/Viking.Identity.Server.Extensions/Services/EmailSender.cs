@@ -6,19 +6,21 @@ using Microsoft.Extensions.Options;
 
 namespace Viking.Identity.Server.Services
 {
-    public class SMTPOptions
+    /// <summary>
+    /// Email configuration options for SMTP settings
+    /// </summary>
+    public class EmailOptions
     {
         public string Server { get; set; }
         public int? Port { get; set; }
-        
         public int? Timeout { get; set; }
-        public string SourceEmail { get; set; }
-        public string SourceDisplayName { get; set; }
-        public bool EnableSSL { get; set; }
-        public bool UseHTML { get; set; }
-
+        public string FromEmail { get; set; }
+        public string FromName { get; set; }
+        public bool EnableSsl { get; set; }
+        public bool UseHtml { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
+        public bool EnableSending { get; set; } = true; // Default to true for backward compatibility
     }
 
     // This class is used by the application to send email for account confirmation and password reset.
@@ -27,33 +29,39 @@ namespace Viking.Identity.Server.Services
     {
         //readonly ILogger<EmailSender> Log; 
 
-        public EmailSender(IOptions<SMTPOptions> optionsAccessor, ILogger<EmailSender> logger)
+        public EmailSender(IOptions<EmailOptions> optionsAccessor, ILogger<EmailSender> logger)
         {
             Options = optionsAccessor.Value;
 
-            if (string.IsNullOrEmpty(Options.SourceEmail))
+            if (string.IsNullOrEmpty(Options.FromEmail))
             {
-                logger.LogError("SMTP.SourceEmail configuration parameter not specified.");
+                logger.LogError("Email.FromEmail configuration parameter not specified.");
             }
 
             if(string.IsNullOrEmpty(Options.Server))
             {
-                logger.LogError("SMTP.Server configuration parameter not specified.");
+                logger.LogError("Email.Server configuration parameter not specified.");
             }
 
             //Log = logger;
         }
 
-        public SMTPOptions Options { get; }
+        public EmailOptions Options { get; }
 
         public Task SendEmailAsync(string[] emailAddresses, string subject, string message)
         {
             if (emailAddresses == null || emailAddresses.Length == 0)
                 return Task.CompletedTask;
 
-            if(string.IsNullOrEmpty(Options.SourceEmail) || string.IsNullOrEmpty(Options.Server))
+            if (!Options.EnableSending)
             {
-                throw new ArgumentException("Required SMTP parameters not configured.  Check the log.");
+                // Email sending is disabled, just log and return
+                return Task.CompletedTask;
+            }
+
+            if(string.IsNullOrEmpty(Options.FromEmail) || string.IsNullOrEmpty(Options.Server))
+            {
+                throw new ArgumentException("Required Email parameters not configured.  Check the log.");
             }
 
             using (SmtpClient ss2 = new SmtpClient(Options.Server))
@@ -71,7 +79,7 @@ namespace Viking.Identity.Server.Services
 
                 ss2.DeliveryMethod = SmtpDeliveryMethod.Network;
 
-                ss2.EnableSsl = Options.EnableSSL;
+                ss2.EnableSsl = Options.EnableSsl;
 
                 if (Options.Username != null && Options.Username.Length > 0)
                 {
@@ -86,7 +94,7 @@ namespace Viking.Identity.Server.Services
                 using (MailMessage madmin = new MailMessage())
                 {
                     
-                    madmin.From = new MailAddress(Options.SourceEmail, Options.SourceDisplayName);
+                    madmin.From = new MailAddress(Options.FromEmail, Options.FromName);
 
                     madmin.Subject = subject;
 
@@ -97,7 +105,7 @@ namespace Viking.Identity.Server.Services
                         madmin.To.Add(new MailAddress(email));
                     }
 
-                    madmin.IsBodyHtml = Options.UseHTML;
+                    madmin.IsBodyHtml = Options.UseHtml;
 
                     madmin.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
 

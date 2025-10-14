@@ -15,14 +15,16 @@ namespace Viking.Identity.Server.Standalone
     /// </summary>
     public class EmailOptions
     {
-        public string SmtpServer { get; set; } = "smtp.gmail.com";
-        public int SmtpPort { get; set; } = 587;
-        public string SmtpUsername { get; set; } = "";
-        public string SmtpPassword { get; set; } = "";
+        public string Server { get; set; } = "smtp.gmail.com";
+        public int Port { get; set; } = 587;
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
         public string FromEmail { get; set; } = "noreply@yourdomain.com";
         public string FromName { get; set; } = "Viking Identity Server";
-        public bool UseSSL { get; set; } = true;
-        public bool EnableEmailSending { get; set; } = false; // Set to true when ready to send real emails
+        public bool EnableSsl { get; set; } = true;
+        public bool UseHtml { get; set; } = true;
+        public int Timeout { get; set; } = 10;
+        public bool EnableSending { get; set; } = false; // Set to true when ready to send real emails
     }
 
     /// <summary>
@@ -72,7 +74,7 @@ namespace Viking.Identity.Server.Standalone
         /// <returns>A task representing the asynchronous operation</returns>
         public async Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
-            if (!_emailOptions.EnableEmailSending)
+            if (!_emailOptions.EnableSending)
             {
                 _logger.LogInformation("Email sending is disabled. Would send to {Email} with subject '{Subject}'", 
                     email, subject);
@@ -92,12 +94,12 @@ namespace Viking.Identity.Server.Standalone
                 message.Body = bodyBuilder.ToMessageBody();
 
                 using var client = new SmtpClient();
-                await client.ConnectAsync(_emailOptions.SmtpServer, _emailOptions.SmtpPort, 
-                    _emailOptions.UseSSL ? SecureSocketOptions.StartTls : SecureSocketOptions.None);
+                await client.ConnectAsync(_emailOptions.Server, _emailOptions.Port, 
+                    _emailOptions.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None);
                 
-                if (!string.IsNullOrEmpty(_emailOptions.SmtpUsername))
+                if (!string.IsNullOrEmpty(_emailOptions.Username))
                 {
-                    await client.AuthenticateAsync(_emailOptions.SmtpUsername, _emailOptions.SmtpPassword);
+                    await client.AuthenticateAsync(_emailOptions.Username, _emailOptions.Password);
                 }
 
                 await client.SendAsync(message);
