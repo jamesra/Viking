@@ -8,7 +8,7 @@ Segment Anything 2 in Docker. A simple, easy to use Docker image for Meta's SAM2
 📰 New: The project has been restructured into three separate components:
 1. **segmentation_grpc**: Contains the gRPC interface definition and code generation
 2. **SegmentationClient**: Contains the client implementation for interacting with the segmentation service
-3. **SegmentationServer**: Contains the server implementation that runs in the Docker container
+3. **segmentation_server**: Contains the server implementation that runs in the Docker container
 
 📰 We also have a ROS Noetic supported image in the [ROS Noetic branch](https://github.com/peasant98/SAM2-Docker/tree/ros-noetic)!
 
@@ -110,14 +110,14 @@ To test the service:
 python -m SegmentationClient.test_service
 ```
 
-### SegmentationServer
+### segmentation_server
 
 This project contains the server implementation that runs in the Docker container.
 
 To run the server:
 
 ```bash
-python -m SegmentationServer
+python -m segmentation_server
 ```
 
 Optional arguments:

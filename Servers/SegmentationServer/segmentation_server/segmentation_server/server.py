@@ -26,7 +26,7 @@ from segmentation_grpc import (
 )
 
 # Import the segmentation model
-from SegmentationServer.segmentation_service import SegmentationModel
+from segmentation_server.segmentation_service import SegmentationModel
 
 
 class SegmentationServicer(SegmentationServiceServicer):

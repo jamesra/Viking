@@ -3,7 +3,7 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "SegmentationServer"
+name = "segmentation_server"
 version = "0.1.0"
 description = "Server for the segmentation service"
 authors = [
@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.scripts]
-segmentation-server = "SegmentationServer.__main__:main"
+segmentation-server = "segmentation_server.__main__:main"
 
 [tool.setuptools]
-packages = ["SegmentationServer"]
+packages = ["segmentation_server"]

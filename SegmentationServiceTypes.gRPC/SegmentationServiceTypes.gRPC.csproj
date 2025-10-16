@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
+    <RootNamespace>Viking.SegmentationServiceTypes.gRPC.V1</RootNamespace>
+    <AssemblyName>SegmentationServiceTypes.gRPC</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <TargetFrameworkMoniker>.NETFramework,Version%3Dv4.8</TargetFrameworkMoniker>
+    <NuGetTargetMoniker>.NETFramework,Version=v4.8</NuGetTargetMoniker>
+    <LangVersion>9.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="..\gRPC_Protos\Segmentation\SAM2\segmentation.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.17.2" />
+    <PackageReference Include="Grpc.Core" Version="2.38.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.38.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\gRPC_Protos\Segmentation\SAM2\segmentation.proto" GrpcServices="Client" />
+  </ItemGroup>
+
+</Project>
+

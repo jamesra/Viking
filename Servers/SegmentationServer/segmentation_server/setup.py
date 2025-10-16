@@ -1,11 +1,11 @@
 """
-Setup script for the SegmentationServer package.
+Setup script for the segmentation_server package.
 """
 
 from setuptools import setup, find_packages
 
 setup(
-    name="SegmentationServer",
+    name="segmentation_server",
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
@@ -24,7 +24,7 @@ setup(
     author="James Anderson",
     entry_points={
         "console_scripts": [
-            "segmentation-server=SegmentationServer.__main__:main",
+            "segmentation-server=segmentation_server.__main__:main",
         ],
     },
 )

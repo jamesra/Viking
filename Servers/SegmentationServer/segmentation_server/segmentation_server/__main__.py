@@ -12,7 +12,7 @@ import argparse
 from segmentation_grpc.generate_grpc import generate_grpc_code
 
 # Import the serve function from the server module
-from SegmentationServer.server import serve
+from segmentation_server.server import serve
 
 
 async def main():

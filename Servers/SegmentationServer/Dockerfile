@@ -24,7 +24,6 @@ RUN set -x \
 	&& apt-get install -y apt-transport-https ca-certificates \
 	&& apt-get install -y git vim tmux nano htop sudo curl wget gnupg2 \
 	&& apt-get install -y bash-completion \
-	&& apt-get install -y guvcview \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& useradd -ms /bin/bash user \
 	&& echo "user:user" | chpasswd && adduser user sudo \
@@ -55,7 +54,11 @@ RUN cd segment-anything-2 && \
     python3 -m pip install -e ".[demo]" && \
     python3 -m pip install grpcio grpcio-tools numpy torch Pillow opencv-python matplotlib
 
-RUN cd segment-anything-2/checkpoints && ./download_ckpts.sh && cd .. 
+RUN cd segment-anything-2/checkpoints && ./download_ckpts.sh && cd ..
+
+# Copy checkpoints to where the installed sam2 package expects them
+RUN mkdir -p /usr/local/lib/python3.13/dist-packages/checkpoints && \
+    cp -r /home/user/segment-anything-2/checkpoints/* /usr/local/lib/python3.13/dist-packages/checkpoints/
 
 RUN cd /home/user/segment-anything-2/sam2/configs/sam2.1/ && \
 	wget https://github.com/facebookresearch/sam2/blob/main/sam2/configs/sam2.1/sam2.1_hiera_l.yaml && \
@@ -64,23 +67,34 @@ RUN cd /home/user/segment-anything-2/sam2/configs/sam2.1/ && \
 	wget https://github.com/facebookresearch/sam2/blob/main/sam2/configs/sam2.1/sam2.1_hiera_t.yaml && \
 	cd ..
 
-# Copy the project directories
-COPY segmentation_grpc /home/user/segmentation_grpc
-COPY SegmentationServer /home/user/SegmentationServer
+# Copy the shared gRPC proto files (required by segmentation_grpc)
+COPY ./gRPC_Protos/ /home/user/gRPC_Protos/
 
+# Copy only dependency files first (for better layer caching)
+COPY ./Servers/SegmentationServer/segmentation_grpc/setup.py ./Servers/SegmentationServer/segmentation_grpc/pyproject.toml /home/user/segmentation_grpc/
+COPY ./Servers/SegmentationServer/segmentation_grpc/segmentation_grpc/ /home/user/segmentation_grpc/segmentation_grpc/
+COPY ./Servers/SegmentationServer/segmentation_server/setup.py ./Servers/SegmentationServer/segmentation_server/pyproject.toml /home/user/segmentation_server/
+COPY ./Servers/SegmentationServer/segmentation_server/segmentation_server/ /home/user/segmentation_server/segmentation_server/
+
+# Debug: Check what packages are installed before installing
+RUN python3 -m pip list | grep -i sam || echo "No SAM packages found"
+
+# Install packages (regular install, not editable)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    cd /home/user/segmentation_grpc && \
+    python3 -m pip install --no-build-isolation .
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    cd /home/user/segmentation_server && \
+    python3 -m pip install --no-build-isolation .
+  
 # Set ownership of the project directories to the user
 RUN chown -R user:user /home/user/segmentation_grpc
-RUN chown -R user:user /home/user/SegmentationServer
-
-# Install the packages
-RUN cd /home/user/segmentation_grpc && \
-    python3 -m pip install -e .
-RUN cd /home/user/SegmentationServer && \
-    python3 -m pip install -e .
-
+RUN chown -R user:user /home/user/segmentation_server
+  
 # Expose the gRPC port
 EXPOSE 50051
-
+ 
 RUN usermod -aG dialout user
 USER user
 
@@ -88,5 +102,13 @@ ENV PYTHONPATH=/usr/bin/python3
 
 STOPSIGNAL SIGTERM
 
-ENTRYPOINT ["python", "-m", "SegmentationService"]
-#CMD sudo service ssh start && python3 -m segmentation_grpc && python3 -m SegmentationServer --generate-grpc & /bin/bash
+# Print installed packages for debugging
+RUN echo "========================================" && \
+    echo "INSTALLED PYTHON PACKAGES:" && \
+    echo "========================================" && \
+    python3 -m pip list && \
+    echo "========================================"
+
+
+ENTRYPOINT ["python3", "-m", "segmentation_server"]
+#CMD sudo service ssh start && python3 -m segmentation_grpc && python3 -m segmentation_server --generate-grpc & /bin/bash

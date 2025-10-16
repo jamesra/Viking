@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+	<runtime>
+		<assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
+			<dependentAssembly>
+				<assemblyIdentity name="System.Text.Json" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+				<bindingRedirect oldVersion="0.0.0.0-9.0.0.0" newVersion="9.0.0.0" />
+			</dependentAssembly>
+			<dependentAssembly>
+				<assemblyIdentity name="System.Memory" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+				<bindingRedirect oldVersion="0.0.0.0-4.6.3.0" newVersion="4.0.5.0" />
+			</dependentAssembly>
+			<dependentAssembly>
+				<assemblyIdentity name="System.Runtime.CompilerServices.Unsafe" publicKeyToken="b03f5f7f11d50a3a" culture="neutral" />
+				<bindingRedirect oldVersion="0.0.0.0-6.1.2.0" newVersion="6.0.3.0" />
+			</dependentAssembly>
+			<dependentAssembly>
+				<assemblyIdentity name="System.Collections.Immutable" publicKeyToken="b03f5f7f11d50a3a" culture="neutral" />
+				<bindingRedirect oldVersion="0.0.0.0-9.0.0.8" newVersion="9.0.0.8" />
+			</dependentAssembly>
+			<dependentAssembly>
+				<assemblyIdentity name="System.Buffers" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+				<bindingRedirect oldVersion="0.0.0.0-4.6.1.0" newVersion="4.0.5.0" />
+			</dependentAssembly>
+			<dependentAssembly>
+				<assemblyIdentity name="System.Numerics.Vectors" publicKeyToken="b03f5f7f11d50a3a" culture="neutral" />
+				<bindingRedirect oldVersion="0.0.0.0-4.1.6.0" newVersion="4.1.6.0" />
+			</dependentAssembly>
+			<dependentAssembly>
+				<assemblyIdentity name="Microsoft.SqlServer.Types" publicKeyToken="89845dcd8080cc91" culture="neutral" />
+				<bindingRedirect oldVersion="0.0.0.0-160.1000.6" newVersion="160.1000.6" />
+			</dependentAssembly>
+		</assemblyBinding>
+	</runtime>
+
+	<configSections>
+		<section name="entityFramework" type="System.Data.Entity.Internal.ConfigFile.EntityFrameworkSection, EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" requirePermission="false" />
+	</configSections>
+
+	<entityFramework>
+		<defaultConnectionFactory type="System.Data.Entity.Infrastructure.LocalDbConnectionFactory, EntityFramework">
+			<parameters>
+				<parameter value="mssqllocaldb" />
+			</parameters>
+		</defaultConnectionFactory>
+		<providers>
+			<provider invariantName="System.Data.SqlClient" type="System.Data.Entity.SqlServer.SqlProviderServices, EntityFramework.SqlServer" />
+		</providers>
+	</entityFramework>
+
+	<system.serviceModel>
+		<extensions>
+			<behaviorExtensions>
+				<add name="protobuf" type="ProtoBuf.ServiceModel.ProtoBehaviorExtension, protobuf-net.ServiceModel, Version=3.0.0.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67" />
+				<add name="identityServerBehavior" type="Annotation.Identity.IdentityServerBehaviorExtension, AnnotationService" />
+			</behaviorExtensions>
+		</extensions>
+		<serviceHostingEnvironment aspNetCompatibilityEnabled="True">
+			<serviceActivations>
+				<add relativeAddress="service.svc" service="Annotation.AnnotateService" />
+				<add relativeAddress="Annotate.svc" service="Annotation.AnnotateService" />
+			</serviceActivations>
+		</serviceHostingEnvironment>
+
+		<diagnostics>
+			<messageLogging logEntireMessage="true" logMalformedMessages="true" logMessagesAtServiceLevel="true" logMessagesAtTransportLevel="true" />
+		</diagnostics>
+
+		<bindings>
+			<customBinding>
+				<binding name="BinaryHTTPS" closeTimeout="00:03:00" openTimeout="00:03:00" receiveTimeout="00:10:00" sendTimeout="00:05:00">
+					<security authenticationMode="UserNameOverTransport">
+						<secureConversationBootstrap authenticationMode="UserNameOverTransport" />
+					</security>
+					<binaryMessageEncoding maxSessionSize="4096" maxReadPoolSize="64" maxWritePoolSize="16">
+					</binaryMessageEncoding>
+					<httpsTransport maxReceivedMessageSize="67108864" maxBufferSize="67108864" />
+				</binding>
+				<binding name="BinaryHTTP" closeTimeout="00:03:00" openTimeout="00:03:00" receiveTimeout="00:10:00" sendTimeout="00:05:00">
+					<binaryMessageEncoding maxSessionSize="4096" maxReadPoolSize="64" maxWritePoolSize="16">
+					</binaryMessageEncoding>
+					<httpTransport maxReceivedMessageSize="67108864" maxBufferSize="67108864" />
+				</binding>
+			</customBinding>
+		</bindings>
+
+		<services>
+			<service behaviorConfiguration="IdentityServerServiceBehaviour" name="Annotation.AnnotateService">
+				<!-- Use relative addresses for Docker/IIS subpath deployment -->
+				<endpoint address="" binding="customBinding" bindingConfiguration="BinaryHTTP" 
+				          name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary" 
+				          contract="AnnotationService.Interfaces.IAnnotateStructureTypes" 
+				          behaviorConfiguration="identityServerEndpointBehavior" />
+				<endpoint address="" binding="customBinding" bindingConfiguration="BinaryHTTP" 
+				          name="Annotation.Service.Interfaces.IAnnotateStructures-Binary" 
+				          contract="AnnotationService.Interfaces.IAnnotateStructures" 
+				          behaviorConfiguration="identityServerEndpointBehavior" />
+				<endpoint address="" binding="customBinding" bindingConfiguration="BinaryHTTP" 
+				          name="Annotation.Service.Interfaces.IAnnotateLocations-Binary" 
+				          contract="AnnotationService.Interfaces.IAnnotateLocations" 
+				          behaviorConfiguration="identityServerEndpointBehavior" />
+				<endpoint address="" binding="customBinding" bindingConfiguration="BinaryHTTP" 
+				          name="Annotation.Service.Interfaces.IAnnotatePermittedStructureLinks-Binary" 
+				          contract="AnnotationService.Interfaces.IAnnotatePermittedStructureLinks" 
+				          behaviorConfiguration="identityServerEndpointBehavior" />
+				<endpoint address="" binding="customBinding" bindingConfiguration="BinaryHTTP" 
+				          name="Annotation.Service.Interfaces.IVolumeMeta-Binary" 
+				          contract="AnnotationService.Interfaces.IVolumeMeta" 
+				          behaviorConfiguration="identityServerEndpointBehavior" />
+				<endpoint address="" binding="customBinding" bindingConfiguration="BinaryHTTP" 
+				          name="Annotation.Service.Interfaces.ICircuit-Binary" 
+				          contract="AnnotationService.Interfaces.ICircuit" />
+				<endpoint address="mex" binding="mexHttpBinding" contract="IMetadataExchange" />
+			</service>
+		</services>
+
+		<behaviors>
+			<endpointBehaviors>
+				<behavior name="protoEndpointBehavior">
+					<protobuf />
+				</behavior>
+
+				<behavior name="identityServerEndpointBehavior">
+					<protobuf />
+					<identityServerBehavior
+						authority="https://identity.codepharm.net:5001/"
+						audience="Viking.Annotation.API"
+						requireHttps="false"
+						validateIssuer="true"
+						validateAudience="true"
+						validateLifetime="true"
+						clockSkew="00:05:00" />
+				</behavior>
+			</endpointBehaviors>
+
+			<serviceBehaviors>
+				<behavior name="IdentityServerServiceBehaviour">
+					<serviceMetadata httpGetEnabled="true" httpsGetEnabled="true"/>
+					<serviceDebug includeExceptionDetailInFaults="true"/>
+					<dataContractSerializer maxItemsInObjectGraph="2147483647"/>
+					<serviceCredentials>
+						<!-- Username authentication required by UserNameOverTransport binding, but JWT is used for actual authorization -->
+						<userNameAuthentication userNamePasswordValidationMode="Custom" customUserNamePasswordValidatorType="Annotation.Identity.IdentityValidator,AnnotationService" />
+					</serviceCredentials>
+					<serviceAuthenticationManager type="Annotation.Identity.AuthenticationManager, AnnotationService"/>
+					<serviceAuthorization principalPermissionMode="Custom" 
+					                      serviceAuthorizationManagerType="Annotation.Identity.RoleAuthorizationManager, AnnotationService"/>
+					<serviceSecurityAudit auditLogLocation="Application" serviceAuthorizationAuditLevel="Failure" messageAuthenticationAuditLevel="Failure"/>
+				</behavior>
+			</serviceBehaviors>
+		</behaviors>
+	</system.serviceModel>
+
+	<system.web>
+		<customErrors mode="Off" />
+		<authentication mode="Forms">
+			<forms cookieless="UseCookies" slidingExpiration="true" requireSSL="false" />
+		</authentication>
+	</system.web>
+
+	<system.webServer>
+		<httpErrors errorMode="DetailedLocalOnly" />
+	</system.webServer>
+
+	<!-- Connection strings - Override with environment variables in Docker -->
+	<connectionStrings>
+		<remove name="VikingApplicationServices" />
+		<add connectionString="metadata=res://*/;provider=System.Data.SqlClient;provider connection string=&quot;data source=localhost;initial catalog=Connectome;integrated security=True;multipleactiveresultsets=True;Type System Version=SQL Server 2012;application name=EntityFramework;Connection Timeout=300;Command Timeout=300&quot;" 
+		     name="ConnectomeEntities" 
+		     providerName="System.Data.EntityClient" />
+		<add connectionString="Server=localhost,1433;Database=UserAccounts;Integrated Security=true" 
+		     name="VikingApplicationServices" />
+	</connectionStrings>
+
+	<appSettings>
+		<remove key="IdentityServer" />
+		<remove key="VolumeURL" />
+		<remove key="EndpointURL" />
+		<add key="EndpointURL" value="http://localhost/annotation/Annotate.svc" />
+		<add key="VolumeURL" value="http://localhost" />
+		<add key="IdentityServer" value="https://identity.codepharm.net:5001" />
+	</appSettings>
+</configuration>
+
+
+
