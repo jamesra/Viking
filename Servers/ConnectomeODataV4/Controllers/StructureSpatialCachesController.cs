@@ -2,6 +2,8 @@
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Routing;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -24,20 +26,50 @@ namespace ConnectomeODataV4.Controllers
     */
     public class StructureSpatialCachesController : ODataController
     {
-        private readonly ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities _db;
+        private readonly ILogger<StructureSpatialCachesController> _logger;
+
+        /// <summary>
+        /// Constructor with dependency injection
+        /// </summary>
+        public StructureSpatialCachesController(ConnectomeEntities db, ILogger<StructureSpatialCachesController> logger)
+        {
+            _db = db ?? throw new ArgumentNullException(nameof(db));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
 
         // GET: odata/StructureSpatialCaches
         [EnableQuery(PageSize = 2048)]
         public IQueryable<StructureSpatialCache> GetStructureSpatialCaches()
         {
-            return db.StructureSpatialCaches;
+            try
+            {
+                _logger.LogInformation("Fetching structure spatial caches");
+                _db.ConfigureAsReadOnly();
+                return _db.StructureSpatialCaches;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching structure spatial caches");
+                throw;
+            }
         }
 
         // GET: odata/StructureSpatialCaches(5)
         [EnableQuery]
         public SingleResult<StructureSpatialCache> GetStructureSpatialCache([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureSpatialCaches.Where(structure => structure.ID == key));
+            try
+            {
+                _logger.LogInformation("Fetching structure spatial cache with ID {StructureSpatialCacheId}", key);
+                _db.ConfigureAsReadOnly();
+                return SingleResult.Create(_db.StructureSpatialCaches.Where(structure => structure.ID == key));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching structure spatial cache with ID {StructureSpatialCacheId}", key);
+                throw;
+            }
         }
 
         /// <summary>
@@ -59,49 +91,56 @@ namespace ConnectomeODataV4.Controllers
         [EnableQuery]
         public IQueryable<Location> GetLocations([FromODataUri] long key)
         {
-            return db.Structures.Where(m => m.ID == key).SelectMany(m => m.Locations);
+            _db.ConfigureAsReadOnly();
+            return _db.Structures.Where(m => m.ID == key).SelectMany(m => m.Locations);
         }
 
         // GET: odata/Structures(5)/LocationLinks
         [EnableQuery]
         public IQueryable<LocationLink> GetLocationLinks([FromODataUri] long key)
         {
-            return db.StructureLocationLinks(key);
+            _db.ConfigureAsReadOnly();
+            return _db.StructureLocationLinks(key);
         }
          
         // GET: odata/Structures(5)/Children
         [EnableQuery]
         public IQueryable<Structure> GetChildren([FromODataUri] long key)
         {
-            return db.Structures.Where(m => m.ID == key).SelectMany(m => m.Children);
+            _db.ConfigureAsReadOnly();
+            return _db.Structures.Where(m => m.ID == key).SelectMany(m => m.Children);
         }
 
         // GET: odata/Structures(5)/Parent
         [EnableQuery]
         public SingleResult<Structure> GetParent([FromODataUri] long key)
         {
-            return SingleResult.Create(db.Structures.Where(m => m.ID == key).Select(m => m.Parent));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.Structures.Where(m => m.ID == key).Select(m => m.Parent));
         }
 
         // GET: odata/Structures(5)/Type
         [EnableQuery]
         public SingleResult<StructureType> GetType([FromODataUri] long key)
         {
-            return SingleResult.Create(db.Structures.Where(m => m.ID == key).Select(m => m.Type));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.Structures.Where(m => m.ID == key).Select(m => m.Type));
         }
 
         // GET: odata/Structures(5)/SourceOfLinks
         [EnableQuery]
         public IQueryable<StructureLink> GetSourceOfLinks([FromODataUri] long key)
         {
-            return db.Structures.Where(m => m.ID == key).SelectMany(m => m.SourceOfLinks);
+            _db.ConfigureAsReadOnly();
+            return _db.Structures.Where(m => m.ID == key).SelectMany(m => m.SourceOfLinks);
         }
 
         // GET: odata/Structures(5)/TargetOfLinks
         [EnableQuery]
         public IQueryable<StructureLink> GetTargetOfLinks([FromODataUri] long key)
         {
-            return db.Structures.Where(m => m.ID == key).SelectMany(m => m.TargetOfLinks);
+            _db.ConfigureAsReadOnly();
+            return _db.Structures.Where(m => m.ID == key).SelectMany(m => m.TargetOfLinks);
         }
 
         [HttpGet]
@@ -118,8 +157,8 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("StructureLocationLinks(StructureID={key})")]
         public IQueryable<LocationLink> StructureLocationLinks([FromODataUri] long key)
         {
-            db.ConfigureAsReadOnly();
-            return db.StructureLocationLinks(key);
+            _db.ConfigureAsReadOnly();
+            return _db.StructureLocationLinks(key);
         }
         
         /*
@@ -138,9 +177,9 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("NetworkSpatialData(IDs={IDs},Hops={Hops})")]
         public IQueryable<StructureSpatialCache> GetNetwork([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
         {
-            db.ConfigureAsReadOnly();
+            _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return db.SelectNetworkStructureSpatialData(IDs, Hops);
+            return _db.SelectNetworkStructureSpatialData(IDs, Hops);
         }
 
         [HttpGet]
@@ -148,10 +187,10 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("NetworkSpatialData()")]
         public IQueryable<StructureSpatialCache> GetNetwork()
         {
-            db.ConfigureAsReadOnly();
+            _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            long[] IDs = db.GetLinkedStructureParentIDs().ToArray();
-            return db.SelectNetworkStructureSpatialData(IDs, 0);
+            long[] IDs = _db.GetLinkedStructureParentIDs().ToArray();
+            return _db.SelectNetworkStructureSpatialData(IDs, 0);
         }
 
         /*
@@ -192,9 +231,9 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("NetworkEdgeSpatialData(IDs={IDs},Hops={Hops})")]
         public IQueryable<StructureSpatialCache> GetNetworkChildren([FromODataUri] long[] IDs, [FromODataUri] int Hops)
         {
-            db.ConfigureAsReadOnly();
+            _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return db.SelectNetworkChildStructureSpatialData(IDs, Hops);
+            return _db.SelectNetworkChildStructureSpatialData(IDs, Hops);
 
             // https://github.com/OData/WebApi/issues/255 
         }
@@ -204,37 +243,29 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("NetworkEdgeSpatialData()")]
         public IQueryable<StructureSpatialCache> GetNetworkChildren()
         {
-            db.ConfigureAsReadOnly();
+            _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            long[] IDs = db.GetLinkedStructureParentIDs().ToArray();
-            return db.SelectNetworkChildStructureSpatialData(IDs, 0);
+            long[] IDs = _db.GetLinkedStructureParentIDs().ToArray();
+            return _db.SelectNetworkChildStructureSpatialData(IDs, 0);
         }
 
         [HttpGet]
         [EnableQuery()]
         public IQueryable<string> DistinctLabels(ODataActionParameters parameters)
         {
-            db.ConfigureAsReadOnly();
+            _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
-            return db.Structures.Select(s => s.Label).Distinct();
+            return _db.Structures.Select(s => s.Label).Distinct();
             
             // https://github.com/OData/WebApi/issues/255
 
         }
 
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+        // No need for Dispose override - DI container handles disposal
 
         private bool StructureExists(long key)
         {
-            return db.Structures.Count(e => e.ID == key) > 0;
+            return _db.Structures.Count(e => e.ID == key) > 0;
         }
     }
 }

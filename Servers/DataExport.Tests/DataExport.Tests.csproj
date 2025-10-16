@@ -3,33 +3,37 @@
     <TargetFramework>net9.0</TargetFramework>
     <RootNamespace>DataExport.Tests</RootNamespace>
     <AssemblyName>DataExport.Tests</AssemblyName>
-    <AssemblyTitle>DataExport.Tests</AssemblyTitle>
-    <AssemblyCompany>Microsoft</AssemblyCompany>
-    <AssemblyProduct>DataExport.Tests</AssemblyProduct>
-    <Copyright>Copyright © Microsoft 2014</Copyright>
+    <Company>Microsoft</Company>
+    <Product>DataExport.Tests</Product>
+    <Copyright>Copyright © Microsoft 2014-2025</Copyright>
     <Version>1.0.0.0</Version>
     <FileVersion>1.0.0.0</FileVersion>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Castle.Core" Version="4.0.0" />
-    <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.3.0" />
-    <PackageReference Include="Microsoft.AspNet.Razor" Version="3.3.0" />
-    <PackageReference Include="Microsoft.AspNet.WebApi" Version="5.2.7" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.Core" Version="5.2.7" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.WebHost" Version="5.2.7" />
-    <PackageReference Include="Microsoft.AspNet.WebPages" Version="3.3.0" />
-    <PackageReference Include="Microsoft.Bcl.Build" Version="1.0.21" />
-    <PackageReference Include="Microsoft.Net.Http" Version="2.2.29" />
-    <PackageReference Include="Microsoft.OData.Core" Version="7.6.0" />
-    <PackageReference Include="Microsoft.OData.Edm" Version="7.6.0" />
-    <PackageReference Include="Microsoft.Spatial" Version="7.6.0" />
-    <PackageReference Include="Microsoft.Web.Infrastructure" Version="1.0.0.0" />
-    <PackageReference Include="Moq" Version="4.7.8" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="protobuf-net" Version="3.2.56" />
+    <!-- Modern testing packages -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    
+    <!-- ASP.NET Core testing -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.1" />
+    
+    <!-- OData packages matching main project -->
+    <PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
+    <PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
+    <PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
+    <PackageReference Include="Microsoft.Spatial" Version="8.1.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DataExport\DataExport.csproj" />
@@ -38,7 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Test resources and content files -->
-    <Content Include="App.config" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Resources\**\*.*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup> 
 </Project>

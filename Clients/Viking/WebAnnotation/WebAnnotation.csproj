@@ -90,6 +90,7 @@
 		<ProjectReference Include="..\..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
 		<ProjectReference Include="..\..\..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
 		<ProjectReference Include="..\..\..\RTree\RTree.csproj" />
+		<ProjectReference Include="..\..\..\SegmentationServiceTypes.gRPC\SegmentationServiceTypes.gRPC.csproj" />
 		<ProjectReference Include="..\..\..\SqlGeometryAnnotationExtensions\SqlGeometryAnnotationExtensions.csproj" />
 		<ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
 		<ProjectReference Include="..\..\..\Triangle.NET\Triangle\Triangle.csproj" />

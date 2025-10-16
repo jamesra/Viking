@@ -1,25 +1,83 @@
-**/.classpath
-**/.dockerignore
-**/.env
-**/.git
-**/.gitignore
-**/.project
-**/.settings
-**/.toolstarget
-**/.vs
-**/.vscode
-**/*.*proj.user
-**/*.dbmdl
-**/*.jfm
-**/azds.yaml
-**/bin
-**/charts
-**/docker-compose*
-**/Dockerfile*
-**/node_modules
-**/npm-debug.log
-**/obj
-**/secrets.dev.yaml
-**/values.dev.yaml
-LICENSE
-README.md
+# Ignore build outputs
+**/bin/
+**/obj/
+**/node_modules/
+**/out/
+**/publish/
+**/PublishProfiles/
+
+# Ignore version control
+.git/
+.gitignore
+.gitattributes
+
+# Ignore IDE files
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.csproj.user
+*.DotSettings.user
+
+# Ignore test results
+TestResults/
+*.trx
+
+# Ignore packages
+packages/
+*.nupkg
+*.snupkg
+
+# Ignore documentation
+Documentation/
+*.md
+!Docker-Combined-Services-README.md
+
+# Ignore logs and temp files
+*.log
+*.tmp
+*.temp
+Temp/
+temp/
+
+# Ignore deployment files
+Publish/
+PublishTest/
+MigrationBackup/
+
+# Ignore database files
+*.mdf
+*.ldf
+
+# Ignore backup files
+*.bak
+*.backup
+
+# Keep necessary Docker files
+!Servers/VolumeAnnotationServices/Dockerfile
+!Servers/VolumeAnnotationServices/README.md
+!docker-compose*.yml
+!Scripts/ConfigureIIS.ps1
+
+# Ignore client applications (not needed in server image)
+Clients/
+Viking/
+Jotunn/
+
+# Ignore analysis tools
+Analysis/
+
+# Ignore test projects
+**/*Test/
+**/*Tests/
+
+# Ignore unnecessary server projects for this build
+Servers/GrpcAnnotation/
+Servers/GrpcAnnotationService/
+Servers/SAM2_Segmentation_gRPC_Client/
+
+# Allow SegmentationServer files (needed for segmentation Docker build)
+!Servers/SegmentationServer/
+!Servers/SegmentationServer/**

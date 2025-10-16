@@ -1,51 +1,59 @@
 ﻿using AnnotationVizLib;
-using AnnotationVizLib.OData; // Use correct namespace
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Hosting;
+using AnnotationVizLib.OData;
 using VikingWebAppSettings;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
 
-namespace DataExport.Controllers
+namespace DataExport.Controllers;
+
+/// <summary>
+/// Controller for exporting network graph data in various formats (DOT, TLP, GML, JSON).
+/// </summary>
+[ApiController]
+[Route("[controller]/[action]")]
+public class NetworkController : Controller
 {
-    [ApiController]
-    [Route("[controller]/[action]")]
-    public class NetworkController : Controller
+    private readonly IWebHostEnvironment _env;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NetworkController"/> class.
+    /// </summary>
+    /// <param name="env">The web host environment.</param>
+    public NetworkController(IWebHostEnvironment env)
     {
-        private readonly IWebHostEnvironment _env;
-        public NetworkController(IWebHostEnvironment env)
-        {
-            _env = env;
-        }
+        _env = env ?? throw new ArgumentNullException(nameof(env));
+    }
 
-        private string GetOutputFilename(ICollection<long> requestIDs, string ext)
-        {
-            string ID_List = OutputNameGenerator.GetFileFriendlyIDList(requestIDs);
-            string date = OutputNameGenerator.GetFileFriendlyDateString();
-            return $"nw-{ID_List}_hops_{GetNumHops()} {date}.{ext}";
-        }
+    private string GetOutputFilename(ICollection<long> requestIDs, string ext)
+    {
+        string idList = OutputNameGenerator.GetFileFriendlyIDList(requestIDs);
+        string date = OutputNameGenerator.GetFileFriendlyDateString();
+        return $"nw-{idList}_hops_{GetNumHops()} {date}.{ext}";
+    }
 
-        private string GetAndCreateOutputDirectory()
+    private string GetAndCreateOutputDirectory()
+    {
+        string outputDir = Path.Combine(_env.ContentRootPath, "Output");
+        if (!Directory.Exists(outputDir))
         {
-            string outputDir = Path.Combine(_env.ContentRootPath, "Output");
-            if (!Directory.Exists(outputDir))
-                Directory.CreateDirectory(outputDir);
-            return outputDir;
+            Directory.CreateDirectory(outputDir);
         }
+        return outputDir;
+    }
 
-        private IActionResult RedirectToFile(string outputFilename)
-        {
-            string url = $"/Output/{outputFilename}";
-            Response.StatusCode = StatusCodes.Status201Created;
-            Response.Headers["Location"] = url;
-            return Redirect(url);
-        }
+    private IActionResult RedirectToFile(string outputFilename)
+    {
+        string url = $"/Output/{outputFilename}";
+        Response.StatusCode = StatusCodes.Status201Created;
+        Response.Headers.Location = url;
+        return Redirect(url);
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> PostDot([FromForm] IFormFile req)
+    /// <summary>
+    /// Exports network data in DOT format via POST request.
+    /// </summary>
+    /// <param name="req">The form file (not used, but required for routing).</param>
+    /// <returns>Redirect to the generated DOT file.</returns>
+    [HttpPost]
+    public async Task<IActionResult> PostDot([FromForm] IFormFile? req)
         {
             ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "dot");
@@ -57,8 +65,13 @@ namespace DataExport.Controllers
             return RedirectToFile(outputFilename);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> PostTLP([FromForm] IFormFile req)
+    /// <summary>
+    /// Exports network data in TLP (Tulip) format via POST request.
+    /// </summary>
+    /// <param name="req">The form file (not used, but required for routing).</param>
+    /// <returns>Redirect to the generated TLP file.</returns>
+    [HttpPost]
+    public async Task<IActionResult> PostTLP([FromForm] IFormFile? req)
         {
             ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "tlp");
@@ -70,8 +83,13 @@ namespace DataExport.Controllers
             return RedirectToFile(outputFilename);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> PostGML([FromForm] IFormFile req)
+    /// <summary>
+    /// Exports network data in GraphML format via POST request.
+    /// </summary>
+    /// <param name="req">The form file (not used, but required for routing).</param>
+    /// <returns>Redirect to the generated GraphML file.</returns>
+    [HttpPost]
+    public async Task<IActionResult> PostGML([FromForm] IFormFile? req)
         {
             ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "graphml");
@@ -83,8 +101,13 @@ namespace DataExport.Controllers
             return RedirectToFile(outputFilename);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> PostJSON([FromForm] IFormFile req)
+    /// <summary>
+    /// Exports network data in JSON format via POST request.
+    /// </summary>
+    /// <param name="req">The form file (not used, but required for routing).</param>
+    /// <returns>Redirect to the generated JSON file.</returns>
+    [HttpPost]
+    public async Task<IActionResult> PostJSON([FromForm] IFormFile? req)
         {
             ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "json");
@@ -96,8 +119,12 @@ namespace DataExport.Controllers
             return RedirectToFile(outputFilename);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetDot()
+    /// <summary>
+    /// Exports network data in DOT format via GET request.
+    /// </summary>
+    /// <returns>The generated DOT file for download.</returns>
+    [HttpGet]
+    public async Task<IActionResult> GetDot()
         {
             ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "dot");
@@ -109,8 +136,12 @@ namespace DataExport.Controllers
             return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetTLP()
+    /// <summary>
+    /// Exports network data in TLP (Tulip) format via GET request.
+    /// </summary>
+    /// <returns>The generated TLP file for download.</returns>
+    [HttpGet]
+    public async Task<IActionResult> GetTLP()
         {
             ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "tlp");
@@ -123,8 +154,12 @@ namespace DataExport.Controllers
             return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetGML()
+    /// <summary>
+    /// Exports network data in GraphML format via GET request.
+    /// </summary>
+    /// <returns>The generated GraphML file for download.</returns>
+    [HttpGet]
+    public async Task<IActionResult> GetGML()
         {
             ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "graphml");
@@ -136,8 +171,12 @@ namespace DataExport.Controllers
             return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetJSON()
+    /// <summary>
+    /// Exports network data in JSON format via GET request.
+    /// </summary>
+    /// <returns>The generated JSON file for download.</returns>
+    [HttpGet]
+    public async Task<IActionResult> GetJSON()
         {
             ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
             string outputFilename = GetOutputFilename(requestIDs, "json");
@@ -150,25 +189,20 @@ namespace DataExport.Controllers
             return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
         }
 
-        private async Task<NeuronGraph> GetGraphAsync(ICollection<long> requestIDs)
-        {
-            // TODO: Replace with ODataClient logic
-            // Example: await ODataClient.GetGraphAsync(...)
-            // For now, return a stub or throw NotImplementedException
-            
-            return ODataNeuronFactory.FromOData(requestIDs, GetNumHops(), AppSettings.ODataURL);
+    private async Task<NeuronGraph> GetGraphAsync(ICollection<long> requestIDs)
+    {
+        // Use ODataClient logic to retrieve the graph
+        return await Task.Run(() => 
+            ODataNeuronFactory.FromOData(requestIDs, GetNumHops(), AppSettings.ODataURL));
+    }
 
-            throw new NotImplementedException("ODataClient graph retrieval not yet implemented.");
-        }
-
-        private uint GetNumHops()
+    private uint GetNumHops()
+    {
+        if (Request.Query.ContainsKey("hops") && 
+            uint.TryParse(Request.Query["hops"], out uint hops))
         {
-            if (Request.Query.ContainsKey("hops"))
-            {
-                if (uint.TryParse(Request.Query["hops"], out uint hops))
-                    return hops;
-            }
-            return 1;
+            return hops;
         }
+        return 1;
     }
 }

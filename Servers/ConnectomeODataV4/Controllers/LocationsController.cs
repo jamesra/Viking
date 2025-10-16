@@ -1,6 +1,8 @@
 ﻿using ConnectomeDataModel;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Extensions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Data;
 using System.Linq;
 using System.Web.Http;
@@ -21,20 +23,50 @@ namespace ConnectomeODataV4.Controllers
     */
     public class LocationsController : ODataController
     {
-        private readonly ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities _db;
+        private readonly ILogger<LocationsController> _logger;
+
+        /// <summary>
+        /// Constructor with dependency injection
+        /// </summary>
+        public LocationsController(ConnectomeEntities db, ILogger<LocationsController> logger)
+        {
+            _db = db ?? throw new ArgumentNullException(nameof(db));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
 
         // GET: odata/Locations
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
         public IQueryable<Location> GetLocations()
         {
-            return db.Locations;
+            try
+            {
+                _logger.LogInformation("Fetching locations");
+                _db.ConfigureAsReadOnly();
+                return _db.Locations;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching locations");
+                throw;
+            }
         }
 
         // GET: odata/Locations(5)
         [EnableQuery]
         public SingleResult<Location> GetLocation([FromODataUri] long key)
         {
-            return SingleResult.Create(db.Locations.Where(location => location.ID == key));
+            try
+            {
+                _logger.LogInformation("Fetching location with ID {LocationId}", key);
+                _db.ConfigureAsReadOnly();
+                return SingleResult.Create(_db.Locations.Where(location => location.ID == key));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching location with ID {LocationId}", key);
+                throw;
+            }
         }
 
         /*
@@ -149,42 +181,39 @@ namespace ConnectomeODataV4.Controllers
         [EnableQuery]
         public SingleResult<Structure> GetStructure([FromODataUri] long key)
         {
-            return SingleResult.Create(db.Locations.Where(m => m.ID == key).Select(m => m.Parent));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.Locations.Where(m => m.ID == key).Select(m => m.Parent));
         }
 
         // GET: odata/Locations(5)/LocationLinksA
         [EnableQuery]
         public IQueryable<LocationLink> GetLocationLinksA([FromODataUri] long key)
         {
-            return db.LocationLinks.Where(m => m.B == key);
+            _db.ConfigureAsReadOnly();
+            return _db.LocationLinks.Where(m => m.B == key);
         }
 
         // GET: odata/Locations(5)/LocationLinksB
         [EnableQuery]
         public IQueryable<LocationLink> GetLocationLinksB([FromODataUri] long key)
         {
-            return db.LocationLinks.Where(m => m.A == key);
+            _db.ConfigureAsReadOnly();
+            return _db.LocationLinks.Where(m => m.A == key);
         }
 
         // GET: odata/Locations(5)/LocationLinks
         [EnableQuery]
         public IQueryable<LocationLink> GetLocationLinks([FromODataUri] long key)
         {
-            return db.LocationLinks.Where(link => link.A == key || link.B == key);
+            _db.ConfigureAsReadOnly();
+            return _db.LocationLinks.Where(link => link.A == key || link.B == key);
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+        // No need for Dispose override - DI container handles disposal
 
         private bool LocationExists(long key)
         {
-            return db.Locations.Count(e => e.ID == key) > 0;
+            return _db.Locations.Count(e => e.ID == key) > 0;
         }
     }
 }

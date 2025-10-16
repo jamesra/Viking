@@ -1,45 +1,55 @@
 ﻿using AnnotationVizLib;
-using AnnotationVizLib.OData; // Use correct namespace
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http; 
-using Microsoft.AspNetCore.Hosting;
+using AnnotationVizLib.OData;
 using VikingWebAppSettings;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
 
-namespace DataExport.Controllers
+namespace DataExport.Controllers;
+
+/// <summary>
+/// Controller for exporting motif graph data in various formats (DOT, TLP, JSON).
+/// </summary>
+[ApiController]
+[Route("[controller]/[action]")]
+public class MotifController : Controller
 {
-    [ApiController]
-    [Route("[controller]/[action]")]
-    public class MotifController : Controller
+    private readonly IWebHostEnvironment _env;
+    private const string DefaultOutputFile = "motifs";
+    private static long _nextId;
+
+    /// <summary>
+    /// Gets the next unique filename ID for motif exports.
+    /// </summary>
+    private static long NextFilenameID => Interlocked.Increment(ref _nextId);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MotifController"/> class.
+    /// </summary>
+    /// <param name="env">The web host environment.</param>
+    public MotifController(IWebHostEnvironment env)
     {
-        private readonly IWebHostEnvironment _env;
-        public MotifController(IWebHostEnvironment env)
+        _env = env ?? throw new ArgumentNullException(nameof(env));
+    }
+
+    private string GetOutputFilename(string ext)
+    {
+        return $"{DefaultOutputFile}{NextFilenameID}{OutputNameGenerator.GetFileFriendlyDateString()}.{ext}";
+    }
+
+    private string GetAndCreateOutputDirectory()
+    {
+        string outputDir = Path.Combine(_env.ContentRootPath, "Output");
+        if (!Directory.Exists(outputDir))
         {
-            _env = env;
+            Directory.CreateDirectory(outputDir);
         }
+        return outputDir;
+    }
 
-        public string DefaultOutputFile = "motifs";
-        private static long _next_id = 0;
-        public static long NextFilenameID => _next_id++;
-
-        private string GetOutputFilename(string ext)
-        {
-            return $"{DefaultOutputFile}{NextFilenameID}{OutputNameGenerator.GetFileFriendlyDateString()}.{ext}";
-        }
-
-        private string GetAndCreateOutputDirectory()
-        {
-            string outputDir = Path.Combine(_env.ContentRootPath, "Output");
-            if (!Directory.Exists(outputDir))
-                Directory.CreateDirectory(outputDir);
-            return outputDir;
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetDot()
+    /// <summary>
+    /// Exports motif graph data in DOT format.
+    /// </summary>
+    /// <returns>The generated DOT file for download.</returns>
+    [HttpGet]
+    public async Task<IActionResult> GetDot()
         {
             string userDotDirectory = GetAndCreateOutputDirectory();
             string outputFilename = GetOutputFilename("dot");
@@ -53,8 +63,12 @@ namespace DataExport.Controllers
             return PhysicalFile(userDotFileFullPath, "text/plain", outputFilename);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetTLP()
+    /// <summary>
+    /// Exports motif graph data in TLP (Tulip) format.
+    /// </summary>
+    /// <returns>The generated TLP file for download.</returns>
+    [HttpGet]
+    public async Task<IActionResult> GetTLP()
         {
             string userDotDirectory = GetAndCreateOutputDirectory();
             string outputFilename = GetOutputFilename("tlp");
@@ -68,8 +82,12 @@ namespace DataExport.Controllers
             return PhysicalFile(userDotFileFullPath, "text/plain", outputFilename);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetJSON()
+    /// <summary>
+    /// Exports motif graph data in JSON format.
+    /// </summary>
+    /// <returns>The generated JSON file for download.</returns>
+    [HttpGet]
+    public async Task<IActionResult> GetJSON()
         {
             string userDotDirectory = GetAndCreateOutputDirectory();
             string outputFilename = GetOutputFilename("json");
@@ -83,12 +101,11 @@ namespace DataExport.Controllers
             return PhysicalFile(userJSONFullPath, "text/plain", outputFilename);
         }
 
-        private async Task<MotifGraph> GetMotifGraphAsync()
-        {
-            // TODO: Replace with ODataClient logic
-            // Example: await ODataClient.GetMotifGraphAsync(...)
-            // For now, return a stub or throw NotImplementedException
-            throw new NotImplementedException("ODataClient motif graph retrieval not yet implemented.");
-        }
+    private async Task<MotifGraph> GetMotifGraphAsync()
+    {
+        // TODO: Replace with ODataClient logic
+        // Example: await ODataClient.GetMotifGraphAsync(...)
+        await Task.CompletedTask;
+        throw new NotImplementedException("ODataClient motif graph retrieval not yet implemented.");
     }
 }

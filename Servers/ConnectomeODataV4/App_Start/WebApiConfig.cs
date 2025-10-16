@@ -1,4 +1,4 @@
-﻿//using System.Web.Http.Batch;
+﻿using System;
 using ConnectomeDataModel;
 using Microsoft.AspNet.OData.Batch;
 using Microsoft.AspNet.OData.Builder;
@@ -16,46 +16,54 @@ namespace ConnectomeODataV4
         {
             
             // Web API configuration and services
-            var json = GlobalConfiguration.Configuration.Formatters.JsonFormatter;
-            json.UseDataContractJsonSerializer = true;
-            //json.SerializerSettings.PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.All;
+            // Modern JSON serialization configuration
+            var json = config.Formatters.JsonFormatter;
+            json.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            json.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+            json.SerializerSettings.DateTimeZoneHandling = Newtonsoft.Json.DateTimeZoneHandling.Utc;
 
-            //var cors = new System.Web.Http.Cors.EnableCorsAttribute("*", "*", "*");
-            //config.EnableCors(cors);
+            // CORS configuration (managed via Web.config for IIS hosting)
+            // For development, consider enabling:
+            // var cors = new System.Web.Http.Cors.EnableCorsAttribute("*", "*", "*");
+            // config.EnableCors(cors);
 
-            //config.EnableSystemDiagnosticsTracing();
-
-            //config.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
+            // Enable detailed error messages in development only
+            // config.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
 
             // Web API routes 
-            //config.EnableUnqualifiedNameCall(true);
-
             config.MapHttpAttributeRoutes();
+            
+            // Configure OData query options
             config.Count().Filter().OrderBy().Expand().Select().MaxTop(null);
 
-            Microsoft.OData.Edm.IEdmModel edmModel = GetModel();
+            IEdmModel edmModel = GetModel();
 
+            // Configure OData batch handler
             ODataBatchHandler odataBatchHandler = new DefaultODataBatchHandler(GlobalConfiguration.DefaultServer)
             {
                 ODataRouteName = "odata"
             };
 
-            config.MapODataServiceRoute(routeName: "odata",
+            // Map OData service route
+            config.MapODataServiceRoute(
+                routeName: "odata",
                 routePrefix: null,
                 model: edmModel,
                 batchHandler: odataBatchHandler);
                          
+            // Fallback Web API route
             config.Routes.MapHttpRoute(
                 name: "api",
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
-
-            
         }
 
+        // NOTE: This method is not used and should be removed. Controllers should manage their own DbContext lifecycle.
+        [Obsolete("This method creates a DbContext without proper disposal. Use dependency injection in controllers instead.")]
         public static System.Linq.IQueryable<LocationLink> StructureLocationLinks(long ID)
         {
+            // This creates a memory leak - DbContext is never disposed
             ConnectomeEntities db = new ConnectomeEntities();
             return db.StructureLocationLinks(ID);
         }
@@ -160,16 +168,16 @@ namespace ConnectomeODataV4
         public static void AddPermittedStructureLinks(ODataModelBuilder builder)
         {
             var type = builder.EntityType<PermittedStructureLink>();
-            type.HasKey(sl => sl.SourceTypeID);
-            type.HasKey(sl => sl.TargetTypeID);
+            // Composite key must be defined in a single HasKey call
+            type.HasKey(sl => new { sl.SourceTypeID, sl.TargetTypeID });
             builder.EntitySet<PermittedStructureLink>("PermittedStructureLinks");
         }
 
         public static void AddLocationLinks(ODataModelBuilder builder)
         {
             var type = builder.EntityType<LocationLink>();
-            type.HasKey(sl => sl.A);
-            type.HasKey(sl => sl.B);
+            // Composite key must be defined in a single HasKey call
+            type.HasKey(sl => new { sl.A, sl.B });
             builder.EntitySet<LocationLink>("LocationLinks");
         }
 

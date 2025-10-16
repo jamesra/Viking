@@ -2,6 +2,8 @@
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Routing;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -22,7 +24,17 @@ namespace ConnectomeODataV4.Controllers
     */
     public class StructureLinksController : ODataController
     {
-        private readonly ConnectomeEntities db = new ConnectomeEntities();
+        private readonly ConnectomeEntities _db;
+        private readonly ILogger<StructureLinksController> _logger;
+
+        /// <summary>
+        /// Constructor with dependency injection
+        /// </summary>
+        public StructureLinksController(ConnectomeEntities db, ILogger<StructureLinksController> logger)
+        {
+            _db = db ?? throw new ArgumentNullException(nameof(db));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
 
         /// <summary>
         /// Return the ODataPath we need to set on requests when invoking functions that return collections of entities
@@ -40,15 +52,35 @@ namespace ConnectomeODataV4.Controllers
         [EnableQuery(PageSize = WebApiConfig.PageSize)]
         public IQueryable<StructureLink> GetStructureLinks()
         {
-            StructureLink[] sl = db.StructureLinks.ToArray();
-            return db.StructureLinks;
+            try
+            {
+                _logger.LogInformation("Fetching structure links");
+                _db.ConfigureAsReadOnly();
+                StructureLink[] sl = _db.StructureLinks.ToArray();
+                return _db.StructureLinks;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching structure links");
+                throw;
+            }
         }
 
         // GET: odata/StructureLinks(5)
         [EnableQuery]
         public SingleResult<StructureLink> GetStructureLink([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureLinks.Where(structureLink => structureLink.SourceID == key));
+            try
+            {
+                _logger.LogInformation("Fetching structure link with ID {StructureLinkId}", key);
+                _db.ConfigureAsReadOnly();
+                return SingleResult.Create(_db.StructureLinks.Where(structureLink => structureLink.SourceID == key));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching structure link with ID {StructureLinkId}", key);
+                throw;
+            }
         }
 
         /*
@@ -176,14 +208,16 @@ namespace ConnectomeODataV4.Controllers
         [EnableQuery]
         public SingleResult<Structure> GetSource([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureLinks.Where(m => m.SourceID == key).Select(m => m.Source));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.StructureLinks.Where(m => m.SourceID == key).Select(m => m.Source));
         }
 
         // GET: odata/StructureLinks(5)/Target
         [EnableQuery]
         public SingleResult<Structure> GetTarget([FromODataUri] long key)
         {
-            return SingleResult.Create(db.StructureLinks.Where(m => m.SourceID == key).Select(m => m.Target));
+            _db.ConfigureAsReadOnly();
+            return SingleResult.Create(_db.StructureLinks.Where(m => m.SourceID == key).Select(m => m.Target));
         }
 
         
@@ -192,10 +226,10 @@ namespace ConnectomeODataV4.Controllers
         [ODataRoute("NetworkLinks(IDs={IDs},Hops={Hops})")]
         public IQueryable<StructureLink> Network([FromODataUri] ICollection<long> IDs, [FromODataUri] int Hops)
         {
-            //db.ConfigureAsReadOnly();
+            _db.ConfigureAsReadOnly();
             Request.ODataProperties().Path = GetRequestPath();
 
-            return db.SelectNetworkStructureLinks(IDs, Hops);
+            return _db.SelectNetworkStructureLinks(IDs, Hops);
             
 
             /* https://github.com/OData/WebApi/issues/255 */
@@ -211,19 +245,11 @@ namespace ConnectomeODataV4.Controllers
             */
         }
         
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+        // No need for Dispose override - DI container handles disposal
 
         private bool StructureLinkExists(long key)
         {
-            return db.StructureLinks.Count(e => e.SourceID == key) > 0;
+            return _db.StructureLinks.Count(e => e.SourceID == key) > 0;
         }
     }
 }

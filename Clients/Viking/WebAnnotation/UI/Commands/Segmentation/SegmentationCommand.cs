@@ -16,6 +16,7 @@ using VikingXNAGraphics;
 using VikingXNAGraphics.Controls;
 using WebAnnotation.UI.Actions;
 using WebAnnotation.UI.ActionViews;
+using Viking.gRPC.SegmentationServiceTypes.V1;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {

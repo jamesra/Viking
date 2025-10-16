@@ -3,13 +3,17 @@
     <TargetFramework>net9.0</TargetFramework>
     <RootNamespace>DataExport</RootNamespace>
     <AssemblyName>DataExport</AssemblyName>
-    <AssemblyTitle>DataExport</AssemblyTitle>
-    <AssemblyCompany>Microsoft</AssemblyCompany>
-    <AssemblyProduct>DataExport</AssemblyProduct>
-    <Copyright>Copyright © Microsoft 2014</Copyright>
+    <Company>Microsoft</Company>
+    <Product>DataExport - Viking Network Export Service</Product>
+    <Copyright>Copyright © Microsoft 2014-2025</Copyright>
     <Version>1.0.0.0</Version>
     <FileVersion>1.0.0.0</FileVersion>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
