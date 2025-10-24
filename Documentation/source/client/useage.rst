@@ -70,4 +70,4 @@ There are two levels at which channel information is stored, volumes and section
 Changing channel setup 
 To override channels for a section right-click section number from the list on the left side. Select Properties from the drop down menu. One of the property page tabs be labeled channels. Select Default and click OK. The image should go to grayscale. Then you can switch channels by selecting Section → Channels from the drop down menu at the top menu bar.
 
-.. _install the software on a PC: http://connectomes.utah.edu/Software/Viking4/setup.exe
+.. _install the software on a PC: https://connectomes.utah.edu/Software/Viking4/setup.exe

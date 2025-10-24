@@ -20,16 +20,19 @@ Viking Client Installation
 
 Viking requires the following:
    * Windows 7+ 
-   * `.NET Framework 4.8`_
+   * .NET Framework 4.8
    * `XNA 4.0 Framework Redistributable`_
    * A dedicated GPU.  Intel chips with embedded graphics also work.
    * An internet connection
    
+`Click here to install the Viking client`_
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Note for existing users:** July 2023 - There was an issue with Chrome where it would not download the most recent version of setup.exe using the link above and would instead pull from a cache.  If setup isn't working try another browser or clear cached files from your browser history.  Also, sometime in June 2023 the web installer for .NET 4.8.1 automatically downloaded from Microsoft is no longer valid.  You will need to manually install .NET 4.8.1 if it is not on your system, but a current Windows install should include it. 
+   
 **Note for IT Administrators:** Viking's installer is signed by the University of Utah. 
 Adding Viking's `public key`_ as a trusted publisher allows users to install Viking without administrator rights.
 
-`Click here to install the Viking client`_
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Contents 
 ========
@@ -61,12 +64,11 @@ Indices and tables
 * :ref:`search` 
 
 .. _Papers: 
-.. _Click here to install the Viking client: http://connectomes.utah.edu/Software/Viking4/setup.exe
+.. _Click here to install the Viking client: https://connectomes.utah.edu/Software/Viking/setup.exe
 .. _Marc Lab : http://marclab.org/
 .. _Marc Lab Papers: http://marclab.org/science/papers/
 .. _Nornir: http://nornir.github.io
 .. _SSTEM and Computation Molecular Phenotyping: http://www.plosbiology.org/article/info%3Adoi%2F10.1371%2Fjournal.pbio.1000074#abstract0
 .. _original visualization site: http://connectomes.utah.edu/viz/
-.. _.NET Framework 4.8: https://www.microsoft.com/en-us/download/details.aspx?id=48130
-.. _XNA 4.0 Framework Redistributable: http://connectomes.utah.edu/XNA%20Framework%204.0%20Redist.msi
+.. _XNA 4.0 Framework Redistributable: https://connectomes.utah.edu/XNA%20Framework%204.0%20Redist.msi
 .. _public key: https://connectomes.utah.edu/Software/Viking4/VikingPublicKey.cer
