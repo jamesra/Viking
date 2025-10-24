@@ -100,6 +100,9 @@ namespace Viking.SSL
                             Log.Warning("Certificate found by DNS name does not have an accessible private key. This certificate cannot be used for signing operations.");
                         }
                     }
+                    else{
+                        Log.Warning("No certificate found by DNS name: {DnsName}", config.DnsName);
+                    }
                     return cert;
                 }
                 catch (Exception ex)
@@ -125,7 +128,9 @@ namespace Viking.SSL
                             Log.Warning("Certificate found by serial number does not have an accessible private key. This certificate cannot be used for signing operations.");
                         }
                     }
-
+                    else{
+                        Log.Warning("No certificate found by serial number: {SerialNumber}", config.SerialNumber);
+                    }
                     return cert;
                 }
                 catch (Exception ex)

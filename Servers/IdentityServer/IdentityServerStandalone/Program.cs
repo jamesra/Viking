@@ -48,8 +48,14 @@ namespace Viking.Identity.Server.Standalone
             var envFile = ".env";
             Env.TraversePath().Load(envFile);
 
-            var buildEnvFile = $".env.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}";
+            var aspnetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+            var hostingEnv = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") ?? "Local";
+            
+            var buildEnvFile = $".env.{aspnetCoreEnv}";
             Env.TraversePath().Load(buildEnvFile);
+            
+            var hostingEnvFile = $".env.{hostingEnv}";
+            Env.TraversePath().Load(hostingEnvFile);
 
 
             try
@@ -57,8 +63,12 @@ namespace Viking.Identity.Server.Standalone
                 Log.Information("Starting IdentityServer...");
                 var builder = WebApplication.CreateBuilder(args);
 
-                // Enable environment variable substitution in the main configuration
-                builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
+                // Enable environment variable substitution in the main configuration 
+                builder.Configuration.AddJsonFile("appsettings.json", optional: true)
+                               .AddJsonFile($"appsettings.{aspnetCoreEnv}.json", optional: true)
+                               .AddJsonFile($"appsettings.{hostingEnv}.json", optional: true)
+                               .AddEnvironmentVariables()
+                               .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
 
                 // Configure Serilog
                 builder.Host.UseSerilog((context, services, configuration) => configuration
@@ -73,7 +83,7 @@ namespace Viking.Identity.Server.Standalone
                 ConfigureServices(builder.Services, builder.Configuration);
 
                 // Configure Kestrel
-                ConfigureKestrel(builder.WebHost);
+                ConfigureKestrel(builder.WebHost, builder.Configuration);
 
                 var app = builder.Build();
 
@@ -92,18 +102,10 @@ namespace Viking.Identity.Server.Standalone
             }
         }
 
-        private static void ConfigureKestrel(IWebHostBuilder webHostBuilder)
+        private static void ConfigureKestrel(IWebHostBuilder webHostBuilder, IConfiguration configuration)
         {
             webHostBuilder.ConfigureKestrel(options =>
-            {
-                var configuration = new ConfigurationBuilder()
-                        .SetBasePath(Directory.GetCurrentDirectory())
-                        .AddJsonFile("appsettings.json", optional: true)
-                        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
-                        .AddEnvironmentVariables()
-                        .EnableSubstitutions("${", "}", true)
-                        .Build();
-
+            {  
                 var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
 
                 var http_port = configuration.GetValue<int>("IDENTITY_STANDALONE_CONTAINER_HTTP_PORT");
@@ -348,7 +350,7 @@ namespace Viking.Identity.Server.Standalone
                 .SetApplicationName("VikingIdentityServer");
 
             // Only use certificate-based key encryption if not in Docker environment
-            var isDockerEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Docker";
+            var isDockerEnvironment = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker";
 
             if (!isDockerEnvironment)
             {
@@ -399,7 +401,7 @@ namespace Viking.Identity.Server.Standalone
             // this will do the initial DB population and required migrations
             InitializeDatabase(app);
 
-            if (env.IsDevelopment() || env.EnvironmentName == "Docker")
+            if (env.IsDevelopment() || Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker")
             {
                 Log.Information("Using Developer Exception Pages...");
                 app.UseDeveloperExceptionPage();

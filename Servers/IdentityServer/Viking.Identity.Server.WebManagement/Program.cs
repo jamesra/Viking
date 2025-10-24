@@ -45,11 +45,17 @@ namespace Viking.Identity.Server.WebManagement
             var envFile = ".env";
             Env.TraversePath().Load(envFile);
 
-            var buildEnvFile = $".env.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}";
+            var aspnetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+            var hostingEnv = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") ?? "Local";
+            
+            var buildEnvFile = $".env.{aspnetCoreEnv}";
             Env.TraversePath().Load(buildEnvFile);
+            
+            var hostingEnvFile = $".env.{hostingEnv}";
+            Env.TraversePath().Load(hostingEnvFile);
 
             // Configure Serilog
-            var logPath = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Docker" 
+            var logPath = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker" 
                 ? "/var/log/supervisor/identity-server/IdentityManagerLogs.json"
                 : "IdentityManagerLogs.json";
             
@@ -65,10 +71,14 @@ namespace Viking.Identity.Server.WebManagement
                 var builder = WebApplication.CreateBuilder(args);
 
                 // Enable environment variable substitution in the main configuration
-                builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
+                builder.Configuration.AddJsonFile("appsettings.json", optional: true)
+                                     .AddJsonFile($"appsettings.{aspnetCoreEnv}.json", optional: true)
+                                     .AddJsonFile($"appsettings.{hostingEnv}.json", optional: true)
+                                     .AddEnvironmentVariables()
+                                     .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
 
                 // Configure Serilog
-                var managementLogPath = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Docker" 
+                var managementLogPath = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker" 
                     ? "/var/log/supervisor/identity-server/IdentityServerManagement.json"
                     : "IdentityServerManagement.json";
                 
@@ -249,6 +259,13 @@ namespace Viking.Identity.Server.WebManagement
             services.AddAccessTokenManagement(options =>
             {
                 // client config is inferred from OpenID Connect settings
+            });
+
+            // Configure HttpClient for calling the WebAPI
+            services.AddHttpClient("IdentityApi", client =>
+            {
+                var webApiOptions = configuration.GetSection(nameof(WebApiOptions)).Get<WebApiOptions>();
+                client.BaseAddress = new Uri(webApiOptions.BaseUrl);
             });
         }
 

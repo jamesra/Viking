@@ -48,11 +48,15 @@ public class Program
         var envFile = ".env";
         Env.TraversePath().Load(envFile);
 
-        var buildEnvFile = $".env.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}";
+        var aspnetCoreEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+        var hostingEnv = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") ?? "Local";
+        
+        var buildEnvFile = $".env.{aspnetCoreEnv}";
         Env.TraversePath().Load(buildEnvFile);
-
-       
-
+        
+        var hostingEnvFile = $".env.{hostingEnv}";
+        Env.TraversePath().Load(hostingEnvFile);
+ 
         try
         {
             Log.Information("Starting Viking Identity Server WebApi");
@@ -60,10 +64,12 @@ public class Program
             var builder = WebApplication.CreateBuilder(args);
 
             // Enable environment variable substitution in the main configuration
-            builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
+            builder.Configuration.AddJsonFile("appsettings.json", optional: true)
+                               .AddJsonFile($"appsettings.{aspnetCoreEnv}.json", optional: true)
+                               .AddJsonFile($"appsettings.{hostingEnv}.json", optional: true)
+                               .AddEnvironmentVariables()
+                               .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
 
-            // Enable environment variable substitution in the main configuration
-            builder.Configuration.EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
 
             // Configure Serilog
             builder.Host.UseSerilog();
@@ -71,17 +77,10 @@ public class Program
             // Load SSL certificate configuration
             var sslOptions = builder.Configuration.GetSection("SSL").Get<SSLOptions>();
             var sslCert = Certs.LoadSSLCertificate(sslOptions);
+             
 
-            var configuration = new ConfigurationBuilder()
-                               .SetBasePath(Directory.GetCurrentDirectory())
-                               .AddJsonFile("appsettings.json", optional: true)
-                               .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
-                               .AddEnvironmentVariables()
-                               .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw)
-                               .Build();
-
-            var http_port = configuration.GetValue<int>("IDENTITY_WEBAPI_CONTAINER_HTTP_PORT");
-            var https_port = configuration.GetValue<int>("IDENTITY_WEBAPI_CONTAINER_HTTPS_PORT");
+            var http_port = builder.Configuration.GetValue<int>("IDENTITY_WEBAPI_CONTAINER_HTTP_PORT");
+            var https_port = builder.Configuration.GetValue<int>("IDENTITY_WEBAPI_CONTAINER_HTTPS_PORT");
             
             Log.Information("DEBUG: http_port = {HttpPort}, https_port = {HttpsPort}", http_port, https_port);
             Log.Information("DEBUG: Environment variables - IDENTITY_WEBAPI_HTTP_PORT = {HttpPortEnv}, IDENTITY_WEBAPI_HTTPS_PORT = {HttpsPortEnv}", 
@@ -197,7 +196,7 @@ public class Program
             var app = builder.Build();
 
             // Configure the HTTP request pipeline
-            if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docker")
+            if (app.Environment.IsDevelopment() || Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker")
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();

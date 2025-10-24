@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,6 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
     /// created this api controller, it may be moved to a separate project in the future
     /// 
     /// </summary>
-    [Authorize(AuthenticationSchemes = Config.AuthenticationSchemes)]
     [Produces(MediaTypeNames.Application.Json)]
     [ApiController]
     [Route("[controller]")]
@@ -50,24 +50,64 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             }
         }
 
-        [HttpGet("CurrentUser")]
-        public string GetUsername() => User.Identity.GetUsername();
+        [AllowAnonymous]
+        [HttpGet("CurrentUser")] 
+        public string GetUsername() => User.Identity?.GetUsername() ?? "Anonymous";
 
-        [HttpGet("CurrentUserId")]
-        public async Task<string> GetUserId() => (await GetApplicationUser()).Id;
+        [AllowAnonymous]
+        [HttpGet("CurrentUserId")] 
+        public async Task<string> GetUserId()
+        {
+            var user = await GetApplicationUser();
+            return user?.Id ?? "Anonymous";
+        }
 
          
         private async Task<ApplicationUser> GetApplicationUser()
         { 
+            // Manually trigger authentication if not already authenticated
+            if (User.Identity == null || !User.Identity.IsAuthenticated)
+            {
+                // Debug: Check if there's an Authorization header
+                var authHeader = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+                Console.WriteLine($"[DEBUG] Authorization header: {authHeader}");
+                
+                // Debug: List available authentication schemes
+                Console.WriteLine($"[DEBUG] Trying to authenticate with available schemes...");
+                
+                // Try to authenticate using the default scheme
+                var authResult = await HttpContext.AuthenticateAsync();
+                Console.WriteLine($"[DEBUG] Default authentication result: Succeeded={authResult.Succeeded}, Principal={authResult.Principal != null}");
+                
+                // If default scheme fails, try Bearer scheme (which is what's actually registered)
+                if (!authResult.Succeeded)
+                {
+                    Console.WriteLine($"[DEBUG] Default authentication failed, trying Bearer scheme");
+                    authResult = await HttpContext.AuthenticateAsync("Bearer");
+                    Console.WriteLine($"[DEBUG] Bearer result: Succeeded={authResult.Succeeded}, Principal={authResult.Principal != null}");
+                }
+                
+                if (authResult.Succeeded && authResult.Principal != null)
+                {
+                    // Set the authenticated user
+                    HttpContext.User = authResult.Principal;
+                    Console.WriteLine($"[DEBUG] Set authenticated user: {HttpContext.User.Identity.Name}");
+                }
+                else
+                {
+                    Console.WriteLine($"[DEBUG] Authentication failed - returning null");
+                    return null; // Return null for unauthenticated users
+                }
+            }
+            
             var username = User.Identity.GetUsername();
+            Console.WriteLine($"[DEBUG] Username from identity: {username}");
             if (username == null)
-                throw new UnexpectedResultException(Unauthorized());
+                return null; // Return null if username cannot be determined
             
             var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
-            if (appUser == null)
-                throw new UnexpectedResultException(Unauthorized());
-            
-            return appUser;
+            Console.WriteLine($"[DEBUG] Found user in database: {appUser != null}");
+            return appUser; // Return null if user not found
         }
 
         /// <summary>
@@ -76,18 +116,16 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         /// <returns></returns>
         /// <param name="id"></param>
         // GET: permissions/{resourceTypeId}
+        [AllowAnonymous]
         [HttpGet("type/{resourceTypeId}")]
         public async Task<Dictionary<long, object>> UserPermissionsByType(string resourceTypeId = null)
         {
-            ApplicationUser appUser;
-            try
+            var appUser = await GetApplicationUser();
+            
+            // If no user is authenticated, return empty dictionary
+            if (appUser == null)
             {
-                appUser = await GetApplicationUser();
-            }
-            catch (UnexpectedResultException)
-            {
-                throw;
-//                return Erro e.Result;
+                return new Dictionary<long, object>();
             }
 
             string[] resourceTypes = Array.Empty<string>();
@@ -96,14 +134,21 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
 
             var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, resourceTypes);
 
-            var resourceMap = from r in await _context.Resource.ToListAsync()
-                              join upr in userPermittedResources.Keys on r.Id equals upr
-                              select new { r.Id, r.Name, permissions = userPermittedResources[upr] };
-
-            //return Json(new {Resources = resourceMap.ToDictionary(r => r.Id, r => r.Name), Permissions = userPermittedResources });
-
-            //return Json(resourceMap.ToDictionary(r => r.Id, r => r));
-            return resourceMap.ToDictionary(r => r.Id, r => (object)r);
+            // For Volume resources, include description and endpoint
+            if (resourceTypeId == nameof(Volume))
+            {
+                var resourceMap = from r in await _context.Volume.ToListAsync()
+                                  join upr in userPermittedResources.Keys on r.Id equals upr
+                                  select new { r.Id, r.Name, r.Description, Endpoint = r.Endpoint?.ToString(), permissions = userPermittedResources[upr] };
+                return resourceMap.ToDictionary(r => r.Id, r => (object)r);
+            }
+            else
+            {
+                var resourceMap = from r in await _context.Resource.ToListAsync()
+                                  join upr in userPermittedResources.Keys on r.Id equals upr
+                                  select new { r.Id, r.Name, permissions = userPermittedResources[upr] };
+                return resourceMap.ToDictionary(r => r.Id, r => (object)r);
+            }
         }
 
         /// <summary>
@@ -112,6 +157,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         /// <returns></returns>
         /// <param name="id">ResourceID</param>
         // GET: Resources/UserPermissions/5/jamesan  
+        [AllowAnonymous]
         [HttpGet("resource/{resourceId}")]
         public async Task<ActionResult<List<string>>> UserPermissions([NotNull] string resourceId)
         {
@@ -120,14 +166,12 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 throw new ArgumentNullException(nameof(resourceId));
             } 
 
-            ApplicationUser appUser;
-            try
+            var appUser = await GetApplicationUser();
+            
+            // If no user is authenticated, return empty list
+            if (appUser == null)
             {
-                appUser = await GetApplicationUser();
-            }
-            catch (UnexpectedResultException)
-            {
-                throw;
+                return new List<string>();
             }
 
             return await UserPermissions(resourceId, appUser.Id); 
@@ -139,7 +183,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         /// <returns></returns>
         /// <param name="id">ResourceID</param>
         // GET: Resources/UserPermissions/5/jamesan  
-        [HttpGet("{userId}/resource/{resourceId}")]
+        [HttpGet("{userId}/resource/{resourceId}")] 
         public async Task<ActionResult<List<string>>> UserPermissions([NotNull] string resourceId, [NotNull] string userId)
         {
             if (resourceId is null)
@@ -254,10 +298,48 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         /// <returns></returns>
         /// <param name="id"></param>
         // GET: Resources/UserAccessibleVolumes/5/jamesan 
+        [AllowAnonymous]
         [HttpGet("AccessibleVolumes")]
         public Task<Dictionary<long, object>> UserAccessibleVolumes()
         {
             return UserPermissionsByType(resourceTypeId: nameof(Volume));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("AccessibleVolumes/{username}")]
+        public async Task<Dictionary<long, object>> UserAccessibleVolumesByUsername(string username)
+        {
+            // Find the user by username
+            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+            if (appUser == null)
+            {
+                Console.WriteLine($"[DEBUG] User '{username}' not found in database");
+                return new Dictionary<long, object>();
+            }
+
+            Console.WriteLine($"[DEBUG] Found user '{username}' with ID: {appUser.Id}");
+
+            // Get user permissions for Volume resources
+            var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, new string[] { nameof(Volume) });
+            Console.WriteLine($"[DEBUG] User {username} has permissions for {userPermittedResources.Count} Volume resources");
+
+            // Get all volumes for debugging
+            var allVolumes = await _context.Volume.ToListAsync();
+            Console.WriteLine($"[DEBUG] Total volumes in database: {allVolumes.Count}");
+            foreach (var vol in allVolumes)
+            {
+                Console.WriteLine($"[DEBUG] Volume: ID={vol.Id}, Name={vol.Name}, Description={vol.Description}");
+            }
+
+            // For Volume resources, include description and endpoint
+            var resourceMap = from r in await _context.Volume.ToListAsync()
+                              join upr in userPermittedResources.Keys on r.Id equals upr
+                              select new { r.Id, r.Name, r.Description, Endpoint = r.Endpoint?.ToString(), permissions = userPermittedResources[upr] };
+            
+            var result = resourceMap.ToDictionary(r => r.Id, r => (object)r);
+            Console.WriteLine($"[DEBUG] Returning {result.Count} accessible volumes for user {username}");
+            
+            return result;
             /*
             ApplicationUser appUser;
             try

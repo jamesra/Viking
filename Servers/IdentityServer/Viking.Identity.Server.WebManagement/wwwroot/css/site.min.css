@@ -17,6 +17,58 @@ body {
     width: 100%
 }
 
+table.edit-settings {
+    text-align: left;
+    padding-left: 2px;
+    padding-right: 5%;
+    width: 100%;
+    table-layout: fixed
+}
+
+.edit-settings th:first-child {
+    text-align: left;
+    padding-left: 2px;
+    padding-right: 2px;
+    width: 75px;
+    white-space: nowrap
+}
+
+.edit-settings th:not(:first-child) {
+    text-align: center;
+    padding-left: 2px;
+    padding-right: 2px;
+    width: 40px;
+    white-space: nowrap
+}
+
+.edit-settings td:first-child {
+    text-align: left;
+    vertical-align: top;
+    padding-left: 2px;
+    padding-right: 2px;
+    width: 75px
+}
+
+.edit-settings td:not(:first-child) {
+    text-align: center;
+    vertical-align: top;
+    padding-left: 2px;
+    padding-right: 2px;
+    width: 40px
+}
+
+.edit-settings ul {
+    list-style-type: none;
+    margin-left: 0px;
+    padding-left: 0px
+}
+
+.edit-settings li {
+    margin-left: 0px;
+    padding-left: 2px;
+    text-align: left
+}
+
 #qrCode {
     margin: 15px
 }

@@ -28,7 +28,7 @@ namespace Client
         //private const string IdentityServerApiEndpoint = "https://localhost:6001/";
         private const string IdentityServerApiEndpoint = "https://identity.codepharm.net:6001/";
 
-        private static string Secret = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET") ?? "CorrectHorseBatteryStaple"; // TODO: Remove fallback in production
+        private static string Secret;
 
         private const string Client = "api";
 
@@ -47,7 +47,15 @@ namespace Client
 
             var buildEnvFile = $".env.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}";
             Env.TraversePath().Load(buildEnvFile);
-            Secret = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET") ?? "CorrectHorseBatteryStaple"; // TODO: Remove fallback in production
+            Secret = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET"); // TODO: Remove fallback in production
+
+            if(Secret is null)
+                            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"No secret found. Please set IDENTITY_SERVER_SECRET in {envFile} or {buildEnvFile}.");
+                Console.ForegroundColor = ConsoleColor.White;
+                return;
+            }
 
             try
             {

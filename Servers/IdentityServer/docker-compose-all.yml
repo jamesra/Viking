@@ -13,6 +13,11 @@ services:
         IDENTITY_WEBAPI_HTTPS_PORT: ${IDENTITY_WEBAPI_HTTPS_PORT:-6001}
         IDENTITY_MANAGEMENT_HTTP_PORT: ${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}
         IDENTITY_MANAGEMENT_HTTPS_PORT: ${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}
+        IDENTITY_ENABLE_REMOTE_DEBUG: ${IDENTITY_ENABLE_REMOTE_DEBUG:-false}
+        REMOTE_DEBUG_PORT: ${REMOTE_DEBUG_PORT:-4024}
+        ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+        HOSTING_ENVIRONMENT: ${HOSTING_ENVIRONMENT:-Docker}
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Release}
     ports:
       # IdentityServerStandalone ports
       - "${IDENTITY_STANDALONE_HTTP_PORT:-5000}:${IDENTITY_STANDALONE_CONTAINER_HTTP_PORT:-5000}"
@@ -23,8 +28,11 @@ services:
       # IdentityServer (Management) ports
       - "${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}:${IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT:-4000}"
       - "${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}:${IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT:-4001}"
+      # Remote debugging port (single port for all services)
+      - "${REMOTE_DEBUG_PORT:-4024}:${REMOTE_DEBUG_CONTAINER_PORT:-4024}"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - HOSTING_ENVIRONMENT=${HOSTING_ENVIRONMENT:-Docker}
       - ASPNETCORE_URLS=https://+:4001;https://+:5001;https://+:6001;http://+:4000;http://+:5000;http://+:6000;
       # Database connections
       - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_IDENTITY_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
@@ -49,18 +57,25 @@ services:
       - IDENTITY_MANAGEMENT_HTTP_PORT=${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}
       - IDENTITY_MANAGEMENT_HTTPS_PORT=${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}
       - IDENTITY_SERVER_HTTP_PORT=${IDENTITY_SERVER_HTTP_PORT:-5000}
-      - IDENTITY_SERVER_HTTPS_PORT=${IDENTITY_SERVER_HTTPS_PORT:-5001} 
+      - IDENTITY_SERVER_HTTPS_PORT=${IDENTITY_SERVER_HTTPS_PORT:-5001}
+      # Remote debugging configuration
+      - IDENTITY_ENABLE_REMOTE_DEBUG=${IDENTITY_ENABLE_REMOTE_DEBUG:-false}
+      - REMOTE_DEBUG_PORT=${REMOTE_DEBUG_PORT:-4024} 
     volumes:
       # Configuration files
       - ./IdentityServerStandalone/appsettings.json:/app/identity-standalone/appsettings.json:ro
-      - ./IdentityServerStandalone/appsettings.Docker.json:/app/identity-standalone/appsettings.Docker.json:ro
+      - ./IdentityServerStandalone/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:/app/identity-standalone/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:ro
+      - ./IdentityServerStandalone/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:/app/identity-standalone/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:ro
       - ./Viking.Identity.Server.WebApi/appsettings.json:/app/identity-webapi/appsettings.json:ro
-      - ./Viking.Identity.Server.WebApi/appsettings.Docker.json:/app/identity-webapi/appsettings.Docker.json:ro
+      - ./Viking.Identity.Server.WebApi/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:/app/identity-webapi/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:ro
+      - ./Viking.Identity.Server.WebApi/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:/app/identity-webapi/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:ro
       - ./Viking.Identity.Server.WebManagement/appsettings.json:/app/identity-server/appsettings.json:ro
-      - ./Viking.Identity.Server.WebManagement/appsettings.Docker.json:/app/identity-server/appsettings.Docker.json:ro
+      - ./Viking.Identity.Server.WebManagement/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:/app/identity-server/appsettings.${ASPNETCORE_ENVIRONMENT:-Production}.json:ro
+      - ./Viking.Identity.Server.WebManagement/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:/app/identity-server/appsettings.${HOSTING_ENVIRONMENT:-Docker}.json:ro
       # Environment files
-      - ./.env.All:/app/.env.All:ro
-      - ./.env.All.Docker:/app/.env.All.Docker:ro
+      - ./.env.All:/app/.env:ro
+      - ./.env.All.${ASPNETCORE_ENVIRONMENT:-Production}:/app/.env.${ASPNETCORE_ENVIRONMENT:-Production}:ro
+      - ./.env.All.${HOSTING_ENVIRONMENT:-Docker}:/app/.env.${HOSTING_ENVIRONMENT:-Docker}:ro
       # Log files
       - ./logs/identity-standalone:/var/log/supervisor/identity-standalone
       - ./logs/identity-webapi:/var/log/supervisor/identity-webapi

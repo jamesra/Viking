@@ -97,6 +97,65 @@ IDENTITY_SERVER_HTTP_PORT=4000
 IDENTITY_SERVER_HTTPS_PORT=4001
 ```
 
+### Remote Debugging Configuration
+Enable Visual Studio remote debugging for development:
+
+```bash
+# Enable remote debugging (default: false)
+IDENTITY_ENABLE_REMOTE_DEBUG=true
+
+# Custom debug port (default: 4024)
+REMOTE_DEBUG_PORT=4024
+```
+
+**Note**: Remote debugging is automatically enabled when `ASPNETCORE_ENVIRONMENT` is set to `Development` or `Debug`.
+
+## Remote Debugging
+
+### Enabling Remote Debugging
+
+Remote debugging allows you to attach Visual Studio or VS Code to the running Docker container for debugging .NET applications.
+
+#### Method 1: Environment Variable
+```bash
+# Enable remote debugging explicitly
+IDENTITY_ENABLE_REMOTE_DEBUG=true docker-compose -f docker-compose-all.yml up --build
+```
+
+#### Method 2: Development Environment
+```bash
+# Automatically enables remote debugging
+ASPNETCORE_ENVIRONMENT=Development docker-compose -f docker-compose-all.yml up --build
+```
+
+#### Method 3: Custom Debug Port
+```bash
+# Use custom debug port
+IDENTITY_ENABLE_REMOTE_DEBUG=true REMOTE_DEBUG_PORT=5000 docker-compose -f docker-compose-all.yml up --build
+```
+
+### Connecting to Remote Debugger
+
+1. **Start the container** with remote debugging enabled
+2. **Open Visual Studio** or VS Code
+3. **Attach to Process**:
+   - **Visual Studio**: Debug → Attach to Process → Remote → `localhost:4024`
+   - **VS Code**: Use the "Remote Debugging" configuration in `.vscode/launch.json`
+
+### Debug Port Mapping
+
+The debugger runs on a single port (default: 4024) and can debug all three services:
+- IdentityServerStandalone
+- WebApi  
+- IdentityServer (Management)
+
+### Troubleshooting Remote Debugging
+
+1. **Debugger not starting**: Check that `IDENTITY_ENABLE_REMOTE_DEBUG=true` is set
+2. **Connection refused**: Verify the debug port (4024) is not blocked by firewall
+3. **Build required**: Use `--build` flag when changing debug settings
+4. **Port conflicts**: Change `REMOTE_DEBUG_PORT` if 4024 is in use
+
 ## Logs and Monitoring
 
 ### View Logs
