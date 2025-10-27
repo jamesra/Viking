@@ -2,245 +2,361 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AnnotationVizLib.OData
 {
     public static class ODataMorphologyFactory
     {
+        /// <summary>
+        /// Synchronously builds a morphology graph from structure IDs
+        /// </summary>
         public static MorphologyGraph FromOData(ICollection<long> StructureIDs, bool include_children, Uri Endpoint)
+        {
+            return FromODataAsync(StructureIDs, include_children, Endpoint).GetAwaiter().GetResult();
+        }
+
+        #region Async Helper Methods
+
+        /// <summary>
+        /// Asynchronously retrieves the scale from the OData service
+        /// </summary>
+        private static async Task<UnitsAndScale.Scale> GetScaleAsync(
+            Container container,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var scaleTask = Task.Run(() => container.Scale().GetValue(), cancellationToken);
+                var scale = await scaleTask;
+                return scale.ToGeometryScale();
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                throw new InvalidOperationException($"Failed to retrieve scale: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Loads multiple structures by their IDs in parallel
+        /// </summary>
+        private static async Task<List<Structure>> LoadStructuresByIDsAsync(
+            Container container,
+            ICollection<long> structureIDs,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var tasks = structureIDs.Select(id => Task.Run(() => 
+                    container.Structures
+                        .Expand(s => s.Locations)
+                        .Expand(s => s.Type)
+                        .Expand(s => s.Children)
+                        .Where(s => s.ID == id)
+                        .ToList(), cancellationToken)
+                ).ToArray();
+
+                await Task.WhenAll(tasks);
+                
+                var allStructures = new List<Structure>();
+                foreach (var task in tasks)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    allStructures.AddRange(task.Result);
+                }
+
+                return allStructures;
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                throw new InvalidOperationException($"Failed to load structures by IDs: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Loads multiple structures by their type IDs in parallel
+        /// </summary>
+        private static async Task<List<Structure>> LoadStructuresByTypeIDsAsync(
+            Container container,
+            ICollection<long> typeIDs,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var tasks = typeIDs.Select(typeId => Task.Run(() => 
+                    container.Structures
+                        .Expand(s => s.Locations)
+                        .Expand(s => s.Type)
+                        .Expand(s => s.Children)
+                        .Where(s => s.TypeID == typeId)
+                        .ToList(), cancellationToken)
+                ).ToArray();
+
+                await Task.WhenAll(tasks);
+                
+                var allStructures = new List<Structure>();
+                foreach (var task in tasks)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    allStructures.AddRange(task.Result);
+                }
+
+                return allStructures;
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                throw new InvalidOperationException($"Failed to load structures by type IDs: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Loads multiple locations by their IDs in parallel
+        /// </summary>
+        private static async Task<List<Location>> LoadLocationsByIDsAsync(
+            Container container,
+            ICollection<long> locationIDs,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var tasks = locationIDs.Distinct().Select(id => Task.Run(() => 
+                    container.Locations
+                        .Where(l => l.ID == id)
+                        .ToList(), cancellationToken)
+                ).ToArray();
+
+                await Task.WhenAll(tasks);
+                
+                var allLocations = new List<Location>();
+                foreach (var task in tasks)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    allLocations.AddRange(task.Result);
+                }
+
+                return allLocations;
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                throw new InvalidOperationException($"Failed to load locations by IDs: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously loads location links for multiple structures in parallel
+        /// </summary>
+        private static async Task LoadStructureLocationLinksAsync(
+            Container container,
+            ICollection<Structure> structures,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var tasks = structures
+                    .Where(s => s.LocationLinks == null || !s.LocationLinks.Any())
+                    .Select(s => Task.Run(() =>
+                    {
+                        var links = container.StructureLocationLinks(s.ID).ToList();
+                        
+                        s.LocationLinks = new Microsoft.OData.Client.DataServiceCollection<LocationLink>(null, Microsoft.OData.Client.TrackingMode.None);
+                        foreach (var link in links)
+                        {
+                            s.LocationLinks.Add(link);
+                        }
+                    }, cancellationToken))
+                    .ToArray();
+
+                await Task.WhenAll(tasks);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                throw new InvalidOperationException($"Failed to load structure location links: {ex.Message}", ex);
+            }
+        }
+
+        #endregion
+
+        #region Public Async Methods
+
+        /// <summary>
+        /// Asynchronously builds morphology graphs for structures matching the given type IDs
+        /// </summary>
+        public static async Task<MorphologyGraph> FromODataByTypeIDsAsync(
+            ICollection<long> TypeIDs, 
+            Uri Endpoint, 
+            bool include_children = false,
+            CancellationToken cancellationToken = default)
         {
             Container container = new Container(Endpoint)
             {
                 MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
             };
-            var scale_retval = container.Scale();
-            var scale = scale_retval.GetValue().ToGeometryScale();
 
+            var scale = await GetScaleAsync(container, cancellationToken);
             MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
 
-            if (StructureIDs is null)
+            if (TypeIDs == null || TypeIDs.Count == 0)
                 return rootGraph;
 
-            List<Structure> listStructures = new List<Structure>();
+            // Load structures by type IDs in parallel
+            var structures = await LoadStructuresByTypeIDsAsync(container, TypeIDs, cancellationToken);
 
-            foreach (long ID in StructureIDs)
-            {
-                Structure result = container.Structures.Expand(s => s.Locations).Expand(s => s.Type).Expand(s => s.Children).Where(s => s.ID == ID).FirstOrDefault();
+            // Load location links in parallel
+            await LoadStructureLocationLinksAsync(container, structures, cancellationToken);
 
-                if (result != null)
-                {
-                    var LocationLink = container.StructureLocationLinks(ID);
-                    result.LocationLinks.Load(LocationLink);
-                    listStructures.Add(result);
-                }
-            }
-
-            MorphologyForStructures(container, rootGraph, listStructures, include_children, scale);
+            // Build morphology graphs
+            await MorphologyForStructuresAsync(container, rootGraph, structures, include_children, scale, cancellationToken);
 
             return rootGraph;
         }
 
-        // ASYNC METHODS
-        public static async Task<MorphologyGraph> FromODataByTypeIDsAsync(ICollection<long> TypeIDs, Uri Endpoint, bool include_children = false)
+        /// <summary>
+        /// Asynchronously builds morphology graphs for the specified structure IDs
+        /// </summary>
+        public static async Task<MorphologyGraph> FromODataAsync(
+            ICollection<long> StructureIDs, 
+            bool include_children, 
+            Uri Endpoint,
+            CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() =>
+            Container container = new Container(Endpoint)
             {
-                var container = new Container(Endpoint)
-                {
-                    MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
-                };
-                var scale_retval = container.Scale();
-                var scale = scale_retval.GetValue().ToGeometryScale();
-                MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
-                if (TypeIDs == null || TypeIDs.Count == 0)
-                    return rootGraph;
+                MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
+            };
 
-                // Query all structures of the given type IDs
-                var allStructures = new List<Structure>();
-                foreach (var typeId in TypeIDs)
-                {
-                    var structs = container.Structures
-                        .Expand(s => s.Locations)
-                        .Expand(s => s.Type)
-                        .Expand(s => s.Children)
-                        .Where(s => s.TypeID == typeId)
-                        .ToList();
-                    allStructures.AddRange(structs);
-                }
-
-                MorphologyForStructures(container, rootGraph, allStructures, include_children, scale);
-                return rootGraph;
-            });
-        }
-
-        public static async Task<MorphologyGraph> FromODataAsync(ICollection<long> StructureIDs, bool include_children, Uri Endpoint)
-        {
-            return await Task.Run(() =>
-            {
-                var container = new Container(Endpoint)
-                {
-                    MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
-                };
-                var scale_retval = container.Scale();
-                var scale = scale_retval.GetValue().ToGeometryScale();
-                MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
-                if (StructureIDs == null || StructureIDs.Count == 0)
-                    return rootGraph;
-
-                // Query all structures by ID
-                var allStructures = new List<Structure>();
-                foreach (var id in StructureIDs)
-                {
-                    var structure = container.Structures
-                        .Expand(s => s.Locations)
-                        .Expand(s => s.Type)
-                        .Expand(s => s.Children)
-                        .Where(s => s.ID == id)
-                        .FirstOrDefault();
-                    if (structure != null)
-                    {
-                        allStructures.Add(structure);
-                    }
-                }
-
-                MorphologyForStructures(container, rootGraph, allStructures, include_children, scale);
-                return rootGraph;
-            });
-        }
-
-        public static async Task<MorphologyGraph> FromODataLocationIDsAsync(ICollection<long> LocationIDs, Uri Endpoint, int hops = 0)
-        {
-            return await Task.Run(() =>
-            {
-                var container = new Container(Endpoint)
-                {
-                    MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
-                };
-                var scale_retval = container.Scale();
-                var scale = scale_retval.GetValue().ToGeometryScale();
-                MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
-                if (LocationIDs == null || LocationIDs.Count == 0)
-                    return rootGraph;
-
-                // Download the initial set of locations
-                var locations = new List<Location>();
-                foreach (var id in LocationIDs.Distinct())
-                {
-                    var location = container.Locations.Where(l => l.ID == id).FirstOrDefault();
-                    if (location != null)
-                    {
-                        locations.Add(location);
-                    }
-                }
-
-                // Find parent structure for the first location
-                if (locations.Count == 0)
-                    return rootGraph;
-                long structureId = locations[0].ParentID;
-                var parent = container.Structures
-                    .Expand(s => s.Locations)
-                    .Expand(s => s.Type)
-                    .Expand(s => s.Children)
-                    .Where(s => s.ID == structureId)
-                    .FirstOrDefault();
-                if (parent == null)
-                    return rootGraph;
-
-                // Load location links
-                var locLinks = container.StructureLocationLinks(structureId);
-                parent.LocationLinks.Load(locLinks);
-
-                // TODO: Implement hops logic if needed (currently only loads direct locations)
-
-                MorphologyGraph graph = MorphologyForStructure(parent, scale);
-                foreach (var loc in locations)
-                {
-                    if (!graph.Nodes.ContainsKey((ulong)loc.ID))
-                    {
-                        graph.AddNode(new MorphologyNode((ulong)loc.ID, new ODataLocationAdapter(loc, scale), graph));
-                    }
-                }
-                AddLocationEdges(graph, parent.LocationLinks.ToArray());
-                return graph;
-            });
-        }
-
-        private static void LoadStructureLocationLinks(Container container, ICollection<Structure> structures)
-        {
-            foreach (Structure s in structures)
-            {
-                var LocationLinks = container.StructureLocationLinks(s.ID);
-                s.LocationLinks.Load(LocationLinks);
-            }
+            var scale = await GetScaleAsync(container, cancellationToken);
+            return await FromODataAsync(StructureIDs, include_children, Endpoint, scale, cancellationToken);
         }
 
         /// <summary>
-        /// Add the morphology for the passed structure ID to the provided root graph
+        /// Asynchronously builds morphology graphs for the specified structure IDs using a pre-fetched scale
         /// </summary>
-        /// <param name="rootGraph"></param>
-        /// <param name="StructureIDs"></param>
-        private static void MorphologyForStructures(Container container, MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, UnitsAndScale.IScale scale)
+        public static async Task<MorphologyGraph> FromODataAsync(
+            ICollection<long> StructureIDs, 
+            bool include_children, 
+            Uri Endpoint,
+            UnitsAndScale.Scale scale,
+            CancellationToken cancellationToken = default)
         {
-            //Queries.PopulateStructureTypes();
-
-            // Get the nodes and build graph for numHops            
-            System.Threading.Tasks.Parallel.ForEach<Structure>(Structures, s =>
-
-            //foreach (Structure s in Structures)
+            Container container = new Container(Endpoint)
             {
+                MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
+            };
+
+            MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
+
+            if (StructureIDs == null || StructureIDs.Count == 0)
+                return rootGraph;
+
+            // Load structures in parallel
+            var structures = await LoadStructuresByIDsAsync(container, StructureIDs, cancellationToken);
+
+            // Load location links in parallel
+            await LoadStructureLocationLinksAsync(container, structures, cancellationToken);
+
+            // Build morphology graphs
+            await MorphologyForStructuresAsync(container, rootGraph, structures, include_children, scale, cancellationToken);
+
+            return rootGraph;
+        }
+
+        /// <summary>
+        /// Asynchronously builds morphology graph for specified location IDs
+        /// </summary>
+        public static async Task<MorphologyGraph> FromODataLocationIDsAsync(
+            ICollection<long> LocationIDs, 
+            Uri Endpoint, 
+            int hops = 0,
+            CancellationToken cancellationToken = default)
+        {
+            Container container = new Container(Endpoint)
+            {
+                MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
+            };
+
+            var scale = await GetScaleAsync(container, cancellationToken);
+            MorphologyGraph rootGraph = new MorphologyGraph(0, scale);
+
+            if (LocationIDs == null || LocationIDs.Count == 0)
+                return rootGraph;
+
+            // Load locations in parallel
+            var locations = await LoadLocationsByIDsAsync(container, LocationIDs, cancellationToken);
+
+            if (locations.Count == 0)
+                return rootGraph;
+
+            // Get parent structure ID from first location
+            long structureId = locations[0].ParentID;
+
+            // Load parent structure
+            var parents = await LoadStructuresByIDsAsync(container, new[] { structureId }, cancellationToken);
+            var parent = parents.FirstOrDefault();
+
+            if (parent == null)
+                return rootGraph;
+
+            // Load location links
+            await LoadStructureLocationLinksAsync(container, new[] { parent }, cancellationToken);
+
+            // TODO: Implement hops logic if needed (currently only loads direct locations)
+
+            // Build morphology graph
+            MorphologyGraph graph = MorphologyForStructure(parent, scale);
+
+            // Add requested locations to graph
+            foreach (var loc in locations)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (!graph.Nodes.TryGetValue((ulong)loc.ID, out _))
+                {
+                    graph.AddNode(new MorphologyNode((ulong)loc.ID, new ODataLocationAdapter(loc, scale), graph));
+                }
+            }
+
+            AddLocationEdges(graph, parent.LocationLinks.ToArray());
+
+            return graph;
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Asynchronously processes structures and builds morphology subgraphs
+        /// </summary>
+        private static async Task MorphologyForStructuresAsync(
+            Container container,
+            MorphologyGraph rootGraph,
+            ICollection<Structure> structures,
+            bool include_children,
+            UnitsAndScale.Scale scale,
+            CancellationToken cancellationToken = default)
+        {
+            foreach (Structure s in structures)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 MorphologyGraph graph = MorphologyForStructure(s, scale);
-                if (graph is null)
-                    return;
+                if (graph == null)
+                    continue;
 
                 rootGraph.AddSubgraph(graph);
 
-                if (include_children && s.Children.Any())
+                if (include_children && s.Children != null && s.Children.Any())
                 {
-                    //Optimization, use the already loaded StructureTypes instead of expand
-                    IList<Structure> child_structs = container.Structures.Expand(st => st.Locations).Expand(st => st.Type).Expand(st => st.Children).Where(st => st.ParentID == s.ID).ToList();
-                    LoadStructureLocationLinks(container, child_structs);
-                    MorphologyForStructures(container, graph, child_structs, include_children, scale);
+                    // Load child structures
+                    var childIds = s.Children.Select(c => (long)c.ID).ToList();
+                    var childStructures = await LoadStructuresByIDsAsync(container, childIds, cancellationToken);
+
+                    // Load location links for children
+                    await LoadStructureLocationLinksAsync(container, childStructures, cancellationToken);
+
+                    // Recursively process children
+                    await MorphologyForStructuresAsync(container, graph, childStructures, include_children, scale, cancellationToken);
                 }
             }
-            );
-        }
-
-        private static async Task MorphologyForStructuresAsync(Container container, MorphologyGraph rootGraph, ICollection<Structure> Structures, bool include_children, UnitsAndScale.IScale scale)
-        {
-            await Task.Run(() =>
-            {
-                foreach (var s in Structures)
-                {
-                    MorphologyGraph graph = MorphologyForStructure(s, scale);
-                    if (graph == null)
-                        continue;
-                    rootGraph.AddSubgraph(graph);
-                    if (include_children && s.Children.Any())
-                    {
-                        var childStructs = container.Structures
-                            .Expand(st => st.Locations)
-                            .Expand(st => st.Type)
-                            .Expand(st => st.Children)
-                            .Where(st => st.ParentID == s.ID)
-                            .ToList();
-                        LoadStructureLocationLinks(container, childStructs);
-                        MorphologyForStructures(container, graph, childStructs, include_children, scale);
-                    }
-                }
-            });
-        }
-
-        private static async Task LoadStructureLocationLinksAsync(Container container, ICollection<Structure> structures)
-        {
-            await Task.Run(() =>
-            {
-                foreach (var s in structures)
-                {
-                    var links = container.StructureLocationLinks(s.ID);
-                    s.LocationLinks.Load(links);
-                }
-            });
         }
 
         private static MorphologyGraph MorphologyForStructure(Structure s, UnitsAndScale.IScale scale)
@@ -274,11 +390,12 @@ namespace AnnotationVizLib.OData
 
             foreach (LocationLink loc_link in location_links)
             {
-                //Only add the links with ID's less than ours to prevent duplicate links in the graph
-                graph.AddEdge(new MorphologyEdge(graph, loc_link.A, loc_link.B));
+                // Only add links if both nodes exist in the graph
+                if (graph.Nodes.TryGetValue((ulong)loc_link.A, out _) && graph.Nodes.TryGetValue((ulong)loc_link.B, out _))
+                {
+                    graph.AddEdge(new MorphologyEdge(graph, loc_link.A, loc_link.B));
+                }
             }
-
-            return;
         }
     }
 }

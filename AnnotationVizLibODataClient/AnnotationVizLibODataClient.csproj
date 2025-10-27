@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48;net9.0</TargetFrameworks>
+    <TargetFramework>net9.0</TargetFramework>
     <LangVersion>9.0</LangVersion>
     <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
@@ -13,20 +13,8 @@
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj" />
     <ProjectReference Include="..\ODataClient\ODataClient.csproj" />
   </ItemGroup>
-  <!-- Conditional Package References for .NET Framework 4.8 -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-    <PackageReference Include="Microsoft.OData.Client" Version="7.15.0" />
-    <PackageReference Include="Microsoft.OData.Core" Version="7.15.0" />
-    <PackageReference Include="Microsoft.OData.Edm" Version="7.15.0" />
-    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
-    <PackageReference Include="System.Memory" Version="4.6.3" />
-  </ItemGroup>
-  
-  <!-- Conditional Package References for .NET 9.0 -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+  <ItemGroup>
     <PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />
-    <PackageReference Include="Microsoft.OData.Core" Version="8.1.0" />
-    <PackageReference Include="Microsoft.OData.Edm" Version="8.1.0" />
     <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
   </ItemGroup>
 </Project>

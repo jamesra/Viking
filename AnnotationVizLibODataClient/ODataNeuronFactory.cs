@@ -1,6 +1,7 @@
 ﻿using Viking.AnnotationServiceTypes.Interfaces;
 using ODataClient.ConnectomeDataModel;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,81 +11,303 @@ namespace AnnotationVizLib.OData
 {
     public class ODataNeuronFactory
     {
-        static SortedDictionary<long, StructureType> IDToStructureType = null;
-        readonly SortedDictionary<ulong, IStructureReadOnly> IDToStructure = new SortedDictionary<ulong, IStructureReadOnly>();
+        // Static cache of instances per endpoint
+        private static readonly ConcurrentDictionary<Uri, ODataNeuronFactory> instances = new ConcurrentDictionary<Uri, ODataNeuronFactory>();
 
-        readonly NeuronGraph graph;
+        // Instance-level structure type dictionary
+        private SortedDictionary<long, StructureType> IDToStructureType = null;
+        private readonly SemaphoreSlim loadLock = new SemaphoreSlim(1, 1);
+        private Task structureTypeLoadTask = null;
 
-        private ODataNeuronFactory()
+        private readonly Uri endpoint;
+
+        private ODataNeuronFactory(Uri endpoint)
         {
-            graph = new AnnotationVizLib.NeuronGraph();
+            this.endpoint = endpoint;
+            
+            // Start loading structure types asynchronously
+            structureTypeLoadTask = Task.Run(async () =>
+            {
+                try
+                {
+                    Container container = new Container(endpoint)
+                    {
+                        MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
+                    };
+                    var structureTypes = await container.StructureTypes.GetAllPagesToListAsync();
+                    await PopulateStructureTypeDictionaryAsync(structureTypes);
+                }
+                catch
+                {
+                    // Silently handle errors - will be loaded on demand if needed
+                }
+            });
         }
 
+        /// <summary>
+        /// Gets or creates an instance for the specified endpoint
+        /// </summary>
+        private static ODataNeuronFactory GetOrCreateInstance(Uri endpoint)
+        {
+            return instances.GetOrAdd(endpoint, ep => new ODataNeuronFactory(ep));
+        }
+
+        /// <summary>
+        /// Synchronously builds a neuron graph from OData service
+        /// </summary>
         public static NeuronGraph FromOData(ICollection<long> StructureIDs, uint numHops, Uri Endpoint)
         {
-            Container container = new Container(Endpoint);
-
-            /*
-            var scale_retval = container.Scale();
-            var scale = scale_retval.GetValue().ToGeometryScale();
-            */
-
-            ODataNeuronFactory graphFactory = new ODataNeuronFactory();
-
-            if (StructureIDs is null)
-                return graphFactory.graph;
-
-            if (StructureIDs.Count == 0)
-                return graphFactory.graph;
-
-            if (IDToStructureType is null)
-            {
-                ODataNeuronFactory.PopulateStructureTypeDictionary(container.StructureTypes.GetAllPages());
-            }
-
-            //List<long> listNetworkStructureID = container.Network(StructureIDs, (int)numHops).ToList();
-            List<Structure> listNetworkStructures = container.Network(StructureIDs, (int)numHops).Expand(s => s.Children).ToList();
-
-            graphFactory.PopulateStructureDictionary(listNetworkStructures);
-
-            //Add nodes to graph
-            graphFactory.AddStructuresAsNodes(listNetworkStructures);
-
-            return graphFactory.graph;
+            return FromODataAsync(StructureIDs, numHops, Endpoint).GetAwaiter().GetResult();
         }
          
-        public static Task<NeuronGraph> FromODataAsync(ICollection<long> StructureIDs, uint numHops, Uri Endpoint)
+        /// <summary>
+        /// Asynchronously builds a neuron graph from OData service
+        /// </summary>
+        public static async Task<NeuronGraph> FromODataAsync(
+            ICollection<long> StructureIDs, 
+            uint numHops, 
+            Uri Endpoint, 
+            CancellationToken cancellationToken = default)
         {
-            return Task.Run(() => FromOData(StructureIDs, numHops, Endpoint));
-        } 
+            // Get or create the instance for this endpoint
+            ODataNeuronFactory factory = GetOrCreateInstance(Endpoint);
+            return await factory.BuildGraphAsync(StructureIDs, numHops, cancellationToken);
+        }
 
-        private static void PopulateStructureTypeDictionary(IEnumerable<StructureType> types)
+        /// <summary>
+        /// Asynchronously builds a neuron graph from structure IDs
+        /// </summary>
+        private async Task<NeuronGraph> BuildGraphAsync(
+            ICollection<long> StructureIDs, 
+            uint numHops, 
+            CancellationToken cancellationToken)
         {
-            ODataNeuronFactory.IDToStructureType = new SortedDictionary<long, StructureType>();
+            NeuronGraph graph = new AnnotationVizLib.NeuronGraph();
 
-            foreach (StructureType t in types)
+            if (StructureIDs is null || StructureIDs.Count == 0)
+                return graph;
+
+            Container container = new Container(endpoint)
             {
-                ODataNeuronFactory.IDToStructureType.Add(t.ID, t);
+                MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
+            };
+
+            // Ensure structure types are loaded
+            await EnsureStructureTypesLoadedAsync(container, cancellationToken);
+
+            // Fetch all data in parallel for better performance
+            var networkStructuresTask = GetNetworkStructuresAsync(container, StructureIDs, numHops, cancellationToken);
+            var childStructuresTask = GetNetworkChildStructuresAsync(container, StructureIDs, numHops, cancellationToken);
+            var structureLinksTask = GetNetworkLinksAsync(container, StructureIDs, numHops, cancellationToken);
+
+            await Task.WhenAll(networkStructuresTask, childStructuresTask, structureLinksTask);
+
+            var networkStructures = await networkStructuresTask;
+            var childStructures = await childStructuresTask;
+            var structureLinks = await structureLinksTask;
+
+            // Build structure dictionary for lookups
+            SortedDictionary<ulong, Structure> IDToStructure = new SortedDictionary<ulong, Structure>();
+
+            // Merge child structures into parent structures
+            foreach (Structure child in childStructures)
+            {
+                if (child.ParentID.HasValue && networkStructures.TryGetValue((ulong)child.ParentID.Value, out var parent))
+                {
+                    if (parent.Children == null)
+                    {
+                        parent.Children = new Microsoft.OData.Client.DataServiceCollection<Structure>(null, Microsoft.OData.Client.TrackingMode.None);
+                    }
+                    parent.Children.Add(child);
+                }
+            }
+
+            // Populate the structure dictionary with all structures (parents and children)
+            PopulateStructureDictionary(networkStructures.Values, IDToStructure);
+
+            // Attach structure links to their source and target structures
+            foreach (StructureLink link in structureLinks)
+            {
+                if (IDToStructure.TryGetValue((ulong)link.SourceID, out var source))
+                {
+                    if (source.SourceOfLinks == null)
+                    {
+                        source.SourceOfLinks = new Microsoft.OData.Client.DataServiceCollection<StructureLink>(null, Microsoft.OData.Client.TrackingMode.None);
+                    }
+                    source.SourceOfLinks.Add(link);
+                }
+
+                if (IDToStructure.TryGetValue((ulong)link.TargetID, out var target))
+                {
+                    if (target.TargetOfLinks == null)
+                    {
+                        target.TargetOfLinks = new Microsoft.OData.Client.DataServiceCollection<StructureLink>(null, Microsoft.OData.Client.TrackingMode.None);
+                    }
+                    target.TargetOfLinks.Add(link);
+                }
+            }
+
+            // Add nodes to graph
+            AddStructuresAsNodes(networkStructures.Values, graph);
+
+            // Add edges to graph
+            AddStructureLinksAsEdges(structureLinks, IDToStructure, graph);
+
+            return graph;
+        }
+
+        /// <summary>
+        /// Ensures structure types are loaded asynchronously
+        /// </summary>
+        private async Task EnsureStructureTypesLoadedAsync(Container container, CancellationToken cancellationToken)
+        {
+            if (IDToStructureType != null)
+                return;
+
+            // Wait for async load to complete if it's still running
+            if (structureTypeLoadTask != null && !structureTypeLoadTask.IsCompleted)
+            {
+                try
+                {
+                    await structureTypeLoadTask;
+                    if (IDToStructureType != null)
+                        return;
+                }
+                catch
+                {
+                    // If async load failed, try loading now
+                }
+            }
+
+            // If still not loaded, load now
+            if (IDToStructureType == null)
+            {
+                var types = await container.StructureTypes.GetAllPagesToListAsync(cancellationToken);
+                await PopulateStructureTypeDictionaryAsync(types);
+            }
+        }
+
+        /// <summary>
+        /// Populates the structure type dictionary from a list
+        /// </summary>
+        private async Task PopulateStructureTypeDictionaryAsync(IEnumerable<StructureType> types)
+        {
+            await loadLock.WaitAsync();
+            try
+            {
+                if (IDToStructureType != null)
+                    return;
+
+                IDToStructureType = new SortedDictionary<long, StructureType>();
+
+                foreach (StructureType t in types)
+                {
+                    IDToStructureType.Add(t.ID, t);
+                }
+            }
+            finally
+            {
+                loadLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Fetches network parent/cell structures asynchronously
+        /// </summary>
+        private async Task<Dictionary<ulong, Structure>> GetNetworkStructuresAsync(
+            Container container, 
+            ICollection<long> StructureIDs, 
+            uint numHops, 
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var structures = await container.Network(StructureIDs, (int)numHops)
+                    .GetAllPagesToListAsync(cancellationToken);
+
+                var dictionary = new Dictionary<ulong, Structure>();
+                foreach (var structure in structures)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    dictionary[(ulong)structure.ID] = structure;
+                }
+
+                return dictionary;
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                throw new InvalidOperationException($"Failed to fetch network structures: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Fetches network child structures asynchronously
+        /// </summary>
+        private async Task<List<Structure>> GetNetworkChildStructuresAsync(
+            Container container, 
+            ICollection<long> StructureIDs, 
+            uint numHops, 
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var childStructures = await container.NetworkChildStructures(StructureIDs, (int)numHops)
+                    .GetAllPagesToListAsync(cancellationToken);
+
+                return childStructures;
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                throw new InvalidOperationException($"Failed to fetch network child structures: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Fetches network structure links asynchronously
+        /// </summary>
+        private async Task<List<StructureLink>> GetNetworkLinksAsync(
+            Container container, 
+            ICollection<long> StructureIDs, 
+            uint numHops, 
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var structureLinks = await container.NetworkLinks(StructureIDs, (int)numHops)
+                    .GetAllPagesToListAsync(cancellationToken);
+
+                return structureLinks;
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                throw new InvalidOperationException($"Failed to fetch network structure links: {ex.Message}", ex);
             }
         }
          
 
-        private void PopulateStructureDictionary(ICollection<Structure> structs)
+        /// <summary>
+        /// Recursively populates the structure dictionary
+        /// </summary>
+        private void PopulateStructureDictionary(ICollection<Structure> structs, SortedDictionary<ulong, Structure> IDToStructure)
         {
             foreach (Structure s in structs)
             {
-                ODataStructureAdapter adapter = new AnnotationVizLib.OData.ODataStructureAdapter(s);
-                IDToStructure.Add((ulong)s.ID, adapter);
+                if (IDToStructure.ContainsKey((ulong)s.ID))
+                    continue;
 
-                PopulateStructureDictionary(s.Children);
+                IDToStructure.Add((ulong)s.ID, s);
+
+                if (s.Children != null)
+                {
+                    PopulateStructureDictionary(s.Children, IDToStructure);
+                }
             }
         }
 
         /// <summary>
         /// Add all top-level structures as nodes in our graph
         /// </summary>
-        /// <param name="structs"></param>
-        private void AddStructuresAsNodes(ICollection<Structure> structs)
+        private void AddStructuresAsNodes(ICollection<Structure> structs, NeuronGraph graph)
         {
             foreach (IStructureReadOnly s in structs.Select(s => new ODataStructureAdapter(s)))
             {
@@ -93,33 +316,52 @@ namespace AnnotationVizLib.OData
             }
         }
 
-        private void AddStructureLinksAsEdges(ICollection<StructureLink> struct_links)
+        /// <summary>
+        /// Add structure links as edges in the graph
+        /// </summary>
+        private void AddStructureLinksAsEdges(
+            ICollection<StructureLink> structureLinks, 
+            SortedDictionary<ulong, Structure> IDToStructure, 
+            NeuronGraph graph)
         {
-            foreach (StructureLink link in struct_links)
+            foreach (StructureLink link in structureLinks)
             {
-                //After this point both nodes are already in the graph and we can create an edge
-                IStructureReadOnly LinkSource = IDToStructure[(ulong)link.SourceID];
-                IStructureReadOnly LinkTarget = IDToStructure[(ulong)link.TargetID];
-
-                if (LinkTarget.ParentID.HasValue && LinkSource.ParentID.HasValue)
+                // Look up source and target structures
+                if (!IDToStructure.TryGetValue((ulong)link.SourceID, out var linkSource) ||
+                    !IDToStructure.TryGetValue((ulong)link.TargetID, out var linkTarget))
                 {
-                    string SourceTypeName = "";
-                    if (IDToStructureType.ContainsKey((long)LinkSource.TypeID))
-                    {
-                        SourceTypeName = IDToStructureType[(long)LinkSource.TypeID].Name;
-                    }
+                    continue; // Skip if either structure not found
+                }
 
-                    NeuronEdge E = new NeuronEdge((long)LinkSource.ParentID.Value, (long)LinkTarget.ParentID.Value, new ODataStructureLinkAdapter(link), SourceTypeName);
+                // Both structures must have parents to create an edge
+                if (!linkTarget.ParentID.HasValue || !linkSource.ParentID.HasValue)
+                {
+                    continue;
+                }
 
-                    if (graph.Edges.ContainsKey(E))
-                    {
-                        E = graph.Edges[E];
-                        E.AddLink(new ODataStructureLinkAdapter(link));
-                    }
-                    else
-                    {
-                        graph.AddEdge(E);
-                    }
+                // Get source type name if available
+                string sourceTypeName = "";
+                if (IDToStructureType != null && IDToStructureType.TryGetValue((long)linkSource.TypeID, out var structureType))
+                {
+                    sourceTypeName = structureType.Name;
+                }
+
+                // Create or update edge
+                NeuronEdge edge = new NeuronEdge(
+                    (long)linkSource.ParentID.Value, 
+                    (long)linkTarget.ParentID.Value, 
+                    new ODataStructureLinkAdapter(link), 
+                    sourceTypeName);
+
+                if (graph.Edges.TryGetValue(edge, out var existingEdge))
+                {
+                    // Add link to existing edge
+                    existingEdge.AddLink(new ODataStructureLinkAdapter(link));
+                }
+                else
+                {
+                    // Add new edge to graph
+                    graph.AddEdge(edge);
                 }
             }
         }
