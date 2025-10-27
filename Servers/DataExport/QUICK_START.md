@@ -65,13 +65,12 @@ Main configuration file with default settings:
 {
   "AppSettings": {
     "VolumeURL": "https://connectomes.utah.edu/RC1",
-    "ODataURL": "https://connectomes.utah.edu/RC1/OData",
-    "XScaleValue": 2.18,
-    "YScaleValue": 2.18,
-    "ZScaleValue": 90
+    "ODataURL": "https://connectomes.utah.edu/RC1/OData"
   }
 }
 ```
+
+**Note:** Scale values (X/Y/Z) are automatically retrieved from the OData service and do not need to be configured.
 
 ### appsettings.Development.json
 Development-specific overrides:

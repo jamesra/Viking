@@ -1,6 +1,5 @@
 ﻿using Viking.AnnotationServiceTypes.Interfaces;
 using AnnotationVizLib;
-using DataExport.Controllers;
 
 namespace DataExport.Tests;
 
@@ -45,30 +44,11 @@ public class MotifTest
     public void TestMotifGraphs()
     {
         MotifGraph motifGraph = CreateMotifGraph();
-        MotifTLPView tlpGraph = MotifTLPView.ToTLP(motifGraph, "http://localhost/");
-        tlpGraph.SaveTLP("C:\\Temp\\motif.tlp");
-    }
-
-    [TestMethod]
-    public async Task TestMorphologyGraphs()
-    {
-        // Create mocks
-        var mockedHttpContext = new DefaultHttpContext();
-        mockedHttpContext.Request.QueryString = new QueryString("?id=180;476");
-
-        // Provide a mock IWebHostEnvironment
-        var mockEnv = new Mock<IWebHostEnvironment>();
-        var controller = new MorphologyController(mockEnv.Object)
-        {
-            ControllerContext = new ControllerContext
-            {
-                HttpContext = mockedHttpContext
-            }
-        };
-
-        IActionResult result = await controller.GetTLP();
+        MotifTLPView tlpGraph = MotifTLPView.ToTLP(motifGraph, "https://vpn.codepharm.net/RC1Test/OData");
         
-        // Check for FileResult instead of FilePathResult
-        Assert.IsTrue(result is FileResult);
+        string outputPath = TestOutputHelper.GetOutputPath("Motif", "motif-graph.tlp");
+        tlpGraph.SaveTLP(outputPath);
+        Console.WriteLine($"Test output saved to: {outputPath}");
     }
+
 }

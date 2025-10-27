@@ -41,16 +41,18 @@ public class RequestVariablesTest
     public void TestRequestParametersForODataQueries()
     {
         var context = new DefaultHttpContext();
+        var endpoint = new Uri("http://webdev.connectomes.utah.edu/RC1Test/OData", UriKind.Absolute);
         
-        // Set up query parameters for DefaultHttpContext
-        var query = new QueryCollection(new Dictionary<string, StringValues> { { "id", "180,476" } });
-        context.Request.QueryString = new QueryString("?id=180,476");
+        // Set up query parameters for DefaultHttpContext (use semicolon as separator)
+        var query = new QueryCollection(new Dictionary<string, StringValues> { { "id", "180;476" } });
+        context.Request.QueryString = new QueryString("?id=180;476");
         context.Request.Query = query;
 
-        ICollection<long> ids = RequestVariables.GetIDsFromQueryData(context.Request.Query);
+        ICollection<long> ids = RequestVariables.GetIDsFromQueryData(context.Request.Query, endpoint);
         
-        // The current implementation should parse "180" from "180,476"
-        Assert.IsTrue(ids.Count >= 1);
+        // The current implementation should parse both 180 and 476
+        Assert.AreEqual(2, ids.Count);
         Assert.IsTrue(ids.Contains(180));
+        Assert.IsTrue(ids.Contains(476));
     }
 }

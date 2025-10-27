@@ -7,6 +7,8 @@ by editing this MSBuild file. In order to learn more about this please visit htt
   <PropertyGroup>
     <TimeStampOfAssociatedLegacyPublishXmlFile>2015-06-09T12:08:50.0000000-06:00</TimeStampOfAssociatedLegacyPublishXmlFile>
     <_PublishTargetUrl>C:\src\git\Viking\Servers\Deployment\Release\Export</_PublishTargetUrl>
+    <History>True|2025-10-25T05:06:35.5856403Z||;True|2025-10-24T20:37:36.9535031-07:00||;True|2025-10-24T15:32:49.6990099-07:00||;True|2025-10-24T15:09:24.6953172-07:00||;</History>
+    <LastFailureDetails />
   </PropertyGroup>
   <ItemGroup>
     <File Include="bin/AnnotationServiceTypes.dll">

@@ -44,5 +44,6 @@
     <!-- Test resources and content files -->
     <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Resources\**\*.*" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup> 
+  </ItemGroup>
+	
 </Project>

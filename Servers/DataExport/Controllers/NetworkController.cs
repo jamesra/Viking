@@ -1,6 +1,5 @@
 ﻿using AnnotationVizLib;
 using AnnotationVizLib.OData;
-using VikingWebAppSettings;
 
 namespace DataExport.Controllers;
 
@@ -12,14 +11,30 @@ namespace DataExport.Controllers;
 public class NetworkController : Controller
 {
     private readonly IWebHostEnvironment _env;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NetworkController"/> class.
     /// </summary>
     /// <param name="env">The web host environment.</param>
-    public NetworkController(IWebHostEnvironment env)
+    /// <param name="configuration">The configuration service.</param>
+    public NetworkController(IWebHostEnvironment env, IConfiguration configuration)
     {
         _env = env ?? throw new ArgumentNullException(nameof(env));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+    }
+
+    private Uri GetODataUrl()
+    {
+        string url = _configuration["AppSettings:ODataURL"] 
+            ?? throw new InvalidOperationException("AppSettings:ODataURL not configured");
+        return new Uri(url);
+    }
+
+    private string GetVolumeUrl()
+    {
+        return _configuration["AppSettings:VolumeURL"] 
+            ?? throw new InvalidOperationException("AppSettings:VolumeURL not configured");
     }
 
     private string GetOutputFilename(ICollection<long> requestIDs, string ext)
@@ -55,7 +70,7 @@ public class NetworkController : Controller
     [HttpPost]
     public async Task<IActionResult> PostDot([FromForm] IFormFile? req)
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
             string outputFilename = GetOutputFilename(requestIDs, "dot");
             string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
@@ -73,12 +88,12 @@ public class NetworkController : Controller
     [HttpPost]
     public async Task<IActionResult> PostTLP([FromForm] IFormFile? req)
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
             string outputFilename = GetOutputFilename(requestIDs, "tlp");
             string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
             NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
-            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, AppSettings.VolumeURL);
+            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, GetVolumeUrl());
             TlpGraph.SaveTLP(outputFileFullPath);
             return RedirectToFile(outputFilename);
         }
@@ -91,12 +106,12 @@ public class NetworkController : Controller
     [HttpPost]
     public async Task<IActionResult> PostGML([FromForm] IFormFile? req)
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
             string outputFilename = GetOutputFilename(requestIDs, "graphml");
             string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
             NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
-            NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, AppSettings.VolumeURL);
+            NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, GetVolumeUrl());
             GmlGraph.SaveGML(outputFileFullPath);
             return RedirectToFile(outputFilename);
         }
@@ -109,7 +124,7 @@ public class NetworkController : Controller
     [HttpPost]
     public async Task<IActionResult> PostJSON([FromForm] IFormFile? req)
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
             string outputFilename = GetOutputFilename(requestIDs, "json");
             string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
@@ -123,10 +138,11 @@ public class NetworkController : Controller
     /// Exports network data in DOT format via GET request.
     /// </summary>
     /// <returns>The generated DOT file for download.</returns>
-    [HttpGet]
+    [HttpGet("GetDot")]
+    [HttpGet("dot")]
     public async Task<IActionResult> GetDot()
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
             string outputFilename = GetOutputFilename(requestIDs, "dot");
             string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
@@ -140,16 +156,17 @@ public class NetworkController : Controller
     /// Exports network data in TLP (Tulip) format via GET request.
     /// </summary>
     /// <returns>The generated TLP file for download.</returns>
-    [HttpGet]
+    [HttpGet("GetTLP")]
+    [HttpGet("tlp")]
     public async Task<IActionResult> GetTLP()
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
             string outputFilename = GetOutputFilename(requestIDs, "tlp");
             string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
             NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
             // OData spatial data append here if needed
-            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, AppSettings.VolumeURL);
+            NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, GetVolumeUrl());
             TlpGraph.SaveTLP(outputFileFullPath);
             return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
         }
@@ -158,15 +175,16 @@ public class NetworkController : Controller
     /// Exports network data in GraphML format via GET request.
     /// </summary>
     /// <returns>The generated GraphML file for download.</returns>
-    [HttpGet]
+    [HttpGet("GetGML")]
+    [HttpGet("gml")]
     public async Task<IActionResult> GetGML()
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
             string outputFilename = GetOutputFilename(requestIDs, "graphml");
             string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
             NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
-            NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, AppSettings.VolumeURL);
+            NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, GetVolumeUrl());
             GmlGraph.SaveGML(outputFileFullPath);
             return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
         }
@@ -175,10 +193,11 @@ public class NetworkController : Controller
     /// Exports network data in JSON format via GET request.
     /// </summary>
     /// <returns>The generated JSON file for download.</returns>
-    [HttpGet]
+    [HttpGet("GetJSON")]
+    [HttpGet("json")]
     public async Task<IActionResult> GetJSON()
         {
-            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
+            ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
             string outputFilename = GetOutputFilename(requestIDs, "json");
             string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
@@ -191,9 +210,11 @@ public class NetworkController : Controller
 
     private async Task<NeuronGraph> GetGraphAsync(ICollection<long> requestIDs)
     {
-        // Use ODataClient logic to retrieve the graph
-        return await Task.Run(() => 
-            ODataNeuronFactory.FromOData(requestIDs, GetNumHops(), AppSettings.ODataURL));
+        // Use async OData client logic to retrieve the graph
+        return await ODataNeuronFactory.FromODataAsync(
+            requestIDs, 
+            GetNumHops(), 
+            GetODataUrl());
     }
 
     private uint GetNumHops()

@@ -1,6 +1,5 @@
 ﻿using AnnotationVizLib;
 using AnnotationVizLib.OData;
-using VikingWebAppSettings;
 
 namespace DataExport.Controllers;
 
@@ -12,6 +11,7 @@ namespace DataExport.Controllers;
 public class MotifController : Controller
 {
     private readonly IWebHostEnvironment _env;
+    private readonly IConfiguration _configuration;
     private const string DefaultOutputFile = "motifs";
     private static long _nextId;
 
@@ -24,9 +24,24 @@ public class MotifController : Controller
     /// Initializes a new instance of the <see cref="MotifController"/> class.
     /// </summary>
     /// <param name="env">The web host environment.</param>
-    public MotifController(IWebHostEnvironment env)
+    /// <param name="configuration">The configuration service.</param>
+    public MotifController(IWebHostEnvironment env, IConfiguration configuration)
     {
         _env = env ?? throw new ArgumentNullException(nameof(env));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+    }
+
+    private Uri GetODataUrl()
+    {
+        string url = _configuration["AppSettings:ODataURL"] 
+            ?? throw new InvalidOperationException("AppSettings:ODataURL not configured");
+        return new Uri(url);
+    }
+
+    private string GetVolumeUrl()
+    {
+        return _configuration["AppSettings:VolumeURL"] 
+            ?? throw new InvalidOperationException("AppSettings:VolumeURL not configured");
     }
 
     private string GetOutputFilename(string ext)
@@ -48,7 +63,8 @@ public class MotifController : Controller
     /// Exports motif graph data in DOT format.
     /// </summary>
     /// <returns>The generated DOT file for download.</returns>
-    [HttpGet]
+    [HttpGet("GetDot")]
+    [HttpGet("dot")]
     public async Task<IActionResult> GetDot()
         {
             string userDotDirectory = GetAndCreateOutputDirectory();
@@ -67,7 +83,8 @@ public class MotifController : Controller
     /// Exports motif graph data in TLP (Tulip) format.
     /// </summary>
     /// <returns>The generated TLP file for download.</returns>
-    [HttpGet]
+    [HttpGet("GetTLP")]
+    [HttpGet("tlp")]
     public async Task<IActionResult> GetTLP()
         {
             string userDotDirectory = GetAndCreateOutputDirectory();
@@ -76,7 +93,7 @@ public class MotifController : Controller
 
             MotifGraph motifGraph = await GetMotifGraphAsync();
             motifGraph.AddEdgeStatistics();
-            MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, AppSettings.VolumeURL);
+            MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, GetVolumeUrl());
             TlpGraph.SaveTLP(userDotFileFullPath);
 
             return PhysicalFile(userDotFileFullPath, "text/plain", outputFilename);
@@ -86,7 +103,8 @@ public class MotifController : Controller
     /// Exports motif graph data in JSON format.
     /// </summary>
     /// <returns>The generated JSON file for download.</returns>
-    [HttpGet]
+    [HttpGet("GetJSON")]
+    [HttpGet("json")]
     public async Task<IActionResult> GetJSON()
         {
             string userDotDirectory = GetAndCreateOutputDirectory();
@@ -103,9 +121,6 @@ public class MotifController : Controller
 
     private async Task<MotifGraph> GetMotifGraphAsync()
     {
-        // TODO: Replace with ODataClient logic
-        // Example: await ODataClient.GetMotifGraphAsync(...)
-        await Task.CompletedTask;
-        throw new NotImplementedException("ODataClient motif graph retrieval not yet implemented.");
+        return await ODataMotifFactory.FromODataAsync(GetODataUrl());
     }
 }

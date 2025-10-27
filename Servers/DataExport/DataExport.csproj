@@ -55,6 +55,5 @@
     <ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
     <ProjectReference Include="..\..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj" />
     <ProjectReference Include="..\..\UnitsAndScale\UnitsAndScale.csproj" />
-    <ProjectReference Include="..\WebAppSettings\VikingWebAppSettings.csproj" />
   </ItemGroup>
 </Project>

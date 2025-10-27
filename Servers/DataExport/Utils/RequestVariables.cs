@@ -60,8 +60,9 @@ public static class RequestVariables
     /// Extracts IDs from query data, supporting multiple parameter names and query strings.
     /// </summary>
     /// <param name="queryData">The query collection from the HTTP request.</param>
+    /// <param name="odataUrl">The OData service URL for query resolution.</param>
     /// <returns>A collection of unique IDs sorted in ascending order.</returns>
-    public static ICollection<long> GetIDsFromQueryData(IQueryCollection? queryData)
+    public static ICollection<long> GetIDsFromQueryData(IQueryCollection? queryData, Uri odataUrl)
     {
         // A hack, but should only occur in unit testing
         if (queryData is null)
@@ -71,21 +72,21 @@ public static class RequestVariables
 
         var ids = new SortedSet<long>();
 
-        ids.UnionWith(ParseIDString(queryData["id"].ToString()));
-        ids.UnionWith(ParseIDString(queryData["ids"].ToString()));
-        ids.UnionWith(ParseIDString(queryData["$id"].ToString()));
-        ids.UnionWith(ParseIDString(queryData["$ids"].ToString()));
+        ids.UnionWith(ParseIDString(queryData["id"].ToString(), odataUrl));
+        ids.UnionWith(ParseIDString(queryData["ids"].ToString(), odataUrl));
+        ids.UnionWith(ParseIDString(queryData["$id"].ToString(), odataUrl));
+        ids.UnionWith(ParseIDString(queryData["$ids"].ToString(), odataUrl));
 
         string queryString = queryData["query"].ToString();
         if (!string.IsNullOrEmpty(queryString))
         {
-            ids.UnionWith(GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, queryString));
+            ids.UnionWith(GetIDsFromQuery(odataUrl, queryString));
         }
 
         queryString = queryData["$query"].ToString();
         if (!string.IsNullOrEmpty(queryString))
         {
-            ids.UnionWith(GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, queryString));
+            ids.UnionWith(GetIDsFromQuery(odataUrl, queryString));
         }
 
         return ids;
@@ -95,8 +96,9 @@ public static class RequestVariables
     /// Parses a string containing one or more IDs separated by semicolons or newlines.
     /// </summary>
     /// <param name="idListStr">The string containing IDs to parse.</param>
+    /// <param name="odataUrl">The OData service URL for query resolution.</param>
     /// <returns>A collection of parsed IDs.</returns>
-    public static ICollection<long> ParseIDString(string? idListStr)
+    public static ICollection<long> ParseIDString(string? idListStr, Uri odataUrl)
     {
         if (string.IsNullOrEmpty(idListStr))
         {
@@ -115,7 +117,7 @@ public static class RequestVariables
             }
             catch (FormatException)
             {
-                ICollection<long> queryIds = GetIDsFromQuery(VikingWebAppSettings.AppSettings.ODataURL, idStr);
+                ICollection<long> queryIds = GetIDsFromQuery(odataUrl, idStr);
                 ids.AddRange(queryIds);
             }
         }
