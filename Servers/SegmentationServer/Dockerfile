@@ -54,11 +54,7 @@ RUN cd segment-anything-2 && \
     python3 -m pip install -e ".[demo]" && \
     python3 -m pip install grpcio grpcio-tools numpy torch Pillow opencv-python matplotlib
 
-RUN cd segment-anything-2/checkpoints && ./download_ckpts.sh && cd ..
-
-# Copy checkpoints to where the installed sam2 package expects them
-RUN mkdir -p /usr/local/lib/python3.13/dist-packages/checkpoints && \
-    cp -r /home/user/segment-anything-2/checkpoints/* /usr/local/lib/python3.13/dist-packages/checkpoints/
+RUN cd segment-anything-2/checkpoints && ./download_ckpts.sh && cd .. 
 
 RUN cd /home/user/segment-anything-2/sam2/configs/sam2.1/ && \
 	wget https://github.com/facebookresearch/sam2/blob/main/sam2/configs/sam2.1/sam2.1_hiera_l.yaml && \
@@ -67,34 +63,41 @@ RUN cd /home/user/segment-anything-2/sam2/configs/sam2.1/ && \
 	wget https://github.com/facebookresearch/sam2/blob/main/sam2/configs/sam2.1/sam2.1_hiera_t.yaml && \
 	cd ..
 
-# Copy the shared gRPC proto files (required by segmentation_grpc)
-COPY ./gRPC_Protos/ /home/user/gRPC_Protos/
-
-# Copy only dependency files first (for better layer caching)
+# Copy package setup files for dependency installation
+# This creates the package directories so pip install -e works
 COPY ./Servers/SegmentationServer/segmentation_grpc/setup.py ./Servers/SegmentationServer/segmentation_grpc/pyproject.toml /home/user/segmentation_grpc/
-COPY ./Servers/SegmentationServer/segmentation_grpc/segmentation_grpc/ /home/user/segmentation_grpc/segmentation_grpc/
+COPY ./Servers/SegmentationServer/segmentation_grpc/segmentation_grpc/__init__.py /home/user/segmentation_grpc/segmentation_grpc/segmentation_grpc/
 COPY ./Servers/SegmentationServer/segmentation_server/setup.py ./Servers/SegmentationServer/segmentation_server/pyproject.toml /home/user/segmentation_server/
-COPY ./Servers/SegmentationServer/segmentation_server/segmentation_server/ /home/user/segmentation_server/segmentation_server/
+COPY ./Servers/SegmentationServer/segmentation_server/segmentation_server/__init__.py /home/user/segmentation_server/segmentation_server/
+COPY ./Servers/SegmentationServer/segmentation_server/requirements-docker.txt /home/user/segmentation_server/
 
-# Debug: Check what packages are installed before installing
-RUN python3 -m pip list | grep -i sam || echo "No SAM packages found"
+# Install dependencies (this layer is cached unless setup files change)
+# Install grpc package first (lighter dependency)
+RUN cd /home/user/segmentation_grpc && \
+    python3 -m pip install -e .
 
-# Install packages (regular install, not editable)
-RUN --mount=type=cache,target=/root/.cache/pip \
-    cd /home/user/segmentation_grpc && \
-    python3 -m pip install --no-build-isolation .
+# Install server package using Docker-specific requirements (excludes sam2)
+RUN cd /home/user/segmentation_server && \
+    python3 -m pip install -r requirements-docker.txt && \
+    python3 -m pip install -e . --no-deps && \
+    python3 -m pip install debugpy
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    cd /home/user/segmentation_server && \
-    python3 -m pip install --no-build-isolation .
+# Copy the proto file
+COPY ./gRPC_Protos /home/user/gRPC_Protos
+
+# NOW copy the full project code (changes here won't invalidate pip install cache)
+COPY ./Servers/SegmentationServer/segmentation_grpc /home/user/segmentation_grpc
+COPY ./Servers/SegmentationServer/segmentation_server/segmentation_server /home/user/segmentation_server/segmentation_server/
   
 # Set ownership of the project directories to the user
+RUN chown -R user:user /home/user/gRPC_Protos
 RUN chown -R user:user /home/user/segmentation_grpc
 RUN chown -R user:user /home/user/segmentation_server
   
-# Expose the gRPC port
+# Expose the gRPC port and debug port
 EXPOSE 50051
- 
+EXPOSE 5678
+
 RUN usermod -aG dialout user
 USER user
 
@@ -102,13 +105,15 @@ ENV PYTHONPATH=/usr/bin/python3
 
 STOPSIGNAL SIGTERM
 
-# Print installed packages for debugging
-RUN echo "========================================" && \
-    echo "INSTALLED PYTHON PACKAGES:" && \
-    echo "========================================" && \
-    python3 -m pip list && \
-    echo "========================================"
+# Create a startup script that supports debugging
+RUN echo '#!/bin/bash\n\
+if [ "$DEBUG" = "true" ]; then\n\
+    echo "Starting with debugpy on port 5678..."\n\
+    python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server\n\
+else\n\
+    echo "Starting normally..."\n\
+    python3 -m segmentation_server\n\
+fi' > /home/user/start.sh && chmod +x /home/user/start.sh
 
-
-ENTRYPOINT ["python3", "-m", "segmentation_server"]
+ENTRYPOINT ["/home/user/start.sh"]
 #CMD sudo service ssh start && python3 -m segmentation_grpc && python3 -m segmentation_server --generate-grpc & /bin/bash
