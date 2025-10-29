@@ -17,7 +17,14 @@ def generate_grpc_code(force: bool = False):
     current_dir = os.path.dirname(os.path.abspath(__file__))
     
     # Path to the shared proto file
-    proto_file = os.path.abspath(os.path.join(current_dir, '..', '..', '..', '..', 'gRPC_Protos', 'Segmentation', 'SAM2', 'segmentation.proto'))
+    # Try Docker container path first, then fall back to local development path
+    docker_proto_file = os.path.abspath(os.path.join('/home/user', 'gRPC_Protos', 'Segmentation', 'SAM2', 'segmentation.proto'))
+    local_proto_file = os.path.abspath(os.path.join(current_dir, '..', '..', '..', '..', 'gRPC_Protos', 'Segmentation', 'SAM2', 'segmentation.proto'))
+    
+    if os.path.exists(docker_proto_file):
+        proto_file = docker_proto_file
+    else:
+        proto_file = local_proto_file
     
     # Check if the proto file exists
     if not os.path.exists(proto_file):

@@ -12,6 +12,8 @@ from PIL import Image
 import io
 import cv2
 import asyncio
+import tempfile
+import shutil
 from typing import List, Tuple, Dict, Any, Optional
 from numpy.typing import NDArray
 
@@ -32,6 +34,10 @@ class SegmentationModel:
     
     def __init__(self):
         """Initialize the SAM2 model."""
+        # Cache the temp directory path and clear it at startup
+        self.temp_dir = tempfile.gettempdir()
+        self._clear_temp_folder()
+        
         # Select the device for computation
         if torch.cuda.is_available():
             self.device = torch.device("cuda")
@@ -79,6 +85,25 @@ class SegmentationModel:
             use_m2m=True,
         )
 
+    def _clear_temp_folder(self):
+        """Clear the temp folder at startup to remove any leftover files."""
+        try:
+            # Create a temp subdirectory for our service to avoid conflicts
+            self.service_temp_dir = os.path.join(self.temp_dir, "segmentation_service")
+            
+            # Remove the directory if it exists and recreate it
+            if os.path.exists(self.service_temp_dir):
+                shutil.rmtree(self.service_temp_dir)
+            
+            # Create the directory
+            os.makedirs(self.service_temp_dir, exist_ok=True)
+            print(f"Cleared and created temp directory: {self.service_temp_dir}")
+            
+        except Exception as e:
+            print(f"Warning: Failed to clear temp folder: {e}")
+            # Fallback to using the main temp directory
+            self.service_temp_dir = self.temp_dir
+
     @staticmethod
     def mask_to_polygons(mask: NDArray[np.bool_]) -> List[np.ndarray]:
         """
@@ -112,6 +137,36 @@ class SegmentationModel:
                 polygons.append(polygon)
 
         return polygons
+
+    @staticmethod
+    def get_mask_bounds(mask: NDArray[np.bool_]) -> Tuple[int, int, int, int]:
+        """
+        Calculate the bounding box of a boolean mask.
+
+        Args:
+            mask: A boolean numpy array where True represents the masked region
+
+        Returns:
+            A tuple containing (x, y, width, height) where (x, y) is the top-left corner
+            and width/height are the dimensions of the bounding box
+        """
+        # Find the coordinates where the mask is True
+        rows, cols = np.where(mask)
+        
+        if len(rows) == 0:
+            # Empty mask
+            return 0, 0, 0, 0
+        
+        # Calculate bounding box
+        min_row, max_row = np.min(rows), np.max(rows)
+        min_col, max_col = np.min(cols), np.max(cols)
+        
+        x = int(min_col)
+        y = int(min_row)
+        width = int(max_col - min_col + 1)
+        height = int(max_row - min_row + 1)
+        
+        return x, y, width, height
 
     @staticmethod
     def create_labeled_image(anns, borders=True) -> NDArray[np.uint16]:
@@ -158,12 +213,48 @@ class SegmentationModel:
         # Convert image bytes to numpy array
         image = Image.open(io.BytesIO(image_data))
         
-        # Convert grayscale to RGB if needed (SAM2 expects RGB)
-        if image.mode == 'L':
-           image = image.convert('RGB')
+        # Debug: Print original image mode and shape
+        print(f"Debug: Original image mode: {image.mode}")
+        
+        # Convert to RGB format (SAM2 expects RGB)
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
         
         # Convert to numpy array
         image_np = np.array(image)
+        
+        # Debug: Print numpy array shape
+        print(f"Debug: Image numpy shape: {image_np.shape}")
+        
+        # Ensure image is RGB format for SAM2 (3 channels)
+        if len(image_np.shape) == 3 and image_np.shape[2] == 4:  # RGBA image
+            print("Debug: Converting RGBA to RGB")
+            image_np = image_np[:, :, :3]  # Remove alpha channel, keep RGB
+        elif len(image_np.shape) == 3 and image_np.shape[2] == 1:  # Grayscale
+            print("Debug: Converting grayscale to RGB")
+            image_np = np.repeat(image_np, 3, axis=2)  # Convert to RGB
+        elif len(image_np.shape) == 2:  # 2D grayscale
+            print("Debug: Converting 2D grayscale to RGB")
+            image_np = np.repeat(image_np[:, :, np.newaxis], 3, axis=2)  # Convert to RGB
+        
+        # Final validation
+        print(f"Debug: Final image shape: {image_np.shape}")
+        if len(image_np.shape) != 3 or image_np.shape[2] != 3:
+            raise ValueError(f"Expected RGB image with 3 channels, got shape: {image_np.shape}")
+        
+        
+        # Debug: Save the image before processing
+        
+        try:
+            debug_path = os.path.join(self.service_temp_dir, "Segmentation_Service_Image.png")
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(debug_path), exist_ok=True)
+            # Save the image
+            debug_image = Image.fromarray(image_np)
+            debug_image.save(debug_path)
+            print(f"Debug: Image saved to {debug_path}")
+        except Exception as e:
+            print(f"Debug: Failed to save image to {debug_path}: {e}")
 
         # Convert coordinates to numpy array
         point_coords = np.array(coordinates)
@@ -195,23 +286,29 @@ class SegmentationModel:
         
         # List to store segment information
         segments = []
-        
-        # Assign each mask a unique index in the labeled image
-        for i, (mask, score) in enumerate(zip(masks, scores)):
-            # Add 1 to index to avoid 0 (background)
-            index = i + 1
+         
+        # Process each mask and create segment information
+        for i, mask in enumerate(masks):
+            # Calculate mask bounds
+            x, y, width, height = self.get_mask_bounds(mask)
             
-            # Update the labeled image
-            #labeled_image[mask] = index
-            
-            # Convert mask to bytes for the response
+            # Encode mask to bytes
             mask_bytes = cv2.imencode('.png', mask.astype(np.uint8) * 255)[1].tobytes()
             
-            # Add segment information
-            segments.append({
-                'index': index,
-                'score': float(score),
-                'mask': mask_bytes
-            })
+            # Create segment dictionary
+            segment = {
+                'index': i,
+                'score': float(scores[i]),
+                'mask': mask_bytes,
+                'x': x,
+                'y': y,
+                'width': width,
+                'height': height
+            }
+            segments.append(segment)
+            
+            # Debug: Save each mask to temp folder
+            mask_path = os.path.join(self.service_temp_dir, f'mask_{i}.png')
+            cv2.imwrite(mask_path, mask.astype(np.uint8) * 255)
         
         return labeled_image, segments

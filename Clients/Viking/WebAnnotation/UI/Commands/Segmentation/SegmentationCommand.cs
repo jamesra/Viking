@@ -429,7 +429,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     request.Coordinates.Add(new SegmentationServiceTypes.Point
                     {
                         X = (int)screenPt.X,
-                        Y = (int)screenPt.Y
+                        Y = height - (int)screenPt.Y
                     });
                     request.Labels.Add(1);
                 }
@@ -441,7 +441,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     request.Coordinates.Add(new SegmentationServiceTypes.Point
                     {
                         X = (int)screenPt.X,
-                        Y = (int)screenPt.Y
+                        Y = height - (int)screenPt.Y
                     });
                     request.Labels.Add(0);
                 }

@@ -15,7 +15,7 @@ from concurrent import futures
 from typing import List, Tuple
 
 # Import the generated gRPC code from the segmentation_grpc package
-from segmentation_grpc import (
+from segmentation_grpc.segmentation_grpc import (
     SegmentationRequest,
     SegmentationResponse,
     Point,
@@ -92,11 +92,15 @@ class SegmentationServicer(SegmentationServiceServicer):
 
             # Add segment results to the response
             for i, segment in enumerate(segments):
-                # Create the segment result
+                # Create the segment result with mask bounds
                 segment_result = SegmentResult(
                     index=segment['index'],
                     score=segment['score'],
-                    mask=segment['mask']
+                    mask=segment['mask'],
+                    width=segment['width'],
+                    height=segment['height'],
+                    X=segment['x'],
+                    Y=segment['y']
                 )
 
                 # Extract polygons from the mask

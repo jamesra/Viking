@@ -28,10 +28,13 @@ async def main():
     args = parser.parse_args()
     
     # Generate gRPC code if requested
-    print("Generating gRPC code...")
-    if not generate_grpc_code(args.generate_grpc):
-        print("Failed to generate gRPC code. Exiting.")
-        return
+    if args.generate_grpc:
+        print("Generating gRPC code...")
+        if not generate_grpc_code(args.generate_grpc):
+            print("Failed to generate gRPC code. Exiting.")
+            return
+    else:
+        print("Skipping gRPC code generation (using pre-generated code)...")
     
     # Start the server
     print(f"Starting segmentation service on port {args.port} with {args.workers} workers...")
