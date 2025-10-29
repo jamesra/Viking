@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -22,6 +23,7 @@ using VikingXNAWinForms;
 using WebAnnotation.Actions;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Commands;
+using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -967,6 +969,9 @@ namespace WebAnnotation
             switch (e.KeyCode)
             {
                 //Refresh the annotations on F5
+                case Keys.CapsLock:
+                    Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand), new object[] {this.Parent, null });
+                    return;
                 case Keys.F5:
                     ResetAnnotationsAsync(CancellationToken.None);
                     return;
