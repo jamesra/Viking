@@ -1,0 +1,5 @@
+---
+description: C# async methods return tasks
+alwaysApply: false
+---
+Always return a Task or Task<T> from async C# methods.  Do not return a void. 
