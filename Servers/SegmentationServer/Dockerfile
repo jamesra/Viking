@@ -94,9 +94,10 @@ RUN chown -R user:user /home/user/gRPC_Protos
 RUN chown -R user:user /home/user/segmentation_grpc
 RUN chown -R user:user /home/user/segmentation_server
   
-# Expose the gRPC port and debug port
+# Expose the gRPC port and debug ports
 EXPOSE 50051
 EXPOSE 5678
+EXPOSE 12348
 
 RUN usermod -aG dialout user
 USER user
@@ -107,9 +108,15 @@ STOPSIGNAL SIGTERM
 
 # Create a startup script that supports debugging
 RUN echo '#!/bin/bash\n\
-if [ "$DEBUG" = "true" ]; then\n\
-    echo "Starting with debugpy on port 5678..."\n\
-    python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server\n\
+if [ "$VS_CODE_DEBUG" = "true" ] && [ "$PYCHARM_DEBUG" = "true" ]; then\n\
+    echo "Starting with both VS Code (debugpy) and PyCharm debugging..."\n\
+    python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -c "import pydevd_pycharm; pydevd_pycharm.settrace(\"0.0.0.0\", port=12348, stdoutToServer=True, stderrToServer=True); import segmentation_server" -m segmentation_server\n\
+elif [ "$VS_CODE_DEBUG" = "true" ]; then\n\
+    echo "Starting with VS Code debugpy on port 5678..."\n\
+    python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server\n\
+elif [ "$PYCHARM_DEBUG" = "true" ]; then\n\
+    echo "Starting with PyCharm debugging on port 12348..."\n\
+    python3 -c "import pydevd_pycharm; pydevd_pycharm.settrace(\"0.0.0.0\", port=12348, stdout_to_server=True, stderr_to_server=True, suspend=False); import segmentation_server" -m segmentation_server\n\
 else\n\
     echo "Starting normally..."\n\
     python3 -m segmentation_server\n\

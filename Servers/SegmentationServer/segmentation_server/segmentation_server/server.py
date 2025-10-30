@@ -92,32 +92,45 @@ class SegmentationServicer(SegmentationServiceServicer):
 
             # Add segment results to the response
             for i, segment in enumerate(segments):
-                # Create the segment result with mask bounds
+                # Process the mask from segmentation_service
+                if 'mask' in segment:
+                    # Get mask as boolean numpy array from segmentation_service
+                    mask_bool = segment['mask']
+
+                    # Clean up the mask - keep only largest connected region and fill small holes
+                    mask_bool = SegmentationModel.cleanup_mask(mask_bool)
+                    
+                    # Recalculate bounds for the cleaned mask
+                    x, y, width, height = SegmentationModel.get_mask_bounds(mask_bool)
+                    
+                    # Encode the cleaned mask to bytes (only place where encoding happens)
+                    mask_bytes = cv2.imencode('.png', mask_bool.astype(np.uint8) * 255)[1].tobytes()
+                    
+                    # Extract polygons from the cleaned mask
+                    polygons = self.model.mask_to_polygons(mask_bool)
+                else:
+                    # Fallback if mask is missing
+                    mask_bytes = b''
+                    x, y, width, height = segment.get('x', 0), segment.get('y', 0), segment.get('width', 0), segment.get('height', 0)
+                    polygons = []
+                
+                # Create the segment result with cleaned mask and updated bounds
                 segment_result = SegmentResult(
                     index=segment['index'],
                     score=segment['score'],
-                    mask=segment['mask'],
-                    width=segment['width'],
-                    height=segment['height'],
-                    X=segment['x'],
-                    Y=segment['y']
+                    mask=mask_bytes,
+                    width=width,
+                    height=height,
+                    X=x,
+                    Y=y
                 )
 
-                # Extract polygons from the mask
-                if 'mask' in segment:
-                    # Decode the mask from bytes to numpy array
-                    mask_np = cv2.imdecode(np.frombuffer(segment['mask'], np.uint8), cv2.IMREAD_GRAYSCALE)
-                    mask_bool = mask_np > 0
-
-                    # Extract polygons from the mask
-                    polygons = self.model.mask_to_polygons(mask_bool)
-
-                    # Add polygons to the segment result
-                    for polygon in polygons:
-                        poly = Polygon()
-                        for point in polygon:
-                            poly.points.append(Point(x=int(point[0]), y=int(point[1])))
-                        segment_result.polygons.append(poly)
+                # Add polygons to the segment result
+                for polygon in polygons:
+                    poly = Polygon()
+                    for point in polygon:
+                        poly.points.append(Point(x=int(point[0]), y=int(point[1])))
+                    segment_result.polygons.append(poly)
 
                 response.segments.append(segment_result)
 

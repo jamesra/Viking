@@ -169,6 +169,68 @@ class SegmentationModel:
         return x, y, width, height
 
     @staticmethod
+    def cleanup_mask(mask: NDArray[np.bool_], hole_threshold: float = 0.03) -> NDArray[np.bool_]:
+        """
+        Clean up a mask by keeping only the largest connected region and filling small holes.
+        
+        Args:
+            mask: A boolean numpy array where True represents the masked region
+            hole_threshold: Fraction of total area below which holes are filled (default 0.03 = 3%)
+        
+        Returns:
+            Cleaned boolean mask with only the largest connected region and small holes filled
+        """
+        # Convert boolean to uint8 for OpenCV operations
+        mask_uint8 = mask.astype(np.uint8) * 255
+        
+        # Find all connected components
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_uint8, connectivity=8)
+        
+        if num_labels <= 1:
+            # No connected components or only background
+            return mask
+        
+        # Find the largest component (excluding background at index 0)
+        largest_component_idx = 1
+        largest_area = stats[1, cv2.CC_STAT_AREA]
+        
+        for i in range(2, num_labels):
+            if stats[i, cv2.CC_STAT_AREA] > largest_area:
+                largest_area = stats[i, cv2.CC_STAT_AREA]
+                largest_component_idx = i
+        
+        # Create mask with only the largest connected component
+        cleaned_mask = (labels == largest_component_idx).astype(np.bool_)
+        
+        # Convert back to uint8 for hole filling
+        cleaned_mask_uint8 = cleaned_mask.astype(np.uint8) * 255
+        
+        # Find internal holes using RETR_CCOMP to get holes
+        mask_copy = cleaned_mask_uint8.copy()
+        holes_contours, holes_hierarchy = cv2.findContours(
+            ~cleaned_mask_uint8,  # Invert to find holes
+            cv2.RETR_CCOMP,
+            cv2.CHAIN_APPROX_SIMPLE
+        )
+        
+        if holes_hierarchy is not None:
+            total_mask_area = np.sum(cleaned_mask)
+            
+            for i, contour in enumerate(holes_contours):
+                # Check if this is a hole (has a parent contour)
+                if holes_hierarchy[0][i][3] >= 0:
+                    hole_area = cv2.contourArea(contour)
+                    
+                    # Fill hole if it's smaller than threshold
+                    if hole_area < (total_mask_area * hole_threshold):
+                        cv2.fillPoly(mask_copy, [contour], 255)
+            
+            # Convert back to boolean
+            cleaned_mask = (mask_copy > 0).astype(np.bool_)
+        
+        return cleaned_mask
+
+    @staticmethod
     def create_labeled_image(anns, borders=True) -> NDArray[np.uint16]:
         """Given a set of masks, creates a labeled image."""
 
@@ -289,17 +351,19 @@ class SegmentationModel:
          
         # Process each mask and create segment information
         for i, mask in enumerate(masks):
+            
+            
             # Calculate mask bounds
             x, y, width, height = self.get_mask_bounds(mask)
             
-            # Encode mask to bytes
-            mask_bytes = cv2.imencode('.png', mask.astype(np.uint8) * 255)[1].tobytes()
+            # Store mask as boolean numpy array (don't encode here)
+            # Mask will be cleaned up and encoded in server.py
             
             # Create segment dictionary
             segment = {
                 'index': i,
                 'score': float(scores[i]),
-                'mask': mask_bytes,
+                'mask': mask,  # Store as boolean numpy array
                 'x': x,
                 'y': y,
                 'width': width,
