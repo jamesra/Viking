@@ -273,7 +273,14 @@ class SegmentationModel:
             - segments: A list of dictionaries containing information about each segment
         """
         # Convert image bytes to numpy array
-        image = Image.open(io.BytesIO(image_data))
+        try:
+            image = Image.open(io.BytesIO(image_data))
+        except (OSError, IOError) as e:
+            error_msg = str(e).lower()
+            if any(keyword in error_msg for keyword in ['truncated', 'corrupted', 'invalid', 'cannot identify image file']):
+                raise OSError(f"Image data is corrupted or truncated: {e}")
+            else:
+                raise
         
         # Debug: Print original image mode and shape
         print(f"Debug: Original image mode: {image.mode}")
@@ -306,17 +313,17 @@ class SegmentationModel:
         
         
         # Debug: Save the image before processing
-        
-        try:
-            debug_path = os.path.join(self.service_temp_dir, "Segmentation_Service_Image.png")
-            # Ensure the directory exists
-            os.makedirs(os.path.dirname(debug_path), exist_ok=True)
-            # Save the image
-            debug_image = Image.fromarray(image_np)
-            debug_image.save(debug_path)
-            print(f"Debug: Image saved to {debug_path}")
-        except Exception as e:
-            print(f"Debug: Failed to save image to {debug_path}: {e}")
+        #
+        # try:
+        #     debug_path = os.path.join(self.service_temp_dir, "Segmentation_Service_Image.png")
+        #     # Ensure the directory exists
+        #     os.makedirs(os.path.dirname(debug_path), exist_ok=True)
+        #     # Save the image
+        #     debug_image = Image.fromarray(image_np)
+        #     debug_image.save(debug_path)
+        #     print(f"Debug: Image saved to {debug_path}")
+        # except Exception as e:
+        #     print(f"Debug: Failed to save image to {debug_path}: {e}")
 
         # Convert coordinates to numpy array
         point_coords = np.array(coordinates)
@@ -372,7 +379,7 @@ class SegmentationModel:
             segments.append(segment)
             
             # Debug: Save each mask to temp folder
-            mask_path = os.path.join(self.service_temp_dir, f'mask_{i}.png')
-            cv2.imwrite(mask_path, mask.astype(np.uint8) * 255)
+            #mask_path = os.path.join(self.service_temp_dir, f'mask_{i}.png')
+            #cv2.imwrite(mask_path, mask.astype(np.uint8) * 255)
         
         return labeled_image, segments

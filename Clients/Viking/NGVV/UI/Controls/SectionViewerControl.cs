@@ -1048,7 +1048,7 @@ namespace Viking.UI.Controls
             progressForm.BeginInvoke(new Action(() => progressForm.Close())); 
         }
 
-        private async Task<RenderTarget2D> RenderSceneToTexture(VikingXNA.Scene TileScene, float CenterX, float CenterY, int Z, bool showOverlays, bool asyncTextureLoad, CancellationToken token)
+        public async Task<RenderTarget2D> RenderSceneToTexture(VikingXNA.Scene TileScene, float CenterX, float CenterY, int Z, bool showOverlays, bool asyncTextureLoad, CancellationToken token)
         {
             if(!asyncTextureLoad)
                 await PreloadSceneTexturesAsync(TileScene, Z, asyncTextureLoad, token);

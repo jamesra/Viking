@@ -28,6 +28,10 @@ namespace Annotation.Identity
         private readonly string _audience;
         private readonly IConfigurationManager<OpenIdConnectConfiguration> _configurationManager;
         private readonly string _volumeName;
+        private readonly bool _validateIssuer;
+        private readonly bool _validateAudience;
+        private readonly bool _validateLifetime;
+        private readonly bool _validateIssuerSigningKey;
 
         public JwtMessageInspector()
         {
@@ -46,12 +50,17 @@ namespace Annotation.Identity
 
         public JwtMessageInspector(string Authority, 
                                    string Audience, 
-                                   bool ValidateIssuerSigningKey = true,
                                    bool ValidateIssuer = true,
+                                   bool ValidateIssuerSigningKey = true,
+                                   bool ValidateAudience = true,
                                    bool ValidateLifetime = true)
         {
             _authority = Authority;
             _audience = Audience;
+            _validateAudience = ValidateAudience;
+            _validateLifetime = ValidateLifetime;
+            _validateIssuer = ValidateIssuer;
+            _validateIssuerSigningKey = ValidateIssuerSigningKey;
 
             // Cache volume name at initialization (read once, use many times)
             _volumeName = ConfigurationManager.AppSettings["VolumeName"] ?? ConfigurationManager.AppSettings["DatabaseName"] ?? "Unknown";
@@ -290,13 +299,13 @@ namespace Annotation.Identity
                 // Create token validation parameters with the signing keys from Identity Server
                 var tokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidateIssuerSigningKey = true,
+                    ValidateIssuerSigningKey = this._validateIssuerSigningKey,
                     IssuerSigningKeys = discoveryDocument.SigningKeys,
-                    ValidateIssuer = true,
+                    ValidateIssuer = this._validateIssuer,
                     ValidIssuer = discoveryDocument.Issuer, // Use issuer from discovery document (includes correct trailing slash)
-                    ValidateAudience = true,
+                    ValidateAudience = this._validateAudience,
                     ValidAudience = _audience,
-                    ValidateLifetime = true,
+                    ValidateLifetime = this._validateLifetime,
                     ClockSkew = TimeSpan.FromMinutes(5)
                 };
                 

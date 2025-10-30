@@ -14,6 +14,10 @@ generate_grpc_code(False)
 from .segmentation_pb2 import (
     SegmentationRequest,
     SegmentationResponse,
+    UploadImageRequest,
+    UploadImageResponse,
+    DeleteImageRequest,
+    DeleteImageResponse,
     Point,
     Polygon,
     SegmentResult
@@ -28,6 +32,10 @@ from .segmentation_pb2_grpc import (
 __all__ = [
     'SegmentationRequest',
     'SegmentationResponse',
+    'UploadImageRequest',
+    'UploadImageResponse',
+    'DeleteImageRequest',
+    'DeleteImageResponse',
     'Point',
     'Polygon',
     'SegmentResult',

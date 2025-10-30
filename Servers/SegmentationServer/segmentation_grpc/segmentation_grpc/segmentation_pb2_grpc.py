@@ -35,16 +35,33 @@ class SegmentationServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.UploadImage = channel.unary_unary(
+                '/segmentation.SegmentationService/UploadImage',
+                request_serializer=segmentation__pb2.UploadImageRequest.SerializeToString,
+                response_deserializer=segmentation__pb2.UploadImageResponse.FromString,
+                _registered_method=True)
         self.SegmentImage = channel.unary_unary(
                 '/segmentation.SegmentationService/SegmentImage',
                 request_serializer=segmentation__pb2.SegmentationRequest.SerializeToString,
                 response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
+                _registered_method=True)
+        self.DeleteImage = channel.unary_unary(
+                '/segmentation.SegmentationService/DeleteImage',
+                request_serializer=segmentation__pb2.DeleteImageRequest.SerializeToString,
+                response_deserializer=segmentation__pb2.DeleteImageResponse.FromString,
                 _registered_method=True)
 
 
 class SegmentationServiceServicer(object):
     """Service for segmenting images using SAM2
     """
+
+    def UploadImage(self, request, context):
+        """Upload an image to the server cache and receive a unique ID
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def SegmentImage(self, request, context):
         """Segment an image based on input coordinates
@@ -53,13 +70,30 @@ class SegmentationServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def DeleteImage(self, request, context):
+        """Delete an image from the server cache
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SegmentationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'UploadImage': grpc.unary_unary_rpc_method_handler(
+                    servicer.UploadImage,
+                    request_deserializer=segmentation__pb2.UploadImageRequest.FromString,
+                    response_serializer=segmentation__pb2.UploadImageResponse.SerializeToString,
+            ),
             'SegmentImage': grpc.unary_unary_rpc_method_handler(
                     servicer.SegmentImage,
                     request_deserializer=segmentation__pb2.SegmentationRequest.FromString,
                     response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
+            ),
+            'DeleteImage': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteImage,
+                    request_deserializer=segmentation__pb2.DeleteImageRequest.FromString,
+                    response_serializer=segmentation__pb2.DeleteImageResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -72,6 +106,33 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
 class SegmentationService(object):
     """Service for segmenting images using SAM2
     """
+
+    @staticmethod
+    def UploadImage(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/UploadImage',
+            segmentation__pb2.UploadImageRequest.SerializeToString,
+            segmentation__pb2.UploadImageResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def SegmentImage(request,
@@ -90,6 +151,33 @@ class SegmentationService(object):
             '/segmentation.SegmentationService/SegmentImage',
             segmentation__pb2.SegmentationRequest.SerializeToString,
             segmentation__pb2.SegmentationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteImage(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/DeleteImage',
+            segmentation__pb2.DeleteImageRequest.SerializeToString,
+            segmentation__pb2.DeleteImageResponse.FromString,
             options,
             channel_credentials,
             insecure,

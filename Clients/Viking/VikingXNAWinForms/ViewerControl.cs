@@ -457,7 +457,7 @@ namespace VikingXNAWinForms
         /// <param name="renderTarget"></param>
         protected virtual void Draw(Scene scene)
         {
-
+            throw new NotImplementedException();
         }
 
         public Geometry.GridVector2 ScreenToWorld(double X, double Y)

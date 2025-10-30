@@ -18,6 +18,10 @@ from typing import List, Tuple
 from segmentation_grpc.segmentation_grpc import (
     SegmentationRequest,
     SegmentationResponse,
+    UploadImageRequest,
+    UploadImageResponse,
+    DeleteImageRequest,
+    DeleteImageResponse,
     Point,
     Polygon,
     SegmentResult,
@@ -25,8 +29,9 @@ from segmentation_grpc.segmentation_grpc import (
     add_SegmentationServiceServicer_to_server
 )
 
-# Import the segmentation model
+# Import the segmentation model and image cache
 from segmentation_server.segmentation_service import SegmentationModel
+from segmentation_server.image_cache import ImageCache
 
 
 class SegmentationServicer(SegmentationServiceServicer):
@@ -37,10 +42,86 @@ class SegmentationServicer(SegmentationServiceServicer):
     the gRPC message format and the format expected by the SegmentationModel.
     """
 
-    def __init__(self):
-        """Initialize the servicer with a SegmentationModel."""
+    def __init__(self, 
+                 cache_max_memory_bytes: int = 1073741824,  # 1 GB
+                 cache_ttl_seconds: int = 300):  # 5 minutes
+        """
+        Initialize the servicer with a SegmentationModel and ImageCache.
+        
+        Args:
+            cache_max_memory_bytes: Maximum memory for image cache (default: 1 GB)
+            cache_ttl_seconds: Time-to-live for cached images (default: 5 minutes)
+        """
         self.model = SegmentationModel()
+        self.image_cache = ImageCache(
+            max_memory_bytes=cache_max_memory_bytes,
+            ttl_seconds=cache_ttl_seconds
+        )
 
+    async def UploadImage(self, request, context):
+        """
+        Upload an image to the cache and return a unique ID.
+        
+        Args:
+            request: The UploadImageRequest message
+            context: The gRPC context
+            
+        Returns:
+            An UploadImageResponse message containing the image ID
+        """
+        try:
+            # Extract image data from request
+            image_data = request.image_data
+            width = request.width
+            height = request.height
+            
+            print(f"==> UploadImage RPC called: {width}x{height}, {len(image_data)} bytes")
+            
+            # Upload to cache
+            image_id = await self.image_cache.upload_image(image_data, width, height)
+            
+            print(f"<== UploadImage RPC completed: assigned ID={image_id}")
+            
+            # Return response with image ID
+            return UploadImageResponse(image_id=image_id)
+            
+        except Exception as e:
+            import traceback
+            stack_trace = traceback.format_exc()
+            print(f"Error uploading image: {e}\n{stack_trace}")
+            await context.abort(grpc.StatusCode.INTERNAL, f"Error uploading image: {e}")
+    
+    async def DeleteImage(self, request, context):
+        """
+        Delete an image from the cache.
+        
+        Args:
+            request: The DeleteImageRequest message
+            context: The gRPC context
+            
+        Returns:
+            A DeleteImageResponse message
+        """
+        try:
+            # Extract image ID from request
+            image_id = request.image_id
+            
+            print(f"==> DeleteImage RPC called: ID={image_id}")
+            
+            # Delete from cache
+            success = await self.image_cache.delete_image(image_id)
+            
+            print(f"<== DeleteImage RPC completed: ID={image_id}, success={success}")
+            
+            # Return response
+            return DeleteImageResponse(success=success)
+            
+        except Exception as e:
+            import traceback
+            stack_trace = traceback.format_exc()
+            print(f"Error deleting image: {e}\n{stack_trace}")
+            await context.abort(grpc.StatusCode.INTERNAL, f"Error deleting image: {e}")
+    
     async def SegmentImage(self, request, context):
         """
         Implement the SegmentImage RPC method.
@@ -52,10 +133,25 @@ class SegmentationServicer(SegmentationServiceServicer):
         Returns:
             A SegmentationResponse message
         """
-        # Extract data from the request
-        image_data = request.image_data
-        width = request.width
-        height = request.height
+        # Determine if using cached image or inline image data
+        if request.image_id != 0:
+            # Use cached image
+            cached_image = await self.image_cache.get_image(request.image_id)
+            if cached_image is None:
+                await context.abort(
+                    grpc.StatusCode.NOT_FOUND,
+                    f"Image ID {request.image_id} not found in cache. "
+                    "It may have been evicted or expired. Please re-upload the image."
+                )
+                return
+                        image_data, width, height = cached_image
+            print(f"Using cached image: ID={request.image_id}, {width}x{height}")
+        else:
+            # Use inline image data (backward compatible)
+            image_data = request.image_data
+            width = request.width
+            height = request.height
+            print(f"Using inline image data: {width}x{height}")
 
         # Convert coordinates from the request format to a list of tuples
         coordinates = [(point.x, point.y) for point in request.coordinates]
@@ -103,8 +199,15 @@ class SegmentationServicer(SegmentationServiceServicer):
                     # Recalculate bounds for the cleaned mask
                     x, y, width, height = SegmentationModel.get_mask_bounds(mask_bool)
                     
-                    # Encode the cleaned mask to bytes (only place where encoding happens)
-                    mask_bytes = cv2.imencode('.png', mask_bool.astype(np.uint8) * 255)[1].tobytes()
+                    # Crop the mask to the bounding box before encoding
+                    if width > 0 and height > 0:
+                        cropped_mask = mask_bool[y:y+height, x:x+width]
+                    else:
+                        cropped_mask = np.zeros((0, 0), dtype=np.bool_)
+                    
+                    # Encode as PNG for compression and to embed dimensions in the image format
+                    # Client will decode PNG to extract width, height, and mask data
+                    mask_bytes = cv2.imencode('.png', cropped_mask.astype(np.uint8) * 255)[1].tobytes()
                     
                     # Extract polygons from the cleaned mask
                     polygons = self.model.mask_to_polygons(mask_bool)
@@ -114,13 +217,11 @@ class SegmentationServicer(SegmentationServiceServicer):
                     x, y, width, height = segment.get('x', 0), segment.get('y', 0), segment.get('width', 0), segment.get('height', 0)
                     polygons = []
                 
-                # Create the segment result with cleaned mask and updated bounds
+                # Create the segment result with PNG-encoded mask and position
                 segment_result = SegmentResult(
                     index=segment['index'],
                     score=segment['score'],
                     mask=mask_bytes,
-                    width=width,
-                    height=height,
                     X=x,
                     Y=y
                 )
@@ -136,6 +237,25 @@ class SegmentationServicer(SegmentationServiceServicer):
 
             return response
 
+        except (OSError, IOError) as e:
+            # Handle image data errors (e.g., truncated images, corrupted data)
+            error_msg = str(e).lower()
+            if any(keyword in error_msg for keyword in ['truncated', 'corrupted', 'invalid', 'cannot identify image file']):
+                print(f"Image data error detected: {e}")
+                
+                # If we're using a cached image, remove it from the cache
+                if request.image_id != 0:
+                    print(f"Removing corrupted image from cache: ID={request.image_id}")
+                    await self.image_cache.delete_image(request.image_id)
+                
+                await context.abort(
+                    grpc.StatusCode.INVALID_ARGUMENT,
+                    f"Image data is corrupted or truncated: {e}. "
+                    "If using cached image, it has been removed from cache. Please re-upload the image."
+                )
+            else:
+                # Re-raise other OSError/IOError exceptions
+                raise
         except Exception as e:
             # Log the error and return an error status
             import traceback

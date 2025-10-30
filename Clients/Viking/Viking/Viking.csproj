@@ -168,28 +168,28 @@
 
 		<Message Text="Copying $(ModulesSourceDir)\WebAnnotation\$(TargetFramework) to $(ModulesTargetDir)\WebAnnotation\" Importance="high" />
 		
-		<Copy SourceFiles="@(LocalBookmarksFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\LocalBookmarks\%(RecursiveDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(MeasurementFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\Measurement\%(RecursiveDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(WebAnnotationsFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\WebAnnotation\%(RecursiveDir)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(LocalBookmarksFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\LocalBookmarks\%(RecursiveDir)" />
+		<Copy SourceFiles="@(MeasurementFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\Measurement\%(RecursiveDir)" />
+		<Copy SourceFiles="@(WebAnnotationsFilesToCopy)" DestinationFolder="$(ModulesTargetDir)\WebAnnotation\%(RecursiveDir)" />
 
 		<Message Text="Copying $(ModulesSourceDir)\LocalBookmarks\$(TargetFramework)\Content to $(TargetDir)\Content" Importance="high" />
 
-		<Copy SourceFiles="@(LocalBookmarksContentToCopy)" DestinationFolder="$(TargetDir)\Content" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(MeasurementContentToCopy)" DestinationFolder="$(TargetDir)\Content" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(WebAnnotationsContentToCopy)" DestinationFolder="$(TargetDir)\Content" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(LocalBookmarksContentToCopy)" DestinationFolder="$(TargetDir)\Content" />
+		<Copy SourceFiles="@(MeasurementContentToCopy)" DestinationFolder="$(TargetDir)\Content" />
+		<Copy SourceFiles="@(WebAnnotationsContentToCopy)" DestinationFolder="$(TargetDir)\Content" />
 		
 		<!-- Copy Xml.Schema.Linq.dll to main output directory if it exists in any module -->
 		<ItemGroup>
 			<XmlSchemaLinqFiles Include="$(ModulesSourceDir)\**\Xml.Schema.Linq.dll" />
 		</ItemGroup>
-		<Copy SourceFiles="@(XmlSchemaLinqFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="'@(XmlSchemaLinqFiles)' != ''" />
+		<Copy SourceFiles="@(XmlSchemaLinqFiles)" DestinationFolder="$(TargetDir)" Condition="'@(XmlSchemaLinqFiles)' != ''" />
 		<Message Text="Copied Xml.Schema.Linq.dll to main output directory" Importance="normal" Condition="'@(XmlSchemaLinqFiles)' != ''" />
 
 		<!-- Copy System.Memory.dll to main output directory if it exists in any module -->
 		<ItemGroup>
 			<SystemMemoryFiles Include="$(ModulesSourceDir)\**\System.Memory.dll" />
 		</ItemGroup>
-		<Copy SourceFiles="@(SystemMemoryFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="'@(SystemMemoryFiles)' != ''" />
+		<Copy SourceFiles="@(SystemMemoryFiles)" DestinationFolder="$(TargetDir)" Condition="'@(SystemMemoryFiles)' != ''" />
 		<Message Text="Copied System.Memory.dll to main output directory" Importance="normal" Condition="'@(SystemMemoryFiles)' != ''" />
 
 		<!-- Remove duplicate shared DLLs from modules -->

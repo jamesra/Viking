@@ -30,7 +30,8 @@ namespace Annotation.Identity
         public void ApplyDispatchBehavior(ServiceEndpoint endpoint, EndpointDispatcher endpointDispatcher)
         {
             // Add JWT token validation to the dispatch runtime
-            endpointDispatcher.DispatchRuntime.MessageInspectors.Add(new JwtMessageInspector());
+            endpointDispatcher.DispatchRuntime.MessageInspectors.Add(
+                new JwtMessageInspector(Authority, Audience, ValidateIssuer, ValidateAudience, ValidateLifetime));
         }
 
         public void Validate(ServiceEndpoint endpoint)
