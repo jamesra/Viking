@@ -141,14 +141,46 @@ namespace WebAnnotation.UI.Commands.Segmentation
             this.success_callback = success_callback;
             structureType = type?.modelObj ?? (Viking.UI.State.SelectedObject as StructureType)?.modelObj;
             
-            // Load configuration
-            serviceUrl = ConfigurationManager.AppSettings["SegmentationServiceUrl"] ?? "localhost:50051";
+            // Load configuration - fallback to VolumeXML if not in AppSettings
+            serviceUrl = Global.GetSegmentationServiceUrl() ?? "localhost:50051";
             debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS;
 
             Parent.Cursor = Cursors.Cross;
             
             // Initialize viewport bounds
             viewportBounds = GetCurrentViewportBounds();
+        }
+
+        /// <summary>
+        /// Constructor that accepts initial foreground and background points for automated segmentation
+        /// </summary>
+        public SegmentationCommand(SectionViewerControl parent,
+            IEnumerable<GridVector2> initialForegroundPoints,
+            IEnumerable<GridVector2> initialBackgroundPoints,
+            StructureType type = null,
+            OnCommandSuccess success_callback = null) : base(parent)
+        {
+            this.success_callback = success_callback;
+            structureType = type?.modelObj ?? (Viking.UI.State.SelectedObject as StructureType)?.modelObj;
+            
+            // Load configuration - fallback to VolumeXML if not in AppSettings
+            serviceUrl = Global.GetSegmentationServiceUrl() ?? "localhost:50051";
+            debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS;
+
+            Parent.Cursor = Cursors.Cross;
+            
+            // Initialize viewport bounds
+            viewportBounds = GetCurrentViewportBounds();
+
+            // Populate initial points
+            if (initialForegroundPoints != null)
+            {
+                foregroundPoints.AddRange(initialForegroundPoints);
+            }
+            if (initialBackgroundPoints != null)
+            {
+                backgroundPoints.AddRange(initialBackgroundPoints);
+            }
         }
         #endregion
 
@@ -172,9 +204,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     "Connection Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
-            // Clear any existing state
-            foregroundPoints.Clear();
-            backgroundPoints.Clear();
+            // Check if we have initial points from constructor
+            bool hasInitialPoints = foregroundPoints.Count > 0 || backgroundPoints.Count > 0;
+            
+            // Clear any existing state (only if no initial points were provided)
+            if (!hasInitialPoints)
+            {
+                foregroundPoints.Clear();
+                backgroundPoints.Clear();
+            }
+            
             lastViewBounds = GetCurrentViewportBounds();
             UpdatePointViews();
 
@@ -182,6 +221,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
             panZoomDebounceTimer = new System.Timers.Timer(debounceMs);
             panZoomDebounceTimer.Elapsed += OnPanZoomDebounceElapsed;
             panZoomDebounceTimer.AutoReset = false;
+
+            // If we have initial points, automatically upload image and request segmentation
+            if (hasInitialPoints)
+            {
+                Debug.WriteLine($"SegmentationCommand activated with {foregroundPoints.Count} foreground and {backgroundPoints.Count} background points");
+                UploadCurrentImage().ContinueWith(task =>
+                {
+                    if (task.Status == TaskStatus.RanToCompletion)
+                    {
+                        RequestSegmentation();
+                    }
+                }, TaskScheduler.FromCurrentSynchronizationContext());
+            }
         }
 
         protected override void OnDeactivate()

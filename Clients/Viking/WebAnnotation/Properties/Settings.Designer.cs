@@ -175,5 +175,17 @@ namespace WebAnnotation.Properties {
                 this["MinRadius"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SegmentationServiceUrl {
+            get {
+                return ((string)(this["SegmentationServiceUrl"]));
+            }
+            set {
+                this["SegmentationServiceUrl"] = value;
+            }
+        }
     }
 }

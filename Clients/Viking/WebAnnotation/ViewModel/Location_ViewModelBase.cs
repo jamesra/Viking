@@ -9,6 +9,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Viking.Common;
 using Viking.Common.UI;
+using Viking.VolumeModel;
 using WebAnnotationModel;
 
 namespace WebAnnotation.ViewModel
@@ -310,6 +311,14 @@ namespace WebAnnotation.ViewModel
                 menuShape.MenuItems.Add(menuCircle);
             }
 
+            // Add segmentation option for circles
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE && 
+                Global.IsSegmentationServiceAvailable)
+            {
+                MenuItem menuSegmentCircle = new MenuItem("Segment to Polygon...", ContextMenu_SegmentCircleToPolygon);
+                menuShape.MenuItems.Add(menuSegmentCircle);
+            }
+
             menu.MenuItems.Add(menuShape);
         }
 
@@ -486,6 +495,105 @@ namespace WebAnnotation.ViewModel
             catch (Exception)
             {
                 Trace.WriteLine("Could not simplify polygon");
+            }
+        }
+
+        /// <summary>
+        /// Launch segmentation command to convert a circle location to a polygon using AI segmentation
+        /// </summary>
+        protected void ContextMenu_SegmentCircleToPolygon(object sender, EventArgs e)
+        {
+            try
+            {
+                // Get the circle geometry
+                GridCircle circle = GetCircleFromLocation();
+                
+                // Generate foreground points: center + 8 points at radius/2
+                List<GridVector2> foregroundPoints = new List<GridVector2>();
+                foregroundPoints.Add(circle.Center);
+                
+                double innerRadius = circle.Radius / 2.0;
+                for (int i = 0; i < 8; i++)
+                {
+                    double angle = (2.0 * Math.PI * i) / 8.0;
+                    double x = circle.Center.X + innerRadius * Math.Cos(angle);
+                    double y = circle.Center.Y + innerRadius * Math.Sin(angle);
+                    foregroundPoints.Add(new GridVector2(x, y));
+                }
+                
+                // Create callback to update location shape
+                WebAnnotation.UI.Commands.Segmentation.SegmentationCommand.OnCommandSuccess callback = (outputPolygon) =>
+                {
+                    UpdateLocationShapeFromPolygon(outputPolygon);
+                };
+                
+                // Launch segmentation command
+                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                var segmentCommand = new WebAnnotation.UI.Commands.Segmentation.SegmentationCommand(
+                    parent,
+                    foregroundPoints,
+                    new List<GridVector2>(), // no background points initially
+                    Parent.Type,
+                    callback
+                );
+                
+                parent.CurrentCommand = segmentCommand;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error launching segmentation: {ex.Message}");
+                MessageBox.Show($"Failed to launch segmentation: {ex.Message}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Extract GridCircle geometry from a circle location
+        /// </summary>
+        private GridCircle GetCircleFromLocation()
+        {
+            if (modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
+            {
+                throw new InvalidOperationException("Location is not a circle");
+            }
+
+            GridVector2 center = modelObj.Position;
+            double radius = modelObj.Radius;
+            
+            return new GridCircle(center, radius);
+        }
+
+        /// <summary>
+        /// Update the location's shape from the segmented polygon and save
+        /// </summary>
+        private void UpdateLocationShapeFromPolygon(GridPolygon polygon)
+        {
+            try
+            {
+                // Convert location type to POLYGON
+                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON;
+                
+                // Get the section's transform
+                var section = AnnotationOverlay.CurrentOverlay.Parent.Section;
+                
+                // Convert polygon to SqlGeometry
+                Microsoft.SqlServer.Types.SqlGeometry mosaicGeometry = polygon.ToSqlGeometry();
+                
+                // Update the location's shape using the extension method
+                modelObj.SetShapeFromGeometryInSection(
+                    section.ActiveSectionToVolumeTransform, 
+                    mosaicGeometry);
+                
+                // Save the location
+                Store.Locations.Save();
+                
+                Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating location shape: {ex.Message}");
+                MessageBox.Show($"Failed to update location shape: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

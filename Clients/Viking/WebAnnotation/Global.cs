@@ -36,6 +36,7 @@ namespace WebAnnotation
         internal static Export Export = null;
 
         private static bool? _isSegmentationServiceAvailable;
+        private static string _segmentationServiceUrlFromVolume;
 
         /// <summary>
         /// Returns true if a SegmentationService is configured and available with a valid URL format
@@ -49,7 +50,7 @@ namespace WebAnnotation
                     return _isSegmentationServiceAvailable.Value;
                 }
 
-                string serviceUrl = ConfigurationManager.AppSettings["SegmentationServiceUrl"];
+                string serviceUrl = GetSegmentationServiceUrl();
                 
                 if (string.IsNullOrWhiteSpace(serviceUrl))
                 {
@@ -67,6 +68,74 @@ namespace WebAnnotation
                 _isSegmentationServiceAvailable = isValid;
                 return isValid;
             }
+        }
+
+        /// <summary>
+        /// Gets the SegmentationServiceUrl from AppSettings or VolumeXML (in that order)
+        /// </summary>
+        /// <returns>The segmentation service URL or null if not configured</returns>
+        public static string GetSegmentationServiceUrl()
+        {
+            // First check AppSettings
+            string serviceUrl = ConfigurationManager.AppSettings["SegmentationServiceUrl"];
+            
+            // If not in AppSettings, check VolumeXML
+            if (string.IsNullOrWhiteSpace(serviceUrl))
+            {
+                serviceUrl = GetSegmentationServiceUrlFromVolume();
+            }
+            
+            return serviceUrl;
+        }
+
+        /// <summary>
+        /// Retrieves the SegmentationServiceUrl from the VolumeXML if available
+        /// </summary>
+        private static string GetSegmentationServiceUrlFromVolume()
+        {
+            if (_segmentationServiceUrlFromVolume != null)
+            {
+                return _segmentationServiceUrlFromVolume;
+            }
+
+            try
+            {
+                Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
+                if (volume?.VolumeElement == null)
+                {
+                    return null;
+                }
+
+                // Check for SegmentationServiceUrl attribute in VolumeToEndpoint element
+                IEnumerable<XElement> mappingElements = volume.VolumeElement.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
+                if (mappingElements.Any())
+                {
+                    XAttribute segmentationUrlAttr = mappingElements.First().Attribute("SegmentationServiceUrl");
+                    if (segmentationUrlAttr != null)
+                    {
+                        _segmentationServiceUrlFromVolume = segmentationUrlAttr.Value;
+                        return _segmentationServiceUrlFromVolume;
+                    }
+                }
+
+                // Could also check for a separate element if needed
+                IEnumerable<XElement> segmentationElements = volume.VolumeElement.Elements().Where(e => e.Name.LocalName == "SegmentationService");
+                if (segmentationElements.Any())
+                {
+                    XAttribute urlAttr = segmentationElements.First().Attribute("Url");
+                    if (urlAttr != null)
+                    {
+                        _segmentationServiceUrlFromVolume = urlAttr.Value;
+                        return _segmentationServiceUrlFromVolume;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error reading SegmentationServiceUrl from VolumeXML: {ex.Message}");
+            }
+
+            return null;
         }
 
         internal static int NumSectionsInMemory => AnnotationSettings.NumSectionsInMemory;
@@ -222,6 +291,18 @@ namespace WebAnnotation
                 {
                     Properties.Settings.Default.MinRadius = Clamp(value, MIN_RADIUS, MAX_RADIUS);
                     Properties.Settings.Default.Save();
+                }
+            }
+
+            public static string SegmentationServiceUrl
+            {
+                get => Properties.Settings.Default.SegmentationServiceUrl;
+                set
+                {
+                    Properties.Settings.Default.SegmentationServiceUrl = value;
+                    Properties.Settings.Default.Save();
+                    // Clear cached availability check when URL changes
+                    _isSegmentationServiceAvailable = null;
                 }
             }
 
