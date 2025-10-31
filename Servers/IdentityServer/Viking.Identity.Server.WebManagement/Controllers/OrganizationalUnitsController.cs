@@ -43,21 +43,49 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Include(o => o.Parent)
                 .Include(o => o.ResourceType)
                 .Include(o => o.Children)
+                    .ThenInclude(c => c.ResourceType)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (organizationalUnit == null)
             {
                 return NotFound();
             }
 
+            // Load volumes in this org
+            var volumes = await _context.Volume
+                .Where(v => v.ParentID == id)
+                .Include(v => v.Parent)
+                .Include(v => v.UsersWithPermissions)
+                .Include(v => v.GroupsWithPermissions)
+                .ToListAsync();
+
+            // Load child orgs
+            var childOrgs = organizationalUnit.Children
+                .OfType<OrganizationalUnit>()
+                .ToList();
+
+            // Load groups for this org
+            var groups = await _context.Group
+                .Where(g => g.ParentID == id)
+                .Include(g => g.Parent)
+                .Include(g => g.MemberUsers)
+                .Include(g => g.MemberGroups)
+                .ToListAsync();
+
+            ViewData["Volumes"] = volumes;
+            ViewData["ChildOrganizations"] = childOrgs;
+            ViewData["Groups"] = groups;
+
             return View(organizationalUnit);
         }
 
         // GET: OrganizationalUnits/Create
-        public IActionResult Create()
+        public IActionResult Create(long? parentOrgId = null)
         {
-            CreateOrgUnitViewModel viewmodel = new CreateOrgUnitViewModel()
-            { 
-            };
+            CreateOrgUnitViewModel viewmodel = new CreateOrgUnitViewModel();
+            if (parentOrgId.HasValue && parentOrgId.Value > 0)
+            {
+                viewmodel.ParentId = parentOrgId.Value;
+            }
 
             ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), viewmodel.ParentId);
             return View(viewmodel);

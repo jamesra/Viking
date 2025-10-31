@@ -75,7 +75,8 @@ namespace Viking.Identity.Server.WebManagement
                                      .AddJsonFile($"appsettings.{aspnetCoreEnv}.json", optional: true)
                                      .AddJsonFile($"appsettings.{hostingEnv}.json", optional: true)
                                      .AddEnvironmentVariables()
-                                     .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
+                                     .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw)
+                                     .AddJsonFile("secrets.json", optional: true, reloadOnChange: false); // Load secrets.json last to override all other configuration
 
                 // Configure Serilog
                 var managementLogPath = Environment.GetEnvironmentVariable("HOSTING_ENVIRONMENT") == "Docker" 

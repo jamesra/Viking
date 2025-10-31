@@ -1,84 +1,296 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model Viking.Identity.Server.WebManagement.Models.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard";
 }
 
-<div id="myCarousel" class="carousel slide" data-ride="carousel" data-interval="6000">
-    <ol class="carousel-indicators">
-        <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
-        <li data-target="#myCarousel" data-slide-to="1"></li>
-    </ol>
-    <div class="carousel-inner" role="listbox">
-        <div class="item active">
-            <img src="~/images/VikingBanner1.jpg" alt="Viking" class="img-responsive" />
-            <div class="carousel-caption" role="option">
-                <p>
-                    Annotate 3D volumes
-                    <a class="btn btn-default" href="http://connectomes.utah.edu/">
-                        Learn More
-                    </a>
-                </p>
-            </div>
-        </div>
-        <div class="item">
-            <img src="~/images/NetworkBanner.png" alt="Export Connectomes" class="img-responsive" />
-            <div class="carousel-caption" role="option">
-                <p>
-                    Export connectivity networks to third-party tools
-                    <a class="btn btn-default" href="https://connectomes.utah.edu/export/toctree.html">
-                        Learn More
-                    </a>
-                </p>
-            </div>
-        </div>
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-0">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </h1>
+        @if (Model.IsAuthenticated)
+        {
+            <p class="text-muted mb-0">Welcome back, <strong>@Model.Username</strong>!</p>
+        }
+        else
+        {
+            <p class="text-muted mb-0">Welcome! Please <a asp-controller="Account" asp-action="Login">log in</a> to access your resources.</p>
+        }
     </div>
-    <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
-        <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
-        <span class="sr-only">Previous</span>
-    </a>
-    <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
-        <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
-        <span class="sr-only">Next</span>
-    </a>
 </div>
 
-<!--
-<div class="row">
-    <div class="col-md-3">
-        <h2>Application uses</h2>
-        <ul>
-            <li>Sample pages using ASP.NET Core MVC</li>
-            <li>Theming using <a href="https://go.microsoft.com/fwlink/?LinkID=398939">Bootstrap</a></li>
-        </ul>
+@if (Model.IsAuthenticated)
+{
+    <!-- Quick Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stats-card bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stats-card-label">Users</div>
+                            <div class="stats-card-value">@Model.TotalUsers</div>
+                        </div>
+                        <div class="stats-card-icon">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-org) 0%, #0056b3 100%);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stats-card-label">Organizations</div>
+                            <div class="stats-card-value">@Model.TotalOrganizations</div>
+                        </div>
+                        <div class="stats-card-icon">
+                            <i class="bi bi-building"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-volume) 0%, #0d5f3f 100%);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stats-card-label">Volumes</div>
+                            <div class="stats-card-value">@Model.TotalVolumes</div>
+                        </div>
+                        <div class="stats-card-icon">
+                            <i class="bi bi-hdd-stack"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stats-card" style="background: linear-gradient(135deg, var(--color-group) 0%, #c8620a 100%);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stats-card-label">Groups</div>
+                            <div class="stats-card-value">@Model.TotalGroups</div>
+                        </div>
+                        <div class="stats-card-icon">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="col-md-3">
-        <h2>How to</h2>
-        <ul>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkID=398600">Add a Controller and View</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkId=699315">Manage User Secrets using Secret Manager.</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkId=699316">Use logging to log a message.</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkId=699317">Add packages using NuGet.</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkId=699319">Target development, staging or production environment.</a></li>
-        </ul>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-sm-6 mb-2">
+                            <a asp-controller="OrganizationalUnits" asp-action="Index" class="btn btn-outline-primary btn-quick-action w-100">
+                                <i class="bi bi-building"></i> View Organizations
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-2">
+                            <a asp-controller="Volumes" asp-action="Index" class="btn btn-outline-success btn-quick-action w-100">
+                                <i class="bi bi-hdd-stack"></i> View Volumes
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-2">
+                            <a asp-controller="ApplicationUsers" asp-action="Index" class="btn btn-outline-purple btn-quick-action w-100">
+                                <i class="bi bi-people"></i> View Users
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-2">
+                            <a asp-controller="MyAccess" asp-action="Index" class="btn btn-outline-info btn-quick-action w-100">
+                                <i class="bi bi-shield-check"></i> My Access
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="col-md-3">
-        <h2>Overview</h2>
-        <ul>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkId=518008">Conceptual overview of what is ASP.NET Core</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkId=699320">Fundamentals of ASP.NET Core such as Startup and middleware.</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkId=398602">Working with Data</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkId=398603">Security</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkID=699321">Client side development</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkID=699322">Develop on different platforms</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkID=699323">Read more on the documentation site</a></li>
-        </ul>
+
+    <!-- Your Volumes -->
+    @if (Model.UserVolumes.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card card-modern">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-hdd-stack"></i> Your Accessible Volumes
+                            <span class="badge bg-light text-dark ms-2">@Model.UserVolumes.Count</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var volume in Model.UserVolumes)
+                            {
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card card-modern card-volume h-100">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="bi bi-hdd entity-icon-volume"></i> @volume.Name
+                                            </h6>
+                                            <p class="card-text text-muted small">
+                                                @(string.IsNullOrEmpty(volume.Description) ? "No description" : volume.Description)
+                                            </p>
+                                            @if (volume.Parent != null)
+                                            {
+                                                <p class="card-text small mb-2">
+                                                    <i class="bi bi-building text-org"></i> 
+                                                    <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@volume.Parent.Id">@volume.Parent.Name</a>
+                                                </p>
+                                            }
+                                            @if (!string.IsNullOrEmpty(volume.Endpoint?.ToString()))
+                                            {
+                                                <a href="@volume.Endpoint" target="_blank" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-box-arrow-up-right"></i> Access Volume
+                                                </a>
+                                            }
+                                            <a asp-controller="Volumes" asp-action="Details" asp-route-id="@volume.Id" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-info-circle"></i> Details
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="mt-3">
+                            <a asp-controller="Volumes" asp-action="Index" class="btn btn-outline-success">
+                                <i class="bi bi-arrow-right"></i> View All Volumes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Your Organizations (if we have them) -->
+    @if (Model.UserOrganizations.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card card-modern">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-building"></i> Your Organizations
+                            <span class="badge bg-light text-dark ms-2">@Model.UserOrganizations.Count</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            @foreach (var org in Model.UserOrganizations)
+                            {
+                                <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@org.Id" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">
+                                            <i class="bi bi-building text-org"></i> @org.Name
+                                        </h6>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(org.Description))
+                                    {
+                                        <p class="mb-1 text-muted small">@org.Description</p>
+                                    }
+                                </a>
+                            }
+                        </div>
+                        <div class="mt-3">
+                            <a asp-controller="OrganizationalUnits" asp-action="Index" class="btn btn-outline-primary">
+                                <i class="bi bi-arrow-right"></i> View All Organizations
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!Model.UserVolumes.Any() && !Model.UserOrganizations.Any())
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle"></i> Getting Started</h5>
+                    <p>You don't have access to any volumes or organizations yet. Contact your administrator to get access assigned.</p>
+                </div>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <!-- Guest Welcome -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-modern">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-shield-check text-primary" style="font-size: 4rem;"></i>
+                    <h3 class="mt-3">Welcome to Viking Identity Server</h3>
+                    <p class="text-muted">Please log in to access your resources and manage permissions.</p>
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-primary btn-lg">
+                        <i class="bi bi-box-arrow-in-right"></i> Log In
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="col-md-3">
-        <h2>Run &amp; Deploy</h2>
-        <ul>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkID=517851">Run your app</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkID=517853">Run tools such as EF migrations and more</a></li>
-            <li><a href="https://go.microsoft.com/fwlink/?LinkID=398609">Publish to Microsoft Azure Web Apps</a></li>
-        </ul>
+}
+
+<!-- Rotating Banner Section -->
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <img id="rotatingBanner" src="" class="img-fluid w-100" style="height: auto; display: block;" alt="Banner" />
+        </div>
     </div>
 </div>
-    -->
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // List of banner images - add more files here as you add banners to the images/banners folder
+            var banners = [
+                '/images/banners/NetworkBanner.png',
+                '/images/banners/VikingBanner1.jpg'
+            ];
+
+            if (banners.length === 0) {
+                // Hide banner container if no banners available
+                $('#rotatingBanner').closest('.container').hide();
+                return;
+            }
+
+            var currentIndex = Math.floor(Math.random() * banners.length);
+            var bannerImg = $('#rotatingBanner');
+
+            // Function to load and display a banner
+            function showBanner(index) {
+                var bannerUrl = banners[index];
+                bannerImg.attr('src', bannerUrl);
+                bannerImg.attr('alt', 'Banner ' + (index + 1));
+            }
+
+            // Show initial random banner
+            showBanner(currentIndex);
+
+            // Rotate banners every 10 seconds (10000 milliseconds)
+            setInterval(function() {
+                currentIndex = (currentIndex + 1) % banners.length;
+                showBanner(currentIndex);
+            }, 10000);
+        });
+    </script>
+}

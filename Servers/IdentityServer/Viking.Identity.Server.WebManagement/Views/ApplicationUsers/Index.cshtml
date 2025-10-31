@@ -5,73 +5,26 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Users</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-people"></i> Users</h2>
+    @if (this.User.IsInRole(Special.Roles.Admin))
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create New
+        </a>
+    }
+</div>
 
-@if (this.User.IsInRole(Special.Roles.Admin))
-{
-    <p>
-        <a asp-action="Create">Create New</a>
-    </p>
-}
-
-<table class="table">
+<table class="table table-modern" id="usersTable">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.FamilyName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.GivenName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UserName)
-            </th>
-            <!--
-            <th>
-                @Html.DisplayNameFor(model => model.NormalizedUserName)
-            </th>
-            -->
-            <th>
-                @Html.DisplayNameFor(model => model.Email)
-            </th>
-            <!--
-            <th>
-                @Html.DisplayNameFor(model => model.NormalizedEmail)
-            </th>
-            -->
-            <th>
-                @Html.DisplayNameFor(model => model.EmailConfirmed)
-            </th>
-            <!--
-            <th>
-                @Html.DisplayNameFor(model => model.PasswordHash)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.SecurityStamp)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.ConcurrencyStamp)
-            </th>
-                -->
-            <th>
-                @Html.DisplayNameFor(model => model.PhoneNumber)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PhoneNumberConfirmed)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TwoFactorEnabled)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.LockoutEnd)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.LockoutEnabled)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.AccessFailedCount)
-            </th>
-            <th></th>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Email Confirmed</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -79,72 +32,80 @@
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.FamilyName)
+                    <i class="bi bi-person entity-icon-user"></i>
+                    <strong>@item.GivenName @item.FamilyName</strong>
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.GivenName)
+                    <code>@item.UserName</code>
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.UserName)
-                </td>
-                <!--
-                <td>
-                    @Html.DisplayFor(modelItem => item.NormalizedUserName)
-                </td>
-                    -->
-                <td>
-                    @Html.DisplayFor(modelItem => item.Email)
-                </td>
-                <!--
-                <td>
-                    @Html.DisplayFor(modelItem => item.NormalizedEmail)
-                </td>
-                -->
-                <td>
-                    @Html.DisplayFor(modelItem => item.EmailConfirmed)
-                </td>
-                <!--
-                <td>
-                    @Html.DisplayFor(modelItem => item.PasswordHash)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.SecurityStamp)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.ConcurrencyStamp)
-                </td>
-                    -->
-                <td>
-                    @Html.DisplayFor(modelItem => item.PhoneNumber)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PhoneNumberConfirmed)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.TwoFactorEnabled)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.LockoutEnd)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.LockoutEnabled)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.AccessFailedCount)
-                </td>
-                <td>
-                    @if (this.User.IsInRole(Special.Roles.Admin) || this.User.Identity.Name == item.UserName)
+                    @if (!string.IsNullOrEmpty(item.Email))
                     {
-                        <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> @Html.Raw("|")
+                        <a href="mailto:@item.Email">@item.Email</a>
                     }
-                    <a asp-action="Details" asp-route-id="@item.Id"> Details </a>
-                    @if (this.User.IsInRole(Special.Roles.Admin) || this.User.Identity.Name == item.UserName)
+                    else
                     {
-                        <a asp-action="Delete" asp-route-id="@item.Id"> Delete </a>
+                        <span class="text-muted">-</span>
                     }
-
+                </td>
+                <td>
+                    @if (item.EmailConfirmed)
+                    {
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Confirmed</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-warning text-dark"><i class="bi bi-x-circle"></i> Pending</span>
+                    }
+                </td>
+                <td>
+                    @if (!string.IsNullOrEmpty(item.PhoneNumber))
+                    {
+                        @item.PhoneNumber
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </td>
+                <td>
+                    @if (item.LockoutEnabled && item.LockoutEnd.HasValue && item.LockoutEnd.Value > DateTimeOffset.UtcNow)
+                    {
+                        <span class="badge bg-danger"><i class="bi bi-lock"></i> Locked</span>
+                    }
+                    else if (item.TwoFactorEnabled)
+                    {
+                        <span class="badge bg-info"><i class="bi bi-shield-check"></i> 2FA</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Active</span>
+                    }
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="View Details">
+                            <i class="bi bi-info-circle"></i>
+                        </a>
+                        @if (this.User.IsInRole(Special.Roles.Admin) || this.User.Identity.Name == item.UserName)
+                        {
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            @if (this.User.IsInRole(Special.Roles.Admin))
+                            {
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            }
+                        }
+                    </div>
                 </td>
             </tr>
         }
     </tbody>
 </table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_DataTable", "usersTable");}
+}

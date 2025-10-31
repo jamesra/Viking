@@ -5,34 +5,57 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Permissions</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-shield-check"></i> Manage Permissions</h2>
+    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
 
-<form asp-action="Edit">
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="alert alert-info mb-3">
+    <i class="bi bi-info-circle"></i> <strong>How to change permissions:</strong> Toggle the switches in the table below to grant or revoke permissions for users and groups. Changes are saved when you click "Update Permissions".
+</div>
+
+<form asp-action="Edit" id="permissionsForm">
     <partial name="~/Views/Shared/_ResourcePermissionsGridViewPartialView.cshtml" for="@Model"/>
-    <div class="form-group">
-        <input type="submit" value="Update" class="btn btn-default" />
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div id="successMessage" class="alert alert-success" role="alert" style="display: inline-block; margin-left: 15px; margin-bottom: 0; padding: 6px 12px;">
-                @TempData["SuccessMessage"]
-            </div>
-        }
+    <div class="form-group mt-4">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-save"></i> Update Permissions
+        </button>
+        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg ms-2">
+            <i class="bi bi-x-circle"></i> Cancel
+        </a>
     </div>
 </form>
 
 @section Scripts {
     <script>
-        (function() {
-            var successMessage = document.getElementById('successMessage');
-            if (successMessage) {
+        // Auto-hide success message after 5 seconds
+        $(document).ready(function() {
+            var successAlert = $('.alert-success');
+            if (successAlert.length) {
                 setTimeout(function() {
-                    successMessage.style.transition = 'opacity 0.5s';
-                    successMessage.style.opacity = '0';
-                    setTimeout(function() {
-                        successMessage.style.display = 'none';
-                    }, 500);
-                }, 2000);
+                    successAlert.fadeOut();
+                }, 5000);
             }
-        })();
+            
+            // Add visual feedback for checkbox changes
+            $('.permission-checkbox').change(function() {
+                var checkbox = $(this);
+                if (checkbox.is(':checked')) {
+                    checkbox.closest('td').addClass('table-success');
+                } else {
+                    checkbox.closest('td').removeClass('table-success');
+                }
+            });
+        });
     </script>
 }

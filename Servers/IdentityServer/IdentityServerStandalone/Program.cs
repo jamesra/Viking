@@ -60,7 +60,6 @@ namespace Viking.Identity.Server.Standalone
 
             try
             {
-                Log.Information("Starting IdentityServer...");
                 var builder = WebApplication.CreateBuilder(args);
 
                 // Enable environment variable substitution in the main configuration 
@@ -79,6 +78,8 @@ namespace Viking.Identity.Server.Standalone
                     .WriteTo.File("IdentityServerApiLogs.json", Serilog.Events.LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
                 );
 
+                Log.Information("Starting IdentityServer...");
+                
                 // Configure services
                 ConfigureServices(builder.Services, builder.Configuration);
 
@@ -225,7 +226,9 @@ namespace Viking.Identity.Server.Standalone
                 options.Events.RaiseInformationEvents = true;
                 options.Events.RaiseFailureEvents = true;
                 options.Events.RaiseSuccessEvents = true;
-                options.KeyManagement.Enabled = false;
+                // KeyManagement is disabled to prevent automatic key rotation issues
+                // When disabled, you must ensure signing credentials are stable across restarts
+                // options.KeyManagement.Enabled = false; // Commented out - will use default behavior or proper operational store
                 options.EmitStaticAudienceClaim = true;
                  
                 if (serverOptions != null)

@@ -1,87 +1,152 @@
 ﻿<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Viking Identity Server</title>
 
     <environment include="Development">
-        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
         <link rel="stylesheet" href="~/css/site.css" />
+        <link rel="stylesheet" href="~/css/site-modern.css" />
     </environment>
     <environment exclude="Development">
-        <link rel="stylesheet" href="https://ajax.aspnetcdn.com/ajax/bootstrap/3.3.7/css/bootstrap.min.css"
-              asp-fallback-href="~/lib/bootstrap/dist/css/bootstrap.min.css"
-              asp-fallback-test-class="sr-only" asp-fallback-test-property="position" asp-fallback-test-value="absolute" />
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
         <link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/css/site-modern.css" asp-append-version="true" />
     </environment>
 </head>
 <body>
-    <nav class="navbar navbar-inverse navbar-fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
         <div class="container">
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-                <a asp-area="" asp-controller="Home" asp-action="Index" class="navbar-brand">Viking Identity Server</a>
-            </div>
-            <div class="navbar-collapse collapse">
-                <ul class="nav navbar-nav">
-                    <li><a asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
-                    <li><a asp-area="" asp-controller="Home" asp-action="About">About</a></li>
-                    <li><a asp-area="" asp-controller="Home" asp-action="Contact">Contact</a></li>
-                    <li><a asp-area="" asp-controller="MyRights" asp-action="Index">My Rights</a></li>
+            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                <i class="bi bi-shield-check"></i> Viking Identity Server
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
                     @if (this.User.Identity.IsAuthenticated)
                     {
-                        <li><a asp-area="" asp-controller="ResourceTypes" asp-action="Index">Resource Types</a></li>
-                        <li><a asp-area="" asp-controller="OrganizationalUnits" asp-action="Index">Organizations</a></li>
-        
-                                <!--<li><a asp-area="" asp-controller="Groups" asp-action="Index">Groups</a></li>-->
-        
-                                <li><a asp-area="" asp-controller="Resources" asp-action="Index">Resources</a></li>
-        
-                                <li><a asp-area="" asp-controller="ApplicationRoles" asp-action="Index">Roles</a></li>
-        
-                                <li><a asp-area="" asp-controller="ApplicationUsers" asp-action="Index">Users</a></li>
-        
-                                <li><a asp-area="" asp-controller="UserRoles" asp-action="Index">Assign Roles</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="orgsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-building"></i> Organizations
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="orgsDropdown">
+                                <li><a class="dropdown-item" asp-area="" asp-controller="OrganizationalUnits" asp-action="Index"><i class="bi bi-list-ul"></i> View All Organizations</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" asp-area="" asp-controller="OrganizationalUnits" asp-action="Create"><i class="bi bi-plus-circle"></i> Create Organization</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="usersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-people"></i> Users & Access
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="usersDropdown">
+                                <li><a class="dropdown-item" asp-area="" asp-controller="ApplicationUsers" asp-action="Index"><i class="bi bi-person"></i> Users</a></li>
+                                <li><a class="dropdown-item" asp-area="" asp-controller="Groups" asp-action="Index"><i class="bi bi-people-fill"></i> Groups</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" asp-area="" asp-controller="UserRoles" asp-action="Index"><i class="bi bi-person-badge"></i> Assign Roles</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="MyAccess" asp-action="Index">
+                                <i class="bi bi-shield-check"></i> My Access
+                            </a>
+                        </li>
+                        @if (this.User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-gear"></i> Administration
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                    <li><a class="dropdown-item" asp-area="" asp-controller="ResourceTypes" asp-action="Index"><i class="bi bi-tags"></i> Resource Types</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-controller="ApplicationRoles" asp-action="Index"><i class="bi bi-key"></i> Application Roles</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-controller="Resources" asp-action="Index"><i class="bi bi-folder"></i> Resources</a></li>
+                                </ul>
+                            </li>
+                        }
                     }
                 </ul>
                 @await Html.PartialAsync("_LoginPartial")
             </div>
         </div>
     </nav>
-    <div class="container body-content">
+    
+    @* Breadcrumb navigation *@
+    @if (ViewData["Breadcrumbs"] != null)
+    {
+        <nav aria-label="breadcrumb" class="bg-light border-bottom">
+            <div class="container">
+                <ol class="breadcrumb mb-0 py-2">
+                    @{
+                        var breadcrumbs = ViewData["Breadcrumbs"] as System.Collections.Generic.List<(string Text, string Url)>;
+                        if (breadcrumbs != null)
+                        {
+                            foreach (var breadcrumb in breadcrumbs)
+                            {
+                                if (!string.IsNullOrEmpty(breadcrumb.Url))
+                                {
+                                    <li class="breadcrumb-item"><a href="@breadcrumb.Url">@breadcrumb.Text</a></li>
+                                }
+                                else
+                                {
+                                    <li class="breadcrumb-item active" aria-current="page">@breadcrumb.Text</li>
+                                }
+                            }
+                        }
+                    }
+                </ol>
+            </div>
+        </nav>
+    }
+    
+    <div class="container body-content mt-4">
         @RenderBody()
-        <hr />
-        <footer>
+    </div>
+    
+    <div class="container">
+        <hr class="mt-5" />
+        <footer class="mb-4">
+            <p class="text-muted text-center small">&copy; @(DateTime.Now.Year) - Viking Identity Server</p>
         </footer>
     </div>
 
     <environment include="Development">
-        <script src="~/lib/jquery/dist/jquery.js"></script>
-        <script src="~/lib/bootstrap/dist/js/bootstrap.js"></script>
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+        <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
         <script src="~/js/site.js" asp-append-version="true"></script>
     </environment>
     <environment exclude="Development">
-        <script src="https://ajax.aspnetcdn.com/ajax/jquery/jquery-2.2.0.min.js"
-                asp-fallback-src="~/lib/jquery/dist/jquery.min.js"
-                asp-fallback-test="window.jQuery"
-                crossorigin="anonymous"
-                integrity="sha384-K+ctZQ+LL8q6tP7I94W+qzQsfRV2a+AfHIi9k8z8l9ggpc8X+Ytst4yBo/hH+8Fk">
-        </script>
-        <script src="https://ajax.aspnetcdn.com/ajax/bootstrap/3.3.7/bootstrap.min.js"
-                asp-fallback-src="~/lib/bootstrap/dist/js/bootstrap.min.js"
-                asp-fallback-test="window.jQuery && window.jQuery.fn && window.jQuery.fn.modal"
-                crossorigin="anonymous"
-                integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa">
-        </script>
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+        <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
         <script src="~/js/site.min.js" asp-append-version="true"></script>
     </environment>
 
     @RenderSection("Scripts", required: false)
+    
+    @* Toast notification support *@
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <script>
+            window.TempDataSuccessMessage = '@TempData["SuccessMessage"]';
+        </script>
+    }
 </body>
 </html>

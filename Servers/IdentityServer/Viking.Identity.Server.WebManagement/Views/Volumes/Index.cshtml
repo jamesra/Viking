@@ -2,68 +2,328 @@
 @model IEnumerable<Viking.Identity.Models.Volume>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Volumes";
+    var volumesByOrg = Model.GroupBy(v => v.Parent?.Name ?? "No Organization").OrderBy(g => g.Key);
 }
 
-<h2>Index</h2>
-
-@if (this.User.IsInRole(Special.Roles.Admin))
-{
-    <p>
-        <a asp-action="Create">Create New</a>
-    </p>
-}
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Description)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Parent)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Endpoint)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-hdd-stack"></i> Volumes</h2>
+    <div class="btn-group" role="group">
+        @if (this.User.IsInRole(Special.Roles.Admin))
         {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Name)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Description)
-                </td>
-                <td>
-                    @if (item.Parent != null)
-                    {
-                        @Html.DisplayFor(modelItem => item.Parent.Name)
-                    }
-                </td>
-                <td>
-                    <a href="@item.Endpoint">@Html.DisplayFor(modelItem => item.Endpoint)</a>
-                </td>
-                <td>
-                    @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, item)))
-                    {
-                        <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id">Permissions</a><text> | </text>
-                        <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> <text> | </text>
-                        <a asp-action="Details" asp-route-id="@item.Id">Details</a> <text> | </text>
-                        <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-                    }
-                    else
-                    {
-                        <a asp-action="Details" asp-route-id="@item.Id">Details</a>
-                    }
-                </td>
-            </tr>
+            <button type="button" class="btn btn-warning" id="bulkPermissionsBtn" style="display: none;">
+                <i class="bi bi-shield-check"></i> Bulk Edit Permissions (<span id="selectedCount">0</span>)
+            </button>
         }
-    </tbody>
-</table>
+    </div>
+</div>
+
+<!-- View Toggle -->
+<div class="btn-group mb-3" role="group" aria-label="View toggle">
+    <input type="radio" class="btn-check" name="viewMode" id="cardView" autocomplete="off" checked>
+    <label class="btn btn-outline-primary" for="cardView">
+        <i class="bi bi-grid-3x3-gap"></i> Card View
+    </label>
+    <input type="radio" class="btn-check" name="viewMode" id="tableView" autocomplete="off">
+    <label class="btn btn-outline-primary" for="tableView">
+        <i class="bi bi-table"></i> Table View
+    </label>
+</div>
+
+<!-- Card View -->
+<div id="cardViewContainer">
+    @foreach (var orgGroup in volumesByOrg)
+    {
+        <div class="card card-modern mb-4">
+            <div class="card-header bg-volume text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-building"></i> @orgGroup.Key
+                    <span class="badge bg-light text-dark ms-2">@orgGroup.Count() volume(s)</span>
+                </h5>
+                @if (this.User.IsInRole(Special.Roles.Admin) && orgGroup.First().Parent != null)
+                {
+                    <a asp-action="Create" asp-route-parentOrgId="@orgGroup.First().Parent.Id" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle"></i> Create Volume
+                    </a>
+                }
+                else if (this.User.IsInRole(Special.Roles.Admin) && orgGroup.Key == "No Organization")
+                {
+                    <a asp-action="Create" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle"></i> Create Volume
+                    </a>
+                }
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @foreach (var volume in orgGroup.OrderBy(v => v.Name))
+                    {
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card card-modern card-volume h-100">
+                                <div class="card-body">
+                                    @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume)))
+                                    {
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input volume-checkbox" type="checkbox" value="@volume.Id" id="volume_@volume.Id">
+                                            <label class="form-check-label" for="volume_@volume.Id" style="cursor: pointer;">
+                                                <strong>Select for bulk operation</strong>
+                                            </label>
+                                        </div>
+                                    }
+                                    <h6 class="card-title">
+                                        <i class="bi bi-hdd entity-icon-volume"></i> @volume.Name
+                                    </h6>
+                                    <p class="card-text text-muted small">
+                                        @(string.IsNullOrEmpty(volume.Description) ? "No description" : volume.Description)
+                                    </p>
+                                    
+                                    @{
+                                        var uniqueUserCount = volume.UsersWithPermissions?.Select(p => p.UserId).Distinct().Count() ?? 0;
+                                    }
+                                    @if (uniqueUserCount > 0)
+                                    {
+                                        <div class="mb-2">
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-person"></i> @uniqueUserCount unique user(s)
+                                            </span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mb-2">
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-exclamation-triangle"></i> No users with permissions
+                                            </span>
+                                        </div>
+                                    }
+                                    
+                                    @if (!string.IsNullOrEmpty(volume.Endpoint?.ToString()))
+                                    {
+                                        <div class="card-text mb-2">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <input type="text" class="form-control form-control-sm" id="volumeUrl_@volume.Id" value="@volume.Endpoint" readonly style="font-size: 0.875rem;">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary copy-url-btn" data-url="@volume.Endpoint" title="Copy to clipboard">
+                                                    <i class="bi bi-clipboard"></i>
+                                                </button>
+                                            </div>
+                                            <a href="@volume.Endpoint" target="_blank" class="btn btn-sm btn-success">
+                                                <i class="bi bi-box-arrow-up-right"></i> Access Volume
+                                            </a>
+                                        </div>
+                                    }
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-action="Details" asp-route-id="@volume.Id" class="btn btn-outline-info">
+                                            <i class="bi bi-info-circle"></i> Details
+                                        </a>
+                                        @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume)))
+                                        {
+                                            <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@volume.Id" class="btn btn-outline-primary">
+                                                <i class="bi bi-shield-check"></i> Permissions
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@volume.Id" class="btn btn-outline-secondary">
+                                                <i class="bi bi-pencil"></i> Edit
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Table View -->
+<div id="tableViewContainer" style="display: none;">
+    <table class="table table-modern" id="volumesTable">
+        <thead>
+            <tr>
+                <th style="width: 40px;">
+                    @if (this.User.IsInRole(Special.Roles.Admin))
+                    {
+                        <input type="checkbox" id="selectAllTable" title="Select All">
+                    }
+                </th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Organization</th>
+                <th>Endpoint</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.OrderBy(v => v.Parent?.Name ?? "").ThenBy(v => v.Name))
+            {
+                <tr>
+                    <td>
+                        @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, item)))
+                        {
+                            <input class="form-check-input volume-checkbox" type="checkbox" value="@item.Id" id="volume_table_@item.Id">
+                        }
+                    </td>
+                    <td>
+                        <i class="bi bi-hdd entity-icon-volume"></i>
+                        <a asp-action="Details" asp-route-id="@item.Id">@item.Name</a>
+                    </td>
+                    <td>@(string.IsNullOrEmpty(item.Description) ? "-" : item.Description)</td>
+                    <td>
+                        @if (item.Parent != null)
+                        {
+                            <i class="bi bi-building text-org"></i>
+                            <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@item.Parent.Id">@item.Parent.Name</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(item.Endpoint?.ToString()))
+                        {
+                            <a href="@item.Endpoint" target="_blank" class="btn btn-sm btn-success">
+                                <i class="bi bi-box-arrow-up-right"></i> Open
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info">
+                                <i class="bi bi-info-circle"></i>
+                            </a>
+                            @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, item)))
+                            {
+                                <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id" class="btn btn-outline-primary">
+                                    <i class="bi bi-shield-check"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            var $bulkBtn = $('#bulkPermissionsBtn');
+            var $selectedCount = $('#selectedCount');
+            var $selectAllTable = $('#selectAllTable');
+
+            // Update bulk button visibility and count
+            function updateBulkButton() {
+                var selected = $('.volume-checkbox:checked').length;
+                $selectedCount.text(selected);
+                if (selected > 0) {
+                    $bulkBtn.show();
+                } else {
+                    $bulkBtn.hide();
+                }
+            }
+
+            // Volume checkbox change handler
+            $(document).on('change', '.volume-checkbox', function() {
+                updateBulkButton();
+            });
+
+            // Select all in table view
+            $selectAllTable.on('change', function() {
+                var isChecked = $(this).is(':checked');
+                $('.volume-checkbox').prop('checked', isChecked);
+                updateBulkButton();
+            });
+
+            // Bulk edit button click
+            $bulkBtn.on('click', function() {
+                var selectedIds = $('.volume-checkbox:checked').map(function() {
+                    return $(this).val();
+                }).get();
+
+                if (selectedIds.length === 0) {
+                    alert('Please select at least one volume.');
+                    return;
+                }
+
+                // Redirect to bulk edit page
+                window.location.href = '@Url.Action("BulkEdit", "GrantedPermissions")?volumeIds=' + selectedIds.join(',');
+            });
+
+            // View toggle functionality
+            $('input[name="viewMode"]').change(function() {
+                if ($(this).attr('id') === 'cardView') {
+                    $('#cardViewContainer').show();
+                    $('#tableViewContainer').hide();
+                } else {
+                    $('#cardViewContainer').hide();
+                    $('#tableViewContainer').show();
+                    // Initialize DataTable if not already initialized
+                    if (!$.fn.DataTable.isDataTable('#volumesTable')) {
+                        $('#volumesTable').DataTable({
+                            responsive: true,
+                            pageLength: 25,
+                            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                            order: [],
+                            columnDefs: [
+                                { orderable: false, targets: 0 } // Disable sorting on checkbox column
+                            ],
+                            language: {
+                                search: "_INPUT_",
+                                searchPlaceholder: "Search..."
+                            }
+                        });
+                    }
+                }
+                updateBulkButton();
+            });
+
+            // Initial update
+            updateBulkButton();
+            
+            // Copy URL to clipboard functionality
+            $('.copy-url-btn').on('click', function() {
+                var url = $(this).data('url');
+                var $input = $(this).siblings('input');
+                
+                // Use the Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(function() {
+                        var $btn = $(this);
+                        var originalHtml = $btn.html();
+                        $btn.html('<i class="bi bi-check"></i>').removeClass('btn-outline-secondary').addClass('btn-success');
+                        setTimeout(function() {
+                            $btn.html(originalHtml).removeClass('btn-success').addClass('btn-outline-secondary');
+                        }, 2000);
+                    }.bind(this)).catch(function(err) {
+                        console.error('Failed to copy:', err);
+                        // Fallback: select and copy
+                        $input.select();
+                        document.execCommand('copy');
+                        alert('URL copied to clipboard');
+                    });
+                } else {
+                    // Fallback for older browsers
+                    $input.select();
+                    document.execCommand('copy');
+                    var $btn = $(this);
+                    var originalHtml = $btn.html();
+                    $btn.html('<i class="bi bi-check"></i>').removeClass('btn-outline-secondary').addClass('btn-success');
+                    setTimeout(function() {
+                        $btn.html(originalHtml).removeClass('btn-success').addClass('btn-outline-secondary');
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+}

@@ -2,5 +2,10 @@
 
 @Html.HiddenFor(x => Model.Id)
 @Html.HiddenFor(x => Model.Name)
-@Html.CheckBoxFor(x => Model.Selected, Model.Name)
-@Html.DisplayFor(x => Model.Name)
+<div class="form-check">
+    @Html.CheckBoxFor(x => Model.Selected, new { @class = "form-check-input", id = $"group_{Model.Id}" })
+    <label class="form-check-label" for="group_@Model.Id">
+        <i class="bi bi-people-fill entity-icon-group me-1"></i>
+        @Html.DisplayFor(x => Model.Name)
+    </label>
+</div>

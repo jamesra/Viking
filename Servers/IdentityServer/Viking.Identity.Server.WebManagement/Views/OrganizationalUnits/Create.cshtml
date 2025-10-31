@@ -1,32 +1,53 @@
 ﻿@model Viking.Identity.Server.WebManagement.Models.UserViewModels.CreateResourceViewModel
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Create Organization";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Organizations", Url.Action("Index", "OrganizationalUnits")),
+        ("Create Organization", null)
+    };
 }
 
-<h2>Create</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-building"></i> Create Organization</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
 
-<h4>OrganizationalUnit</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<div class="card card-modern">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Organization Details</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Create" id="createOrgForm">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
             <partial name="~/Views/Shared/_CreateResourceBasicsPartialForm.cshtml" for="@Model"/>
 
             @Html.HiddenFor(x => Model.ResourceTypeId)
              
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-default" />
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle"></i> Create Organization
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            $('#createOrgForm').on('submit', function() {
+                var $submitBtn = $(this).find('button[type="submit"]');
+                $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating...');
+            });
+        });
+    </script>
 }

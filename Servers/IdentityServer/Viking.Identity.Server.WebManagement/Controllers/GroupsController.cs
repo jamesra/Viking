@@ -29,7 +29,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: Organizations
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Group.ToListAsync());
+            return View(await _context.Group
+                .Include(g => g.MemberUsers)
+                .Include(g => g.MemberGroups)
+                .Include(g => g.Parent)
+                .ToListAsync());
         }
 
         // GET: Organizations/Details/5
@@ -65,7 +69,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         }
 
         // GET: Organizations/Create
-        public IActionResult Create()
+        public IActionResult Create(long? parentOrgId = null)
         {
             CreateGroupViewModel groupModel = new CreateGroupViewModel()
             {
@@ -86,7 +90,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 }
             };
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name));
+            if (parentOrgId.HasValue && parentOrgId.Value > 0)
+            {
+                groupModel.ParentId = parentOrgId.Value;
+            }
+
+            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), groupModel.ParentId);
 
             return View(groupModel);
         }
@@ -170,6 +179,13 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            // Prevent editing the Everyone group (special system group)
+            if (id.Value == Special.Groups.Everyone.Id)
+            {
+                TempData["ErrorMessage"] = "The Everyone group is a special system group that cannot be edited. All users are automatically members of this group.";
+                return RedirectToAction(nameof(Details), new { id = id.Value });
+            }
+
             //Determine which groups we are already a member of, this prevents cycles
             List<Group> AlreadyMemberOf = await _context.RecursiveMemberOfGroups(id.Value,false);
 
@@ -238,6 +254,13 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (id != groupDetails.Group.Id)
             {
                 return NotFound();
+            }
+
+            // Prevent editing the Everyone group (special system group)
+            if (id == Special.Groups.Everyone.Id)
+            {
+                TempData["ErrorMessage"] = "The Everyone group is a special system group that cannot be edited. All users are automatically members of this group.";
+                return RedirectToAction(nameof(Details), new { id = id });
             }
               
             var group = await _context.Group
@@ -324,6 +347,13 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
+            // Prevent deleting the Everyone group (special system group)
+            if (id.Value == Special.Groups.Everyone.Id)
+            {
+                TempData["ErrorMessage"] = "The Everyone group is a special system group that cannot be deleted. All users are automatically members of this group.";
+                return RedirectToAction(nameof(Details), new { id = id.Value });
+            }
+
             var authResult = await _authorization.AuthorizeAsync(HttpContext.User, id.Value, Operations.GroupAccessManager);
             if (authResult.Succeeded == false)
             {
@@ -346,6 +376,13 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
+            // Prevent deleting the Everyone group (special system group)
+            if (id == Special.Groups.Everyone.Id)
+            {
+                TempData["ErrorMessage"] = "The Everyone group is a special system group that cannot be deleted. All users are automatically members of this group.";
+                return RedirectToAction(nameof(Details), new { id = id });
+            }
+
             var group = await _context.Group
                 .Include(g => g.MemberGroups)
                 .SingleOrDefaultAsync(m => m.Id == id);

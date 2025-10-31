@@ -1,16 +1,25 @@
 ﻿@model IList<Viking.Identity.Server.WebManagement.Models.UserViewModels.GroupSelectedViewModel>
 
-
-<table>
-    @for (int i = 0; i < Model.Count(); i++)
-    {
-        <tr>
-            <td>
+@if (Model != null && Model.Any())
+{
+    <div class="group-checklist-container">
+        @for (int i = 0; i < Model.Count(); i++)
+        {
+            <div class="form-check mb-2 group-checklist-item" data-group-name="@Model[i].Name.ToLower()">
                 @Html.HiddenFor(x => Model[i].Id)
                 @Html.HiddenFor(x => Model[i].Name)
-                @Html.CheckBoxFor(x => Model[i].Selected, Model[i].Id)
-                @Html.DisplayFor(x => Model[i].Name)
-            </td>
-        </tr>
-    }
-</table>
+                <div class="form-check">
+                    @Html.CheckBoxFor(x => Model[i].Selected, new { @class = "form-check-input", id = $"group_{Model[i].Id}", data_group_id = Model[i].Id })
+                    <label class="form-check-label" for="group_@Model[i].Id">
+                        <i class="bi bi-people-fill entity-icon-group me-1"></i>
+                        @Html.DisplayFor(x => Model[i].Name)
+                    </label>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p class="text-muted">No groups available.</p>
+}

@@ -18,6 +18,8 @@ services:
         ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
         HOSTING_ENVIRONMENT: ${HOSTING_ENVIRONMENT:-Docker}
         BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Release}
+        IMAGE_VERSION: ${IMAGE_VERSION:-latest}
+    image: ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest}
     ports:
       # IdentityServerStandalone ports
       - "${IDENTITY_STANDALONE_HTTP_PORT:-5000}:${IDENTITY_STANDALONE_CONTAINER_HTTP_PORT:-5000}"

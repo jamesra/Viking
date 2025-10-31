@@ -42,14 +42,37 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
-            var applicationUser = await _context.ApplicationUser.Include("GroupAssignments.Group")
+            var applicationUser = await _context.ApplicationUser
+                .Include(u => u.GroupAssignments)
+                    .ThenInclude(ga => ga.Group)
+                .Include(u => u.PermissionsHeld)
+                    .ThenInclude(p => p.Resource)
                 .SingleOrDefaultAsync(m => m.Id == id);
+            
             if (applicationUser == null)
             {
                 return NotFound();
             }
 
-            ViewBag.RecursiveGroups = await _context.RecursiveMemberOfGroups(id);
+            // Get user's groups (recursive)
+            var recursiveGroups = await _context.RecursiveMemberOfGroups(id);
+            
+            // Get volumes user has access to
+            var userVolumeIds = await _context.GrantedUserPermissions
+                .Where(gup => gup.UserId == id)
+                .Select(gup => gup.ResourceId)
+                .Distinct()
+                .ToListAsync();
+
+            var volumes = await _context.Volume
+                .Where(v => userVolumeIds.Contains(v.Id))
+                .Include(v => v.Parent)
+                .Include(v => v.UsersWithPermissions.Where(gup => gup.UserId == id))
+                .ToListAsync();
+
+            ViewBag.RecursiveGroups = recursiveGroups;
+            ViewBag.UserGroups = applicationUser.GroupAssignments?.Select(ga => ga.Group).ToList() ?? new List<Group>();
+            ViewBag.Volumes = volumes;
 
             return View(applicationUser);
         }

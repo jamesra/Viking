@@ -27,11 +27,12 @@ namespace Viking.Identity.Server.Services
     // For more details see https://go.microsoft.com/fwlink/?LinkID=532713
     public class EmailSender : IEmailSender
     {
-        //readonly ILogger<EmailSender> Log; 
+        private readonly ILogger<EmailSender> _logger;
 
         public EmailSender(IOptions<EmailOptions> optionsAccessor, ILogger<EmailSender> logger)
         {
             Options = optionsAccessor.Value;
+            _logger = logger;
 
             if (string.IsNullOrEmpty(Options.FromEmail))
             {
@@ -42,8 +43,6 @@ namespace Viking.Identity.Server.Services
             {
                 logger.LogError("Email.Server configuration parameter not specified.");
             }
-
-            //Log = logger;
         }
 
         public EmailOptions Options { get; }
@@ -51,68 +50,101 @@ namespace Viking.Identity.Server.Services
         public Task SendEmailAsync(string[] emailAddresses, string subject, string message)
         {
             if (emailAddresses == null || emailAddresses.Length == 0)
+            {
+                _logger.LogWarning("SendEmailAsync called with no email addresses");
                 return Task.CompletedTask;
+            }
 
             if (!Options.EnableSending)
             {
-                // Email sending is disabled, just log and return
+                _logger.LogInformation("Email sending is disabled (EnableSending=false). Skipping send to: {Recipients}", string.Join(", ", emailAddresses));
                 return Task.CompletedTask;
             }
 
             if(string.IsNullOrEmpty(Options.FromEmail) || string.IsNullOrEmpty(Options.Server))
             {
+                _logger.LogError("Required Email parameters not configured. FromEmail: {FromEmail}, Server: {Server}", 
+                    Options.FromEmail ?? "null", Options.Server ?? "null");
                 throw new ArgumentException("Required Email parameters not configured.  Check the log.");
             }
 
-            using (SmtpClient ss2 = new SmtpClient(Options.Server))
+            var smtpPort = Options.Port ?? 25;
+            var smtpTimeout = Options.Timeout ?? 30;
+            var useSsl = Options.EnableSsl;
+            var useCredentials = Options.Username != null && Options.Username.Length > 0;
+
+            _logger.LogInformation("SMTP Send: Connecting to server {Server}:{Port}, SSL: {EnableSsl}, Timeout: {Timeout}s, Credentials: {HasCredentials}, Username: {Username}", 
+                Options.Server, smtpPort, useSsl, smtpTimeout, useCredentials, useCredentials ? Options.Username : "N/A");
+            _logger.LogInformation("SMTP Send: From: {FromEmail} ({FromName}), To: {Recipients}, Subject: {Subject}", 
+                Options.FromEmail, Options.FromName ?? "N/A", string.Join(", ", emailAddresses), subject);
+            _logger.LogDebug("SMTP Send: Message body length: {Length} characters, HTML: {IsHtml}", message.Length, Options.UseHtml);
+
+            try
             {
-
-                if (Options.Port.HasValue)
+                using (SmtpClient ss2 = new SmtpClient(Options.Server))
                 {
-                    ss2.Port = Options.Port.Value;
-                }
-
-                if (Options.Timeout.HasValue)
-                {
-                    ss2.Timeout = Options.Timeout.Value * 1000;
-                }
-
-                ss2.DeliveryMethod = SmtpDeliveryMethod.Network;
-
-                ss2.EnableSsl = Options.EnableSsl;
-
-                if (Options.Username != null && Options.Username.Length > 0)
-                {
-                    ss2.Credentials = new System.Net.NetworkCredential(Options.Username, Options.Password);
-                }
-                else
-                {
-                    ss2.UseDefaultCredentials = true;
-                }
-
-
-                using (MailMessage madmin = new MailMessage())
-                {
-                    
-                    madmin.From = new MailAddress(Options.FromEmail, Options.FromName);
-
-                    madmin.Subject = subject;
-
-                    madmin.Body = message;
-
-                    foreach (string email in emailAddresses)
+                    if (Options.Port.HasValue)
                     {
-                        madmin.To.Add(new MailAddress(email));
+                        ss2.Port = Options.Port.Value;
                     }
 
-                    madmin.IsBodyHtml = Options.UseHtml;
+                    if (Options.Timeout.HasValue)
+                    {
+                        ss2.Timeout = Options.Timeout.Value * 1000;
+                    }
 
-                    madmin.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+                    ss2.DeliveryMethod = SmtpDeliveryMethod.Network;
+                    ss2.EnableSsl = Options.EnableSsl;
 
-                    ss2.Send(madmin);
+                    if (Options.Username != null && Options.Username.Length > 0)
+                    {
+                        ss2.Credentials = new System.Net.NetworkCredential(Options.Username, Options.Password);
+                        _logger.LogDebug("SMTP Send: Using authentication with username: {Username}", Options.Username);
+                    }
+                    else
+                    {
+                        ss2.UseDefaultCredentials = true;
+                        _logger.LogDebug("SMTP Send: Using default credentials");
+                    }
+
+                    using (MailMessage madmin = new MailMessage())
+                    {
+                        madmin.From = new MailAddress(Options.FromEmail, Options.FromName);
+                        madmin.Subject = subject;
+                        madmin.Body = message;
+
+                        foreach (string email in emailAddresses)
+                        {
+                            madmin.To.Add(new MailAddress(email));
+                        }
+
+                        madmin.IsBodyHtml = Options.UseHtml;
+                        madmin.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+
+                        _logger.LogInformation("SMTP Send: Attempting to send email via {Server}:{Port}...", Options.Server, ss2.Port);
+                        ss2.Send(madmin);
+                        _logger.LogInformation("SMTP Send: Email sent successfully. Server: {Server}, Recipients: {Recipients}", 
+                            Options.Server, string.Join(", ", emailAddresses));
+                    }
+
+                    ss2.Dispose(); 
                 }
-
-                ss2.Dispose(); 
+            }
+            catch (System.Net.Mail.SmtpException ex)
+            {
+                _logger.LogError(ex, "SMTP Send: Failed to send email. Server: {Server}:{Port}, StatusCode: {StatusCode}, Error: {Message}. Recipients: {Recipients}", 
+                    Options.Server, smtpPort, ex.StatusCode, ex.Message, string.Join(", ", emailAddresses));
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError(ex.InnerException, "SMTP Send: Inner exception details");
+                }
+                throw;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "SMTP Send: Unexpected error sending email. Server: {Server}:{Port}, Error: {Message}. Recipients: {Recipients}", 
+                    Options.Server, smtpPort, ex.Message, string.Join(", ", emailAddresses));
+                throw;
             }
 
             return Task.CompletedTask;

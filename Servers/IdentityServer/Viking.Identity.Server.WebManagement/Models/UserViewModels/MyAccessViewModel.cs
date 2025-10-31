@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
 {
-    public class MyRightsViewModel
+    public class MyAccessViewModel
     {
         public string Username { get; set; }
         public bool IsAuthenticated { get; set; }
@@ -18,6 +18,4 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
         public List<string> Permissions { get; set; } = new List<string>();
     }
 }
-
-
 

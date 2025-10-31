@@ -2,169 +2,379 @@
 @model Viking.Identity.Models.Group
 
 @{
-    ViewData["Title"] = "Details";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = Model.Name;
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Groups", Url.Action("Index", "Groups")),
+        (Model.Name, null)
+    };
+    var canEdit = (await AuthorizationService.AuthorizeAsync(User, Model, Operations.GroupAccessManager)).Succeeded;
+    var isEveryoneGroup = Model.Id == Special.Groups.Everyone.Id;
+    var accessManagers = ViewBag.AccessManagers as List<string> ?? new List<string>();
 }
 
-<h2>Details</h2>
- 
-
-<div>
-    <h4>Group</h4>
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd>
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-        <dt>
-            @Html.DisplayNameFor(model => model.Id)
-        </dt>
-        <dd>
-            @Html.DisplayFor(model => model.Id)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Parent)
-        </dt>
-        <dd>
-            @if (Model.ParentID.HasValue)
-            {
-                @Html.DisplayFor(model => model.Parent.Name)
-            }
-            else
-            {
-                @Html.Display("<b>None</b>")
-            }
-        </dd>
-        <dt>
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd>
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-        <dt>
-            @Html.DisplayNameFor(model => model.NumMemberGroups)
-        </dt>
-        <dd>
-            @Html.DisplayFor(model => model.NumMemberGroups)
-        </dd>
-        <dt>
-            @Html.DisplayNameFor(model => model.NumMemberUsers)
-        </dt>
-        <dd>
-            @Html.DisplayFor(model => model.NumMemberUsers)
-        </dd>
-        @if (ViewData.ContainsKey("AccessManagers"))
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>
+        <i class="bi bi-people-fill entity-icon-group"></i> @Model.Name
+        @if (isEveryoneGroup)
         {
-            <dt>
-                Access Managers
-            </dt>
-            <dd>
-                <ul class="no-bullets">
-                    @for (int i = 0; i < ViewBag.AccessManagers.Count; i++)
-                    {
-                    <li>
-                        @ViewBag.AccessManagers[i]
-                    </li>
-                    }
-                </ul>
-                
-            </dd>
+            <span class="badge bg-warning text-dark ms-2" title="Special system group - all users are automatically members">
+                <i class="bi bi-shield-lock"></i> System Group
+            </span>
         }
-        <dd>
-            <table class="edit-settings">
-                <thead>
-                    <tr>
-                        <th>
-                            @Html.DisplayNameFor(model => Model.MemberOf)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => Model.MemberUsers)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => Model.MemberGroups)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => Model.GroupsWithPermissions)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => Model.UsersWithPermissions)
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <ul>
-                                @for (int i = 0; i < Model.MemberOf.Count; i++)
-                                {
-                                    <li>
-                                        @Html.DisplayFor(x => Model.MemberOf.ElementAt(i).Name)
-                                    </li>
-
-                                }
-                            </ul>
-                        </td>
-                        <td>
-                            <ul>
-                                @for (int i = 0; i < Model.Users.Count; i++)
-                                {
-
-                                    <li>
-                                        @Html.DisplayFor(x => Model.Users.ElementAt(i).UserName)
-                                    </li>
-
-                                }
-                            </ul>
-                        </td>
-                        <td>
-                            <ul>
-                                @for (int i = 0; i < Model.Groups.Count; i++)
-                                {
-
-                                    <li>
-                                        @Html.DisplayFor(x => Model.Groups.ElementAt(i).Name)
-                                    </li>
-
-                                }
-                            </ul>
-                        </td>
-                        <td>
-                            <!--<a asp-action="Create" asp-controller="GrantedGroupPermissions" asp-route-ResourceId="@Model.Id">Add Permission</a>-->
-                            <ul>
-                                @for (int i = 0; i < Model.GroupsWithPermissions.Count; i++)
-                                {
-                                    <li>
-                                        @Html.DisplayFor(x => Model.GroupsWithPermissions.ElementAt(i).PermittedGroup.Name) - @Html.DisplayFor(x => Model.GroupsWithPermissions.ElementAt(i).PermissionId)
-                                    </li>
-                                }
-                            </ul>
-                        </td>
-                        <td>
-                            <!--<a asp-action="Create" asp-controller="GrantedUserPermissions" asp-route-ResourceId="@Model.Id">Add Permission</a>-->
-                            <ul>
-                                @for (int i = 0; i < Model.UsersWithPermissions.Count; i++)
-                                {
-                                    <li>
-                                        @Html.DisplayFor(x => Model.UsersWithPermissions.ElementAt(i).PermittedUser.UserName) - @Html.DisplayFor(x => Model.UsersWithPermissions.ElementAt(i).PermissionId)
-                                    </li>
-
-                                }
-                            </ul>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </dd>
-    </dl> 
+    </h2>
+    <div class="btn-group" role="group">
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@Model.Id" class="btn btn-primary">
+                <i class="bi bi-shield-check"></i> Permissions
+            </a>
+            @if (!isEveryoneGroup)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+            }
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
 </div>
-<div>
-    @if ((await AuthorizationService.AuthorizeAsync(User, Model, Operations.GroupAccessManager)).Succeeded)
+
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs mb-4" id="groupTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">
+            <i class="bi bi-info-circle"></i> Overview
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="members-tab" data-bs-toggle="tab" data-bs-target="#members" type="button" role="tab" aria-controls="members" aria-selected="false">
+            <i class="bi bi-people"></i> Members
+            @if (Model.NumMemberUsers > 0)
+            {
+                <span class="badge bg-success ms-1">@Model.NumMemberUsers</span>
+            }
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="permissions-tab" data-bs-toggle="tab" data-bs-target="#permissions" type="button" role="tab" aria-controls="permissions" aria-selected="false">
+            <i class="bi bi-shield-check"></i> Permissions
+            @if (Model.GroupsWithPermissions.Any() || Model.UsersWithPermissions.Any())
+            {
+                <span class="badge bg-info ms-1">@(Model.GroupsWithPermissions.Count + Model.UsersWithPermissions.Count)</span>
+            }
+        </button>
+    </li>
+    @if (Model.Groups.Any())
     {
-        <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a><text> | </text>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="subgroups-tab" data-bs-toggle="tab" data-bs-target="#subgroups" type="button" role="tab" aria-controls="subgroups" aria-selected="false">
+                <i class="bi bi-diagram-3"></i> Subgroups
+                <span class="badge bg-primary ms-1">@Model.Groups.Count</span>
+            </button>
+        </li>
     }
-<a asp-action="Index">Back to List</a>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="groupTabContent">
+    <!-- Overview Tab -->
+    <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+        <div class="card card-modern">
+            <div class="card-header bg-group text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Group Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Name</dt>
+                    <dd class="col-sm-9">
+                        @Model.Name
+                        @if (isEveryoneGroup)
+                        {
+                            <span class="badge bg-warning text-dark ms-2">
+                                <i class="bi bi-shield-lock"></i> System Group
+                            </span>
+                        }
+                    </dd>
+                    
+                    <dt class="col-sm-3">Description</dt>
+                    <dd class="col-sm-9">
+                        @if (string.IsNullOrEmpty(Model.Description))
+                        {
+                            <em class="text-muted">No description</em>
+                        }
+                        else
+                        {
+                            @Model.Description
+                        }
+                        @if (isEveryoneGroup)
+                        {
+                            <div class="alert alert-info mt-2 mb-0">
+                                <i class="bi bi-info-circle"></i> <strong>Special Group:</strong> All users are automatically members of the Everyone group. This group cannot be edited or deleted.
+                            </div>
+                        }
+                    </dd>
+                    
+                    @if (Model.Parent != null)
+                    {
+                        <dt class="col-sm-3">Parent Organization</dt>
+                        <dd class="col-sm-9">
+                            <i class="bi bi-building text-org"></i>
+                            <a asp-controller="OrganizationalUnits" asp-action="Details" asp-route-id="@Model.Parent.Id">@Model.Parent.Name</a>
+                        </dd>
+                    }
+                    
+                    <dt class="col-sm-3">Member Users</dt>
+                    <dd class="col-sm-9">
+                        <span class="badge bg-success">
+                            <i class="bi bi-person"></i> @Model.NumMemberUsers user(s)
+                        </span>
+                    </dd>
+                    
+                    <dt class="col-sm-3">Member Groups</dt>
+                    <dd class="col-sm-9">
+                        <span class="badge bg-primary">@Model.NumMemberGroups group(s)</span>
+                    </dd>
+                    
+                    @if (accessManagers.Any())
+                    {
+                        <dt class="col-sm-3">Access Managers</dt>
+                        <dd class="col-sm-9">
+                            @foreach (var manager in accessManagers)
+                            {
+                                <span class="badge bg-warning text-dark">@manager</span>
+                            }
+                        </dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Members Tab -->
+    <div class="tab-pane fade" id="members" role="tabpanel" aria-labelledby="members-tab">
+        <div class="row">
+            <!-- Member Users -->
+            <div class="col-md-6 mb-4">
+                <div class="card card-modern">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person"></i> Member Users
+                            <span class="badge bg-light text-dark ms-2">@Model.Users.Count</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Users.Any())
+                        {
+                            <div class="list-group">
+                                @foreach (var user in Model.Users.OrderBy(u => u.UserName))
+                                {
+                                    <a asp-controller="ApplicationUsers" asp-action="Details" asp-route-id="@user.Id" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">
+                                                <i class="bi bi-person entity-icon-user"></i> @user.UserName
+                                            </h6>
+                                        </div>
+                                        <p class="mb-1">@user.GivenName @user.FamilyName</p>
+                                        @if (!string.IsNullOrEmpty(user.Email))
+                                        {
+                                            <small class="text-muted">@user.Email</small>
+                                        }
+                                    </a>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No users are members of this group.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Member Groups -->
+            <div class="col-md-6 mb-4">
+                <div class="card card-modern">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people-fill"></i> Member Groups
+                            <span class="badge bg-light text-dark ms-2">@Model.Groups.Count</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Groups.Any())
+                        {
+                            <div class="list-group">
+                                @foreach (var group in Model.Groups.OrderBy(g => g.Name))
+                                {
+                                    <a asp-action="Details" asp-route-id="@group.Id" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">
+                                                <i class="bi bi-people-fill entity-icon-group"></i> @group.Name
+                                            </h6>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(group.Description))
+                                        {
+                                            <p class="mb-1 text-muted small">@group.Description</p>
+                                        }
+                                    </a>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No groups are members of this group.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permissions Tab -->
+    <div class="tab-pane fade" id="permissions" role="tabpanel" aria-labelledby="permissions-tab">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card card-modern">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people-fill"></i> Permissions Granted to Groups
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.GroupsWithPermissions.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Group</th>
+                                            <th>Permission</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var perm in Model.GroupsWithPermissions.OrderBy(p => p.PermittedGroup.Name).ThenBy(p => p.PermissionId))
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <a asp-action="Details" asp-route-id="@perm.PermittedGroup.Id">@perm.PermittedGroup.Name</a>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-permission">@perm.PermissionId</span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No permissions have been granted to other groups.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card card-modern">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person"></i> Permissions Granted to Users
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.UsersWithPermissions.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Permission</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var perm in Model.UsersWithPermissions.OrderBy(p => p.PermittedUser.UserName).ThenBy(p => p.PermissionId))
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <a asp-controller="ApplicationUsers" asp-action="Details" asp-route-id="@perm.PermittedUser.Id">@perm.PermittedUser.UserName</a>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-permission">@perm.PermissionId</span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No permissions have been granted to users.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (canEdit)
+        {
+            <div class="card card-modern">
+                <div class="card-body">
+                    <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@Model.Id" class="btn btn-primary">
+                        <i class="bi bi-shield-check"></i> Manage Permissions
+                    </a>
+                </div>
+            </div>
+        }
+        @if (isEveryoneGroup)
+        {
+            <div class="alert alert-warning mt-3">
+                <i class="bi bi-exclamation-triangle"></i> <strong>System Group:</strong> The Everyone group is managed automatically by the system. All users are automatically members and this group cannot be edited.
+            </div>
+        }
+    </div>
+
+    <!-- Subgroups Tab -->
+    @if (Model.Groups.Any())
+    {
+        <div class="tab-pane fade" id="subgroups" role="tabpanel" aria-labelledby="subgroups-tab">
+            <div class="card card-modern">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3"></i> Subgroups
+                        <span class="badge bg-light text-dark ms-2">@Model.Groups.Count</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var subgroup in Model.Groups.OrderBy(g => g.Name))
+                        {
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card card-modern card-group">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="bi bi-people-fill entity-icon-group"></i> @subgroup.Name
+                                        </h6>
+                                        @if (!string.IsNullOrEmpty(subgroup.Description))
+                                        {
+                                            <p class="card-text text-muted small">@subgroup.Description</p>
+                                        }
+                                        <a asp-action="Details" asp-route-id="@subgroup.Id" class="btn btn-sm btn-outline-info">
+                                            <i class="bi bi-info-circle"></i> View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>

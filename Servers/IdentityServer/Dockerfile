@@ -91,6 +91,8 @@ RUN dotnet publish "Viking.Identity.Server.WebApi.csproj" -c $BUILD_CONFIGURATIO
 # Publish Viking.Identity.Server.WebManagement
 WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebManagement"
 RUN dotnet publish "IdentityManagementWebsite.csproj" -c $BUILD_CONFIGURATION -o /app/publish/identity-server /p:UseAppHost=false --runtime linux-x64 --self-contained false /p:DebugType=portable
+# Copy secrets.json explicitly to ensure it's included in the published output
+COPY IdentityServer/Viking.Identity.Server.WebManagement/secrets.json /app/publish/identity-server/secrets.json
 
 # Generate Data Protection keys
 FROM build AS keygenerator

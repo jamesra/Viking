@@ -1,4 +1,7 @@
 ﻿@model Viking.Identity.Server.WebManagement.Models.UserViewModels.ItemSelectedViewModel<string>
 
 @Html.HiddenFor(x => Model.Id) 
-@Html.CheckBoxFor(x => Model.Selected, Model.Id)
+<div class="form-check form-switch d-flex justify-content-center">
+    @Html.CheckBoxFor(x => Model.Selected, new { @class = "form-check-input permission-checkbox", id = Model.Id, role = "switch" })
+    <label class="form-check-label visually-hidden" for="@Model.Id">@Model.Id</label>
+</div>

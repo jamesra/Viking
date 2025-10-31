@@ -16,6 +16,9 @@ TestResults
 
 *Logs*.json 
 
+# Secrets files
+secrets.json
+
 # Build results
 build
 [Dd]ebug/

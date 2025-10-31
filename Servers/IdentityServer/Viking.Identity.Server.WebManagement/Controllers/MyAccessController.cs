@@ -13,13 +13,13 @@ using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
-    public class MyRightsController : Controller
+    public class MyAccessController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IConfiguration _configuration;
 
-        public MyRightsController(
+        public MyAccessController(
             IHttpClientFactory httpClientFactory,
             IHttpContextAccessor httpContextAccessor,
             IConfiguration configuration)
@@ -31,7 +31,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var model = new MyRightsViewModel
+            var model = new MyAccessViewModel
             {
                 IsAuthenticated = User.Identity?.IsAuthenticated ?? false,
                 Username = User.Identity?.Name ?? "Guest"

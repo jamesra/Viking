@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,8 +26,45 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: Volumes
         public async Task<IActionResult> Index()
         {
-            var applicationDbContext = _context.Volume.Include(v => v.Parent);
-            return View(await applicationDbContext.ToListAsync());
+            var allVolumes = await _context.Volume
+                .Include(v => v.Parent)
+                .Include(v => v.UsersWithPermissions)
+                .Include(v => v.GroupsWithPermissions)
+                .ToListAsync();
+
+            // Filter volumes to only show those the user has access to
+            var accessibleVolumes = new List<Volume>();
+            foreach (var volume in allVolumes)
+            {
+                // User can see volume if they're admin of parent org OR have any permissions on the volume
+                var isParentAdmin = await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume);
+                
+                // Check if user has direct permissions
+                var userId = HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var hasDirectPermissions = !string.IsNullOrEmpty(userId) && 
+                    volume.UsersWithPermissions?.Any(p => p.UserId == userId) == true;
+                
+                // Check if user is in any groups with permissions
+                // Note: We'll skip recursive group check for now to avoid complexity - this is a basic filter
+                // A more complete implementation would check group memberships recursively
+                var hasGroupPermissions = false;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    // Use RecursiveMemberOfGroups to get all groups user belongs to (including nested)
+                    var userGroups = await _context.RecursiveMemberOfGroups(userId);
+                    var userGroupIds = userGroups.Select(g => g.Id).ToList();
+                    
+                    hasGroupPermissions = userGroupIds.Any(groupId => 
+                        volume.GroupsWithPermissions?.Any(p => p.GroupId == groupId) == true);
+                }
+
+                if (isParentAdmin || hasDirectPermissions || hasGroupPermissions)
+                {
+                    accessibleVolumes.Add(volume);
+                }
+            }
+
+            return View(accessibleVolumes);
         }
 
         // GET: Volumes/Details/5
@@ -50,10 +88,15 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         }
 
         // GET: Volumes/Create
-        public IActionResult Create()
+        public IActionResult Create(long? parentOrgId = null)
         {
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name));
-            return View(new CreateVolumeViewModel());
+            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), parentOrgId);
+            var viewModel = new CreateVolumeViewModel();
+            if (parentOrgId.HasValue && parentOrgId.Value > 0)
+            {
+                viewModel.ParentId = parentOrgId.Value;
+            }
+            return View(viewModel);
         }
 
         [HttpGet]

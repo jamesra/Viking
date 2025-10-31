@@ -81,6 +81,49 @@
     </div>
 </div>
 
+<!-- Rotating Banner Section -->
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <img id="rotatingBanner" src="" class="img-fluid w-100" style="height: auto; display: block;" alt="Banner" />
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        $(document).ready(function() {
+            // List of banner images - add more files here as you add banners to the images/banners folder
+            var banners = [
+                '/images/banners/NetworkBanner.png',
+                '/images/banners/VikingBanner1.jpg'
+            ];
+
+            if (banners.length === 0) {
+                // Hide banner container if no banners available
+                $('#rotatingBanner').closest('.container').hide();
+                return;
+            }
+
+            var currentIndex = Math.floor(Math.random() * banners.length);
+            var bannerImg = $('#rotatingBanner');
+
+            // Function to load and display a banner
+            function showBanner(index) {
+                var bannerUrl = banners[index];
+                bannerImg.attr('src', bannerUrl);
+                bannerImg.attr('alt', 'Banner ' + (index + 1));
+            }
+
+            // Show initial random banner
+            showBanner(currentIndex);
+
+            // Rotate banners every 10 seconds (10000 milliseconds)
+            setInterval(function() {
+                currentIndex = (currentIndex + 1) % banners.length;
+                showBanner(currentIndex);
+            }, 10000);
+        });
+    </script>
 }

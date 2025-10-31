@@ -1,51 +1,74 @@
 ﻿@model Viking.Identity.Models.Volume
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Edit Volume";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Volumes", Url.Action("Index", "Volumes")),
+        (Model.Name, Url.Action("Details", "Volumes", new { id = Model.Id })),
+        ("Edit", null)
+    };
 }
 
-<h2>Edit</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-hdd-stack"></i> Edit Volume: @Model.Name</h2>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Details
+    </a>
+</div>
 
-<h4>Volume</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="Endpoint" class="control-label"></label>
-                <input asp-for="Endpoint" class="form-control" />
-                <span asp-validation-for="Endpoint" class="text-danger"></span>
-            </div>
+<div class="card card-modern">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Volume Information</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" id="editVolumeForm">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
             <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
                 <input asp-for="Name" class="form-control" />
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
                 <input asp-for="Description" class="form-control" />
                 <span asp-validation-for="Description" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Parent" class="control-label"></label>
-                <select asp-for="ParentID" asp-items="@ViewBag.AvailableParents">
+            <div class="mb-3">
+                <label asp-for="Endpoint" class="form-label"></label>
+                <input asp-for="Endpoint" class="form-control" placeholder="https://example.com/volume" />
+                <span asp-validation-for="Endpoint" class="text-danger"></span>
+                <small class="form-text text-muted">Enter the endpoint URL for this volume</small>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Parent" class="form-label"></label>
+                <select asp-for="ParentID" asp-items="@ViewBag.AvailableParents" class="form-select">
                     <option value="">None</option>
                 </select>
                 <span asp-validation-for="ParentID" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-default" />
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-save"></i> Save Changes
+                </button>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            $('#editVolumeForm').on('submit', function() {
+                var $submitBtn = $(this).find('button[type="submit"]');
+                $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...');
+            });
+        });
+    </script>
 }

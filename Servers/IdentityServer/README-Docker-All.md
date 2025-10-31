@@ -110,6 +110,39 @@ REMOTE_DEBUG_PORT=4024
 
 **Note**: Remote debugging is automatically enabled when `ASPNETCORE_ENVIRONMENT` is set to `Development` or `Debug`.
 
+### Docker Image Versioning
+Version your Docker images for deployment to registries:
+
+```bash
+# Set image version (default: latest)
+IMAGE_VERSION=1.2.3
+
+# Set registry prefix (optional, for pushing to registries)
+# Examples:
+#   Docker Hub: IMAGE_REGISTRY=username/
+#   Azure ACR: IMAGE_REGISTRY=myregistry.azurecr.io/
+#   AWS ECR: IMAGE_REGISTRY=123456789.dkr.ecr.us-east-1.amazonaws.com/
+IMAGE_REGISTRY=myregistry.azurecr.io/
+
+# Build with version
+docker-compose -f docker-compose-all.yml build
+
+# Tag with multiple versions (best practice)
+docker tag ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest} ${IMAGE_REGISTRY:-}identity-all-services:1.2
+docker tag ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest} ${IMAGE_REGISTRY:-}identity-all-services:1
+docker tag ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest} ${IMAGE_REGISTRY:-}identity-all-services:latest
+
+# Push to registry
+docker push ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest}
+docker push ${IMAGE_REGISTRY:-}identity-all-services:latest
+```
+
+**Versioning Strategy:**
+- Use semantic versioning (e.g., `1.2.3`) for releases
+- Tag with major (`1`), minor (`1.2`), and patch (`1.2.3`) versions
+- Always tag `latest` to the most recent stable version
+- Use git commit SHA for development builds: `IMAGE_VERSION=$(git rev-parse --short HEAD)`
+
 ## Remote Debugging
 
 ### Enabling Remote Debugging

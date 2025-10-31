@@ -2,9 +2,15 @@
 
 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-<div class="form-group">
-    <h4><label asp-for="@Model.GroupPermissions"></label></h4>
-    <table class="edit-settings">
+@if (Model.GroupPermissions != null && Model.GroupPermissions.Any())
+{
+<div class="card card-modern mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-people-fill"></i> Group Permissions</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-modern permission-grid">
         <thead>
             <tr>
                 <th>
@@ -31,18 +37,29 @@
 
                     @for (int iPermission = 0; iPermission < Model.GroupPermissions[i].Permissions.Count(); iPermission++)
                     {
-                        <td>
-                            <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.GroupPermissions[i].Permissions[iPermission]" />
+                        <td class="text-center">
+                            <div class="form-check form-check-inline d-flex justify-content-center">
+                                <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.GroupPermissions[i].Permissions[iPermission]" />
+                            </div>
                         </td>
                     }
                 </tr>
             }
         </tbody>
     </table>
+        </div>
+    </div>
 </div>
-<div class="form-group">
-    <h4><label asp-for="@Model.UserPermissions"></label></h4>
-    <table class="edit-settings">
+}
+@if (Model.UserPermissions != null && Model.UserPermissions.Any())
+{
+<div class="card card-modern mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-person"></i> User Permissions</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-modern permission-grid">
         <thead>
             <tr>
                 <th>
@@ -69,12 +86,23 @@
 
                     @for (int iPermission = 0; iPermission < Model.UserPermissions[i].Permissions.Count(); iPermission++)
                     {
-                        <td>
-                            <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.UserPermissions[i].Permissions[iPermission]" />
+                        <td class="text-center">
+                            <div class="form-check form-check-inline d-flex justify-content-center">
+                                <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.UserPermissions[i].Permissions[iPermission]" />
+                            </div>
                         </td>
                     }
                 </tr>
             }
         </tbody>
     </table>
+        </div>
+    </div>
 </div>
+}
+@if ((Model.GroupPermissions == null || !Model.GroupPermissions.Any()) && (Model.UserPermissions == null || !Model.UserPermissions.Any()))
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No users or groups have been granted permissions yet.
+    </div>
+}

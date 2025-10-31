@@ -173,19 +173,48 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             message += UserMessage + OrgMessage + NewOrgMessage;
 
+            string[] recipientEmails;
+            if (InvolvedAdmins.Count > 0)
+            {
+                recipientEmails = InvolvedAdmins.ToArray();
+                _logger.LogInformation("Claims request email: Preparing to send to {Count} organization admin(s). Recipients: {Recipients}", 
+                    recipientEmails.Length, string.Join(", ", recipientEmails));
+            }
+            else
+            {
+                recipientEmails = AdminUsers.Select(a => a.Email).ToArray();
+                _logger.LogInformation("Claims request email: Preparing to send to {Count} site admin(s). Recipients: {Recipients}", 
+                    recipientEmails.Length, string.Join(", ", recipientEmails));
+            }
+
+            _logger.LogDebug("Claims request email details - From user: {UserName} ({UserId}), Subject: {Subject}, Message length: {MessageLength} characters", 
+                User.UserName, User.Id, string.Format("{0} claim request", User.UserName), message.Length);
+
             try
             {
-                if (InvolvedAdmins.Count > 0)
-                {
-                    await this._emailSender.SendEmailAsync(InvolvedAdmins.ToArray(), string.Format("{0} claim request", User.UserName), message);
-                }
-                else
-                {
-                    await this._emailSender.SendEmailAsync(AdminUsers.Select(a => a.Email).ToArray(), string.Format("{0} claim request", User.UserName), message);
-                }
+                _logger.LogInformation("Claims request email: Attempting to send email to SMTP server...");
+                await this._emailSender.SendEmailAsync(recipientEmails, string.Format("{0} claim request", User.UserName), message);
+                _logger.LogInformation("Claims request email: Successfully sent email to {Count} recipient(s): {Recipients}", 
+                    recipientEmails.Length, string.Join(", ", recipientEmails));
             }
-            catch(System.Net.Mail.SmtpException)
+            catch(System.Net.Mail.SmtpException ex)
             {
+                _logger.LogError(ex, "Claims request email: SMTP error sending email. Recipients: {Recipients}, StatusCode: {StatusCode}, Message: {Message}", 
+                    string.Join(", ", recipientEmails), ex.StatusCode, ex.Message);
+                
+                StatusMessage = "Error sending message.  Please contact an administrator:\n";
+                foreach(var admin in AdminUsers)
+                {
+                    StatusMessage += "\t" + admin.Email + "\n";
+                }
+
+                return RedirectToAction(nameof(Index));
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Claims request email: Unexpected error sending email. Recipients: {Recipients}, Error: {Error}", 
+                    string.Join(", ", recipientEmails), ex.Message);
+                
                 StatusMessage = "Error sending message.  Please contact an administrator:\n";
                 foreach(var admin in AdminUsers)
                 {
