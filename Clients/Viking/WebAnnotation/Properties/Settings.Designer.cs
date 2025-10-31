@@ -55,5 +55,125 @@ namespace WebAnnotation.Properties {
                 this["FavoriteStructureIDs"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public int NumSectionsInMemory {
+            get {
+                return ((int)(this["NumSectionsInMemory"]));
+            }
+            set {
+                this["NumSectionsInMemory"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int NumSectionsLoading {
+            get {
+                return ((int)(this["NumSectionsLoading"]));
+            }
+            set {
+                this["NumSectionsLoading"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public float LocationTextScaleFactor {
+            get {
+                return ((float)(this["LocationTextScaleFactor"]));
+            }
+            set {
+                this["LocationTextScaleFactor"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2.5")]
+        public float ReferenceLocationTextScaleFactor {
+            get {
+                return ((float)(this["ReferenceLocationTextScaleFactor"]));
+            }
+            set {
+                this["ReferenceLocationTextScaleFactor"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("24")]
+        public double DefaultClosedLineWidth {
+            get {
+                return ((double)(this["DefaultClosedLineWidth"]));
+            }
+            set {
+                this["DefaultClosedLineWidth"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        public double DefaultLocationJumpDownsample {
+            get {
+                return ((double)(this["DefaultLocationJumpDownsample"]));
+            }
+            set {
+                this["DefaultLocationJumpDownsample"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public double AdjacentLocationRadiusScalar {
+            get {
+                return ((double)(this["AdjacentLocationRadiusScalar"]));
+            }
+            set {
+                this["AdjacentLocationRadiusScalar"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        public uint NumClosedCurveInterpolationPointsForDisplay {
+            get {
+                return ((uint)(this["NumClosedCurveInterpolationPointsForDisplay"]));
+            }
+            set {
+                this["NumClosedCurveInterpolationPointsForDisplay"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("12")]
+        public int PenSimplifyThreshold {
+            get {
+                return ((int)(this["PenSimplifyThreshold"]));
+            }
+            set {
+                this["PenSimplifyThreshold"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public double MinRadius {
+            get {
+                return ((double)(this["MinRadius"]));
+            }
+            set {
+                this["MinRadius"] = value;
+            }
+        }
     }
 }

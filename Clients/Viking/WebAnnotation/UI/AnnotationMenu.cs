@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Windows.Forms;
+using System.Windows.Forms.Integration;
 using Viking.Common;
 using WebAnnotation.UI;
 
@@ -11,6 +12,7 @@ namespace WebAnnotation
     {
         private static FindStructureNumberForm _FindStructureNumberForm = null;
         private static MergeStructuresForm _MergeStructuresForm = null;
+        private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog _preferencesDialog = null;
         private static ToolStripMenuItem menuPenMode;
 
         System.Windows.Forms.ToolStripItem Viking.Common.IMenuFactory.CreateMenuItem()
@@ -21,6 +23,10 @@ namespace WebAnnotation
             ToolStripMenuItem menuFavoriteTypes = new ToolStripMenuItem("Choose Favorited Structure Types");
             menuFavoriteTypes.Click += OnChooseFavoriteStructureTypes;
             menuRoot.DropDownItems.Add(menuFavoriteTypes);
+
+            ToolStripMenuItem menuPreferences = new ToolStripMenuItem("Preferences...");
+            menuPreferences.Click += OnPreferences;
+            menuRoot.DropDownItems.Add(menuPreferences);
 
             if (Global.Export != null)
             {
@@ -68,6 +74,55 @@ namespace WebAnnotation
             Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new Annotation.ViewModels.FavoriteStructureIDsViewModel(Global.UserFavoriteStructureTypes);
             StructureIDChoiceForm.DataContext = favorite_view_model;
             StructureIDChoiceForm.Show();
+        }
+
+        public static void OnPreferences(object sender, EventArgs e)
+        {
+            Debug.Print("OnPreferences");
+            
+            // If dialog already exists and is open, just focus it
+            if (_preferencesDialog != null && !_preferencesDialog.IsClosed)
+            {
+                _preferencesDialog.Focus();
+                return;
+            }
+
+            // Create ViewModel and load current settings
+            var viewModel = new WebAnnotation.WPF.Forms.AnnotationPreferencesDialogViewModel();
+            viewModel.LoadCurrentSettings(
+                Global.AnnotationSettings.NumSectionsInMemory,
+                Global.AnnotationSettings.NumSectionsLoading,
+                Global.AnnotationSettings.LocationTextScaleFactor,
+                Global.AnnotationSettings.ReferenceLocationTextScaleFactor,
+                Global.AnnotationSettings.DefaultClosedLineWidth,
+                Global.AnnotationSettings.DefaultLocationJumpDownsample,
+                Global.AnnotationSettings.AdjacentLocationRadiusScalar,
+                Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay,
+                Global.AnnotationSettings.PenSimplifyThreshold,
+                Global.AnnotationSettings.MinRadius
+            );
+
+            _preferencesDialog = new WebAnnotation.WPF.Forms.AnnotationPreferencesDialog(viewModel);
+            
+            // Wire up event handlers to save settings
+            _preferencesDialog.ApplyClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
+            _preferencesDialog.OkClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
+            
+            _preferencesDialog.Show(); // Modeless dialog
+        }
+
+        private static void SaveSettingsFromViewModel(WebAnnotation.WPF.Forms.AnnotationPreferencesDialogViewModel viewModel)
+        {
+            Global.AnnotationSettings.NumSectionsInMemory = viewModel.NumSectionsInMemory;
+            Global.AnnotationSettings.NumSectionsLoading = viewModel.NumSectionsLoading;
+            Global.AnnotationSettings.LocationTextScaleFactor = viewModel.LocationTextScaleFactor;
+            Global.AnnotationSettings.ReferenceLocationTextScaleFactor = viewModel.ReferenceLocationTextScaleFactor;
+            Global.AnnotationSettings.DefaultClosedLineWidth = viewModel.DefaultClosedLineWidth;
+            Global.AnnotationSettings.DefaultLocationJumpDownsample = viewModel.DefaultLocationJumpDownsample;
+            Global.AnnotationSettings.AdjacentLocationRadiusScalar = viewModel.AdjacentLocationRadiusScalar;
+            Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay = viewModel.NumClosedCurveInterpolationPointsForDisplay;
+            Global.AnnotationSettings.PenSimplifyThreshold = viewModel.PenSimplifyThreshold;
+            Global.AnnotationSettings.MinRadius = viewModel.MinRadius;
         }
 
         [MenuItem("Show Pen Input Window")]

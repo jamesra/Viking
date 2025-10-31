@@ -53,23 +53,12 @@
     <Setting Name="CachedUsername" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="ServerURLs" Type="System.Collections.Specialized.StringCollection" Scope="User">
-      <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
-&lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
-  &lt;string&gt;http://storage1.connectomes.utah.edu/&lt;/string&gt;
-  &lt;string&gt;http://internal.connectomes.utah.edu/&lt;/string&gt;
-  &lt;string&gt;http://openconnecto.me/ocp/ca/&lt;/string&gt;
-  &lt;string&gt;http://v2486.host.s.uw.edu/&lt;/string&gt;
-  &lt;string&gt;http://connectomes.utah.edu/&lt;/string&gt;
-  &lt;string&gt;http://storage2.connectomes.utah.edu/&lt;/string&gt;
-&lt;/ArrayOfString&gt;</Value>
-    </Setting>
     <Setting Name="ShowCommandHelp" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="VolumeURLs" Type="System.Collections.Specialized.StringCollection" Scope="User">
       <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
-&lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
+&lt;ArrayOfString xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt;
   &lt;string&gt;http://connectomes.utah.edu/Rabbit&lt;/string&gt;
   &lt;string&gt;http://internal.connectomes.utah.edu/RC2/SliceToVolume.VikingXML&lt;/string&gt;
   &lt;string&gt;http://storage1.connectomes.utah.edu/RPC1/SliceToVolume.VikingXML &lt;/string&gt;
@@ -89,6 +78,23 @@
     </Setting>
     <Setting Name="ScreenShotNumber" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="ServerURLs" Type="System.Collections.Specialized.StringCollection" Scope="User">
+      <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
+&lt;ArrayOfString xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt;
+  &lt;string&gt;http://storage1.connectomes.utah.edu/&lt;/string&gt;
+  &lt;string&gt;http://internal.connectomes.utah.edu/&lt;/string&gt;
+  &lt;string&gt;http://openconnecto.me/ocp/ca/&lt;/string&gt;
+  &lt;string&gt;http://v2486.host.s.uw.edu/&lt;/string&gt;
+  &lt;string&gt;http://connectomes.utah.edu/&lt;/string&gt;
+  &lt;string&gt;http://storage2.connectomes.utah.edu/&lt;/string&gt;
+&lt;/ArrayOfString&gt;</Value>
+    </Setting>
+    <Setting Name="ApiClientSecret" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Correct Horse Battery Staple</Value>
+    </Setting>
+    <Setting Name="VikingSecret" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Correct Horse Battery Staple</Value>
     </Setting>
   </Settings>
 </SettingsFile>

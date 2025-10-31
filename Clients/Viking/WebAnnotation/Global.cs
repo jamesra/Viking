@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -22,21 +23,58 @@ namespace WebAnnotation
 {
     public class Global : IInitExtensions
     {
-        internal static double DefaultLocationJumpDownsample = 4; //Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
+        /// <summary>
+        /// Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
+        /// </summary>
+        internal static double DefaultLocationJumpDownsample => AnnotationSettings.DefaultLocationJumpDownsample;
 
         /// <summary>
         /// Number of sections we should be attempting to load at the same time before cancelling a request
         /// </summary>
-        internal static int NumSectionsLoading = 5;
+        internal static int NumSectionsLoading => AnnotationSettings.NumSectionsLoading;
 
         internal static Export Export = null;
 
-#if DEBUG
-        internal static int NumSectionsInMemory = 10;
-#else
-        internal static int NumSectionsInMemory = 10;
-#endif
-        public static readonly double AdjacentLocationRadiusScalar = 0.5; //Make radius of annotations on adjacent sections half of the normal value
+        private static bool? _isSegmentationServiceAvailable;
+
+        /// <summary>
+        /// Returns true if a SegmentationService is configured and available with a valid URL format
+        /// </summary>
+        public static bool IsSegmentationServiceAvailable
+        {
+            get
+            {
+                if (_isSegmentationServiceAvailable.HasValue)
+                {
+                    return _isSegmentationServiceAvailable.Value;
+                }
+
+                string serviceUrl = ConfigurationManager.AppSettings["SegmentationServiceUrl"];
+                
+                if (string.IsNullOrWhiteSpace(serviceUrl))
+                {
+                    _isSegmentationServiceAvailable = false;
+                    return false;
+                }
+
+                // If no scheme is present, prepend http:// for validation (gRPC often uses host:port format)
+                string urlToValidate = serviceUrl.Contains("://") ? serviceUrl : $"http://{serviceUrl}";
+                
+                // Use built-in Uri validation
+                bool isValid = Uri.TryCreate(urlToValidate, UriKind.Absolute, out Uri result) &&
+                               (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
+
+                _isSegmentationServiceAvailable = isValid;
+                return isValid;
+            }
+        }
+
+        internal static int NumSectionsInMemory => AnnotationSettings.NumSectionsInMemory;
+
+        /// <summary>
+        /// Make radius of annotations on adjacent sections half of the normal value
+        /// </summary>
+        public static double AdjacentLocationRadiusScalar => AnnotationSettings.AdjacentLocationRadiusScalar;
 
         public static uint NumCurveInterpolationPoints(bool Closed)
         {
@@ -47,15 +85,171 @@ namespace WebAnnotation
         public static uint NumOpenCurveInterpolationPoints => Geometry.Global.NumOpenCurveInterpolationPoints;
         public static uint NumClosedCurveInterpolationPoints => Geometry.Global.NumClosedCurveInterpolationPoints;
 
-        public static uint NumClosedCurveInterpolationPointsForDisplay = 4;
+        public static uint NumClosedCurveInterpolationPointsForDisplay => AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay;
 
-        public static int PenSimplifyThreshold = 12;
+        public static int PenSimplifyThreshold => AnnotationSettings.PenSimplifyThreshold;
 
-        public static double DefaultClosedLineWidth = 24.0;
+        public static double DefaultClosedLineWidth => AnnotationSettings.DefaultClosedLineWidth;
 
-        public static double MinRadius = 0.5;
+        public static double MinRadius => AnnotationSettings.MinRadius;
 
         public static WebAnnotation.UI.Forms.PenAnnotationViewForm PenAnnotationForm = null;
+
+        /// <summary>
+        /// Wrapper class for annotation settings with validation
+        /// </summary>
+        public static class AnnotationSettings
+        {
+            private const int MIN_SECTIONS_IN_MEMORY = 1;
+            private const int MAX_SECTIONS_IN_MEMORY = 100;
+            private const int MIN_SECTIONS_LOADING = 1;
+            private const int MAX_SECTIONS_LOADING = 50;
+            private const double MIN_SCALE_FACTOR = 0.1;
+            private const double MAX_SCALE_FACTOR = 50.0;
+            private const double MIN_LINE_WIDTH = 1.0;
+            private const double MAX_LINE_WIDTH = 100.0;
+            private const double MIN_DOWNSAMPLE = 1.0;
+            private const double MAX_DOWNSAMPLE = 64.0;
+            private const double MIN_RADIUS_SCALAR = 0.1;
+            private const double MAX_RADIUS_SCALAR = 2.0;
+            private const int MIN_CURVE_POINTS = 2;
+            private const int MAX_CURVE_POINTS = 20;
+            private const int MIN_PEN_THRESHOLD = 1;
+            private const int MAX_PEN_THRESHOLD = 100;
+            private const double MIN_RADIUS = 0.1;
+            private const double MAX_RADIUS = 10.0;
+
+            // Helper methods for clamping values (Math.Clamp not available in .NET Framework 4.8)
+            private static int Clamp(int value, int min, int max) => value < min ? min : (value > max ? max : value);
+            private static double Clamp(double value, double min, double max) => value < min ? min : (value > max ? max : value);
+            private static float Clamp(float value, double min, double max) => (float)(value < min ? min : (value > max ? max : value));
+
+            public static int NumSectionsInMemory
+            {
+                get => Clamp(Properties.Settings.Default.NumSectionsInMemory, MIN_SECTIONS_IN_MEMORY, MAX_SECTIONS_IN_MEMORY);
+                set
+                {
+                    Properties.Settings.Default.NumSectionsInMemory = Clamp(value, MIN_SECTIONS_IN_MEMORY, MAX_SECTIONS_IN_MEMORY);
+                    Properties.Settings.Default.Save();
+                    OnSettingsChanged();
+                }
+            }
+
+            public static int NumSectionsLoading
+            {
+                get => Clamp(Properties.Settings.Default.NumSectionsLoading, MIN_SECTIONS_LOADING, MAX_SECTIONS_LOADING);
+                set
+                {
+                    Properties.Settings.Default.NumSectionsLoading = Clamp(value, MIN_SECTIONS_LOADING, MAX_SECTIONS_LOADING);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static float LocationTextScaleFactor
+            {
+                get => Clamp(Properties.Settings.Default.LocationTextScaleFactor, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
+                set
+                {
+                    Properties.Settings.Default.LocationTextScaleFactor = Clamp(value, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static float ReferenceLocationTextScaleFactor
+            {
+                get => Clamp(Properties.Settings.Default.ReferenceLocationTextScaleFactor, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
+                set
+                {
+                    Properties.Settings.Default.ReferenceLocationTextScaleFactor = Clamp(value, MIN_SCALE_FACTOR, MAX_SCALE_FACTOR);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static double DefaultClosedLineWidth
+            {
+                get => Clamp(Properties.Settings.Default.DefaultClosedLineWidth, MIN_LINE_WIDTH, MAX_LINE_WIDTH);
+                set
+                {
+                    Properties.Settings.Default.DefaultClosedLineWidth = Clamp(value, MIN_LINE_WIDTH, MAX_LINE_WIDTH);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static double DefaultLocationJumpDownsample
+            {
+                get => Clamp(Properties.Settings.Default.DefaultLocationJumpDownsample, MIN_DOWNSAMPLE, MAX_DOWNSAMPLE);
+                set
+                {
+                    Properties.Settings.Default.DefaultLocationJumpDownsample = Clamp(value, MIN_DOWNSAMPLE, MAX_DOWNSAMPLE);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static double AdjacentLocationRadiusScalar
+            {
+                get => Clamp(Properties.Settings.Default.AdjacentLocationRadiusScalar, MIN_RADIUS_SCALAR, MAX_RADIUS_SCALAR);
+                set
+                {
+                    Properties.Settings.Default.AdjacentLocationRadiusScalar = Clamp(value, MIN_RADIUS_SCALAR, MAX_RADIUS_SCALAR);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static uint NumClosedCurveInterpolationPointsForDisplay
+            {
+                get => (uint)Clamp((int)Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
+                set
+                {
+                    Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = (uint)Clamp((int)value, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static int PenSimplifyThreshold
+            {
+                get => Clamp(Properties.Settings.Default.PenSimplifyThreshold, MIN_PEN_THRESHOLD, MAX_PEN_THRESHOLD);
+                set
+                {
+                    Properties.Settings.Default.PenSimplifyThreshold = Clamp(value, MIN_PEN_THRESHOLD, MAX_PEN_THRESHOLD);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static double MinRadius
+            {
+                get => Clamp(Properties.Settings.Default.MinRadius, MIN_RADIUS, MAX_RADIUS);
+                set
+                {
+                    Properties.Settings.Default.MinRadius = Clamp(value, MIN_RADIUS, MAX_RADIUS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static void ResetToDefaults()
+            {
+                Properties.Settings.Default.NumSectionsInMemory = 10;
+                Properties.Settings.Default.NumSectionsLoading = 5;
+                Properties.Settings.Default.LocationTextScaleFactor = 5;
+                Properties.Settings.Default.ReferenceLocationTextScaleFactor = 2.5f;
+                Properties.Settings.Default.DefaultClosedLineWidth = 24.0;
+                Properties.Settings.Default.DefaultLocationJumpDownsample = 4.0;
+                Properties.Settings.Default.AdjacentLocationRadiusScalar = 0.5;
+                Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 4;
+                Properties.Settings.Default.PenSimplifyThreshold = 12;
+                Properties.Settings.Default.MinRadius = 0.5;
+                Properties.Settings.Default.Save();
+                OnSettingsChanged();
+            }
+
+            private static void OnSettingsChanged()
+            {
+                // Update cache size when memory settings change
+                if (AnnotationOverlay.CurrentOverlay != null)
+                {
+                    AnnotationOverlay.UpdateCacheSize(NumSectionsInMemory);
+                }
+            }
+        }
 
         /// <summary>
         /// Number of interpolations to place between curve control points, determines distance between control points

@@ -16,6 +16,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
+using Viking.UI.Commands;
 using Viking.ViewModels;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
@@ -33,8 +34,8 @@ namespace WebAnnotation
     [Viking.Common.SectionOverlay("Annotation")]
     internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, IPenActionSupport, ICanvasViewHitTesting
     {
-        public static float LocationTextScaleFactor = 5;
-        public static float ReferenceLocationTextScaleFactor = 2.5f;
+        public static float LocationTextScaleFactor => Global.AnnotationSettings.LocationTextScaleFactor;
+        public static float ReferenceLocationTextScaleFactor => Global.AnnotationSettings.ReferenceLocationTextScaleFactor;
         private Viking.UI.Controls.SectionViewerControl _Parent;
         public Viking.UI.Controls.SectionViewerControl Parent => _Parent;
 
@@ -97,6 +98,15 @@ namespace WebAnnotation
         {
             MessageBox.Show(
                 $"Server did not send proper response to save request.  The change was probably not saved.\nException:\n{e}", "Client <-> Server Error", MessageBoxButtons.OK);
+        }
+
+        /// <summary>
+        /// Updates the maximum cache size for section annotations
+        /// </summary>
+        /// <param name="maxSize">The new maximum cache size</param>
+        public static void UpdateCacheSize(int maxSize)
+        {
+            cacheSectionAnnotations.MaxCacheSize = maxSize;
         }
 
         public static bool SaveLocationsWithMessageBoxOnError()
@@ -970,7 +980,17 @@ namespace WebAnnotation
             {
                 //Refresh the annotations on F5
                 case Keys.CapsLock:
-                    Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand), new object[] {this.Parent, null });
+
+                    if (_Parent.CurrentCommand is null || _Parent.CurrentCommand is DefaultCommand)
+                    {
+                        _Parent.CurrentCommand = new SegmentationCommand(this.Parent, null,
+                        new SegmentationCommand.OnCommandSuccess((outputPolygon) =>
+                            {
+                                SegmentationCommand.CreateAnnotationFromPolygon(this.Parent, null, outputPolygon);
+                                // Determine structure type
+                            }
+                        ));
+                    }
                     return;
                 case Keys.F5:
                     ResetAnnotationsAsync(CancellationToken.None);

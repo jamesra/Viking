@@ -87,6 +87,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         // Structure type for created annotations
         private readonly StructureTypeObj structureType;
+
+        /// <summary>
+        /// Set to the segmented polygon if the command completes successfully
+        /// </summary>
+        public GridPolygon Output
+        {
+            get;
+            private set;
+        }
         #endregion
 
         #region Help Strings
@@ -113,11 +122,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         public ObservableCollection<string> ObservableHelpStrings => new ObservableCollection<string>(HelpStrings);
+
+
+        /// <summary>
+        /// Return the approved polygon
+        /// </summary>
+        /// <param name="output"></param>
+        public delegate void OnCommandSuccess(GridPolygon output);
+        private readonly OnCommandSuccess success_callback;
+
         #endregion
 
         #region Constructor
-        public SegmentationCommand(SectionViewerControl parent, StructureType type = null) : base(parent)
+        public SegmentationCommand(SectionViewerControl parent,
+            StructureType type = null,
+            OnCommandSuccess success_callback = null) : base(parent)
         {
+            this.success_callback = success_callback;
             structureType = type?.modelObj ?? (Viking.UI.State.SelectedObject as StructureType)?.modelObj;
             
             // Load configuration
@@ -208,113 +229,26 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 if (shiftHeld)
                 {
-                    // Shift + Left-click: Delete foreground point within POINT_RADIUS
-                    GridVector2? pointToRemove = FindPointWithinRadius(foregroundPoints, worldPos, POINT_RADIUS);
-                    if (pointToRemove.HasValue)
-                    {
-                        foregroundPoints.Remove(pointToRemove.Value);
-                        UpdatePointViews();
-                        
-                        // If last foreground point was removed, clear rendered mesh and polygons
-                        if (foregroundPoints.Count == 0)
-                        {
-                            ClearSegmentationResults();
-                        }
-                        else
-                        {
-                            RequestSegmentation();
-                        }
-                    }
+                    HandlePointDeletion(foregroundPoints, worldPos);
                 }
                 else
                 {
-                    // Check if clicking inside existing polygon to execute (finalize)
-                    GridPolygon clickedPolygon = FindPolygonContainingPoint(worldPos);
-                    if (clickedPolygon != null)
-                    {
-                        selectedPolygon = clickedPolygon;
-                        Execute();
-                        return;
-                    }
-
-                    // Check for overlapping foreground point
-                    GridVector2? existingPoint = FindPointWithinRadius(foregroundPoints, worldPos, POINT_RADIUS);
-                    if (!existingPoint.HasValue)
-                    {
-                        // Check if this is the first point being added
-                        bool isFirstPoint = (foregroundPoints.Count == 0 && backgroundPoints.Count == 0);
-                        
-                        // Add foreground point only if no overlap
-                        foregroundPoints.Add(worldPos);
-                        UpdatePointViews();
-                        
-                        // If this is the first point, upload the image first
-                        if (isFirstPoint && !currentImageId.HasValue && !isUploadingImage)
-                        {
-                            Debug.WriteLine("First point placed, uploading image to server cache");
-                            UploadCurrentImage().ContinueWith(task =>
-                            {
-                                if (task.Status == TaskStatus.RanToCompletion)
-                                {
-                                    RequestSegmentation();
-                                }
-                            }, TaskScheduler.FromCurrentSynchronizationContext());
-                        }
-                        else
-                        {
-                            RequestSegmentation();
-                        }
-                    }
+                    HandleForegroundPointAddition(worldPos);
                 }
             }
             else if (e.Button.Right())
             {
                 if (shiftHeld)
                 {
-                    // Shift + Right-click: Delete background point within POINT_RADIUS
-                    GridVector2? pointToRemove = FindPointWithinRadius(backgroundPoints, worldPos, POINT_RADIUS);
-                    if (pointToRemove.HasValue)
-                    {
-                        backgroundPoints.Remove(pointToRemove.Value);
-                        UpdatePointViews();
-                        RequestSegmentation();
-                    }
+                    HandlePointDeletion(backgroundPoints, worldPos);
                 }
                 else
                 {
-                    // Check for overlapping background point
-                    GridVector2? existingPoint = FindPointWithinRadius(backgroundPoints, worldPos, POINT_RADIUS);
-                    if (!existingPoint.HasValue)
-                    {
-                        // Check if this is the first point being added
-                        bool isFirstPoint = (foregroundPoints.Count == 0 && backgroundPoints.Count == 0);
-                        
-                        // Add background point only if no overlap
-                        backgroundPoints.Add(worldPos);
-                        UpdatePointViews();
-                        
-                        // If this is the first point, upload the image first
-                        if (isFirstPoint && !currentImageId.HasValue && !isUploadingImage)
-                        {
-                            Debug.WriteLine("First point placed, uploading image to server cache");
-                            UploadCurrentImage().ContinueWith(task =>
-                            {
-                                if (task.Status == TaskStatus.RanToCompletion)
-                                {
-                                    RequestSegmentation();
-                                }
-                            }, TaskScheduler.FromCurrentSynchronizationContext());
-                        }
-                        else
-                        {
-                            RequestSegmentation();
-                        }
-                    }
+                    HandleBackgroundPointAddition(worldPos);
                 }
             }
             else if (e.Button == MouseButtons.Middle)
             {
-                // Remove nearest point
                 RemoveNearestPoint(worldPos);
                 UpdatePointViews();
                 
@@ -330,6 +264,77 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             base.OnMouseDown(sender, e);
+        }
+
+        private void HandlePointDeletion(List<GridVector2> pointList, GridVector2 worldPos)
+        {
+            GridVector2? pointToRemove = FindPointWithinRadius(pointList, worldPos, POINT_RADIUS);
+            if (pointToRemove.HasValue)
+            {
+                pointList.Remove(pointToRemove.Value);
+                UpdatePointViews();
+                
+                // If last foreground point was removed, clear rendered mesh and polygons
+                if (foregroundPoints.Count == 0)
+                {
+                    ClearSegmentationResults();
+                }
+                else
+                {
+                    RequestSegmentation();
+                }
+            }
+        }
+
+        private void HandleForegroundPointAddition(GridVector2 worldPos)
+        {
+            // Check if clicking inside existing polygon to execute (finalize)
+            GridPolygon clickedPolygon = FindPolygonContainingPoint(worldPos);
+            if (clickedPolygon != null)
+            {
+                selectedPolygon = clickedPolygon;
+                Execute();
+                return;
+            }
+
+            HandlePointAddition(foregroundPoints, worldPos);
+        }
+
+        private void HandleBackgroundPointAddition(GridVector2 worldPos)
+        {
+            HandlePointAddition(backgroundPoints, worldPos);
+        }
+
+        private void HandlePointAddition(List<GridVector2> pointList, GridVector2 worldPos)
+        {
+            // Check for overlapping point
+            GridVector2? existingPoint = FindPointWithinRadius(pointList, worldPos, POINT_RADIUS);
+            if (!existingPoint.HasValue)
+            {
+                // Check if this is the first point being added
+                bool isFirstPoint = (foregroundPoints.Count == 0 && backgroundPoints.Count == 0);
+                
+                // Add point only if no overlap
+                pointList.Add(worldPos);
+                UpdatePointViews();
+                
+                // If this is the first point, upload the image first
+                if (isFirstPoint && !currentImageId.HasValue && !isUploadingImage)
+                {
+                    Debug.WriteLine("First point placed, uploading image to server cache");
+                    UploadCurrentImage().ContinueWith(task =>
+                    {
+                        if (task.Status == TaskStatus.RanToCompletion)
+                        {
+                            RequestSegmentation();
+                        }
+                    }, TaskScheduler.FromCurrentSynchronizationContext());
+                }
+                else
+                {
+                    RequestSegmentation();
+                }
+            }
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
@@ -1310,12 +1315,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return;
                 }
 
+                this.Output = selectedPolygon;
+                this?.success_callback(selectedPolygon);
                 // Create structure and location using the selected polygon
-                CreateAnnotationFromPolygon(selectedPolygon);
+                //CreateAnnotationFromPolygon(selectedPolygon);
 
                 // Clean up and deactivate
                 CleanupCommand();
-                Deactivated = true;
+                Deactivated = true; 
             }
             catch (Exception ex)
             {
@@ -1410,19 +1417,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return ordered;
         }
 
-        private void CreateAnnotationFromPolygon(GridPolygon polygon)
+        public static void CreateAnnotationFromPolygon(Viking.UI.Controls.SectionViewerControl Parent, StructureType type, GridPolygon polygon)
         {
-            // Determine structure type
-            StructureTypeObj type = structureType ?? GetDefaultStructureType();
-            if (type == null)
-            {
-                MessageBox.Show("No structure type selected. Please select a structure type first.", 
-                    "No Structure Type", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
+            StructureTypeObj typeObj = GetDefaultStructureType(type);
             // Create structure
-            StructureObj newStruct = new StructureObj(type);
+            StructureObj newStruct = new StructureObj(typeObj);
 
             // Create location with polygon type
             LocationObj newLocation = new LocationObj(
@@ -1449,8 +1448,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private StructureTypeObj GetDefaultStructureType()
+        /// <summary>
+        /// Gets the default structure type to use for new annotations if the provided type is null.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        private static StructureTypeObj GetDefaultStructureType(StructureType type = null)
         {
+            if(type is not null)
+                return type.modelObj;
+
             // Try to get from state
             StructureType result = Viking.UI.State.SelectedObject as StructureType;
             if(result is null)
@@ -1461,7 +1468,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 return result.modelObj;
             }
-
         }
         #endregion
 
