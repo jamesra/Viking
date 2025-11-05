@@ -11,19 +11,23 @@ const static int3 RGBIndexMap[] = {{0,1,2},
 								  {1,2,0},
 								  {0,2,1}};
 
-const static float4 ComponentLumaWeightsMap[] = {{0.30, 0.59, 0.11, 0.70}, //Luma weights of Chroma, slope, base, slope+base
-												 {0.59, 0.30, 0.11, 0.41},
-												 {0.59, 0.11, 0.30, 0.41},
-												 {0.11, 0.59, 0.30, 0.89},
-												 {0.11, 0.30, 0.59, 0.89},
-												 {0.30, 0.11, 0.59, 0.70}};
+const static float4 ComponentLumaWeightsMap[] = {
+	{0.30, 0.59, 0.11, 0.89}, // 0.30 + 0.59 = 0.89
+	{0.59, 0.30, 0.11, 0.89}, // 0.59 + 0.30 = 0.89
+	{0.59, 0.11, 0.30, 0.70}, // 0.59 + 0.11 = 0.70
+	{0.11, 0.59, 0.30, 0.70}, // 0.11 + 0.59 = 0.70
+	{0.11, 0.30, 0.59, 0.41}, // 0.11 + 0.30 = 0.41
+	{0.30, 0.11, 0.59, 0.41}  // 0.30 + 0.11 = 0.41
+};
 
-const static float4 InverseComponentLumaWeightsMap[] = {{1/0.30, 1/0.59, 1/0.11, 1/0.70}, //Luma weights of Chroma, slope, base, slope+base
-												 {1/0.59, 1/0.30, 1/0.11, 1/0.41},
-												 {1/0.59, 1/0.11, 1/0.30, 1/0.41},
-												 {1/0.11, 1/0.59, 1/0.30, 1/0.89},
-												 {1/0.11, 1/0.30, 1/0.59, 1/0.89},
-												 {1/0.30, 1/0.11, 1/0.59, 1/0.70}};
+const static float4 InverseComponentLumaWeightsMap[] = {
+	{1 / 0.30, 1 / 0.59, 1 / 0.11, 1 / 0.89},
+	{1 / 0.59, 1 / 0.30, 1 / 0.11, 1 / 0.89},
+	{1 / 0.59, 1 / 0.11, 1 / 0.30, 1 / 0.70},
+	{1 / 0.11, 1 / 0.59, 1 / 0.30, 1 / 0.70},
+	{1 / 0.11, 1 / 0.30, 1 / 0.59, 1 / 0.41},
+	{1 / 0.30, 1 / 0.11, 1 / 0.59, 1 / 0.41}
+};
 
 float BlendLumaWithBackground(float BackgroundLuma, float ForegroundLuma, float Alpha)
 {
@@ -31,12 +35,11 @@ float BlendLumaWithBackground(float BackgroundLuma, float ForegroundLuma, float 
 }
 
 
-float CalculateHSLLumaFromRGB(float4 RGB)
+// Calculate perceptual luma using ITU-R BT.601 coefficients
+// This preserves brightness as perceived by human vision
+float CalculatePerceptualLumaFromRGB(float4 RGB)
 {
-    float maxval = max(max(RGB.r, RGB.g), RGB.b);
-    float minval = min(min(RGB.r, RGB.g), RGB.b);
-
-    return (maxval + minval) / 2.0;
+    return mul(LumaWeights, RGB);
 }
 
 //Convert RGB value to Hue, Chroma, Luma, slope
@@ -76,7 +79,8 @@ float4 RGBToHCL(float4 RGB)
 	
 	Hue = HPrime / 6;
 	
-    float Luma = (maxC + minC) / 2.0; //mul(LumaWeights, RGB);
+    //float Luma = (maxC + minC) / 2.0;  
+	float Luma = mul(LumaWeights, RGB); // Perceptual luma, not HSL lightness
 
 	float4 HCL = {Hue, Chroma, Luma, RGB.a};
 
@@ -141,17 +145,80 @@ float4 HCLToRGB(float4 hcls)
 	return output;
 }
 
-float4 BlendHSLColorOverBackground(float4 HSLForegroundColor, float4 RGBBackgroundColor, float ForegroundLumaAlpha)
+// Calculate maximum achievable chroma at a given luma for a specific hue
+// Components = {Chroma, Slope, 0} before adding base offset m
+// After adding m: RGB components = Components + m
+// Constraint: all RGB in [0,1], Luma = weighted sum of RGB
+float GetMaxChromaAtLuma(float Hue, float Luma)
 {
-	float Hue = HSLForegroundColor.r;
-	float Saturation = HSLForegroundColor.g;
-	float ForegroundLuma = HSLForegroundColor.b;
-    float BackgroundLuma = CalculateHSLLumaFromRGB(RGBBackgroundColor); //mul(RGBBackgroundColor.xyz, LumaWeights.xyz);
+    // At the extremes (black/white), no chroma is possible
+    if (Luma <= 0.001 || Luma >= 0.999)
+        return 0.0;
+    
+    float HPrime = Hue * 6;
+    int Hextant = (int)HPrime;
+    float fDescend = fmod(HPrime, 2);
+    
+    // Test several chroma values to find maximum
+    // The relationship: Components = {Chroma, Slope, 0} + m
+    // where m adjusts to hit target luma
+    float4 ComponentLumaWeights = ComponentLumaWeightsMap[Hextant];
+    
+    // Calculate slope coefficient
+    float slopeCoeff = (1.0 - abs(fDescend - 1.0));
+    
+    // For a given chroma, the components are: {Chroma, Chroma*slopeCoeff, 0}
+    // The luma of these components: Luma_components = w.r*Chroma + w.g*Chroma*slopeCoeff + w.b*0
+    // To reach target Luma, we add m to all: m = Luma - Luma_components
+    // Final components: {Chroma+m, Chroma*slopeCoeff+m, m}
+    // All must be in [0,1]:
+    //   Chroma + m <= 1  =>  Chroma <= 1 - m
+    //   m >= 0  =>  Luma >= Luma_components
+    //   m <= 1  =>  Luma_components >= Luma - 1
+    
+    // The chromatic components contribute: ComponentLumaWeights[0]*C + ComponentLumaWeights[1]*C*slopeCoeff
+    float chromaLumaCoeff = ComponentLumaWeights[0] + ComponentLumaWeights[1] * slopeCoeff;
+    
+    // Base component contributes: ComponentLumaWeights[2] * m
+    // Luma = chromaLumaCoeff * Chroma + (Chroma*slopeCoeff + Chroma + m) * ComponentLumaWeights (weighted)
+    // Simpler: For Components {C, C*slope, 0} + m, the total luma is:
+    // Luma = ComponentWeights.r*(C+m) + ComponentWeights.g*(C*slope+m) + ComponentWeights.b*m
+    // Luma = C*(ComponentWeights.r + ComponentWeights.g*slope) + m*(ComponentWeights.r + ComponentWeights.g + ComponentWeights.b)
+    // Luma = C*chromaLumaCoeff + m
+    // So: m = Luma - C*chromaLumaCoeff
+    
+    // Constraints:
+    // C + m <= 1  =>  C + Luma - C*chromaLumaCoeff <= 1  =>  C*(1 - chromaLumaCoeff) <= 1 - Luma  =>  C <= (1-Luma)/(1-chromaLumaCoeff)
+    // m >= 0  =>  Luma >= C*chromaLumaCoeff  =>  C <= Luma/chromaLumaCoeff
+    
+    float maxFromUpperBound = (1.0 - Luma) / (1.0 - chromaLumaCoeff);
+    float maxFromLowerBound = Luma / chromaLumaCoeff;
+    
+    return min(maxFromUpperBound, maxFromLowerBound);
+}
+
+// Blend HCL (Hue, Chroma, Luma) foreground color over RGB background
+// Input foreground color is already in HCL format from C# ConvertToHCL
+float4 BlendHCLColorOverBackground(float4 HCLForegroundColor, float4 RGBBackgroundColor, float ForegroundLumaAlpha)
+{
+	float Hue = HCLForegroundColor.r;
+	float ForegroundChroma = HCLForegroundColor.g;
+	float ForegroundLuma = HCLForegroundColor.b;
+    float BackgroundLuma = CalculatePerceptualLumaFromRGB(RGBBackgroundColor);
 
 	float Luma = BlendLumaWithBackground(BackgroundLuma, ForegroundLuma, ForegroundLumaAlpha);
+	
+	// Limit chroma to what's achievable at the target luma
+	// This prevents CorrectLuma from clamping/desaturating
+	float Chroma = ForegroundChroma;
+	if (ForegroundChroma > 0.0)
+	{
+		float maxChroma = GetMaxChromaAtLuma(Hue, Luma);
+		Chroma = min(ForegroundChroma, maxChroma);
+	}
 
-	float4 hsv = { Hue, Saturation, Luma, HSLForegroundColor.a };
-	float4 finalColor = ForegroundLuma > 0 ? HCLToRGB(hsv) : RGBBackgroundColor;
+	float4 hcl = { Hue, Chroma, Luma, HCLForegroundColor.a };
+	float4 finalColor = ForegroundLuma > 0 ? HCLToRGB(hcl) : RGBBackgroundColor;
 
 	return finalColor;
 }

@@ -305,7 +305,7 @@ PixelShaderOutput SolidColorOverBackgroundLumaPixelShaderFunction(SolidColorPixe
 	float2 ScreenTexCoord = input.Position.xy / input.Position.w;
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / RenderTargetSize.xy));
-	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, InputLumaAlpha);
+	output.Color = BlendHCLColorOverBackground(input.HSLColor, RGBBackgroundColor, InputLumaAlpha);
 	output.Color.a = input.HSLColor.a;
 	return output;
 }
@@ -339,7 +339,7 @@ PixelShaderOutput HSLATextureOverBackgroundLumaPixelShaderFunction(LumaTexturePi
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy)));
-	output.Color = BlendHSLColorOverBackground(HSLColor, RGBBackgroundColor, 1.0f - HSLColor.a);
+	output.Color = BlendHCLColorOverBackground(HSLColor, RGBBackgroundColor, 1.0f - HSLColor.a);
 	output.Color.a = 1.0;
 
 	return output;
@@ -377,7 +377,7 @@ PixelShaderOutput GrayscaleTextureOverBackgroundLumaPixelShaderFunction(LumaText
 
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy)));
-	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
+	output.Color = BlendHCLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
 	output.Color.a = RGBColor.r * input.HSLColor.a;
 
 	return output;

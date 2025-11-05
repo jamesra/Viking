@@ -45,7 +45,7 @@ struct CircleVertexShaderOutput
 
 struct PixelShaderInput
 {
-    float4 Position : POSITION0;
+    float4 Position : SV_Position;
 	float4 HSLColor : COLOR0;
     float2 TexCoord : TEXCOORD0; 
 	float2 CenterDistance : TEXCOORD1; 
@@ -53,7 +53,7 @@ struct PixelShaderInput
 
 struct CirclePixelShaderInput
 {
-    float4 Position : POSITION0;
+    float4 Position : SV_Position;
 	float4 HSLColor : COLOR0;
 	float2 CenterDistance : TEXCOORD0;
     
@@ -110,7 +110,7 @@ PixelShaderOutput RGBATextureOverBackgroundLumaPixelShaderFunction(VertexShaderO
 	//This is a greyscale+Alpha image.  Greyscale indicates the degree of color, alpha indicates degree to which we use Overlay Luma or Background Luma
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy)));
-    output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
+    output.Color = BlendHCLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - RGBColor.a);
     output.Color.a = RGBColor.r * input.HSLColor.a;
 
     return output;
@@ -141,7 +141,7 @@ PixelShaderOutput RGBCircleOverBackgroundLumaPixelShaderFunction(CircleVertexSha
 	}
 
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / RenderTargetSize.xy));
-	output.Color = BlendHSLColorOverBackground(input.HSLColor, RGBBackgroundColor, alphaBlend);
+	output.Color = BlendHCLColorOverBackground(input.HSLColor, RGBBackgroundColor, alphaBlend);
 	output.Color.a = input.HSLColor.a;
     return output;
 }
