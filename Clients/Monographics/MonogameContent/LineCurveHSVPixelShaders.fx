@@ -135,7 +135,7 @@ Color_Depth_Output MyPSAnimatedLinearHSV(LINE_PS_INPUT input)
 	lineColorHSV.a = lineColor.a * BlurEdge(input.polar.x, blurThreshold) * modulation;
 	clip(lineColorHSV.a);
 
-	output.Color.rgb = lineColorHSV;
+	output.Color.rgb = lineColorHSV.rgb;
 	float depth = (input.polar.z * 2) > 1 ? 1 - ((1 - input.polar.z) * 2) : 1 - (input.polar.z * 2);
 	 //depth;
 					  //output.Color.a = lineColorHSV.a * (1 - depth) * modulation *(1 - input.polar.x);

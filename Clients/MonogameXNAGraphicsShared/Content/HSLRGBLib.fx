@@ -11,19 +11,23 @@ const static int3 RGBIndexMap[] = {{0,1,2},
 								  {1,2,0},
 								  {0,2,1}};
 
-const static float4 ComponentLumaWeightsMap[] = {{0.30, 0.59, 0.11, 0.70}, //Luma weights of Chroma, slope, base, slope+base
-												 {0.59, 0.30, 0.11, 0.41},
-												 {0.59, 0.11, 0.30, 0.41},
-												 {0.11, 0.59, 0.30, 0.89},
-												 {0.11, 0.30, 0.59, 0.89},
-												 {0.30, 0.11, 0.59, 0.70}};
+const static float4 ComponentLumaWeightsMap[] = {
+	{0.30, 0.59, 0.11, 0.89}, // 0.30 + 0.59 = 0.89
+	{0.59, 0.30, 0.11, 0.89}, // 0.59 + 0.30 = 0.89
+	{0.59, 0.11, 0.30, 0.70}, // 0.59 + 0.11 = 0.70
+	{0.11, 0.59, 0.30, 0.70}, // 0.11 + 0.59 = 0.70
+	{0.11, 0.30, 0.59, 0.41}, // 0.11 + 0.30 = 0.41
+	{0.30, 0.11, 0.59, 0.41}  // 0.30 + 0.11 = 0.41
+};
 
-const static float4 InverseComponentLumaWeightsMap[] = {{1/0.30, 1/0.59, 1/0.11, 1/0.70}, //Luma weights of Chroma, slope, base, slope+base
-												 {1/0.59, 1/0.30, 1/0.11, 1/0.41},
-												 {1/0.59, 1/0.11, 1/0.30, 1/0.41},
-												 {1/0.11, 1/0.59, 1/0.30, 1/0.89},
-												 {1/0.11, 1/0.30, 1/0.59, 1/0.89},
-												 {1/0.30, 1/0.11, 1/0.59, 1/0.70}};
+const static float4 InverseComponentLumaWeightsMap[] = {
+	{1 / 0.30, 1 / 0.59, 1 / 0.11, 1 / 0.89},
+	{1 / 0.59, 1 / 0.30, 1 / 0.11, 1 / 0.89},
+	{1 / 0.59, 1 / 0.11, 1 / 0.30, 1 / 0.70},
+	{1 / 0.11, 1 / 0.59, 1 / 0.30, 1 / 0.70},
+	{1 / 0.11, 1 / 0.30, 1 / 0.59, 1 / 0.41},
+	{1 / 0.30, 1 / 0.11, 1 / 0.59, 1 / 0.41}
+};
 
 float BlendLumaWithBackground(float BackgroundLuma, float ForegroundLuma, float Alpha)
 {
@@ -76,7 +80,8 @@ float4 RGBToHCL(float4 RGB)
 	
 	Hue = HPrime / 6;
 	
-    float Luma = (maxC + minC) / 2.0; //mul(LumaWeights, RGB);
+    //float Luma = (maxC + minC) / 2.0;  
+	float Luma = mul(LumaWeights, RGB); // Perceptual luma, not HSL lightness
 
 	float4 HCL = {Hue, Chroma, Luma, RGB.a};
 
@@ -98,7 +103,7 @@ float3 CorrectLuma(int Hextant, float3 Components, float Luma)
 
 	//Figure out how much to spill over
     OverlayLuma = mul(ComponentLumaWeights.xyz, Components);
-	m =  (Luma - OverlayLuma) * 1/ComponentLumaWeights[3];
+	m =  (Luma - OverlayLuma) * InverseComponentLumaWeightsMap[Hextant][3];
 	Components.gb += m; 
 
 	if(Components.g <= 1 && Components.g >= 0)
@@ -141,8 +146,39 @@ float4 HCLToRGB(float4 hcls)
 	return output;
 }
 
+// Convert HSV to HCL
+float4 HSVToHCL(float4 HSV)
+{
+    float Hue = HSV.r;
+    float Saturation = HSV.g;
+    float Value = HSV.b;
+    
+    // In HSV: Chroma = Value * Saturation
+    float Chroma = Value * Saturation;
+    
+    // Calculate what the RGB would be to get the luma
+    // For now, we can use a simpler approach: use Value directly
+    // or calculate the actual luma from the implicit RGB
+    float m = Value - Chroma;
+    
+    float HPrime = Hue * 6;
+    int Hextant = (int)HPrime;
+    float fDescend = fmod(HPrime, 2);
+    float Slope = Chroma * (1 - abs(fDescend - 1));
+    
+    float3 Components = {Chroma, Slope, 0};
+    Components += m; // Add base value
+    
+    // Calculate luma with proper hextant weights
+    float4 ComponentLumaWeights = ComponentLumaWeightsMap[Hextant];
+    float Luma = mul(ComponentLumaWeights.xyz, Components);
+    
+    return float4(Hue, Chroma, Luma, HSV.a);
+}
+
 float4 BlendHSLColorOverBackground(float4 HSLForegroundColor, float4 RGBBackgroundColor, float ForegroundLumaAlpha)
 {
+	HSLForegroundColor = HSVToHCL(HSLForegroundColor)
 	float Hue = HSLForegroundColor.r;
 	float Saturation = HSLForegroundColor.g;
 	float ForegroundLuma = HSLForegroundColor.b;

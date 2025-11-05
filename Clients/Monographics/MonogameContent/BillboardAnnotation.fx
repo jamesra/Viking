@@ -399,7 +399,6 @@ PixelShaderOutput CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction(Lu
 }
 
 
-
 ////////////////////////////////////////////
 // Standard alpha blending billboard effects
 ////////////////////////////////////////////
@@ -408,8 +407,8 @@ technique SingleColorAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 EffectColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 SolidColorPixelShaderFunction();
+		VertexShader = compile vs_4_0 EffectColorVertexShaderFunction();
+		PixelShader = compile ps_4_0 SolidColorPixelShaderFunction();
 	}
 }
 
@@ -418,8 +417,8 @@ technique VertexColorAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 ColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 SolidColorPixelShaderFunction();
+		VertexShader = compile vs_4_0 ColorVertexShaderFunction();
+		PixelShader = compile ps_4_0 SolidColorPixelShaderFunction();
 	}
 }
 
@@ -428,8 +427,8 @@ technique TextureAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 TextureShaderFunction();
-		PixelShader = compile ps_3_0 TexturePixelShaderFunction();
+		VertexShader = compile vs_4_0 TextureShaderFunction();
+		PixelShader = compile ps_4_0 TexturePixelShaderFunction();
 	}
 }
 
@@ -438,8 +437,8 @@ technique SingleColorTextureAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 EffectColorLumaTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 GrayscaleTexturePixelShaderFunction();
+		VertexShader = compile vs_4_0 EffectColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_4_0 GrayscaleTexturePixelShaderFunction();
 	}
 }
 
@@ -448,8 +447,8 @@ technique VertexColorTextureAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 VertexColorLumaTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 GrayscaleTexturePixelShaderFunction();
+		VertexShader = compile vs_4_0 VertexColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_4_0 GrayscaleTexturePixelShaderFunction();
 	}
 }
 
@@ -462,8 +461,8 @@ technique CircleSingleColorAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 EffectColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 SolidColorCirclePixelShaderFunction();
+		VertexShader = compile vs_4_0 EffectColorVertexShaderFunction();
+		PixelShader = compile ps_4_0 SolidColorCirclePixelShaderFunction();
 	}
 }
 
@@ -472,8 +471,8 @@ technique CircleVertexColorAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 ColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 SolidColorCirclePixelShaderFunction();
+		VertexShader = compile vs_4_0 ColorVertexShaderFunction();
+		PixelShader = compile ps_4_0 SolidColorCirclePixelShaderFunction();
 	}
 }
 
@@ -482,8 +481,8 @@ technique CircleTextureAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 TextureShaderFunction();
-		PixelShader = compile ps_3_0 CircleTexturePixelShaderFunction();
+		VertexShader = compile vs_4_0 TextureShaderFunction();
+		PixelShader = compile ps_4_0 CircleTexturePixelShaderFunction();
 	}
 }
 
@@ -492,8 +491,8 @@ technique CircleSingleColorTextureAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 EffectColorLumaTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 CircleGrayscaleTexturePixelShaderFunction();
+		VertexShader = compile vs_4_0 EffectColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_4_0 CircleGrayscaleTexturePixelShaderFunction();
 	}
 }
 
@@ -502,8 +501,8 @@ technique CircleVertexColorTextureAlphaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 VertexColorLumaTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 CircleGrayscaleTexturePixelShaderFunction();
+		VertexShader = compile vs_4_0 VertexColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_4_0 CircleGrayscaleTexturePixelShaderFunction();
 	}
 }
 
@@ -517,8 +516,8 @@ technique SingleColorLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 EffectColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 SolidColorOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 EffectColorVertexShaderFunction();
+		PixelShader = compile ps_4_0 SolidColorOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
@@ -527,8 +526,8 @@ technique VertexColorLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 ColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 SolidColorOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 ColorVertexShaderFunction();
+		PixelShader = compile ps_4_0 SolidColorOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
@@ -537,8 +536,8 @@ technique TextureLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 TextureShaderFunction();
-		PixelShader = compile ps_3_0 HSLATextureOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 TextureShaderFunction();
+		PixelShader = compile ps_4_0 HSLATextureOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
@@ -547,8 +546,8 @@ technique SingleColorTextureLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 EffectColorLumaTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 GrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 EffectColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_4_0 GrayscaleTextureOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
@@ -557,8 +556,8 @@ technique VertexColorTextureLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 VertexColorLumaTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 GrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 VertexColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_4_0 GrayscaleTextureOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
@@ -573,8 +572,8 @@ technique CircleSingleColorLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 EffectColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 SolidColorCircleOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 EffectColorVertexShaderFunction();
+		PixelShader = compile ps_4_0 SolidColorCircleOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
@@ -583,8 +582,8 @@ technique CircleVertexColorLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 ColorVertexShaderFunction();
-		PixelShader = compile ps_3_0 SolidColorCircleOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 ColorVertexShaderFunction();
+		PixelShader = compile ps_4_0 SolidColorCircleOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
@@ -593,8 +592,8 @@ technique CircleTextureLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 TextureShaderFunction();
-		PixelShader = compile ps_3_0 CircleHSLATextureOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 TextureShaderFunction();
+		PixelShader = compile ps_4_0 CircleHSLATextureOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
@@ -603,8 +602,8 @@ technique CircleSingleColorTextureLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 EffectColorLumaTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 EffectColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_4_0 CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction();
 	}
 }
 
@@ -613,7 +612,7 @@ technique CircleVertexColorTextureLumaOverlayEffect
 {
 	pass
 	{
-		VertexShader = compile vs_3_0 VertexColorLumaTextureVertexShaderFunction();
-		PixelShader = compile ps_3_0 CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+		VertexShader = compile vs_4_0 VertexColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_4_0 CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction();
 	}
 }

@@ -27,7 +27,7 @@ Color_Depth_Output MyPSAlphaGradient(LINE_PS_INPUT input)
 	
 	finalColor.a = lineColor.a *  ((input.polar.z * 2) > 1 ? ((1 - input.polar.z) * 2) : (input.polar.z * 2)) * BlurEdge(input.polar.x, blurThreshold);
 
-	output.Color = finalColor;
+	output.Color.rgba = finalColor.rgba;
 	output.Depth = 0; 
 	return output;
 }
