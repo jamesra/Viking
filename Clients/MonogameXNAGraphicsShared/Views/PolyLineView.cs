@@ -130,7 +130,7 @@ namespace VikingXNAGraphics
             set
             {
                 _Color = value;
-                _HSLColor = value.ConvertToHSL();
+                _HSLColor = value.ConvertToHCL();
                 if (ControlPointViews != null)
                 {
                     foreach (CircleView cpv in ControlPointViews)

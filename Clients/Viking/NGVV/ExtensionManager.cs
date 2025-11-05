@@ -758,7 +758,7 @@ namespace Viking.Common
         private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
         {
             try
-            {
+             {
                 // Extract the assembly name from the full name
                 string assemblyName = new AssemblyName(args.Name).Name;
                 string assemblyFileName = assemblyName + ".dll";

@@ -4,7 +4,7 @@ using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace Viking.WPF
+namespace Viking.UI.WPF
 {
     /// <summary>
     /// Interaction logic for UserControl1.xaml

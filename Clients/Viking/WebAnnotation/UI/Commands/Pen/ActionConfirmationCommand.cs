@@ -180,7 +180,7 @@ namespace WebAnnotation.UI.Commands
 
                 case ShapeType2D.CURVEPOLYGON:
                 case ShapeType2D.POLYGON:
-                    DrawnShape2D = TriangleNetExtensions.CreateMeshForPolygon2D((GridPolygon)VolumeShape, ShapeColor.ConvertToHSL());
+                    DrawnShape2D = TriangleNetExtensions.CreateMeshForPolygon2D((GridPolygon)VolumeShape, ShapeColor.ConvertToHCL());
                     break;
 
                 case ShapeType2D.POINT:

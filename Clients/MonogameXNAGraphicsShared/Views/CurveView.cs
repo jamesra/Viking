@@ -89,7 +89,7 @@ namespace VikingXNAGraphics
             set
             {
                 _Color = value;
-                _HSLColor = value.ConvertToHSL();
+                _HSLColor = value.ConvertToHCL();
                 foreach (CircleView cpv in ControlPointViews)
                 {
                     cpv.Color = value;
@@ -136,7 +136,7 @@ namespace VikingXNAGraphics
         {
             this._CurveControlPoints = new CurveViewControlPoints(controlPoints, numInterpolations, TryToClose);
             this._Color = color;
-            this._HSLColor = color.ConvertToHSL();
+            this._HSLColor = color.ConvertToHCL();
             this.Style = lineStyle;
             this._ControlPointTexture = texture;
             this._LineWidth = lineWidth;

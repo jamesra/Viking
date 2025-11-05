@@ -2,6 +2,7 @@
 using RoundCurve;
 using RoundLineCode;
 using System;
+using System.ComponentModel;
 using VikingXNA;
 
 namespace VikingXNAGraphics
@@ -35,6 +36,7 @@ namespace VikingXNAGraphics
         /// <param name="scene"></param>
         void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay);
     }
+
 
     public static class RenderableExtensions
     {

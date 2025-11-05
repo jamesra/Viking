@@ -341,7 +341,7 @@ namespace Viking.UI.Controls
         }
 
         private ElementHost commandHelpTextScrollerHost;
-        private Viking.WPF.StringArrayAutoScroller commandHelpText;
+        private Viking.UI.WPF.StringArrayAutoScroller commandHelpText;
 
         private PenEventManager penEventManager;
         private GestureEventManager gestureEventManager;
@@ -391,13 +391,20 @@ namespace Viking.UI.Controls
 
             this.Controls.Add(commandHelpTextScrollerHost);
 
-            commandHelpText = new Viking.WPF.StringArrayAutoScroller
+            try { 
+                commandHelpText = new Viking.UI.WPF.StringArrayAutoScroller
+                {
+                    DataContext = this.CurrentCommand as IHelpStrings
+                };
+
+                //commandHelpText.TextArray = new String[] { "Hello", "world" };
+                //commandHelpText.InitializeComponent();
+                commandHelpTextScrollerHost.Child = commandHelpText;
+            }
+            catch(Exception ex)
             {
-                DataContext = this.CurrentCommand as IHelpStrings
-            };
-            //commandHelpText.TextArray = new String[] { "Hello", "world" };
-            //commandHelpText.InitializeComponent();
-            commandHelpTextScrollerHost.Child = commandHelpText;
+                Trace.WriteLine("Could not create command help text control: " + ex.Message, "UI");
+            }
 
             commandHelpTextScrollerHost.Height /= 2;
         }
@@ -2241,8 +2248,11 @@ namespace Viking.UI.Controls
                     this.Invalidate();
                     break;
                 case Keys.F1:
-                    this.commandHelpText.IsDropDownOpen = !this.commandHelpText.IsDropDownOpen;
-                    this.timerHelpTextChange.Enabled = !this.commandHelpText.IsDropDownOpen;
+                    if(commandHelpText != null)
+                    { 
+                        this.commandHelpText.IsDropDownOpen = !this.commandHelpText.IsDropDownOpen;
+                        this.timerHelpTextChange.Enabled = !this.commandHelpText.IsDropDownOpen;
+                    }
                     break;
             }
 
@@ -2760,6 +2770,9 @@ namespace Viking.UI.Controls
 
         private void timerHelpTextChange_Tick(object sender, EventArgs e)
         {
+            if(this.commandHelpText is null)
+                return;
+
             this.commandHelpText.TextArrayIndex++;
         }
 

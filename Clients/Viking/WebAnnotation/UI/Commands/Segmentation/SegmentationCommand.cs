@@ -228,7 +228,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Debug.WriteLine($"SegmentationCommand activated with {foregroundPoints.Count} foreground and {backgroundPoints.Count} background points");
                 UploadCurrentImage().ContinueWith(task =>
                 {
-                    if (task.Status == TaskStatus.RanToCompletion)
+                    if (task.Status == TaskStatus.RanToCompletion && task.Result)
                     {
                         RequestSegmentation();
                     }
@@ -290,14 +290,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             else if (e.Button.Right())
             {
-                if (shiftHeld)
-                {
+                if(shiftHeld)
                     HandlePointDeletion(backgroundPoints, worldPos);
-                }
                 else
-                {
                     HandleBackgroundPointAddition(worldPos);
-                }
             }
             else if (e.Button == MouseButtons.Middle)
             {
@@ -376,7 +372,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     Debug.WriteLine("First point placed, uploading image to server cache");
                     UploadCurrentImage().ContinueWith(task =>
                     {
-                        if (task.Status == TaskStatus.RanToCompletion)
+                        if (task.Status == TaskStatus.RanToCompletion && task.Result)
                         {
                             RequestSegmentation();
                         }
@@ -585,7 +581,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             // Distribute hues evenly across the color spectrum
             float hue = (float)index / Math.Max(total, 1);
-            return ColorFromHSL(hue, 0.8f, 0.5f, 0.5f);
+            return ColorFromHSL(hue, 0.8f, 0.5f, 0.25f);
         }
 
         /// <summary>
@@ -638,10 +634,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Server Image Upload/Delete
-        private async Task UploadCurrentImage()
+
+        /// <summary>
+        /// Upload an image to the server.  Returns true if successful
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool> UploadCurrentImage()
         {
-            if (isUploadingImage || grpcClient == null)
-                return;
+            if (grpcClient == null)
+                return false;
 
             isUploadingImage = true;
 
@@ -657,7 +658,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 if (imageData == null || imageData.Length == 0)
                 {
                     Debug.WriteLine("Failed to capture viewport image for upload");
-                    return;
+                    return false;
                 }
 
                 // Build gRPC upload request
@@ -683,14 +684,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 uploadedImageWidth = width;
                 uploadedImageHeight = height;
 
-                Debug.WriteLine($"Image uploaded successfully: ID={currentImageId}, dimensions={width}x{height}");
-
-                // After upload completes, request segmentation if we have points
-                if (foregroundPoints.Count > 0 || backgroundPoints.Count > 0)
-                {
-                    Debug.WriteLine("Requesting segmentation with uploaded image");
-                    RequestSegmentation();
-                }
+                Debug.WriteLine($"Image uploaded successfully: ID={currentImageId}, dimensions={width}x{height}"); 
+                return true;
             }
             catch (OperationCanceledException)
             {
@@ -716,6 +711,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 isUploadingImage = false;
             }
+
+            return false;
         }
 
         private async Task DeleteCurrentImage()
@@ -763,8 +760,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!currentImageId.HasValue && !isUploadingImage) 
             {
                 Debug.WriteLine("No cached image ID, uploading image first");
-                await UploadCurrentImage();
-                await RequestSegmentation();
+                UploadCurrentImage().ContinueWith(task =>
+                {
+                    if(!task.Result)
+                        return;
+
+                    RequestSegmentation();
+                });
+
                 return;
             }
 
@@ -838,15 +841,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     uploadedImageBounds = null;
 
                     // Re-upload the image and retry segmentation
-                    await UploadCurrentImage();
-                    var callOptions = new CallOptions(deadline: DateTime.UtcNow.AddSeconds(30));
-                    var response = await grpcClient.SegmentImageAsync(request, callOptions);
+                    if(await UploadCurrentImage())
+                    { 
+                        var callOptions = new CallOptions(deadline: DateTime.UtcNow.AddSeconds(30));
+                        var response = await grpcClient.SegmentImageAsync(request, callOptions);
 
-                    // Process response on UI thread
-                    await Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
-                    {
-                        ProcessSegmentationResponse(response);
-                    }));
+                        // Process response on UI thread
+                        await Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
+                        {
+                            ProcessSegmentationResponse(response);
+                        }));
+                    }
                 }
                 else
                 {
@@ -951,12 +956,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (maskTexture != null)
             {
                 // Transform segment bounds from viewport coordinates to world coordinates
-                GridVector2 topLeft = ViewportToWorld(bestSegment.X, bestSegment.Y, decodedWidth, decodedHeight);
+                GridVector2 topLeft = ViewportToWorld(bestSegment.X, response.Height - bestSegment.Y, uploadedImageWidth, uploadedImageHeight);
                 GridVector2 bottomRight = ViewportToWorld(
                     bestSegment.X + decodedWidth,
-                    bestSegment.Y + decodedHeight,
-                    decodedWidth, 
-                    decodedHeight
+                    (response.Height - bestSegment.Y) -decodedHeight,
+                    uploadedImageWidth,
+                    uploadedImageHeight
                 );
                 GridRectangle segmentBounds = new GridRectangle(topLeft, bottomRight);
                 maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
@@ -1324,21 +1329,32 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // Draw segment polygons first (underneath points)
             foreach (var polygonView in segmentPolygonViews)
             {
-                polygonView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                //polygonView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             }
 
             // Disable depth testing to ensure points always draw on top of polygons
             graphicsDevice.DepthStencilState = DepthStencilState.None;
 
             // Draw foreground points (green circles using PointSetView) - always on top
+            float FlashRate = 3; //x second between max opacity
+            DateTime now = DateTime.UtcNow;
+            float foreground_seconds = (now.Second * 1000 + now.Millisecond) / 1000f;
+        
+            double foreground_offset = ((foreground_seconds % FlashRate) / 3)  * 2 * Math.PI;
+
+            foreground_offset = Math.Sin(foreground_offset);
+            var background_offset = Math.Cos(foreground_offset);
+
             if (foregroundPointsView != null)
             {
+                foregroundPointsView.Alpha = (float)(0.5f + foreground_offset / 2);
                 foregroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             }
 
             // Draw background points (red circles using PointSetView) - always on top
             if (backgroundPointsView != null)
             {
+                backgroundPointsView.Alpha = (float)(0.5f + background_offset / 2);
                 backgroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             }
 

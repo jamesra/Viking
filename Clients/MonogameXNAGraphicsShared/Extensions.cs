@@ -681,6 +681,7 @@ namespace VikingXNAGraphics
             return hsl;
         }
 
+        [Obsolete("Use ConvertToHCL for shader compatibility. ConvertToHSL uses HSL color space which differs from shader expectations.")]
         public static Microsoft.Xna.Framework.Color ConvertToHSL(this Microsoft.Xna.Framework.Color color, float alpha)
         {
             HSLColor hsl = color.GetHSL();
@@ -696,9 +697,69 @@ namespace VikingXNAGraphics
             return HSLColor;
         }
 
+        [Obsolete("Use ConvertToHCL for shader compatibility. ConvertToHSL uses HSL color space which differs from shader expectations.")]
         public static Microsoft.Xna.Framework.Color ConvertToHSL(this Microsoft.Xna.Framework.Color color)
         {
             return color.ConvertToHSL((float)color.A / 255f);
+        }
+
+        /// <summary>
+        /// Converts an RGB color to HCL (Hue, Chroma, Luma) color space for use with shaders.
+        /// Uses perceptual luma (0.3R + 0.59G + 0.11B) to preserve brightness as perceived by human vision.
+        /// </summary>
+        /// <param name="color">Input RGB color</param>
+        /// <param name="alpha">Alpha value from 0 to 1</param>
+        /// <returns>Color with R=Hue(0-1)*255, G=Chroma*255, B=PerceptualLuma*255, A=alpha*255</returns>
+        public static Microsoft.Xna.Framework.Color ConvertToHCL(this Microsoft.Xna.Framework.Color color, float alpha)
+        {
+            float R = (float)color.R / 255f;
+            float G = (float)color.G / 255f;
+            float B = (float)color.B / 255f;
+
+            float max = Math.Max(R, Math.Max(G, B));
+            float min = Math.Min(R, Math.Min(G, B));
+            float chroma = max - min;
+
+            // Perceptual luma using ITU-R BT.601 coefficients
+            float luma = 0.3f * R + 0.59f * G + 0.11f * B;
+
+            // Calculate hue (0-1 range)
+            float hue = 0;
+            if (chroma > 0)
+            {
+                if (max == R)
+                {
+                    hue = ((G - B) / chroma) / 6f;
+                    if (hue < 0)
+                        hue += 1f;
+                }
+                else if (max == G)
+                {
+                    hue = ((B - R) / chroma + 2f) / 6f;
+                }
+                else // max == B
+                {
+                    hue = ((R - G) / chroma + 4f) / 6f;
+                }
+            }
+
+            return new Microsoft.Xna.Framework.Color(
+                (byte)(hue * 255f),
+                (byte)(chroma * 255f),
+                (byte)(luma * 255f),
+                (byte)(alpha * 255f)
+            );
+        }
+
+        /// <summary>
+        /// Converts an RGB color to HCL (Hue, Chroma, Luma) color space for use with shaders.
+        /// Uses perceptual luma (0.3R + 0.59G + 0.11B) to preserve brightness as perceived by human vision.
+        /// </summary>
+        /// <param name="color">Input RGB color</param>
+        /// <returns>Color with R=Hue(0-1)*255, G=Chroma*255, B=PerceptualLuma*255, A=original alpha</returns>
+        public static Microsoft.Xna.Framework.Color ConvertToHCL(this Microsoft.Xna.Framework.Color color)
+        {
+            return color.ConvertToHCL((float)color.A / 255f);
         }
 
         /// <summary>

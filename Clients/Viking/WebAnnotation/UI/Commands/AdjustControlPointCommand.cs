@@ -34,7 +34,7 @@ namespace WebAnnotation.UI.Commands
                                         OnCommandSuccess success_callback) : base(parent)
         {
             OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
-            CreateView(OriginalControlPoints, color.ConvertToHSL(0.5f), LineWidth, IsClosedCurve);
+            CreateView(OriginalControlPoints, color.ConvertToHCL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
             mapping = parent.Section.ActiveSectionToVolumeTransform;
         }

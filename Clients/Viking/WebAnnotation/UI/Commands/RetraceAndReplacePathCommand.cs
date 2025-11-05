@@ -360,9 +360,9 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         private void UpdateViews()
         {
-            Microsoft.Xna.Framework.Color CCW_Color = SwitchSide ? Microsoft.Xna.Framework.Color.Magenta.ConvertToHSL(0.5f) : Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f);
-            Microsoft.Xna.Framework.Color CW_Color = SwitchSide ? Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f) : Microsoft.Xna.Framework.Color.Magenta.ConvertToHSL(0.5f);
-            Microsoft.Xna.Framework.Color Grow_Color = Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f);
+            Microsoft.Xna.Framework.Color CCW_Color = SwitchSide ? Microsoft.Xna.Framework.Color.Magenta.ConvertToHCL(0.5f) : Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f);
+            Microsoft.Xna.Framework.Color CW_Color = SwitchSide ? Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f) : Microsoft.Xna.Framework.Color.Magenta.ConvertToHCL(0.5f);
+            Microsoft.Xna.Framework.Color Grow_Color = Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f);
             switch (CutAction)
             {
                 case RetraceCommandAction.NONE:
@@ -370,25 +370,25 @@ namespace WebAnnotation.UI.Commands
                     ClockwiseWalkMesh = null;
                     break;
                 case RetraceCommandAction.GROW_EXTERIOR_RING:
-                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
+                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f));
                     CounterClockwiseWalkMesh = GenerateOutputVolumePolygon().CreateMeshForPolygon2D(Grow_Color);
                     ClockwiseWalkMesh = null;
                     break;
                 case RetraceCommandAction.SHRINK_EXTERIOR_RING:
-                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
-                    //PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Red.ConvertToHSL(0.5f));
+                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f));
+                    //PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Red.ConvertToHCL(0.5f));
 
                     CounterClockwiseWalkMesh = CounterClockwiseCutPolygon.CreateMeshForPolygon2D(CCW_Color);
                     ClockwiseWalkMesh = ClockwiseCutPolygon.CreateMeshForPolygon2D(CW_Color);
                     break;
                 case RetraceCommandAction.GROW_INTERNAL_RING:
-                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
+                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(this.CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f));
                     CounterClockwiseWalkMesh = GenerateOutputVolumePolygon().CreateMeshForPolygon2D(Grow_Color);
                     ClockwiseWalkMesh = null;
                     break;
                 case RetraceCommandAction.SHRINK_INTERNAL_RING:
-                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHSL(0.5f));
-                    //PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Red.ConvertToHSL(0.5f));
+                    //NextWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(CounterClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f));
+                    //PrevWalkMesh = TriangleNetExtensions.CreateMeshForPolygon2D(ClockwiseCutPolygon.Smooth(Global.NumClosedCurveInterpolationPoints), Microsoft.Xna.Framework.Color.Red.ConvertToHCL(0.5f));
 
                     CounterClockwiseWalkMesh = CounterClockwiseCutPolygon.CreateMeshForPolygon2D(CCW_Color);
                     ClockwiseWalkMesh = ClockwiseCutPolygon.CreateMeshForPolygon2D(CW_Color);

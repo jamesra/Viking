@@ -69,7 +69,7 @@ namespace WebAnnotation.View
             }
         }
 
-        public Microsoft.Xna.Framework.Color HSLColor => _Color.ConvertToHSL();
+        public Microsoft.Xna.Framework.Color HSLColor => _Color.ConvertToHCL();
 
         public float Alpha
         {
@@ -91,7 +91,7 @@ namespace WebAnnotation.View
         public static uint NumInterpolationPoints = Global.NumClosedCurveInterpolationPoints;
         public LocationPolygonView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
-            _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
+            _ControlPointRadius = Global.DefaultClosedLineWidth / 4.0;
             VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape).ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
@@ -199,7 +199,7 @@ namespace WebAnnotation.View
         public List<CircleView> CreateControlPointViews(GridPolygon polygon)
         {
             List<CircleView> views = new List<CircleView>(polygon.ExteriorRing.Length);
-            views.AddRange(polygon.ExteriorRing.Select(p => new CircleView(new GridCircle(p, ControlPointRadius), HSLColor.AdjustHSLHue(180))));
+            views.AddRange(polygon.ExteriorRing.Select(p => new CircleView(new GridCircle(p, ControlPointRadius), HSLColor.AdjustHSLHue(180, 0.5f))));
 
             foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
             {
@@ -228,7 +228,7 @@ namespace WebAnnotation.View
             OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
 #if DEBUG
-            CircleView.Draw(device, scene, OverlayStyle.Luma, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
+            CircleView.Draw(device, scene, OverlayStyle.Alpha, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
 #else
             if(!Global.PenMode)
             {

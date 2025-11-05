@@ -53,7 +53,7 @@ namespace VikingXNAGraphics
 
             set
             {
-                _Color.SetAlpha(value);
+                _Color = _Color.SetAlpha(value);
                 UpdateViews();
             }
         }

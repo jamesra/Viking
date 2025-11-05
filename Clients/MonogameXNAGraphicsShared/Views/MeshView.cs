@@ -125,7 +125,7 @@ namespace VikingXNAGraphics
         public void Draw(GraphicsDevice device,
             IScene scene,
             PolygonOverlayEffect effect = null,
-            CullMode cullmode = CullMode.CullCounterClockwiseFace)
+            CullMode cullmode = CullMode.CullClockwiseFace)
         {  
             FillMode fillMode = this.WireFrame ? FillMode.WireFrame : FillMode.Solid;
              
@@ -135,7 +135,7 @@ namespace VikingXNAGraphics
         public static void Draw(GraphicsDevice device,
             IScene scene,
             PolygonOverlayEffect effect = null,
-            CullMode cullmode = CullMode.CullCounterClockwiseFace,
+            CullMode cullmode = CullMode.CullClockwiseFace,
             FillMode fillMode = FillMode.Solid,
             IEnumerable<MeshModel<VERTEXTYPE>> meshmodels = null)
         {

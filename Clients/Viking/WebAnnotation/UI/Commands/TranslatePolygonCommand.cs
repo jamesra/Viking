@@ -55,6 +55,20 @@ namespace WebAnnotation.UI.Commands
             this.success_callback = success_callback;
         }
 
+        public TranslatePolygonCommand(Viking.UI.Controls.SectionViewerControl parent,
+                                        GridPolygon MosaicPolygon,
+                                        GridVector2 VolumePosition,
+                                        GridVector2[] extra_points, //Additional points to display for user feedback
+                                        Microsoft.Xna.Framework.Color color,
+                                        OnCommandSuccess success_callback) : base(parent, VolumePosition)
+        {
+            OriginalMosaicPolygon = MosaicPolygon;
+            Color = color;
+            TransformedMosaicPolygon = CalculateTransformedPolygon();
+            CreateUpdateView();
+            this.success_callback = success_callback;
+        }
+
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
                                     VikingXNA.Scene scene,
                                     BasicEffect basicEffect)
@@ -62,7 +76,10 @@ namespace WebAnnotation.UI.Commands
             CircleView.Draw(graphicsDevice, scene, OverlayStyle.Luma,
                             new CircleView[] { OriginalVolumePositionView, TranslatedVolumePositionView });
 
-            MeshView<VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: new MeshModel<VertexPositionColor>[] { _mesh });
+            var oldValue = Parent.PolygonOverlayEffect.InputLumaAlphaValue;
+            Parent.PolygonOverlayEffect.InputLumaAlphaValue = 1f;
+            MeshView<VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, cullmode: CullMode.CullClockwiseFace, meshmodels: new MeshModel<VertexPositionColor>[] { _mesh });
+            Parent.PolygonOverlayEffect.InputLumaAlphaValue = oldValue;
         }
 
         protected override void OnAngleChanged()
@@ -91,7 +108,7 @@ namespace WebAnnotation.UI.Commands
                 poly = OriginalMosaicPolygon.Rotate(Angle);
             }
 
-            if (SizeScale != 1.0)
+            if (Math.Abs(SizeScale - 1.0) > Geometry.Global.Epsilon)
             {
                 poly = poly.Scale(SizeScale);
             }
@@ -108,7 +125,7 @@ namespace WebAnnotation.UI.Commands
         {
             GridPolygon TransformedVolumePolygon = mapping.TryMapShapeSectionToVolume(TransformedMosaicPolygon);
             TransformedVolumePolygon = TransformedVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
-            _mesh = TransformedVolumePolygon.CreateMeshForPolygon2D(Color.ConvertToHSL());
+            _mesh = TransformedVolumePolygon.CreateMeshForPolygon2D(Color.ConvertToHCL());
 
             OriginalVolumePositionView = new CircleView(new GridCircle(OriginalVolumePosition, 16), Microsoft.Xna.Framework.Color.Red);
             TranslatedVolumePositionView = new CircleView(new GridCircle(TranslatedVolumePosition, 16), Microsoft.Xna.Framework.Color.Green);

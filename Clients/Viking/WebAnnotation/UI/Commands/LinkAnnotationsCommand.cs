@@ -380,7 +380,7 @@ namespace WebAnnotation.UI.Commands
 
             float Time = (float)TimeSpan.FromTicks(DateTime.Now.Ticks - DateTime.Today.Ticks).TotalSeconds;
             RoundLineManager lineManager = UseLumaLineManager ? Parent.LumaOverlayLineManager : Parent.LineManager;
-            lineColor = UseLumaLineManager ? lineColor.ConvertToHSL() : lineColor;
+            lineColor = UseLumaLineManager ? lineColor.ConvertToHCL() : lineColor;
             lineManager.Draw(lineToParent,
                                     (float)(lineRadius),
                                     lineColor,

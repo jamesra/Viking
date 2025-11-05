@@ -83,6 +83,16 @@ namespace Viking
             // Check for Squirrel updates
             CheckForUpdates();
 
+            // Initialize WPF Application instance for Pack URI resolution
+            // This is required when hosting WPF controls in WinForms via ElementHost
+            if (System.Windows.Application.Current == null)
+            {
+                var wpfApp = new System.Windows.Application();
+                // Set ShutdownMode to OnExplicitShutdown to prevent automatic shutdown
+                // when WPF windows close, since this is a hybrid WinForms/WPF application
+                wpfApp.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown;
+            }
+
             Application.EnableVisualStyles();
 
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();
@@ -274,6 +284,12 @@ namespace Viking
             
             Application.Run(context);
 
+            // Shutdown WPF Application instance if it exists
+            if (System.Windows.Application.Current != null)
+            {
+                System.Windows.Application.Current.Shutdown();
+            }
+
             SynchronizedDebugWriter?.Close();
             DebugLogFile?.Close();
         }
@@ -316,39 +332,55 @@ namespace Viking
 
         private static string ShowLoginWindow(string VolumePath, string username=null, string password=null)
         {
+            // Use new WPF-based login system
+            var wpfLoginWindow = new Viking.UI.WPF.LoginWindow();
+            
+            // Provide recent volume URLs from settings
+            wpfLoginWindow.RecentVolumeUrls = Viking.Properties.Settings.Default.VolumeURLs;
+            
+            var result = wpfLoginWindow.ShowDialog();
 
-#if !USEASPMEMBERSHIP
-            using (Logon vikingLogon = new Logon(VolumePath is null ? null : new Uri(VolumePath)))
+            if (result != true)
             {
-                vikingLogon.ShowDialog();
-
-                if (vikingLogon.Result == DialogResult.Cancel)
-                { 
-                    return null;
-                } 
-
-                UI.State.UserBearerToken = vikingLogon.BearerToken;
-                UI.State.UserCredentials = vikingLogon.Credentials;
-
-                Viking.Tokens.TokenInjector.BearerToken = vikingLogon.BearerToken;
-                Viking.Tokens.TokenInjector.BearerTokenAuthority = vikingLogon.AuthenticationServiceURL.ToString();
-
-                return vikingLogon.VolumeURL;
+                return null;
             }
-#else
-            using (LogonASPMembership vikingLogon = new LogonASPMembership(VolumePath, username, password))
-            {
-                vikingLogon.ShowDialog();
 
-                if (vikingLogon.Result == DialogResult.Cancel)
+            UI.State.UserBearerToken = wpfLoginWindow.BearerToken;
+            UI.State.UserCredentials = wpfLoginWindow.Credentials;
+
+            if (wpfLoginWindow.BearerToken != null)
+            {
+                Viking.Tokens.TokenInjector.BearerToken = wpfLoginWindow.BearerToken;
+                var identityServerUrl = Viking.Properties.Settings.Default.IdentityServerURL;
+                if (!string.IsNullOrEmpty(identityServerUrl))
                 {
-                    return null;
+                    Viking.Tokens.TokenInjector.BearerTokenAuthority = identityServerUrl;
                 }
-                 
-                UI.State.UserCredentials = vikingLogon.Credentials;
-                return vikingLogon.VolumeURL;
             }
-#endif
+
+            // Add selected volume to recent volumes
+            if (!string.IsNullOrEmpty(wpfLoginWindow.VolumeURL))
+            {
+                var settings = Viking.Properties.Settings.Default;
+                if (settings.VolumeURLs == null)
+                {
+                    settings.VolumeURLs = new System.Collections.Specialized.StringCollection();
+                }
+
+                // Remove duplicate if it exists to move it to the top
+                if (settings.VolumeURLs.Contains(wpfLoginWindow.VolumeURL))
+                {
+                    settings.VolumeURLs.Remove(wpfLoginWindow.VolumeURL);
+                }
+
+                // Insert at top of list (most recent)
+                settings.VolumeURLs.Insert(0, wpfLoginWindow.VolumeURL);
+                settings.Save();
+                
+                System.Diagnostics.Trace.WriteLine($"[Viking] Saved volume to recent volumes: {wpfLoginWindow.VolumeURL}");
+            }
+
+            return wpfLoginWindow.VolumeURL;
         } 
 
 

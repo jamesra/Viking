@@ -12,6 +12,23 @@
 
 
 #---------------------------------- Content ---------------------------------#
+#begin CurveVertexShader.fx
+/copy:CurveVertexShader.fx
+
+#begin HSLRGBLib.fx
+/copy:HSLRGBLib.fx
+
+#begin LineCurveCommon.fx
+/copy:LineCurveCommon.fx
+
+#begin LineCurvePixelShaderShared.fx
+/copy:LineCurvePixelShaderShared.fx
+
+#begin LineVertexShader.fx
+/copy:LineVertexShader.fx
+
+#begin OverlayShaderShared.fx
+/copy:OverlayShaderShared.fx
 
 #begin AnnotationOverlayShader.fx
 /importer:EffectImporter

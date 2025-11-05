@@ -541,10 +541,40 @@ namespace WebAnnotation
 
                         SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out SqlGeometry VolumeShape);
 
-                        return new TranslatePolygonCommand(Parent,
+                        if(Global.IsSegmentationServiceAvailable)
+                        {
+                            //Fetch the medial axis of the polygon.  Pass those points to the translation algorithm.  Extract the medial axis points and pass them to the segmentation command. 
+                            var mosaic_shape_poly = MosaicShape.ToPolygon();
+                            var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxis(mosaic_shape_poly);
+                            var medial_axis_points = medial_axis.Points;
+
+
+                            return new TranslatePolygonCommand(Parent,
+                                mosaic_shape_poly,
+                                volumePosition,
+                                loc.Parent.Type.Color.ToXNAColor(0.25f),
+                                (MosaicPolygon) =>
+                                {
+                                    LocationObj newLoc = new LocationObj(loc.Parent,
+                                        Parent.Section.Number,
+                                        loc.TypeCode);
+                                    try
+                                    {
+                                        newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
+                                        Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                    }
+                                    catch (ArgumentException e)
+                                    {
+                                        MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                    }
+                                }
+                            );
+                        }
+                        else
+                            return new TranslatePolygonCommand(Parent,
                                                                  MosaicShape.ToPolygon(),
                                                                  volumePosition,
-                                                                 loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 loc.Parent.Type.Color.ToXNAColor(0.25f),
                                                                  (MosaicPolygon) =>
                                                                  {
                                                                      LocationObj newLoc = new LocationObj(loc.Parent,

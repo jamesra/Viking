@@ -30,15 +30,11 @@
 		<PackageReference Include="MonoGame.Framework.Native" Version="3.8.5-develop.4" />
 
 		<PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
-		<!-- Temporarily disable building the content until there is a working Monogame 3.8.5 build
-		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.5-develop.4" /> -->
+		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.5-develop.4" />
 	</ItemGroup>
 	
 	<ItemGroup>
-		<!--
-		Temporarily disable building the content until there is a working Monogame 3.8.5 build
 		<MonoGameContentReference Include="MonogameContent\Content.mgcb" />
-		-->
 		<None Include="app.config" />
 		<Compile Include="..\MonogameXNAGraphicsShared\**\*.cs" Exclude="..\MonogameXNAGraphicsShared\obj\**;..\MonogameXNAGraphicsShared\bin\**" />
 	</ItemGroup>
@@ -69,12 +65,4 @@
 		<Message Text="Restoring dotnet tools" Importance="High" />
 		<Exec Command="dotnet tool restore" />
 	</Target>
-	
-	
-	<!-- Custom target to build MonoGame content using the local MGCB tool -->
-	<!--
-	<Target Name="BuildMonoGameContent" BeforeTargets="Build" Condition="'$(Configuration)' != ''">
-		<Exec Command="dotnet tool run mgcb /quiet /@:Content.mgcb /outputDir:bin\Windows\Content /intermediateDir:obj\Windows\$(TargetFramework)\Content" WorkingDirectory="$(ProjectDir)MonogameContent" ContinueOnError="false" />
-	</Target>
-	-->
 </Project>

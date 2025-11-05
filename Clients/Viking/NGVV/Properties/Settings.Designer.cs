@@ -326,5 +326,17 @@ namespace Viking.Properties {
                 this["ScreenShotNumber"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://identity.codepharm.net:5001/")]
+        public string IdentityServerURL {
+            get {
+                return ((string)(this["IdentityServerURL"]));
+            }
+            set {
+                this["IdentityServerURL"] = value;
+            }
+        }
     }
 }

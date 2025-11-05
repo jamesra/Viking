@@ -24,8 +24,7 @@
 	</PropertyGroup>
 	<!-- Post-build event to copy output to Modules folder -->
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-
-
+ 
 		<!-- Create Modules directory if it doesn't exist -->
 		<Exec Command="if not exist &quot;$(ModulesDir)&quot; mkdir &quot;$(ModulesDir)&quot;" />
 

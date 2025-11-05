@@ -32,9 +32,23 @@
 			<HintPath>$(NuGetPackageRoot)\monogame.framework.windowsdx\3.7.1\lib\net45\MonoGame.Framework.dll</HintPath>
 		</Reference>
 	</ItemGroup>
-	<Target Name="CompileContent" BeforeTargets="Build">
+	
+	<!-- Collect all .fx files and content files as inputs for dependency tracking -->
+	<ItemGroup>
+		<MGCBShaderFiles Include="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\**\*.fx" />
+		<MGCBContentFiles Include="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\**\*.*" Exclude="@(MGCBShaderFiles);**\bin\**;**\obj\**" />
+		<MGCBConfigFile Include="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\Content.mgcb" />
+	</ItemGroup>
+	
+	<Target Name="CompileContent" BeforeTargets="Build"
+	        Inputs="@(MGCBShaderFiles);@(MGCBContentFiles);@(MGCBConfigFile)"
+	        Outputs="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\bin\Windows\.mgcb_timestamp">
+		
 		<Exec
 			Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;bin/Windows&quot; /intermediateDir:&quot;obj/Windows&quot;"
 			WorkingDirectory="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content" />
+		
+		<!-- Create timestamp file to track when content was built -->
+		<Touch Files="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\bin\Windows\.mgcb_timestamp" AlwaysCreate="true" />
 	</Target>
 </Project> 

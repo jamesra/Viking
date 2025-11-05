@@ -146,7 +146,7 @@ namespace MeasurementExtension
 
             Parent.LumaOverlayLineManager.Draw(lineToParent,
                                     (float)(6 * Parent.Downsample),
-                                    lineColor.ConvertToHSL(),
+                                    lineColor.ConvertToHCL(),
                                     scene.Camera.View * scene.Projection,
                                     1,
                                     "Glow");

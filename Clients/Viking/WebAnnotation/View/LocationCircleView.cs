@@ -656,13 +656,17 @@ namespace WebAnnotation.View
             }
             else if (ScreenFraction > MaxScreenFraction)
             {
-                return 0f;
+                return 0.25f;
             }
             else
             {
                 Range screenFractionRange = new Range(MinScreenFraction, MaxScreenFraction);
                 double scalar = screenFractionRange.Normalize(ScreenFraction, clip: true);
                 //double scalar = (ScreenFraction - MaxScreenFraction) / (MinScreenFraction - MaxScreenFraction);
+                scalar = 1f - scalar;
+                if(scalar < 0.25f)
+                    scalar = 0.25;
+
                 return (float)scalar;
             }
         }

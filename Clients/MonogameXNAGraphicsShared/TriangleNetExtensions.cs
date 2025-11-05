@@ -30,6 +30,7 @@ namespace VikingXNAGraphics
             {
                 ConformingDelaunay = false,
                 Convex = false
+
             };
 
             QualityOptions quality = new QualityOptions

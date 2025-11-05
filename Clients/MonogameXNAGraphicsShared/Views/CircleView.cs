@@ -267,7 +267,7 @@ namespace VikingXNAGraphics
             set
             {
                 _Color = value;
-                _HSLColor = value.ConvertToHSL();
+                _HSLColor = value.ConvertToHCL();
                 ClearCachedData();
             }
         }
@@ -529,7 +529,8 @@ namespace VikingXNAGraphics
             
             foreach (CircleView cv in arraySolidCircles)
             {
-                overlayEffect.AnnotationColorHSL = cv.HSLColor.SetAlpha(0.5f);
+                //overlayEffect.AnnotationColorHSL = cv.HSLColor.SetAlpha(0.5f);
+                overlayEffect.AnnotationColorHSL = cv.HSLColor;
                 overlayEffect.WorldViewProjMatrix = (cv.ModelMatrix * scene.World) * scene.ViewProj;
                 overlayEffect.InputLumaAlphaValue = 0f;
 
@@ -561,12 +562,25 @@ namespace VikingXNAGraphics
             CircleView.RestoreGraphicsDevice(device, overlayEffect);
         }
 
+         
+        static OverlayShaderEffect.Techniques GetTechnique(OverlayStyle style)
+        {
+            switch (style)
+            {
+                case OverlayStyle.Alpha:
+                    return OverlayShaderEffect.Techniques.CircleSingleColorAlphaOverlayEffect;
+                case OverlayStyle.Luma:
+                    return OverlayShaderEffect.Techniques.CircleSingleColorLumaOverlayEffect;
+            }
+
+            throw new NotImplementedException("GetTechnique: Unknown Overlay Style " + style.ToString());
+        } 
+
 
         public static void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items)
         {
             OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
-            overlayEffect.Technique = Overlay == OverlayStyle.Alpha ? OverlayShaderEffect.Techniques.CircleSingleColorAlphaOverlayEffect :
-                OverlayShaderEffect.Techniques.CircleSingleColorLumaOverlayEffect;
+            overlayEffect.Technique = GetTechnique(Overlay);
 
             CircleView.Draw(device, scene, overlayEffect, items.Select(i => i as CircleView).Where(i => i != null).ToArray());
             TextureCircleView.Draw(device, scene, overlayEffect, items.Select(i => i as TextureCircleView).Where(i => i != null).ToArray());

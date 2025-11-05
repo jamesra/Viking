@@ -8,6 +8,13 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EDFF88E3-E60F-431F-AC97-C738507425E3}"
 	ProjectSection(SolutionItems) = preProject
 		Connectome Project.vsmdi = Connectome Project.vsmdi
+		DOCKER-BUILD-FIXES.md = DOCKER-BUILD-FIXES.md
+		DOCKER-COMBINED-QUICKSTART.md = DOCKER-COMBINED-QUICKSTART.md
+		Docker-Combined-Services-README.md = Docker-Combined-Services-README.md
+		docker-compose.combined.yml = docker-compose.combined.yml
+		docker-compose.yml = docker-compose.yml
+		Docker-Configuration-README.md = Docker-Configuration-README.md
+		DOCKERFILE-RELOCATION-SUMMARY.md = DOCKERFILE-RELOCATION-SUMMARY.md
 		Clients\LocalTestRun.testrunconfig = Clients\LocalTestRun.testrunconfig
 		Servers\Performance1.psess = Servers\Performance1.psess
 	EndProjectSection

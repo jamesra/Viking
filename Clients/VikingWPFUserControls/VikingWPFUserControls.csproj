@@ -1,11 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <LangVersion>9.0</LangVersion>
     <UseWPF>true</UseWPF>
-    <AssemblyName>VikingWPFUserControls</AssemblyName>
-    <RootNamespace>VikingWPFUserControls</RootNamespace>
+    <AssemblyName>Viking.UI.WPF</AssemblyName>
+    <RootNamespace>Viking.UI.WPF</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WCFTokenInjector\WCFTokenInjector.csproj" />
+    <ProjectReference Include="..\VolumeModel\VolumeModel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Duende.IdentityModel" Version="7.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
 
 </Project>

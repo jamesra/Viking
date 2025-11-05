@@ -1,0 +1,31 @@
+<Window x:Class="Viking.UI.WPF.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Viking.UI.WPF"
+        xmlns:controls="clr-namespace:Viking.UI.WPF.Controls"
+        xmlns:converters="clr-namespace:Viking.UI.WPF.Converters"
+        xmlns:vm="clr-namespace:Viking.UI.WPF.ViewModels"
+        mc:Ignorable="d"
+        Title="Viking Login" 
+        Height="550" 
+        Width="650"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+    <Window.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter"/>
+    </Window.Resources>
+    
+    <Grid>
+        <!-- Stage 1: Login -->
+        <controls:LoginControl x:Name="loginControl" 
+                               Visibility="{Binding ShowLoginStage, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+        <!-- Stage 2: Volume Selection -->
+        <controls:VolumeSelectionControl x:Name="volumeSelectionControl"
+                                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ShowVolumeSelectionStage, Converter={StaticResource BoolToVisibilityConverter}}"/>
+    </Grid>
+</Window>
+

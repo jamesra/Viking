@@ -57,6 +57,18 @@
 	<ItemGroup>
 		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
 		<ProjectReference Include="..\..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
+		<ProjectReference Include="..\..\VikingWPFUserControls\VikingWPFUserControls.csproj" />
+		
+		<!-- Module projects - built as plugins, not direct references -->
+		<ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj">
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>
+		<ProjectReference Include="..\LocalBookmarks\LocalBookmarks.csproj">
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>
+		<ProjectReference Include="..\MeasurementExtension\Measurement.csproj">
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>
 	</ItemGroup>
 	<ItemGroup>
 		<Content Include="app.config" />
@@ -127,6 +139,20 @@
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 	  <IsPublishable>True</IsPublishable>
 	</PropertyGroup>
+
+	<Target Name="CopyGraphicsContent" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48'">
+		<Message Text="Copying graphics content to output directory..." Importance="high" />
+		
+		<ItemGroup>
+			<GraphicsContent Include="..\..\VikingXNAGraphics\bin\$(Configuration)\net48\Content\**\*.xnb" />
+		</ItemGroup>
+		
+		<Copy SourceFiles="@(GraphicsContent)" 
+			DestinationFolder="$(TargetDir)\Content\%(RecursiveDir)" 
+			SkipUnchangedFiles="true" />
+		
+		<Message Text="Copied @(GraphicsContent->Count()) content files" Importance="high" />
+	</Target>	
 
 	<!-- Helper target to copy one module's files -->
 	<Target Name="CopyModules" AfterTargets="Build">

@@ -409,6 +409,8 @@ namespace WebAnnotation.ViewModel
             switch (targetShape)
             {
                 case Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE:
+                    this.modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+                    LocationActions.UpdateCircleLocationNoSaveCallback(this.modelObj, new GridVector2(VolumeX, VolumeY), new GridVector2(X,Y));
                     break;
                 case Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE:
                     break;
@@ -520,7 +522,16 @@ namespace WebAnnotation.ViewModel
                     double y = circle.Center.Y + innerRadius * Math.Sin(angle);
                     foregroundPoints.Add(new GridVector2(x, y));
                 }
-                
+
+                innerRadius = 3 * circle.Radius / 4.0;
+                for (int i = 0; i < 8; i++)
+                {
+                    double angle = (2.0 * Math.PI * i) / 8.0;
+                    double x = circle.Center.X + innerRadius * Math.Cos(angle);
+                    double y = circle.Center.Y + innerRadius * Math.Sin(angle);
+                    foregroundPoints.Add(new GridVector2(x, y));
+                }
+
                 // Create callback to update location shape
                 WebAnnotation.UI.Commands.Segmentation.SegmentationCommand.OnCommandSuccess callback = (outputPolygon) =>
                 {

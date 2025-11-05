@@ -4,10 +4,12 @@
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         xmlns:local="clr-namespace:WebAnnotation.WPF.Forms"
         Title="Annotation Preferences" 
-        Height="600" 
-        Width="500"
+        Height="750" 
+        Width="520"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize">
+        ResizeMode="CanResize"
+        MinHeight="500"
+        MinWidth="480">
     <Window.Resources>
         <Style TargetType="Label">
             <Setter Property="Margin" Value="5,5,5,0"/>
@@ -67,11 +69,22 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Concurrent Section Loads:"/>
-                            <xctk:IntegerUpDown Grid.Column="1" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Concurrent Section Loads:"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1" 
                                               Value="{Binding NumSectionsLoading}" 
                                               Minimum="1" 
                                               Maximum="50"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Maximum number of sections to load simultaneously. Higher values load faster but use more bandwidth."/>
                         </Grid>
 
                         <!-- Location Text Scale Factor -->
@@ -80,13 +93,24 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Location Text Scale:"/>
-                            <xctk:DoubleUpDown Grid.Column="1" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Location Text Scale:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
                                              Value="{Binding LocationTextScaleFactor}" 
                                              Minimum="0.1" 
                                              Maximum="50.0"
                                              Increment="0.5"
                                              FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Size multiplier for annotation labels. Increase for better readability on high-resolution displays."/>
                         </Grid>
 
                         <!-- Reference Location Text Scale Factor -->
@@ -95,13 +119,24 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Reference Text Scale:"/>
-                            <xctk:DoubleUpDown Grid.Column="1" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Reference Text Scale:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
                                              Value="{Binding ReferenceLocationTextScaleFactor}" 
                                              Minimum="0.1" 
                                              Maximum="50.0"
                                              Increment="0.5"
                                              FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Size multiplier for reference location text on adjacent sections."/>
                         </Grid>
 
                         <!-- Default Closed Line Width -->
@@ -110,13 +145,24 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Default Line Width:"/>
-                            <xctk:DoubleUpDown Grid.Column="1" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Default Line Width:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
                                              Value="{Binding DefaultClosedLineWidth}" 
                                              Minimum="1.0" 
                                              Maximum="100.0"
                                              Increment="1.0"
                                              FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Default width in pixels for newly created closed curve annotations."/>
                         </Grid>
                     </StackPanel>
                 </Expander>
@@ -130,13 +176,24 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Jump Zoom Downsample:"/>
-                            <xctk:DoubleUpDown Grid.Column="1" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Jump Zoom Downsample:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
                                              Value="{Binding DefaultLocationJumpDownsample}" 
                                              Minimum="1.0" 
                                              Maximum="64.0"
                                              Increment="1.0"
                                              FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Controls zoom level when jumping to locations. Higher values zoom out more (location occupies 1/8 screen width ÷ this value)."/>
                         </Grid>
 
                         <!-- Adjacent Location Radius Scalar -->
@@ -145,13 +202,24 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Adjacent Section Radius:"/>
-                            <xctk:DoubleUpDown Grid.Column="1" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Adjacent Section Radius:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
                                              Value="{Binding AdjacentLocationRadiusScalar}" 
                                              Minimum="0.1" 
                                              Maximum="2.0"
                                              Increment="0.1"
                                              FormatString="F2"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Size multiplier for annotations displayed on adjacent sections. Default 0.5 shows them at half size."/>
                         </Grid>
 
                         <!-- Num Curve Interpolation Points -->
@@ -160,11 +228,22 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Curve Display Points:"/>
-                            <xctk:IntegerUpDown Grid.Column="1" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Curve Display Points:"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1" 
                                               Value="{Binding NumClosedCurveInterpolationPointsForDisplay}" 
                                               Minimum="2" 
                                               Maximum="20"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Controls visual smoothness of curves. Higher values produce smoother curves but slower rendering, loading, and manipulation."/>
                         </Grid>
 
                         <!-- Pen Simplify Threshold -->
@@ -173,11 +252,22 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Pen Simplify Threshold:"/>
-                            <xctk:IntegerUpDown Grid.Column="1" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Pen Simplify Threshold:"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1" 
                                               Value="{Binding PenSimplifyThreshold}" 
                                               Minimum="1" 
                                               Maximum="100"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="How close polygon edges must be to the pen stroke. Smaller numbers are more accurate but require more points, negatively impacting performance."/>
                         </Grid>
 
                         <!-- Min Radius -->
@@ -186,13 +276,24 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Minimum Radius:"/>
-                            <xctk:DoubleUpDown Grid.Column="1" 
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Minimum Radius:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
                                              Value="{Binding MinRadius}" 
                                              Minimum="0.1" 
                                              Maximum="10.0"
                                              Increment="0.1"
                                              FormatString="F2"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Smallest allowed radius for circle annotations."/>
                         </Grid>
                     </StackPanel>
                 </Expander>

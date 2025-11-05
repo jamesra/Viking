@@ -2207,7 +2207,7 @@ namespace WebAnnotation
 
             Microsoft.Xna.Framework.Color color = GetLocationLinkColor(type.Color, distanceFactor, directionFactor, LastMouseOverObject == link);
               
-            _Parent.LumaOverlayLineManager.Draw(link.lineGraphic, (float)link.LineWidth, color.ConvertToHSL(),
+            _Parent.LumaOverlayLineManager.Draw(link.lineGraphic, (float)link.LineWidth, color.ConvertToHCL(),
                                          ViewProjMatrix, 0, null);
         }*/
 

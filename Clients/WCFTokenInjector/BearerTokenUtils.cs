@@ -180,5 +180,30 @@ namespace Viking.Tokens
                 return permissions;
             }
         }
+
+        /// <summary>
+        /// Retrieves all volumes accessible to the authenticated user.
+        /// </summary>
+        /// <param name="user_token">The user's bearer token</param>
+        /// <returns>Dictionary mapping volume IDs to volume metadata objects</returns>
+        public async Task<System.Collections.Generic.Dictionary<long, object>> RetrieveUserAccessibleVolumes(TokenResponse user_token)
+        {
+            using (var client = new System.Net.Http.HttpClient())
+            {
+                client.SetBearerToken(user_token.AccessToken);
+                var address_uri = new Uri(IdentityApiURL, "Permissions/AccessibleVolumes");
+                string address = address_uri.ToString();
+
+                // Debug logging
+                Trace.WriteLine($"[IdentityServerHelper] IdentityApiURL base: {IdentityApiURL}");
+                Trace.WriteLine($"[IdentityServerHelper] Calling UserAccessibleVolumes at: {address}");
+                Trace.WriteLine($"[IdentityServerHelper] URI Scheme: {address_uri.Scheme}, Host: {address_uri.Host}, Port: {address_uri.Port}, Path: {address_uri.PathAndQuery}");
+
+                var response = await client.GetStringAsync(address);
+                var volumes = JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<long, object>>(response);
+                Trace.WriteLine($"[IdentityServerHelper] Retrieved {volumes?.Count ?? 0} accessible volumes");
+                return volumes;
+            }
+        }
     } 
 }

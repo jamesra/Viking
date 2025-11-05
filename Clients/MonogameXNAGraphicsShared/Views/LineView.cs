@@ -55,7 +55,7 @@ namespace VikingXNAGraphics
         public Microsoft.Xna.Framework.Color Color
         {
             get => _Color;
-            set { _Color = value; _HSLColor = value.ConvertToHSL(); }
+            set { _Color = value; _HSLColor = value.ConvertToHCL(); }
         }
 
         public float Alpha
