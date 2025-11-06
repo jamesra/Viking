@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -161,9 +162,26 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Unauthorized();
             }
 
+            // Ensure ResourceType is loaded
+            if (applicationDbContext.ResourceType == null)
+            {
+                await _context.Entry(applicationDbContext)
+                    .Reference(r => r.ResourceType)
+                    .LoadAsync();
+                
+                if (applicationDbContext.ResourceType != null)
+                {
+                    await _context.Entry(applicationDbContext.ResourceType)
+                        .Collection(rt => rt.Permissions)
+                        .LoadAsync();
+                }
+            }
+
+            var availablePerms = applicationDbContext.AvailablePermissions?.Select(p => p.PermissionId).ToList() ?? new List<string>();
+            
             ResourcePermissionsEditGridViewModel model = new ResourcePermissionsEditGridViewModel
             {
-                AvailablePermissions = applicationDbContext.AvailablePermissions.Select(p => p.PermissionId).ToList(),
+                AvailablePermissions = availablePerms,
                 UserPermissions = _permissionsHelper.ResourcePermissionsByUser(applicationDbContext),
                 GroupPermissions = _permissionsHelper.ResourcePermissionsByGroup(applicationDbContext)
             };
@@ -256,9 +274,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             var applicationDbContext = _context.Resource
                     .Include(r => r.Parent)
-                    .Include(r => r.UsersWithPermissions).ThenInclude(uwp => uwp.PermittedUser)
-                    .Include(r => r.ResourceType).ThenInclude(r => r.Permissions)
-                    .Include(r => r.GroupsWithPermissions).ThenInclude(gwp => gwp.PermittedGroup)
+                    .Include(r => r.ResourceType)
+                        .ThenInclude(rt => rt.Permissions)
+                    .Include(r => r.UsersWithPermissions)
+                        .ThenInclude(uwp => uwp.PermittedUser)
+                    .Include(r => r.GroupsWithPermissions)
+                        .ThenInclude(gwp => gwp.PermittedGroup)
                     .FirstOrDefaultAsync(r => r.Id == ResourceId);
 
             return applicationDbContext;

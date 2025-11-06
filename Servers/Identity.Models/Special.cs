@@ -51,6 +51,12 @@
                 public const string Annotate = "Annotate";
                 public const string Review = "Review";
             }
+
+            public static class SegmentationService
+            {
+                public const string AccessManager = "Access Manager";
+                public const string User = "User";
+            }
         }
 
     }

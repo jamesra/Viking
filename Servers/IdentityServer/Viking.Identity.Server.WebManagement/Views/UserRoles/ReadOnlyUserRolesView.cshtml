@@ -14,8 +14,15 @@
 
     @foreach (var role in Model.AvailableRoles)
     {
-        <td> 
-            @Html.CheckBox(@role.Id, Model.Roles.Contains(role.Id), new { @disabled = "disabled" })
+        <td class="text-center">
+            <div class="form-check form-switch d-flex justify-content-center">
+                @Html.CheckBox(@role.Id, Model.Roles.Contains(role.Id), new { 
+                    @class = "form-check-input", 
+                    @disabled = "disabled",
+                    role = "switch"
+                })
+                <label class="form-check-label visually-hidden" for="@role.Id">@role.Name</label>
+            </div>
         </td>
     }
 } 

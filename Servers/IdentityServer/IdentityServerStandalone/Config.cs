@@ -143,7 +143,8 @@ namespace Viking.Identity
                     {
                         new Secret("ro.viking.secret".Sha256())
                     },
-                    AllowedScopes = AnnotationScopes
+                    AllowedScopes = AnnotationScopes,                    
+                    AccessTokenType = AccessTokenType.Reference
                 }, 
                 // API Client for token introspection, used by WebApi project to validate tokens
                 new Client
@@ -155,7 +156,8 @@ namespace Viking.Identity
                         new Secret(options.Secret.Sha256())
                     },
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
-                    AllowedScopes = allowedScopes
+                    AllowedScopes = allowedScopes,
+                    AccessTokenType = AccessTokenType.Reference
                 },
                 // OpenID Connect hybrid flow and client credentials client (MVC)
                 new Client

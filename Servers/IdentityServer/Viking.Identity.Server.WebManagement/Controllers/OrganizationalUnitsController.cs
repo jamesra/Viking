@@ -127,7 +127,24 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 _context.Add(ou);
 
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+
+                // Grant Administrator permission to all users with ASP.NET Administrator role
+                var adminUsers = await _context.GetUsersInAdminRole().ToListAsync();
+                foreach (var adminUser in adminUsers)
+                {
+                    var permission = new GrantedUserPermission
+                    {
+                        ResourceId = ou.Id,
+                        UserId = adminUser.Id,
+                        PermissionId = Special.Permissions.OrgUnit.Admin
+                    };
+                    _context.GrantedUserPermissions.Add(permission);
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Redirect to permissions management UI for fine-tuning
+                return RedirectToAction(nameof(GrantedPermissionsController.Index), "GrantedPermissions", new { id = ou.Id });
             }
 
             ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);

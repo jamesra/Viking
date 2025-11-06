@@ -219,6 +219,23 @@ namespace Viking.Identity.Server.Standalone
             services.AddIdentity<ApplicationUser, ApplicationRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
+
+            string licenseKey = null;
+            var hostingEnv = configuration.GetValue<string>("HOSTING_ENVIRONMENT") ?? "Local";
+            if (hostingEnv == "Local")
+            { 
+                var licenseKeyPath = configuration.GetValue<string>("DUENDE_KEY_PATH");
+                if (licenseKeyPath != null)
+                { 
+                    try{
+                        licenseKey = File.ReadAllText(licenseKeyPath);
+                    }
+                    catch (IOException ex)
+                    {
+                        Log.Error(ex, "Failed to read license key from file. {LicenseKeyPath}", licenseKeyPath);
+                    }
+                }
+            }
              
             var builder = services.AddIdentityServer(options =>
             {                
@@ -230,6 +247,7 @@ namespace Viking.Identity.Server.Standalone
                 // When disabled, you must ensure signing credentials are stable across restarts
                 // options.KeyManagement.Enabled = false; // Commented out - will use default behavior or proper operational store
                 options.EmitStaticAudienceClaim = true;
+                options.LicenseKey = licenseKey;
                  
                 if (serverOptions != null)
                 {

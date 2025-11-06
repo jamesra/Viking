@@ -47,6 +47,25 @@
                 }, 5000);
             }
             
+            // Debug: Check if checkboxes exist
+            var checkboxes = $('.permission-checkbox');
+            console.log('Found', checkboxes.length, 'permission checkboxes');
+            if (checkboxes.length === 0) {
+                console.warn('No permission checkboxes found! Check if data is loaded.');
+            } else {
+                checkboxes.each(function() {
+                    var $cb = $(this);
+                    // Force visibility
+                    $cb.css({
+                        'display': 'inline-block',
+                        'visibility': 'visible',
+                        'opacity': '1',
+                        'width': '3em',
+                        'height': '1.75em'
+                    });
+                });
+            }
+            
             // Add visual feedback for checkbox changes
             $('.permission-checkbox').change(function() {
                 var checkbox = $(this);

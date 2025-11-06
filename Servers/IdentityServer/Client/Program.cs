@@ -26,7 +26,7 @@ namespace Client
         //private const string IdentityServerApiEndpoint = "https://identity.connectomes.utah.edu/api/";
         //private const string IdentityServerApiEndpoint = "https://localhost:44387/";
         //private const string IdentityServerApiEndpoint = "https://localhost:6001/";
-        private const string IdentityServerApiEndpoint = "https://identity.codepharm.net:6001/";
+        private const string IdentityServerApiEndpoint = "https://identity.codempharm.net:6001/";
 
         private static string Secret;
 
@@ -50,7 +50,7 @@ namespace Client
             Secret = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET"); // TODO: Remove fallback in production
 
             if(Secret is null)
-                            {
+            {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"No secret found. Please set IDENTITY_SERVER_SECRET in {envFile} or {buildEnvFile}.");
                 Console.ForegroundColor = ConsoleColor.White;

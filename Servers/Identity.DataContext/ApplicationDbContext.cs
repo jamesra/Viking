@@ -120,6 +120,9 @@ namespace Viking.Identity.Data
             /// 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Resource) });
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.OrganizationalUnit) });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(OrganizationalUnit),
+                                                                                            PermissionId = Models.Special.Permissions.OrgUnit.Admin, 
+                                                                                            Description = "Edit all aspects of an organizational unit and CRUD operations on all child resources" });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Group) });
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Group),

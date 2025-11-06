@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Viking.Identity.Data;
 
@@ -11,13 +12,15 @@ using Viking.Identity.Data;
 namespace Viking.Identity.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251031195810_AddOrganizationalUnitAdministratorPermission")]
+    partial class AddOrganizationalUnitAdministratorPermission
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.8")
+                .HasAnnotation("ProductVersion", "9.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -263,7 +266,7 @@ namespace Viking.Identity.Data.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("GrantedGroupPermissions", (string)null);
+                    b.ToTable("GrantedGroupPermissions");
 
                     b.HasDiscriminator<string>("GranteeType").HasValue("Group");
                 });
@@ -291,7 +294,7 @@ namespace Viking.Identity.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("GrantedUserPermissions", (string)null);
+                    b.ToTable("GrantedUserPermissions");
 
                     b.HasDiscriminator<string>("GranteeType").HasValue("User");
                 });
@@ -308,7 +311,7 @@ namespace Viking.Identity.Data.Migrations
 
                     b.HasIndex("MemberGroupId");
 
-                    b.ToTable("GroupToGroupAssignments", (string)null);
+                    b.ToTable("GroupToGroupAssignments");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.Resource", b =>
@@ -341,7 +344,7 @@ namespace Viking.Identity.Data.Migrations
 
                     b.HasIndex("ResourceTypeId");
 
-                    b.ToTable("Resource", (string)null);
+                    b.ToTable("Resource");
 
                     b.HasDiscriminator<string>("ResourceTypeId").HasValue("Resource");
 
@@ -360,7 +363,7 @@ namespace Viking.Identity.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ResourceTypes", (string)null);
+                    b.ToTable("ResourceTypes");
 
                     b.HasData(
                         new
@@ -378,10 +381,6 @@ namespace Viking.Identity.Data.Migrations
                         new
                         {
                             Id = "Volume"
-                        },
-                        new
-                        {
-                            Id = "SegmentationService"
                         });
                 });
 
@@ -399,7 +398,7 @@ namespace Viking.Identity.Data.Migrations
 
                     b.HasKey("ResourceTypeId", "PermissionId");
 
-                    b.ToTable("Permissions", (string)null);
+                    b.ToTable("Permissions");
 
                     b.HasData(
                         new
@@ -428,18 +427,6 @@ namespace Viking.Identity.Data.Migrations
                         {
                             ResourceTypeId = "Volume",
                             PermissionId = "Review"
-                        },
-                        new
-                        {
-                            ResourceTypeId = "SegmentationService",
-                            PermissionId = "Access Manager",
-                            Description = "Manage access to segmentation service resources"
-                        },
-                        new
-                        {
-                            ResourceTypeId = "SegmentationService",
-                            PermissionId = "User",
-                            Description = "Access segmentation service resources"
                         });
                 });
 
@@ -455,7 +442,7 @@ namespace Viking.Identity.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserToGroupAssignments", (string)null);
+                    b.ToTable("UserToGroupAssignments");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.ApplicationRole", b =>

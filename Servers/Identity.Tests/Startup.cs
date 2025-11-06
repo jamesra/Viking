@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging; 
 
-namespace TestIdentityModel
+namespace Identity.Tests
 {
     public class Startup
     {
@@ -23,8 +23,10 @@ namespace TestIdentityModel
                 .AddJsonFile("appsettings.test.json")
                 .AddEnvironmentVariables()
                 .Build();
-                services.AddTransient<IPasswordHasher<ApplicationUser>,PasswordHasher<ApplicationUser>>();
+            
+            services.AddTransient<IPasswordHasher<ApplicationUser>, PasswordHasher<ApplicationUser>>();
             services.AddSingleton<IConfiguration>(config);
+            services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Information));
             //services.ConfigureIdentityServerDataContext(config.GetRequiredSection("DataContext"));
         }
 

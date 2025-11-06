@@ -18,7 +18,7 @@
 </select>
     -->
 
-<table class="table">
+<table class="table table-modern">
     <thead>
         <tr>
             <th>
@@ -37,7 +37,7 @@
     </thead>
     <tbody>
         @{
-            if (!User.IsInRole(Special.Roles.Admin))
+            if (User.IsInRole(Special.Roles.Admin))
             {
                 foreach (var item in Model.UsersRoles)
                 {

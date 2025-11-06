@@ -39,7 +39,7 @@ namespace TestIdentityModel
             return new string(chars);
         }
 
-        public CreateDropDatabaseFixture(IConfiguration configuration, IPasswordHasher<ApplicationUser> passwordHasher, ILogger log = null)
+        public CreateDropDatabaseFixture(IConfiguration configuration, IPasswordHasher<ApplicationUser> passwordHasher, ILogger<CreateDropDatabaseFixture> log = null)
         {
             var connStringTemplate = configuration.GetRequiredSection("DataContext").GetConnectionString("IdentityConnection");
 

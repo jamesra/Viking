@@ -2,6 +2,19 @@
 
 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
+@if (Model.AvailablePermissions == null || !Model.AvailablePermissions.Any())
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> <strong>No permissions available:</strong> This resource type does not have any permissions defined. Please configure permissions for this resource type.
+    </div>
+    <div class="alert alert-info">
+        <strong>Debug Info:</strong><br/>
+        AvailablePermissions: @(Model.AvailablePermissions?.Count() ?? 0)<br/>
+        UserPermissions: @(Model.UserPermissions?.Count() ?? 0)<br/>
+        GroupPermissions: @(Model.GroupPermissions?.Count() ?? 0)
+    </div>
+}
+
 @if (Model.GroupPermissions != null && Model.GroupPermissions.Any())
 {
 <div class="card card-modern mb-4">
@@ -35,14 +48,28 @@
                         @Html.HiddenFor(x => Model.GroupPermissions[i].GranteeId)
                     </td>
 
-                    @for (int iPermission = 0; iPermission < Model.GroupPermissions[i].Permissions.Count(); iPermission++)
+                @if (Model.AvailablePermissions != null && Model.AvailablePermissions.Any())
+                {
+                    @for (int iPermission = 0; iPermission < Model.AvailablePermissions.Count(); iPermission++)
                     {
                         <td class="text-center">
-                            <div class="form-check form-check-inline d-flex justify-content-center">
+                            @if (iPermission < Model.GroupPermissions[i].Permissions.Count())
+                            {
                                 <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.GroupPermissions[i].Permissions[iPermission]" />
-                            </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-danger">Permission index mismatch: @iPermission</div>
+                            }
                         </td>
                     }
+                }
+                else
+                {
+                    <td colspan="@(Model.AvailablePermissions?.Count() ?? 0)" class="text-center text-muted">
+                        No permissions defined
+                    </td>
+                }
                 </tr>
             }
         </tbody>
@@ -84,12 +111,26 @@
                         @Html.HiddenFor(x => Model.UserPermissions[i].GranteeId)
                     </td>
 
-                    @for (int iPermission = 0; iPermission < Model.UserPermissions[i].Permissions.Count(); iPermission++)
+                    @if (Model.AvailablePermissions != null && Model.AvailablePermissions.Any())
                     {
-                        <td class="text-center">
-                            <div class="form-check form-check-inline d-flex justify-content-center">
-                                <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.UserPermissions[i].Permissions[iPermission]" />
-                            </div>
+                        @for (int iPermission = 0; iPermission < Model.AvailablePermissions.Count(); iPermission++)
+                        {
+                            <td class="text-center">
+                                @if (iPermission < Model.UserPermissions[i].Permissions.Count())
+                                {
+                                    <partial name="~/Views/Shared/_Checkbox_StringKey.cshtml" for="@Model.UserPermissions[i].Permissions[iPermission]" />
+                                }
+                                else
+                                {
+                                    <div class="alert alert-danger">Permission index mismatch: @iPermission</div>
+                                }
+                            </td>
+                        }
+                    }
+                    else
+                    {
+                        <td colspan="@(Model.AvailablePermissions?.Count() ?? 0)" class="text-center text-muted">
+                            No permissions defined
                         </td>
                     }
                 </tr>

@@ -16,13 +16,19 @@ $Projects = @{
         Name = "IdentityServerStandalone"
         DockerfilePath = "IdentityServer\IdentityServerStandalone\Dockerfile"
         ImageName = "identityserver-standalone"
-        Ports = @(6000, 6001)
+        Ports = @(5000, 5001)
     }
     "webapi" = @{
         Name = "Viking.Identity.Server.WebApi"
         DockerfilePath = "IdentityServer\Viking.Identity.Server.WebApi\Dockerfile"
         ImageName = "identity-webapi"
-        Ports = @(5000, 5001)
+        Ports = @(6000, 6001)
+    }
+    "webmanagement" = @{
+        Name = "Viking.Identity.Server.WebManagement"
+        DockerfilePath = "IdentityServer\Dockerfile"
+        ImageName = "identity-all-services"
+        Ports = @(4000, 4001, 5000, 5001, 6000, 6001)
     }
 }
 

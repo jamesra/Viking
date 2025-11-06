@@ -496,25 +496,59 @@ body {
 }
 
 /* Larger, more visible permission switches */
-.permission-grid .form-switch {
-    padding-left: 2.5em;
+.permission-switch-container {
+    min-height: 2em;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0;
+    padding-left: 3.5em !important;
 }
 
-.permission-grid .form-check-input {
-    width: 2em;
-    height: 1.2em;
-    margin-top: 0.2em;
-    cursor: pointer;
+.permission-grid .permission-switch-container {
+    padding-left: 3.5em !important;
 }
 
-.permission-grid .form-check-input:checked {
-    background-color: var(--color-success);
-    border-color: var(--color-success);
+.permission-grid .form-check-input.permission-checkbox {
+    width: 3em !important;
+    height: 1.75em !important;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    appearance: auto !important;
+    -webkit-appearance: checkbox !important;
 }
 
-.permission-grid .form-check-input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+/* Bootstrap 5 form-switch styling */
+.permission-switch-container.form-switch .form-check-input {
+    width: 3em !important;
+    height: 1.75em !important;
+    background-color: #dee2e6 !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 1.75em !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%280, 0, 0, 0.25%29'/%3e%3c/svg%3e") !important;
+    background-position: left center !important;
+    background-repeat: no-repeat !important;
+    background-size: contain !important;
+    transition: background-position .15s ease-in-out, background-color .15s ease-in-out !important;
+}
+
+.permission-switch-container.form-switch .form-check-input:checked {
+    background-color: var(--color-success) !important;
+    border-color: var(--color-success) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e") !important;
+    background-position: right center !important;
+}
+
+.permission-switch-container.form-switch .form-check-input:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    outline: none !important;
 }
 
 /* Highlight changed permissions */

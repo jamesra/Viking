@@ -14,9 +14,9 @@ namespace TestIdentityModel
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly IConfiguration _config;
-        private readonly ILogger Log;
+        private readonly ILogger<DirectVolumePermissionsUnitTests> Log;
 
-        public DirectVolumePermissionsUnitTests(CreateDropDatabaseFixture dbFixture, IConfiguration config, ILogger log = null)
+        public DirectVolumePermissionsUnitTests(CreateDropDatabaseFixture dbFixture, IConfiguration config, ILogger<DirectVolumePermissionsUnitTests> log = null)
         {
             _dbContext = dbFixture.DataContext;
             _config = config;
@@ -141,9 +141,9 @@ namespace TestIdentityModel
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly IConfiguration _config;
-        private readonly ILogger Log;
+        private readonly ILogger<OrgUnitPermissionsUnitTests> Log;
 
-        public OrgUnitPermissionsUnitTests(CreateDropDatabaseFixture dbFixture, IConfiguration config, ILogger log = null)
+        public OrgUnitPermissionsUnitTests(CreateDropDatabaseFixture dbFixture, IConfiguration config, ILogger<OrgUnitPermissionsUnitTests> log = null)
         {
             _dbContext = dbFixture.DataContext;
             _config = config;
@@ -207,9 +207,9 @@ namespace TestIdentityModel
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly IConfiguration _config;
-        private readonly ILogger Log;
+        private readonly ILogger<GroupPermissionsUnitTests> Log;
 
-        public GroupPermissionsUnitTests(CreateDropDatabaseFixture dbFixture, IConfiguration config, ILogger log = null)
+        public GroupPermissionsUnitTests(CreateDropDatabaseFixture dbFixture, IConfiguration config, ILogger<GroupPermissionsUnitTests> log = null)
         {
             _dbContext = dbFixture.DataContext;
             _config = config;

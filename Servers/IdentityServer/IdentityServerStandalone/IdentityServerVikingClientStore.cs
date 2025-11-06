@@ -92,7 +92,8 @@ namespace Viking.Identity
                     RedirectUris = { new Uri(_redirectUri, "signin-oidc").ToString() },
                     PostLogoutRedirectUris = { new Uri(_redirectUri,"signout-callback-oidc").ToString() },
                     AllowedScopes = scopes,
-                    AllowOfflineAccess = true
+                    AllowOfflineAccess = true,
+                    AccessTokenType = AccessTokenType.Reference
                 };
             }
             else if (clientId == "Viking") /* The Viking client is used for the Viking Application */
