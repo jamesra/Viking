@@ -63,17 +63,6 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// Getter for channels
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public bool TryGetChannelInfo(string channel, out ChannelInfo result)
-        {
-            result = this._ChannelInfo.FirstOrDefault(c => c.ChannelName == channel);
-            return !(result is null);
-        }
-
-        /// <summary>
         /// The volume this section belongs to
         /// </summary>
         public Volume volume;
