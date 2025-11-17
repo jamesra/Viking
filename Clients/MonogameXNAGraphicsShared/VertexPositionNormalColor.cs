@@ -66,7 +66,7 @@ namespace VikingXNAGraphics
 
         public static bool operator ==(VertexPositionNormalColor left, VertexPositionNormalColor right)
         {
-            if (Type.ReferenceEquals(left, right))
+            if (left.Equals(right))
                 return true;
 
             //if (right is null || left is null)
@@ -77,7 +77,7 @@ namespace VikingXNAGraphics
 
         public static bool operator !=(VertexPositionNormalColor left, VertexPositionNormalColor right)
         {
-            return (left == right) == false;
+            return !(left.Equals(right));
         }
 
 

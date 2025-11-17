@@ -134,7 +134,7 @@ namespace VikingXNAGraphics
             {
                 BeginInvokeGenerateTexture(device, spritebatch, font);
             }
-            else if (_LabelTexture.IsDisposed || _LabelTexture.IsContentLost)
+            else if (_LabelTexture.IsDisposed)
             {
                 _LabelTexture = null;
                 BeginInvokeGenerateTexture(device, spritebatch, font);

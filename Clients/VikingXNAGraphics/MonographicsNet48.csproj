@@ -19,11 +19,11 @@
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="..\MonogameXNAGraphicsShared\**\*.cs" Exclude="..\MonogameXNAGraphicsShared\obj\**;..\MonogameXNAGraphicsShared\bin\**"></Compile> 
-		<Content Include="..\MonogameXNAGraphicsShared\Content\bin\Windows\**\*.xnb">
+		<Content Include="Content\bin\Windows\**\*.xnb">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Link>Content\%(Filename)%(Extension)</Link>
 		</Content>
-		<None Include="..\MonogameXNAGraphicsShared\Content\**\*.fx"> 
+		<None Include="Content\**\*.fx"> 
 			<Link>Content\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</None>
 	</ItemGroup>
@@ -35,20 +35,20 @@
 	
 	<!-- Collect all .fx files and content files as inputs for dependency tracking -->
 	<ItemGroup>
-		<MGCBShaderFiles Include="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\**\*.fx" />
-		<MGCBContentFiles Include="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\**\*.*" Exclude="@(MGCBShaderFiles);**\bin\**;**\obj\**" />
-		<MGCBConfigFile Include="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\Content.mgcb" />
+		<MGCBShaderFiles Include="$(MSBuildThisFileDirectory)Content\**\*.fx" />
+		<MGCBContentFiles Include="$(MSBuildThisFileDirectory)Content\**\*.*" Exclude="@(MGCBShaderFiles);**\bin\**;**\obj\**" />
+		<MGCBConfigFile Include="$(MSBuildThisFileDirectory)Content\Content.mgcb" />
 	</ItemGroup>
 	
 	<Target Name="CompileContent" BeforeTargets="Build"
 	        Inputs="@(MGCBShaderFiles);@(MGCBContentFiles);@(MGCBConfigFile)"
-	        Outputs="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\bin\Windows\.mgcb_timestamp">
+	        Outputs="$(MSBuildThisFileDirectory)Content\bin\Windows\.mgcb_timestamp">
 		
 		<Exec
 			Command="&quot;C:\Program Files (x86)\MSBuild\MonoGame\v3.0\Tools\MGCB.exe&quot; /@:&quot;Content.mgcb&quot; /platform:Windows /outputDir:&quot;bin/Windows&quot; /intermediateDir:&quot;obj/Windows&quot;"
-			WorkingDirectory="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content" />
+			WorkingDirectory="$(MSBuildThisFileDirectory)Content" />
 		
 		<!-- Create timestamp file to track when content was built -->
-		<Touch Files="$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\bin\Windows\.mgcb_timestamp" AlwaysCreate="true" />
+		<Touch Files="$(MSBuildThisFileDirectory)Content\bin\Windows\.mgcb_timestamp" AlwaysCreate="true" />
 	</Target>
 </Project> 

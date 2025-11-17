@@ -26,31 +26,19 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<ItemGroup> 		
-		<!--<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />-->
-		<PackageReference Include="MonoGame.Framework.Native" Version="3.8.5-develop.4" />
-
+		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.5-develop.13" />
 		<PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
-		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.5-develop.4" />
+		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.5-develop.13" />
 	</ItemGroup>
-	
 	<ItemGroup>
-		<MonoGameContentReference Include="MonogameContent\Content.mgcb" />
+		<MonoGameContentReference Include="Content\Content.mgcb" />
 		<None Include="app.config" />
 		<Compile Include="..\MonogameXNAGraphicsShared\**\*.cs" Exclude="..\MonogameXNAGraphicsShared\obj\**;..\MonogameXNAGraphicsShared\bin\**" />
 	</ItemGroup>
 	<ItemGroup Label="Content">
 		<None Include=".config\**\*" />
-		<None Include="..\MonogameXNAGraphicsShared\Content\**\*.fx" />
-		<None Include="..\MonogameXNAGraphicsShared\Content\**\*.png" />
-		<!--<MonoGameContentReference Include="MonogameContent\Content.mgcb" />-->
-		<!--<MonoGameContentReference Include="..\MonogameXNAGraphicsShared\Content\**\Content.mgcb" />-->
-<!--		<None Remove="dotnet-tools.json" />-->
-		<Content Include="MonogameContent\LineCurvePixelShaderShared.fx" />
-
-		<Content Include="Content\**\*.fx">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<Link>Content\%(RecursiveDir)%(Filename)%(Extension)</Link>
-		</Content>
+		<None Include="Content\**\*.fx" />
+		<None Include="Content\**\*.png" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
