@@ -11,10 +11,10 @@ import torch
 from PIL import Image
 import io
 import cv2
-import asyncio
 import tempfile
 import shutil
-from typing import List, Tuple, Dict, Any, Optional
+import threading
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypedDict
 from numpy.typing import NDArray
 
 # Import SAM2 modules
@@ -24,29 +24,64 @@ from sam2.sam2_image_predictor import SAM2ImagePredictor
 from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
 
 
+MaskArray = NDArray[np.bool_]
+LabeledImage = NDArray[np.uint16]
+PolygonArray = NDArray[np.int32]
+Point = Tuple[int, int]
+
+
+class SegmentInfo(TypedDict):
+    index: int
+    score: float
+    mask: MaskArray
+    x: int
+    y: int
+    width: int
+    height: int
+
+
 class SegmentationModel:
     """
     A wrapper around the SAM2 model for image segmentation.
     
     This class handles the initialization of the SAM2 model and provides
     methods for segmenting images based on input coordinates.
+    
+    Architecture:
+        - Maintains a shared SAM2 model instance (expensive to create, reused for all predictors)
+        - Each predictor instance (created via create_predictor()) shares the model but has
+          independent state for set_image() calls
+        - The shared predictor (self.predictor) is used only for backward compatibility with
+          inline image segmentation requests
+    
+    Performance:
+        - Model initialization: One-time cost at startup (~few seconds)
+        - Predictor creation: Fast (just wraps the shared model)
+        - set_image() call: O(n) where n is image size - this is why cached predictors are faster
+        - predict() call: O(n) where n is image size, but much faster than set_image() + predict()
+    
+    Thread Safety:
+        - The shared model is thread-safe for read-only operations (model weights)
+        - Predictor instances are NOT thread-safe - each should be used by one thread at a time
+        - This is why each cached image gets its own predictor with a lock
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the SAM2 model."""
         # Cache the temp directory path and clear it at startup
-        self.temp_dir = tempfile.gettempdir()
+        self.temp_dir: str = tempfile.gettempdir()
+        self.service_temp_dir: str
         self._clear_temp_folder()
         
         # Select the device for computation
         if torch.cuda.is_available():
-            self.device = torch.device("cuda")
-            # Use bfloat16 for better performance on CUDA
-            torch.autocast("cuda", dtype=torch.bfloat16).__enter__()
-            # Turn on tfloat32 for Ampere GPUs
+            self.device: torch.device = torch.device("cuda")
+            # Turn on tfloat32 for Ampere GPUs (improves performance on A100, RTX 30xx, etc.)
             if torch.cuda.get_device_properties(0).major >= 8:
                 torch.backends.cuda.matmul.allow_tf32 = True
                 torch.backends.cudnn.allow_tf32 = True
+            # Note: autocast is used per-operation in segment_image_with_predictor() 
+            # and segment_image() methods, not as a global context manager
         elif torch.backends.mps.is_available():
             self.device = torch.device("mps")
             print(
@@ -66,12 +101,12 @@ class SegmentationModel:
         model_cfg = f"/{root_path}/sam2/configs/sam2.1/sam2.1_hiera_l.yaml"
         
         # Build the SAM2 model
-        self.sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=self.device)
+        self.sam2_model: Any = build_sam2(model_cfg, sam2_checkpoint, device=self.device)
         
         # Create the image predictor
-        self.predictor = SAM2ImagePredictor(self.sam2_model)
+        self.predictor: SAM2ImagePredictor = SAM2ImagePredictor(self.sam2_model)
 
-        self.mask_generator = SAM2AutomaticMaskGenerator(
+        self.mask_generator: SAM2AutomaticMaskGenerator = SAM2AutomaticMaskGenerator(
             model=self.sam2_model,
             points_per_side=32,
             points_per_batch=256,
@@ -84,8 +119,74 @@ class SegmentationModel:
             min_mask_region_area=25.0,
             use_m2m=True,
         )
+    
+    def create_predictor(self) -> SAM2ImagePredictor:
+        """
+        Create a new SAM2ImagePredictor instance.
+        
+        Each predictor shares the underlying SAM2 model (which contains the weights),
+        but has independent state for image embedding and prediction operations.
+        This allows multiple predictors to work on different images concurrently
+        without interference.
+        
+        Performance:
+            - Fast operation - just creates a wrapper around the shared model
+            - Model weights are shared, so memory overhead is minimal
+            - Independent state per predictor enables true concurrency
+        
+        Returns:
+            A new SAM2ImagePredictor instance using the shared model.
+            The predictor must be initialized with set_image() before use.
+            
+        Thread Safety:
+            Each predictor instance should be used by one thread at a time.
+            Use a threading.Lock if concurrent access is possible.
+        """
+        return SAM2ImagePredictor(self.sam2_model)
+    
+    @staticmethod
+    def prepare_image_for_sam2(image_data: bytes) -> NDArray[np.uint8]:
+        """
+        Convert image bytes to numpy array in RGB format for SAM2.
+        
+        Args:
+            image_data: The image data as bytes
+            
+        Returns:
+            A numpy array in RGB format (H, W, 3)
+        """
+        # Convert image bytes to numpy array
+        try:
+            image = Image.open(io.BytesIO(image_data))
+        except (OSError, IOError) as e:
+            error_msg = str(e).lower()
+            if any(keyword in error_msg for keyword in ['truncated', 'corrupted', 'invalid', 'cannot identify image file']):
+                raise OSError(f"Image data is corrupted or truncated: {e}")
+            else:
+                raise
+        
+        # Convert to RGB format (SAM2 expects RGB)
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Convert to numpy array
+        image_np: NDArray[np.uint8] = np.array(image)
+        
+        # Ensure image is RGB format for SAM2 (3 channels)
+        if len(image_np.shape) == 3 and image_np.shape[2] == 4:  # RGBA image
+            image_np = image_np[:, :, :3]  # Remove alpha channel, keep RGB
+        elif len(image_np.shape) == 3 and image_np.shape[2] == 1:  # Grayscale
+            image_np = np.repeat(image_np, 3, axis=2)  # Convert to RGB
+        elif len(image_np.shape) == 2:  # 2D grayscale
+            image_np = np.repeat(image_np[:, :, np.newaxis], 3, axis=2)  # Convert to RGB
+        
+        # Final validation
+        if len(image_np.shape) != 3 or image_np.shape[2] != 3:
+            raise ValueError(f"Expected RGB image with 3 channels, got shape: {image_np.shape}")
+        
+        return image_np
 
-    def _clear_temp_folder(self):
+    def _clear_temp_folder(self) -> None:
         """Clear the temp folder at startup to remove any leftover files."""
         try:
             # Create a temp subdirectory for our service to avoid conflicts
@@ -105,7 +206,7 @@ class SegmentationModel:
             self.service_temp_dir = self.temp_dir
 
     @staticmethod
-    def mask_to_polygons(mask: NDArray[np.bool_]) -> List[np.ndarray]:
+    def mask_to_polygons(mask: MaskArray) -> List[PolygonArray]:
         """
         Convert a boolean mask to a list of polygons representing the contours.
 
@@ -123,7 +224,7 @@ class SegmentationModel:
         contours, _ = cv2.findContours(mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Convert contours to simplified polygons
-        polygons = []
+        polygons: List[PolygonArray] = []
         for contour in contours:
             # Simplify the contour to reduce the number of points
             epsilon = 0.005 * cv2.arcLength(contour, True)
@@ -139,7 +240,7 @@ class SegmentationModel:
         return polygons
 
     @staticmethod
-    def get_mask_bounds(mask: NDArray[np.bool_]) -> Tuple[int, int, int, int]:
+    def get_mask_bounds(mask: MaskArray) -> Tuple[int, int, int, int]:
         """
         Calculate the bounding box of a boolean mask.
 
@@ -169,7 +270,7 @@ class SegmentationModel:
         return x, y, width, height
 
     @staticmethod
-    def cleanup_mask(mask: NDArray[np.bool_], hole_threshold: float = 0.03) -> NDArray[np.bool_]:
+    def cleanup_mask(mask: MaskArray, hole_threshold: float = 0.03) -> MaskArray:
         """
         Clean up a mask by keeping only the largest connected region and filling small holes.
         
@@ -229,13 +330,77 @@ class SegmentationModel:
             cleaned_mask = (mask_copy > 0).astype(np.bool_)
         
         return cleaned_mask
+    
+    @staticmethod
+    def _process_masks(
+        masks: NDArray[np.bool_],
+        scores: NDArray[np.float32],
+        empty_shape: Tuple[int, int] = (0, 0)
+    ) -> Tuple[LabeledImage, List[SegmentInfo]]:
+        """
+        Process masks and scores to create labeled image and segment information.
+        
+        This helper method extracts the common mask processing logic used in both
+        segment_image_with_predictor() and segment_image() methods.
+        
+        Args:
+            masks: Boolean mask array of shape (N, H, W) where N is number of masks
+            scores: Score array of shape (N,) with scores for each mask
+            empty_shape: Shape to use for empty labeled image (default: (0, 0))
+            
+        Returns:
+            Tuple of (labeled_image, segments) where:
+            - labeled_image: A 2D numpy array where each pixel value is a segment index
+            - segments: A list of dictionaries containing information about each segment
+        """
+        if masks.size == 0:
+            empty_image: LabeledImage = np.zeros(empty_shape, dtype=np.uint16)
+            return empty_image, []
+        
+        # Handle case where masks might not have proper shape
+        if len(masks.shape) < 3:
+            empty_image: LabeledImage = np.zeros(empty_shape, dtype=np.uint16)
+            return empty_image, []
+        
+        mask_height, mask_width = masks.shape[1], masks.shape[2]
+        labeled_image: LabeledImage = np.zeros((mask_height, mask_width), dtype=np.uint16)
+        
+        # List to store segment information
+        segments: List[SegmentInfo] = []
+         
+        # Process each mask and create segment information
+        for i, mask in enumerate(masks):
+            if not np.any(mask):
+                continue
+
+            # Assign label ids starting at 1 to reserve 0 for background
+            label_id = i + 1
+            unlabeled_pixels = np.logical_and(mask, labeled_image == 0)
+            labeled_image[unlabeled_pixels] = label_id
+            
+            # Calculate mask bounds
+            x, y, width, height = SegmentationModel.get_mask_bounds(mask)
+            
+            # Create segment dictionary
+            segment: SegmentInfo = {
+                'index': i,
+                'score': float(scores[i]),
+                'mask': mask,  # Store as boolean numpy array
+                'x': x,
+                'y': y,
+                'width': width,
+                'height': height
+            }
+            segments.append(segment)
+        
+        return labeled_image, segments
 
     @staticmethod
-    def create_labeled_image(anns, borders=True) -> NDArray[np.uint16]:
+    def create_labeled_image(anns: Sequence[Dict[str, Any]]) -> LabeledImage:
         """Given a set of masks, creates a labeled image."""
 
         if len(anns) == 0:
-            return
+            return np.zeros((0, 0), dtype=np.uint16)
 
         #Start with the largest mask, and work towards the smallest
         sorted_anns = sorted(anns, key=(lambda x: x['area']), reverse=True)
@@ -244,23 +409,81 @@ class SegmentationModel:
 
         img = np.zeros((sorted_anns[0]['segmentation'].shape[0], sorted_anns[0]['segmentation'].shape[1]), dtype=np.uint16)
         for i, ann in enumerate(sorted_anns):
-            m = ann['segmentation']
+            m: MaskArray = ann['segmentation']
             img[m] = i
 
         return img
+    
+    def segment_image_with_predictor(self,
+                                     predictor: SAM2ImagePredictor,
+                                     coordinates: Sequence[Point],
+                                     labels: Sequence[int],
+                                     multimask_output: bool = True) -> Tuple[LabeledImage, List[SegmentInfo]]:
+        """
+        Segment an image using a pre-initialized predictor.
+        
+        This is the high-performance path for cached images. The predictor must already
+        have been initialized with set_image() before calling this method. This eliminates
+        the set_image() overhead from the segmentation request.
+        
+        Args:
+            predictor: A SAM2ImagePredictor that has already been initialized with set_image().
+                The predictor should be locked if concurrent access is possible.
+            coordinates: List of (x, y) coordinates to use as prompts
+            labels: List of labels for each coordinate (1 for foreground, 0 for background).
+                Must match length of coordinates.
+            multimask_output: Whether to output multiple masks per point
+            
+        Returns:
+            A tuple containing:
+            - labeled_image: A 2D numpy array where each pixel value corresponds to a segment index
+            - segments: A list of dictionaries containing information about each segment
+            
+        Performance:
+            - O(n) where n is image size for predict() call
+            - No set_image() overhead - this is the key performance benefit
+            - Mask processing is O(m * k) where m is number of masks, k is mask size
+            
+        Thread Safety:
+            The predictor parameter must be thread-safe or protected by a lock.
+            This method does not acquire any locks itself.
+        """
+        # Convert coordinates to numpy array
+        point_coords: NDArray[np.int_] = np.array(coordinates)
+        point_labels: NDArray[np.int_] = np.array(labels)
+
+        # Use the pre-initialized predictor
+        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+            masks, scores, _logits = predictor.predict(
+                    point_coords=point_coords,
+                    point_labels=point_labels,
+                    multimask_output=multimask_output,
+                )
+
+        # Sort masks by score
+        sorted_ind = np.argsort(scores)[::-1]
+        masks = masks[sorted_ind].astype(np.bool_)
+        scores = scores[sorted_ind]
+        
+        # Process masks using helper method
+        return self._process_masks(masks, scores, empty_shape=(0, 0))
     
     def segment_image(self,
                            image_data: bytes, 
                            width: int, 
                            height: int, 
-                           coordinates: List[Tuple[int, int]], 
-                           labels: List[int], 
-                           multimask_output: bool = True) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
+                           coordinates: Sequence[Point], 
+                           labels: Sequence[int], 
+                           multimask_output: bool = True) -> Tuple[LabeledImage, List[SegmentInfo]]:
         """
         Segment an image based on input coordinates.
         
+        This method is kept for backward compatibility with inline image requests.
+        It uses the shared predictor, which requires a set_image() call for each request.
+        For better performance, use cached images with pre-initialized predictors.
+        
         Args:
-            image_data: The grayscale image data as bytes
+            image_data: The image data as bytes
             width: The width of the image
             height: The height of the image
             coordinates: List of (x, y) coordinates to use as prompts
@@ -271,115 +494,39 @@ class SegmentationModel:
             A tuple containing:
             - labeled_image: A 2D numpy array where each pixel value corresponds to a segment index
             - segments: A list of dictionaries containing information about each segment
+            
+        Performance:
+            - O(n) for prepare_image_for_sam2() where n is image size
+            - O(n) for set_image() - this is the performance bottleneck
+            - O(n) for predict() call
+            - Total: ~2x slower than segment_image_with_predictor() due to set_image() overhead
+            
+        Thread Safety:
+            The shared predictor (self.predictor) is NOT thread-safe. Concurrent calls
+            to this method may interfere with each other. This is acceptable for backward
+            compatibility use case, but cached images with per-predictor locks are preferred.
         """
-        # Convert image bytes to numpy array
-        try:
-            image = Image.open(io.BytesIO(image_data))
-        except (OSError, IOError) as e:
-            error_msg = str(e).lower()
-            if any(keyword in error_msg for keyword in ['truncated', 'corrupted', 'invalid', 'cannot identify image file']):
-                raise OSError(f"Image data is corrupted or truncated: {e}")
-            else:
-                raise
-        
-        # Debug: Print original image mode and shape
-        print(f"Debug: Original image mode: {image.mode}")
-        
-        # Convert to RGB format (SAM2 expects RGB)
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        
-        # Convert to numpy array
-        image_np = np.array(image)
-        
-        # Debug: Print numpy array shape
-        print(f"Debug: Image numpy shape: {image_np.shape}")
-        
-        # Ensure image is RGB format for SAM2 (3 channels)
-        if len(image_np.shape) == 3 and image_np.shape[2] == 4:  # RGBA image
-            print("Debug: Converting RGBA to RGB")
-            image_np = image_np[:, :, :3]  # Remove alpha channel, keep RGB
-        elif len(image_np.shape) == 3 and image_np.shape[2] == 1:  # Grayscale
-            print("Debug: Converting grayscale to RGB")
-            image_np = np.repeat(image_np, 3, axis=2)  # Convert to RGB
-        elif len(image_np.shape) == 2:  # 2D grayscale
-            print("Debug: Converting 2D grayscale to RGB")
-            image_np = np.repeat(image_np[:, :, np.newaxis], 3, axis=2)  # Convert to RGB
-        
-        # Final validation
-        print(f"Debug: Final image shape: {image_np.shape}")
-        if len(image_np.shape) != 3 or image_np.shape[2] != 3:
-            raise ValueError(f"Expected RGB image with 3 channels, got shape: {image_np.shape}")
-        
-        
-        # Debug: Save the image before processing
-        #
-        # try:
-        #     debug_path = os.path.join(self.service_temp_dir, "Segmentation_Service_Image.png")
-        #     # Ensure the directory exists
-        #     os.makedirs(os.path.dirname(debug_path), exist_ok=True)
-        #     # Save the image
-        #     debug_image = Image.fromarray(image_np)
-        #     debug_image.save(debug_path)
-        #     print(f"Debug: Image saved to {debug_path}")
-        # except Exception as e:
-        #     print(f"Debug: Failed to save image to {debug_path}: {e}")
+        # Prepare image for SAM2
+        image_np = self.prepare_image_for_sam2(image_data)
 
         # Convert coordinates to numpy array
-        point_coords = np.array(coordinates)
-        point_labels = np.array(labels)
+        point_coords: NDArray[np.int_] = np.array(coordinates)
+        point_labels: NDArray[np.int_] = np.array(labels)
 
-        # Set the image for the
+        # Set the image for the shared predictor (not thread-safe for concurrent use)
         with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
             self.predictor.set_image(image_np)
 
-            masks, scores, logits = self.predictor.predict(
+            masks, scores, _logits = self.predictor.predict(
                     point_coords=point_coords,
                     point_labels=point_labels,
                     multimask_output=multimask_output,
                 )
 
-            #full_masks = self.mask_generator.generate(image_np)
-
-        #labeled_image = self.create_labeled_image(full_masks)
-        labeled_image = np.zeros((height, width), dtype=np.uint16)
-
         # Sort masks by score
         sorted_ind = np.argsort(scores)[::-1]
-        masks = masks[sorted_ind].astype(bool)
+        masks = masks[sorted_ind].astype(np.bool_)
         scores = scores[sorted_ind]
-        logits = logits[sorted_ind]
         
-        # Create a labeled image where each pixel value corresponds to a segment index
-        #labeled_image = np.zeros((height, width), dtype=np.uint16)
-        
-        # List to store segment information
-        segments = []
-         
-        # Process each mask and create segment information
-        for i, mask in enumerate(masks):
-            
-            
-            # Calculate mask bounds
-            x, y, width, height = self.get_mask_bounds(mask)
-            
-            # Store mask as boolean numpy array (don't encode here)
-            # Mask will be cleaned up and encoded in server.py
-            
-            # Create segment dictionary
-            segment = {
-                'index': i,
-                'score': float(scores[i]),
-                'mask': mask,  # Store as boolean numpy array
-                'x': x,
-                'y': y,
-                'width': width,
-                'height': height
-            }
-            segments.append(segment)
-            
-            # Debug: Save each mask to temp folder
-            #mask_path = os.path.join(self.service_temp_dir, f'mask_{i}.png')
-            #cv2.imwrite(mask_path, mask.astype(np.uint8) * 255)
-        
-        return labeled_image, segments
+        # Process masks using helper method (use image dimensions for empty case)
+        return self._process_masks(masks, scores, empty_shape=(height, width))

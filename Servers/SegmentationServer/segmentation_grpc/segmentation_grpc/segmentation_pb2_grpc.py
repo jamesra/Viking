@@ -45,6 +45,11 @@ class SegmentationServiceStub(object):
                 request_serializer=segmentation__pb2.SegmentationRequest.SerializeToString,
                 response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
                 _registered_method=True)
+        self.MultiSegmentImage = channel.unary_unary(
+                '/segmentation.SegmentationService/MultiSegmentImage',
+                request_serializer=segmentation__pb2.MultiSegmentationRequest.SerializeToString,
+                response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
+                _registered_method=True)
         self.DeleteImage = channel.unary_unary(
                 '/segmentation.SegmentationService/DeleteImage',
                 request_serializer=segmentation__pb2.DeleteImageRequest.SerializeToString,
@@ -70,6 +75,13 @@ class SegmentationServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def MultiSegmentImage(self, request, context):
+        """Segment an image using a dictionary mapping IDs to points (id=0 for background, id!=0 for foreground)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def DeleteImage(self, request, context):
         """Delete an image from the server cache
         """
@@ -88,6 +100,11 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
             'SegmentImage': grpc.unary_unary_rpc_method_handler(
                     servicer.SegmentImage,
                     request_deserializer=segmentation__pb2.SegmentationRequest.FromString,
+                    response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
+            ),
+            'MultiSegmentImage': grpc.unary_unary_rpc_method_handler(
+                    servicer.MultiSegmentImage,
+                    request_deserializer=segmentation__pb2.MultiSegmentationRequest.FromString,
                     response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
             ),
             'DeleteImage': grpc.unary_unary_rpc_method_handler(
@@ -150,6 +167,33 @@ class SegmentationService(object):
             target,
             '/segmentation.SegmentationService/SegmentImage',
             segmentation__pb2.SegmentationRequest.SerializeToString,
+            segmentation__pb2.SegmentationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def MultiSegmentImage(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/MultiSegmentImage',
+            segmentation__pb2.MultiSegmentationRequest.SerializeToString,
             segmentation__pb2.SegmentationResponse.FromString,
             options,
             channel_credentials,

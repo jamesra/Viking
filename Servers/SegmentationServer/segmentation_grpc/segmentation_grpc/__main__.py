@@ -8,15 +8,14 @@ python -m segmentation_grpc
 import sys
 from segmentation_grpc.generate_grpc import generate_grpc_code
 
-def main():
+def main() -> int:
     """Generate the gRPC code when the package is run as a module."""
     print("Generating gRPC code...")
     if generate_grpc_code():
         print("gRPC code generation successful.")
         return 0
-    else:
-        print("gRPC code generation failed.")
-        return 1
+    print("gRPC code generation failed.")
+    return 1
 
 if __name__ == "__main__":
     sys.exit(main())
