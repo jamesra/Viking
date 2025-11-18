@@ -74,6 +74,7 @@ namespace Viking.Identity.Server.WebManagement
                 builder.Configuration.AddJsonFile("appsettings.json", optional: true)
                                      .AddJsonFile($"appsettings.{aspnetCoreEnv}.json", optional: true)
                                      .AddJsonFile($"appsettings.{hostingEnv}.json", optional: true)
+                                     .AddUserSecrets<Program>(optional: true)
                                      .AddEnvironmentVariables()
                                      .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw)
                                      .AddJsonFile("secrets.json", optional: true, reloadOnChange: false); // Load secrets.json last to override all other configuration

@@ -134,6 +134,17 @@
             }
         },
         {
+            "name": "SMTP Test (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-solution-debug",
+            "program": "${workspaceFolder}/SmtpTest/bin/Debug/net9.0/SmtpTest.dll",
+            "args": ["jander42@hotmail.com"],
+            "cwd": "${workspaceFolder}/SmtpTest",
+            "console": "integratedTerminal",
+            "stopAtEntry": false
+        },
+        {
             "name": "Identity.WebApi (Debug)",
             "type": "coreclr",
             "request": "launch",

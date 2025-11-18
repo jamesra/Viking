@@ -17,7 +17,7 @@ namespace SmtpTest
                 Console.WriteLine();
 
                 // Get the recipient email address
-                string recipientEmail = null;
+                string? recipientEmail = null;
                 if (args.Length > 0)
                 {
                     recipientEmail = args[0];
@@ -33,10 +33,12 @@ namespace SmtpTest
                     Console.WriteLine("Error: Recipient email address is required.");
                     return;
                 }
+                var recipient = recipientEmail.Trim();
 
                 // Load configuration from management project's appsettings.json
                 var configPath = Path.Combine(
                     AppDomain.CurrentDomain.BaseDirectory,
+                    "..",
                     "..",
                     "..",
                     "..",
@@ -55,6 +57,8 @@ namespace SmtpTest
 
                 var configuration = new ConfigurationBuilder()
                     .AddJsonFile(configPath, optional: false, reloadOnChange: false)
+                    .AddUserSecrets<Program>(optional: true)
+                    .AddEnvironmentVariables()
                     .Build();
 
                 var emailOptions = configuration.GetSection("Email").Get<EmailOptions>();
@@ -65,11 +69,18 @@ namespace SmtpTest
                     return;
                 }
 
+                // Overlay secrets/environment password if not already populated
+                var configuredPassword = configuration["Email:Password"];
+                if (!string.IsNullOrWhiteSpace(configuredPassword))
+                {
+                    emailOptions.Password = configuredPassword;
+                }
+
                 // Display configuration
                 Console.WriteLine("Email Configuration:");
-                Console.WriteLine($"  Server: {emailOptions.Server}");
+                Console.WriteLine($"  Server: {emailOptions.Server ?? "N/A"}");
                 Console.WriteLine($"  Port: {emailOptions.Port ?? 25}");
-                Console.WriteLine($"  From Email: {emailOptions.FromEmail}");
+                Console.WriteLine($"  From Email: {emailOptions.FromEmail ?? "N/A"}");
                 Console.WriteLine($"  From Name: {emailOptions.FromName ?? "N/A"}");
                 Console.WriteLine($"  Enable SSL: {emailOptions.EnableSsl}");
                 Console.WriteLine($"  Use HTML: {emailOptions.UseHtml}");
@@ -93,10 +104,10 @@ namespace SmtpTest
                 }
 
                 // Send test email
-                Console.WriteLine($"Sending test email to: {recipientEmail}");
+                Console.WriteLine($"Sending test email to: {recipient}");
                 Console.WriteLine();
 
-                await SendTestEmailAsync(emailOptions, recipientEmail);
+                await SendTestEmailAsync(emailOptions, recipient);
 
                 Console.WriteLine();
                 Console.WriteLine("Email sent successfully!");
@@ -123,14 +134,18 @@ namespace SmtpTest
 
         private static Task SendTestEmailAsync(EmailOptions options, string recipientEmail)
         {
+            var server = options.Server!;
+            var fromEmail = options.FromEmail!;
+            var fromName = options.FromName ?? string.Empty;
+
             var smtpPort = options.Port ?? 25;
             var smtpTimeout = options.Timeout ?? 30;
-            var useCredentials = !string.IsNullOrEmpty(options.Username);
+                var useCredentials = !string.IsNullOrEmpty(options.Username) && !string.IsNullOrEmpty(options.Password);
 
-            Console.WriteLine($"Connecting to SMTP server: {options.Server}:{smtpPort}");
+            Console.WriteLine($"Connecting to SMTP server: {server}:{smtpPort}");
             Console.WriteLine($"SSL: {options.EnableSsl}, Timeout: {smtpTimeout}s, Credentials: {useCredentials}");
 
-            using (var smtpClient = new SmtpClient(options.Server))
+            using (var smtpClient = new SmtpClient(server))
             {
                 if (options.Port.HasValue)
                 {
@@ -148,6 +163,7 @@ namespace SmtpTest
                 if (useCredentials)
                 {
                     smtpClient.Credentials = new System.Net.NetworkCredential(options.Username, options.Password);
+                    smtpClient.UseDefaultCredentials = false;
                 }
                 else
                 {
@@ -156,7 +172,7 @@ namespace SmtpTest
 
                 using (var mailMessage = new MailMessage())
                 {
-                    mailMessage.From = new MailAddress(options.FromEmail, options.FromName);
+                    mailMessage.From = new MailAddress(fromEmail, fromName);
                     mailMessage.To.Add(new MailAddress(recipientEmail));
                     mailMessage.Subject = "SMTP Test Email";
                     mailMessage.Body = $@"<html>
@@ -165,9 +181,9 @@ namespace SmtpTest
 <p>This is a test email sent from the SMTP test application.</p>
 <p><strong>Configuration Used:</strong></p>
 <ul>
-<li>Server: {options.Server}</li>
+<li>Server: {server}</li>
 <li>Port: {smtpPort}</li>
-<li>From: {options.FromEmail} ({options.FromName ?? "N/A"})</li>
+<li>From: {fromEmail} ({options.FromName ?? "N/A"})</li>
 <li>SSL: {options.EnableSsl}</li>
 <li>Sent at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}</li>
 </ul>
@@ -178,7 +194,7 @@ namespace SmtpTest
 
                     if (!options.UseHtml)
                     {
-                        mailMessage.Body = $"SMTP Test Email\n\nThis is a test email sent from the SMTP test application.\n\nConfiguration Used:\n- Server: {options.Server}\n- Port: {smtpPort}\n- From: {options.FromEmail} ({options.FromName ?? "N/A"})\n- SSL: {options.EnableSsl}\n- Sent at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n\nIf you received this email, the SMTP configuration is working correctly.";
+                        mailMessage.Body = $"SMTP Test Email\n\nThis is a test email sent from the SMTP test application.\n\nConfiguration Used:\n- Server: {server}\n- Port: {smtpPort}\n- From: {fromEmail} ({options.FromName ?? "N/A"})\n- SSL: {options.EnableSsl}\n- Sent at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n\nIf you received this email, the SMTP configuration is working correctly.";
                     }
 
                     mailMessage.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;

@@ -47,6 +47,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityManagementWebsite",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeyGenerator", "KeyGenerator\KeyGenerator.csproj", "{5263CDBC-4E98-9912-38C3-E782AEB23551}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmtpTest", "SmtpTest\SmtpTest.csproj", "{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -138,6 +140,12 @@ Global
 		{5263CDBC-4E98-9912-38C3-E782AEB23551}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5263CDBC-4E98-9912-38C3-E782AEB23551}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{5263CDBC-4E98-9912-38C3-E782AEB23551}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
+		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
+		{10F899B2-8B6C-4E90-9B18-2B0C0B1D4C9F}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
