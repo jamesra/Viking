@@ -205,5 +205,29 @@ namespace Viking.Tokens
                 return volumes;
             }
         }
+
+        /// <summary>
+        /// Retrieves all segmentation services accessible to the authenticated user.
+        /// </summary>
+        /// <param name="user_token">The user's bearer token</param>
+        /// <returns>Dictionary mapping segmentation service IDs to metadata objects</returns>
+        public async Task<System.Collections.Generic.Dictionary<long, object>> RetrieveUserAccessibleSegmentationServices(TokenResponse user_token)
+        {
+            using (var client = new System.Net.Http.HttpClient())
+            {
+                client.SetBearerToken(user_token.AccessToken);
+                var address_uri = new Uri(IdentityApiURL, "Permissions/AccessibleSegmentationServices");
+                string address = address_uri.ToString();
+
+                Trace.WriteLine($"[IdentityServerHelper] IdentityApiURL base: {IdentityApiURL}");
+                Trace.WriteLine($"[IdentityServerHelper] Calling UserAccessibleSegmentationServices at: {address}");
+                Trace.WriteLine($"[IdentityServerHelper] URI Scheme: {address_uri.Scheme}, Host: {address_uri.Host}, Port: {address_uri.Port}, Path: {address_uri.PathAndQuery}");
+
+                var response = await client.GetStringAsync(address);
+                var services = JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<long, object>>(response);
+                Trace.WriteLine($"[IdentityServerHelper] Retrieved {services?.Count ?? 0} accessible segmentation services");
+                return services;
+            }
+        }
     } 
 }

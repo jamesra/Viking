@@ -1,0 +1,41 @@
+<UserControl x:Class="Viking.UI.WPF.Controls.ChannelSetupControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="400"
+             d:DesignWidth="640">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
+            <TextBlock Text="Display mode:" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <RadioButton x:Name="GreyscaleRadio"
+                         Content="Greyscale"
+                         Checked="GreyscaleRadio_OnChecked"
+                         Margin="0,0,12,0" />
+            <RadioButton x:Name="ColorRadio"
+                         Content="Multi-channel"
+                         Checked="ColorRadio_OnChecked" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="ChannelPanel" />
+        </ScrollViewer>
+
+        <Button Grid.Row="2"
+                x:Name="AddChannelButton"
+                Content="Add Channel"
+                Width="120"
+                HorizontalAlignment="Left"
+                Margin="0,8,0,0"
+                Click="AddChannelButton_OnClick" />
+    </Grid>
+</UserControl>
+

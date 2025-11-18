@@ -156,7 +156,7 @@ namespace Viking.UI.WPF.ViewModels
         private void LoadRecentVolumes()
         {
             // Recent volumes will be populated by the hosting application
-            // This keeps VikingWPFUserControls independent of VikingCore
+            // This keeps Viking.UI.WPF independent of VikingCore
         }
 
         public void AddRecentVolume(string url, string name)

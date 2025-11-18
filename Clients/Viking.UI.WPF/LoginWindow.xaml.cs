@@ -16,8 +16,10 @@ namespace Viking.UI.WPF
     {
         private bool _showLoginStage = true;
         private bool _showVolumeSelectionStage = false;
+        private bool _showSegmentationServiceStage = false;
         private LoginViewModel _loginViewModel;
         private VolumeSelectionViewModel _volumeSelectionViewModel;
+        private SegmentationServiceSelectionViewModel _segmentationServiceSelectionViewModel;
         private string _savedUsername;
         private string _savedPassword;
         private bool _isAnonymous;
@@ -56,9 +58,25 @@ namespace Viking.UI.WPF
             }
         }
 
+        public bool ShowSegmentationServiceStage
+        {
+            get => _showSegmentationServiceStage;
+            set
+            {
+                if (_showSegmentationServiceStage != value)
+                {
+                    _showSegmentationServiceStage = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public string VolumeURL { get; private set; }
+        public string SegmentationServiceUrl { get; private set; }
         public NetworkCredential Credentials { get; private set; }
         public TokenResponse BearerToken { get; private set; }
+
+        public string InitialSegmentationServiceUrl { get; set; }
 
         private void InitializeLoginStage()
         {
@@ -98,6 +116,13 @@ namespace Viking.UI.WPF
             // Populate recent volumes from settings (will be done by hosting app)
             PopulateRecentVolumes();
             
+            _segmentationServiceSelectionViewModel = null;
+            ShowSegmentationServiceStage = false;
+            if (segmentationSelectionControl != null)
+            {
+                segmentationSelectionControl.DataContext = null;
+            }
+
             volumeSelectionControl.DataContext = _volumeSelectionViewModel;
             
             ShowLoginStage = false;
@@ -114,6 +139,13 @@ namespace Viking.UI.WPF
             // Populate recent volumes from settings (will be done by hosting app)
             PopulateRecentVolumes();
             
+            _segmentationServiceSelectionViewModel = null;
+            ShowSegmentationServiceStage = false;
+            if (segmentationSelectionControl != null)
+            {
+                segmentationSelectionControl.DataContext = null;
+            }
+
             volumeSelectionControl.DataContext = _volumeSelectionViewModel;
             
             ShowLoginStage = false;
@@ -136,18 +168,18 @@ namespace Viking.UI.WPF
             }
         }
 
-        // Property to allow hosting app to provide recent volume URLs
+        // Properties to allow hosting app to provide recent history
         public System.Collections.Specialized.StringCollection RecentVolumeUrls { get; set; }
+        public System.Collections.Specialized.StringCollection RecentSegmentationServiceUrls { get; set; }
 
-        private async void OnVolumeSelected(object sender, VolumeSelectedEventArgs e)
+        private void OnVolumeSelected(object sender, VolumeSelectedEventArgs e)
         {
             VolumeURL = e.VolumeUrl;
             
             // Add to recent volumes
             AddToRecentVolumes(VolumeURL);
-            
-            // Perform second authentication stage - request volume-specific permissions token
-            await PerformVolumeAuthenticationAsync(VolumeURL);
+
+            ShowSegmentationSelectionStage();
         }
 
         private async Task PerformVolumeAuthenticationAsync(string volumeUrl)
@@ -159,6 +191,12 @@ namespace Viking.UI.WPF
                 {
                     _volumeSelectionViewModel.IsLoading = true;
                     _volumeSelectionViewModel.StatusMessage = "Requesting volume permissions...";
+                }
+
+                if (_segmentationServiceSelectionViewModel != null)
+                {
+                    _segmentationServiceSelectionViewModel.IsLoading = true;
+                    _segmentationServiceSelectionViewModel.StatusMessage = "Requesting volume permissions...";
                 }
 
                 // Load and parse volume XML to get volume name and API URL
@@ -182,6 +220,11 @@ namespace Viking.UI.WPF
                     _volumeSelectionViewModel.StatusMessage = $"Authenticating to volume '{volumeName}'...";
                 }
 
+                if (_segmentationServiceSelectionViewModel != null)
+                {
+                    _segmentationServiceSelectionViewModel.StatusMessage = $"Authenticating to volume '{volumeName}'...";
+                }
+
                 // Request volume-specific permissions token
                 var volumeToken = await RequestVolumePermissionsToken(volumeName, identityApiUrl, identityServerUrl);
 
@@ -192,6 +235,12 @@ namespace Viking.UI.WPF
                 {
                     _volumeSelectionViewModel.StatusMessage = "Authentication successful!";
                     _volumeSelectionViewModel.IsLoading = false;
+                }
+
+                if (_segmentationServiceSelectionViewModel != null)
+                {
+                    _segmentationServiceSelectionViewModel.StatusMessage = "Authentication successful!";
+                    _segmentationServiceSelectionViewModel.IsLoading = false;
                 }
 
                 // Close the window successfully
@@ -205,6 +254,12 @@ namespace Viking.UI.WPF
                 {
                     _volumeSelectionViewModel.IsLoading = false;
                     _volumeSelectionViewModel.StatusMessage = $"Error: {ex.Message}";
+                }
+
+                if (_segmentationServiceSelectionViewModel != null)
+                {
+                    _segmentationServiceSelectionViewModel.IsLoading = false;
+                    _segmentationServiceSelectionViewModel.StatusMessage = $"Error: {ex.Message}";
                 }
 
                 System.Diagnostics.Trace.WriteLine($"Volume authentication error: {ex}");
@@ -223,13 +278,92 @@ namespace Viking.UI.WPF
             // Return to login stage
             ShowVolumeSelectionStage = false;
             ShowLoginStage = true;
+            ShowSegmentationServiceStage = false;
             Title = "Viking Login";
         }
 
         private void AddToRecentVolumes(string url)
         {
             // Let the hosting application handle adding to recent volumes
-            // This keeps VikingWPFUserControls independent
+            // This keeps Viking.UI.WPF independent
+        }
+
+        private void ShowSegmentationSelectionStage()
+        {
+            if (_segmentationServiceSelectionViewModel != null)
+            {
+                _segmentationServiceSelectionViewModel.SegmentationServiceSelected -= OnSegmentationServiceSelected;
+                _segmentationServiceSelectionViewModel.SegmentationSelectionSkipped -= OnSegmentationSelectionSkipped;
+                _segmentationServiceSelectionViewModel.SelectionCancelled -= OnSegmentationSelectionCancelled;
+            }
+
+            var preselectedEndpoint = SegmentationServiceUrl ?? InitialSegmentationServiceUrl;
+
+            _segmentationServiceSelectionViewModel = new SegmentationServiceSelectionViewModel(BearerToken, _loginViewModel.IdentityServerUrl, preselectedEndpoint);
+            _segmentationServiceSelectionViewModel.SegmentationServiceSelected += OnSegmentationServiceSelected;
+            _segmentationServiceSelectionViewModel.SegmentationSelectionSkipped += OnSegmentationSelectionSkipped;
+            _segmentationServiceSelectionViewModel.SelectionCancelled += OnSegmentationSelectionCancelled;
+
+            segmentationSelectionControl.DataContext = _segmentationServiceSelectionViewModel;
+
+            PopulateRecentSegmentationServices();
+
+            if (!string.IsNullOrWhiteSpace(preselectedEndpoint))
+            {
+                _segmentationServiceSelectionViewModel.PreselectService(preselectedEndpoint);
+            }
+
+            ShowVolumeSelectionStage = false;
+            ShowSegmentationServiceStage = true;
+            Title = "Viking - Select Segmentation Service";
+        }
+
+        private void PopulateRecentSegmentationServices()
+        {
+            if (RecentSegmentationServiceUrls == null || _segmentationServiceSelectionViewModel == null)
+            {
+                return;
+            }
+
+            foreach (var endpoint in RecentSegmentationServiceUrls)
+            {
+                _segmentationServiceSelectionViewModel.AddRecentService(endpoint, null);
+            }
+
+            if (string.IsNullOrWhiteSpace(SegmentationServiceUrl ?? InitialSegmentationServiceUrl))
+            {
+                _segmentationServiceSelectionViewModel.SelectMostRecentServiceIfAvailable();
+            }
+        }
+
+        private void AddToRecentSegmentationServices(string endpoint)
+        {
+            // Let the hosting application handle adding to recent segmentation services
+            // This keeps Viking.UI.WPF independent
+        }
+
+        private async void OnSegmentationServiceSelected(object sender, SegmentationServiceSelectedEventArgs e)
+        {
+            SegmentationServiceUrl = e.Endpoint;
+
+            if (!e.IsNone && !string.IsNullOrWhiteSpace(e.Endpoint))
+            {
+                AddToRecentSegmentationServices(e.Endpoint);
+            }
+
+            await PerformVolumeAuthenticationAsync(VolumeURL);
+        }
+
+        private void OnSegmentationSelectionSkipped(object sender, EventArgs e)
+        {
+            SegmentationServiceUrl = null;
+        }
+
+        private void OnSegmentationSelectionCancelled(object sender, EventArgs e)
+        {
+            ShowSegmentationServiceStage = false;
+            ShowVolumeSelectionStage = true;
+            Title = "Viking - Select Volume";
         }
 
         private async Task<(string volumeName, Uri identityApiUrl)> LoadAndParseVolumeXml(string volumeUrl)

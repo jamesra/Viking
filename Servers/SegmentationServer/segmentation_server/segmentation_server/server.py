@@ -8,6 +8,7 @@ to the SegmentationModel implementation.
 
 import asyncio
 import threading
+import time
 from concurrent import futures
 from typing import List, Optional, Sequence, Tuple, Any
 
@@ -371,7 +372,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         if await self._abort_if_predictor_unavailable(predictor, image_id, context):
             return SegmentationResponse()
         
-        print(f"Using cached image with predictor: ID={image_id}, {width}x{height}")
+        start_time = time.perf_counter()
+        print(f"Using cached image with predictor: ID={image_id}, {width}x{height}", end="")
         
         # Validate inputs (use custom message for MultiSegmentImage)
         if await self._validate_coordinates(
@@ -380,6 +382,8 @@ class SegmentationServicer(SegmentationServiceServicer):
             context,
             empty_message="No foreground_points provided. At least one point is required."
         ):
+            elapsed_time = time.perf_counter() - start_time
+            print(f" (validation failed in {elapsed_time:.3f}s)")
             return SegmentationResponse()
         
         try:
@@ -399,6 +403,8 @@ class SegmentationServicer(SegmentationServiceServicer):
             print(f"Predictor error for image ID {image_id}: {e}\n{stack_trace}")
             # Remove image from cache so it can be re-uploaded
             await self.image_cache.delete_image(image_id)
+            elapsed_time = time.perf_counter() - start_time
+            print(f" (failed in {elapsed_time:.3f}s)")
             await context.abort(
                 grpc.StatusCode.INTERNAL,
                 f"Error processing segmentation request: {e}. Image has been removed from cache. Please re-upload the image."
@@ -406,6 +412,8 @@ class SegmentationServicer(SegmentationServiceServicer):
             return SegmentationResponse()
         
         # Build and return response
+        elapsed_time = time.perf_counter() - start_time
+        print(f" (completed in {elapsed_time:.3f}s)")
         return self._build_segmentation_response(labeled_image, segments, width, height)
     
     async def _handle_inline_image_segmentation(
@@ -433,7 +441,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         Returns:
             SegmentationResponse if successful, None if aborted due to error
         """
-        print(f"Using inline image data: {width}x{height}")
+        start_time = time.perf_counter()
+        print(f"Using inline image data: {width}x{height}", end="")
         
         # Validate inputs (use custom message for MultiSegmentImage)
         if await self._validate_coordinates(
@@ -460,11 +469,15 @@ class SegmentationServicer(SegmentationServiceServicer):
         except Exception as e:
             import traceback
             stack_trace = traceback.format_exc()
+            elapsed_time = time.perf_counter() - start_time
+            print(f" (failed in {elapsed_time:.3f}s)")
             print(f"Error during segmentation: {e}\n{stack_trace}")
             await context.abort(grpc.StatusCode.INTERNAL, f"Error processing request: {e}")
             return SegmentationResponse()
         
         # Build and return response
+        elapsed_time = time.perf_counter() - start_time
+        print(f" (completed in {elapsed_time:.3f}s)")
         return self._build_segmentation_response(labeled_image, segments, width, height)
 
     async def UploadImage(
@@ -482,20 +495,22 @@ class SegmentationServicer(SegmentationServiceServicer):
         Returns:
             An UploadImageResponse message containing the image ID
         """
+        start_time = time.perf_counter()
         try:
             # Extract image data from request
             image_data: bytes = request.image_data
             width: int = request.width
             height: int = request.height
             
-            print(f"==> UploadImage RPC called: {width}x{height}, {len(image_data)} bytes")
+            print(f"==> UploadImage RPC called: {width}x{height}, {len(image_data)} bytes", end="")
             
             # Upload to cache (predictor will be created in executor)
             image_id: int = await self.image_cache.upload_image(
                 image_data, width, height, executor=self.inference_executor
             )
             
-            print(f"<== UploadImage RPC completed: assigned ID={image_id}")
+            elapsed_time = time.perf_counter() - start_time
+            print(f" <== completed: assigned ID={image_id} (took {elapsed_time:.3f}s)")
             
             # Return response with image ID
             return UploadImageResponse(image_id=image_id)
@@ -503,6 +518,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         except Exception as e:
             import traceback
             stack_trace = traceback.format_exc()
+            elapsed_time = time.perf_counter() - start_time
+            print(f" (failed in {elapsed_time:.3f}s)")
             print(f"Error uploading image: {e}\n{stack_trace}")
             await context.abort(grpc.StatusCode.INTERNAL, f"Error uploading image: {e}")
     
@@ -521,16 +538,18 @@ class SegmentationServicer(SegmentationServiceServicer):
         Returns:
             A DeleteImageResponse message
         """
+        start_time = time.perf_counter()
         try:
             # Extract image ID from request
             image_id: int = request.image_id
             
-            print(f"==> DeleteImage RPC called: ID={image_id}")
+            print(f"==> DeleteImage RPC called: ID={image_id}", end="")
             
             # Delete from cache
             success: bool = await self.image_cache.delete_image(image_id)
             
-            print(f"<== DeleteImage RPC completed: ID={image_id}, success={success}")
+            elapsed_time = time.perf_counter() - start_time
+            print(f" <== completed: ID={image_id}, success={success} (took {elapsed_time:.3f}s)")
             
             # Return response
             return DeleteImageResponse(success=success)
@@ -538,6 +557,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         except Exception as e:
             import traceback
             stack_trace = traceback.format_exc()
+            elapsed_time = time.perf_counter() - start_time
+            print(f" (failed in {elapsed_time:.3f}s)")
             print(f"Error deleting image: {e}\n{stack_trace}")
             await context.abort(grpc.StatusCode.INTERNAL, f"Error deleting image: {e}")
     

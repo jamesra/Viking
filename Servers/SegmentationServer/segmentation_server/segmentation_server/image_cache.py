@@ -100,7 +100,7 @@ class ImageCache:
         Architecture Note:
             Each image gets its own predictor instance created at upload time. This design
             choice eliminates the need to call set_image() during segmentation requests,
-            which is a major performance optimization. The trade-off is higher memory usage
+            which is a performance optimization. The trade-off is higher memory usage
             per cached image, but it enables true concurrent processing of different images.
         """
         self._cache: Dict[int, CachedImage] = {}

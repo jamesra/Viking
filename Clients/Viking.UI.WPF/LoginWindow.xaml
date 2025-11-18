@@ -26,6 +26,10 @@
         <!-- Stage 2: Volume Selection -->
         <controls:VolumeSelectionControl x:Name="volumeSelectionControl"
                                          Visibility="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ShowVolumeSelectionStage, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+        <!-- Stage 3: Segmentation Service Selection -->
+        <controls:SegmentationServiceSelectionControl x:Name="segmentationSelectionControl"
+                                                      Visibility="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ShowSegmentationServiceStage, Converter={StaticResource BoolToVisibilityConverter}}"/>
     </Grid>
 </Window>
 

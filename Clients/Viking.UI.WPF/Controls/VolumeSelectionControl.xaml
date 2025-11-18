@@ -1,0 +1,225 @@
+<UserControl x:Class="Viking.UI.WPF.Controls.VolumeSelectionControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Viking.UI.WPF.ViewModels"
+             xmlns:converters="clr-namespace:Viking.UI.WPF.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="500" d:DesignWidth="600"
+             Background="White">
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter"/>
+        <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+    </UserControl.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="10"/>
+            <ColumnDefinition Width="200"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                   Text="Select Volume" 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,20"
+                   HorizontalAlignment="Center"/>
+
+        <!-- Volumes Tree (Left Side) -->
+        <Grid Grid.Row="1" Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" 
+                       Text="Available Volumes" 
+                       FontSize="14" 
+                       FontWeight="Bold" 
+                       Margin="0,0,0,10"/>
+
+            <TreeView Grid.Row="1" 
+                      Name="treeVolumes"
+                      ItemsSource="{Binding OrganizationNodes}"
+                      SelectedItemChanged="treeVolumes_SelectedItemChanged"
+                      MouseDoubleClick="treeVolumes_MouseDoubleClick">
+                <TreeView.Resources>
+                    <HierarchicalDataTemplate DataType="{x:Type local:VolumeTreeNode}" 
+                                              ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}" 
+                                       FontWeight="{Binding IsOrganization, Converter={StaticResource BoolToFontWeightConverter}}"
+                                       Margin="0,2"/>
+                        </StackPanel>
+                    </HierarchicalDataTemplate>
+                </TreeView.Resources>
+            </TreeView>
+        </Grid>
+
+        <!-- Recent Volumes (Right Side) -->
+        <Grid Grid.Row="1" Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" 
+                       Text="Recent Volumes" 
+                       FontSize="14" 
+                       FontWeight="Bold" 
+                       Margin="0,0,0,10"/>
+
+            <ListBox Grid.Row="1" 
+                     Name="lstRecentVolumes"
+                     ItemsSource="{Binding RecentVolumes}"
+                     DisplayMemberPath="Name"
+                     SelectionChanged="lstRecentVolumes_SelectionChanged"
+                     MouseDoubleClick="lstRecentVolumes_MouseDoubleClick">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="ToolTip" Value="{Binding VolumeXmlUrl}"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+        </Grid>
+
+        <!-- Selected Volume URL Display -->
+        <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                Margin="0,15,0,0"
+                Padding="8"
+                Background="#F5F5F5"
+                BorderBrush="#DDDDDD"
+                BorderThickness="1"
+                CornerRadius="3"
+                Visibility="{Binding SelectedVolumeUrl, Converter={StaticResource StringToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" 
+                           Text="Selected URL:" 
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"
+                           Foreground="#666666"
+                           FontSize="11"/>
+
+                <TextBox Grid.Column="1" 
+                         Text="{Binding SelectedVolumeUrl, Mode=OneWay}"
+                         IsReadOnly="True"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         VerticalAlignment="Center"
+                         FontSize="11"
+                         Foreground="#333333"
+                         Padding="0"/>
+
+                <Button Grid.Column="2" 
+                        Command="{Binding CopyUrlCommand}"
+                        ToolTip="Copy URL to clipboard"
+                        Width="24"
+                        Height="24"
+                        Margin="5,0,0,0"
+                        Padding="2"
+                        Background="Transparent"
+                        BorderBrush="#CCCCCC"
+                        BorderThickness="1">
+                    <Viewbox Width="14" Height="14">
+                        <Canvas Width="16" Height="16">
+                            <!-- Copy icon (two overlapping rectangles) -->
+                            <Rectangle Canvas.Left="4" Canvas.Top="0" Width="9" Height="11" 
+                                       Stroke="#555555" StrokeThickness="1.2" Fill="Transparent"/>
+                            <Rectangle Canvas.Left="0" Canvas.Top="4" Width="9" Height="11" 
+                                       Stroke="#555555" StrokeThickness="1.2" Fill="White"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Manual Entry Expander (Bottom) -->
+        <Expander Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
+                  Header="Advanced: Enter Volume URL Manually"
+                  Margin="0,15,0,10"
+                  IsExpanded="{Binding ShowManualEntry}">
+            <Grid Margin="10,10,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" 
+                           Text="Volume URL:"
+                           Margin="0,0,0,5"/>
+                <TextBox Grid.Row="1" 
+                         Text="{Binding ManualVolumeUrl, UpdateSourceTrigger=PropertyChanged}"
+                         Padding="5"
+                         FontSize="12"/>
+            </Grid>
+        </Expander>
+
+        <!-- Status Message -->
+        <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
+                   Text="{Binding StatusMessage}" 
+                   Foreground="Gray"
+                   TextWrapping="Wrap"
+                   Margin="0,5,0,10"
+                   MinHeight="20"/>
+
+        <!-- Buttons -->
+        <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3"
+              Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="1" 
+                    Content="Select" 
+                    Command="{Binding SelectCommand}"
+                    Width="100"
+                    Height="35"
+                    FontSize="14"
+                    IsDefault="True"/>
+
+            <Button Grid.Column="3" 
+                    Content="Cancel" 
+                    Command="{Binding CancelCommand}"
+                    Width="100"
+                    Height="35"
+                    FontSize="14"
+                    IsCancel="True"/>
+        </Grid>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.Row="0" Grid.Column="0" Grid.RowSpan="6" Grid.ColumnSpan="3"
+              Background="#80FFFFFF"
+              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="Loading volumes..." 
+                           FontSize="16" 
+                           FontWeight="Bold"
+                           Margin="0,0,0,10"/>
+                <ProgressBar IsIndeterminate="True" 
+                             Width="200" 
+                             Height="20"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>
+
