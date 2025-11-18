@@ -1,0 +1,82 @@
+@model Viking.Identity.Models.SegmentationService
+
+@{
+    ViewData["Title"] = "Edit Segmentation Service";
+    ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
+    {
+        ("Dashboard", Url.Action("Index", "Home")),
+        ("Segmentation Services", Url.Action("Index", "SegmentationServices")),
+        (Model.Name, Url.Action("Details", "SegmentationServices", new { id = Model.Id })),
+        ("Edit", null)
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-diagram-3"></i> Edit Segmentation Service</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="card card-modern">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Update Details</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" id="editSegmentationServiceForm">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            @Html.HiddenFor(model => model.Id)
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Organizational Unit</label>
+                <select asp-for="ParentID" class="form-select" asp-items="ViewBag.AvailableParents">
+                    <option value="">No Organization</option>
+                </select>
+                <span asp-validation-for="ParentID" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Endpoint" class="form-label"></label>
+                <input asp-for="Endpoint" class="form-control" placeholder="https://example.com/segmentation" />
+                <span asp-validation-for="Endpoint" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-save"></i> Save Changes
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function () {
+            $('#editSegmentationServiceForm').on('submit', function () {
+                var $submitBtn = $(this).find('button[type=\"submit\"]');
+                $submitBtn.prop('disabled', true).html('<span class=\"spinner-border spinner-border-sm me-2\" role=\"status\" aria-hidden=\"true\"></span>Saving...');
+            });
+        });
+    </script>
+}
+
+
+
+

@@ -5,6 +5,7 @@
     ViewData["Title"] = Model.Name;
     Layout = "~/Views/Shared/_Layout.cshtml";
     var volumes = ViewData["Volumes"] as List<Viking.Identity.Models.Volume> ?? new List<Viking.Identity.Models.Volume>();
+    var segmentationServices = ViewData["SegmentationServices"] as List<Viking.Identity.Models.SegmentationService> ?? new List<Viking.Identity.Models.SegmentationService>();
     var childOrgs = ViewData["ChildOrganizations"] as List<Viking.Identity.Models.OrganizationalUnit> ?? new List<Viking.Identity.Models.OrganizationalUnit>();
     var groups = ViewData["Groups"] as List<Viking.Identity.Models.Group> ?? new List<Viking.Identity.Models.Group>();
     var canEdit = (await AuthorizationService.AuthorizeAsync(User, Model, Operations.OrgUnitAdmin)).Succeeded;
@@ -38,6 +39,15 @@
             @if (volumes.Any())
             {
                 <span class="badge bg-success ms-1">@volumes.Count</span>
+            }
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="segmentation-tab" data-bs-toggle="tab" data-bs-target="#segmentation" type="button" role="tab" aria-controls="segmentation" aria-selected="false">
+            <i class="bi bi-diagram-3"></i> Segmentation Services
+            @if (segmentationServices.Any())
+            {
+                <span class="badge bg-primary ms-1">@segmentationServices.Count</span>
             }
         </button>
     </li>
@@ -114,6 +124,11 @@
                     <dd class="col-sm-9">
                         <span class="badge bg-success">@volumes.Count</span>
                     </dd>
+
+                    <dt class="col-sm-3">Segmentation Services</dt>
+                    <dd class="col-sm-9">
+                        <span class="badge bg-primary">@segmentationServices.Count</span>
+                    </dd>
                     
                     <dt class="col-sm-3">Groups</dt>
                     <dd class="col-sm-9">
@@ -122,6 +137,95 @@
                 </dl>
             </div>
         </div>
+    </div>
+
+    <!-- Segmentation Services Tab -->
+    <div class="tab-pane fade" id="segmentation" role="tabpanel" aria-labelledby="segmentation-tab">
+        @if (canEdit)
+        {
+            <div class="mb-3">
+                <a asp-controller="SegmentationServices" asp-action="Create" asp-route-parentOrgId="@Model.Id" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create Segmentation Service
+                </a>
+            </div>
+        }
+        @if (segmentationServices.Any())
+        {
+            <div class="row">
+                @foreach (var service in segmentationServices.OrderBy(s => s.Name))
+                {
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card card-modern card-segmentation h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="bi bi-diagram-3 entity-icon-segmentation"></i> @service.Name
+                                </h6>
+                                <p class="card-text text-muted small">
+                                    @(string.IsNullOrEmpty(service.Description) ? "No description" : service.Description)
+                                </p>
+
+                                @{
+                                    var uniqueUserCount = service.UsersWithPermissions?.Select(p => p.UserId).Distinct().Count() ?? 0;
+                                }
+                                @if (uniqueUserCount > 0)
+                                {
+                                    <div class="mb-2">
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-person"></i> @uniqueUserCount unique user(s)
+                                        </span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="mb-2">
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-exclamation-triangle"></i> No users with permissions
+                                        </span>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrEmpty(service.Endpoint?.ToString()))
+                                {
+                                    <div class="card-text mb-2">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <input type="text" class="form-control form-control-sm" id="segmentationUrl_@service.Id" value="@service.Endpoint" readonly style="font-size: 0.875rem;">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary copy-url-btn" data-url="@service.Endpoint" title="Copy to clipboard">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                        <a href="@service.Endpoint" target="_blank" class="btn btn-sm btn-success">
+                                            <i class="bi bi-box-arrow-up-right"></i> Access Service
+                                        </a>
+                                    </div>
+                                }
+
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a asp-controller="SegmentationServices" asp-action="Details" asp-route-id="@service.Id" class="btn btn-outline-info">
+                                        <i class="bi bi-info-circle"></i> Details
+                                    </a>
+                                    @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, service)))
+                                    {
+                                        <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@service.Id" class="btn btn-outline-primary">
+                                            <i class="bi bi-shield-check"></i> Permissions
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> This organization doesn't have any segmentation services yet.
+                @if (canEdit)
+                {
+                    <a asp-controller="SegmentationServices" asp-action="Create" class="alert-link">Create a segmentation service</a>
+                }
+            </div>
+        }
     </div>
 
     <!-- Volumes Tab -->

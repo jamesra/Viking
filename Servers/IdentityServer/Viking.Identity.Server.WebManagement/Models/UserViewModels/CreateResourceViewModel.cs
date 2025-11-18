@@ -58,4 +58,17 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
         public CreateVolumeViewModel() : base() { }
         public CreateVolumeViewModel(CreateResourceViewModel template) : base(template) { }
     }
+
+    public class CreateSegmentationServiceViewModel : CreateResourceViewModel
+    {
+        public override string ResourceTypeId => nameof(SegmentationService);
+
+        [Display(Name = "Endpoint URL")]
+        public virtual Uri Endpoint { get; set; }
+
+        public CreateSegmentationServiceViewModel() : base() { }
+        public CreateSegmentationServiceViewModel(CreateResourceViewModel template) : base(template)
+        {
+        }
+    }
 }

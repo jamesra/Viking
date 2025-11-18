@@ -151,6 +151,59 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             }
         }
 
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<List<object>> UserPermissions()
+        {
+            var appUser = await GetApplicationUser();
+
+            if (appUser == null)
+            {
+                return new List<object>();
+            }
+
+            var resourceTypeIds = await _context.ResourceTypes
+                .Select(rt => rt.Id)
+                .ToArrayAsync();
+
+            if (resourceTypeIds.Length == 0)
+            {
+                return new List<object>();
+            }
+
+            var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, resourceTypeIds);
+
+            if (userPermittedResources.Count == 0)
+            {
+                return new List<object>();
+            }
+
+            var resourceIds = userPermittedResources.Keys.ToArray();
+
+            var resources = await _context.Resource
+                .Where(r => resourceIds.Contains(r.Id))
+                .Select(r => new { r.Id, r.Name, r.Description, r.ResourceTypeId })
+                .ToListAsync();
+
+            var resourceSummaries = resources
+                .Select(r =>
+                {
+                    userPermittedResources.TryGetValue(r.Id, out var grantedPermissions);
+                    return new
+                    {
+                        r.Id,
+                        r.Name,
+                        r.Description,
+                        r.ResourceTypeId,
+                        permissions = grantedPermissions ?? Array.Empty<string>()
+                    };
+                })
+                .Cast<object>()
+                .ToList();
+
+            return resourceSummaries;
+        }
+
         /// <summary>
         /// Return the permissions the current user has on the resource
         /// </summary>
@@ -303,6 +356,106 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         public Task<Dictionary<long, object>> UserAccessibleVolumes()
         {
             return UserPermissionsByType(resourceTypeId: nameof(Volume));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("AccessibleSegmentationServices")]
+        public async Task<Dictionary<long, object>> UserAccessibleSegmentationServices()
+        {
+            var appUser = await GetApplicationUser();
+
+            if (appUser == null)
+            {
+                return new Dictionary<long, object>();
+            }
+
+            var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, new[] { nameof(SegmentationService) });
+
+            if (userPermittedResources.Count == 0)
+            {
+                return new Dictionary<long, object>();
+            }
+
+            var segmentationServiceIds = userPermittedResources.Keys.Distinct().ToArray();
+
+            var segmentationServices = await _context.SegmentationServices
+                .Where(s => segmentationServiceIds.Contains(s.Id))
+                .Select(s => new
+                {
+                    s.Id,
+                    s.Name,
+                    s.Description,
+                    Endpoint = s.Endpoint != null ? s.Endpoint.ToString() : null
+                })
+                .ToListAsync();
+
+            return segmentationServices
+                .Select(r =>
+                {
+                    userPermittedResources.TryGetValue(r.Id, out var grantedPermissions);
+                    return new
+                    {
+                        r.Id,
+                        r.Name,
+                        r.Description,
+                        r.Endpoint,
+                        permissions = grantedPermissions ?? Array.Empty<string>()
+                    };
+                    return new
+                    {
+                        r.Id,
+                        r.Name,
+                        r.Description,
+                        r.Endpoint,
+                        permissions = grantedPermissions ?? Array.Empty<string>()
+                    };
+                })
+                .ToDictionary(r => r.Id, r => (object)r);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("AccessibleSegmentationServices/{username}")]
+        public async Task<Dictionary<long, object>> UserAccessibleSegmentationServicesByUsername(string username)
+        {
+            var appUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+            if (appUser == null)
+            {
+                return new Dictionary<long, object>();
+            }
+
+            var userPermittedResources = await _context.UserResourcePermissionsByType(appUser.Id, new[] { nameof(SegmentationService) });
+            if (userPermittedResources.Count == 0)
+            {
+                return new Dictionary<long, object>();
+            }
+
+            var segmentationServiceIds = userPermittedResources.Keys.Distinct().ToArray();
+
+            var segmentationServices = await _context.SegmentationServices
+                .Where(s => segmentationServiceIds.Contains(s.Id))
+                .Select(s => new
+                {
+                    s.Id,
+                    s.Name,
+                    s.Description,
+                    Endpoint = s.Endpoint != null ? s.Endpoint.ToString() : null
+                })
+                .ToListAsync();
+
+            return segmentationServices
+                .Select(r =>
+                {
+                    userPermittedResources.TryGetValue(r.Id, out var grantedPermissions);
+                    return new
+                    {
+                        r.Id,
+                        r.Name,
+                        r.Description,
+                        r.Endpoint,
+                        permissions = grantedPermissions ?? Array.Empty<string>()
+                    };
+                })
+                .ToDictionary(r => r.Id, r => (object)r);
         }
 
         [AllowAnonymous]

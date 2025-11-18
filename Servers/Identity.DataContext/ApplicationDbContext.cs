@@ -3,6 +3,7 @@ using System.Security.Policy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging;
 using Viking.Identity.Models;
 
@@ -99,7 +100,22 @@ namespace Viking.Identity.Data
                 .HasValue<Resource>(nameof(Models.Resource))
                 .HasValue<Volume>(nameof(Models.Volume))
                 .HasValue<OrganizationalUnit>(nameof(Models.OrganizationalUnit))
-                .HasValue<Group>(nameof(Models.Group));
+                .HasValue<Group>(nameof(Models.Group))
+                .HasValue<SegmentationService>(nameof(Models.SegmentationService));
+
+            var uriConverter = new ValueConverter<Uri, string>(
+                v => v == null ? null : v.ToString(),
+                v => string.IsNullOrWhiteSpace(v) ? null : new Uri(v));
+
+            builder.Entity<Volume>()
+                .Property(v => v.Endpoint)
+                .HasColumnName("Endpoint")
+                .HasConversion(uriConverter);
+
+            builder.Entity<SegmentationService>()
+                .Property(s => s.Endpoint)
+                .HasColumnName("Endpoint")
+                .HasConversion(uriConverter);
                  
             InitialPopulationOfDatabase(builder);
         }
@@ -134,9 +150,12 @@ namespace Viking.Identity.Data
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = Models.Special.Permissions.Volume.Annotate });
             builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.Volume), PermissionId = Models.Special.Permissions.Volume.Review });
 
-            ////////////////////////////////////////
-            /// Create standard groups
-            /// 
+            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.SegmentationService) });
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.SegmentationService), PermissionId = Models.Special.Permissions.SegmentationService.AccessManager});
+            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.SegmentationService), PermissionId = Models.Special.Permissions.SegmentationService.User});
+             
+            //////////////////////////
+            /// Create standard groups 
             var EveryoneGroup = new Group { Id = Special.Groups.Everyone, Name = Special.Groups.Everyone };
             builder.Entity<Group>().HasData(new Group[] {
                EveryoneGroup
@@ -207,6 +226,8 @@ namespace Viking.Identity.Data
         public DbSet<Volume> Volume { get; set; }
 
         public DbSet<Group> Group { get; set; }
+
+        public DbSet<SegmentationService> SegmentationServices { get; set; }
 
         public DbSet<UserToGroupAssignment> UserToGroupAssignments { get; set; }
 

@@ -44,23 +44,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
                 // For now, let's use a simpler approach - call the API directly without authentication
                 // since the API endpoint we created supports both authenticated and unauthenticated access
-                string apiEndpoint;
-                if (User.Identity?.IsAuthenticated == true && !string.IsNullOrEmpty(User.Identity.Name))
-                {
-                    // Use the username-specific endpoint for authenticated users
-                    apiEndpoint = $"/Permissions/AccessibleVolumes/{Uri.EscapeDataString(User.Identity.Name)}";
-                }
-                else
-                {
-                    // Use the general endpoint for unauthenticated users (will return empty)
-                    apiEndpoint = "/Permissions/AccessibleVolumes";
-                }
+                const string volumeEndpoint = "/Permissions/AccessibleVolumes";
+                var volumeResponse = await client.GetAsync(volumeEndpoint);
 
-                var response = await client.GetAsync(apiEndpoint);
-
-                if (response.IsSuccessStatusCode)
+                if (volumeResponse.IsSuccessStatusCode)
                 {
-                    var jsonContent = await response.Content.ReadAsStringAsync();
+                    var jsonContent = await volumeResponse.Content.ReadAsStringAsync();
                     Console.WriteLine($"[DEBUG] JSON Response: {jsonContent}");
                     
                     var apiResponse = JsonSerializer.Deserialize<Dictionary<long, JsonElement>>(jsonContent);
@@ -104,7 +93,50 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 {
                     // Log the error but don't fail the view - just show empty list
                     // In a production app, you might want to use a proper logging framework
-                    Console.WriteLine($"Failed to get accessible volumes: {response.StatusCode} - {response.ReasonPhrase}");
+                    Console.WriteLine($"Failed to get accessible volumes: {volumeResponse.StatusCode} - {volumeResponse.ReasonPhrase}");
+                }
+
+                // Fetch segmentation services
+                const string segmentationEndpoint = "/Permissions/AccessibleSegmentationServices";
+                var segmentationResponse = await client.GetAsync(segmentationEndpoint);
+                if (segmentationResponse.IsSuccessStatusCode)
+                {
+                    var segJsonContent = await segmentationResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[DEBUG] Segmentation JSON Response: {segJsonContent}");
+
+                    var segApiResponse = JsonSerializer.Deserialize<Dictionary<long, JsonElement>>(segJsonContent);
+
+                    if (segApiResponse != null)
+                    {
+                        model.AccessibleSegmentationServices = segApiResponse.Values
+                            .Select(serviceElement =>
+                            {
+                                try
+                                {
+                                    return new SegmentationServiceAccessInfo
+                                    {
+                                        Id = serviceElement.GetProperty("id").GetInt64(),
+                                        Name = serviceElement.GetProperty("name").GetString(),
+                                        Description = serviceElement.TryGetProperty("description", out var desc) ? desc.GetString() : string.Empty,
+                                        Endpoint = serviceElement.TryGetProperty("endpoint", out var endpoint) ? endpoint.GetString() : string.Empty,
+                                        Permissions = serviceElement.TryGetProperty("permissions", out var perms)
+                                            ? perms.EnumerateArray().Select(p => p.GetString()).ToList()
+                                            : new List<string>()
+                                    };
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"[DEBUG] Error processing segmentation service element: {ex.Message}");
+                                    Console.WriteLine($"[DEBUG] Element: {serviceElement}");
+                                    throw;
+                                }
+                            })
+                            .ToList();
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to get accessible segmentation services: {segmentationResponse.StatusCode} - {segmentationResponse.ReasonPhrase}");
                 }
             }
             catch (Exception ex)

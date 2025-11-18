@@ -58,6 +58,14 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Include(v => v.GroupsWithPermissions)
                 .ToListAsync();
 
+            // Load segmentation services in this org
+            var segmentationServices = await _context.SegmentationServices
+                .Where(s => s.ParentID == id)
+                .Include(s => s.Parent)
+                .Include(s => s.UsersWithPermissions)
+                .Include(s => s.GroupsWithPermissions)
+                .ToListAsync();
+
             // Load child orgs
             var childOrgs = organizationalUnit.Children
                 .OfType<OrganizationalUnit>()
@@ -72,6 +80,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .ToListAsync();
 
             ViewData["Volumes"] = volumes;
+            ViewData["SegmentationServices"] = segmentationServices;
             ViewData["ChildOrganizations"] = childOrgs;
             ViewData["Groups"] = groups;
 

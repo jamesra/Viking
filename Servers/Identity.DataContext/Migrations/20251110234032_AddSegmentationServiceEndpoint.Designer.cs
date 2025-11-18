@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Viking.Identity.Data;
 
@@ -11,9 +12,11 @@ using Viking.Identity.Data;
 namespace Viking.Identity.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251110234032_AddSegmentationServiceEndpoint")]
+    partial class AddSegmentationServiceEndpoint
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -378,10 +381,6 @@ namespace Viking.Identity.Data.Migrations
                         new
                         {
                             Id = "Volume"
-                        },
-                        new
-                        {
-                            Id = "SegmentationService"
                         });
                 });
 
@@ -428,16 +427,6 @@ namespace Viking.Identity.Data.Migrations
                         {
                             ResourceTypeId = "Volume",
                             PermissionId = "Review"
-                        },
-                        new
-                        {
-                            ResourceTypeId = "SegmentationService",
-                            PermissionId = "Access Manager"
-                        },
-                        new
-                        {
-                            ResourceTypeId = "SegmentationService",
-                            PermissionId = "User"
                         });
                 });
 

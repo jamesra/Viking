@@ -2,18 +2,23 @@
 
 @{
     ViewData["Title"] = "Bulk Edit Permissions";
+    var resourceController = ViewBag.ResourceController as string ?? "Resources";
+    var resourceListTitle = ViewBag.ResourceListTitle as string ?? "Resources";
+    var resourceBreadcrumb = ViewBag.ResourceBreadcrumb as string ?? resourceListTitle;
+    var formAction = ViewBag.FormAction as string ?? "BulkEdit";
+    var resourceIcon = Model.ResourceIconClass ?? "bi bi-folder";
     ViewData["Breadcrumbs"] = new List<(string Text, string Url)>
     {
         ("Dashboard", Url.Action("Index", "Home")),
-        ("Volumes", Url.Action("Index", "Volumes")),
+        (resourceBreadcrumb, Url.Action("Index", resourceController)),
         ("Bulk Edit Permissions", null)
     };
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2><i class="bi bi-shield-check"></i> Bulk Edit Permissions</h2>
-    <a asp-action="Index" asp-controller="Volumes" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Volumes
+    <a asp-action="Index" asp-controller="@resourceController" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to @resourceListTitle
     </a>
 </div>
 
@@ -26,23 +31,23 @@
 }
 
 <div class="alert alert-info">
-    <i class="bi bi-info-circle"></i> <strong>Bulk Operation:</strong> You are editing permissions for <strong>@Model.Volumes.Count</strong> volume(s). Changes will be applied to all selected volumes.
+    <i class="bi bi-info-circle"></i> <strong>Bulk Operation:</strong> You are editing permissions for <strong>@Model.Resources.Count</strong> @Model.ResourcePluralDisplayName.ToLower(). Changes will be applied to all selected @Model.ResourcePluralDisplayName.ToLower().
 </div>
 
 <div class="card card-modern mb-4">
     <div class="card-header bg-warning text-dark">
-        <h5 class="mb-0"><i class="bi bi-hdd-stack"></i> Selected Volumes</h5>
+        <h5 class="mb-0"><i class="@resourceIcon"></i> Selected @Model.ResourcePluralDisplayName</h5>
     </div>
     <div class="card-body">
         <div class="row">
-            @foreach (var volume in Model.Volumes)
+            @foreach (var resource in Model.Resources)
             {
                 <div class="col-md-6 col-lg-4 mb-2">
                     <div class="d-flex align-items-center">
-                        <i class="bi bi-hdd entity-icon-volume me-2"></i>
+                        <i class="@resourceIcon me-2"></i>
                         <div>
-                            <strong>@volume.Name</strong>
-                            <br><small class="text-muted">@volume.OrganizationName</small>
+                            <strong>@resource.Name</strong>
+                            <br><small class="text-muted">@resource.OrganizationName</small>
                         </div>
                     </div>
                 </div>
@@ -51,10 +56,10 @@
     </div>
 </div>
 
-<form asp-action="BulkEdit" id="bulkPermissionsForm">
-    @for (int i = 0; i < Model.SelectedVolumeIds.Count; i++)
+<form asp-action="@formAction" id="bulkPermissionsForm">
+    @for (int i = 0; i < Model.SelectedResourceIds.Count; i++)
     {
-        <input type="hidden" asp-for="SelectedVolumeIds[i]" />
+        <input type="hidden" asp-for="SelectedResourceIds[i]" />
     }
     
     <partial name="~/Views/Shared/_ResourcePermissionsGridViewPartialView.cshtml" 
@@ -68,13 +73,13 @@
     <div class="card card-modern mt-4">
         <div class="card-body">
             <div class="alert alert-warning">
-                <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> This will apply the selected permissions to all @Model.Volumes.Count volume(s). Make sure this is what you want before proceeding.
+                <i class="bi bi-exclamation-triangle"></i> <strong>Warning:</strong> This will apply the selected permissions to all @Model.Resources.Count @Model.ResourcePluralDisplayName.ToLower(). Make sure this is what you want before proceeding.
             </div>
             <div class="form-group mt-4">
                 <button type="submit" class="btn btn-warning btn-lg">
-                    <i class="bi bi-save"></i> Apply to All @Model.Volumes.Count Volume(s)
+                    <i class="bi bi-save"></i> Apply to All @Model.Resources.Count @Model.ResourcePluralDisplayName
                 </button>
-                <a asp-action="Index" asp-controller="Volumes" class="btn btn-outline-secondary btn-lg ms-2">
+                <a asp-action="Index" asp-controller="@resourceController" class="btn btn-outline-secondary btn-lg ms-2">
                     <i class="bi bi-x-circle"></i> Cancel
                 </a>
             </div>
@@ -86,7 +91,7 @@
     <script>
         $(document).ready(function() {
             $('#bulkPermissionsForm').on('submit', function() {
-                if (!confirm('Are you sure you want to apply these permissions to all @Model.Volumes.Count selected volume(s)? This action cannot be undone.')) {
+                if (!confirm('Are you sure you want to apply these permissions to all @Model.Resources.Count selected @Model.ResourcePluralDisplayName.ToLower()? This action cannot be undone.')) {
                     return false;
                 }
                 var $submitBtn = $(this).find('button[type="submit"]');

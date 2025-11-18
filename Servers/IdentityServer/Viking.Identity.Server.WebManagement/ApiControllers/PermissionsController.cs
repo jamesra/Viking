@@ -264,5 +264,11 @@ namespace Viking.Identity.Server.WebManagement.ApiControllers
             return resourceMap.ToDictionary(r => r.Id, r => (object)r);
             */
         }
+
+        [HttpGet("AccessibleSegmentationServices")]
+        public Task<Dictionary<long, object>> UserAccessibleSegmentationServices()
+        {
+            return UserPermissionsByType(resourceTypeId: nameof(SegmentationService));
+        }
     }
 }

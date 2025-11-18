@@ -16,6 +16,7 @@
     --color-volume: #198754;     /* Green for Volumes */
     --color-user: #6f42c1;       /* Purple for Users */
     --color-group: #fd7e14;      /* Orange for Groups */
+    --color-segmentation: #1b6ca8; /* Blue for Segmentation Services */
     --color-permission: #0dcaf0;  /* Cyan for Permissions */
     
     /* Spacing */
@@ -66,6 +67,11 @@
     color: white;
 }
 
+.badge-segmentation {
+    background-color: var(--color-segmentation);
+    color: white;
+}
+
 .badge-permission {
     background-color: var(--color-permission);
     color: white;
@@ -86,6 +92,10 @@
 
 .entity-icon-group {
     color: var(--color-group);
+}
+
+.entity-icon-segmentation {
+    color: var(--color-segmentation);
 }
 
 /* Permission States */
@@ -129,6 +139,10 @@
 
 .card-modern.card-group {
     border-left: 4px solid var(--color-group);
+}
+
+.card-modern.card-segmentation {
+    border-left: 4px solid var(--color-segmentation);
 }
 
 /* Stats Cards */
@@ -283,11 +297,13 @@
 .text-volume { color: var(--color-volume); }
 .text-user { color: var(--color-user); }
 .text-group { color: var(--color-group); }
+.text-segmentation { color: var(--color-segmentation); }
 
 .bg-org { background-color: var(--color-org); }
 .bg-volume { background-color: var(--color-volume); }
 .bg-user { background-color: var(--color-user); }
 .bg-group { background-color: var(--color-group); }
+.bg-segmentation { background-color: var(--color-segmentation); }
 
 .btn-outline-purple {
     color: var(--color-user);
@@ -298,6 +314,17 @@
     color: white;
     background-color: var(--color-user);
     border-color: var(--color-user);
+}
+
+.btn-outline-segmentation {
+    color: var(--color-segmentation);
+    border-color: var(--color-segmentation);
+}
+
+.btn-outline-segmentation:hover {
+    color: white;
+    background-color: var(--color-segmentation);
+    border-color: var(--color-segmentation);
 }
 
 /* Table Enhancements */

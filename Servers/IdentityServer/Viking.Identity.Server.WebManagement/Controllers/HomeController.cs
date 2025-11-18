@@ -37,6 +37,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 model.TotalUsers = await _context.Users.CountAsync();
                 model.TotalOrganizations = await _context.OrgUnit.CountAsync();
                 model.TotalVolumes = await _context.Volume.CountAsync();
+                model.TotalSegmentationServices = await _context.SegmentationServices.CountAsync();
                 model.TotalGroups = await _context.Group.CountAsync();
 
                 // Get user's organizations and volumes - simplified for now
@@ -61,6 +62,21 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                                 .Take(10)
                                 .ToListAsync();
                         }
+
+                        var userSegmentationIds = await _context.GrantedUserPermissions
+                            .Where(gup => gup.UserId == user.Id)
+                            .Select(gup => gup.ResourceId)
+                            .Distinct()
+                            .ToListAsync();
+
+                        if (userSegmentationIds.Any())
+                        {
+                            model.UserSegmentationServices = await _context.SegmentationServices
+                                .Where(s => userSegmentationIds.Contains(s.Id))
+                                .Include(s => s.Parent)
+                                .Take(10)
+                                .ToListAsync();
+                        }
                     }
                 }
             }
@@ -70,6 +86,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 model.TotalUsers = 0;
                 model.TotalOrganizations = 0;
                 model.TotalVolumes = 0;
+                model.TotalSegmentationServices = 0;
                 model.TotalGroups = 0;
             }
 

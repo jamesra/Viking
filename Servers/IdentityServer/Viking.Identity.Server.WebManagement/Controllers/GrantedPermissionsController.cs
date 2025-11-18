@@ -313,67 +313,118 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             };
         }
 
-        // GET: GrantedPermissions/BulkEdit
-        public async Task<IActionResult> BulkEdit(string volumeIds)
+        // GET: GrantedPermissions/BulkEdit (Volumes)
+        public Task<IActionResult> BulkEdit(string volumeIds)
         {
-            if (string.IsNullOrEmpty(volumeIds))
+            return BulkEditResources<Volume>(
+                ParseIds(volumeIds),
+                "Volumes",
+                "Volumes",
+                "bi bi-hdd-stack",
+                nameof(BulkEdit));
+        }
+
+        // POST: GrantedPermissions/BulkEdit (Volumes)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public Task<IActionResult> BulkEdit([Bind()] BulkPermissionsEditViewModel model)
+        {
+            return ApplyBulkPermissions<Volume>(
+                model,
+                "Volumes",
+                "Volumes");
+        }
+
+        // GET: GrantedPermissions/BulkEditSegmentation
+        public Task<IActionResult> BulkEditSegmentation(string segmentationServiceIds)
+        {
+            return BulkEditResources<SegmentationService>(
+                ParseIds(segmentationServiceIds),
+                "Segmentation Services",
+                "SegmentationServices",
+                "bi bi-diagram-3",
+                nameof(BulkEditSegmentation));
+        }
+
+        // POST: GrantedPermissions/BulkEditSegmentation
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public Task<IActionResult> BulkEditSegmentation([Bind()] BulkPermissionsEditViewModel model)
+        {
+            return ApplyBulkPermissions<SegmentationService>(
+                model,
+                "Segmentation Services",
+                "SegmentationServices");
+        }
+
+        private List<long> ParseIds(string ids)
+        {
+            if (string.IsNullOrWhiteSpace(ids))
             {
-                TempData["ErrorMessage"] = "No volumes selected for bulk editing.";
-                return RedirectToAction("Index", "Volumes");
+                return new List<long>();
             }
 
-            var volumeIdList = volumeIds.Split(',')
+            return ids.Split(',')
                 .Select(v => long.TryParse(v, out var id) ? id : (long?)null)
                 .Where(v => v.HasValue)
-                .Select(v => v.Value)
+                .Select(v => v!.Value)
                 .ToList();
+        }
 
-            if (!volumeIdList.Any())
+        private async Task<IActionResult> BulkEditResources<TResource>(
+            List<long> resourceIds,
+            string resourceDisplayName,
+            string returnController,
+            string resourceIconClass,
+            string formActionName)
+            where TResource : Resource
+        {
+            if (!resourceIds.Any())
             {
-                TempData["ErrorMessage"] = "Invalid volume IDs provided.";
-                return RedirectToAction("Index", "Volumes");
+                TempData["ErrorMessage"] = $"No {resourceDisplayName.ToLower()} selected for bulk editing.";
+                return RedirectToAction("Index", returnController);
             }
 
-            // Get volumes and check permissions
-            var volumes = await _context.Volume
-                .Include(v => v.Parent)
-                .Include(v => v.ResourceType)
-                .Where(v => volumeIdList.Contains(v.Id))
+            var resources = await _context.Set<TResource>()
+                .Include(r => r.Parent)
+                .Include(r => r.ResourceType)
+                .Where(r => resourceIds.Contains(r.Id))
                 .ToListAsync();
 
-            // Check that user can edit all selected volumes
-            foreach (var volume in volumes)
+            if (!resources.Any())
             {
-                if (!await CanEditResourcePermissions(volume))
+                TempData["ErrorMessage"] = $"Invalid {resourceDisplayName.ToLower()} provided.";
+                return RedirectToAction("Index", returnController);
+            }
+
+            foreach (var resource in resources)
+            {
+                if (!await CanEditResourcePermissions(resource))
                 {
-                    TempData["ErrorMessage"] = $"You do not have permission to edit permissions for volume: {volume.Name}";
-                    return RedirectToAction("Index", "Volumes");
+                    TempData["ErrorMessage"] = $"You do not have permission to edit permissions for {resourceDisplayName.ToLower().TrimEnd('s')}: {resource.Name}";
+                    return RedirectToAction("Index", returnController);
                 }
             }
 
-            // Get common permissions across all volumes (they should all be the same ResourceType)
-            var firstVolume = volumes.First();
+            var firstResource = resources.First();
             var commonPermissions = await _context.Permissions
-                .Where(p => p.ResourceTypeId == firstVolume.ResourceTypeId)
+                .Where(p => p.ResourceTypeId == firstResource.ResourceTypeId)
                 .Select(p => p.PermissionId)
                 .ToListAsync();
 
-            // Get union of all users/groups that have permissions on any of these volumes
             var allUserPermissions = await _context.GrantedUserPermissions
                 .Include(gup => gup.PermittedUser)
-                .Where(gup => volumeIdList.Contains(gup.ResourceId))
+                .Where(gup => resourceIds.Contains(gup.ResourceId))
                 .ToListAsync();
 
             var allGroupPermissions = await _context.GrantedGroupPermissions
                 .Include(gup => gup.PermittedGroup)
-                .Where(gup => volumeIdList.Contains(gup.ResourceId))
+                .Where(gup => resourceIds.Contains(gup.ResourceId))
                 .ToListAsync();
 
-            // Build view model - show all users/groups that appear in any volume
             var userIds = allUserPermissions.Select(gup => gup.UserId).Distinct().ToList();
             var groupIds = allGroupPermissions.Select(gup => gup.GroupId).Distinct().ToList();
 
-            // Materialize users first, then build permissions in memory
             var usersList = await _context.Users
                 .Where(u => userIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.UserName })
@@ -386,11 +437,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 Permissions = commonPermissions.Select(permissionId => new ItemSelectedViewModel<string>
                 {
                     Id = permissionId,
-                    Selected = allUserPermissions.Any(gup => gup.UserId == u.Id && gup.ResourceId == volumeIdList.First() && gup.PermissionId == permissionId)
+                    Selected = allUserPermissions.Any(gup => gup.UserId == u.Id && gup.ResourceId == resourceIds.First() && gup.PermissionId == permissionId)
                 }).ToList()
             }).ToList();
 
-            // Materialize groups first, then build permissions in memory
             var groupsList = await _context.Group
                 .Where(g => groupIds.Contains(g.Id))
                 .Select(g => new { g.Id, g.Name })
@@ -403,75 +453,83 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 Permissions = commonPermissions.Select(permissionId => new ItemSelectedViewModel<string>
                 {
                     Id = permissionId,
-                    Selected = allGroupPermissions.Any(gup => gup.GroupId == g.Id && gup.ResourceId == volumeIdList.First() && gup.PermissionId == permissionId)
+                    Selected = allGroupPermissions.Any(gup => gup.GroupId == g.Id && gup.ResourceId == resourceIds.First() && gup.PermissionId == permissionId)
                 }).ToList()
             }).ToList();
 
             var model = new BulkPermissionsEditViewModel
             {
-                SelectedVolumeIds = volumeIdList,
-                Volumes = volumes.Select(v => new BulkPermissionsEditViewModel.VolumeInfo
+                SelectedResourceIds = resourceIds,
+                Resources = resources.Select(r => new BulkPermissionsEditViewModel.ResourceInfo
                 {
-                    Id = v.Id,
-                    Name = v.Name,
-                    OrganizationName = v.Parent?.Name ?? "No Organization"
+                    Id = r.Id,
+                    Name = r.Name,
+                    OrganizationName = r.Parent?.Name ?? "No Organization"
                 }).ToList(),
+                ResourcePluralDisplayName = resourceDisplayName,
+                ResourceSingularDisplayName = resourceDisplayName.TrimEnd('s'),
+                ResourceIconClass = resourceIconClass,
+                ReturnController = returnController,
                 AvailablePermissions = commonPermissions,
                 UserPermissions = users,
                 GroupPermissions = groups
             };
 
-            return View(model);
+            ViewBag.ResourceController = returnController;
+            ViewBag.ResourceListTitle = resourceDisplayName;
+            ViewBag.ResourceBreadcrumb = resourceDisplayName;
+            ViewBag.FormAction = formActionName;
+
+            return View("BulkEdit", model);
         }
 
-        // POST: GrantedPermissions/BulkEdit
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> BulkEdit([Bind()] BulkPermissionsEditViewModel model)
+        private async Task<IActionResult> ApplyBulkPermissions<TResource>(
+            BulkPermissionsEditViewModel model,
+            string resourceDisplayName,
+            string returnController)
+            where TResource : Resource
         {
-            if (!model.SelectedVolumeIds.Any())
+            if (!model.SelectedResourceIds.Any())
             {
-                TempData["ErrorMessage"] = "No volumes selected.";
-                return RedirectToAction("Index", "Volumes");
+                TempData["ErrorMessage"] = $"No {resourceDisplayName.ToLower()} selected.";
+                return RedirectToAction("Index", returnController);
             }
 
-            // Verify volumes exist and user has permission
-            var volumes = await _context.Volume
-                .Include(v => v.UsersWithPermissions)
-                .Include(v => v.GroupsWithPermissions)
-                .Include(v => v.Parent)
-                .Where(v => model.SelectedVolumeIds.Contains(v.Id))
+            var resources = await _context.Set<TResource>()
+                .Include(r => r.UsersWithPermissions)
+                .Include(r => r.GroupsWithPermissions)
+                .Include(r => r.Parent)
+                .Where(r => model.SelectedResourceIds.Contains(r.Id))
                 .ToListAsync();
 
-            foreach (var volume in volumes)
+            foreach (var resource in resources)
             {
-                if (!await CanEditResourcePermissions(volume))
+                if (!await CanEditResourcePermissions(resource))
                 {
-                    TempData["ErrorMessage"] = $"You do not have permission to edit permissions for volume: {volume.Name}";
-                    return RedirectToAction("Index", "Volumes");
+                    TempData["ErrorMessage"] = $"You do not have permission to edit permissions for {resourceDisplayName.ToLower().TrimEnd('s')}: {resource.Name}";
+                    return RedirectToAction("Index", returnController);
                 }
             }
 
-            // Apply permissions to all selected volumes
             int successCount = 0;
-            foreach (var volume in volumes)
+            foreach (var resource in resources)
             {
                 try
                 {
-                    volume.UpdateUsersPermissions(model.UserPermissions);
-                    volume.UpdateGroupsPermissions(model.GroupPermissions);
+                    resource.UpdateUsersPermissions(model.UserPermissions);
+                    resource.UpdateGroupsPermissions(model.GroupPermissions);
                     successCount++;
                 }
                 catch
                 {
-                    // Log error but continue with other volumes
+                    // TODO: log error
                 }
             }
 
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = $"Permissions updated successfully for {successCount} volume(s).";
-            return RedirectToAction("Index", "Volumes");
+            TempData["SuccessMessage"] = $"Permissions updated successfully for {successCount} {resourceDisplayName.ToLower()}.";
+            return RedirectToAction("Index", returnController);
         }
     }
 }
