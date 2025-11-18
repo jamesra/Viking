@@ -20,8 +20,8 @@ namespace Viking.DataModel.Annotation
         public DateTime LastModified { get; set; }
         public DateTime Created { get; set; }
         public string Username { get; set; }
-        public object MosaicShape { get; set; }
-        public object VolumeShape { get; set; }
+        public byte[] MosaicShape { get; set; }
+        public byte[] VolumeShape { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
         public double VolumeX { get; set; }

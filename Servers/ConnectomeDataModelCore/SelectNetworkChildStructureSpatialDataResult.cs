@@ -7,14 +7,5 @@ namespace Viking.DataModel.Annotation
 {
     public partial class SelectNetworkChildStructureSpatialDataResult
     {
-        public long ID { get; set; }
-        public object BoundingRect { get; set; }
-        public double Area { get; set; }
-        public double Volume { get; set; }
-        public int MaxDimension { get; set; }
-        public double MinZ { get; set; }
-        public double MaxZ { get; set; }
-        public object ConvexHull { get; set; }
-        public DateTime LastModified { get; set; }
     }
 }

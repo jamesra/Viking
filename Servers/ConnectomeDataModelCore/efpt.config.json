@@ -1,5 +1,5 @@
 ﻿{
-   "CodeGenerationMode": 0,
+   "CodeGenerationMode": 2,
    "ContextClassName": "AnnotationContext",
    "ContextNamespace": null,
    "DefaultDacpacSchema": null,
@@ -272,7 +272,7 @@
       {
          "Name": "[dbo].[LocationHasTag]",
          "ObjectType": 2
-      }, 
+      },
       {
          "Name": "[dbo].[NetworkChildStructureIDs]",
          "ObjectType": 2
@@ -308,7 +308,7 @@
       {
          "Name": "[dbo].[TypeIDToName]",
          "ObjectType": 2
-      }, 
+      },
       {
          "Name": "[dbo].[ufnCenterToCenterIntersectionPoint]",
          "ObjectType": 2
@@ -426,15 +426,17 @@
          "ObjectType": 2
       }
    ],
-   "UiHint": "OPR-MARC-DB2.Test",
+   "UiHint": "OpR-Marc-DB2.Test",
    "UseBoolPropertiesWithoutDefaultSql": false,
    "UseDatabaseNames": false,
    "UseDbContextSplitting": false,
    "UseFluentApiOnly": false,
    "UseHandleBars": false,
+   "UseHierarchyId": false,
    "UseInflector": true,
    "UseLegacyPluralizer": false,
-   "UseNoConstructor": false,
+   "UseManyToManyEntity": true,
+   "UseNoConstructor": true,
    "UseNoDefaultConstructor": false,
    "UseNoNavigations": false,
    "UseNoObjectFilter": false,

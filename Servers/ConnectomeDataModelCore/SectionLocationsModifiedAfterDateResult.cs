@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Xml.Serialization;
-using NetTopologySuite.Geometries;
 
 namespace Viking.DataModel.Annotation
 {
@@ -22,8 +20,8 @@ namespace Viking.DataModel.Annotation
         public DateTime LastModified { get; set; }
         public DateTime Created { get; set; }
         public string Username { get; set; }
-        public Geometry MosaicShape { get; set; }
-        public Geometry VolumeShape { get; set; }
+        public byte[] MosaicShape { get; set; }
+        public byte[] VolumeShape { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
         public double VolumeX { get; set; }
