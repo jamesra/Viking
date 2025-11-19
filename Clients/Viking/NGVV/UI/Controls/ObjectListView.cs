@@ -407,12 +407,10 @@ namespace Viking.UI.BaseClasses
                 if (contextObj != null)
                 {
                     // Convert old ContextMenu to ContextMenuStrip items
-                    using (ContextMenu objectContextMenu = contextObj.ContextMenu)
+                    ContextMenu objectContextMenu = contextObj.ContextMenu;
+                    if (objectContextMenu != null)
                     {
-                        if (objectContextMenu != null)
-                        {
-                            AddMenuItemsToContextMenuStrip(contextMenu, objectContextMenu);
-                        }
+                        AddMenuItemsToContextMenuStrip(contextMenu, objectContextMenu);
                     }
                 }
             }
@@ -479,7 +477,7 @@ namespace Viking.UI.BaseClasses
             toolStripItem.Enabled = menuItem.Enabled;
             toolStripItem.Checked = menuItem.Checked;
             
-            // Copy event handlers by invoking the original handler when the new one is clicked
+            // Copy event handlers by invoking the original handler when the new one is clicked            
             toolStripItem.Click += (sender, e) => {
                 // Create a MenuItem event args and invoke the original handler
                 menuItem.PerformClick();

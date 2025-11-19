@@ -21,6 +21,8 @@ using Viking.ViewModels;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using Viking.DependencyInjection;
+using Viking.Services.Grpc;
 using WebAnnotation.Actions;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Commands;
@@ -983,13 +985,14 @@ namespace WebAnnotation
 
                     if (_Parent.CurrentCommand is null || _Parent.CurrentCommand is DefaultCommand)
                     {
-                        _Parent.CurrentCommand = new SegmentationCommand(this.Parent, null,
-                        new SegmentationCommand.OnCommandSuccess((outputPolygon) =>
+                        var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                        _Parent.CurrentCommand = new SegmentationCommand(this.Parent,
+                            new SegmentationCommand.OnCommandSuccess((outputPolygon) =>
                             {
                                 SegmentationCommand.CreateAnnotationFromPolygon(this.Parent, null, outputPolygon);
                                 // Determine structure type
                             }
-                        ));
+                        ), channelManager);
                     }
                     return;
                 case Keys.F5:

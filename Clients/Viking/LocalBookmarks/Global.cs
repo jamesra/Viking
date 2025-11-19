@@ -171,7 +171,7 @@ namespace LocalBookmarks
 
                 //Reload the bookmarks
                 Global global = new Global();
-                global.Initialize();
+                global.Initialize(null);
 
                 if (AfterUndo != null)
                     AfterUndo(Global.FolderUIObjRoot, new EventArgs());
@@ -195,7 +195,7 @@ namespace LocalBookmarks
 
         #region IInitExtensions Members
 
-        public bool Initialize()
+        public bool Initialize(IServiceProvider provider = null)
         {
             //Check if there is a local favorites XML file, if it does not exist, create it, we always return true
 

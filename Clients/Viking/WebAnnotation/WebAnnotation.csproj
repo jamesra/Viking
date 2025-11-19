@@ -109,6 +109,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="log4net" Version="2.0.13" />
 		<PackageReference Include="MathNet.Numerics" Version="5.0.0" /> 
 		<PackageReference Include="NETStandard.Library" Version="2.0.3" />

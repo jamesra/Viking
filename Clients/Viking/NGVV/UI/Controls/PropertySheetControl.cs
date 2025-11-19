@@ -28,7 +28,9 @@ namespace Viking.UI.Controls
         public IUIObjectBasic ShownObject = null;
 
         [Browsable(false)]
-        public System.Drawing.Size MaxTabSize = Size.Empty;
+        public Size MaxTabSize => _maxTabSize;
+
+        private Size _maxTabSize = Size.Empty;
 
         [Browsable(false)]
         public IPropertyPage[] IPropertyPages => IPageArray.ToArray();
@@ -59,15 +61,11 @@ namespace Viking.UI.Controls
 
                     if (TPage != null)
                     {
-                        if (TPage.Width > MaxTabSize.Width)
-                            MaxTabSize.Width = TPage.Width;
-                        if (TPage.Height > MaxTabSize.Height)
-                            MaxTabSize.Height = TPage.Height;
-
                         //Disable all pages to start with
                         IPage.Enable(false);
 
                         this.TabPages.Add(TPage);
+                        UpdateMaxTabSizeForPage(TPage);
                     }
                 }
             }
@@ -169,6 +167,65 @@ namespace Viking.UI.Controls
                     ShownObject.Row.RejectChanges();
             }
              * */
+        }
+
+        public Size RecalculateMaxTabSize()
+        {
+            _maxTabSize = Size.Empty;
+            foreach (TabPage tab in this.TabPages)
+            {
+                UpdateMaxTabSizeForPage(tab);
+            }
+            return _maxTabSize;
+        }
+
+        private void UpdateMaxTabSizeForPage(TabPage tabPage)
+        {
+            if (tabPage is null)
+            {
+                return;
+            }
+
+            Size candidate = tabPage.Padding.Size;
+
+            if (tabPage.Controls.Count > 0)
+            {
+                Control child = tabPage.Controls[0];
+
+                DockStyle originalDock = child.Dock;
+                try
+                {
+                    // Temporarily remove docking to get an accurate preferred size
+                    if (originalDock == DockStyle.Fill)
+                    {
+                        child.Dock = DockStyle.None;
+                    }
+
+                    Size preferred = child.GetPreferredSize(Size.Empty);
+                    if (preferred.IsEmpty)
+                    {
+                        preferred = child.Size;
+                    }
+
+                    candidate.Width = Math.Max(candidate.Width, preferred.Width);
+                    candidate.Height = Math.Max(candidate.Height, preferred.Height);
+                }
+                finally
+                {
+                    child.Dock = originalDock;
+                }
+            }
+
+            // Fallback to tab preferred size if child measurement fails
+            Size tabPreferred = tabPage.GetPreferredSize(Size.Empty);
+            if (!tabPreferred.IsEmpty)
+            {
+                candidate.Width = Math.Max(candidate.Width, tabPreferred.Width);
+                candidate.Height = Math.Max(candidate.Height, tabPreferred.Height);
+            }
+
+            _maxTabSize.Width = Math.Max(_maxTabSize.Width, candidate.Width);
+            _maxTabSize.Height = Math.Max(_maxTabSize.Height, candidate.Height);
         }
     }
 }

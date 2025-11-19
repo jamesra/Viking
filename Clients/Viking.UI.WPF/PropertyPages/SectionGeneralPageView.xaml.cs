@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Documents;
 using Viking.Common;
+using Viking.UI.WPF.Models;
 using Viking.VolumeModel;
 using VolumeSection = Viking.VolumeModel.Section;
 
@@ -61,19 +62,19 @@ namespace Viking.UI.WPF.PropertyPages
         {
             List<int> above = new List<int>();
             List<int> below = new List<int>();
+            int currentNumber = (int)_section.Number;
 
             if (_sectionMap != null)
             {
-                int currentNumber = (int)_section.Number;
                 foreach (object key in _sectionMap.Keys)
                 {
                     if (key is int number)
                     {
-                        if (number < currentNumber)
+                        if (number > currentNumber)  // Higher numbers are above
                         {
                             above.Add(number);
                         }
-                        else if (number > currentNumber)
+                        else if (number < currentNumber)  // Lower numbers are below
                         {
                             below.Add(number);
                         }
@@ -86,24 +87,92 @@ namespace Viking.UI.WPF.PropertyPages
 
             AboveList.ItemsSource = above;
             BelowList.ItemsSource = below;
-
-            int? aboveNumber = GetSectionNumber(_section.ReferenceSectionAbove as VolumeSection);
-            int? belowNumber = GetSectionNumber(_section.ReferenceSectionBelow as VolumeSection);
-
-            if (aboveNumber.HasValue)
+              
+            // Get the volume's local directory for settings
+            string volumeLocalDir = GetVolumeLocalDirectory();
+            
+            // Load persisted settings
+            var allSettings = SectionReferenceSettings.LoadForVolume(volumeLocalDir);
+            
+            int? aboveNumber = null;
+            int? belowNumber = null;
+            
+            // Check if we have persisted settings for this section
+            if (allSettings.TryGetValue(currentNumber, out var persistedRefs))
             {
-                AboveList.SelectedItem = aboveNumber.Value;
+                aboveNumber = persistedRefs.ReferenceAbove;
+                belowNumber = persistedRefs.ReferenceBelow;
+            }
+            else
+            {
+                // No persisted settings, check if already set in the section model
+                aboveNumber = GetSectionNumber(_section.ReferenceSectionAbove as VolumeSection);
+                belowNumber = GetSectionNumber(_section.ReferenceSectionBelow as VolumeSection);
+                
+                // If not set in model, auto-select adjacent sections (defaults)
+                if (!aboveNumber.HasValue)
+                {
+                    int defaultAbove = currentNumber + 1;
+                    if (above.Contains(defaultAbove))
+                    {
+                        aboveNumber = defaultAbove;
+                    }
+                }
+                
+                if (!belowNumber.HasValue)
+                {
+                    int defaultBelow = currentNumber - 1;
+                    if (below.Contains(defaultBelow))
+                    {
+                        belowNumber = defaultBelow;
+                    }
+                }
             }
 
-            if (belowNumber.HasValue)
+            // Set selections and scroll into view
+            if (aboveNumber.HasValue && above.Contains(aboveNumber.Value))
+            {
+                AboveList.SelectedItem = aboveNumber.Value;
+                AboveList.ScrollIntoView(aboveNumber.Value);
+            }
+
+            if (belowNumber.HasValue && below.Contains(belowNumber.Value))
             {
                 BelowList.SelectedItem = belowNumber.Value;
+                BelowList.ScrollIntoView(belowNumber.Value);
             }
         }
 
         private static int? GetSectionNumber(VolumeSection section)
         {
             return section?.Number;
+        }
+
+        private string GetVolumeLocalDirectory()
+        {
+            try
+            {
+                dynamic volume = _section?.VolumeViewModel;
+                if (volume == null)
+                {
+                    return null;
+                }
+
+                // Access the Volume object through the ViewModel
+                dynamic volumeModel = volume.Volume;
+                if (volumeModel == null)
+                {
+                    return null;
+                }
+
+                // Get LocalVolumeDir using the public property
+                return volumeModel.LocalVolumeDir as string;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Failed to get volume local directory: {ex.Message}");
+                return null;
+            }
         }
 
         private VolumeSection ResolveSection(int number)
@@ -133,6 +202,7 @@ namespace Viking.UI.WPF.PropertyPages
 
         public override void SaveChanges()
         {
+            // Update the section model with selected values
             _section.ReferenceSectionAbove = AboveList.SelectedItem is int aboveNumber
                 ? ResolveSection(aboveNumber)
                 : null;
@@ -140,6 +210,43 @@ namespace Viking.UI.WPF.PropertyPages
             _section.ReferenceSectionBelow = BelowList.SelectedItem is int belowNumber
                 ? ResolveSection(belowNumber)
                 : null;
+
+            // Persist to volume-specific settings if different from defaults
+            int currentNumber = (int)_section.Number;
+            int? selectedAbove = AboveList.SelectedItem as int?;
+            int? selectedBelow = BelowList.SelectedItem as int?;
+
+            string volumeLocalDir = GetVolumeLocalDirectory();
+            if (string.IsNullOrWhiteSpace(volumeLocalDir))
+            {
+                return;
+            }
+
+            var allSettings = SectionReferenceSettings.LoadForVolume(volumeLocalDir);
+
+            // Calculate defaults
+            var (defaultAbove, defaultBelow) = SectionReferenceSettings.GetDefaultReferences(currentNumber);
+
+            // Check if current selections are different from defaults
+            bool isAboveDefault = selectedAbove == defaultAbove;
+            bool isBelowDefault = selectedBelow == defaultBelow;
+
+            if (isAboveDefault && isBelowDefault)
+            {
+                // Selections match defaults, remove from settings
+                allSettings.Remove(currentNumber);
+            }
+            else
+            {
+                // Selections differ from defaults, persist them
+                allSettings[currentNumber] = new SectionReferences
+                {
+                    ReferenceAbove = selectedAbove,
+                    ReferenceBelow = selectedBelow
+                };
+            }
+
+            SectionReferenceSettings.SaveForVolume(volumeLocalDir, allSettings);
         }
     }
 }

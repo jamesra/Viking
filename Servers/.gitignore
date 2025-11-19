@@ -1,6 +1,6 @@
 /Deployment/
 packages/
 /.vs/
-IdentityServer
-Identity.DataContext
-Identity.Models
+IdentityServer/
+Identity.DataContext/
+Identity.Models/

@@ -8,20 +8,26 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Viking;
 using Viking.Common;
 using Viking.UI;
 using WebAnnotationModel;
 using WebAnnotationModel.Service;
 using System.Net.Http;
-using codepharm.net.XSD.WebAnnotationUserSettings.xsd; 
+using codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Utils;
+using Viking.DependencyInjection;
+using Viking.Services.Grpc;
 
 namespace WebAnnotation
 {
-    public class Global : IInitExtensions
+    public class Global : IModuleServiceRegistrar, IModuleInitializer
     {
         /// <summary>
         /// Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
@@ -50,14 +56,14 @@ namespace WebAnnotation
                     return _isSegmentationServiceAvailable.Value;
                 }
 
-                string serviceUrl = GetSegmentationServiceUrl();
-                
-                if (string.IsNullOrWhiteSpace(serviceUrl))
+                var segmentationService = ServiceLocator.ServiceProvider.GetRequiredService<IGrpcServiceConfiguration>();
+                if (segmentationService is null)
                 {
                     _isSegmentationServiceAvailable = false;
                     return false;
                 }
 
+                var serviceUrl = segmentationService.Endpoint();
                 // If no scheme is present, prepend http:// for validation (gRPC often uses host:port format)
                 string urlToValidate = serviceUrl.Contains("://") ? serviceUrl : $"http://{serviceUrl}";
                 
@@ -67,24 +73,21 @@ namespace WebAnnotation
 
                 _isSegmentationServiceAvailable = isValid;
                 return isValid;
-            }
+            } 
         }
 
         /// <summary>
-        /// Gets the SegmentationServiceUrl from AppSettings or VolumeXML (in that order)
+        /// Gets the SegmentationServiceUrl from configuration or volume metadata.
         /// </summary>
-        /// <returns>The segmentation service URL or null if not configured</returns>
         public static string GetSegmentationServiceUrl()
         {
-            // First check AppSettings
             string serviceUrl = ConfigurationManager.AppSettings["SegmentationServiceUrl"];
-            
-            // If not in AppSettings, check VolumeXML
+
             if (string.IsNullOrWhiteSpace(serviceUrl))
             {
                 serviceUrl = GetSegmentationServiceUrlFromVolume();
             }
-            
+
             return serviceUrl;
         }
 
@@ -303,6 +306,11 @@ namespace WebAnnotation
                     Properties.Settings.Default.Save();
                     // Clear cached availability check when URL changes
                     _isSegmentationServiceAvailable = null;
+                    // Reset the shared channel so it reconnects to the new URL
+                    if (ServiceLocator.IsInitialized)
+                    {
+                        ServiceLocator.GrpcChannelManager?.ResetChannel();
+                    }
                 }
             }
 
@@ -546,45 +554,88 @@ namespace WebAnnotation
         }
          */
 
-        bool IInitExtensions.Initialize()
+        void IModuleServiceRegistrar.RegisterServices(IServiceCollection services)
+        {
+            if (services is null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            services.AddSingleton<IGrpcServiceConfiguration>(provider =>
+            {
+                var appSettings = provider.GetService<ApplicationSettings>();
+                return new WebAnnotationGrpcServiceConfiguration(appSettings);
+            });
+        }
+
+        Task IModuleInitializer.InitializeAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {
 #if DEBUG
-            //           return false;
-#endif 
+            //           return Task.CompletedTask;
+#endif
+            cancellationToken.ThrowIfCancellationRequested();
+
+            ServiceLocator.RebuildServiceProvider(collection =>
+            {
+                collection.RemoveAll<IGrpcChannelManager>();
+                collection.AddSingleton<IGrpcChannelManager>(sp =>
+                {
+                    var configuration = sp.GetRequiredService<IGrpcServiceConfiguration>();
+                    return new GrpcChannelManager(configuration);
+                });
+            });
+
+            var refreshedProvider = ServiceLocator.ServiceProvider ?? serviceProvider;
+
+            if (!InitializeModule(refreshedProvider))
+            {
+                throw new InvalidOperationException("WebAnnotation initialization failed.");
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private static bool InitializeModule(IServiceProvider serviceProvider)
+        {
             AnnotationService.Types.Settings.PrepareSerializers();
+
             //Find the server hosting the volume.  Look for an XML file mapping the volume to an endpoint.
-            //return true; 
-
-
             Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
-
-            //Section Thickness is hard-coded, should be pulled from server.
-            Scale = new Geometry.GridVector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
 
             if (volume == null)
             {
                 return false;
             }
 
+            //Section Thickness is hard-coded, should be pulled from server.
+            Scale = new Geometry.GridVector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
+
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
 
-            //Check the VikingXML for the endpoint first.  
+            if (serviceProvider?.GetService<ApplicationSettings>() is ApplicationSettings applicationSettings &&
+                !string.IsNullOrWhiteSpace(applicationSettings.SegmentationURL) &&
+                !string.Equals(AnnotationSettings.SegmentationServiceUrl, applicationSettings.SegmentationURL, StringComparison.OrdinalIgnoreCase))
+            {
+                AnnotationSettings.SegmentationServiceUrl = applicationSettings.SegmentationURL;
+            }
+
+            string segmentationUrlFromVolume = GetSegmentationServiceUrlFromVolume();
+            if (!string.IsNullOrWhiteSpace(segmentationUrlFromVolume) &&
+                !string.Equals(AnnotationSettings.SegmentationServiceUrl, segmentationUrlFromVolume, StringComparison.OrdinalIgnoreCase))
+            {
+                AnnotationSettings.SegmentationServiceUrl = segmentationUrlFromVolume;
+            }
+
+            serviceProvider?.GetService<IGrpcChannelManager>();
+
             if (GetEndpointFromXML(volume.VolumeElement))
             {
                 LoadUserPreferences();
                 WebAnnotationModel.Store.Init();
                 return true;
             }
-            else
-            {
-                return false;
-            }
 
-            //LEGACY, check the about.xml file for the endpoint.  This needs to be removed when we have rebuilt the VikingXML files using new
-            //CreateXML.py script from 11/2/10
-            //LoadUserPreferences(); 
-            //XDocument AboutXML = GetAboutXML(new Uri(volume.Host + "/About.xml"));
-            //return GetEndpointFromXML(AboutXML);
+            return false;
         }
 
         private static XDocument GetAboutXML(Uri AboutURI)
@@ -862,8 +913,34 @@ namespace WebAnnotation
         public static void SaveUserSettings()
         {
             Global._userSettingsDoc.Save(UserSettingsFilePath);
-        }
+        } 
 
         #endregion
+    }
+
+    internal sealed class WebAnnotationGrpcServiceConfiguration : IGrpcServiceConfiguration
+    {
+        private readonly ApplicationSettings _applicationSettings;
+
+        public WebAnnotationGrpcServiceConfiguration(ApplicationSettings applicationSettings)
+        {
+            _applicationSettings = applicationSettings;
+        }
+
+        public string Endpoint()
+        {
+            if (!string.IsNullOrWhiteSpace(_applicationSettings?.SegmentationURL))
+            {
+                return _applicationSettings.SegmentationURL;
+            }
+
+            var persistedUrl = Global.AnnotationSettings.SegmentationServiceUrl;
+            if (!string.IsNullOrWhiteSpace(persistedUrl))
+            {
+                return persistedUrl;
+            }
+
+            return Global.GetSegmentationServiceUrl();
+        }
     }
 }

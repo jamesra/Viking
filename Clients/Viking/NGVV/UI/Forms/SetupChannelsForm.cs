@@ -1,25 +1,24 @@
-﻿using System.Windows.Forms;
+﻿using System;
+using System.Windows.Forms;
 using Viking.VolumeModel;
+using WpfChannelSetup = Viking.UI.WPF.Controls.ChannelSetupControl;
 
 namespace Viking.UI.Forms
 {
     internal partial class SetupChannelsForm : Form
     {
-        public ChannelInfo[] ChannelInfo
-        {
-            get
-            {
-                if (ChannelControl != null)
-                    return ChannelControl.Channels;
+        private readonly WpfChannelSetup _channelControl;
 
-                return new ChannelInfo[0];
-            }
-        }
+        public ChannelInfo[] ChannelInfo => _channelControl?.Channels ?? Array.Empty<ChannelInfo>();
+
         internal SetupChannelsForm(ChannelInfo[] Channels, string[] ChannelNames)
         {
             InitializeComponent();
 
-            ChannelControl.SetChannelData(Channels, ChannelNames);
+            _channelControl = new WpfChannelSetup();
+            this.channelHost.Child = _channelControl;
+
+            _channelControl.SetChannelData(Channels, ChannelNames);
         }
     }
 }

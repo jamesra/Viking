@@ -11,6 +11,8 @@ using Viking.Common;
 using Viking.Common.UI;
 using Viking.VolumeModel;
 using WebAnnotationModel;
+using Viking.DependencyInjection;
+using Viking.Services.Grpc;
 
 namespace WebAnnotation.ViewModel
 {
@@ -540,12 +542,13 @@ namespace WebAnnotation.ViewModel
                 
                 // Launch segmentation command
                 var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
                 var segmentCommand = new WebAnnotation.UI.Commands.Segmentation.SegmentationCommand(
                     parent,
                     foregroundPoints,
-                    new List<GridVector2>(), // no background points initially
-                    Parent.Type,
-                    callback
+                    Array.Empty<GridVector2>(), // no background points initially 
+                    callback,
+                    channelManager
                 );
                 
                 parent.CurrentCommand = segmentCommand;

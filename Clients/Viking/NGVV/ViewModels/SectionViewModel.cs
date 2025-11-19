@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Viking.Common;
 using Viking.Common.UI;
+using Viking.UI.WPF.PropertyPages;
 using Viking.VolumeModel;
 
 namespace Viking.ViewModels
@@ -13,7 +14,7 @@ namespace Viking.ViewModels
     /// <summary>
     /// Encapsulates a section within the UI
     /// </summary>
-    public class SectionViewModel : IUIObject, INotifyPropertyChanged
+    public class SectionViewModel : IUIObject, INotifyPropertyChanged, IContextMenu
     {
         public readonly Section section;
 
@@ -52,23 +53,6 @@ namespace Viking.ViewModels
         public List<string> PyramidTransformNames => section.PyramidTransformNames;
         public SortedList<string, Pyramid> ImagePyramids => section.ImagePyramids;
 
-
-        /// <summary>
-        /// Fetch channels. The channel may not exist if it is a default channel.  Failing to fetch a mapping will determine that case.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public bool TryGetChannelInfo(string channel, out ChannelInfo result)
-        {
-            if(section.ChannelInfoArray.Length == 0)
-            { 
-                result = VolumeViewModel.DefaultChannels.FirstOrDefault(c => c.ChannelName == channel);
-                return !(result is null);
-            }
-            
-            return this.section.TryGetChannelInfo(channel, out result);
-        }
-
         /// <summary>
         /// The currently displayed channels
         /// </summary>
@@ -88,7 +72,12 @@ namespace Viking.ViewModels
                 }
                 return section.ChannelInfoArray;
             }
-            set => section.ChannelInfoArray = value;
+            set
+            {
+                section.ChannelInfoArray = value;
+                System.Diagnostics.Trace.WriteLine($"Section {section.Number}: ChannelInfoArray set to {value?.Length ?? 0} channels", "SectionViewModel");
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChannelInfoArray)));
+            }
         }
 
         /// <summary>
@@ -218,19 +207,14 @@ namespace Viking.ViewModels
 
         #region IUIObject Members
 
-        void IUIObjectBasic.ShowProperties()
-        {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
-        }
+        void IUIObjectBasic.ShowProperties() => ShowPropertiesWindow();
 
         public System.Windows.Forms.ContextMenu ContextMenu
         {
             get
             {
-                System.Windows.Forms.ContextMenu menu = new System.Windows.Forms.ContextMenu();
-
-                menu.MenuItems.Add("Properties", ContextMenu_OnProperties);
-
+                System.Windows.Forms.ContextMenu menu = new System.Windows.Forms.ContextMenu(); 
+                menu.MenuItems.Add("Properties", ContextMenu_OnProperties); 
                 return menu;
             }
         }
@@ -317,7 +301,11 @@ namespace Viking.ViewModels
 
         protected void ContextMenu_OnProperties(object sender, EventArgs e)
         {
-            Viking.UI.Forms.PropertySheetForm.Show(this);
+            ShowPropertiesWindow();
+        }
+        private void ShowPropertiesWindow()
+        {
+            PropertySheetService.ShowDialog(this);
         }
 
         public async Task PrepareTransform(string transform)

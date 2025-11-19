@@ -192,6 +192,11 @@ namespace Viking.VolumeModel
         internal readonly VolumePaths Paths;
 
         /// <summary>
+        /// The local directory where volume-specific data is cached
+        /// </summary>
+        public string LocalVolumeDir => Paths?.LocalVolumeDir;
+
+        /// <summary>
         /// Maps a section number to its section object
         /// </summary>
         public SortedList<int, Section> Sections = new SortedList<int, Section>();

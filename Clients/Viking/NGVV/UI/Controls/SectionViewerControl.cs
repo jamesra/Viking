@@ -2690,6 +2690,7 @@ namespace Viking.UI.Controls
         private void OnSectionPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             //TODO: Cancel the active command
+            System.Diagnostics.Trace.WriteLine($"SectionViewerControl: Property '{e.PropertyName}' changed, invalidating", "SectionViewerControl");
             this.Invalidate();
         }
 

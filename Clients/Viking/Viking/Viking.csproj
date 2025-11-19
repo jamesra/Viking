@@ -57,7 +57,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
 		<ProjectReference Include="..\..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
-		<ProjectReference Include="..\..\VikingWPFUserControls\VikingWPFUserControls.csproj" />
+		<ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
 		
 		<!-- Module projects - built as plugins, not direct references -->
 		<ProjectReference Include="..\WebAnnotation\WebAnnotation.csproj">
@@ -147,11 +147,9 @@
 			<GraphicsContent Include="..\..\VikingXNAGraphics\bin\$(Configuration)\net48\Content\**\*.xnb" />
 		</ItemGroup>
 		
-		<Copy SourceFiles="@(GraphicsContent)" 
-			DestinationFolder="$(TargetDir)\Content\%(RecursiveDir)" 
-			SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(GraphicsContent)" DestinationFolder="$(TargetDir)\Content\%(RecursiveDir)" SkipUnchangedFiles="true" />
 		
-		<Message Text="Copied @(GraphicsContent->Count()) content files" Importance="high" />
+		<Message Text="Copied @(GraphicsContent-&gt;Count()) content files" Importance="high" />
 	</Target>	
 
 	<!-- Helper target to copy one module's files -->
@@ -227,7 +225,7 @@
 	<!-- Target to remove duplicate DLLs from modules -->
 	<Target Name="RemoveDuplicateDlls" AfterTargets="CopyModules">
 		<PropertyGroup>
-			<ModulesDir>$(TargetDir)Modules</ModulesDir>
+			<ModulesDir>$(TargetDir)\Modules</ModulesDir>
 		</PropertyGroup>
 		
 		<!-- Get all DLLs from the main TargetDir -->
@@ -237,34 +235,40 @@
 			<MainAppConfigs Include="$(TargetDir)*.dll.config" />
 		</ItemGroup>
 		
-		<!-- Find all DLLs in modules that match DLLs in main app -->
+		<!-- First, collect all DLLs in modules -->
 		<ItemGroup>
-			<DuplicateDlls Include="$(ModulesDir)\**\*.dll" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
-			<DuplicatePdbs Include="$(ModulesDir)\**\*.pdb" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
-			<DuplicateConfigs Include="$(ModulesDir)\**\*.dll.config" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
+			<AllModuleDlls Include="$(ModulesDir)\**\*.dll" />
+			<AllModulePdbs Include="$(ModulesDir)\**\*.pdb" />
+			<AllModuleConfigs Include="$(ModulesDir)\**\*.dll.config" />
+		</ItemGroup>
+		
+		<!-- Filter to find only those that exist in main app directory -->
+		<ItemGroup>
+			<DuplicateDlls Include="@(AllModuleDlls)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
+			<DuplicatePdbs Include="@(AllModulePdbs)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
+			<DuplicateConfigs Include="@(AllModuleConfigs)" Condition="Exists('$(TargetDir)%(Filename)%(Extension)')" />
 		</ItemGroup>
 		
 		<Message Text="Found @(MainAppDlls-&gt;Count()) DLLs in main app directory $(TargetDir)" Importance="high" />
 		<Message Text="Found @(DuplicateDlls-&gt;Count()) duplicate DLLs in modules to remove in $(ModulesDir)" Importance="high" />
 		
 		<!-- Delete all duplicate DLLs from modules -->
-		<!-- Temporarily disabled to avoid file lock issues -->
-		<!--<Delete Files="@(DuplicateDlls)" Condition="'@(DuplicateDlls)' != ''" /> -->
+		<Delete Files="@(DuplicateDlls)" Condition="'@(DuplicateDlls)' != ''" ContinueOnError="true" />
 		<Message Text="Removed @(DuplicateDlls-&gt;Count()) duplicate DLLs from modules" Importance="high" />
 		
-		<!--<Delete Files="@(DuplicatePdbs)" Condition="'@(DuplicatePdbs)' != ''" /> -->
+		<Delete Files="@(DuplicatePdbs)" Condition="'@(DuplicatePdbs)' != ''" ContinueOnError="true" />
 		<Message Text="Removed @(DuplicatePdbs-&gt;Count()) duplicate PDBs from modules" Importance="high" />
 		
-		<!--<Delete Files="@(DuplicateConfigs)" Condition="'@(DuplicateConfigs)' != ''" /> -->
+		<Delete Files="@(DuplicateConfigs)" Condition="'@(DuplicateConfigs)' != ''" ContinueOnError="true" />
 		<Message Text="Removed @(DuplicateConfigs-&gt;Count()) duplicate DLL.CONFIGs from modules" Importance="high" />
 	</Target>
 
 	<Target Name="CleanModules" AfterTargets="Clean">
 		<PropertyGroup>
-			<ModulesDir>$(TargetDir)Modules</ModulesDir>
+			<ModulesDir>$(TargetDir)\Modules</ModulesDir>
 		</PropertyGroup>
 		<!-- Remove the project-specific target framework folder -->
-		<RemoveDir Directories="ModulesDir" ContinueOnError="true" />
+		<RemoveDir Directories="$(ModulesDir)" ContinueOnError="true" />
  
 	</Target>
 </Project>

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks; 
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Extensions.DependencyInjection;
+using Viking.DependencyInjection;
 using Viking.UI.Forms;
 using Microsoft.Xna.Framework;
 
@@ -16,21 +18,29 @@ namespace Viking
     {
         public CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
-        public VikingApplicationContext(string VolumeURL)
+        private readonly ApplicationSettings _settings;
+
+        public VikingApplicationContext(ApplicationSettings settings)
         {
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            if (string.IsNullOrWhiteSpace(_settings.VolumeURL))
+            {
+                throw new ArgumentException("VolumeURL must be provided", nameof(settings));
+            }            
+
             UI.State.MainThreadDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
 
             //Microsoft.Xna.Framework.Content.RootDirectory = "Content";
         }
 
-        public void Initialize(string VolumeURL)
+        public void Initialize()
         {
-            if (VolumeURL is null)
-                throw new ArgumentNullException(nameof(VolumeURL));
+            if (string.IsNullOrWhiteSpace(_settings.VolumeURL))
+                throw new ArgumentNullException(nameof(_settings.VolumeURL));
             //var cancellationTokenSource = new CancellationTokenSource();
 
             using SplashForm Splash = new SplashForm();
-            Splash.TrackedTask = System.Threading.Tasks.Task.Run(() => BackgroundLoading(VolumeURL, Splash.progressReporter, cancellationTokenSource.Token));
+            Splash.TrackedTask = System.Threading.Tasks.Task.Run(() => BackgroundLoading(_settings.VolumeURL, Splash.progressReporter, cancellationTokenSource.Token));
 
             //The splash dialog will run until the Volume is initialized 
             Splash.ShowDialog();
@@ -93,6 +103,23 @@ namespace Viking
             DateTime stopExtensions = DateTime.UtcNow;
             var elapsedExtensionTime = stopExtensions - startExtensions;
             Trace.WriteLine("Extension Load Time: " + elapsedExtensionTime.ToString());
+
+            var services = new ServiceCollection();
+            services.AddSingleton(_settings);
+            services.AddSingleton(Volume);
+            services.AddSingleton(UI.State.volume);
+
+            Viking.Common.ExtensionManager.RegisterModuleServices(services);
+
+            if (ServiceLocator.IsInitialized)
+            {
+                ServiceLocator.Reset();
+            }
+
+            var serviceProvider = services.BuildServiceProvider();
+            ServiceLocator.Initialize(serviceProvider, services);
+
+            await Viking.Common.ExtensionManager.InitializeModulesAsync(ServiceLocator.ServiceProvider, token).ConfigureAwait(false);
 
             await textureCacheTask;
             DateTime TextureCacheLoadStop = DateTime.UtcNow;

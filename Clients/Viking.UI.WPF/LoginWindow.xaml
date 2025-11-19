@@ -21,7 +21,7 @@
     <Grid>
         <!-- Stage 1: Login -->
         <controls:LoginControl x:Name="loginControl" 
-                               Visibility="{Binding ShowLoginStage, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                               Visibility="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ShowLoginStage, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
         <!-- Stage 2: Volume Selection -->
         <controls:VolumeSelectionControl x:Name="volumeSelectionControl"

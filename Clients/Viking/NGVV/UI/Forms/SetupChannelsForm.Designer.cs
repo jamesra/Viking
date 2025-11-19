@@ -28,19 +28,20 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.ChannelControl = new Viking.UI.Controls.ChannelSetupControl();
+            this.channelHost = new System.Windows.Forms.Integration.ElementHost();
             this.buttonCancel = new System.Windows.Forms.Button();
             this.buttonOK = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // ChannelControl
+            // channelHost
             // 
-            this.ChannelControl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.ChannelControl.Location = new System.Drawing.Point(0, 0);
-            this.ChannelControl.Name = "ChannelControl";
-            this.ChannelControl.Padding = new System.Windows.Forms.Padding(2, 0, 2, 31);
-            this.ChannelControl.Size = new System.Drawing.Size(304, 224);
-            this.ChannelControl.TabIndex = 0;
+            this.channelHost.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.channelHost.Location = new System.Drawing.Point(0, 0);
+            this.channelHost.Name = "channelHost";
+            this.channelHost.Size = new System.Drawing.Size(304, 224);
+            this.channelHost.TabIndex = 0;
+            this.channelHost.Text = "channelHost";
+            this.channelHost.Child = null;
             // 
             // buttonCancel
             // 
@@ -69,9 +70,9 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(304, 224);
+            this.Controls.Add(this.channelHost);
             this.Controls.Add(this.buttonCancel);
             this.Controls.Add(this.buttonOK);
-            this.Controls.Add(this.ChannelControl);
             this.Name = "SetupChannelsForm";
             this.Text = "Setup Channels";
             this.ResumeLayout(false);
@@ -80,7 +81,7 @@
 
         #endregion
 
-        private Viking.UI.Controls.ChannelSetupControl ChannelControl;
+        private System.Windows.Forms.Integration.ElementHost channelHost;
         private System.Windows.Forms.Button buttonCancel;
         private System.Windows.Forms.Button buttonOK;
     }

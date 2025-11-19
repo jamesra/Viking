@@ -4,7 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Extensions.DependencyInjection;
+using Viking.DependencyInjection;
 
 namespace Viking.Common
 {
@@ -30,7 +34,10 @@ namespace Viking.Common
         /// <summary>
         /// List of objects that can extend the context menu
         /// </summary>
-        private static readonly List<System.Type> ContextMenuProviderList = new List<System.Type>(); 
+        private static readonly List<System.Type> ContextMenuProviderList = new List<System.Type>();
+        private static readonly List<System.Type> ModuleRegistrarTypes = new List<System.Type>();
+        private static readonly List<System.Type> ModuleInitializerTypes = new List<System.Type>();
+        private static readonly List<System.Type> LegacyInitializerTypes = new List<System.Type>();
 
         /// <summary>
         /// This maps a system.type that the user would interact with, such as a structure to a list of commands that can operate on that type 
@@ -332,13 +339,79 @@ namespace Viking.Common
             progressReporter.Report("Extensions loading complete", 100, 100);
         }
 
+        internal static void RegisterModuleServices(IServiceCollection services)
+        {
+            if (services is null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            foreach (var registrarType in ModuleRegistrarTypes)
+            {
+                try
+                {
+                    if (Activator.CreateInstance(registrarType) is IModuleServiceRegistrar registrar)
+                    {
+                        registrar.RegisterServices(services);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Failed to register services for module {registrarType.FullName}: {ex}", "ExtMan");
+                }
+            }
+        }
+
+        internal static async Task InitializeModulesAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        {
+            if (serviceProvider is null)
+            {
+                throw new ArgumentNullException(nameof(serviceProvider));
+            }
+
+            foreach (var initializerType in ModuleInitializerTypes)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    if (Activator.CreateInstance(initializerType) is IModuleInitializer initializer)
+                    {
+                        var activeProvider = ServiceLocator.IsInitialized ? ServiceLocator.ServiceProvider : serviceProvider;
+                        await initializer.InitializeAsync(activeProvider, cancellationToken).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Failed to initialize module {initializerType.FullName}: {ex}", "ExtMan");
+                }
+            }
+
+            foreach (var legacyType in LegacyInitializerTypes)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    if (Activator.CreateInstance(legacyType) is IInitExtensions legacy)
+                    {
+                        var activeProvider = ServiceLocator.IsInitialized ? ServiceLocator.ServiceProvider : serviceProvider;
+                        legacy.Initialize(activeProvider);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Failed to initialize legacy module {legacyType.FullName}: {ex}", "ExtMan");
+                }
+            }
+        }
+
         private static bool CanAssemblyInitialize(Assembly A)
         {
-            bool OKToLoad = true; 
-            System.Type[] types = null;
             try
             {
-                types = A.GetExportedTypes();
+                _ = A.GetExportedTypes();
+                return true;
             }
             catch (ReflectionTypeLoadException except)
             {
@@ -383,72 +456,7 @@ namespace Viking.Common
                 }
             }
 
-            if (types is null || types.Length == 0)
-                return false;
-
-            foreach (System.Type type in types)
-            {
-                if (type.IsClass == false)
-                    continue;
-
-                System.Type interfaceType = type.GetInterface("Viking.Common.IInitExtensions");
-                if (interfaceType is null)
-                    continue;
-
-                try
-                {
-                    Viking.Common.IInitExtensions InitObj = Activator.CreateInstance(type, new object[0]) as IInitExtensions;
-                    OKToLoad = InitObj.Initialize();
-                }
-                catch (System.MissingMethodException except)
-                {
-                    VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                    DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nIn the past this exception suggests there are duplicate .dll files accidentally shipped in both the Viking and Modules folders.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
-
-                    if (result == DialogResult.OK)
-                    {
-                        return false;
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                catch (System.TypeInitializationException except)
-                {
-                    var shownException = except.InnerException is null ? except : except.InnerException;
-                    VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                    DialogResult result = MessageBox.Show("OK -> Run Viking without the extension.\nCancel -> Exit and throw exception with debug information.\n\nException:\n" + shownException.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
-
-                    if (result == DialogResult.OK)
-                    {
-                        return false;
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                catch (System.Exception except)
-                {
-                    VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
-                    DialogResult result = MessageBox.Show("OK -> Run Viking without the extension.\nCancel -> Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
-
-                    if (result == DialogResult.OK)
-                    {
-                        return false;
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-
-                if (OKToLoad == false)
-                    return false;
-            }
-
-            return true; 
+            return true;
         }
 
         private static VikingExtensionAttribute GetAssemblyExtensionAttribute(Assembly A)
@@ -514,7 +522,8 @@ namespace Viking.Common
                 /*Find ContextMenu extensions*/
    //             FindExtensionInterfaces(Extension, T);
 
-                FindExtensionOverlays(T); 
+                FindExtensionOverlays(T);
+                RegisterModuleInterfaces(T);
             }
         }
 
@@ -562,10 +571,17 @@ namespace Viking.Common
                 /*Add this type to the list for each table it supports*/
                 foreach (PropertyPageAttribute Attrib in Attribs)
                 {
+                    Type resolvedTarget = Attrib.ResolveTargetType();
+                    if (resolvedTarget is null)
+                    {
+                        Trace.WriteLine($"Skipping property page '{T}' because target type '{Attrib.TargetTypeName}' could not be resolved.", "ExtensionManager");
+                        continue;
+                    }
+
                     /*The list contains lists. If one already exists then reuse it.
                         * otherwise create a new one */
                     List<System.Type> List;
-                    if (ObjectTypeToPropertyPageTable.TryGetValue(Attrib.targetType, out var value))
+                    if (ObjectTypeToPropertyPageTable.TryGetValue(resolvedTarget, out var value))
                         List = value;
                     else
                     {
@@ -574,7 +590,7 @@ namespace Viking.Common
 
                     List.Add(T);
 
-                    ObjectTypeToPropertyPageTable[Attrib.targetType] = List;
+                    ObjectTypeToPropertyPageTable[resolvedTarget] = List;
                 }
             }
         }
@@ -655,6 +671,29 @@ namespace Viking.Common
                 //  }
 
                 ExtensionManager.SectionOverlayList.Add(T);
+            }
+        }
+
+        private static void RegisterModuleInterfaces(System.Type type)
+        {
+            if (type.IsInterface || type.IsAbstract)
+            {
+                return;
+            }
+
+            if (typeof(IModuleServiceRegistrar).IsAssignableFrom(type) && !ModuleRegistrarTypes.Contains(type))
+            {
+                ModuleRegistrarTypes.Add(type);
+            }
+
+            if (typeof(IModuleInitializer).IsAssignableFrom(type) && !ModuleInitializerTypes.Contains(type))
+            {
+                ModuleInitializerTypes.Add(type);
+            }
+
+            if (typeof(IInitExtensions).IsAssignableFrom(type) && !LegacyInitializerTypes.Contains(type))
+            {
+                LegacyInitializerTypes.Add(type);
             }
         }
 
@@ -814,7 +853,7 @@ namespace Viking.Common
             PropertyPageAttribute attrib_x = Util.GetAttribute(x as Type, typeof(PropertyPageAttribute)) as PropertyPageAttribute;
             PropertyPageAttribute attrib_y = Util.GetAttribute(y as Type, typeof(PropertyPageAttribute)) as PropertyPageAttribute;
 
-            return attrib_x.priority.CompareTo(attrib_y.priority);
+            return attrib_x.Priority.CompareTo(attrib_y.Priority);
         }
     }
 }

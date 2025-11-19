@@ -1,7 +1,9 @@
 ﻿using Geometry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
+using Viking.UI.WPF.Models;
 using Viking.VolumeModel;
 
 namespace Viking.ViewModels
@@ -65,6 +67,74 @@ namespace Viking.ViewModels
             }
 
             _ActiveVolumeTransform = this.DefaultVolumeTransform;
+
+            // Apply persisted section reference settings
+            ApplyPersistedSectionReferences();
+        }
+
+        private void ApplyPersistedSectionReferences()
+        {
+            try
+            {
+                string volumeLocalDir = _Volume?.LocalVolumeDir;
+                if (string.IsNullOrWhiteSpace(volumeLocalDir))
+                {
+                    return;
+                }
+
+                var allSettings = SectionReferenceSettings.LoadForVolume(volumeLocalDir);
+                if (allSettings == null || allSettings.Count == 0)
+                {
+                    return;
+                }
+
+                foreach (var kvp in allSettings)
+                {
+                    int sectionNumber = kvp.Key;
+                    var references = kvp.Value;
+
+                    if (!SectionViewModels.TryGetValue(sectionNumber, out var sectionViewModel))
+                    {
+                        continue;
+                    }
+
+                    // Apply reference above
+                    if (references.ReferenceAbove.HasValue)
+                    {
+                        if (_Volume.Sections.TryGetValue(references.ReferenceAbove.Value, out var refAbove))
+                        {
+                            sectionViewModel.ReferenceSectionAbove = refAbove;
+                        }
+                    }
+
+                    // Apply reference below
+                    if (references.ReferenceBelow.HasValue)
+                    {
+                        if (_Volume.Sections.TryGetValue(references.ReferenceBelow.Value, out var refBelow))
+                        {
+                            sectionViewModel.ReferenceSectionBelow = refBelow;
+                        }
+                    }
+
+                    // Apply channel settings
+                    if (references.Channels != null && references.Channels.Length > 0)
+                    {
+                        var channels = SectionReferenceSettings.FromDto(references.Channels);
+                        if (channels != null && channels.Length > 0)
+                        {
+                            if (_Volume.Sections.TryGetValue(sectionNumber, out var section))
+                            {
+                                section.ChannelInfoArray = channels;
+                                System.Diagnostics.Trace.WriteLine($"VolumeViewModel: Loaded {channels.Length} channels for section {sectionNumber}", "VolumeViewModel");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Failed to apply persisted section references: {ex.Message}");
+            }
         }
 
         public string Host => _Volume.Host;
@@ -94,6 +164,7 @@ namespace Viking.ViewModels
             }
             else
             {
+                
                 SortedList<int, ITransform> SectionTransforms = _Volume.Transforms[this.ActiveVolumeTransform];
 
                 if (SectionTransforms.TryGetValue(SectionNumber, out var transform))

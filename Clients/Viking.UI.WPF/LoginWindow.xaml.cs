@@ -27,7 +27,6 @@ namespace Viking.UI.WPF
         public LoginWindow()
         {
             InitializeComponent();
-            DataContext = this;
             
             InitializeLoginStage();
         }

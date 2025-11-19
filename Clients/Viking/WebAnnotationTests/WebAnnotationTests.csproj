@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="PathAnnotationInteractionTests.cs" />
   </ItemGroup>

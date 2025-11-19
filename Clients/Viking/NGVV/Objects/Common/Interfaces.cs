@@ -1,4 +1,5 @@
-﻿using Geometry;
+﻿using System;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System.Windows.Controls;
 
@@ -10,7 +11,7 @@ namespace Viking.Common
     /// </summary>
     public interface IInitExtensions
     {
-        bool Initialize();
+        bool Initialize(IServiceProvider provider);
     }
 
     /// <summary>

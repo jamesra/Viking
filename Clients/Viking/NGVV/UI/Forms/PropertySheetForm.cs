@@ -22,6 +22,10 @@ namespace Viking.UI.Forms
             //            this.MdiParent = UI.State.Appwindow;
 
             InitializeComponent();
+
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            this.MinimumSize = new System.Drawing.Size(400, 440);
         }
 
         #region Variables
@@ -150,7 +154,7 @@ namespace Viking.UI.Forms
         {
             //if (TabsProperty.IPropertyPages.Length > 1)
             {
-                Size MaxTabSize = TabsProperty.MaxTabSize;
+                Size MaxTabSize = TabsProperty.RecalculateMaxTabSize();
 
                 Size Margin = new Size
                 {
@@ -158,8 +162,20 @@ namespace Viking.UI.Forms
                     Height = this.Height - TabsProperty.Height
                 };
 
-                this.Width = MaxTabSize.Width + Margin.Width;
-                this.Height = MaxTabSize.Height + Margin.Height;
+                int targetClientWidth = MaxTabSize.Width + Margin.Width;
+                int targetClientHeight = MaxTabSize.Height + Margin.Height;
+
+                if (targetClientWidth < this.ClientSize.Width)
+                {
+                    targetClientWidth = this.ClientSize.Width;
+                }
+
+                if (targetClientHeight < this.ClientSize.Height)
+                {
+                    targetClientHeight = this.ClientSize.Height;
+                }
+
+                this.ClientSize = new System.Drawing.Size(targetClientWidth, targetClientHeight);
 
                 foreach (IPropertyPage IPage in TabsProperty.IPropertyPages)
                 {

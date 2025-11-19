@@ -33,7 +33,9 @@
     <NuGetTargetMoniker>.NETCoreApp,Version=v9.0</NuGetTargetMoniker>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Grpc.Core" Version="2.38.0" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
@@ -64,7 +66,7 @@
     <ProjectReference Include="..\..\..\Utils\Utils.csproj" />
     <ProjectReference Include="..\..\Common\Common.csproj" />
     <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
-    <ProjectReference Include="..\..\VikingWPFUserControls\VikingWPFUserControls.csproj" Private="true"/>
+    <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" Private="true"/>
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
@@ -147,12 +149,6 @@
     <EmbeddedResource Include="UI\BaseClasses\VikingControl.resx">
       <LogicalName>Viking.UI.BaseClasses.VikingControl.resources</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="UI\Controls\ChannelPickerControl.resx">
-      <LogicalName>Viking.UI.Controls.ChannelPickerControl.resources</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UI\Controls\ChannelSetupControl.resx">
-      <LogicalName>Viking.UI.Controls.ChannelSetupControl.resources</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="UI\Controls\EnableToolBar.resx">
       <LogicalName>Viking.UI.Controls.EnableToolBar.resources</LogicalName>
     </EmbeddedResource>
@@ -173,12 +169,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\VolumeControls\SectionList.resx">
       <LogicalName>Viking.UI.Controls.SectionList.resources</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="PropertyPages\SectionChannelsPage.resx">
-      <LogicalName>Viking.PropertyPages.SectionChannelsPage.resources</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="PropertyPages\SectionGeneralPage.resx">
-      <LogicalName>Viking.PropertyPages.SectionGeneralPage.resources</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

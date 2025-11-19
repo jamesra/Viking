@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace Viking.UI.BaseClasses
 {
@@ -49,6 +50,12 @@ namespace Viking.UI.BaseClasses
         private void InitializeComponent()
         {
             this.SuspendLayout();
+            // 
+            // Scaling
+            // 
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            this.Font = SystemFonts.MessageBoxFont;
             // 
             // NGVVControl
             // 

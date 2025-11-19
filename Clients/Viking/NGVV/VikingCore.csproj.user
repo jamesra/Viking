@@ -35,12 +35,6 @@
     <StartAction>Program</StartAction>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Update="PropertyPages\SectionChannelsPage.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="PropertyPages\SectionGeneralPage.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
     <Compile Update="UI\BaseClasses\DockableUserControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -63,12 +57,6 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Update="UI\BaseClasses\VikingObjectEventControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="UI\Controls\ChannelPickerControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="UI\Controls\ChannelSetupControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Update="UI\Controls\EnableToolBar.cs">

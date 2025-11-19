@@ -55,7 +55,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XNATestbed", "XNATestbed\XN
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XNATestbedContent", "XNATestbed\XNATestbedContent\XNATestbedContent.contentproj", "{789EB871-5FD3-4174-896B-162B2AAAB9B2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingWPFUserControls", "VikingWPFUserControls\VikingWPFUserControls.csproj", "{4F62FCE1-3FCF-431B-9526-80B859131513}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Viking.UI.WPF", "Viking.UI.WPF\Viking.UI.WPF.csproj", "{4F62FCE1-3FCF-431B-9526-80B859131513}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLib", "..\AnnotationVizLib\AnnotationVizLib.csproj", "{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}"
 EndProject

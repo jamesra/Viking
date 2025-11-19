@@ -7,7 +7,10 @@ using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using Viking.DependencyInjection;
+using Viking.Services.Grpc;
 using WebAnnotation.UI.Commands;
+using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotationModel;
 
 namespace WebAnnotation
@@ -403,9 +406,9 @@ namespace WebAnnotation
                                                                loc.MosaicShape.ToPolygon(),
                                                                volumePosition,
                                                                loc.Parent.Type.Color.ToXNAColor().SetAlpha(0.5f),
-                                                               (MosaicPolygon) =>
+                                                               (mosaicPolygon, points) =>
                                                                     {
-                                                                        loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
+                                                                        loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, mosaicPolygon.ToSqlGeometry());
                                                                         AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
                                                                     });
                 case LocationAction.SCALE:
@@ -545,28 +548,35 @@ namespace WebAnnotation
                         {
                             //Fetch the medial axis of the polygon.  Pass those points to the translation algorithm.  Extract the medial axis points and pass them to the segmentation command. 
                             var mosaic_shape_poly = MosaicShape.ToPolygon();
-                            var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxis(mosaic_shape_poly);
+                            var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxisImproved(mosaic_shape_poly);
                             var medial_axis_points = medial_axis.Points;
-
+                            var mosaic_centroid = mosaic_shape_poly.Centroid; //TODO:  I am temporarily using the mosaic shape centroid instead of the medial axis until the Medial Axis code improves
 
                             return new TranslatePolygonCommand(Parent,
                                 mosaic_shape_poly,
                                 volumePosition,
+                                new GridVector2[] {mosaic_centroid }, //medial_axis_points,
                                 loc.Parent.Type.Color.ToXNAColor(0.25f),
-                                (MosaicPolygon) =>
-                                {
-                                    LocationObj newLoc = new LocationObj(loc.Parent,
-                                        Parent.Section.Number,
-                                        loc.TypeCode);
-                                    try
-                                    {
-                                        newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                        Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
-                                    }
-                                    catch (ArgumentException e)
-                                    {
-                                        MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                    }
+                                (polygon, points) =>
+                                { 
+                                    var transformed = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out var volume_points);
+                                    var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                                    Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand), new object[] {Parent, volume_points, Array.Empty<GridVector2>(), new SegmentationCommand.OnCommandSuccess( (segmentedVolumePolygon) =>
+                                            {
+                                                LocationObj newLoc = new LocationObj(loc.Parent,
+                                                    Parent.Section.Number,
+                                                    loc.TypeCode);
+                                                try
+                                                {
+                                                    newLoc.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, segmentedVolumePolygon.ToSqlGeometry());
+                                                    Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
+                                                }
+                                                catch (ArgumentException e)
+                                                {
+                                                    MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                }
+                                            }), channelManager});
+                                    
                                 }
                             );
                         }
@@ -575,14 +585,14 @@ namespace WebAnnotation
                                                                  MosaicShape.ToPolygon(),
                                                                  volumePosition,
                                                                  loc.Parent.Type.Color.ToXNAColor(0.25f),
-                                                                 (MosaicPolygon) =>
+                                                                 (mosaicPolygon, points) =>
                                                                  {
                                                                      LocationObj newLoc = new LocationObj(loc.Parent,
                                                                         Parent.Section.Number,
                                                                         loc.TypeCode);
                                                                      try
                                                                      {
-                                                                         newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
+                                                                         newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, mosaicPolygon.ToSqlGeometry());
                                                                          Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), new object[] { Parent, loc, newLoc });
                                                                      }
                                                                      catch (ArgumentException e)

@@ -40,28 +40,6 @@ namespace Viking.Common
 
 
     /// <summary>
-    /// Attribute for specifying that the object is a property page
-    /// used to display information for the specified object
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Class)]
-    public sealed class PropertyPageAttribute : System.Attribute
-    {
-        public System.Type targetType;
-        public int priority = 1;
-
-        public PropertyPageAttribute(System.Type ObjType)
-        {
-            targetType = ObjType;
-        }
-
-        public PropertyPageAttribute(System.Type ObjType, int Priority)
-            : this(ObjType)
-        {
-            priority = Priority;
-        }
-    }
-
-    /// <summary>
     /// Determines which types of objects are valid targets for the command
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]

@@ -28,8 +28,9 @@ namespace MeasurementExtension
         /// <summary>
         /// Returns true if the extension should be loaded
         /// </summary>
+        /// <param name="provider"></param>
         /// <returns></returns>
-        bool IInitExtensions.Initialize()
+        bool IInitExtensions.Initialize(IServiceProvider provider)
         {
             //This code will fetch the scale of the images from the webserver
             //If the scale can't be found we won't

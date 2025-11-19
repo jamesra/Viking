@@ -50,7 +50,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebAnnotationModelTest", "C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RTree", "RTree\RTree.csproj", "{4085BA67-60D7-4679-886E-457AAF37EC7B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingWPFUserControls", "Clients\VikingWPFUserControls\VikingWPFUserControls.csproj", "{4F62FCE1-3FCF-431B-9526-80B859131513}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Viking.UI.WPF", "Clients\Viking.UI.WPF\Viking.UI.WPF.csproj", "{4F62FCE1-3FCF-431B-9526-80B859131513}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnnotationVizLib", "AnnotationVizLib\AnnotationVizLib.csproj", "{A89A628B-3FFA-4271-B99A-E45C3D72D3E3}"
 EndProject

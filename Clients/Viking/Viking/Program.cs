@@ -2,16 +2,20 @@
 
 using CommandLine;
 using System;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CommandLine.Text;
 using Viking.UI.Forms;
 using VikingCoreResources = Viking.Properties.Resources;
 using Squirrel;
 using System.Linq;
+using System.Threading;
+using System.Xml.Linq;
 
 
 namespace Viking
@@ -27,8 +31,7 @@ namespace Viking
         [Option('p', "pwd", Default = "connectome", Required = false, HelpText = "URL of VolumeXML file")]
         public string Password { get; set; }
          
-        //[Option('c', "position", Required = false, HelpText= "Position to start viewer at")]
-        
+        //[Option('c', "position", Required = false, HelpText= "Position to start viewer at")] 
     }
 
     static class Program
@@ -79,20 +82,11 @@ namespace Viking
         /// </summary>
         [STAThread]
         static void Main(string[] args)
-        {
+        {  
             // Check for Squirrel updates
             CheckForUpdates();
 
-            // Initialize WPF Application instance for Pack URI resolution
-            // This is required when hosting WPF controls in WinForms via ElementHost
-            if (System.Windows.Application.Current == null)
-            {
-                var wpfApp = new System.Windows.Application();
-                // Set ShutdownMode to OnExplicitShutdown to prevent automatic shutdown
-                // when WPF windows close, since this is a hybrid WinForms/WPF application
-                wpfApp.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown;
-            }
-
+            //ConfigureHighDpiMode();
             Application.EnableVisualStyles();
 
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();
@@ -121,7 +115,7 @@ namespace Viking
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            string website = null;
+            ApplicationSettings appSettings = null;
 
             var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 
@@ -196,12 +190,11 @@ namespace Viking
             //   Logon nag screen, I've only added this tiny code here, and made a logon form in 
             //  Viking/UI/forms
 
-            options.WithParsed((o) =>
+            options.WithParsed(o =>
             {
-                website = o.VolumeURL;
-                TryBypassSplash(o);
-            }).WithNotParsed((errors) => 
-            { 
+                appSettings = TryBypassSplash(o);
+            }).WithNotParsed(errors =>
+            {
                 // Create a new help text with error information
                 var errorHelpText = HelpText.AutoBuild(options);
                 errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
@@ -216,11 +209,11 @@ namespace Viking
                 Console.WriteLine(errorHelpText);
                 
                 // Show login window as fallback
-                website = ShowLoginWindow(website);
+                appSettings = ShowLoginWindow(null, null, null);
             });
 
-            //Close the program if no website is configured
-            if (website is null)
+            //Close the program if no settings were provided or the volume is missing
+            if (appSettings == null || string.IsNullOrWhiteSpace(appSettings.VolumeURL))
                 return;
             /*
 #if !USEASPMEMBERSHIP
@@ -257,12 +250,14 @@ namespace Viking
 #endif 
             */
 
-            //Make sure the website includes a file, if it does not then include Volume.VikingXML by default
-            website = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(website);
+            //Make sure the volume URL includes a file, if it does not then include Volume.VikingXML by default
+            appSettings.VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(appSettings.VolumeURL);
+
+            PopulateAnnotationUrlFromVolume(appSettings);
 
             // --------------------------------------------------------------------------------------
 
-            Trace.WriteLine($"Loading: {website}", "Viking");
+            Trace.WriteLine($"Loading: {appSettings.VolumeURL}", "Viking");
 
             /*
 
@@ -279,8 +274,8 @@ namespace Viking
             }
             */
 
-            VikingApplicationContext context = new VikingApplicationContext(website);
-            context.Initialize(website);
+            VikingApplicationContext context = new VikingApplicationContext(appSettings);
+            context.Initialize();
             
             Application.Run(context);
 
@@ -294,20 +289,20 @@ namespace Viking
             DebugLogFile?.Close();
         }
 
-        private static string TryBypassSplash(CommandLineOptions options)
+        private static ApplicationSettings TryBypassSplash(CommandLineOptions options)
         {
-            string VolumeURL; 
-            if (options.VolumeURL != null && options.Username != null && options.Password != null)
+            if (!string.IsNullOrWhiteSpace(options.VolumeURL) &&
+                !string.IsNullOrWhiteSpace(options.Username) &&
+                !string.IsNullOrWhiteSpace(options.Password))
             {
                 UI.State.UserCredentials = new System.Net.NetworkCredential(options.Username, options.Password);
-                VolumeURL = options.VolumeURL;
-            }
-            else
-            {
-                VolumeURL = ShowLoginWindow(options.VolumeURL, options.Username, options.Password); 
+                return new ApplicationSettings
+                {
+                    VolumeURL = options.VolumeURL
+                };
             }
 
-            return VolumeURL;
+            return ShowLoginWindow(options.VolumeURL, options.Username, options.Password);
         }
 
 
@@ -330,13 +325,19 @@ namespace Viking
             }
         }
 
-        private static string ShowLoginWindow(string VolumePath, string username=null, string password=null)
+        private static ApplicationSettings ShowLoginWindow(string volumePath, string username = null, string password = null)
         {
             // Use new WPF-based login system
             var wpfLoginWindow = new Viking.UI.WPF.LoginWindow();
+            var appSettings = new ApplicationSettings();
+            var settings = Viking.Properties.Settings.Default;
             
             // Provide recent volume URLs from settings
-            wpfLoginWindow.RecentVolumeUrls = Viking.Properties.Settings.Default.VolumeURLs;
+            wpfLoginWindow.RecentVolumeUrls = settings.VolumeURLs;
+            wpfLoginWindow.RecentSegmentationServiceUrls = settings.SegmentationServiceUrls;
+
+            var initialSegmentationUrl = settings.LastSegmentationServiceUrl;
+            wpfLoginWindow.InitialSegmentationServiceUrl = string.IsNullOrWhiteSpace(initialSegmentationUrl) ? null : initialSegmentationUrl;
             
             var result = wpfLoginWindow.ShowDialog();
 
@@ -351,38 +352,109 @@ namespace Viking
             if (wpfLoginWindow.BearerToken != null)
             {
                 Viking.Tokens.TokenInjector.BearerToken = wpfLoginWindow.BearerToken;
-                var identityServerUrl = Viking.Properties.Settings.Default.IdentityServerURL;
+                var identityServerUrl = settings.IdentityServerURL;
                 if (!string.IsNullOrEmpty(identityServerUrl))
                 {
                     Viking.Tokens.TokenInjector.BearerTokenAuthority = identityServerUrl;
                 }
             }
 
+            bool settingsChanged = false;
+
             // Add selected volume to recent volumes
-            if (!string.IsNullOrEmpty(wpfLoginWindow.VolumeURL))
+            appSettings.VolumeURL = wpfLoginWindow.VolumeURL;
+
+            if (!string.IsNullOrEmpty(appSettings.VolumeURL))
             {
-                var settings = Viking.Properties.Settings.Default;
                 if (settings.VolumeURLs == null)
                 {
                     settings.VolumeURLs = new System.Collections.Specialized.StringCollection();
+                    settingsChanged = true;
                 }
 
                 // Remove duplicate if it exists to move it to the top
-                if (settings.VolumeURLs.Contains(wpfLoginWindow.VolumeURL))
+                if (settings.VolumeURLs.Contains(appSettings.VolumeURL))
                 {
-                    settings.VolumeURLs.Remove(wpfLoginWindow.VolumeURL);
+                    settings.VolumeURLs.Remove(appSettings.VolumeURL);
                 }
 
                 // Insert at top of list (most recent)
-                settings.VolumeURLs.Insert(0, wpfLoginWindow.VolumeURL);
-                settings.Save();
+                settings.VolumeURLs.Insert(0, appSettings.VolumeURL);
+                settingsChanged = true;
                 
-                System.Diagnostics.Trace.WriteLine($"[Viking] Saved volume to recent volumes: {wpfLoginWindow.VolumeURL}");
+                System.Diagnostics.Trace.WriteLine($"[Viking] Saved volume to recent volumes: {appSettings.VolumeURL}");
             }
 
-            return wpfLoginWindow.VolumeURL;
-        } 
+            // Persist segmentation service selection
+            var selectedSegmentationUrl = wpfLoginWindow.SegmentationServiceUrl;
+            appSettings.SegmentationURL = selectedSegmentationUrl;
+            settings.LastSegmentationServiceUrl = selectedSegmentationUrl ?? string.Empty;
+            settingsChanged = true;
 
+            if (!string.IsNullOrWhiteSpace(selectedSegmentationUrl))
+            {
+                var history = settings.SegmentationServiceUrls ?? new StringCollection();
+                if (history.Contains(selectedSegmentationUrl))
+                {
+                    history.Remove(selectedSegmentationUrl);
+                }
+                history.Insert(0, selectedSegmentationUrl);
+                settings.SegmentationServiceUrls = history;
+                settingsChanged = true;
+            }
+
+            if (settingsChanged)
+            {
+                settings.Save();
+            }
+
+            return appSettings;
+        }
+
+        private static void PopulateAnnotationUrlFromVolume(ApplicationSettings appSettings)
+        {
+            if (appSettings == null ||
+                !string.IsNullOrWhiteSpace(appSettings.AnnotationURL) ||
+                string.IsNullOrWhiteSpace(appSettings.VolumeURL))
+            {
+                return;
+            }
+
+            try
+            {
+                var volumeDocument = Viking.VolumeModel.Volume.LoadXDocumentAsync(appSettings.VolumeURL, CancellationToken.None, UI.State.UserCredentials)
+                    .GetAwaiter()
+                    .GetResult();
+
+                var volumeElement = Viking.VolumeModel.Volume.GetVolumeElement(volumeDocument);
+                if (volumeElement == null)
+                {
+                    return;
+                }
+
+                var mappingElement = volumeElement
+                    .Elements()
+                    .FirstOrDefault(e => string.Equals(e.Name.LocalName, "VolumeToEndpoint", StringComparison.OrdinalIgnoreCase));
+
+                var endpoint = GetAttributeValueCaseInsensitive(mappingElement, "Endpoint");
+                if (!string.IsNullOrWhiteSpace(endpoint))
+                {
+                    appSettings.AnnotationURL = endpoint;
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Failed to derive annotation endpoint from volume '{appSettings?.VolumeURL}': {ex.Message}");
+            }
+        }
+
+        private static string GetAttributeValueCaseInsensitive(XElement element, string attributeName)
+        {
+            return element?
+                .Attributes()
+                .FirstOrDefault(a => string.Equals(a.Name.LocalName, attributeName, StringComparison.OrdinalIgnoreCase))
+                ?.Value;
+        }
 
         [Conditional("DEBUG")]
         private static void CreateDebugListener()
@@ -470,5 +542,51 @@ namespace Viking
                 // Continue with application startup even if update check fails
             }
         }
+
+        private static void ConfigureHighDpiMode()
+        {
+            try
+            {
+                var applicationType = typeof(Application);
+                MethodInfo setHighDpiMode = applicationType.GetMethod("SetHighDpiMode", BindingFlags.Public | BindingFlags.Static);
+                if (setHighDpiMode != null)
+                {
+                    Type highDpiModeType = setHighDpiMode.GetParameters()[0].ParameterType;
+                    object perMonitorV2Value = Enum.Parse(highDpiModeType, "PerMonitorV2");
+                    setHighDpiMode.Invoke(null, new[] { perMonitorV2Value });
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Failed to call Application.SetHighDpiMode: {ex.Message}");
+            }
+
+            TrySetPerMonitorDpiAwareness();
+        }
+
+        private static void TrySetPerMonitorDpiAwareness()
+        {
+            try
+            {
+                // PROCESS_PER_MONITOR_DPI_AWARE = 2
+                SetProcessDpiAwareness(2);
+            }
+            catch (DllNotFoundException)
+            {
+                Trace.WriteLine("[Viking] shcore.dll not available for DPI awareness.");
+            }
+            catch (EntryPointNotFoundException)
+            {
+                Trace.WriteLine("[Viking] SetProcessDpiAwareness not available on this OS.");
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Viking] Failed to set DPI awareness via shcore.dll: {ex.Message}");
+            }
+        }
+
+        [DllImport("Shcore.dll")]
+        private static extern int SetProcessDpiAwareness(int awareness);
     }
 }

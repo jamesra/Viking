@@ -28,7 +28,6 @@ namespace WebAnnotation.View
             }
         }
 
-
         private void CreateVisuals(GridVector2 position)
         {
             Label = new LabelView(model.Name, position);

@@ -93,7 +93,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />
-    <ProjectReference Include="..\..\VikingWPFUserControls\VikingWPFUserControls.csproj" />
+    <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
   </ItemGroup>
   
