@@ -68,6 +68,7 @@ public class Program
                                .AddJsonFile($"appsettings.{aspnetCoreEnv}.json", optional: true)
                                .AddJsonFile($"appsettings.{hostingEnv}.json", optional: true)
                                .AddEnvironmentVariables()
+                               .AddUserSecrets<Program>(optional: true)
                                .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
 
 

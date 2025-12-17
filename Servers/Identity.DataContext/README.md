@@ -12,14 +12,67 @@ This project contains the Entity Framework Core data context for the Identity Se
 
 ### Connection String
 
-The connection string is configured in `appsettings.json`:
+**Important**: Connection strings with credentials should **never** be stored in `appsettings.json` files that are committed to version control. Use one of the following secure methods:
+
+#### Option 1: User Secrets (Recommended for Development)
+
+For local development, use .NET User Secrets to store connection strings with credentials:
+
+```bash
+# Navigate to the Identity.DataContext project directory
+cd C:\src\git\Viking\Servers\Identity.DataContext
+
+# Set the connection string in user secrets
+dotnet user-secrets set "ConnectionStrings:IdentityConnection" "Server=YourServer;Database=IdentityViking;Trusted_Connection=False;User ID=YourUser;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True"
+```
+
+**User Secrets ID**: `aspnet-Identity.DataContext-9A8B7C6D-5E4F-3A2B-1C0D-9E8F7A6B5C4D`
+
+#### Option 2: Environment Variables
+
+You can also use environment variables for connection strings:
+
+```bash
+# Windows PowerShell
+$env:ConnectionStrings__IdentityConnection = "Server=YourServer;Database=IdentityViking;Trusted_Connection=False;User ID=YourUser;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True"
+
+# Linux/Mac
+export ConnectionStrings__IdentityConnection="Server=YourServer;Database=IdentityViking;Trusted_Connection=False;User ID=YourUser;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True"
+```
+
+#### Option 3: appsettings.json with Environment Variable Substitution
+
+The `appsettings.json` file uses environment variable substitution for deployment scenarios:
 
 ```json
 {
   "ConnectionStrings": {
-    "IdentityConnection": "Server=YourServer;Database=IdentityViking;Trusted_Connection=False;User ID=YourUser;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True"
+    "IdentityConnection": "Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=IdentityViking;Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True"
   }
 }
+```
+
+Set the following environment variables:
+- `SQL_SERVER_HOST` - SQL Server hostname or IP
+- `SQL_SERVER_PORT` - SQL Server port (default: 1433)
+- `SQL_SERVER_USER` - SQL Server username
+- `SQL_SERVER_PASSWORD` - SQL Server password
+
+#### Generic Connection String Examples
+
+**SQL Server with Integrated Security (Windows Authentication)**:
+```
+Server=YourServer;Database=IdentityViking;Trusted_Connection=True;Integrated Security=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+```
+
+**SQL Server with SQL Authentication**:
+```
+Server=YourServer;Database=IdentityViking;Trusted_Connection=False;User ID=YourUser;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True
+```
+
+**SQL Server with Custom Port**:
+```
+Server=YourServer,1433;Database=IdentityViking;Trusted_Connection=False;User ID=YourUser;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True
 ```
 
 ## Entity Framework Migrations
@@ -201,10 +254,48 @@ dotnet ef migrations script FromMigration ToMigration
 dotnet ef database update --dry-run
 ```
 
+## User Secrets Configuration
+
+### Setting Up User Secrets
+
+User secrets are stored outside the repository and are automatically ignored by git. They are stored in:
+- **Windows**: `%APPDATA%\Microsoft\UserSecrets\<UserSecretsId>\secrets.json`
+- **Linux/Mac**: `~/.microsoft/usersecrets/<UserSecretsId>/secrets.json`
+
+### Required Secrets
+
+The following secrets should be configured for this project:
+
+| Secret Key | Description | Example |
+|------------|-------------|---------|
+| `ConnectionStrings:IdentityConnection` | Full database connection string with credentials | `Server=YourServer;Database=IdentityViking;Trusted_Connection=False;User ID=YourUser;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True` |
+
+### Managing User Secrets
+
+```bash
+# List all secrets
+dotnet user-secrets list
+
+# Get a specific secret
+dotnet user-secrets get "ConnectionStrings:IdentityConnection"
+
+# Remove a secret
+dotnet user-secrets remove "ConnectionStrings:IdentityConnection"
+
+# Clear all secrets
+dotnet user-secrets clear
+```
+
+### Design-Time Operations
+
+The `DesignTimeDbContextFactory` automatically loads user secrets and environment variables, so Entity Framework Core tools (migrations, etc.) will use the connection string from user secrets when available.
+
 ## Security Considerations
 
-- Never commit connection strings with real credentials to version control
-- Use environment variables or user secrets for production connection strings
-- Regularly backup your database before applying migrations
-- Test migrations on a copy of production data when possible
+- **Never commit connection strings with real credentials** to version control
+- **Use user secrets for local development** - they are stored outside the repository
+- **Use environment variables or secrets managers** for production deployments
+- **The `secrets.json` file** (if used) is automatically ignored by `.gitignore`
+- **Regularly backup your database** before applying migrations
+- **Test migrations on a copy of production data** when possible
 

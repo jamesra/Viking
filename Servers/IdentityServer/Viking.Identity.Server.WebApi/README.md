@@ -100,9 +100,32 @@ docker run -d \
 
 ## Configuring Settings
 
+**Important**: Connection strings with credentials should **never** be stored in `appsettings.json` files that are committed to version control. Use User Secrets for local development or environment variables for deployment.
+
 The Viking.Identity.Server.WebApi application uses several configuration methods:
 
-### A. Environment Variables
+### A. User Secrets (Recommended for Local Development)
+
+For local development, use .NET User Secrets to store sensitive configuration:
+
+```bash
+# Navigate to the project directory
+cd C:\src\git\Viking\Servers\IdentityServer\Viking.Identity.Server.WebApi
+
+# Set connection string with credentials
+dotnet user-secrets set "ConnectionStrings:IdentityConnection" "Server=your-db-server;Database=IdentityViking;Trusted_Connection=False;User ID=your-user;Password=your-password;MultipleActiveResultSets=true;TrustServerCertificate=True"
+
+# Set Identity Server secret
+dotnet user-secrets set "VikingIdentityServerOptions:Secret" "your-identity-server-secret"
+```
+
+**User Secrets ID**: `aspnet-Viking.Identity.Server.WebApi-489B09E1-41D8-42F9-9F75-CD8530619CD5`
+
+**User secrets location** (automatically ignored by git):
+- **Windows**: `%APPDATA%\Microsoft\UserSecrets\aspnet-Viking.Identity.Server.WebApi-489B09E1-41D8-42F9-9F75-CD8530619CD5\secrets.json`
+- **Linux/Mac**: `~/.microsoft/usersecrets/aspnet-Viking.Identity.Server.WebApi-489B09E1-41D8-42F9-9F75-CD8530619CD5/secrets.json`
+
+### B. Environment Variables
 You can override configuration using environment variables:
 
 ```bash
@@ -118,7 +141,7 @@ docker run -d \
   identity-webapi:latest
 ```
 
-### B. Volume Mounting for Configuration Files
+### C. Volume Mounting for Configuration Files
 
 **Important**: Docker can only mount single files if they already exist on the host. If the file doesn't exist, Docker will create a directory instead.
 
@@ -145,8 +168,10 @@ docker run -d \
   identity-webapi:latest
 ```
 
-### C. Custom Configuration File
+### D. Custom Configuration File
 Create a custom `appsettings.json` file and mount it:
+
+**Note**: Do not include credentials in `appsettings.json` files committed to version control. Use environment variable substitution or load credentials from user secrets/secrets.json.
 
 ```json
 {
@@ -187,12 +212,54 @@ Create a custom `appsettings.json` file and mount it:
 The application uses these main configuration sections:
 
 - **ConnectionStrings**: Database connection for Identity data
+  - **IdentityConnection**: Full connection string with server, database, and authentication
+  - Should be stored in User Secrets or environment variables when credentials are included
+- **VikingIdentityServerOptions**: Identity Server configuration
+  - **Authority**: URL of the Identity Server
+  - **Secret**: Client secret for authentication (should be in User Secrets or environment variables)
 - **JwtBearerOptions**: JWT Bearer authentication configuration including:
   - **Authority**: URL of the Identity Server
   - **RequireHttpsMetadata**: Whether to require HTTPS for metadata
   - **TokenValidationParameters**: JWT token validation settings
 - **SSL**: Certificate serial number for HTTPS (if not provided, uses developer signing credential)
 - **Logging**: Log levels and output configuration
+
+## Required User Secrets
+
+For local development, the following secrets should be configured using `dotnet user-secrets`:
+
+| Secret Key | Description | Example |
+|------------|-------------|---------|
+| `ConnectionStrings:IdentityConnection` | Database connection string with credentials | `Server=YourServer;Database=IdentityViking;Trusted_Connection=False;User ID=YourUser;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True` |
+| `VikingIdentityServerOptions:Secret` | Identity Server client secret | `your-identity-server-secret-here` |
+
+### Managing User Secrets
+
+```bash
+# List all secrets
+dotnet user-secrets list
+
+# Get a specific secret
+dotnet user-secrets get "ConnectionStrings:IdentityConnection"
+
+# Remove a secret
+dotnet user-secrets remove "ConnectionStrings:IdentityConnection"
+
+# Clear all secrets
+dotnet user-secrets clear
+```
+
+### Connection String Examples
+
+**SQL Server with Integrated Security (Windows Authentication)**:
+```
+Server=YourServer;Database=IdentityViking;Trusted_Connection=True;Integrated Security=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+```
+
+**SQL Server with SQL Authentication**:
+```
+Server=YourServer;Database=IdentityViking;Trusted_Connection=False;User ID=YourUser;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True
+```
 
 ## Accessing the Application
 

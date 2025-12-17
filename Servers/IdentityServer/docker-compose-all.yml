@@ -1,5 +1,6 @@
 services:
   identity-all-services:
+    platform: linux/amd64
     env_file:
       - .env.All
       - .env.All.Docker

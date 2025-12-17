@@ -36,6 +36,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             ILogger<AccountController> logger,
             IWebHostEnvironment env)
         {
+            _env = env;
             _userManager = userManager;
             _signInManager = signInManager;
             _emailSender = emailSender;

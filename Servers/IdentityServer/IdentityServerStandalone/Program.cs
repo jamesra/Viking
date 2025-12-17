@@ -67,6 +67,7 @@ namespace Viking.Identity.Server.Standalone
                                .AddJsonFile($"appsettings.{aspnetCoreEnv}.json", optional: true)
                                .AddJsonFile($"appsettings.{hostingEnv}.json", optional: true)
                                .AddEnvironmentVariables()
+                               .AddUserSecrets<Program>(optional: true)
                                .EnableSubstitutions("${", "}", UnresolvedVariableBehaviour.Throw);
 
                 // Configure Serilog

@@ -14,7 +14,7 @@ ARG REMOTE_DEBUG_PORT=4024
 ARG ASPNETCORE_ENVIRONMENT=Production
 ARG HOSTING_ENVIRONMENT=Docker
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 
 # Install supervisor for process management and dos2unix for line ending conversion
@@ -38,7 +38,7 @@ ENV REMOTE_DEBUG_PORT=$REMOTE_DEBUG_PORT
 # Expose ports for all services (HTTP, HTTPS, and single Debug port)
 EXPOSE 5000 5001 6000 6001 4000 4001 4024
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/sdk:9.0 AS build
 # Pass build arguments to build stage
 ARG ASPNETCORE_ENVIRONMENT
 ARG BUILD_CONFIGURATION=Release

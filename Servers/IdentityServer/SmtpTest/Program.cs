@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Net.Mail;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration; 
 
 namespace SmtpTest
 {
@@ -55,9 +55,15 @@ namespace SmtpTest
                 Console.WriteLine($"Loading configuration from: {configPath}");
                 Console.WriteLine();
 
+                // Get the directory containing the config file (WebManagement directory)
+                var configDir = Path.GetDirectoryName(configPath)!;
+                
+                // Load secrets.json from the same directory (will be linked from WebManagement)
+                var secretsPath = Path.Combine(configDir, "secrets.json");
+                
                 var configuration = new ConfigurationBuilder()
                     .AddJsonFile(configPath, optional: false, reloadOnChange: false)
-                    .AddUserSecrets<Program>(optional: true)
+                    .AddJsonFile(secretsPath, optional: true, reloadOnChange: false)
                     .AddEnvironmentVariables()
                     .Build();
 
@@ -65,11 +71,34 @@ namespace SmtpTest
 
                 if (emailOptions == null)
                 {
-                    Console.WriteLine("Error: Email section not found in configuration.");
-                    return;
+                    emailOptions = new EmailOptions();
+                    // Fallback: read individual keys if section binding didn't work
+                    emailOptions.Server = configuration["Email:Server"];
+                    emailOptions.Port = int.TryParse(configuration["Email:Port"], out var p) ? p : null;
+                    emailOptions.FromEmail = configuration["Email:FromEmail"];
+                    emailOptions.FromName = configuration["Email:FromName"];
+                    emailOptions.Username = configuration["Email:Username"];
+                    emailOptions.Password = configuration["Email:Password"];
+                    emailOptions.Timeout = int.TryParse(configuration["Email:Timeout"], out var t) ? t : null;
+                    if (bool.TryParse(configuration["Email:EnableSsl"], out var enableSsl))
+                    {
+                        emailOptions.EnableSsl = enableSsl;
+                    }
+                    if (bool.TryParse(configuration["Email:UseHtml"], out var useHtml))
+                    {
+                        emailOptions.UseHtml = useHtml;
+                    }
+                    if (bool.TryParse(configuration["Email:EnableSending"], out var enableSending))
+                    {
+                        emailOptions.EnableSending = enableSending;
+                    }
+                    else
+                    {
+                        emailOptions.EnableSending = true;
+                    }
                 }
 
-                // Overlay secrets/environment password if not already populated
+                // Overlay password from secrets/environment if not already populated
                 var configuredPassword = configuration["Email:Password"];
                 if (!string.IsNullOrWhiteSpace(configuredPassword))
                 {
@@ -134,8 +163,8 @@ namespace SmtpTest
 
         private static Task SendTestEmailAsync(EmailOptions options, string recipientEmail)
         {
-            var server = options.Server!;
-            var fromEmail = options.FromEmail!;
+            var server = options.Server ?? throw new ArgumentException("Server cannot be null", nameof(options));
+            var fromEmail = options.FromEmail ?? throw new ArgumentException("FromEmail cannot be null", nameof(options));
             var fromName = options.FromName ?? string.Empty;
 
             var smtpPort = options.Port ?? 25;

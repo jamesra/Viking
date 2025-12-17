@@ -14,10 +14,12 @@ namespace Viking.Identity.Data
     {
         public ApplicationDbContext CreateDbContext(string[] args)
         {
-            // Build configuration from appsettings.json
+            // Build configuration from appsettings.json, user secrets, and environment variables
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false)
+                .AddUserSecrets<DesignTimeDbContextFactory>(optional: true)
+                .AddEnvironmentVariables()
                 .Build();
 
             // Get connection string
@@ -28,7 +30,7 @@ namespace Viking.Identity.Data
                 throw new InvalidOperationException(
                     "Connection string 'IdentityConnection' not found. " +
                     "Please ensure appsettings.json exists in the Identity.DataContext project " +
-                    "and contains the IdentityConnection connection string.");
+                    "and contains the IdentityConnection connection string, or set it in user secrets or environment variables.");
             }
 
             // Create DbContext options
