@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -20,7 +20,7 @@ using Viking.UI;
 using WebAnnotationModel;
 using WebAnnotationModel.Service;
 using System.Net.Http;
-using codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Utils;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
@@ -43,6 +43,45 @@ namespace WebAnnotation
 
         private static bool? _isSegmentationServiceAvailable;
         private static string _segmentationServiceUrlFromVolume;
+
+        /// <summary>
+        /// Static method called by ExtensionManager to determine if this extension should be loaded.
+        /// Returns false if the VolumeToEndpoint element with Endpoint attribute is not found in the VikingXML.
+        /// </summary>
+        /// <param name="context">The extension load context providing access to VikingXML</param>
+        /// <returns>True if the extension should load, false otherwise</returns>
+        public static bool ShouldLoad(Viking.Common.IExtensionLoadContext context)
+        {
+            if (context == null)
+            {
+                return false;
+            }
+
+            XElement volumeElement = context.VolumeElement;
+            if (volumeElement == null)
+            {
+                return false;
+            }
+
+            // Check for VolumeToEndpoint element with Endpoint attribute
+            IEnumerable<XElement> mappingElements = volumeElement.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
+            
+            if (!mappingElements.Any())
+            {
+                return false;
+            }
+
+            XElement volumeToEndpointElement = mappingElements.First();
+            XAttribute endpointAttribute = volumeToEndpointElement.Attribute("Endpoint");
+            
+            if (endpointAttribute == null || string.IsNullOrWhiteSpace(endpointAttribute.Value))
+            {
+                return false;
+            }
+
+            // Both VolumeToEndpoint element and Endpoint attribute are present
+            return true;
+        }
 
         /// <summary>
         /// Returns true if a SegmentationService is configured and available with a valid URL format
@@ -482,6 +521,7 @@ namespace WebAnnotation
 //        static internal readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd";
 
         private static XRoot _userSettingsDoc;
+        private static Task _loadUserPreferencesTask = null;
 
         public static string EndpointName
         {
@@ -489,18 +529,20 @@ namespace WebAnnotation
             internal set;
         }
 
+         
         internal static UserSettings UserSettings
         {
             get
             {
                 if (_userSettingsDoc is null)
                 {
-                    LoadUserPreferences();
+                
+                    LoadUserPreferencesAsync();
+                    return null; 
                 }
 
-                return _userSettingsDoc.UserSettings;
-            }
-
+                return _userSettingsDoc?.UserSettings;
+            } 
         }
 
         /// <summary>
@@ -630,7 +672,14 @@ namespace WebAnnotation
 
             if (GetEndpointFromXML(volume.VolumeElement))
             {
-                LoadUserPreferences();
+                try
+                {
+                    LoadUserPreferencesAsync().GetAwaiter().GetResult();
+                }
+                catch (OperationCanceledException)
+                {
+                    Trace.WriteLine("LoadUserPreferences timed out during initialization.");
+                }
                 WebAnnotationModel.Store.Init();
                 return true;
             }
@@ -754,7 +803,34 @@ namespace WebAnnotation
             return;
         }
 
-        private static void LoadUserPreferences()
+        private static Task LoadUserPreferencesAsync()
+        {
+            // Check if a load is already in progress
+            Task existingTask = _loadUserPreferencesTask;
+            if (existingTask != null && !existingTask.IsCompleted)
+            {
+                return existingTask;
+            }
+
+            // Create a new task with timeout
+            var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(10));
+
+            _loadUserPreferencesTask = LoadUserPreferencesAsyncInternal(cts.Token);
+            
+            // Clear the task reference when it completes
+            _loadUserPreferencesTask.ContinueWith(t =>
+            {
+                if (t == _loadUserPreferencesTask)
+                {
+                    _loadUserPreferencesTask = null;
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
+
+            return _loadUserPreferencesTask;
+        }
+
+        private static async Task LoadUserPreferencesAsyncInternal(CancellationToken cancellationToken)
         {
             try
             {
@@ -765,33 +841,42 @@ namespace WebAnnotation
                     LoadFromServer = true;
                 }
 
-                if (!CachedResourceIsValid(UserSettingsFilePath, UserSettingsUri))
+                if (! await CachedResourceIsValidAsync(UserSettingsFilePath, UserSettingsUri, cancellationToken))
                 {
                     LoadFromServer = true;
                 }
 
                 if (LoadFromServer)
                 {
-                    bool success = LoadServerUserSettings();
+                    bool success = await LoadServerUserSettingsAsync(cancellationToken);
                     if (!success)
                     {
                         return;
                     }
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (System.IO.File.Exists(UserSettingsFilePath))
                 {
                     _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Trace.WriteLine("LoadUserPreferencesAsync timed out after 10 seconds.");
+                throw;
+            }
             catch (Xml.Schema.Linq.LinqToXsdException)
             {
                 //We found it locally, but could not parse it
-                bool success = LoadServerUserSettings();
+                bool success = await LoadServerUserSettingsAsync(cancellationToken);
                 if (!success)
                 {
                     throw;
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 if (System.IO.File.Exists(UserSettingsFilePath))
                 {
@@ -801,11 +886,13 @@ namespace WebAnnotation
             catch (System.Xml.XmlException)
             {
                 //We found it locally, but could not parse it
-                bool success = LoadServerUserSettings();
+                bool success = await LoadServerUserSettingsAsync(cancellationToken);
                 if (!success)
                 {
                     throw;
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 if (System.IO.File.Exists(UserSettingsFilePath))
                 {
@@ -827,12 +914,12 @@ namespace WebAnnotation
         /// <param name="CacheFilename"></param>
         /// <param name="textureUri"></param>
         /// <returns></returns>
-        private static bool CachedResourceIsValid(string CacheFilename, Uri uri)
+        private static Task<bool> CachedResourceIsValid(string CacheFilename, Uri uri)
         {
-            return CachedResourceIsValidAsync(CacheFilename, uri).GetAwaiter().GetResult();
+            return CachedResourceIsValidAsync(CacheFilename, uri);
         }
 
-        private static async Task<bool> CachedResourceIsValidAsync(string CacheFilename, Uri uri)
+        private static async Task<bool> CachedResourceIsValidAsync(string CacheFilename, Uri uri, CancellationToken cancellationToken = default)
         {
             if (uri == null)
             {
@@ -848,12 +935,11 @@ namespace WebAnnotation
             try
             {
                 var request = new HttpRequestMessage(HttpMethod.Head, uri);
-                var response = await httpClient.SendAsync(request);
+                var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
                 if (!response.Content.Headers.LastModified.HasValue) return false;
                 bool valid = response.Content.Headers.LastModified.Value.UtcDateTime <= System.IO.File.GetLastWriteTimeUtc(CacheFilename);
-                return valid;
-
+                return valid; 
             }
             catch
             {
@@ -861,24 +947,27 @@ namespace WebAnnotation
             }
         }
 
-        private static bool LoadServerUserSettings()
+        private static Task<bool> LoadServerUserSettings()
         {
-            return LoadServerUserSettingsAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            return LoadServerUserSettingsAsync();
         }
 
-        private static async Task<bool> LoadServerUserSettingsAsync()
+        private static async Task<bool> LoadServerUserSettingsAsync(CancellationToken cancellationToken = default)
         {
             //Try to download the default user settings file
-            //Uri uri = UserSettingsUri;
-            Uri uri = new Uri("http://codepharm.net/XSD/WebAnnotationUserSettings.xml");
-            if (uri is null) return false;
+            Uri uri = UserSettingsUri;
+            if(uri is null)
+                uri = new Uri("http://rouge1.codepharm.net/RABBIT/WebAnnotationUserSettings.xml");
+            
             try
             {
                 using var httpClient = new HttpClient();
-                var response = await httpClient.GetAsync(uri);
+                var response = await httpClient.GetAsync(uri, cancellationToken).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                         
-                byte[] data = await response.Content.ReadAsByteArrayAsync();
+                byte[] data = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 try
                 {
@@ -892,7 +981,7 @@ namespace WebAnnotation
                 }
 
                 using FileStream file = File.Open(UserSettingsFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-                await file.WriteAsync(data, 0, data.Length);
+                await file.WriteAsync(data, 0, data.Length, cancellationToken).ConfigureAwait(false);
                 return true;
             }
             catch (Exception)

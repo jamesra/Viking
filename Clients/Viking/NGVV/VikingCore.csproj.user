@@ -107,12 +107,6 @@
     <Compile Update="UI\Forms\LoadingVolumeForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="UI\Forms\Logon.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="UI\Forms\LogonASPMembership.cs">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Update="UI\Forms\PropertySheetForm.cs">
       <SubType>Form</SubType>
     </Compile>

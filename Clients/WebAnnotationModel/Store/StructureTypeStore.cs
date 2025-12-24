@@ -154,7 +154,7 @@ namespace WebAnnotationModel
             return created_structuretype;
         }
 
-        /// <summary>
+        /// <summary> 
         /// At startup we load the entire structure types table since it is fairly static
         /// </summary>
         public void LoadStructureTypes()

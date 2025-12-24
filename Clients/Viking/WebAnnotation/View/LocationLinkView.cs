@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using Viking.AnnotationServiceTypes;
+using Viking.Common;
 using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -21,7 +22,7 @@ namespace WebAnnotation.ViewModel
     /// This class represents a link between locations. This object is a little unique because it is
     /// not tied to the database object like the other *obj classes
     /// </summary>
-    public class LocationLinkView : Viking.Objects.UIObjBase, ICanvasGeometryView, IEquatable<LocationLinkView>, IColorView, IViewLocationLink
+    public class LocationLinkView : Viking.Objects.UIObjBase, ICanvasGeometryView, IEquatable<LocationLinkView>, IColorView, IViewLocationLink, IContextMenu
     {
         public readonly LocationLinkKey Key;
 

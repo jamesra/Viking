@@ -35,9 +35,7 @@ namespace Viking.UI.WPF.ViewModels
             CancelCommand = new RelayCommand(Cancel);
             LoadVolumesCommand = new RelayCommand(async () => await LoadVolumesAsync());
             CopyUrlCommand = new RelayCommand(CopyUrlToClipboard, () => !string.IsNullOrWhiteSpace(SelectedVolumeUrl));
-            
-            LoadRecentVolumes();
-            
+              
             // Auto-load volumes on creation if we have a bearer token
             if (_bearerToken != null)
             {
@@ -90,9 +88,22 @@ namespace Viking.UI.WPF.ViewModels
                     _selectedVolume = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(SelectedVolumeUrl));
+                    OnPropertyChanged(nameof(SelectedVolumeDescription));
                     (SelectCommand as RelayCommand)?.RaiseCanExecuteChanged();
                     (CopyUrlCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
+            }
+        }
+
+        public string SelectedVolumeDescription
+        {
+            get
+            {
+                if (SelectedVolume?.Volume != null)
+                {
+                    return SelectedVolume.Volume.Description ?? string.Empty;
+                }
+                return string.Empty;
             }
         }
 
@@ -152,12 +163,7 @@ namespace Viking.UI.WPF.ViewModels
         public event EventHandler<VolumeSelectedEventArgs> VolumeSelected;
         public event EventHandler SelectionCancelled;
         public event PropertyChangedEventHandler PropertyChanged;
-
-        private void LoadRecentVolumes()
-        {
-            // Recent volumes will be populated by the hosting application
-            // This keeps Viking.UI.WPF independent of VikingCore
-        }
+         
 
         public void AddRecentVolume(string url, string name)
         {
@@ -238,7 +244,7 @@ namespace Viking.UI.WPF.ViewModels
                 // Debug logging
                 Trace.WriteLine($"[VolumeSelection] Identity Server URL: {identityUri}");
                 Trace.WriteLine($"[VolumeSelection] Identity API URL (port 6001): {identityApiUri}");
-                Trace.WriteLine($"[VolumeSelection] Full endpoint will be: {new Uri(identityApiUri, "Permissions/AccessibleVolumes")}");
+                Trace.WriteLine($"[VolumeSelection] Full endpoint will be: {new Uri(identityApiUri, "Permissions/UserAccessibleVolumeTree")}");
 
                 var helper = new Viking.Tokens.IdentityServerHelper
                 {
@@ -246,60 +252,42 @@ namespace Viking.UI.WPF.ViewModels
                     IdentityApiURL = identityApiUri
                 };
 
-                var volumesDict = await helper.RetrieveUserAccessibleVolumes(_bearerToken);
+                var apiTreeNodes = await helper.RetrieveUserAccessibleVolumeTree(_bearerToken);
                 
-                if (volumesDict == null || volumesDict.Count == 0)
+                if (apiTreeNodes == null || apiTreeNodes.Count == 0)
                 {
                     StatusMessage = "No volumes available from server. Use manual entry or recent volumes.";
                     return;
                 }
 
                 OrganizationNodes.Clear();
-                var orgGroups = new Dictionary<string, VolumeTreeNode>();
-
-                foreach (var kvp in volumesDict)
+                
+                int totalVolumes = 0;
+                foreach (var apiNode in apiTreeNodes)
                 {
                     try
                     {
-                        var volumeInfo = ParseVolumeData(kvp.Key, kvp.Value);
-                        
-                        var org = volumeInfo.Organization ?? "Uncategorized";
-                        
-                        if (!orgGroups.ContainsKey(org))
+                        var uiNode = BuildUITreeNodeFromApiNode(apiNode);
+                        if (uiNode != null)
                         {
-                            var orgNode = new VolumeTreeNode
-                            {
-                                Name = org,
-                                IsOrganization = true,
-                                Children = new ObservableCollection<VolumeTreeNode>()
-                            };
-                            orgGroups[org] = orgNode;
-                            OrganizationNodes.Add(orgNode);
+                            OrganizationNodes.Add(uiNode);
+                            totalVolumes += CountVolumesInNode(uiNode);
                         }
-
-                        var volumeNode = new VolumeTreeNode
-                        {
-                            Name = volumeInfo.Name,
-                            Volume = volumeInfo,
-                            IsOrganization = false
-                        };
-
-                        orgGroups[org].Children.Add(volumeNode);
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Trace.WriteLine($"Error parsing volume {kvp.Key}: {ex.Message}");
+                        System.Diagnostics.Trace.WriteLine($"Error processing tree node {apiNode?.Name}: {ex.Message}");
                     }
                 }
 
-                StatusMessage = $"Loaded {volumesDict.Count} volume(s)";
+                StatusMessage = $"Loaded {totalVolumes} volume(s)";
             }
             catch (System.Net.Http.HttpRequestException httpEx) when (httpEx.Message.Contains("404"))
             {
                 // The volumes API endpoint doesn't exist on this Identity Server
-                // This is expected for servers that don't implement the UserAccessibleVolumes endpoint
+                // This is expected for servers that don't implement the UserAccessibleVolumeTree endpoint
                 StatusMessage = "Volume list unavailable. Please use manual entry or recent volumes.";
-                System.Diagnostics.Trace.WriteLine($"Volumes API not available (404): {httpEx.Message}");
+                System.Diagnostics.Trace.WriteLine($"VolumeTree API not available (404): {httpEx.Message}");
                 ShowManualEntry = true; // Auto-expand manual entry section
             }
             catch (Exception ex)
@@ -314,91 +302,146 @@ namespace Viking.UI.WPF.ViewModels
             }
         }
 
-        private VolumeInfo ParseVolumeData(long id, object data)
+        private VolumeTreeNode BuildUITreeNodeFromApiNode(Viking.Tokens.ApiVolumeTreeNode apiNode)
         {
-            var volumeInfo = new VolumeInfo { Id = id };
+            if (apiNode == null)
+                return null;
 
-            try
+            var uiNode = new VolumeTreeNode
             {
-                // The API returns a Dictionary<long, object> where object might be a JsonElement
-                if (data is JsonElement jsonElement)
+                Name = apiNode.Name ?? "Unnamed",
+                IsOrganization = true,
+                Children = new ObservableCollection<VolumeTreeNode>()
+            };
+
+            // Process Volumes (the leaves)
+            if (apiNode.Volumes != null)
+            {
+                foreach (var volumePermission in apiNode.Volumes)
                 {
-                    System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Parsing volume {id}, JSON: {jsonElement.GetRawText()}");
-                    
-                    if (jsonElement.TryGetProperty("name", out JsonElement nameElement))
-                        volumeInfo.Name = nameElement.GetString();
-                    
-                    if (jsonElement.TryGetProperty("organization", out JsonElement orgElement))
-                        volumeInfo.Organization = orgElement.GetString();
-                    
-                    // Try multiple possible field names for the volume URL
-                    if (jsonElement.TryGetProperty("endpoint", out JsonElement endpointElement))
+                    try
                     {
-                        volumeInfo.VolumeXmlUrl = endpointElement.GetString();
-                        System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Found endpoint: {volumeInfo.VolumeXmlUrl}");
-                    } 
-                    else
-                    {
-                        System.Diagnostics.Trace.WriteLine($"[VolumeSelection] No endpoint, volumeXmlUrl, or url property found in JSON");
+                        var volumeInfo = ConvertUserResourcePermissionsToVolumeInfo(volumePermission);
+                        var volumeNode = new VolumeTreeNode
+                        {
+                            Name = volumeInfo.Name,
+                            Volume = volumeInfo,
+                            IsOrganization = false
+                        };
+                        uiNode.Children.Add(volumeNode);
                     }
-                    
-                    if (jsonElement.TryGetProperty("description", out JsonElement descElement))
-                        volumeInfo.Description = descElement.GetString();
-                }
-                else
-                {
-                    // Fallback: try to parse as JSON string
-                    var json = JsonSerializer.Serialize(data);
-                    using (JsonDocument doc = JsonDocument.Parse(json))
+                    catch (Exception ex)
                     {
-                        var root = doc.RootElement;
-                        
-                        if (root.TryGetProperty("name", out JsonElement nameElement))
-                            volumeInfo.Name = nameElement.GetString();
-                        
-                        if (root.TryGetProperty("organization", out JsonElement orgElement))
-                            volumeInfo.Organization = orgElement.GetString();
-                        
-                        // Try multiple possible field names for the volume URL
-                        if (root.TryGetProperty("endpoint", out JsonElement endpointElement))
-                            volumeInfo.VolumeXmlUrl = endpointElement.GetString(); 
-                        
-                        if (root.TryGetProperty("description", out JsonElement descElement))
-                            volumeInfo.Description = descElement.GetString();
+                        System.Diagnostics.Trace.WriteLine($"Error processing volume {volumePermission?.Id}: {ex.Message}");
                     }
                 }
             }
-            catch (Exception ex)
+
+            // Recursively process Children
+            if (apiNode.Children != null)
             {
-                System.Diagnostics.Trace.WriteLine($"Error parsing volume data: {ex.Message}");
+                foreach (var childApiNode in apiNode.Children)
+                {
+                    try
+                    {
+                        var childUiNode = BuildUITreeNodeFromApiNode(childApiNode);
+                        if (childUiNode != null)
+                        {
+                            uiNode.Children.Add(childUiNode);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Trace.WriteLine($"Error processing child node {childApiNode?.Name}: {ex.Message}");
+                    }
+                }
             }
 
-            // Set defaults if not found
-            if (string.IsNullOrEmpty(volumeInfo.Name))
-                volumeInfo.Name = $"Volume {id}";
-            
-            if (string.IsNullOrEmpty(volumeInfo.Organization))
-                volumeInfo.Organization = "Uncategorized";
+            return uiNode;
+        }
 
-            System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Final VolumeInfo: Id={volumeInfo.Id}, Name={volumeInfo.Name}, VolumeXmlUrl={volumeInfo.VolumeXmlUrl ?? "(null)"}");
+        private VolumeInfo ConvertUserResourcePermissionsToVolumeInfo(Viking.Tokens.UserResourcePermissions resourcePermissions)
+        {
+            var volumeInfo = new VolumeInfo
+            {
+                Id = resourcePermissions.Id,
+                Name = resourcePermissions.Name ?? $"Volume {resourcePermissions.Id}"
+            };
+
+            // Extract Endpoint and Description from Metadata
+            if (resourcePermissions.Metadata != null)
+            {
+                // Extract Endpoint (volume URL)
+                if (resourcePermissions.Metadata.TryGetValue("Endpoint", out object endpointObj))
+                {
+                    if (endpointObj is string endpointStr)
+                    {
+                        volumeInfo.VolumeXmlUrl = endpointStr;
+                    }
+                    else if (endpointObj != null)
+                    {
+                        volumeInfo.VolumeXmlUrl = endpointObj.ToString();
+                    }
+                }
+
+                // Extract Description
+                if (resourcePermissions.Metadata.TryGetValue("Description", out object descObj))
+                {
+                    if (descObj is string descStr)
+                    {
+                        volumeInfo.Description = descStr;
+                    }
+                    else if (descObj != null)
+                    {
+                        volumeInfo.Description = descObj.ToString();
+                    }
+                }
+            }
+
+            System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Converted VolumeInfo: Id={volumeInfo.Id}, Name={volumeInfo.Name}, VolumeXmlUrl={volumeInfo.VolumeXmlUrl ?? "(null)"}, Description={volumeInfo.Description ?? "(null)"}");
             
             return volumeInfo;
+        }
+
+        private int CountVolumesInNode(VolumeTreeNode node)
+        {
+            if (node == null)
+                return 0;
+
+            int count = 0;
+            if (node.Volume != null && !node.IsOrganization)
+            {
+                count = 1;
+            }
+
+            if (node.Children != null)
+            {
+                foreach (var child in node.Children)
+                {
+                    count += CountVolumesInNode(child);
+                }
+            }
+
+            return count;
         }
 
         private void SelectVolume()
         {
             string selectedUrl = null;
+            string selectedName = null;
 
             // Prioritize manual entry if provided
             if (!string.IsNullOrWhiteSpace(ManualVolumeUrl))
             {
                 selectedUrl = ManualVolumeUrl;
+                selectedName = null; // Will be loaded from XML
                 System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Using manually entered volume: {selectedUrl}");
             }
             else if (SelectedVolume?.Volume != null)
             {
                 selectedUrl = SelectedVolume.Volume.VolumeXmlUrl;
-                System.Diagnostics.Trace.WriteLine($"[VolumeSelection] SelectedVolume.Volume exists - VolumeXmlUrl={selectedUrl ?? "(null)"}");
+                selectedName = SelectedVolume.Volume.Name;
+                System.Diagnostics.Trace.WriteLine($"[VolumeSelection] SelectedVolume.Volume exists - VolumeXmlUrl={selectedUrl ?? "(null)"}, Name={selectedName ?? "(null)"}");
             }
             else
             {
@@ -410,8 +453,8 @@ namespace Viking.UI.WPF.ViewModels
                 // Ensure URL has proper format (add volume.vikingxml if needed)
                 selectedUrl = AppendDefaultVolumeFilenameIfMissing(selectedUrl);
                 
-                System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Final volume URL: {selectedUrl}");
-                VolumeSelected?.Invoke(this, new VolumeSelectedEventArgs { VolumeUrl = selectedUrl });
+                System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Final volume URL: {selectedUrl}, Name: {selectedName ?? "(null - will load from XML)"}");
+                VolumeSelected?.Invoke(this, new VolumeSelectedEventArgs { Url = selectedUrl, Name = selectedName });
             }
             else
             {
@@ -545,7 +588,9 @@ namespace Viking.UI.WPF.ViewModels
 
     public class VolumeSelectedEventArgs : EventArgs
     {
-        public string VolumeUrl { get; set; }
+        public string Url { get; set; }
+
+        public string Name { get;set;}
     }
 }
 

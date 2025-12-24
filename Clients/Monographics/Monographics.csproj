@@ -39,7 +39,7 @@
 		<None Include=".config\**\*" />
 		<None Include="Content\**\*.fx" />
 		<None Include="Content\**\*.png" />
-	</ItemGroup>
+	</ItemGroup> 
 	<ItemGroup>
 		<ProjectReference Include="..\..\AnnotationVizLib\AnnotationVizLib.csproj" />
 		<ProjectReference Include="..\..\Geometry\Geometry.csproj" />
@@ -52,5 +52,13 @@
 	<Target Name="RestoreDotnetTools" BeforeTargets="Restore">
 		<Message Text="Restoring dotnet tools" Importance="High" />
 		<Exec Command="dotnet tool restore" />
+	</Target>
+	
+	<!-- Override MGCB command to use direct path to mgcb.dll from NuGet packages -->
+	<Target Name="OverrideMGCBCommand" BeforeTargets="RunContentBuilder">
+		<PropertyGroup>
+			<_MGCBDllPath>$(NuGetPackageRoot)dotnet-mgcb\3.8.5-develop.13\tools\net8.0\any\mgcb.dll</_MGCBDllPath>
+			<_Command Condition="Exists('$(_MGCBDllPath)')">&quot;$(DotnetCommand)&quot; &quot;$(_MGCBDllPath)&quot;</_Command>
+		</PropertyGroup>
 	</Target>
 </Project>

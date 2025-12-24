@@ -19,7 +19,7 @@ from grpc.aio import ServicerContext
 from numpy.typing import NDArray
 
 # Import the generated gRPC code from the segmentation_grpc package
-from segmentation_grpc.segmentation_grpc import (
+from segmentation_grpc import (
     SegmentationRequest,
     SegmentationResponse,
     MultiSegmentationRequest,

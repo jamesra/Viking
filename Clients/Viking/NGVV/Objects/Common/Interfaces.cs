@@ -6,6 +6,34 @@ using System.Windows.Controls;
 namespace Viking.Common
 {
     /// <summary>
+    /// Provides context information to extensions during conditional loading checks.
+    /// Extensions can implement a static method: static bool ShouldLoad(IExtensionLoadContext context)
+    /// to examine program state and determine if they should be loaded.
+    /// </summary>
+    public interface IExtensionLoadContext
+    {
+        /// <summary>
+        /// The full VikingXML document defining the volume
+        /// </summary>
+        System.Xml.Linq.XDocument VikingXML { get; }
+        
+        /// <summary>
+        /// The Volume element from the VikingXML
+        /// </summary>
+        System.Xml.Linq.XElement VolumeElement { get; }
+        
+        /// <summary>
+        /// The volume name from the VikingXML
+        /// </summary>
+        string VolumeName { get; }
+        
+        /// <summary>
+        /// The volume host URL
+        /// </summary>
+        string VolumeHost { get; }
+    }
+
+    /// <summary>
     /// This interface can be placed on a class in an extension assembly.  If the Initialize
     /// method returns false the assembly will not be loaded as an extension
     /// </summary>

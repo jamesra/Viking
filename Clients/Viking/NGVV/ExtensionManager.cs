@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Viking.DependencyInjection;
 
@@ -294,9 +295,94 @@ namespace Viking.Common
             return listFiles;
         }
 
+        /// <summary>
+        /// Checks if an extension assembly should be loaded by looking for a static ShouldLoad method.
+        /// If the method exists, it is called with the provided context. If it doesn't exist, returns true for backward compatibility.
+        /// </summary>
+        /// <param name="assembly">The extension assembly to check</param>
+        /// <param name="context">The load context to pass to the ShouldLoad method</param>
+        /// <returns>True if the extension should be loaded, false otherwise</returns>
+        private static bool CheckExtensionShouldLoad(Assembly assembly, IExtensionLoadContext context)
+        {
+            if (assembly == null)
+            {
+                return true;
+            }
+
+            try
+            {
+                // Get all types in the assembly
+                Type[] types = assembly.GetTypes();
+
+                // Look for a static method named ShouldLoad with signature: bool ShouldLoad(IExtensionLoadContext)
+                foreach (Type type in types)
+                {
+                    if (type.IsAbstract || type.IsInterface)
+                    {
+                        continue;
+                    }
+
+                    MethodInfo shouldLoadMethod = type.GetMethod("ShouldLoad",
+                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
+                        null,
+                        new Type[] { typeof(IExtensionLoadContext) },
+                        null);
+
+                    if (shouldLoadMethod != null && shouldLoadMethod.ReturnType == typeof(bool))
+                    {
+                        try
+                        {
+                            object result = shouldLoadMethod.Invoke(null, new object[] { context });
+                            bool shouldLoad = (bool)result;
+                            
+                            if (!shouldLoad)
+                            {
+                                Trace.WriteLine($"Extension {assembly.GetName().Name} indicated it should not load via ShouldLoad method", "ExtMan");
+                            }
+                            
+                            return shouldLoad;
+                        }
+                        catch (Exception ex)
+                        {
+                            Trace.WriteLine($"Error calling ShouldLoad method on {type.FullName}: {ex.Message}", "ExtMan");
+                            // If there's an error calling the method, default to loading (fail-safe)
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                // Some types couldn't be loaded, but that's OK - we'll handle it in CanAssemblyInitialize
+                Trace.WriteLine($"Some types could not be loaded from {assembly.GetName().Name} during ShouldLoad check: {ex.Message}", "ExtMan");
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error checking ShouldLoad for {assembly.GetName().Name}: {ex.Message}", "ExtMan");
+            }
+
+            // No ShouldLoad method found - backward compatibility: load the extension
+            return true;
+        }
+
         internal static void LoadExtensions(IProgressReporter progressReporter)
         {
             //Put in an array so we can change the collection in the loop
+
+            // Create the extension load context once for all extensions
+            ExtensionLoadContext loadContext = null;
+            try
+            {
+                Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
+                if (volume != null)
+                {
+                    loadContext = new ExtensionLoadContext(volume);
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Error creating ExtensionLoadContext: {ex.Message}", "ExtMan");
+            }
 
             int extensionCount = 0;
             IEnumerable<VikingExtensionAttribute> extensions = ExtensionToAssemblyTable.Keys.ToArray();
@@ -305,6 +391,16 @@ namespace Viking.Common
                 Assembly A = ExtensionToAssemblyTable[Extension];
 
                 progressReporter.Report($"Loading {Extension.Name}", (int)((double)extensionCount / (double)ExtensionToAssemblyTable.Count), 100);
+
+                // Check if extension wants to conditionally prevent loading
+                bool shouldLoad = CheckExtensionShouldLoad(A, loadContext);
+                if (!shouldLoad)
+                {
+                    //Remove assembly if it indicated it should not load
+                    ExtensionToAssemblyTable.Remove(Extension);
+                    Trace.WriteLine($"Extension {Extension.Name} indicated it should not load", "ExtMan");
+                    continue;
+                }
 
                 //Before we agree to load an assembly we need to determine if it can initialize correctly
                 bool canInit = CanAssemblyInitialize(A);
@@ -442,6 +538,29 @@ namespace Viking.Common
                 }
             }
             catch (System.AggregateException except)
+            {
+                VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
+                
+                // Check if this is a FileLoadException about strongly-named assemblies
+                bool isStrongNameIssue = except.InnerExceptions.OfType<System.IO.FileLoadException>()
+                    .Any(e => e.Message.Contains("strongly-named assembly") || e.HResult == 0x80131044);
+                
+                string message = isStrongNameIssue 
+                    ? "OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nThis extension requires a strongly-named assembly that is not available.\n\nException:\n" + except.ToString()
+                    : "OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString();
+                
+                DialogResult result = MessageBox.Show(message, "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
+
+                if (result == DialogResult.OK)
+                {
+                    return false;
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            catch (System.IO.FileLoadException except)
             {
                 VikingExtensionAttribute Extension = GetAssemblyExtensionAttribute(A);
                 DialogResult result = MessageBox.Show("OK = Run Viking without the extension.\nCancel = Exit and throw exception with debug information.\n\nException:\n" + except.ToString(), "Could not load module: " + Extension.Name, MessageBoxButtons.OKCancel);
@@ -841,7 +960,47 @@ namespace Viking.Common
         }
     }
 
-    
+    /// <summary>
+    /// Provides context information to extensions during conditional loading checks
+    /// </summary>
+    internal class ExtensionLoadContext : IExtensionLoadContext
+    {
+        private readonly XDocument _vikingXML;
+        private readonly XElement _volumeElement;
+        private readonly Viking.ViewModels.VolumeViewModel _volume;
+
+        public ExtensionLoadContext(Viking.ViewModels.VolumeViewModel volume)
+        {
+            _volume = volume;
+            if (volume?.VolumeElement?.Document != null)
+            {
+                _vikingXML = volume.VolumeElement.Document;
+                _volumeElement = volume.VolumeElement;
+            }
+        }
+
+        public XDocument VikingXML => _vikingXML;
+
+        public XElement VolumeElement => _volumeElement;
+
+        public string VolumeName
+        {
+            get
+            {
+                if (_volumeElement != null)
+                {
+                    var nameAttr = _volumeElement.Attribute("Name");
+                    if (nameAttr != null)
+                    {
+                        return nameAttr.Value;
+                    }
+                }
+                return _volume?.Name ?? string.Empty;
+            }
+        }
+
+        public string VolumeHost => _volume?.Host ?? string.Empty;
+    }
 
     /// <summary>
     /// used to sort property pages by there priority

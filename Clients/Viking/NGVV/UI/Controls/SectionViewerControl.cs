@@ -1351,7 +1351,24 @@ namespace Viking.UI.Controls
             Texture ChannelOverlay = null;
             if (Channelset.Length == 1)
             {
-                tileLayoutEffect.TileColor = new Microsoft.Xna.Framework.Color(1f, 1f, 1f, 1);
+                ChannelInfo singleChannel = Channelset[0];
+                
+                // If the single channel is greyscale, render as greyscale
+                // If it's a color channel, apply the channel's color
+                if (singleChannel.Greyscale)
+                {
+                    tileLayoutEffect.TileColor = new Microsoft.Xna.Framework.Color(1f, 1f, 1f, 1);
+                }
+                else
+                {
+                    // Apply the channel's color for single color channel rendering
+                    tileLayoutEffect.TileColor = new Microsoft.Xna.Framework.Color(
+                        (float)singleChannel.Color.R / 255f,
+                        (float)singleChannel.Color.G / 255f,
+                        (float)singleChannel.Color.B / 255f,
+                        (float)singleChannel.Color.A / 255f);
+                }
+                
                 tileLayoutEffect.RenderToGreyscale();
 
                 backgroundSectionTexture = DrawSection(graphicsDevice, this.Section.section, this.CurrentChannel, scene);

@@ -1,6 +1,7 @@
 ﻿using Geometry;
 using Geometry.Meshing;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Geometry
@@ -49,6 +50,33 @@ namespace Geometry
             }
         }
 
+        /// <summary>
+        /// Returns a copy of the graph with all nodes translated by the specified vector.
+        /// </summary>
+        /// <param name="vector">The translation vector to apply to all nodes</param>
+        /// <returns>A new MedialAxisGraph with translated nodes and edges</returns>
+        public MedialAxisGraph Translate(GridVector2 vector)
+        {
+            MedialAxisGraph translatedGraph = new MedialAxisGraph();
+
+            // Add all translated nodes
+            foreach (var node in this.Nodes)
+            {
+                GridVector2 translatedPosition = node.Key + vector;
+                translatedGraph.AddNode(new MedialAxisVertex(translatedPosition));
+            }
+
+            // Add all edges with translated endpoints
+            foreach (var edge in this.Edges.Values)
+            {
+                GridVector2 translatedSource = edge.SourceNodeKey + vector;
+                GridVector2 translatedTarget = edge.TargetNodeKey + vector;
+                translatedGraph.AddEdge(new MedialAxisEdge(translatedSource, translatedTarget));
+            }
+
+            return translatedGraph;
+        }
+
     }
 
     public static class MedialAxisFinder
@@ -56,15 +84,18 @@ namespace Geometry
         /// <summary>
         /// Approximate the boundary that is equidistant from all shapes
         /// </summary>
-        /// <param name="shapes"></param>
+        /// <param name="shape">The polygon shape to calculate the medial axis for</param>
         /// <returns></returns>
         public static MedialAxisGraph ApproximateMedialAxis(GridPolygon shape)
         {
             TriangulationMesh<IVertex2D<PolygonIndex>> mesh;
+            var centroid = shape.Centroid;
             try
             {
+                
                 mesh = shape.Triangulate();
-                //triangulationMesh = TriangleExtensions.Triangulate(shape);// shape.Triangulate();
+                //Triangulate will translate the verticies to the centroid to avoid floating point rounding errors. 
+                //We will correct the medial axis verticies to match the input shape later. 
             }
             catch (ArgumentException)
             {
@@ -75,8 +106,47 @@ namespace Geometry
 
             //List<GridTriangle> triangles = triangulationMesh.ToTriangles();
 
-            MedialAxisGraph graph = BuildGraphFromMesh2D(mesh, shape);
-            return graph;
+            
+            MedialAxisGraph graph; 
+            graph = BuildImprovedGraphFromMesh2D(mesh, centroid == GridVector2.Zero ? shape : shape.Translate(-centroid));
+
+            //Translate the medial axis graph back to the shape centroid if necessary
+            if(centroid == GridVector2.Zero)
+                return graph;
+            else
+                return graph.Translate(centroid);
+        }
+
+        /// <summary>
+        /// Approximate the medial axis using an improved circumcenter-based algorithm.
+        /// This method uses the mathematically correct approach based on the Voronoi dual of the Delaunay triangulation.
+        /// Triangle circumcenters are used as medial axis vertices, which are equidistant from all three triangle vertices.
+        /// </summary>
+        /// <param name="shape">The polygon shape to calculate the medial axis for</param>
+        /// <returns>A medial axis graph with vertices at triangle circumcenters</returns>
+        public static MedialAxisGraph ApproximateMedialAxisImproved(GridPolygon shape)
+        {
+            TriangulationMesh<IVertex2D<PolygonIndex>> mesh;
+            var centroid = shape.Centroid;
+            try
+            {
+                mesh = shape.Triangulate();
+                //Triangulate will translate the vertices to the centroid to avoid floating point rounding errors. 
+                //We will correct the medial axis vertices to match the input shape later. 
+            }
+            catch (ArgumentException)
+            {
+                return new MedialAxisGraph();
+            }
+
+            MedialAxisGraph graph;
+            graph = BuildImprovedGraphFromMesh2D(mesh, centroid == GridVector2.Zero ? shape : shape.Translate(-centroid));
+
+            //Translate the medial axis graph back to the shape centroid if necessary
+            if (centroid == GridVector2.Zero)
+                return graph;
+            else
+                return graph.Translate(centroid);
         }
 
         private static MedialAxisGraph BuildGraphFromTriangles(GridTriangle[] triangles, GridPolygon boundary)
@@ -165,6 +235,69 @@ namespace Geometry
                         if (!graph.Edges.ContainsKey(borderEdge))
                             graph.AddEdge(borderEdge);
                     }*/
+                }
+            }
+
+            return graph;
+        }
+
+        /// <summary>
+        /// Converts a triangulation of a polygon into an improved medial axis graph using triangle circumcenters.
+        /// This method implements the mathematically correct approach using the Voronoi dual of the Delaunay triangulation.
+        /// Circumcenters of triangles are used as medial axis vertices, and edges connect circumcenters of adjacent triangles.
+        /// </summary>
+        /// <param name="mesh">The triangulated mesh</param>
+        /// <param name="boundary">The polygon boundary to constrain the medial axis</param>
+        /// <returns>A medial axis graph with vertices at triangle circumcenters</returns>
+        private static MedialAxisGraph BuildImprovedGraphFromMesh2D(IReadOnlyMesh2D<IVertex2D> mesh, GridPolygon boundary)
+        {
+            MedialAxisGraph graph = new MedialAxisGraph();
+
+            // Map faces to their circumcenters (only if inside boundary)
+            Dictionary<IFace, GridVector2> faceToCircumcenter = new Dictionary<IFace, GridVector2>();
+
+            // Step 1: Calculate circumcenters for all triangles
+            foreach (var face in mesh.Faces)
+            {
+                try
+                {
+                    GridVector2[] vertices = mesh[face.iVerts].Select(v => v.Position).ToArray();
+                    
+                    // Calculate the circumcircle of the triangle
+                    GridCircle circle = GridCircle.CircleFromThreePoints(vertices);
+
+                    // Only add circumcenters that fall inside the polygon boundary
+                    if (boundary.GetRelation(circle.Center) == ShapeRelation.CONTAINED)
+                    {
+                        faceToCircumcenter[face] = circle.Center;
+                        GetOrAddVertex(graph, circle.Center);
+                    }
+                }
+                catch (ArgumentException)
+                {
+                    // Degenerate triangle (collinear points) - skip this face
+                    // CircleFromThreePoints throws ArgumentException for collinear points
+                }
+            }
+
+            // Step 2: Connect circumcenters of adjacent triangles that share an interior edge
+            foreach (var edge in mesh.Edges.Values)
+            {
+                GridLineSegment line = mesh.ToGridLineSegment(edge);
+
+                // Only process interior (non-boundary) edges with exactly two adjacent faces
+                if (!boundary.IsExteriorOrInteriorSegment(line) && edge.Faces.Count == 2)
+                {
+                    var faces = edge.Faces.ToArray();
+
+                    // Connect the circumcenters if both triangles have valid circumcenters inside the boundary
+                    if (faceToCircumcenter.TryGetValue(faces[0], out var center1) &&
+                        faceToCircumcenter.TryGetValue(faces[1], out var center2))
+                    {
+                        MedialAxisEdge medialEdge = new MedialAxisEdge(center1, center2);
+                        if (!graph.Edges.ContainsKey(medialEdge))
+                            graph.AddEdge(medialEdge);
+                    }
                 }
             }
 

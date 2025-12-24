@@ -66,7 +66,7 @@
     <ProjectReference Include="..\..\..\Utils\Utils.csproj" />
     <ProjectReference Include="..\..\Common\Common.csproj" />
     <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
-    <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" Private="true"/>
+    <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" Private="true" />
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\..\WCFTokenInjector\WCFTokenInjector.csproj" />
@@ -85,12 +85,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\GoToLocationForm.resx">
       <LogicalName>Viking.UI.Forms.GoToLocationForm.resources</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UI\Forms\Logon.resx">
-      <LogicalName>Viking.UI.Forms.Logon.resources</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UI\Forms\LogonASPMembership.resx">
-      <LogicalName>Viking.UI.Forms.LogonASPMembership.resources</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\FrameCapturesForm.resx">
       <LogicalName>Viking.UI.Forms.FrameCapturesForm.resources</LogicalName>

@@ -37,7 +37,7 @@ RTree.dll
 Utils.dll
 UnitsAndScale.dll
 VikingCore.dll
-VikingWPFUserControls.dll
+Viking.UI.WPF.dll
 VikingXNAGraphics.dll
 VikingXNAWinForms.dll
 VolumeModel.dll

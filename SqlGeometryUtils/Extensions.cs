@@ -361,7 +361,7 @@ namespace SqlGeometryUtils
             }
 
             if (points.AreClockwise())
-                points = points.Reverse().ToArray();
+                points = points.AsEnumerable().Reverse().ToArray();
 
             //Ensure the first and last element are the same
             if (points.First() != points.Last())
@@ -389,7 +389,7 @@ namespace SqlGeometryUtils
             }
 
             if (points.AreClockwise())
-                points = points.Reverse().ToArray();
+                points = points.AsEnumerable().Reverse().ToArray();
 
             if (points.First() != points.Last())
             {
@@ -719,7 +719,7 @@ namespace SqlGeometryUtils
                     return TypeString;
                 case "POLYGON":
                     if (points.AreClockwise())
-                        points = points.Reverse().ToArray();
+                        points = points.AsEnumerable().Reverse().ToArray();
                     TypeString += "( " + points.ToSqlCoordinateList(true) + ")";
                     return TypeString;
                 default:

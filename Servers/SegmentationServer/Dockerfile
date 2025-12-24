@@ -101,26 +101,33 @@ EXPOSE 12348
 
 RUN usermod -aG dialout user
 USER user
-
-ENV PYTHONPATH=/usr/bin/python3
+  
+# Ensure Python can find the local segmentation packages first
+ENV PYTHONPATH=/home/user/segmentation_server:/home/user/segmentation_grpc
+ENV VS_CODE_DEBUG="false"
 
 STOPSIGNAL SIGTERM
 
 # Create a startup script that supports debugging
-RUN echo '#!/bin/bash\n\
-if [ "$VS_CODE_DEBUG" = "true" ] && [ "$PYCHARM_DEBUG" = "true" ]; then\n\
-    echo "Starting with both VS Code (debugpy) and PyCharm debugging..."\n\
-    python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -c "import pydevd_pycharm; pydevd_pycharm.settrace(\"0.0.0.0\", port=12348, stdoutToServer=True, stderrToServer=True); import segmentation_server" -m segmentation_server\n\
-elif [ "$VS_CODE_DEBUG" = "true" ]; then\n\
-    echo "Starting with VS Code debugpy on port 5678..."\n\
-    python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server\n\
-elif [ "$PYCHARM_DEBUG" = "true" ]; then\n\
-    echo "Starting with PyCharm debugging on port 12348..."\n\
-    python3 -c "import pydevd_pycharm; pydevd_pycharm.settrace(\"0.0.0.0\", port=12348, stdout_to_server=True, stderr_to_server=True, suspend=False); import segmentation_server" -m segmentation_server\n\
-else\n\
-    echo "Starting normally..."\n\
-    python3 -m segmentation_server\n\
-fi' > /home/user/start.sh && chmod +x /home/user/start.sh
+RUN cat << 'EOF' > /home/user/start.sh
+#!/bin/bash
+set -e
+
+if [ "$VS_CODE_DEBUG" = "true" ] && [ "$PYCHARM_DEBUG" = "true" ]; then
+    echo "Starting with both VS Code (debugpy) and PyCharm debugging..."
+    python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server 
+elif [ "$VS_CODE_DEBUG" = "true" ]; then
+    echo "Starting with VS Code debugpy on port 5678..."
+    python3 -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m segmentation_server 
+elif [ "$PYCHARM_DEBUG" = "true" ]; then
+    echo "Starting with PyCharm debugging on port 12348..."
+    python3 -c "import pydevd_pycharm; pydevd_pycharm.settrace('0.0.0.0', port=12348, stdout_to_server=True, stderr_to_server=True, suspend=False); import segmentation_server.__main__ as main_mod; import asyncio; asyncio.run(main_mod.main())"
+else
+    echo "Starting normally..."
+    python3 -m segmentation_server
+fi
+EOF
+RUN chmod +x /home/user/start.sh
 
 ENTRYPOINT ["/home/user/start.sh"]
 #CMD sudo service ssh start && python3 -m segmentation_grpc && python3 -m segmentation_server --generate-grpc & /bin/bash

@@ -40,3 +40,8 @@ TestResults
 /Clients/Viking/Viking/Properties/launchSettings.json
 *.log
 *.csproj.user
+# Environment variable files (contain secrets)
+.env
+.env.*
+*.env
+*.env.*

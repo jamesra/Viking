@@ -18,7 +18,7 @@ echo.
 echo Starting SAM2 Docker container with configuration volume mounts...
 
 REM Remove existing container if it exists
-docker rm -f sam2-dev2 2>nul
+REM docker rm -f sam2-dev2 2>nul
 
 REM Build the image first if it doesn't exist
 cd ../..

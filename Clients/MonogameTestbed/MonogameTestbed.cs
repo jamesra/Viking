@@ -83,7 +83,7 @@ namespace MonogameTestbed
         /// <summary>
         /// Test to run at startup
         /// </summary>
-        private TestMode Mode = TestMode.BAJAJMULTITEST;
+        private TestMode Mode = TestMode.TRIANGLEALGORITHM;
 
         LabelView testLabel = null;
 
@@ -105,10 +105,39 @@ namespace MonogameTestbed
         public MonoTestbed()
         {
             SqlServerTypesUtilities.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
+            
+            // Preload MonoGame native DLLs for Visual Studio debugger
+            LoadMonoGameNativeLibraries();
+            
             graphics = new GraphicsDeviceManager(this);
+            graphics.GraphicsProfile= GraphicsProfile.HiDef;
             					VikingXNAGraphics.Global.Content = this.Content;
             graphics.PreparingDeviceSettings += graphics_PreparingDeviceSettings;
             Content.RootDirectory = "Content";
+        }
+        
+        private static void LoadMonoGameNativeLibraries()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string sdl2Path = System.IO.Path.Combine(baseDir, "SDL2.dll");
+                string openalPath = System.IO.Path.Combine(baseDir, "openal.dll");
+                
+                if (System.IO.File.Exists(sdl2Path))
+                {
+                    System.Runtime.InteropServices.NativeLibrary.Load(sdl2Path);
+                }
+                
+                if (System.IO.File.Exists(openalPath))
+                {
+                    System.Runtime.InteropServices.NativeLibrary.Load(openalPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not preload MonoGame native libraries: {ex.Message}");
+            }
         }
 
         private void graphics_PreparingDeviceSettings(object sender, PreparingDeviceSettingsEventArgs e)

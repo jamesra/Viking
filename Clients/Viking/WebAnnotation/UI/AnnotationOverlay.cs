@@ -1,4 +1,4 @@
-﻿using codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -925,6 +925,9 @@ namespace WebAnnotation
 
         private string[] BuildHotkeyHelpStrings()
         {
+            if(Global.UserSettings is null)
+                return Array.Empty<string>();
+
             List<string> hotkeyStrings = new List<string>(Global.UserSettings.Shortcuts.Hotkey.Count);
             foreach (Hotkey hkey in Global.UserSettings.Shortcuts.Hotkey)
             {
@@ -1069,7 +1072,7 @@ namespace WebAnnotation
                             return;
                         }
 
-                        codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
+                        rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
                         if (a != null)
                         {
 

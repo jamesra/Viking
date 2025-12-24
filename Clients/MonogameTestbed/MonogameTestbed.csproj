@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net9.0-windows</TargetFramework>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<RollForward>Major</RollForward>
 		<RootNamespace>MonogameTestbed</RootNamespace>
 		<AssemblyName>MonogameTestbed</AssemblyName>
@@ -9,17 +10,22 @@
 		<MonoGamePlatform>Windows</MonoGamePlatform>
 		<SignManifests>true</SignManifests>
 		<ManifestCertificateThumbprint>2BADCE24EC984EC73C686B32B12C48B543B4441C</ManifestCertificateThumbprint>
+		<UseWPF>False</UseWPF>
+		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
+		<PublishAot>False</PublishAot>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
 		<DefineConstants>DEBUG;TRACE;WINDOWS</DefineConstants>
-		<Optimize>false</Optimize>
-		<OutputPath>bin\Windows\x64\Debug\</OutputPath>
+		<Optimize>True</Optimize>
+		<!-- Using standard output path so native DLLs are deployed correctly -->
+		<!-- <OutputPath>bin\Windows\x64\Debug\</OutputPath> -->
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
 		<DefineConstants>TRACE;WINDOWS</DefineConstants>
-		<Optimize>true</Optimize>
-		<OutputPath>bin\Windows\x64\Release\</OutputPath>
+		<Optimize>False</Optimize>
+		<!-- Using standard output path so native DLLs are deployed correctly -->
+		<!-- <OutputPath>bin\Windows\x64\Release\</OutputPath> -->
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<ItemGroup> 
@@ -39,7 +45,8 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
+		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.5-develop.13" />
+		<PackageReference Include="MonoGame.Framework.Native" Version="3.8.5-develop.13" />
 		<Reference Include="System.Drawing" />
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
@@ -88,11 +95,17 @@
 		<Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="Always" />
 		<Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll" CopyToOutputDirectory="Always" />
 	</ItemGroup>
+	
 	<Target Name="CopyMonogameContentBin" AfterTargets="Build">
 		<ItemGroup>
 			<MonogameContentFiles Include="$(ProjectDir)..\Monographics\MonogameContent\bin\Windows\Content\**\*.*" />
 		</ItemGroup>
 		<MakeDir Directories="$(TargetDir)Content" />
 		<Copy SourceFiles="@(MonogameContentFiles)" DestinationFiles="@(MonogameContentFiles->'$(TargetDir)Content\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+		
+		<!-- Copy MonoGame native DLLs to output directory for both command line and Visual Studio debugging -->
+		<Copy SourceFiles="$(NuGetPackageRoot)monogame.library.sdl\2.32.2.1\runtimes\win-x64\native\SDL2.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="Exists('$(NuGetPackageRoot)monogame.library.sdl\2.32.2.1\runtimes\win-x64\native\SDL2.dll')" />
+		<Copy SourceFiles="$(NuGetPackageRoot)monogame.library.openal\1.23.1.1\runtimes\win-x64\native\openal.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="Exists('$(NuGetPackageRoot)monogame.library.openal\1.23.1.1\runtimes\win-x64\native\openal.dll')" />
 	</Target>
+	
 </Project>

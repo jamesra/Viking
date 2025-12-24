@@ -246,7 +246,7 @@ namespace ColladaIO
             asset_typeContributor contributor = new asset_typeContributor
             {
                 authoring_tool = "Viking",
-                author_website = "http://connectomes.utah.edu/"
+                author_website = "http://codepharm.net/"
             };
 
             return contributor;

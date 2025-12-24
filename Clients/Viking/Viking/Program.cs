@@ -3,6 +3,7 @@
 using CommandLine;
 using System;
 using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -372,17 +373,46 @@ namespace Viking
                     settingsChanged = true;
                 }
 
-                // Remove duplicate if it exists to move it to the top
-                if (settings.VolumeURLs.Contains(appSettings.VolumeURL))
+                // Remove duplicate entries by URL (checking both "URL" and "URL|Name" formats)
+                var volumeName = wpfLoginWindow.VolumeURL;
+                var entriesToRemove = new List<string>();
+                foreach (string entry in settings.VolumeURLs)
                 {
-                    settings.VolumeURLs.Remove(appSettings.VolumeURL);
+                    if (string.IsNullOrWhiteSpace(entry))
+                        continue;
+                    
+                    // Parse entry to extract URL
+                    var parts = entry.Split(new[] { '|' }, 2);
+                    var entryUrl = parts[0];
+                    
+                    // If URLs match, mark for removal
+                    if (string.Equals(entryUrl, appSettings.VolumeURL, StringComparison.OrdinalIgnoreCase))
+                    {
+                        entriesToRemove.Add(entry);
+                    }
+                }
+                
+                foreach (var entry in entriesToRemove)
+                {
+                    settings.VolumeURLs.Remove(entry);
+                }
+
+                // Format entry: "URL|Name" or just "URL" if name is null/empty
+                string entryToAdd;
+                if (!string.IsNullOrWhiteSpace(volumeName))
+                {
+                    entryToAdd = $"{appSettings.VolumeURL}|{volumeName}";
+                }
+                else
+                {
+                    entryToAdd = appSettings.VolumeURL;
                 }
 
                 // Insert at top of list (most recent)
-                settings.VolumeURLs.Insert(0, appSettings.VolumeURL);
+                settings.VolumeURLs.Insert(0, entryToAdd);
                 settingsChanged = true;
                 
-                System.Diagnostics.Trace.WriteLine($"[Viking] Saved volume to recent volumes: {appSettings.VolumeURL}");
+                System.Diagnostics.Trace.WriteLine($"[Viking] Saved volume to recent volumes: {entryToAdd}");
             }
 
             // Persist segmentation service selection

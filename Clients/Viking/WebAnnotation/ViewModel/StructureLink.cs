@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -82,7 +83,7 @@ namespace WebAnnotation.ViewModel
 
     public delegate ContextMenu StructureLinkContextMenuGeneratorDelegate(IViewStructureLink key);
 
-    internal abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasGeometryView, IViewStructureLink
+    internal abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasGeometryView, IViewStructureLink, IContextMenu
     {
         private readonly StructureLinkObj modelObj;
 

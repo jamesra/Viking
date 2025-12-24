@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web.Configuration;
 using UnitsAndScale;
 
@@ -17,13 +18,22 @@ namespace VikingWebAppSettings
     {
         public static string GetApplicationSetting(string name)
         {
+            // First check environment variable (convert key name to environment variable format)
+            string envVarName = name.Replace(".", "_").ToUpperInvariant();
+            string envValue = Environment.GetEnvironmentVariable(envVarName);
+            if (!string.IsNullOrEmpty(envValue))
+            {
+                return envValue;
+            }
+
+            // Fall back to web.config
             if (!WebConfigurationManager.AppSettings.HasKeys())
             {
-                throw new ArgumentException(name + " not configured in AppSettings");
+                throw new ArgumentException(name + " not configured in AppSettings or environment variables");
             }
 
             string setting = WebConfigurationManager.AppSettings[name];
-            return setting ?? throw new ArgumentNullException(name + " not configured in AppSettings");
+            return setting ?? throw new ArgumentNullException(name + " not configured in AppSettings or environment variables");
         }
 
         public static string GetDatabaseServer()
@@ -65,7 +75,7 @@ namespace VikingWebAppSettings
             return setting.Split(';').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray();
         }
 
-        public static string GetConnectionString(string name)
+        public static string GetConnectionString(string name) 
         { 
             if (WebConfigurationManager.ConnectionStrings is null)
             {
@@ -80,7 +90,18 @@ namespace VikingWebAppSettings
                 throw new ArgumentException("Connection string " + name + " has a null ConnectionStringSettings value");
             }
 
-            return WebConfigurationManager.ConnectionStrings[name].ConnectionString ?? throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
+            string connectionString = WebConfigurationManager.ConnectionStrings[name].ConnectionString ?? throw new ArgumentException("Connection string " + name + " returned null ConnectionString");
+            
+            // Substitute environment variables in connection string
+            // Pattern: %VARIABLE_NAME% will be replaced with environment variable value
+            connectionString = Regex.Replace(connectionString, @"%([A-Z_][A-Z0-9_]*)%", match =>
+            {
+                string envVarName = match.Groups[1].Value;
+                string envValue = Environment.GetEnvironmentVariable(envVarName);
+                return envValue ?? match.Value; // Return original if env var not found
+            });
+            
+            return connectionString;
         }
           
         public static string WebServiceURL => GetApplicationSetting("EndpointURL");

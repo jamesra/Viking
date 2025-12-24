@@ -104,20 +104,24 @@
                 CornerRadius="3"
                 Visibility="{Binding SelectedVolumeUrl, Converter={StaticResource StringToVisibilityConverter}}">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" 
+                <TextBlock Grid.Row="0" Grid.Column="0" 
                            Text="Selected URL:" 
                            VerticalAlignment="Center"
                            Margin="0,0,10,0"
                            Foreground="#666666"
                            FontSize="11"/>
 
-                <TextBox Grid.Column="1" 
+                <TextBox Grid.Row="0" Grid.Column="1" 
                          Text="{Binding SelectedVolumeUrl, Mode=OneWay}"
                          IsReadOnly="True"
                          BorderThickness="0"
@@ -127,7 +131,7 @@
                          Foreground="#333333"
                          Padding="0"/>
 
-                <Button Grid.Column="2" 
+                <Button Grid.Row="0" Grid.Column="2" 
                         Command="{Binding CopyUrlCommand}"
                         ToolTip="Copy URL to clipboard"
                         Width="24"
@@ -147,6 +151,16 @@
                         </Canvas>
                     </Viewbox>
                 </Button>
+
+                <!-- Description Display -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                           Text="{Binding SelectedVolumeDescription}"
+                           TextWrapping="Wrap"
+                           FontStyle="Italic"
+                           Foreground="#666666"
+                           FontSize="11"
+                           Margin="0,8,0,0"
+                           Visibility="{Binding SelectedVolumeDescription, Converter={StaticResource StringToVisibilityConverter}}"/>
             </Grid>
         </Border>
 

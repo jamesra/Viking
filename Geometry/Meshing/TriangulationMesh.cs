@@ -484,6 +484,35 @@ namespace Geometry.Meshing
             _YSorted = new SortedSet<long>(new MeshVertexComparerYX<VERTEX>(this));
         }
 
+        /// <summary>
+        /// A constructor used to clone an existing TriangulationMesh.
+        /// For example, translation of vertex positions with a rigid transform.
+        /// </summary>
+        public TriangulationMesh<VERTEX> Clone(IEnumerable<VERTEX> verts, IEnumerable<IEdge> edges, IEnumerable<IFace> face)
+        {
+            TriangulationMesh<VERTEX> mesh = new TriangulationMesh<VERTEX>();
+             
+            // Add vertices with their existing indices
+            foreach (var vert in verts)
+            {
+                mesh.AddVertex(vert);  
+            }
+
+            // Add edges
+            foreach (var edge in edges)
+            {
+                mesh.AddEdge(edge); 
+            }
+
+            // Add faces
+            foreach (var f in face)
+            {
+                mesh.AddFace(f);
+            }
+
+            return mesh;
+        }
+
         public override int AddVertex(VERTEX vert)
         {
             int iNew = base.AddVertex(vert);
@@ -1060,9 +1089,35 @@ namespace Geometry.Meshing
                 }
             }
 
-            return intersected_edges.Count > 0;
-
-        }
+            return intersected_edges.Count > 0; 
+        } 
     }
 
+    public static class TriangleMeshExtensions<VERTEX,T>
+       where VERTEX: IVertex2D, IVertex2D<T>
+        where T: ICloneable
+    { 
+        /// <summary>
+        /// Returns a copy of the mesh with the verticies translated.
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="vector"></param>
+        /// <param name="CloneData">If true, the data value of each vertex is cloned instead of referenced</param>
+        /// <returns></returns>
+        public static TriangulationMesh<VERTEX> Translate(TriangulationMesh<VERTEX> mesh, GridVector2 vector, bool CloneData=false)
+        {
+            TriangulationMesh<VERTEX> triMesh = new TriangulationMesh<VERTEX>();
+
+            if (CloneData)
+            {
+                var translated_verts = mesh.Verticies.Select(v => (VERTEX)(IVertex2D<T>)new Vertex2D<T>(v.Index, v.Position + vector, (T)v.Data.Clone()));
+                return triMesh.Clone(translated_verts, mesh.Edges.Values, mesh.Faces);
+            }
+            else
+            {
+                var translated_verts = mesh.Verticies.Select(v => (VERTEX)(IVertex2D<T>)new Vertex2D<T>(v.Index, v.Position + vector, v.Data));
+                return triMesh.Clone(translated_verts, mesh.Edges.Values, mesh.Faces);
+            } 
+        } 
+    }
 }
