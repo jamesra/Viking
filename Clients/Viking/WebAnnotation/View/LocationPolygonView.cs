@@ -97,15 +97,15 @@ namespace WebAnnotation.View
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             if (obj.Parent == null)
             {
-                Color = Color.Gray.SetAlpha(0.5f);
+                Color = Color.Gray.SetAlpha(Global.AnnotationSettings.PolygonOpacityParentless);
             }
             else if (obj.Parent.TypeID == 1) //Cells get a random color for polygons to help Becca see Glia
             {
-                Color = obj.Parent.Color.ToXNAColor(0.33f);
+                Color = obj.Parent.Color.ToXNAColor(Global.AnnotationSettings.PolygonOpacityWithParent);
             }
             else
             {
-                Color = obj.Parent.Type.Color.ToXNAColor(0.33f);
+                Color = obj.Parent.Type.Color.ToXNAColor(Global.AnnotationSettings.PolygonOpacityWithParent);
             }
 
             //polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);

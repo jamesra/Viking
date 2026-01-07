@@ -25,6 +25,8 @@ namespace WebAnnotation.WPF.Forms
         private uint _originalNumClosedCurveInterpolationPointsForDisplay;
         private int _originalPenSimplifyThreshold;
         private double _originalMinRadius;
+        private double _originalPolygonOpacityParentless;
+        private double _originalPolygonOpacityWithParent;
         #endregion
 
         #region Basic Settings Properties
@@ -173,6 +175,38 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        private double _polygonOpacityParentless;
+        public double PolygonOpacityParentless
+        {
+            get => _polygonOpacityParentless;
+            set
+            {
+                double clampedValue = Clamp(value, 0.0, 1.0);
+                if (_polygonOpacityParentless != clampedValue)
+                {
+                    _polygonOpacityParentless = clampedValue;
+                    OnPropertyChanged();
+                    OnPolygonOpacityChanged();
+                }
+            }
+        }
+
+        private double _polygonOpacityWithParent;
+        public double PolygonOpacityWithParent
+        {
+            get => _polygonOpacityWithParent;
+            set
+            {
+                double clampedValue = Clamp(value, 0.0, 1.0);
+                if (_polygonOpacityWithParent != clampedValue)
+                {
+                    _polygonOpacityWithParent = clampedValue;
+                    OnPropertyChanged();
+                    OnPolygonOpacityChanged();
+                }
+            }
+        }
+
         #endregion
 
         #region Commands
@@ -188,6 +222,14 @@ namespace WebAnnotation.WPF.Forms
             ApplyCommand = new RelayCommand(Apply);
         }
 
+        // Event to notify when polygon opacity changes for real-time preview
+        public event Action<double, double> PolygonOpacityChanged;
+
+        private void OnPolygonOpacityChanged()
+        {
+            PolygonOpacityChanged?.Invoke(_polygonOpacityParentless, _polygonOpacityWithParent);
+        }
+
         public void LoadCurrentSettings(
             int numSectionsInMemory,
             int numSectionsLoading,
@@ -198,7 +240,9 @@ namespace WebAnnotation.WPF.Forms
             double adjacentLocationRadiusScalar,
             uint numClosedCurveInterpolationPointsForDisplay,
             int penSimplifyThreshold,
-            double minRadius)
+            double minRadius,
+            double polygonOpacityParentless,
+            double polygonOpacityWithParent)
         {
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
@@ -211,8 +255,8 @@ namespace WebAnnotation.WPF.Forms
             _numClosedCurveInterpolationPointsForDisplay = numClosedCurveInterpolationPointsForDisplay;
             _penSimplifyThreshold = penSimplifyThreshold;
             _minRadius = minRadius;
-
-            // Store original values for Cancel revert
+            
+            // Store original values for Cancel revert BEFORE setting properties
             _originalNumSectionsInMemory = numSectionsInMemory;
             _originalNumSectionsLoading = numSectionsLoading;
             _originalLocationTextScaleFactor = locationTextScaleFactor;
@@ -223,6 +267,16 @@ namespace WebAnnotation.WPF.Forms
             _originalNumClosedCurveInterpolationPointsForDisplay = numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = penSimplifyThreshold;
             _originalMinRadius = minRadius;
+            _originalPolygonOpacityParentless = polygonOpacityParentless;
+            _originalPolygonOpacityWithParent = polygonOpacityWithParent;
+
+            // Use property setters to ensure bindings are established correctly
+            // Temporarily disable preview updates during initial load
+            var tempHandler = PolygonOpacityChanged;
+            PolygonOpacityChanged = null;
+            PolygonOpacityParentless = polygonOpacityParentless;
+            PolygonOpacityWithParent = polygonOpacityWithParent;
+            PolygonOpacityChanged = tempHandler;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }
@@ -241,6 +295,8 @@ namespace WebAnnotation.WPF.Forms
             _originalNumClosedCurveInterpolationPointsForDisplay = _numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = _penSimplifyThreshold;
             _originalMinRadius = _minRadius;
+            _originalPolygonOpacityParentless = _polygonOpacityParentless;
+            _originalPolygonOpacityWithParent = _polygonOpacityWithParent;
         }
 
         public void RevertToOriginal()
@@ -255,6 +311,8 @@ namespace WebAnnotation.WPF.Forms
             _numClosedCurveInterpolationPointsForDisplay = _originalNumClosedCurveInterpolationPointsForDisplay;
             _penSimplifyThreshold = _originalPenSimplifyThreshold;
             _minRadius = _originalMinRadius;
+            _polygonOpacityParentless = _originalPolygonOpacityParentless;
+            _polygonOpacityWithParent = _originalPolygonOpacityWithParent;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }
@@ -271,6 +329,8 @@ namespace WebAnnotation.WPF.Forms
             _numClosedCurveInterpolationPointsForDisplay = 4;
             _penSimplifyThreshold = 12;
             _minRadius = 0.5;
+            _polygonOpacityParentless = 0.5;
+            _polygonOpacityWithParent = 0.33;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }

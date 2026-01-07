@@ -240,17 +240,15 @@ namespace Viking.VolumeModel
         /// <returns></returns>
         public static string GridTileFormatStringFromPythonString(string gridFormat)
         {
-            string outputFormat = string.Copy(gridFormat);
-
             if (!char.IsLetter(gridFormat[0]))
             {
                 if (char.IsLetter(gridFormat[gridFormat.Length - 1]))
                 {
-                    outputFormat = outputFormat[gridFormat.Length - 1] + outputFormat.Substring(0, gridFormat.Length - 1);
+                    return gridFormat[gridFormat.Length - 1] + gridFormat.Substring(0, gridFormat.Length - 1);
                 }
             }
 
-            return outputFormat;
+            return gridFormat;
 
         }
 

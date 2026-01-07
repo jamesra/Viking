@@ -229,6 +229,8 @@ namespace WebAnnotation
             private const int MAX_PEN_THRESHOLD = 100;
             private const double MIN_RADIUS = 0.1;
             private const double MAX_RADIUS = 10.0;
+            private const double MIN_OPACITY = 0.0;
+            private const double MAX_OPACITY = 1.0;
 
             // Helper methods for clamping values (Math.Clamp not available in .NET Framework 4.8)
             private static int Clamp(int value, int min, int max) => value < min ? min : (value > max ? max : value);
@@ -336,6 +338,26 @@ namespace WebAnnotation
                 }
             }
 
+            public static float PolygonOpacityParentless
+            {
+                get => Clamp(Properties.Settings.Default.PolygonOpacityParentless, MIN_OPACITY, MAX_OPACITY);
+                set
+                {
+                    Properties.Settings.Default.PolygonOpacityParentless = Clamp(value, MIN_OPACITY, MAX_OPACITY);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static float PolygonOpacityWithParent
+            {
+                get => Clamp(Properties.Settings.Default.PolygonOpacityWithParent, MIN_OPACITY, MAX_OPACITY);
+                set
+                {
+                    Properties.Settings.Default.PolygonOpacityWithParent = Clamp(value, MIN_OPACITY, MAX_OPACITY);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             public static string SegmentationServiceUrl
             {
                 get => Properties.Settings.Default.SegmentationServiceUrl;
@@ -365,6 +387,8 @@ namespace WebAnnotation
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 4;
                 Properties.Settings.Default.PenSimplifyThreshold = 12;
                 Properties.Settings.Default.MinRadius = 0.5;
+                Properties.Settings.Default.PolygonOpacityParentless = 0.5f;
+                Properties.Settings.Default.PolygonOpacityWithParent = 0.33f;
                 Properties.Settings.Default.Save();
                 OnSettingsChanged();
             }

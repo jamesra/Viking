@@ -26,10 +26,10 @@
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
  
 		<!-- Create Modules directory if it doesn't exist -->
-		<Exec Command="if not exist &quot;$(ModulesDir)&quot; mkdir &quot;$(ModulesDir)&quot;" />
+		<MakeDir Directories="$(ModulesDir)" />
 
 		<!-- Create project-specific directory if it doesn't exist -->
-		<Exec Command="if not exist &quot;$(ProjectModulesDir)&quot; mkdir &quot;$(ProjectModulesDir)&quot;" />
+		<MakeDir Directories="$(ProjectModulesDir)" />
 
 		<!-- Copy project output to Modules folder (only newer files) -->
 		<ItemGroup>

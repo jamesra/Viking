@@ -59,11 +59,11 @@ namespace AnnotationService.Types
         [ProtoMember(4)] 
         public double YMin { get; set; } 
 
-        public double Width => XMax - XMin;
+        public readonly double Width => XMax - XMin;
 
-        public double Height => YMax - YMin;
+        public readonly double Height => YMax - YMin;
 
-        public double Area => Width * Height;
+        public readonly double Area => Width * Height;
 
         public BoundingRectangle(double xmin, double ymin, double xmax, double ymax)
         {
@@ -111,11 +111,11 @@ namespace AnnotationService.Types
         [DataMember]
         public double ZMax { get; set; } 
 
-        public double Width => XMax - XMin;
+        public readonly double Width => XMax - XMin;
 
-        public double Height => YMax - YMin;
+        public readonly double Height => YMax - YMin;
 
-        public double Depth => ZMax - ZMin;
+        public readonly double Depth => ZMax - ZMin;
 
         public BoundingBox(double xmin, double ymin, double zmin, double xmax, double ymax, double zmax)
         {

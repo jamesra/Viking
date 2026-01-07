@@ -187,5 +187,29 @@ namespace WebAnnotation.Properties {
                 this["SegmentationServiceUrl"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public float PolygonOpacityParentless {
+            get {
+                return ((float)(this["PolygonOpacityParentless"]));
+            }
+            set {
+                this["PolygonOpacityParentless"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.33")]
+        public float PolygonOpacityWithParent {
+            get {
+                return ((float)(this["PolygonOpacityWithParent"]));
+            }
+            set {
+                this["PolygonOpacityWithParent"] = value;
+            }
+        }
     }
 }

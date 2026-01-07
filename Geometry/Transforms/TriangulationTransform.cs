@@ -748,11 +748,8 @@ namespace Geometry.Transforms
                 }
                 catch (Exception)
                 {
-                    if (AddThreadObj != null)
-                    {
-                        AddThreadObj.Dispose();
-                        AddThreadObj = null;
-                    }
+                    AddThreadObj?.Dispose();
+                    AddThreadObj = null;
 
                     throw;
                 }

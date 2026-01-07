@@ -50,5 +50,11 @@
     <Setting Name="SegmentationServiceUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="PolygonOpacityParentless" Type="System.Single" Scope="User">
+      <Value Profile="(Default)">0.5</Value>
+    </Setting>
+    <Setting Name="PolygonOpacityWithParent" Type="System.Single" Scope="User">
+      <Value Profile="(Default)">0.33</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
