@@ -171,7 +171,6 @@ namespace Viking.Common
                 {
                     rwKnownLocationsLock.ExitWriteLock();
                 }
-                return TrackedKeys.Contains(ID);
             }
             finally
             {
