@@ -341,7 +341,7 @@ namespace Viking.UI.Controls
             // Copy event handlers by invoking the original handler when the new one is clicked
             toolStripItem.Click += (sender, e) => {
                 // Create a MenuItem event args and invoke the original handler
-                menuItem.PerformClick();
+                menuItem?.PerformClick();
             };
 
             // Convert sub-menu items recursively
