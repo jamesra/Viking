@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -158,12 +158,7 @@ namespace WebAnnotation.View
 
         public override bool IsVisible(VikingXNA.Scene scene)
         {
-            if (Math.Min(BoundingBox.Width, BoundingBox.Height) / scene.DevicePixelWidth < 2.0)
-            {
-                return false;
-            }
-
-            return scene.VisibleWorldBounds.Intersects(BoundingBox);
+            return LocationCanvasView.IsPolygonVisible(BoundingBox, scene);
         }
 
         public virtual bool IsLabelVisible(Scene scene)

@@ -370,7 +370,12 @@ namespace WebAnnotation.View
         private void CreateViewObjects(GridCircle MosaicCircle, IVolumeToSectionTransform mapper)
         {
             GridVector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
-            Color color = modelObj.Parent == null ? Color.Gray.SetAlpha(0.5f) : modelObj.Parent.Type.Color.ToXNAColor(1.0f);
+            float opacity = modelObj.Parent == null 
+                ? Global.AnnotationSettings.CircleOpacityParentless 
+                : Global.AnnotationSettings.CircleOpacityWithParent;
+            Color color = modelObj.Parent == null 
+                ? Color.Gray.SetAlpha(opacity) 
+                : modelObj.Parent.Type.Color.ToXNAColor(opacity);
             circleView = new CircleView(new GridCircle(VolumePosition, modelObj.Radius), color);
         }
 

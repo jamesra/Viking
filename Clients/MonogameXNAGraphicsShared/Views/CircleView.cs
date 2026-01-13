@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -232,6 +232,45 @@ namespace VikingXNAGraphics
         //static double BeginFadeCutoff = 0.1;
         static readonly double InvisibleCutoff = 1.5f;
 
+        /// <summary>
+        /// Optional accessor function to get the current smallest rendered size setting.
+        /// If null, the smallest rendered size check is skipped.
+        /// </summary>
+        public static Func<double> SmallestRenderedSizeAccessor { get; set; }
+
+        /// <summary>
+        /// Return true if a circle with the given radius and center would be visible if rendered into the scene.
+        /// </summary>
+        /// <param name="radius">Circle radius in world coordinates</param>
+        /// <param name="center">Circle center in world coordinates</param>
+        /// <param name="scene">Scene to check visibility against</param>
+        /// <returns>True if the circle would be visible</returns>
+        public static bool IsCircleVisible(double radius, GridVector2 center, VikingXNA.Scene scene)
+        {
+            GridCircle circle = new GridCircle(center, radius);
+            
+            // Check if circle intersects visible world bounds
+            if (!scene.VisibleWorldBounds.Intersects(circle))
+                return false;
+
+            // Check the existing InvisibleCutoff ratio logic
+            double maxDimension = Math.Max(scene.VisibleWorldBounds.Width, scene.VisibleWorldBounds.Height);
+            double LocToScreenRatio = radius * 2.0 / maxDimension;
+            if (LocToScreenRatio > InvisibleCutoff)
+                return false;
+
+            // Check smallest rendered size if accessor is provided
+            if (SmallestRenderedSizeAccessor != null)
+            {
+                double smallestRenderedSize = SmallestRenderedSizeAccessor();
+                // Calculate circle diameter in pixels 
+                if (radius * 2.0 < smallestRenderedSize)
+                    return false;
+            }
+
+            return true;
+        }
+
         #endregion
 
         protected Matrix ModelMatrix = Matrix.Identity;
@@ -290,19 +329,7 @@ namespace VikingXNAGraphics
         /// <returns></returns>
         public bool IsVisible(VikingXNA.Scene scene)
         {
-            if (!scene.VisibleWorldBounds.Intersects(this.Circle))
-                return false; 
-
-            double maxDimension = Math.Max(scene.VisibleWorldBounds.Width, scene.VisibleWorldBounds.Height);
-            double LocToScreenRatio = Radius * 2.0 / maxDimension;
-            if (LocToScreenRatio > InvisibleCutoff)
-                return false;
-
-            double maxPixelDimension = Math.Max(scene.DevicePixelWidth, scene.DevicePixelHeight);
-            if (Radius * 2.0 <= maxPixelDimension)
-                return false;
-
-            return true;
+            return IsCircleVisible(Radius, VolumePosition, scene);
         }
         
         public CircleView(GridCircle circle, Color color)

@@ -493,36 +493,42 @@ namespace VikingXNAGraphics
             if (font is null)
                 font = Global.DefaultFont;
 
+
             BlendState originalBlendState = spriteBatch.GraphicsDevice.BlendState;
             DepthStencilState originalDepthState = spriteBatch.GraphicsDevice.DepthStencilState;
             RasterizerState originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             SamplerState originalSamplerState = spriteBatch.GraphicsDevice.SamplerStates[0];
             SamplerState originalVSamplerState = spriteBatch.GraphicsDevice.VertexSamplerStates[0];
-            
 
-            spriteBatch.Begin();
+            try
+            {  
+                spriteBatch.Begin();
 
-            foreach(LabelView label in Labels.Where(l => l != null))
-            {
-                label.Draw(spriteBatch, font, scene as VikingXNA.Scene);
+                foreach (LabelView label in Labels.Where(l => l != null))
+                {
+                    label.Draw(spriteBatch, font, scene as VikingXNA.Scene);
+                }
+
+                spriteBatch.End();
             }
+            finally
+            {
+                if (originalBlendState != null)
+                    spriteBatch.GraphicsDevice.BlendState = originalBlendState;
 
-            spriteBatch.End();
+                if (originalDepthState != null)
+                    spriteBatch.GraphicsDevice.DepthStencilState = originalDepthState;
 
-            if(originalBlendState != null)
-                spriteBatch.GraphicsDevice.BlendState = originalBlendState;
+                if (originalRasterizerState != null)
+                    spriteBatch.GraphicsDevice.RasterizerState = originalRasterizerState;
 
-            if (originalDepthState != null)
-                spriteBatch.GraphicsDevice.DepthStencilState = originalDepthState;
+                if (originalSamplerState != null)
+                    spriteBatch.GraphicsDevice.SamplerStates[0] = originalSamplerState;
 
-            if(originalRasterizerState != null)
-                spriteBatch.GraphicsDevice.RasterizerState = originalRasterizerState;
-
-            if(originalSamplerState != null)
-                spriteBatch.GraphicsDevice.SamplerStates[0] = originalSamplerState;
-
-            if (originalVSamplerState != null)
-                spriteBatch.GraphicsDevice.VertexSamplerStates[0] = originalVSamplerState;
+                if (originalVSamplerState != null)
+                    spriteBatch.GraphicsDevice.VertexSamplerStates[0] = originalVSamplerState;
+            }
+            
             
         }
 

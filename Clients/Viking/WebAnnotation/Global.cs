@@ -24,6 +24,8 @@ using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Utils;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
+using VikingXNAGraphics;
+using WebAnnotation.View;
 
 namespace WebAnnotation
 {
@@ -103,6 +105,9 @@ namespace WebAnnotation
                 }
 
                 var serviceUrl = segmentationService.Endpoint();
+                if(serviceUrl is null)
+                    return false; 
+
                 // If no scheme is present, prepend http:// for validation (gRPC often uses host:port format)
                 string urlToValidate = serviceUrl.Contains("://") ? serviceUrl : $"http://{serviceUrl}";
                 
@@ -119,67 +124,10 @@ namespace WebAnnotation
         /// Gets the SegmentationServiceUrl from configuration or volume metadata.
         /// </summary>
         public static string GetSegmentationServiceUrl()
-        {
-            string serviceUrl = ConfigurationManager.AppSettings["SegmentationServiceUrl"];
-
-            if (string.IsNullOrWhiteSpace(serviceUrl))
-            {
-                serviceUrl = GetSegmentationServiceUrlFromVolume();
-            }
-
-            return serviceUrl;
+        { 
+            return AnnotationSettings.SegmentationServiceUrl;
         }
-
-        /// <summary>
-        /// Retrieves the SegmentationServiceUrl from the VolumeXML if available
-        /// </summary>
-        private static string GetSegmentationServiceUrlFromVolume()
-        {
-            if (_segmentationServiceUrlFromVolume != null)
-            {
-                return _segmentationServiceUrlFromVolume;
-            }
-
-            try
-            {
-                Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
-                if (volume?.VolumeElement == null)
-                {
-                    return null;
-                }
-
-                // Check for SegmentationServiceUrl attribute in VolumeToEndpoint element
-                IEnumerable<XElement> mappingElements = volume.VolumeElement.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
-                if (mappingElements.Any())
-                {
-                    XAttribute segmentationUrlAttr = mappingElements.First().Attribute("SegmentationServiceUrl");
-                    if (segmentationUrlAttr != null)
-                    {
-                        _segmentationServiceUrlFromVolume = segmentationUrlAttr.Value;
-                        return _segmentationServiceUrlFromVolume;
-                    }
-                }
-
-                // Could also check for a separate element if needed
-                IEnumerable<XElement> segmentationElements = volume.VolumeElement.Elements().Where(e => e.Name.LocalName == "SegmentationService");
-                if (segmentationElements.Any())
-                {
-                    XAttribute urlAttr = segmentationElements.First().Attribute("Url");
-                    if (urlAttr != null)
-                    {
-                        _segmentationServiceUrlFromVolume = urlAttr.Value;
-                        return _segmentationServiceUrlFromVolume;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"Error reading SegmentationServiceUrl from VolumeXML: {ex.Message}");
-            }
-
-            return null;
-        }
-
+           
         internal static int NumSectionsInMemory => AnnotationSettings.NumSectionsInMemory;
 
         /// <summary>
@@ -211,6 +159,13 @@ namespace WebAnnotation
         /// </summary>
         public static class AnnotationSettings
         {
+            static AnnotationSettings()
+            {
+                // Initialize static accessor properties on application startup
+                CircleView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
+                LocationCanvasView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
+            }
+
             private const int MIN_SECTIONS_IN_MEMORY = 1;
             private const int MAX_SECTIONS_IN_MEMORY = 100;
             private const int MIN_SECTIONS_LOADING = 1;
@@ -231,6 +186,12 @@ namespace WebAnnotation
             private const double MAX_RADIUS = 10.0;
             private const double MIN_OPACITY = 0.0;
             private const double MAX_OPACITY = 1.0;
+            private const double MIN_SEGMENTATION_POINT_RADIUS = 1.0;
+            private const double MAX_SEGMENTATION_POINT_RADIUS = 15.0;
+            private const double MIN_POLYGON_POINT_RADIUS = 1.0;
+            private const double MAX_POLYGON_POINT_RADIUS = 50.0;
+            private const double MIN_SMALLEST_RENDERED_SIZE = 0.5;
+            private const double MAX_SMALLEST_RENDERED_SIZE = 10.0;
 
             // Helper methods for clamping values (Math.Clamp not available in .NET Framework 4.8)
             private static int Clamp(int value, int min, int max) => value < min ? min : (value > max ? max : value);
@@ -358,6 +319,26 @@ namespace WebAnnotation
                 }
             }
 
+            public static float CircleOpacityParentless
+            {
+                get => Clamp(Properties.Settings.Default.CircleOpacityParentless, MIN_OPACITY, MAX_OPACITY);
+                set
+                {
+                    Properties.Settings.Default.CircleOpacityParentless = Clamp(value, MIN_OPACITY, MAX_OPACITY);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static float CircleOpacityWithParent
+            {
+                get => Clamp(Properties.Settings.Default.CircleOpacityWithParent, MIN_OPACITY, MAX_OPACITY);
+                set
+                {
+                    Properties.Settings.Default.CircleOpacityWithParent = Clamp(value, MIN_OPACITY, MAX_OPACITY);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             public static string SegmentationServiceUrl
             {
                 get => Properties.Settings.Default.SegmentationServiceUrl;
@@ -375,6 +356,36 @@ namespace WebAnnotation
                 }
             }
 
+            public static double SegmentationPointRadius
+            {
+                get => Clamp(Properties.Settings.Default.SegmentationPointRadius, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
+                set
+                {
+                    Properties.Settings.Default.SegmentationPointRadius = Clamp(value, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static double PolygonPointRadius
+            {
+                get => Clamp(Properties.Settings.Default.PolygonPointRadius, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
+                set
+                {
+                    Properties.Settings.Default.PolygonPointRadius = Clamp(value, MIN_POLYGON_POINT_RADIUS, MAX_POLYGON_POINT_RADIUS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            public static double SmallestRenderedSize
+            {
+                get => Clamp(Properties.Settings.Default.SmallestRenderedSize, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
+                set
+                {
+                    Properties.Settings.Default.SmallestRenderedSize = Clamp(value, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             public static void ResetToDefaults()
             {
                 Properties.Settings.Default.NumSectionsInMemory = 10;
@@ -389,6 +400,11 @@ namespace WebAnnotation
                 Properties.Settings.Default.MinRadius = 0.5;
                 Properties.Settings.Default.PolygonOpacityParentless = 0.5f;
                 Properties.Settings.Default.PolygonOpacityWithParent = 0.33f;
+                Properties.Settings.Default.CircleOpacityParentless = 0.5f;
+                Properties.Settings.Default.CircleOpacityWithParent = 1.0f;
+                Properties.Settings.Default.SegmentationPointRadius = 5.0;
+                Properties.Settings.Default.PolygonPointRadius = 6.0;
+                Properties.Settings.Default.SmallestRenderedSize = 0.5;
                 Properties.Settings.Default.Save();
                 OnSettingsChanged();
             }
@@ -678,19 +694,19 @@ namespace WebAnnotation
 
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
 
-            if (serviceProvider?.GetService<ApplicationSettings>() is ApplicationSettings applicationSettings &&
-                !string.IsNullOrWhiteSpace(applicationSettings.SegmentationURL) &&
-                !string.Equals(AnnotationSettings.SegmentationServiceUrl, applicationSettings.SegmentationURL, StringComparison.OrdinalIgnoreCase))
+            if (serviceProvider?.GetService<ApplicationSettings>() is ApplicationSettings applicationSettings)
             {
                 AnnotationSettings.SegmentationServiceUrl = applicationSettings.SegmentationURL;
             }
 
+            /*
             string segmentationUrlFromVolume = GetSegmentationServiceUrlFromVolume();
             if (!string.IsNullOrWhiteSpace(segmentationUrlFromVolume) &&
                 !string.Equals(AnnotationSettings.SegmentationServiceUrl, segmentationUrlFromVolume, StringComparison.OrdinalIgnoreCase))
             {
                 AnnotationSettings.SegmentationServiceUrl = segmentationUrlFromVolume;
             }
+            */
 
             serviceProvider?.GetService<IGrpcChannelManager>();
 

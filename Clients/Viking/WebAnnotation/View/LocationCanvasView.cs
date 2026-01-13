@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
@@ -19,6 +19,42 @@ namespace WebAnnotation.View
     public abstract class LocationCanvasView : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
                                                IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings, IContextMenu
     {
+        #region static
+
+        /// <summary>
+        /// Optional accessor function to get the current smallest rendered size setting.
+        /// If null, the smallest rendered size check is skipped.
+        /// </summary>
+        public static Func<double> SmallestRenderedSizeAccessor { get; set; }
+
+        /// <summary>
+        /// Return true if a polygon with the given bounding box would be visible if rendered into the scene.
+        /// Uses the smallest dimension (min of width and height) to determine visibility.
+        /// </summary>
+        /// <param name="boundingBox">Bounding box in world coordinates</param>
+        /// <param name="scene">Scene to check visibility against</param>
+        /// <returns>True if the polygon would be visible</returns>
+        public static bool IsPolygonVisible(GridRectangle boundingBox, VikingXNA.Scene scene)
+        {
+            // Check if bounding box intersects visible world bounds
+            if (!scene.VisibleWorldBounds.Intersects(boundingBox))
+                return false;
+
+            // Check smallest rendered size if accessor is provided
+            if (SmallestRenderedSizeAccessor != null)
+            {
+                double smallestDimension = Math.Min(boundingBox.Width, boundingBox.Height);
+                double scaledSmallestDimension = smallestDimension / scene.Camera.Downsample;
+                double smallestRenderedSize = SmallestRenderedSizeAccessor();
+                if (scaledSmallestDimension < smallestRenderedSize)
+                    return false;
+            }
+
+            return true;
+        }
+
+        #endregion
+
         protected readonly LocationObj modelObj;
 
         public abstract SqlGeometry VolumeShapeAsRendered { get; }

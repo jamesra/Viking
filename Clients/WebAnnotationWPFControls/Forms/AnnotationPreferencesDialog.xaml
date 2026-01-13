@@ -296,6 +296,78 @@
                                      Text="Smallest allowed radius for circle annotations."/>
                         </Grid>
 
+                        <!-- Smallest Rendered Size -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Smallest Rendered Size:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
+                                    Minimum="0.5"
+                                    Maximum="10"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SmallestRenderedSize, StringFormat='F1'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Minimum pixel size for circle diameter before it is hidden. Circles smaller than this value will not be rendered. Range: 0.5 to 10.0 pixels."/>
+                        </Grid>
+
+                        <!-- Polygon Point Radius -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Point Radius:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding PolygonPointRadius, Mode=TwoWay}"
+                                    Minimum="1"
+                                    Maximum="50"
+                                    TickFrequency="0.5"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding PolygonPointRadius, StringFormat='F1'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Size in pixels for control points displayed on polygon and smooth polygon annotations. Range: 1.0 to 50.0."/>
+                        </Grid>
+
                         <!-- Polygon Opacity Parentless -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -318,7 +390,8 @@
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>
                             <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding PolygonOpacityParentless, StringFormat='F2', UpdateSourceTrigger=LostFocus}"
+                                     Text="{Binding PolygonOpacityParentless, StringFormat='F2'}"
+                                     IsReadOnly="True"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
                                      Width="50"
@@ -353,7 +426,8 @@
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>
                             <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding PolygonOpacityWithParent, StringFormat='F2', UpdateSourceTrigger=LostFocus}"
+                                     Text="{Binding PolygonOpacityWithParent, StringFormat='F2'}"
+                                     IsReadOnly="True"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
                                      Width="50"
@@ -364,6 +438,119 @@
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
                                      Text="Opacity for polygons with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Circle Opacity Parentless -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (Parentless):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding CircleOpacityParentless, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding CircleOpacityParentless, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity for circles without a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Circle Opacity With Parent -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (With Parent):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding CircleOpacityWithParent, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding CircleOpacityWithParent, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity for circles with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Segmentation Settings -->
+                <Expander Header="Segmentation" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <!-- Segmentation Point Radius -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Point Radius:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationPointRadius, Mode=TwoWay}"
+                                    Minimum="1"
+                                    Maximum="15"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationPointRadius, StringFormat='F1'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Radius in pixels for segmentation points displayed on the image. Range: 1.0 to 15.0. Larger values make points more visible but may overlap."/>
                         </Grid>
                     </StackPanel>
                 </Expander>

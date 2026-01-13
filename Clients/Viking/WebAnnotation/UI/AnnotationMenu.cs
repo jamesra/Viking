@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -22,6 +22,10 @@ namespace WebAnnotation
         private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog _preferencesDialog = null;
         private static ToolStripMenuItem menuPenMode;
         private static CancellationTokenSource _opacityUpdateCancellationTokenSource;
+        private static System.Threading.Timer _circleOpacityUpdateTimer;
+        private static readonly object _circleOpacityUpdateLock = new object();
+        private static double _pendingCircleOpacityParentless;
+        private static double _pendingCircleOpacityWithParent;
 
         System.Windows.Forms.ToolStripItem Viking.Common.IMenuFactory.CreateMenuItem()
         {
@@ -109,8 +113,17 @@ namespace WebAnnotation
                 Global.AnnotationSettings.PenSimplifyThreshold,
                 Global.AnnotationSettings.MinRadius,
                 Global.AnnotationSettings.PolygonOpacityParentless,
-                Global.AnnotationSettings.PolygonOpacityWithParent
+                Global.AnnotationSettings.PolygonOpacityWithParent,
+                Global.AnnotationSettings.CircleOpacityParentless,
+                Global.AnnotationSettings.CircleOpacityWithParent,
+                Global.AnnotationSettings.SegmentationPointRadius,
+                Global.AnnotationSettings.PolygonPointRadius,
+                Global.AnnotationSettings.SmallestRenderedSize
             );
+
+            // Initialize static accessor properties
+            CircleView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
+            LocationCanvasView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
 
             // Wire up real-time preview for polygon opacity changes
             viewModel.PolygonOpacityChanged += (parentlessOpacity, withParentOpacity) =>
@@ -143,6 +156,47 @@ namespace WebAnnotation
                 });
             };
 
+            // Wire up real-time preview for circle opacity changes
+            viewModel.CircleOpacityChanged += (parentlessOpacity, withParentOpacity) =>
+            {
+                // Use the same throttling mechanism as polygon opacity
+                lock (_circleOpacityUpdateLock)
+                {
+                    _pendingCircleOpacityParentless = parentlessOpacity;
+                    _pendingCircleOpacityWithParent = withParentOpacity;
+                    
+                    _circleOpacityUpdateTimer?.Dispose();
+                    _circleOpacityUpdateTimer = new System.Threading.Timer(_ =>
+                    {
+                        lock (_circleOpacityUpdateLock)
+                        {
+                            _opacityUpdateCancellationTokenSource?.Cancel();
+                            _opacityUpdateCancellationTokenSource?.Dispose();
+                            _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
+                            
+                            double parentless = _pendingCircleOpacityParentless;
+                            double withParent = _pendingCircleOpacityWithParent;
+                            
+                            _ = Task.Run(() => 
+                            {
+                                try
+                                {
+                                    UpdateVisibleSectionCircleOpacity(
+                                        parentless, 
+                                        withParent, 
+                                        _opacityUpdateCancellationTokenSource.Token);
+                                }
+                                catch (OperationCanceledException) { }
+                                catch (Exception ex)
+                                {
+                                    Debug.WriteLine($"Error updating circle opacity: {ex.Message}");
+                                }
+                            });
+                        }
+                    }, null, 100, Timeout.Infinite);
+                }
+            };
+
             _preferencesDialog = new WebAnnotation.WPF.Forms.AnnotationPreferencesDialog(viewModel);
             
             // Wire up event handlers to save settings
@@ -164,6 +218,13 @@ namespace WebAnnotation
             Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay = viewModel.NumClosedCurveInterpolationPointsForDisplay;
             Global.AnnotationSettings.PenSimplifyThreshold = viewModel.PenSimplifyThreshold;
             Global.AnnotationSettings.MinRadius = viewModel.MinRadius;
+            Global.AnnotationSettings.SegmentationPointRadius = viewModel.SegmentationPointRadius;
+            Global.AnnotationSettings.PolygonPointRadius = viewModel.PolygonPointRadius;
+            Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize;
+            
+            // Update static accessor properties
+            VikingXNAGraphics.CircleView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
+            WebAnnotation.View.LocationCanvasView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
             
             float oldParentlessOpacity = Global.AnnotationSettings.PolygonOpacityParentless;
             float oldWithParentOpacity = Global.AnnotationSettings.PolygonOpacityWithParent;
@@ -178,6 +239,21 @@ namespace WebAnnotation
                 UpdateAllPolygonOpacityInMemory(
                     Global.AnnotationSettings.PolygonOpacityParentless,
                     Global.AnnotationSettings.PolygonOpacityWithParent);
+            }
+            
+            float oldCircleOpacityParentless = Global.AnnotationSettings.CircleOpacityParentless;
+            float oldCircleOpacityWithParent = Global.AnnotationSettings.CircleOpacityWithParent;
+            
+            Global.AnnotationSettings.CircleOpacityParentless = (float)viewModel.CircleOpacityParentless;
+            Global.AnnotationSettings.CircleOpacityWithParent = (float)viewModel.CircleOpacityWithParent;
+            
+            // Update all circles in memory if opacity has changed
+            if (oldCircleOpacityParentless != Global.AnnotationSettings.CircleOpacityParentless ||
+                oldCircleOpacityWithParent != Global.AnnotationSettings.CircleOpacityWithParent)
+            {
+                UpdateAllCircleOpacityInMemory(
+                    Global.AnnotationSettings.CircleOpacityParentless,
+                    Global.AnnotationSettings.CircleOpacityWithParent);
             }
         }
 
@@ -214,10 +290,10 @@ namespace WebAnnotation
             var parallelOptions = new ParallelOptions
             {
                 CancellationToken = cancellationToken,
-                MaxDegreeOfParallelism = Environment.ProcessorCount
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
             };
 
-            Parallel.ForEach(sectionsToProcess, parallelOptions, sectionAnnotations =>
+            Parallel.ForEach(sectionsToProcess, (sectionAnnotations) => 
             {
                 try
                 {
@@ -230,20 +306,13 @@ namespace WebAnnotation
                         return;
 
                     // Update all polygons in this section in parallel
-                    Parallel.ForEach(polygonViews, parallelOptions, polygonView =>
+                    Parallel.ForEach(polygonViews, (polygonView) => 
                     {
-                        try
-                        {
-                            bool hasParent = polygonView.Parent.ParentID.HasValue;
-                            float targetOpacity = hasParent ? withParentOpacity : parentlessOpacity;
+                        bool hasParent = polygonView.Parent.ParentID.HasValue;
+                        float targetOpacity = hasParent ? withParentOpacity : parentlessOpacity;
 
-                            var currentColor = polygonView.Color;
-                            polygonView.Color = currentColor.SetAlpha(targetOpacity);
-                        }
-                        catch
-                        {
-                            // Skip polygons that aren't ready for updates yet
-                        }
+                        var currentColor = polygonView.Color;
+                        polygonView.Color = currentColor.SetAlpha(targetOpacity);
                     });
                 }
                 catch
@@ -284,6 +353,149 @@ namespace WebAnnotation
             {
                 Debug.WriteLine($"Error updating all polygon opacity in memory: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Updates opacity for circles in the specified sections using parallel processing
+        /// </summary>
+        private static void UpdateCircleOpacityForSections(
+            IEnumerable<int> sectionNumbers,
+            float parentlessOpacity,
+            float withParentOpacity,
+            CancellationToken cancellationToken = default)
+        {
+            if (Viking.UI.State.volume?.SectionViewModels == null)
+                return;
+
+            // Collect sections that exist and have annotations loaded
+            var sectionsToProcess = new List<SectionAnnotationsView>();
+            
+            foreach (var sectionNumber in sectionNumbers)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                SectionAnnotationsView sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(sectionNumber);
+                if (sectionAnnotations != null)
+                {
+                    sectionsToProcess.Add(sectionAnnotations);
+                }
+            }
+
+            if (sectionsToProcess.Count == 0)
+                return;
+
+            // Process all sections in parallel
+            var parallelOptions = new ParallelOptions
+            {
+                CancellationToken = cancellationToken,
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            };
+
+            Parallel.ForEach(sectionsToProcess, parallelOptions, sectionAnnotations =>
+            {
+                try
+                {
+                    // Collect all circle views from this section
+                    var circleViews = sectionAnnotations.GetLocations()
+                        .OfType<LocationCircleView>()
+                        .ToList();
+
+                    if (circleViews.Count == 0)
+                        return;
+
+                    // Update all circles in this section in parallel
+                    Parallel.ForEach(circleViews, parallelOptions, circleView =>
+                    {
+                        try
+                        {
+                            bool hasParent = circleView.Parent.ParentID.HasValue;
+                            float targetOpacity = hasParent ? withParentOpacity : parentlessOpacity;
+
+                            var currentColor = circleView.Color;
+                            circleView.Color = currentColor.SetAlpha(targetOpacity);
+                        }
+                        catch
+                        {
+                            // Skip circles that aren't ready for updates yet
+                        }
+                    });
+                }
+                catch
+                {
+                    // Skip sections that have issues
+                }
+            });
+        }
+
+        /// <summary>
+        /// Updates opacity for all circle views in memory using parallel processing
+        /// </summary>
+        private static void UpdateAllCircleOpacityInMemory(
+            float parentlessOpacity,
+            float withParentOpacity)
+        {
+            if (Viking.UI.State.volume?.SectionViewModels == null)
+                return;
+
+            try
+            {
+                // Get all section numbers that might have annotations loaded
+                var allSectionNumbers = Viking.UI.State.volume.SectionViewModels.Keys;
+                
+                // Update circles in all sections
+                UpdateCircleOpacityForSections(
+                    allSectionNumbers,
+                    parentlessOpacity,
+                    withParentOpacity);
+                
+                // Trigger redraw
+                if (AnnotationOverlay.CurrentOverlay != null)
+                {
+                    AnnotationOverlay.CurrentOverlay.InvalidateParent();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating all circle opacity in memory: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Updates opacity for visible section circle views in real-time for preview using parallel processing
+        /// </summary>
+        private static void UpdateVisibleSectionCircleOpacity(
+            double parentlessOpacity, 
+            double withParentOpacity, 
+            CancellationToken cancellationToken)
+        {
+            if (AnnotationOverlay.CurrentOverlay == null)
+                return;
+
+            var overlay = AnnotationOverlay.CurrentOverlay;
+            var currentSection = overlay.Parent.Section;
+            
+            // Collect visible section numbers: current first, then adjacent
+            var visibleSectionNumbers = new List<int> { currentSection.Number };
+            
+            if (currentSection.ReferenceSectionAbove != null)
+            {
+                visibleSectionNumbers.Add(currentSection.ReferenceSectionAbove.Number);
+            }
+            
+            if (currentSection.ReferenceSectionBelow != null)
+            {
+                visibleSectionNumbers.Add(currentSection.ReferenceSectionBelow.Number);
+            }
+            
+            // Update circles in visible sections
+            UpdateCircleOpacityForSections(
+                visibleSectionNumbers,
+                (float)parentlessOpacity,
+                (float)withParentOpacity,
+                cancellationToken);
+            
+            // Trigger redraw on UI thread
+            overlay.InvalidateParent();
         }
 
         /// <summary>

@@ -27,6 +27,11 @@ namespace WebAnnotation.WPF.Forms
         private double _originalMinRadius;
         private double _originalPolygonOpacityParentless;
         private double _originalPolygonOpacityWithParent;
+        private double _originalCircleOpacityParentless;
+        private double _originalCircleOpacityWithParent;
+        private double _originalSegmentationPointRadius;
+        private double _originalPolygonPointRadius;
+        private double _originalSmallestRenderedSize;
         #endregion
 
         #region Basic Settings Properties
@@ -207,6 +212,80 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        private double _circleOpacityParentless;
+        public double CircleOpacityParentless
+        {
+            get => _circleOpacityParentless;
+            set
+            {
+                double clampedValue = Clamp(value, 0.0, 1.0);
+                if (_circleOpacityParentless != clampedValue)
+                {
+                    _circleOpacityParentless = clampedValue;
+                    OnPropertyChanged();
+                    OnCircleOpacityChanged();
+                }
+            }
+        }
+
+        private double _circleOpacityWithParent;
+        public double CircleOpacityWithParent
+        {
+            get => _circleOpacityWithParent;
+            set
+            {
+                double clampedValue = Clamp(value, 0.0, 1.0);
+                if (_circleOpacityWithParent != clampedValue)
+                {
+                    _circleOpacityWithParent = clampedValue;
+                    OnPropertyChanged();
+                    OnCircleOpacityChanged();
+                }
+            }
+        }
+
+        private double _segmentationPointRadius;
+        public double SegmentationPointRadius
+        {
+            get => _segmentationPointRadius;
+            set
+            {
+                if (Math.Abs(_segmentationPointRadius - value) > 0.01)
+                {
+                    _segmentationPointRadius = Clamp(value, 1.0, 15.0);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _polygonPointRadius;
+        public double PolygonPointRadius
+        {
+            get => _polygonPointRadius;
+            set
+            {
+                if (Math.Abs(_polygonPointRadius - value) > 0.01)
+                {
+                    _polygonPointRadius = Clamp(value, 1.0, 50.0);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private double _smallestRenderedSize;
+        public double SmallestRenderedSize
+        {
+            get => _smallestRenderedSize;
+            set
+            {
+                if (Math.Abs(_smallestRenderedSize - value) > 0.01)
+                {
+                    _smallestRenderedSize = Clamp(value, 0.5, 10.0);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         #endregion
 
         #region Commands
@@ -230,6 +309,14 @@ namespace WebAnnotation.WPF.Forms
             PolygonOpacityChanged?.Invoke(_polygonOpacityParentless, _polygonOpacityWithParent);
         }
 
+        // Event to notify when circle opacity changes for real-time preview
+        public event Action<double, double> CircleOpacityChanged;
+
+        private void OnCircleOpacityChanged()
+        {
+            CircleOpacityChanged?.Invoke(_circleOpacityParentless, _circleOpacityWithParent);
+        }
+
         public void LoadCurrentSettings(
             int numSectionsInMemory,
             int numSectionsLoading,
@@ -242,7 +329,12 @@ namespace WebAnnotation.WPF.Forms
             int penSimplifyThreshold,
             double minRadius,
             double polygonOpacityParentless,
-            double polygonOpacityWithParent)
+            double polygonOpacityWithParent,
+            double circleOpacityParentless,
+            double circleOpacityWithParent,
+            double segmentationPointRadius,
+            double polygonPointRadius,
+            double smallestRenderedSize)
         {
             // Store current values
             _numSectionsInMemory = numSectionsInMemory;
@@ -255,6 +347,9 @@ namespace WebAnnotation.WPF.Forms
             _numClosedCurveInterpolationPointsForDisplay = numClosedCurveInterpolationPointsForDisplay;
             _penSimplifyThreshold = penSimplifyThreshold;
             _minRadius = minRadius;
+            _segmentationPointRadius = segmentationPointRadius;
+            _polygonPointRadius = polygonPointRadius;
+            _smallestRenderedSize = smallestRenderedSize;
             
             // Store original values for Cancel revert BEFORE setting properties
             _originalNumSectionsInMemory = numSectionsInMemory;
@@ -269,14 +364,29 @@ namespace WebAnnotation.WPF.Forms
             _originalMinRadius = minRadius;
             _originalPolygonOpacityParentless = polygonOpacityParentless;
             _originalPolygonOpacityWithParent = polygonOpacityWithParent;
+            _originalCircleOpacityParentless = circleOpacityParentless;
+            _originalCircleOpacityWithParent = circleOpacityWithParent;
+            _originalSegmentationPointRadius = segmentationPointRadius;
+            _originalPolygonPointRadius = polygonPointRadius;
+            _originalSmallestRenderedSize = smallestRenderedSize;
 
             // Use property setters to ensure bindings are established correctly
             // Temporarily disable preview updates during initial load
-            var tempHandler = PolygonOpacityChanged;
+            var tempPolygonHandler = PolygonOpacityChanged;
             PolygonOpacityChanged = null;
             PolygonOpacityParentless = polygonOpacityParentless;
             PolygonOpacityWithParent = polygonOpacityWithParent;
-            PolygonOpacityChanged = tempHandler;
+            PolygonOpacityChanged = tempPolygonHandler;
+
+            var tempCircleHandler = CircleOpacityChanged;
+            CircleOpacityChanged = null;
+            CircleOpacityParentless = circleOpacityParentless;
+            CircleOpacityWithParent = circleOpacityWithParent;
+            CircleOpacityChanged = tempCircleHandler;
+
+            SegmentationPointRadius = segmentationPointRadius;
+            PolygonPointRadius = polygonPointRadius;
+            SmallestRenderedSize = smallestRenderedSize;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }
@@ -297,6 +407,11 @@ namespace WebAnnotation.WPF.Forms
             _originalMinRadius = _minRadius;
             _originalPolygonOpacityParentless = _polygonOpacityParentless;
             _originalPolygonOpacityWithParent = _polygonOpacityWithParent;
+            _originalCircleOpacityParentless = _circleOpacityParentless;
+            _originalCircleOpacityWithParent = _circleOpacityWithParent;
+            _originalSegmentationPointRadius = _segmentationPointRadius;
+            _originalPolygonPointRadius = _polygonPointRadius;
+            _originalSmallestRenderedSize = _smallestRenderedSize;
         }
 
         public void RevertToOriginal()
@@ -313,6 +428,11 @@ namespace WebAnnotation.WPF.Forms
             _minRadius = _originalMinRadius;
             _polygonOpacityParentless = _originalPolygonOpacityParentless;
             _polygonOpacityWithParent = _originalPolygonOpacityWithParent;
+            _circleOpacityParentless = _originalCircleOpacityParentless;
+            _circleOpacityWithParent = _originalCircleOpacityWithParent;
+            _segmentationPointRadius = _originalSegmentationPointRadius;
+            _polygonPointRadius = _originalPolygonPointRadius;
+            _smallestRenderedSize = _originalSmallestRenderedSize;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }
@@ -331,6 +451,11 @@ namespace WebAnnotation.WPF.Forms
             _minRadius = 0.5;
             _polygonOpacityParentless = 0.5;
             _polygonOpacityWithParent = 0.33;
+            _circleOpacityParentless = 0.5;
+            _circleOpacityWithParent = 1.0;
+            _segmentationPointRadius = 5.0;
+            _polygonPointRadius = 6.0;
+            _smallestRenderedSize = 0.5;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
         }
