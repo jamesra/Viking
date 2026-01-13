@@ -55,7 +55,17 @@ namespace Viking
             return key.TileView;
         }
 
-        public TileView ConstructTile(TileViewModel tileViewModel,
+        /// <summary>
+        /// Creates a TileView if it does not exist in the cache
+        /// </summary>
+        /// <param name="tileViewModel"></param>
+        /// <param name="textureFileName"></param>
+        /// <param name="cachedTextureFileName"></param>
+        /// <param name="TransformName"></param>
+        /// <param name="MipMapLevels"></param>
+        /// <param name="TextureSize"></param>
+        /// <returns>null if TileView is in cache, otherwise true</returns>
+        protected TileView ConstructTile(TileViewModel tileViewModel,
                                 string textureFileName,
                                 string cachedTextureFileName,
                                 string TransformName,
