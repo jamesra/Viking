@@ -120,12 +120,20 @@
                 <TextBox Grid.Column="1" 
                          Text="{Binding SelectedServiceEndpoint, Mode=OneWay}"
                          IsReadOnly="True"
+                         IsReadOnlyCaretVisible="True"
+                         Focusable="True"
                          BorderThickness="0"
                          Background="Transparent"
                          VerticalAlignment="Center"
                          FontSize="11"
                          Foreground="#333333"
-                         Padding="0"/>
+                         Padding="0">
+                    <TextBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Copy" Command="ApplicationCommands.Copy"/>
+                        </ContextMenu>
+                    </TextBox.ContextMenu>
+                </TextBox>
 
                 <Button Grid.Column="2" 
                         Command="{Binding CopyEndpointCommand}"

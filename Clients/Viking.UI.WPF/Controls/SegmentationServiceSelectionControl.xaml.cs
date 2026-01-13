@@ -14,9 +14,26 @@ namespace Viking.UI.WPF.Controls
 
         private void treeServices_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
-            if (DataContext is SegmentationServiceSelectionViewModel viewModel && e.NewValue is SegmentationServiceTreeNode node)
+            if (DataContext is SegmentationServiceSelectionViewModel viewModel)
             {
-                viewModel.SelectedService = node;
+                if (e.NewValue is SegmentationServiceTreeNode node)
+                {
+                    // Only set SelectedService if the node has a Service property (not a category node)
+                    if (node.Service != null)
+                    {
+                        viewModel.SelectedService = node;
+                    }
+                    else
+                    {
+                        // Clear selection if a category node is selected
+                        viewModel.SelectedService = null;
+                    }
+                }
+                else if (e.NewValue == null)
+                {
+                    // Clear selection when deselected
+                    viewModel.SelectedService = null;
+                }
             }
         }
 
