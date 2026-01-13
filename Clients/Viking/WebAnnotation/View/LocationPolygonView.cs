@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -27,7 +27,7 @@ namespace WebAnnotation.View
         private SolidPolygonView polygonMesh;
         private readonly GridPolygon VolumePolygon;
         private GridPolygon SmoothedVolumePolygon;
-        private CircleView[] ControlPointViews = new CircleView[0];
+        private PointSetView ControlPointView;
 
         public override string[] HelpStrings
         {
@@ -63,13 +63,81 @@ namespace WebAnnotation.View
                 _Color = value;
                 if (polygonMesh != null)
                 {
-                    polygonMesh.Color = value;
-                    ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
+                    polygonMesh.Color = value.ConvertToHCL();
+                    if (ControlPointView != null)
+                    {
+                        ControlPointView.Color = GetControlPointColor();
+                        ControlPointView.UpdateViews();
+                    }
                 }
             }
         }
 
         public Microsoft.Xna.Framework.Color HSLColor => _Color.ConvertToHCL();
+
+                /// <summary>
+        /// Calculates a control point color that maintains the same hue as the polygon
+        /// but inverts the luma (brightness) for better visibility and contrast.
+        /// Uses perceptual luma (0.3R + 0.59G + 0.11B) to match human vision.
+        /// Uses more aggressive contrast to ensure points are clearly visible.
+        /// </summary>
+        private Microsoft.Xna.Framework.Color GetControlPointColor()
+        {
+            // Calculate perceptual luma of the polygon color
+            float r = (float)_Color.R / 255f;
+            float g = (float)_Color.G / 255f;
+            float b = (float)_Color.B / 255f;
+            float currentLuma = 0.3f * r + 0.59f * g + 0.11f * b;
+
+            // More aggressive contrast: push to extremes (0.1 for dark, 0.9 for light)
+            float targetLuma = currentLuma > 0.5f ? 0.1f : 0.9f;
+
+            // Handle edge cases with still-good contrast
+            if (currentLuma < 0.05f)
+                targetLuma = 0.85f; // Very dark polygon -> very light points
+            else if (currentLuma > 0.95f)
+                targetLuma = 0.15f; // Very light polygon -> very dark points
+
+            // Calculate the difference needed to reach target luma
+            float lumaDifference = targetLuma - currentLuma;
+
+            // To preserve hue, add/subtract the same value from all RGB components
+            // This maintains the relative ratios between R, G, B (which defines hue)
+            // Clamp to [0,1] to stay within valid RGB range
+            float newR = Math.Max(0.0f, Math.Min(1.0f, r + lumaDifference));
+            float newG = Math.Max(0.0f, Math.Min(1.0f, g + lumaDifference));
+            float newB = Math.Max(0.0f, Math.Min(1.0f, b + lumaDifference));
+
+            // If we hit the caps, boost saturation for better visibility
+            // while maintaining approximate hue
+            float maxComponent = Math.Max(newR, Math.Max(newG, newB));
+            float minComponent = Math.Min(newR, Math.Min(newG, newB));
+            float chroma = maxComponent - minComponent;
+
+            // If there's color (chroma > 0), boost saturation for visibility
+            if (chroma > 0.01f)
+            {
+                // Boost saturation by reducing the minimum component
+                // This makes colors more vibrant while preserving hue
+                float saturationBoost = 0.25f; // 25% saturation boost
+                float boostAmount = minComponent * saturationBoost;
+                
+                // Reduce the minimum component to increase saturation
+                if (Math.Abs(newR - minComponent) < 0.001f) 
+                    newR = Math.Max(0.0f, newR - boostAmount);
+                else if (Math.Abs(newG - minComponent) < 0.001f) 
+                    newG = Math.Max(0.0f, newG - boostAmount);
+                else if (Math.Abs(newB - minComponent) < 0.001f) 
+                    newB = Math.Max(0.0f, newB - boostAmount);
+            }
+
+            return new Microsoft.Xna.Framework.Color(
+                (byte)(newR * 255f),
+                (byte)(newG * 255f),
+                (byte)(newB * 255f),
+                _Color.A
+            );
+        }
 
         public float Alpha
         {
@@ -77,13 +145,32 @@ namespace WebAnnotation.View
             set
             {
                 polygonMesh.Alpha = value;
-                ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
+                if (ControlPointView != null)
+                {
+                    ControlPointView.Alpha = value;
+                    ControlPointView.UpdateViews();
+                }
             }
         }
 
-        private readonly double _ControlPointRadius;
+        private double _ControlPointRadius;
 
-        public double ControlPointRadius => _ControlPointRadius;
+        public double ControlPointRadius
+        {
+            get => _ControlPointRadius;
+            set
+            {
+                if (Math.Abs(_ControlPointRadius - value) > 0.01)
+                {
+                    _ControlPointRadius = value;
+                    if (Initialized && ControlPointView != null)
+                    {
+                        ControlPointView.PointRadius = value;
+                        ControlPointView.UpdateViews();
+                    }
+                }
+            }
+        }
 
 
         public double lineWidth = 32;
@@ -91,8 +178,8 @@ namespace WebAnnotation.View
         public static uint NumInterpolationPoints = Global.NumClosedCurveInterpolationPoints;
         public LocationPolygonView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
-            _ControlPointRadius = Global.DefaultClosedLineWidth / 4.0;
-            VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape).ToPolygon();
+            _ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
+            VolumePolygon = mapper.TryMapShapeSectionToVolume(obj.MosaicShape)?.ToPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             if (obj.Parent == null)
@@ -107,6 +194,12 @@ namespace WebAnnotation.View
             {
                 Color = obj.Parent.Type.Color.ToXNAColor(Global.AnnotationSettings.PolygonOpacityWithParent);
             }
+
+            ControlPointView = new PointSetView(GetControlPointColor(), Global.AnnotationSettings.PolygonPointRadius)
+            {
+                Points = GetAllPolygonVertices(VolumePolygon)
+            };
+            ControlPointView.UpdateViews();
 
             //polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);
             //polygonMesh = SmoothedVolumePolygon.CreateMeshForPolygon2D(this.HSLColor);
@@ -140,7 +233,9 @@ namespace WebAnnotation.View
                 return Task.CompletedTask;
             }
 
-            ControlPointViews = CreateControlPointViews(VolumePolygon).ToArray();
+            ControlPointView.Points = GetAllPolygonVertices(VolumePolygon);
+            ControlPointView.PointRadius = Global.AnnotationSettings.PolygonPointRadius;
+            ControlPointView.UpdateViews();
 
             try
             {
@@ -196,17 +291,38 @@ namespace WebAnnotation.View
             curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
         }
 
-        public List<CircleView> CreateControlPointViews(GridPolygon polygon)
+        /// <summary>
+        /// Return a collection of GridVector2s containing the location of every vertex
+        /// </summary>
+        /// <param name="polygon"></param>
+        /// <returns></returns>
+        private ICollection<GridVector2> GetAllPolygonVertices(GridPolygon polygon)
         {
-            List<CircleView> views = new List<CircleView>(polygon.ExteriorRing.Length);
-            views.AddRange(polygon.ExteriorRing.Select(p => new CircleView(new GridCircle(p, ControlPointRadius), HSLColor.AdjustHSLHue(180, 0.5f))));
-
-            foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
+            List<GridVector2> vertices = new List<GridVector2>();
+            
+            // Add exterior ring vertices (excluding last duplicate point)
+            if (polygon.ExteriorRing.Length > 0)
             {
-                views.AddRange(CreateControlPointViews(innerPoly));
+                int count = polygon.ExteriorRing.Length;
+                // Exclude last point if it's duplicate of first
+                if (count > 1 && polygon.ExteriorRing[0] == polygon.ExteriorRing[count - 1])
+                {
+                    count--;
+                }
+                for (int i = 0; i < count; i++)
+                {
+                    vertices.Add(polygon.ExteriorRing[i]);
+                }
             }
 
-            return views;
+            // Add interior polygon vertices recursively
+            foreach (GridPolygon innerPoly in polygon.InteriorPolygons)
+            {
+                ICollection<GridVector2> innerVertices = GetAllPolygonVertices(innerPoly);
+                vertices.AddRange(innerVertices);
+            }
+
+            return vertices;
         }
 
         private SqlGeometry _RenderedVolumeShape;
@@ -215,7 +331,7 @@ namespace WebAnnotation.View
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves
         /// </summary> 
-        public override GridRectangle BoundingBox => GridRectangle.Pad(SmoothedVolumePolygon.BoundingBox, _ControlPointRadius);
+        public override GridRectangle BoundingBox => GridRectangle.Pad(SmoothedVolumePolygon.BoundingBox, ControlPointRadius);
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -224,15 +340,33 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           LocationPolygonView[] listToDraw)
         {
+
             listToDraw = listToDraw.Where(l => l.Initialized).ToArray();
             OverlappedLinkCircleView[] overlappedLocations = listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene)).ToArray();
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
+
+            double radius_scalar = Math.Sqrt((double)scene.Camera.Downsample);
+            double expected_radius = Global.AnnotationSettings.PolygonPointRadius * radius_scalar;
+             
+            //Todo: Check if control points will be visible.
 #if DEBUG
-            CircleView.Draw(device, scene, OverlayStyle.Alpha, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
+            foreach (var lpv in listToDraw.Where(lpv => lpv.ControlPointView != null))
+            {
+                if(Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.001)
+                    lpv.ControlPointRadius = expected_radius;
+
+                lpv.ControlPointView.Draw(device, scene, OverlayStyle.Alpha);
+            }
 #else
             if(!Global.PenMode)
             {
-                CircleView.Draw(device, scene, OverlayStyle.Luma, listToDraw.SelectMany(lpv => lpv.ControlPointViews).ToArray());
+                foreach (var lpv in listToDraw.Where(lpv => lpv.ControlPointView != null))
+                {
+                    if(lpv.ControlPointRadius != Global.AnnotationSettings.PolygonPointRadius)
+                        lpv.ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
+
+                    lpv.ControlPointView.Draw(device, scene, OverlayStyle.Luma);
+                }
             }
 #endif
             //CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
@@ -532,7 +666,7 @@ namespace WebAnnotation.View
 
         internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            //ClearOverlappingLinkedLocationCache();
+            //ClearOverlappingLinkedLocationCache();A
 
             //CreateViewObjects();
             if (IsLocationPropertyAffectingLabels(args.PropertyName))
@@ -558,12 +692,7 @@ namespace WebAnnotation.View
                 return false;
             }
 
-            if (Math.Min(BoundingBox.Width, BoundingBox.Height) / scene.DevicePixelWidth < 2.0)
-            {
-                return false;
-            }
-
-            return scene.VisibleWorldBounds.Intersects(BoundingBox);
+            return LocationCanvasView.IsPolygonVisible(BoundingBox, scene);
         }
 
         public override double DistanceFromCenterNormalized(GridVector2 Position)
