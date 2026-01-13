@@ -25,7 +25,8 @@ namespace WebAnnotationModelTest
         public static string Endpoint = "https://webdev.connectomes.utah.edu/RC1Test/Annotation/service.svc";
         public static string IdentityEndpoint = "https://identity.connectomes.utah.edu/";
 
-        public static Viking.Tokens.IdentityServerHelper TokenHelper;
+        public static Viking.Tokens.BearerTokenHelper TokenHelper;
+        public static Viking.Tokens.IdentityApiHelper ApiHelper;
 
         [TestInitialize]
         public void Init()
@@ -44,15 +45,26 @@ namespace WebAnnotationModelTest
 
         private async System.Threading.Tasks.Task InitIdentity()
         {
-            TokenHelper = new IdentityServerHelper()
+            TokenHelper = new BearerTokenHelper()
             {
                 IdentityServerURL = new Uri(IdentityEndpoint),
+            };
+
+            // Create IdentityApiHelper - need to determine IdentityApiURL (typically same host, port 6001)
+            var identityApiUri = new UriBuilder(IdentityEndpoint)
+            {
+                Port = 6001
+            }.Uri;
+
+            ApiHelper = new IdentityApiHelper()
+            {
+                IdentityApiURL = identityApiUri
             };
 
             var token = await TokenHelper.RetrieveBearerToken(Username, Password);
             Assert.IsFalse(token.IsError, token.Error);
 
-            var permissions = await TokenHelper.RetrieveUserVolumePermissions(token as TokenResponse, VolumeName);
+            var permissions = await ApiHelper.RetrieveUserVolumePermissions(token as TokenResponse, VolumeName);
             Assert.IsFalse(permissions is null || permissions.Length == 0, $"No permissions found for test user {Username} in volume {VolumeName}");
 
             List<string> list_permissions = new List<string>
