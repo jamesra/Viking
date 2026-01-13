@@ -28,22 +28,26 @@
 	</PropertyGroup>
 	
 	<!-- Post-build event to copy output to Modules folder -->
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-
+		<!-- Post-build event to copy output to Modules folder -->
+	<Target Name="PostBuild" AfterTargets="Build">
+		<PropertyGroup>
+			<OutputDirectory>$(OutDir)</OutputDirectory>
+			<OutputDirectory Condition="'$(OutputDirectory)' == ''">$(OutputPath)</OutputDirectory>
+		</PropertyGroup>
 
 		<!-- Create Modules directory if it doesn't exist -->
-		<Exec Command="if not exist &quot;$(ModulesDir)&quot; mkdir &quot;$(ModulesDir)&quot;" />
+		<MakeDir Directories="$(ModulesDir)" Condition="!Exists('$(ModulesDir)')" />
+		<MakeDir Directories="$(ProjectModulesDir)" Condition="!Exists('$(ProjectModulesDir)')" />
+		<MakeDir Directories="$(ProjectModulesDir)\$(TargetFramework)" Condition="!Exists('$(ProjectModulesDir)\$(TargetFramework)')" />
 
-		<!-- Create project-specific directory if it doesn't exist -->
-		<Exec Command="if not exist &quot;$(ProjectModulesDir)&quot; mkdir &quot;$(ProjectModulesDir)&quot;" />
-
-		<!-- Copy project output to Modules folder (only newer files) -->
+		<!-- Copy project output to Modules folder -->
 		<ItemGroup>
-			<FilesToCopy Include="$(TargetDir)**\*.*" />
+			<FilesToCopy Include="$(OutputDirectory)**\*.*" Exclude="$(OutputDirectory)**\*.pdb" />
 		</ItemGroup>
-		<Message Text="Copying $(TargetDir)**\*.* to $(ProjectModulesDir)\$(TargetFramework)\" Importance="high" />
+		<Message Text="Copying from $(OutputDirectory) to $(ProjectModulesDir)\$(TargetFramework)\" Importance="high" />
+		<Message Text="Files to copy: @(FilesToCopy->Count())" Importance="normal" />
 		
-		<Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="false" />
 	</Target>
 
 	<!-- Clean target to remove copied files when build is cleaned -->
