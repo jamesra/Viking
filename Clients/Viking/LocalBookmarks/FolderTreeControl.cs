@@ -236,6 +236,7 @@ namespace LocalBookmarks
             this.Tree.LineColor = System.Drawing.Color.Black;
             this.Tree.SelectedImageIndex = 1;
             this.Tree.AfterLabelEdit += new System.Windows.Forms.NodeLabelEditEventHandler(this.Tree_AfterLabelEdit);
+            this.Tree.MouseDown += new System.Windows.Forms.MouseEventHandler(this.Tree_MouseDown);
             // 
             // imageList
             // 
@@ -322,6 +323,29 @@ namespace LocalBookmarks
                 e.Effect = DragDropEffects.Copy; // Okay
             else
                 base.OnDragEnter(e);
+        }
+
+        private void Tree_MouseDown(object sender, MouseEventArgs e)
+        {
+
+            if (e.Button == MouseButtons.Right)
+            {
+                TreeNode node = Tree.GetNodeAt(e.Location);
+
+                if (node == null)
+                {
+                    Viking.UI.State.SelectedObject = null;
+                    ContextMenu menu = new ContextMenu();
+
+                    MenuItem menuItem = new MenuItem("New", ContextMenuOnNewRootFolder);
+
+                    menu.MenuItems.Add(menuItem);
+
+                    ContextMenu = menu;
+
+                    ContextMenu.Show(this, e.Location);
+                }
+            }
         }
 
         private void FolderTreeControl_DragOver(object sender, DragEventArgs e)

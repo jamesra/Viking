@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 using WebAnnotation.ViewModel;
 
@@ -38,6 +38,7 @@ namespace WebAnnotation.View
                 Parent.ContextMenu_AddUnverifiedBranchTerminals(menu);
                 _AddConvertShapeMenus(menu);
                 _AddSimplifyPolygonMenus(menu);
+                _AddRandomColorMenu(menu);
                 _AddDeleteMenu(menu);
 
                 return menu;

@@ -9,44 +9,51 @@
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <MonoGamePlatform>Windows</MonoGamePlatform>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
+    <!-- Disable auto-generated assembly info to use manual AssemblyInfo.cs -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <PropertyGroup>
       <ModulesDir>..\Viking\Modules</ModulesDir>
-      <ProjectModuleDir>$(ModulesDir)\$(MSBuildProjectName)</ProjectModuleDir>
+      <ProjectModulesDir>$(ModulesDir)\$(MSBuildProjectName)</ProjectModulesDir>
 	  <ProjectContentDir>$(ProjectDir)\Content\</ProjectContentDir>
 	  <ProjectContentOutputDir>$(TargetDir)\Content\</ProjectContentOutputDir>
   </PropertyGroup>
   <!-- Post-build event to copy output to Modules folder -->
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-     
+  <Target Name="PostBuild" AfterTargets="Build">
+    <PropertyGroup>
+      <OutputDirectory>$(OutDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(OutputDirectory)' == ''">$(OutputPath)</OutputDirectory>
+    </PropertyGroup>
+
     <!-- Create Modules directory if it doesn't exist -->
-    <Exec Command="if not exist &quot;$(ModulesDir)&quot; mkdir &quot;$(ModulesDir)&quot;" />
-    
-    <!-- Create project-specific directory if it doesn't exist -->
-    <Exec Command="if not exist &quot;$(ProjectModuleDir)&quot; mkdir &quot;$(ProjectModuleDir)&quot;" />
+    <MakeDir Directories="$(ModulesDir)" Condition="!Exists('$(ModulesDir)')" />
+    <MakeDir Directories="$(ProjectModulesDir)" Condition="!Exists('$(ProjectModulesDir)')" />
+    <MakeDir Directories="$(ProjectModulesDir)\$(TargetFramework)" Condition="!Exists('$(ProjectModulesDir)\$(TargetFramework)')" />
     
     <!-- Ensure Content directory exists in target -->
-    <Exec Command="if not exist &quot;$(ProjectModuleDir)\$(TargetFramework)\Content&quot; mkdir &quot;$(ProjectModuleDir)\$(TargetFramework)\Content&quot;" />
+    <MakeDir Directories="$(ProjectModulesDir)\$(TargetFramework)\Content" Condition="!Exists('$(ProjectModulesDir)\$(TargetFramework)\Content')" />
     
-	  <!-- Copy project output to Modules folder (only newer files) -->
+    <!-- Copy project output to Modules folder -->
     <ItemGroup>
-	    <FilesToCopy Include="$(TargetDir)**\*.*" />
+      <FilesToCopy Include="$(OutputDirectory)**\*.*" Exclude="$(OutputDirectory)**\*.pdb" />
     </ItemGroup>
-	  
-    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModuleDir)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="true" />
-	
+    <Message Text="Copying from $(OutputDirectory) to $(ProjectModulesDir)\$(TargetFramework)\" Importance="high" />
+    <Message Text="Files to copy: @(FilesToCopy->Count())" Importance="normal" />
+  
+    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectModulesDir)\$(TargetFramework)\%(RecursiveDir)" SkipUnchangedFiles="false" />
   </Target>
   
   <!-- Clean target to remove copied files when build is cleaned -->
+  <!-- Note: We don't remove modules during clean because they're intermediate files that will be regenerated on build -->
+  <!-- If you need to clean modules, do it manually or use a separate clean target -->
   <Target Name="CleanModules" AfterTargets="Clean"> 
     
-    <!-- Remove the project-specific target framework folder -->
-    <RemoveDir Directories="$(ProjectModuleDir)\$(TargetFramework)" ContinueOnError="true" />
+    <!-- Only clean if explicitly requested via CleanModules property -->
+    <!-- This prevents modules from being removed during Rebuild operations -->
+    <RemoveDir Directories="$(ProjectModulesDir)\$(TargetFramework)" Condition="'$(CleanModules)' == 'true'" ContinueOnError="true" />
+    <RemoveDir Directories="$(ProjectModulesDir)" Condition="'$(CleanModules)' == 'true' AND !Exists('$(ProjectModulesDir)\*')" ContinueOnError="true" />
     
-    <!-- Remove the project-specific folder if it's empty -->
-    <RemoveDir Directories="$(ProjectModuleDir)" Condition="!Exists('$(ProjectModuleDir)\*')" ContinueOnError="true" />
-    
-    <!-- Clean content compilation output -->
+    <!-- Clean content compilation output (always clean these) -->
     <RemoveDir Directories="$(ProjectContentOutputDir)\bin" ContinueOnError="true" />
     <RemoveDir Directories="$(ProjectContentOutputDir)\obj" ContinueOnError="true" />
     <RemoveDir Directories="$(ProjectContentOutputDir)\bin" Condition="!Exists('$(ProjectContentOutputDir)\bin\*')" ContinueOnError="true" />

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.UI.Controls;
 using VikingXNAGraphics;
  
@@ -19,7 +20,7 @@ namespace LocalBookmarks
     }
 
     [Viking.Common.UI.TreeViewVisible()]
-    partial class FolderUIObj : UIObjTemplate<Folder>
+    partial class FolderUIObj : UIObjTemplate<Folder>, IContextMenu
     {
         public FolderUIObj(FolderUIObj parent)
         {
