@@ -137,7 +137,11 @@ namespace Viking.UI.Commands
                 ContextMenu menu = null;
                 if (context_obj != null)
                     if(context_obj is IContextMenu menu_obj)
+                    { 
                         menu = menu_obj.ContextMenu;
+                        if(menu is null)
+                            menu = new ContextMenu();
+                    }
                     else
                         menu = new ContextMenu();
                 else
