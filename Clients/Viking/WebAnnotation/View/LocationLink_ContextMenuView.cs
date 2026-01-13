@@ -53,6 +53,9 @@ namespace WebAnnotation.View
         } 
         public ContextMenu BuildMenuFor(object Obj, ContextMenu menu)
         {
+            if(menu is null)
+                return null;
+
             if (Obj is LocationLinkView link)
             {
                 MenuItem menuSeperator = new MenuItem();
