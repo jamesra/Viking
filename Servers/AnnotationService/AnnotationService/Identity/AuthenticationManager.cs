@@ -8,26 +8,55 @@ using System.Security.Principal;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
 using Duende.IdentityModel.Client;
+using Viking.Tokens;
 
 namespace Annotation.Identity
 {
     public class AuthenticationManager : ServiceAuthenticationManager
     {
+        private static BearerTokenHelper _tokenHelper;
+        private const string Secret = "CorrectHorseBatteryStaple";
+
+        private static BearerTokenHelper GetTokenHelper()
+        {
+            if (_tokenHelper == null)
+            {
+                _tokenHelper = BearerTokenHelper.CreateFromAppSettings();
+                if (_tokenHelper == null)
+                {
+                    // Fallback: create from settings directly
+                    string IdentityServerEndpoint = VikingWebAppSettings.AppSettings.GetIdentityServerURLString();
+                    if (Uri.TryCreate(IdentityServerEndpoint, UriKind.Absolute, out Uri identityServerUrl))
+                    {
+                        _tokenHelper = new BearerTokenHelper
+                        {
+                            IdentityServerURL = identityServerUrl,
+                            ClientSecret = Secret
+                        };
+                    }
+                }
+            }
+            return _tokenHelper;
+        }
+
         public override ReadOnlyCollection<IAuthorizationPolicy> Authenticate(ReadOnlyCollection<IAuthorizationPolicy> authPolicy, Uri listenUri, ref Message message)
         {
             string IdentityServerEndpoint = VikingWebAppSettings.AppSettings.GetIdentityServerURLString();
             int iBearer = message.Headers.FindHeader("Bearer", IdentityServerEndpoint);
 
-            string Secret = IdentityServerHelper.Secret;
-
             if (iBearer >= 0 && iBearer <= 5)
             {
                 var AccessToken = message.Headers.GetHeader<string>(iBearer);
 
-                //string IdentityServerEndpoint = "https://webdev.connectomes.utah.edu/identityserver/";
-                //var Disco = DiscoveryClient.GetAsync(IdentityServerEndpoint).Result;
+                var helper = GetTokenHelper();
+                if (helper == null)
+                {
+                    message.Properties["Principal"] = CreateAnonymousUser();
+                    return authPolicy;
+                }
+
                 var client = new HttpClient();
-                var disco = IdentityServerHelper.GetDiscoveryDocumentAsync().Result;
+                var disco = helper.GetDiscoveryDocumentAsync().Result;
 
                 var validation = client.IntrospectTokenAsync(new TokenIntrospectionRequest()
                 {
