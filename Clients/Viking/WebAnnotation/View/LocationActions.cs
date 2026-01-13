@@ -548,8 +548,7 @@ namespace WebAnnotation
                         {
                             //Fetch the medial axis of the polygon.  Pass those points to the translation algorithm.  Extract the medial axis points and pass them to the segmentation command. 
                             var mosaic_shape_poly = MosaicShape.ToPolygon();
-                            var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxisImproved(mosaic_shape_poly);
-                            var medial_axis_points = medial_axis.Points;
+                            
                             var mosaic_centroid = mosaic_shape_poly.Centroid; //TODO:  I am temporarily using the mosaic shape centroid instead of the medial axis until the Medial Axis code improves
 
                             return new TranslatePolygonCommand(Parent,
@@ -558,10 +557,14 @@ namespace WebAnnotation
                                 new GridVector2[] {mosaic_centroid }, //medial_axis_points,
                                 loc.Parent.Type.Color.ToXNAColor(0.25f),
                                 (polygon, points) =>
-                                { 
+                                {
+                                    var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxisImproved(mosaic_shape_poly);
+                                    var medial_axis_points = medial_axis.Points;
                                     var transformed = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out var volume_points);
+                                    var transformed_medial_axis = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out var transformed_medial_axis_points);
                                     var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                                    Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand), new object[] {Parent, volume_points, Array.Empty<GridVector2>(), new SegmentationCommand.OnCommandSuccess( (segmentedVolumePolygon) =>
+                                    Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand), 
+                                        new object[] {Parent, medial_axis_points, Array.Empty<GridVector2>(), new SegmentationCommand.OnCommandSuccess( (segmentedVolumePolygon) =>
                                             {
                                                 LocationObj newLoc = new LocationObj(loc.Parent,
                                                     Parent.Section.Number,
